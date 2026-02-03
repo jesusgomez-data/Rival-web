@@ -1,10 +1,8 @@
 import Stripe from 'stripe';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error('STRIPE_SECRET_KEY is missing');
-}
-
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+// Initialize Stripe with a fallback to avoid build-time errors
+// The actual key should be provided in Vercel Environment Variables
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? 'sk_test_placeholder', {
     apiVersion: '2024-12-18.acacia' as any, // Latest stable or specified
     appInfo: {
         name: 'Rival Web',
