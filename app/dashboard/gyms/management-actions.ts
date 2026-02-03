@@ -5,7 +5,6 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "../notifications-actions";
 import { updateMissionProgress } from "../training/actions";
-import { v4 as uuidv4 } from 'uuid';
 // --- HELPERS ---
 const sanitizeDate = (date: string | null | undefined) => {
     if (!date || date.trim() === "") return null;
