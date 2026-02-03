@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Check, Star, Zap, Trophy, CreditCard, Shield, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import clsx from "clsx";
@@ -63,6 +63,14 @@ const plans = [
 ];
 
 export default function BillingPage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-center text-gray-500 font-black uppercase tracking-widest animate-pulse">Cargando Protocolos...</div>}>
+            <BillingContent />
+        </Suspense>
+    );
+}
+
+function BillingContent() {
     const searchParams = useSearchParams();
     const status = searchParams.get('status');
     const [profile, setProfile] = useState<any>(null);
