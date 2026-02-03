@@ -1,0 +1,92 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-brand-red: #DC2626;
+  --color-brand-accent: #B91C1C;
+  --color-brand-dark: #000000;
+  --color-brand-gray: var(--card);
+  /* Dynamic Card Background */
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-input: var(--input);
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-outfit);
+  --font-accent: var(--font-lexend);
+}
+
+:root {
+  /* DARK THEME (Default/Original) */
+  --background: #000000;
+  --foreground: #EDEDED;
+  --card: #0a0a0a;
+  --card-foreground: #EDEDED;
+  --border: rgba(255, 255, 255, 0.08);
+  --muted: #1a1a1a;
+  --muted-foreground: #a1a1aa;
+  --input: #0f0f0f;
+
+  --font-inter: "Inter", sans-serif;
+  --font-outfit: "Outfit", sans-serif;
+}
+
+[data-theme='light'] {
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --border: rgba(0, 0, 0, 0.08);
+  --muted: #f1f5f9;
+  --muted-foreground: #64748b;
+  --input: #ffffff;
+}
+
+/* Ensure common color utilities respect the theme, but respect dark containers */
+[data-theme='light'] .text-white:not(.bg-brand-red *):not(.bg-brand-red):not(.dark-section *):not(.keep-white) {
+  color: var(--foreground) !important;
+}
+
+[data-theme='light'] .bg-brand-gray:not(.keep-bg) {
+  background-color: var(--muted) !important;
+}
+
+[data-theme='light'] .border-white\/5:not(.keep-border),
+[data-theme='light'] .border-white\/10:not(.keep-border) {
+  border-color: var(--border) !important;
+}
+
+[data-theme='light'] .bg-black:not(.keep-bg):not(.dark-section *) {
+  background-color: var(--background) !important;
+}
+
+[data-theme='light'] .bg-black\/40:not(.keep-bg):not(.dark-section *),
+[data-theme='light'] .bg-black\/60:not(.keep-bg):not(.dark-section *) {
+  background-color: var(--muted) !important;
+}
+
+[data-theme='light'] .text-gray-100:not(.dark-section *),
+[data-theme='light'] .text-gray-200:not(.dark-section *),
+[data-theme='light'] .text-gray-300:not(.dark-section *) {
+  color: var(--foreground) !important;
+}
+
+[data-theme='light'] .text-gray-400:not(.dark-section *),
+[data-theme='light'] .text-gray-500:not(.dark-section *) {
+  color: var(--muted-foreground) !important;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ocultar el indicador de desarrollo/carga de Next.js (La 'N') */
+nextjs-portal {
+  display: none !important;
+}
