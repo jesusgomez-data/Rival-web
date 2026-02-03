@@ -10,4 +10,4 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? 'sk_test_place
     },
 });
 
-// Final cleanup for deployment - 23:53
+// Final cleanup for deployment - v3
