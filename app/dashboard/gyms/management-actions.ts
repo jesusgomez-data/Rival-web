@@ -2029,8 +2029,8 @@ export async function getPendingClassReviews() {
             member:member_id!inner(user_id)
         `)
         .eq('member.user_id', user.id)
-        .lt('class.scheduled_time', nowISO)
-        .gte('class.scheduled_time', twoDaysAgo);
+        .lt('classes.scheduled_time', nowISO)
+        .gte('classes.scheduled_time', twoDaysAgo);
 
     if (error) {
         console.error("Error fetching pending reviews:", error);
@@ -2040,7 +2040,8 @@ export async function getPendingClassReviews() {
     if (!enrollments || enrollments.length === 0) return [];
 
     // 2. Check for existing results
-    const classIds = enrollments.map(e => e.class.id);
+    // @ts-ignore
+    const classIds = enrollments.map((e: any) => e.class.id);
     const { data: results } = await supabase
         .from('class_results')
         .select('class_id')
