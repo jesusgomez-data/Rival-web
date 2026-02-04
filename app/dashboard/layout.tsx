@@ -292,16 +292,19 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             {!isGymView && (
                 <nav className="lg:hidden fixed bottom-0 w-full bg-[#0a0a0a]/80 backdrop-blur-xl border-t border-white/5 py-2 px-4 z-[100] safe-area-inset-bottom">
                     <div className="flex justify-between items-center h-16 relative">
-                        {navItems.filter(i => ["Inicio", "Mensajes", "Comunidad", "Análisis"].includes(i.name)).map((item) => {
+                        {navItems.filter(i => ["Inicio", "Mensajes", "Coach Online", "Comunidad"].includes(i.name)).map((item, idx) => {
                             const Icon = item.icon;
                             const isActive = pathname === item.href;
+                            // Add a spacer for the central FAB if needed, or just let them group
                             return (
                                 <Link
                                     key={item.href}
                                     href={item.href}
                                     className={clsx(
                                         "flex flex-col items-center justify-center w-12 h-12 rounded-2xl transition-all relative group",
-                                        isActive ? "text-brand-red" : "text-gray-500 hover:text-foreground"
+                                        isActive ? "text-brand-red" : "text-gray-500 hover:text-foreground",
+                                        idx === 1 && "mr-12", // Leave space for FAB
+                                        idx === 2 && "ml-12"  // Leave space for FAB
                                     )}
                                 >
                                     <div className="relative">

@@ -509,7 +509,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                     <button
                                         onClick={handleFollow}
                                         disabled={loading}
-                                        className={`h-12 px-8 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg ${following ? (theme === 'dark' ? 'bg-white/10 text-white hover:bg-red-500/10 hover:text-red-500 border border-white/10' : 'bg-gray-200 text-black hover:text-red-600') : 'bg-brand-red text-white hover:bg-red-600 hover:scale-105 hover:shadow-red-900/40'}`}
+                                        className={`h-10 md:h-12 px-4 md:px-8 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg ${following ? (theme === 'dark' ? 'bg-white/10 text-white hover:bg-red-500/10 hover:text-red-500 border border-white/10' : 'bg-gray-200 text-black hover:text-red-600') : 'bg-brand-red text-white hover:bg-red-600 hover:scale-105 hover:shadow-red-900/40'}`}
                                     >
                                         {following ? <><UserCheck className="w-4 h-4" /> Siguiendo</> : <><UserPlus className="w-4 h-4" /> Seguir</>}
                                     </button>
@@ -517,13 +517,13 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                     {!isMember && (
                                         <button
                                             onClick={() => setActiveTab('schedule')}
-                                            className={`h-12 px-8 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg border ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}
+                                            className={`h-10 md:h-12 px-4 md:px-8 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg border ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}
                                         >
                                             Prueba Gratis
                                         </button>
                                     )}
                                     {isMember && (
-                                        <div className="h-12 px-8 rounded-xl bg-green-500/10 text-green-500 border border-green-500/20 text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                                        <div className="h-10 md:h-12 px-4 md:px-8 rounded-xl bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2">
                                             <CheckCircle2 className="w-4 h-4" /> Miembro Activo
                                         </div>
                                     )}

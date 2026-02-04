@@ -136,15 +136,15 @@ export default function CenterSignup() {
         </div>
       </div>
 
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative">
-        <Link href="/" className="absolute top-8 left-8 text-gray-400 hover:text-white flex items-center gap-2 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back
-        </Link>
+      <div className="w-full lg:w-1/2 flex items-start lg:items-center justify-center p-8 relative overflow-y-auto">
+        <div className="max-w-md w-full pt-4 pb-12">
+          <Link href="/" className="mb-6 text-gray-400 hover:text-white flex items-center gap-2 transition-colors w-fit group">
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Volver al Inicio
+          </Link>
 
-        <div className="max-w-md w-full">
-          <div className="mb-10">
-            <Image src="/logo.svg" alt="Rival" width={40} height={40} className="mb-6 w-10 h-10" />
-            <h1 className="text-4xl font-heading font-bold text-white mb-2">Crea tu Centro</h1>
+          <div className="mb-8">
+            <Image src="/logo.svg" alt="Rival" width={40} height={40} className="mb-6 w-10 h-10 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
+            <h1 className="text-4xl font-heading font-bold text-white mb-2 tracking-tight">Crea tu Centro</h1>
             <p className="text-gray-400">Únete a la red de fitness más grande.</p>
           </div>
 

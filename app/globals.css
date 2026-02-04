@@ -6,9 +6,13 @@
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-border: var(--border);
-  --color-brand-red: #DC2626;
-  --color-brand-accent: #B91C1C;
+  --color-brand-red: #EF4444;
+  --color-brand-accent: #DC2626;
   --color-brand-dark: #000000;
+  --color-brand-orange: #FF6B00;
+  --color-brand-green: #22C55E;
+  --color-brand-neon-green: #39FF14;
+  --color-brand-neon-orange: #FFAC1C;
   --color-brand-gray: var(--card);
   /* Dynamic Card Background */
   --color-muted: var(--muted);
@@ -84,6 +88,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
 
 /* Ocultar el indicador de desarrollo/carga de Next.js (La 'N') */

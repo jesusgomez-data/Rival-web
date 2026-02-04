@@ -20,11 +20,35 @@ const lexend = Lexend({
 });
 
 export const metadata: Metadata = {
-  title: "Rival | Face Yourself. Conquer All.",
-  description: "The ultimate social network for athletes. Track, compete, and evolve.",
+  title: "Rival | El Futuro del Fitness 2026",
+  description: "La primera red social creada para la mentalidad del 1%. Registra tus progresos, compite globalmente y accede a gimnasios de élite.",
   manifest: "/manifest.json",
-  themeColor: "#000000",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0", // Mobile app feel
+  icons: {
+    icon: "/logo.svg",
+    apple: "/logo.svg",
+  },
+  openGraph: {
+    title: "Rival | Face Yourself. Conquer All.",
+    description: "Únete a la elite del fitness. Registra, compite y evoluciona en la red social definitiva para atletas.",
+    url: "https://rival.fitness",
+    siteName: "Rival",
+    images: [
+      {
+        url: "/assets/hero-cinematic.png",
+        width: 1200,
+        height: 630,
+        alt: "Rival Fitness App",
+      },
+    ],
+    locale: "es_ES",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Rival | El Futuro del Fitness",
+    description: "Competencia real, progreso real.",
+    images: ["/assets/hero-cinematic.png"],
+  },
 };
 
 export default function RootLayout({

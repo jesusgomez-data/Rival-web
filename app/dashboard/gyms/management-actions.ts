@@ -1746,7 +1746,27 @@ export async function requestTrial(centerId: string, date?: string, classId?: st
 
     const { error } = await supabase.from('trial_requests').insert({ organization_id: centerId, user_id: user.id, status: 'pending', request_date: new Date().toISOString(), scheduled_date: date || null, class_id: classId || null });
     if (error) return { error: error.message };
+
+    // Trigger Notification for Staff
+    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+    const { data: org } = await supabase.from('organizations').select('name, owner_id, head_coach_id').eq('id', centerId).single();
+
+    if (org) {
+        const notifications = [];
+        const message = `${profile?.full_name || 'Un usuario'} ha solicitado una prueba gratuita.`;
+        const link = `/dashboard/gyms/${centerId}/members`;
+
+        if (org.owner_id && org.owner_id !== user.id) {
+            notifications.push({ user_id: org.owner_id, type: 'trial_request', title: 'Solicitud de Prueba', content: message, link, is_read: false });
+        }
+        if (org.head_coach_id && org.head_coach_id !== user.id && org.head_coach_id !== org.owner_id) {
+            notifications.push({ user_id: org.head_coach_id, type: 'trial_request', title: 'Solicitud de Prueba', content: message, link, is_read: false });
+        }
+        if (notifications.length > 0) await supabase.from('notifications').insert(notifications);
+    }
+
     revalidatePath(`/dashboard/gyms/${centerId}/members`);
+    revalidatePath(`/dashboard/gyms/${centerId}/memberships`);
     return { success: true };
 }
 

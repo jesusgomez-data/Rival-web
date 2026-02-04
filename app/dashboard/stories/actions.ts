@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { createNotification } from '../notifications-actions'
 
 export async function createStory(formData: FormData) {
     try {
@@ -234,6 +235,20 @@ export async function toggleStoryLike(storyId: string) {
         return { liked: false }
     } else {
         await supabase.from('story_likes').insert({ story_id: storyId, user_id: user.id })
+
+        // Trigger Notification
+        const { data: story } = await supabase.from('stories').select('user_id').eq('id', storyId).single();
+        if (story && story.user_id !== user.id) {
+            const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+            await createNotification({
+                userId: story.user_id,
+                type: 'story_like',
+                title: '🔥 Nuevo Like en Story',
+                content: `${profile?.full_name || 'Alguien'} le ha dado like a tu story.`,
+                link: '/dashboard'
+            });
+        }
+
         return { liked: true }
     }
 }

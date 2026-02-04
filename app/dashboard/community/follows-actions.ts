@@ -47,12 +47,12 @@ export async function toggleFollow(followingId: string) {
         await updateMissionProgress(user.id, 'social_interactions', 1)
 
         // Trigger Notification
-        // Notifications usually require admin rights to write if RLS is strict for 'other' users
+        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
         await createNotification({
             userId: followingId,
             type: 'follow',
             title: '¡Nuevo Rival!',
-            content: `${user.user_metadata?.full_name || 'Alguien'} ha comenzado a seguirte.`,
+            content: `${profile?.full_name || 'Alguien'} ha comenzado a seguirte.`,
             link: '/dashboard/community'
         });
     }

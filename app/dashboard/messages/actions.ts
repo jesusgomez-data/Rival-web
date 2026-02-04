@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { createNotification } from '../notifications-actions'
 
 export async function getConversations() {
     const supabase = await createClient()
@@ -103,6 +104,25 @@ export async function sendMessage(conversationId: string, text: string, imageUrl
         })
         .eq('id', conversationId)
         .then(() => { })
+
+    // Trigger Notification
+    const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+    const { data: participant } = await supabase
+        .from('conversation_participants')
+        .select('user_id')
+        .eq('conversation_id', conversationId)
+        .neq('user_id', user.id)
+        .maybeSingle();
+
+    if (participant) {
+        await createNotification({
+            userId: participant.user_id,
+            type: 'message',
+            title: 'Nuevo Mensaje',
+            content: `${profile?.full_name || 'Alguien'} te ha enviado un mensaje.`,
+            link: `/dashboard/messages?id=${conversationId}`
+        });
+    }
 
     return { success: true, message: msgData }
 }

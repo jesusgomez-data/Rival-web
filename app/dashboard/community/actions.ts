@@ -202,10 +202,12 @@ export async function addComment(postId: string, content: string, parentId?: str
     if (error) return { error: error.message }
 
     // Trigger Notification
+    const { data: profile } = await adminSupabase.from('profiles').select('full_name').eq('id', user.id).single();
+    const truncated = content.length > 30 ? content.substring(0, 30) + '...' : content;
     const { data: post } = await adminSupabase.from('posts').select('user_id').eq('id', postId).single();
+
+    // Notify Post Author
     if (post && post.user_id !== user.id) {
-        const { data: profile } = await adminSupabase.from('profiles').select('full_name').eq('id', user.id).single();
-        const truncated = content.length > 30 ? content.substring(0, 30) + '...' : content;
         await createNotification({
             userId: post.user_id,
             type: 'comment',
@@ -213,6 +215,20 @@ export async function addComment(postId: string, content: string, parentId?: str
             content: `${profile?.full_name || 'Alguien'} comentó: "${truncated}"`,
             link: '/dashboard/community'
         });
+    }
+
+    // Notify Parent Comment Author (if it's a reply)
+    if (parentId) {
+        const { data: parentComment } = await adminSupabase.from('comments').select('user_id').eq('id', parentId).single();
+        if (parentComment && parentComment.user_id !== user.id && parentComment.user_id !== post?.user_id) {
+            await createNotification({
+                userId: parentComment.user_id,
+                type: 'comment_reply',
+                title: 'Respuesta a tu comentario',
+                content: `${profile?.full_name || 'Alguien'} ha respondido a tu comentario.`,
+                link: '/dashboard/community'
+            });
+        }
     }
 
     revalidatePath('/dashboard')

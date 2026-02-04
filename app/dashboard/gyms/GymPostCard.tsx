@@ -265,13 +265,14 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
 
             {/* Stats/Actions */}
             <div className="px-4 py-3 bg-muted/20 border-t border-border">
-                <div className="flex items-center justify-between text-muted-foreground text-sm mb-3">
-                    <div className="flex items-center gap-1">
-                        <Heart className="w-4 h-4 fill-brand-red text-brand-red" />
-                        <span>{likes} likes</span>
+                <div className="flex items-center gap-6 text-muted-foreground text-xs mb-3 font-bold uppercase tracking-widest">
+                    <div className="flex items-center gap-1.5 transition-colors hover:text-brand-red cursor-default">
+                        <Heart className="w-3.5 h-3.5 fill-brand-red text-brand-red" />
+                        <span>{likes} {likes === 1 ? 'Me gusta' : 'Me gustas'}</span>
                     </div>
-                    <div className="cursor-pointer hover:text-foreground transition-colors" onClick={toggleComments}>
-                        {commentsCount} comments
+                    <div className="flex items-center gap-1.5 cursor-pointer hover:text-brand-red transition-colors" onClick={toggleComments}>
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>{commentsCount} {commentsCount === 1 ? 'Comentario' : 'Comentarios'}</span>
                     </div>
                 </div>
 
