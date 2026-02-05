@@ -160,6 +160,16 @@ export async function editMessage(id: string, text: string) {
     return { error: error?.message }
 }
 
+export async function toggleMessageLike(id: string, currentStatus: boolean) {
+    const supabase = await createClient()
+    const { error } = await supabase
+        .from('messages')
+        .update({ is_liked: !currentStatus })
+        .eq('id', id)
+
+    return { error: error?.message }
+}
+
 export async function getFriendsToChat() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()

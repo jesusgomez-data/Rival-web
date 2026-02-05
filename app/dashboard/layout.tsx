@@ -20,7 +20,8 @@ import {
     Search as SearchIcon,
     X,
     Sun,
-    Moon
+    Moon,
+    Shield
 } from "lucide-react";
 import clsx from "clsx";
 import { useRouter, usePathname } from "next/navigation";
@@ -29,6 +30,7 @@ import Image from "next/image";
 import NotificationBell from "./NotificationBell";
 import { StoryProvider, useStories } from "./stories/StoryContext";
 import { useTheme } from "../ThemeContext";
+import { useLanguage } from "@/app/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import PendingReviewPrompt from "./PendingReviewPrompt";
 
@@ -36,6 +38,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
     const { theme, toggleTheme } = useTheme();
+    const { language, setLanguage, t } = useLanguage();
 
     const [profile, setProfile] = useState<any>(null);
     const [showMobileSearch, setShowMobileSearch] = useState(false);
@@ -113,15 +116,16 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     };
 
     const navItems = [
-        { name: "Inicio", href: "/dashboard", icon: Home },
-        { name: "Mensajes", href: "/dashboard/messages", icon: MessageSquarePlus },
-        { name: "Coach Online", href: "/dashboard/coach", icon: MessageCircle },
-        { name: "Entrenamiento", href: "/dashboard/training", icon: Dumbbell },
-        { name: "Afilia tu centro", href: "/dashboard/gyms", icon: Building2 },
-        { name: "Comunidad", href: "/dashboard/community", icon: Users },
-        { name: "Clasificación", href: "/dashboard/leaderboard", icon: Trophy },
-        { name: "Análisis", href: "/dashboard/analytics", icon: BarChart2 },
-        { name: "Perfil", href: "/dashboard/profile", icon: Settings },
+        { name: t.navDashboard.home, href: "/dashboard", icon: Home },
+        { name: t.navDashboard.messages, href: "/dashboard/messages", icon: MessageSquarePlus },
+        { name: t.navDashboard.onlineCoach, href: "/dashboard/coach", icon: MessageCircle },
+        { name: t.navDashboard.training, href: "/dashboard/training", icon: Dumbbell },
+        { name: t.navDashboard.affiliateGym, href: "/dashboard/gyms", icon: Building2 },
+        { name: t.navDashboard.community, href: "/dashboard/community", icon: Users },
+        { name: t.navDashboard.leaderboard, href: "/dashboard/leaderboard", icon: Trophy },
+        { name: t.navDashboard.analytics, href: "/dashboard/analytics", icon: BarChart2 },
+        { name: t.navDashboard.profile, href: "/dashboard/profile", icon: Settings },
+        { name: "Rival Command", href: "/dashboard/admin", icon: Shield },
     ];
 
     const isGymView = pathname?.startsWith('/dashboard/gyms/') && pathname.split('/').length > 3;
@@ -155,7 +159,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                                 >
                                     <div className="relative">
                                         <Icon className={clsx("w-5 h-5", isActive ? "text-white" : "group-hover:text-foreground")} />
-                                        {item.name === "Mensajes" && unreadMessages > 0 && (
+                                        {(item.name === t.navDashboard.messages) && unreadMessages > 0 && (
                                             <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-white text-brand-red text-[8px] font-black rounded-full flex items-center justify-center border border-brand-red animate-bounce">
                                                 {unreadMessages}
                                             </span>
@@ -172,11 +176,11 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                             onClick={handleLogout}
                             className="w-full text-gray-500 hover:text-brand-red flex items-center gap-3 px-2 py-2 text-[9px] font-black uppercase tracking-[0.2em] transition-colors group/logout"
                         >
-                            <LogOut className="w-4 h-4 group-hover/logout:-translate-x-1 transition-transform" /> Cerrar Sesión
+                            <LogOut className="w-4 h-4 group-hover/logout:-translate-x-1 transition-transform" /> {t.navDashboard.logout}
                         </button>
 
                         <Link href="/dashboard/training/session" className="w-full bg-background border border-border text-foreground py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-brand-red hover:text-white hover:border-brand-red transition-all shadow-xl uppercase text-[10px] tracking-wider">
-                            <PlusCircle className="w-4 h-4" /> EMPEZAR ENTRENAMIENTO
+                            <PlusCircle className="w-4 h-4" /> {t.navDashboard.startTraining}
                         </Link>
 
                         <Link href="/dashboard/profile" className="flex items-center gap-3 px-2 py-2 group bg-foreground/5 rounded-2xl border border-transparent hover:border-brand-red/30 transition-all">
@@ -292,7 +296,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             {!isGymView && (
                 <nav className="lg:hidden fixed bottom-0 w-full bg-[#0a0a0a]/80 backdrop-blur-xl border-t border-white/5 py-2 px-4 z-[100] safe-area-inset-bottom">
                     <div className="flex justify-between items-center h-16 relative">
-                        {navItems.filter(i => ["Inicio", "Mensajes", "Coach Online", "Comunidad"].includes(i.name)).map((item, idx) => {
+                        {navItems.filter(i => [t.navDashboard.home, t.navDashboard.messages, t.navDashboard.onlineCoach, t.navDashboard.community].includes(i.name)).map((item, idx) => {
                             const Icon = item.icon;
                             const isActive = pathname === item.href;
                             // Add a spacer for the central FAB if needed, or just let them group
@@ -309,7 +313,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                                 >
                                     <div className="relative">
                                         <Icon className={clsx("w-6 h-6 transition-transform group-active:scale-90", isActive && "drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]")} />
-                                        {item.name === "Mensajes" && unreadMessages > 0 && !isActive && (
+                                        {item.name === t.navDashboard.messages && unreadMessages > 0 && !isActive && (
                                             <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-red text-white text-[8px] font-black rounded-full flex items-center justify-center border border-[#0a0a0a] animate-pulse">
                                                 {unreadMessages}
                                             </span>

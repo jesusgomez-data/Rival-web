@@ -2,7 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_noStore } from "next/cache";
 import { createNotification } from "../notifications-actions";
 import { updateMissionProgress } from "../training/actions";
 // --- HELPERS ---
@@ -13,7 +13,7 @@ const sanitizeDate = (date: string | null | undefined) => {
 
 // --- SCHEDULE & CLASSES ---
 
-export async function getCenterClasses(centerId: string, date?: string) {
+export async function getCenterClasses(id: string, date?: string, isCenterId: boolean = false) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -24,8 +24,13 @@ export async function getCenterClasses(centerId: string, date?: string) {
             coach:coach_id (full_name, avatar_url),
             enrollments:class_enrollments(count)
         `)
-        .eq('organization_id', centerId)
         .order('scheduled_time', { ascending: true });
+
+    if (isCenterId) {
+        query = query.eq('center_id', id);
+    } else {
+        query = query.eq('organization_id', id);
+    }
 
     if (date) {
         const startOfDay = new Date(date).toISOString();
@@ -78,16 +83,23 @@ export async function getCenterClasses(centerId: string, date?: string) {
     }));
 }
 
-export async function getClassesRange(centerId: string, startDate: string, endDate: string) {
+export async function getClassesRange(id: string, startDate: string, endDate: string, isCenterId: boolean = false) {
     const supabase = await createClient();
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('classes')
         .select(`
             *,
             enrollments:class_enrollments(count)
-        `)
-        .eq('organization_id', centerId)
+        `);
+
+    if (isCenterId) {
+        query = query.eq('center_id', id);
+    } else {
+        query = query.eq('organization_id', id);
+    }
+
+    const { data, error } = await query
         .gte('scheduled_time', startDate)
         .lte('scheduled_time', endDate)
         .order('scheduled_time', { ascending: true });
@@ -199,6 +211,7 @@ export async function createClass(centerId: string, data: any) {
             .from('classes')
             .insert({
                 organization_id: centerId,
+                center_id: data.center_id || null, // Allow linking to specific center
                 name: data.name || 'Unnamed Class',
                 description: data.description || '',
                 coach_id: data.coach_id || null,
@@ -485,74 +498,54 @@ export async function markAttendance(enrollmentId: string, attended: boolean, pa
 
 // --- MEMBERS ---
 
-export async function getCenterMembers(centerId: string) {
+export async function getCenterMembers(id: string, isCenterId: boolean = false) {
     const supabase = await createClient();
     const admin = createAdminClient();
 
-    // Check if user has access to this center
+    // Check if user has access
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return [];
-    // Check access using the USER's client (so RLS policies work)
-    const { data: org, error: orgError } = await supabase
-        .from('organizations')
-        .select('owner_id')
-        .eq('id', centerId)
-        .single();
 
-    if (orgError) console.warn("[getCenterMembers] Org check warning:", orgError.message);
+    // 1. Fetch Members & Requests
+    let memberQuery = admin.from('members').select('*');
+    let requestQuery = admin.from('trial_requests').select('*').eq('status', 'pending');
 
-    const { data: role } = await supabase
-        .from('center_roles')
-        .select('id')
-        .eq('organization_id', centerId)
-        .eq('user_id', user.id)
-        .single();
+    if (isCenterId) {
+        memberQuery = memberQuery.eq('center_id', id);
+        requestQuery = requestQuery.eq('center_id', id);
+    } else {
+        // Fallback: assume the ID is the primary center_id for now as most centers are single-location
+        // If we had org_id on members table we would use it, but it seems we don't.
+        memberQuery = memberQuery.eq('center_id', id);
+        requestQuery = requestQuery.eq('center_id', id);
+    }
 
-    // DEBUG: Skip strict check for now to see if data flows
-    const isOwner = org?.owner_id === user.id;
-    const hasStaffRole = !!role;
+    const [{ data: rawMembers }, { data: rawRequests }] = await Promise.all([
+        memberQuery.order('created_at', { ascending: false }),
+        requestQuery
+    ]);
 
-    // 1. Members (Simple select to avoid RLS join issues)
-    const { data: rawMembers } = await admin
-        .from('members')
-        .select('*')
-        .eq('center_id', centerId)
-        .order('created_at', { ascending: false });
-
-    // 2. Trial Requests (Simple select)
-    const { data: rawRequests } = await admin
-        .from('trial_requests')
-        .select('*')
-        .or(`organization_id.eq.${centerId},center_id.eq.${centerId}`)
-        .eq('status', 'pending');
-
-    // 3. Collect User IDs for manual fetch (Decoupled to prevent total failure)
+    // 2. Collect User IDs
     const userIds = new Set<string>();
     rawMembers?.forEach((m) => { if (m.user_id) userIds.add(m.user_id); });
     rawRequests?.forEach((r) => { if (r.user_id) userIds.add(r.user_id); });
 
     let userProfiles: Record<string, any> = {};
+    let userStoryStatus: Record<string, 'none' | 'seen' | 'unseen'> = {};
 
     if (userIds.size > 0) {
-        // Fetch profiles using ADMIN client to bypass RLS (User might not have permission to view other profiles)
+        // Fetch profiles
         const { data: profiles } = await admin
             .from('profiles')
             .select('*')
             .in('id', Array.from(userIds));
 
         if (profiles) {
-            profiles.forEach(p => {
-                userProfiles[p.id] = p;
-            });
+            profiles.forEach(p => { userProfiles[p.id] = p; });
         }
-    }
 
-    // 4. Check for active stories (last 24h) and view status
-    let userStoryStatus: Record<string, 'none' | 'seen' | 'unseen'> = {};
-    if (userIds.size > 0) {
+        // Fetch stories
         const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-        // Fetch all active stories for these users
         const { data: activeStories } = await admin
             .from('stories')
             .select('id, user_id')
@@ -560,66 +553,55 @@ export async function getCenterMembers(centerId: string) {
             .gte('created_at', oneDayAgo);
 
         if (activeStories && activeStories.length > 0) {
-            const storyIds = activeStories.map(s => s.id);
+            const userIdsWithStories = new Set(activeStories.map(s => s.user_id));
 
-            // Fetch views for these stories by CURRENT USER
-            const { data: myViews } = await supabase
+            // Check views
+            const { data: views } = await admin
                 .from('story_views')
                 .select('story_id')
                 .eq('viewer_id', user.id)
-                .in('story_id', storyIds);
+                .in('story_id', activeStories.map(s => s.id));
 
-            const viewedStoryIds = new Set(myViews?.map(v => v.story_id));
+            const viewedStoryIds = new Set(views?.map(v => v.story_id));
 
-            // Group stories by user
-            const storiesByUser: Record<string, string[]> = {};
-            activeStories.forEach(s => {
-                if (!storiesByUser[s.user_id]) storiesByUser[s.user_id] = [];
-                storiesByUser[s.user_id].push(s.id);
-            });
-
-            // Determine status for each user
-            userIds.forEach(uid => {
-                const stories = storiesByUser[uid];
-                if (!stories || stories.length === 0) {
-                    userStoryStatus[uid] = 'none';
-                } else {
-                    const hasUnseen = stories.some(sid => !viewedStoryIds.has(sid));
-                    userStoryStatus[uid] = hasUnseen ? 'unseen' : 'seen';
-                }
+            userIdsWithStories.forEach(uid => {
+                const userStories = activeStories.filter(s => s.user_id === uid);
+                const allSeen = userStories.every(s => viewedStoryIds.has(s.id));
+                userStoryStatus[uid] = allSeen ? 'seen' : 'unseen';
             });
         }
     }
 
-    const members = (rawMembers || []).map(m => {
-        const profile = m.user_id ? userProfiles[m.user_id] : null;
-        return {
-            ...m,
-            user: profile, // Attach profile manually
-            full_name: profile?.full_name || m.full_name || 'Atleta Sin Nombre',
-            status: m.status || 'active',
-            story_status: m.user_id ? (userStoryStatus[m.user_id] || 'none') : 'none'
-        };
-    });
+    // 3. Assemble
+    const members = (rawMembers || []).map(m => ({
+        ...m,
+        user: userProfiles[m.user_id] || null,
+        story_status: userStoryStatus[m.user_id] || 'none'
+    }));
 
-    const requests = (rawRequests || []).map(r => {
-        const profile = r.user_id ? userProfiles[r.user_id] : null;
-        return {
-            ...r,
-            user: profile, // Attach profile manually
-            full_name: profile?.full_name || r.full_name || 'Solicitud de Prueba',
-            status: 'trial',
-            is_request: true,
-            story_status: r.user_id ? (userStoryStatus[r.user_id] || 'none') : 'none'
-        };
-    });
+    const requests = (rawRequests || []).map(r => ({
+        ...r,
+        is_request: true,
+        status: 'trial',
+        user: userProfiles[r.user_id] || null,
+        story_status: userStoryStatus[r.user_id] || 'none'
+    }));
 
-    const result = [...requests, ...members];
-    return result;
+    return [...members, ...requests];
 }
+
+
 
 export async function removeMember(centerId: string, memberId: string) {
     const admin = createAdminClient();
+
+    // 1. Delete associated enrollments first (to avoid FK constraints)
+    await admin
+        .from('class_enrollments')
+        .delete()
+        .eq('member_id', memberId);
+
+    // 2. Delete the member
     const { error } = await admin
         .from('members')
         .delete()
@@ -627,6 +609,7 @@ export async function removeMember(centerId: string, memberId: string) {
         .eq('center_id', centerId);
 
     if (error) return { error: error.message };
+
     revalidatePath(`/dashboard/gyms/${centerId}/members`);
     revalidatePath('/dashboard/gyms');
     return { success: true };
@@ -688,6 +671,8 @@ export async function addGuestMember(centerId: string, fullName: string, email: 
 export async function approveTrialRequest(centerId: string, requestId: string, userId: string, fullName: string, avatarUrl: string) {
     const admin = createAdminClient();
 
+
+
     const { error: memberError } = await admin
         .from('members')
         .insert({
@@ -705,7 +690,8 @@ export async function approveTrialRequest(centerId: string, requestId: string, u
     if (memberError) {
         if (memberError.code === '23505') {
             await admin.from('trial_requests').update({ status: 'approved' }).eq('id', requestId);
-            // Notify the user even if member already exists (duplicate entry)
+
+            // Notify
             const { data: org } = await admin.from('organizations').select('name').eq('id', centerId).single();
             const gymName = org?.name || 'El Centro';
 
@@ -744,13 +730,20 @@ export async function approveTrialRequest(centerId: string, requestId: string, u
 
 // --- STORE ---
 
-export async function getCenterProducts(centerId: string) {
+export async function getCenterProducts(id: string, isCenterId: boolean = false) {
     const supabase = await createClient();
-    const { data, error } = await supabase
+
+    let query = supabase
         .from('center_products')
-        .select('*')
-        .eq('organization_id', centerId)
-        .order('created_at', { ascending: false });
+        .select('*');
+
+    if (isCenterId) {
+        query = query.eq('center_id', id);
+    } else {
+        query = query.eq('organization_id', id);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
 
     if (error) return [];
     return data;
@@ -860,7 +853,7 @@ export async function purchaseProduct(centerId: string, productId: string, payme
     const { data: member } = await supabase
         .from('members')
         .select('id, card_last4')
-        .eq('organization_id', centerId) // Fixed: was 'center_id' which might be wrong based on schema, but previously logic used 'center_id'. Wait, schema usually uses organization_id. Let's check previous code.
+        .eq('center_id', centerId)
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -924,18 +917,25 @@ export async function purchaseProduct(centerId: string, productId: string, payme
 
 // --- ANALYTICS ---
 
-export async function getCenterAnalytics(centerId: string) {
-    const supabase = await createClient();
+export async function getCenterAnalytics(id: string, isCenterId: boolean = false) {
+    const supabase = createAdminClient();
 
-    const { data: members } = await supabase
-        .from('members')
-        .select('created_at, status, plan, membership_start_date')
-        .eq('center_id', centerId);
+    let membersQuery = supabase.from('members').select('created_at, status, plan, membership_start_date');
+    let salesQuery = supabase.from('sales').select('total_amount, created_at');
 
-    const { data: sales } = await supabase
-        .from('sales')
-        .select('total_amount, created_at')
-        .eq('center_id', centerId);
+    if (isCenterId) {
+        membersQuery = membersQuery.eq('center_id', id);
+        salesQuery = salesQuery.eq('center_id', id);
+    } else {
+        // Simplified query
+        membersQuery = membersQuery.eq('center_id', id);
+        salesQuery = salesQuery.eq('organization_id', id);
+    }
+
+    const [{ data: members }, { data: sales }] = await Promise.all([
+        membersQuery,
+        salesQuery
+    ]);
 
     const analytics = [];
     const now = new Date();
@@ -990,15 +990,32 @@ export async function getCenterAnalytics(centerId: string) {
     return analytics;
 }
 
-export async function getCenterActivity(centerId: string) {
+export async function getCenterActivity(id: string, isCenterId: boolean = false) {
     const supabase = await createClient();
 
     // Fetch members, trial requests, sales, and classes
+    let membersQuery = supabase.from('members').select('full_name, created_at, plan').order('created_at', { ascending: false }).limit(5);
+    let trialsQuery = supabase.from('trial_requests').select('full_name, created_at, status').order('created_at', { ascending: false }).limit(5);
+    let salesQuery = supabase.from('sales').select('total_amount, created_at, member:member_id(full_name), product:product_id(name)').order('created_at', { ascending: false }).limit(5);
+    let classesQuery = supabase.from('classes').select('name, scheduled_time, created_at').order('created_at', { ascending: false }).limit(5);
+
+    if (isCenterId) {
+        membersQuery = membersQuery.eq('center_id', id);
+        trialsQuery = trialsQuery.eq('center_id', id);
+        salesQuery = salesQuery.eq('center_id', id);
+        classesQuery = classesQuery.eq('center_id', id);
+    } else {
+        membersQuery = membersQuery.eq('center_id', id);
+        trialsQuery = trialsQuery.eq('organization_id', id);
+        salesQuery = salesQuery.eq('organization_id', id);
+        classesQuery = classesQuery.eq('organization_id', id);
+    }
+
     const [{ data: members }, { data: trials }, { data: sales }, { data: classes }] = await Promise.all([
-        supabase.from('members').select('full_name, created_at, plan').eq('center_id', centerId).order('created_at', { ascending: false }).limit(5),
-        supabase.from('trial_requests').select('full_name, created_at, status').eq('organization_id', centerId).order('created_at', { ascending: false }).limit(5),
-        supabase.from('sales').select('total_amount, created_at, member:member_id(full_name), product:product_id(name)').eq('center_id', centerId).order('created_at', { ascending: false }).limit(5),
-        supabase.from('classes').select('name, scheduled_time, created_at').eq('organization_id', centerId).order('created_at', { ascending: false }).limit(5)
+        membersQuery,
+        trialsQuery,
+        salesQuery,
+        classesQuery
     ]);
 
     const activity = [
@@ -1013,19 +1030,33 @@ export async function getCenterActivity(centerId: string) {
 
 // --- POSTS, LIKES & COMMENTS ---
 
-export async function getCenterPosts(centerId: string) {
+export async function getCenterPosts(id: string, allowFuture: boolean = false, isCenterId: boolean = false) {
+    unstable_noStore();
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('center_posts')
         .select(`
             *,
             author:author_id (full_name, avatar_url),
             organization:organization_id (name, logo_url),
             likes:center_post_likes(user_id)
-        `)
-        .eq('organization_id', centerId)
+        `);
+
+    if (isCenterId) {
+        query = query.eq('center_id', id);
+    } else {
+        query = query.eq('organization_id', id);
+    }
+
+    const now = new Date().toISOString();
+
+    if (!allowFuture) {
+        query = query.or(`scheduled_for.lte."${now}",scheduled_for.is.null`);
+    }
+
+    const { data, error } = await query
         .order('scheduled_for', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
 
@@ -2060,8 +2091,11 @@ export async function getPendingClassReviews() {
     if (!enrollments || enrollments.length === 0) return [];
 
     // 2. Check for existing results
-    // @ts-ignore
-    const classIds = enrollments.map((e: any) => e.class.id);
+    const classIds = enrollments.map((e: any) => {
+        const c = Array.isArray(e.class) ? e.class[0] : e.class;
+        return c?.id;
+    }).filter(Boolean);
+
     const { data: results } = await supabase
         .from('class_results')
         .select('class_id')
@@ -2072,16 +2106,22 @@ export async function getPendingClassReviews() {
 
     // 3. Filter pending
     // Sort by most recent finished class first
-    // @ts-ignore
     const pendingEnrollments = enrollments
-        .filter(e => !completedClassIds.has(e.class.id))
-        .sort((a, b) => new Date(b.class.scheduled_time).getTime() - new Date(a.class.scheduled_time).getTime());
+        .filter((e: any) => {
+            const c = Array.isArray(e.class) ? e.class[0] : e.class;
+            return c && !completedClassIds.has(c.id);
+        })
+        .sort((a: any, b: any) => {
+            const ca = Array.isArray(a.class) ? a.class[0] : a.class;
+            const cb = Array.isArray(b.class) ? b.class[0] : b.class;
+            return new Date(cb.scheduled_time).getTime() - new Date(ca.scheduled_time).getTime();
+        });
 
     if (pendingEnrollments.length === 0) return [];
 
     // 4. Fetch WODs for these classes
     const enrichedClasses = await Promise.all(pendingEnrollments.map(async (e: any) => {
-        const c = e.class;
+        const c = Array.isArray(e.class) ? e.class[0] : e.class;
         const dateStr = new Date(c.scheduled_time).toISOString().split('T')[0];
 
         // Fetch WOD

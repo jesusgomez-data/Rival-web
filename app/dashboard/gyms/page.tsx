@@ -29,23 +29,23 @@ export default function CenterListPage() {
             price: '0€',
             description: 'Para centros que empiezan su legado.',
             icon: <Zap className="w-6 h-6 text-yellow-500" />,
-            features: ['Perfil público básico', 'Aparecer en búsquedas', 'Gestión de miembros básica']
+            features: ['Perfil público', 'Hasta 10 clases/semana', 'Hasta 50 miembros', 'Chat básico', 'Check-in manual']
+        },
+        {
+            id: 'starter',
+            name: 'Rival Starter',
+            price: '49.99€',
+            description: 'Lanzamiento: Primeros 50 centros.',
+            icon: <Rocket className="w-6 h-6 text-brand-red" />,
+            features: ['Todo en Free', 'Clases ilimitadas', 'Sistema de pruebas', 'Tienda básica', 'Google Calendar sync']
         },
         {
             id: 'pro',
             name: 'Rival Pro',
-            price: '9.99€',
-            description: 'Lanzamiento: Solo para los primeros 50 centros.',
-            icon: <Rocket className="w-6 h-6 text-brand-red" />,
-            features: ['Todo en Free', 'Programación de WODs', 'Analíticas de rendimiento', 'Gestión de tienda']
-        },
-        {
-            id: 'elite',
-            name: 'Rival Elite',
-            price: '29.99€',
-            description: 'Lanzamiento: Solo para los primeros 50 centros.',
+            price: '99.99€',
+            description: 'Lanzamiento: Primeros 50 centros.',
             icon: <Shield className="w-6 h-6 text-purple-500" />,
-            features: ['Todo en Pro', 'Reservas de Trial (Leads)', 'Marketing Destacado', 'Soporte 24/7 de Rival']
+            features: ['Todo en Starter', 'WOD Generator', 'Churn Prediction', 'Benchmarking Competitivo', 'Tienda avanzada']
         }
     ];
 
@@ -158,7 +158,7 @@ export default function CenterListPage() {
 
                 {showCreate && (
                     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-center justify-center p-4">
-                        <div className={`${theme === 'dark' ? 'bg-brand-gray border-white/10' : 'bg-white border-gray-200 shadow-2xl'} border rounded-[40px] max-w-2xl w-full relative overflow-hidden animate-in zoom-in-95 duration-300`}>
+                        <div className={`${theme === 'dark' ? 'bg-brand-gray border-white/10' : 'bg-white border-gray-200 shadow-2xl'} border rounded-[32px] max-w-lg w-full relative overflow-hidden animate-in zoom-in-95 duration-300`}>
                             {/* Progress Guard */}
                             <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/5">
                                 <div
@@ -174,12 +174,12 @@ export default function CenterListPage() {
                                 <ArrowLeft className="w-5 h-5" />
                             </button>
 
-                            <div className="p-10 pt-12">
+                            <div className="p-6 pt-8">
                                 <div className="mb-8">
                                     <div className="flex items-center gap-2 mb-2">
                                         <span className="bg-brand-red transition-colors text-white px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">Paso {step} de 3</span>
                                     </div>
-                                    <h2 className={`text-3xl font-black italic uppercase italic tracking-tight ${textHeading}`}>
+                                    <h2 className={`text-2xl font-black italic uppercase italic tracking-tight ${textHeading}`}>
                                         {step === 1 && "Identidad del Centro"}
                                         {step === 2 && "Ubicación e Impacto"}
                                         {step === 3 && "Selecciona tu Arsenal"}
@@ -197,20 +197,21 @@ export default function CenterListPage() {
                                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                                             <div>
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Nombre del Campo de Batalla</label>
-                                                <input name="name" required placeholder="e.g. Iron Forge CrossFit" className={`w-full rounded-2xl p-4 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                <input name="name" required placeholder="e.g. Iron Forge CrossFit" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
                                             </div>
                                             <div>
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Manifiesto / Bio</label>
-                                                <textarea name="bio" placeholder="Describe la esencia de tu centro..." className={`w-full rounded-2xl p-4 focus:border-brand-red outline-none border mt-1 h-24 resize-none ${bgInput}`} />
+                                                <textarea name="bio" placeholder="Describe la esencia de tu centro..." className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 h-20 resize-none ${bgInput}`} />
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Tipo de Centro</label>
-                                                    <select name="type" className={`w-full rounded-2xl p-4 focus:border-brand-red outline-none border mt-1 appearance-none ${bgInput}`}>
+                                                    <select name="type" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 appearance-none ${bgInput}`}>
                                                         <option value="crossfit">Box de CrossFit</option>
                                                         <option value="gym">Gimnasio Comercial</option>
                                                         <option value="studio">Estudio Personal</option>
                                                         <option value="club">Club Deportivo</option>
+                                                        <option value="other">Otro</option>
                                                     </select>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-2">
@@ -231,7 +232,7 @@ export default function CenterListPage() {
                                                 </div>
                                             </div>
                                             <div className="pt-4">
-                                                <button type="button" onClick={() => setStep(2)} className="w-full bg-brand-red text-white font-black uppercase tracking-[0.2em] py-5 rounded-2xl shadow-glow hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2">
+                                                <button type="button" onClick={() => setStep(2)} className="w-full bg-brand-red text-white font-black uppercase tracking-[0.2em] py-3 rounded-xl shadow-glow hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2">
                                                     Siguiente Paso <ArrowRight className="w-4 h-4" />
                                                 </button>
                                             </div>
@@ -243,20 +244,20 @@ export default function CenterListPage() {
                                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                                             <div>
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Dirección Física</label>
-                                                <input name="address" required placeholder="Calle Principal 123" className={`w-full rounded-2xl p-4 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                <input name="address" required placeholder="Calle Principal 123" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
                                             </div>
                                             <div className="grid grid-cols-3 gap-4">
                                                 <div className="col-span-1">
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>C. Postal</label>
-                                                    <input name="zip_code" required placeholder="28001" className={`w-full rounded-2xl p-4 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                    <input name="zip_code" required placeholder="28001" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
                                                 </div>
                                                 <div className="col-span-1">
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Ciudad</label>
-                                                    <input name="city" required placeholder="Madrid" className={`w-full rounded-2xl p-4 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                    <input name="city" required placeholder="Madrid" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
                                                 </div>
                                                 <div className="col-span-1">
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>País</label>
-                                                    <input name="country" required placeholder="España" className={`w-full rounded-2xl p-4 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                    <input name="country" required placeholder="España" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
@@ -264,14 +265,14 @@ export default function CenterListPage() {
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Teléfono / WhatsApp</label>
                                                     <div className="relative">
                                                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                                                        <input name="phone" placeholder="+34 600..." className={`w-full rounded-2xl pl-12 pr-4 py-4 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                        <input name="phone" placeholder="+34 600..." className={`w-full rounded-xl pl-12 pr-4 py-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
                                                     </div>
                                                 </div>
                                                 <div>
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Instagram</label>
                                                     <div className="relative">
                                                         <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                                                        <input name="instagram" placeholder="@centro_gym" className={`w-full rounded-2xl pl-12 pr-4 py-4 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                        <input name="instagram" placeholder="@centro_gym" className={`w-full rounded-xl pl-12 pr-4 py-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
                                                     </div>
                                                 </div>
                                             </div>
@@ -279,14 +280,32 @@ export default function CenterListPage() {
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Sitio Web</label>
                                                 <div className="relative">
                                                     <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                                                    <input name="website" placeholder="www.centro.com" className={`w-full rounded-2xl pl-12 pr-4 py-4 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                    <input name="website" placeholder="www.centro.com" className={`w-full rounded-xl pl-12 pr-4 py-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
                                                 </div>
                                             </div>
+
+                                            {/* Multi-Center Toggle */}
+                                            <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-100 bg-gray-50'} flex items-center justify-between`}>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+                                                        <Building2 className="w-5 h-5" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-black uppercase italic tracking-tighter">Empresa Multi-sede</p>
+                                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-none">Gestiona múltiples ubicaciones</p>
+                                                    </div>
+                                                </div>
+                                                <label className="relative inline-flex items-center cursor-pointer">
+                                                    <input type="checkbox" name="is_multi_center" value="true" className="sr-only peer" />
+                                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                                                </label>
+                                            </div>
+
                                             <div className="pt-4 flex gap-4">
-                                                <button type="button" onClick={() => setStep(1)} className={`flex-1 font-black uppercase tracking-widest py-5 rounded-2xl border transition-all ${theme === 'dark' ? 'border-white/10 hover:bg-white/5' : 'border-gray-200 hover:bg-gray-50'}`}>
+                                                <button type="button" onClick={() => setStep(1)} className={`flex-1 font-black uppercase tracking-widest py-3 rounded-xl border transition-all ${theme === 'dark' ? 'border-white/10 hover:bg-white/5' : 'border-gray-200 hover:bg-gray-50'}`}>
                                                     Atrás
                                                 </button>
-                                                <button type="button" onClick={() => setStep(3)} className="flex-[2] bg-brand-red text-white font-black uppercase tracking-[0.2em] py-5 rounded-2xl shadow-glow hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2">
+                                                <button type="button" onClick={() => setStep(3)} className="flex-[2] bg-brand-red text-white font-black uppercase tracking-[0.2em] py-3 rounded-xl shadow-glow hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2">
                                                     Ver Planes <ArrowRight className="w-4 h-4" />
                                                 </button>
                                             </div>
@@ -328,13 +347,13 @@ export default function CenterListPage() {
                                             </div>
 
                                             <div className="pt-4 flex gap-4">
-                                                <button type="button" onClick={() => setStep(2)} className={`flex-1 font-black uppercase tracking-widest py-5 rounded-2xl border transition-all ${theme === 'dark' ? 'border-white/10 hover:bg-white/5' : 'border-gray-200 hover:bg-gray-50'}`}>
+                                                <button type="button" onClick={() => setStep(2)} className={`flex-1 font-black uppercase tracking-widest py-3 rounded-xl border transition-all ${theme === 'dark' ? 'border-white/10 hover:bg-white/5' : 'border-gray-200 hover:bg-gray-50'}`}>
                                                     Atrás
                                                 </button>
                                                 <button
                                                     disabled={isCreating}
                                                     type="submit"
-                                                    className="flex-[2] bg-white text-black font-black uppercase tracking-[0.3em] py-5 rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 group"
+                                                    className="flex-[2] bg-white text-black font-black uppercase tracking-[0.3em] py-3 rounded-xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2 group"
                                                 >
                                                     {isCreating ? 'Lanzando...' : 'Lanzar Centro'}
                                                     <Zap className="w-4 h-4 fill-current group-hover:animate-pulse" />

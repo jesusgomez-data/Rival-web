@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import ChatList from './ChatList'
 import ChatWindow from './ChatWindow'
 import NewChatModal from './NewChatModal'
-import { getConversations, getMessages, sendMessage, getOrCreateConversation, getFriendsToChat, deleteMessage, editMessage, uploadChatImage } from './actions'
+import { getConversations, getMessages, sendMessage, getOrCreateConversation, getFriendsToChat, deleteMessage, editMessage, uploadChatImage, toggleMessageLike } from './actions'
 import { Loader2 } from 'lucide-react'
 import { clsx } from 'clsx'
 
@@ -191,6 +191,18 @@ export default function MessagesPage() {
         }
     }
 
+    const handleToggleLike = async (messageId: string, currentStatus: boolean) => {
+        // Optimistic update
+        setMessages(prev => prev.map(m => m.id === messageId ? { ...m, is_liked: !currentStatus } : m))
+
+        const result = await toggleMessageLike(messageId, currentStatus)
+        if (result.error) {
+            // Revert on error
+            setMessages(prev => prev.map(m => m.id === messageId ? { ...m, is_liked: currentStatus } : m))
+            console.error("Error toggling like:", result.error)
+        }
+    }
+
     const filteredConversations = conversations.filter(conv =>
         conv.other_person?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         conv.other_person?.username?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -201,8 +213,11 @@ export default function MessagesPage() {
     }
 
     return (
-        <div className="h-[calc(100vh-120px)] bg-[#090909] flex text-white overflow-hidden rounded-[2.5rem] border border-white/5 shadow-2xl mx-auto max-w-[1600px] my-4">
-            <div className={`${isMobileListVisible ? 'w-full' : 'hidden'} md:flex md:w-[350px] lg:w-[400px] shrink-0 border-r border-white/5`}>
+        <div className="h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] bg-[#090909] flex text-white overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-white/5 shadow-2xl mx-auto max-w-[1600px] my-0 md:my-4 transition-all duration-500">
+            <div className={clsx(
+                "w-full md:w-[350px] lg:w-[420px] shrink-0 border-r border-white/5 flex flex-col bg-[#090909]",
+                !isMobileListVisible ? 'hidden md:flex' : 'flex'
+            )}>
                 <ChatList
                     conversations={filteredConversations}
                     activeId={activeConversationId}
@@ -213,8 +228,10 @@ export default function MessagesPage() {
             </div>
 
             <div className={clsx(
-                "flex-1 flex flex-col transition-all duration-300 bg-[#070707]",
-                !isMobileListVisible ? "fixed inset-0 z-[150] bg-[#070707] lg:relative lg:inset-auto" : "hidden md:flex"
+                "flex-1 flex flex-col transition-all duration-300 bg-[#070707] overflow-hidden",
+                !isMobileListVisible
+                    ? "fixed inset-0 z-[110] bg-[#070707] animate-in slide-in-from-right duration-300 lg:relative lg:inset-auto lg:z-auto lg:animate-none"
+                    : "hidden md:flex"
             )}>
                 <ChatWindow
                     messages={messages}
@@ -224,6 +241,7 @@ export default function MessagesPage() {
                     onUploadImage={uploadChatImage}
                     onDeleteMessage={deleteMessage}
                     onEditMessage={editMessage}
+                    onToggleLike={handleToggleLike}
                     isLoading={isLoadingMessages}
                     onBack={() => setIsMobileListVisible(true)}
                 />

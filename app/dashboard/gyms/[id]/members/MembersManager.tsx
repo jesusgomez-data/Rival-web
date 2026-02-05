@@ -2,15 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Plus, Search, User, CheckCircle, Trash2, Edit2, X, CreditCard, Phone, Mail, Landmark, Power, Cake, Calendar, Link as LinkIcon, Loader2, ChevronDown, Check, Send, Download, Upload, FileText, AlertCircle } from "lucide-react";
-import { addMember, addGuestMember, approveTrialRequest, removeMember, updateMemberDetails, toggleMemberStatus, searchAthletes, linkMemberToUser, bulkImportMembers } from "../../management-actions";
+import { Plus, Search, User, CheckCircle, Trash2, Edit2, X, CreditCard, Phone, Mail, Landmark, Power, Cake, Calendar, Link as LinkIcon, Loader2, ChevronDown, Check, Send, Download, Upload, FileText, AlertCircle, Building2 } from "lucide-react";
+import { addMember, addGuestMember, approveTrialRequest, removeMember, updateMemberDetails, toggleMemberStatus, searchAthletes, linkMemberToUser, bulkImportMembers, getCenterMembers } from "../../management-actions";
 
-export default function MembersManager({ centerId, initialMembers, plans = [] }: any) {
+export default function MembersManager({ centerId, initialMembers, plans = [], centers = [], orgDetails }: any) {
     const searchParams = useSearchParams();
     const router = useRouter();
     const memberIdParam = searchParams.get('memberId');
+    const centerIdParam = searchParams.get('centerId');
 
     const [members, setMembers] = useState(initialMembers);
+    const [selectedCenterId, setSelectedCenterId] = useState<string | null>(centerIdParam || (centers.length > 0 ? centers[0].id : null));
+    const [centerDropdownOpen, setCenterDropdownOpen] = useState(false);
+    const isMultiCenter = orgDetails?.is_multi_center;
     useEffect(() => {
         console.log("[MembersManager] initialMembers count:", initialMembers?.length || 0);
     }, [initialMembers]);
@@ -43,10 +47,21 @@ export default function MembersManager({ centerId, initialMembers, plans = [] }:
     const [notes, setNotes] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Sync state with props when server refreshes
+    // Sync state with props when server refreshes or center changes
     useEffect(() => {
-        setMembers(initialMembers);
-    }, [initialMembers]);
+        if (!isMultiCenter) {
+            setMembers(initialMembers);
+            return;
+        }
+
+        const fetchByCenter = async () => {
+            const idToFetch = selectedCenterId || centerId;
+            const isSede = !!selectedCenterId;
+            const data = await getCenterMembers(idToFetch, isSede);
+            setMembers(data);
+        };
+        fetchByCenter();
+    }, [initialMembers, selectedCenterId, centerId, isMultiCenter]);
 
     // Handle opening member from URL parameter
     useEffect(() => {
@@ -155,9 +170,17 @@ export default function MembersManager({ centerId, initialMembers, plans = [] }:
 
         let res;
         if (plan === 'guest') {
-            res = await addGuestMember(centerId, username, email, { ...extraData, notes });
+            res = await addGuestMember(centerId, username, email, {
+                ...extraData,
+                notes,
+                center_id: selectedCenterId
+            });
         } else {
-            res = await addMember(centerId, username, plan, { ...extraData, notes }, selectedProfile?.id);
+            res = await addMember(centerId, username, plan, {
+                ...extraData,
+                notes,
+                center_id: selectedCenterId
+            }, selectedProfile?.id);
         }
 
         setIsSaving(false);
@@ -405,9 +428,40 @@ export default function MembersManager({ centerId, initialMembers, plans = [] }:
             <div className="flex justify-between items-end mb-2 sm:mb-4">
                 <div className="flex flex-col">
                     <h2 className="text-xl sm:text-2xl italic font-black text-white uppercase tracking-tighter">Gestión de Atletas</h2>
-                    <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                        Registrados: {members.length} | Filtrados: {filteredMembers.length}
-                    </p>
+                    <div className="flex items-center gap-2">
+                        <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                            Registrados: {members.length} | Filtrados: {filteredMembers.length}
+                        </p>
+                        {isMultiCenter && (
+                            <div className="relative">
+                                <button
+                                    onClick={() => setCenterDropdownOpen(!centerDropdownOpen)}
+                                    className="flex items-center gap-1.5 text-[9px] text-purple-500 font-black uppercase tracking-widest bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20"
+                                >
+                                    <Building2 className="w-3 h-3" />
+                                    {centers.find((c: any) => c.id === selectedCenterId)?.name || 'Sede'}
+                                    <ChevronDown className={`w-2.5 h-2.5 transition-transform ${centerDropdownOpen ? 'rotate-180' : ''}`} />
+                                </button>
+                                {centerDropdownOpen && (
+                                    <div className="absolute top-full left-0 mt-1 w-48 bg-brand-gray border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+                                        {centers.map((c: any) => (
+                                            <button
+                                                key={c.id}
+                                                onClick={() => {
+                                                    setSelectedCenterId(c.id);
+                                                    setCenterDropdownOpen(false);
+                                                }}
+                                                className={`w-full text-left px-3 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5 transition-all flex items-center justify-between ${selectedCenterId === c.id ? 'text-purple-500 bg-purple-500/5' : 'text-gray-400'}`}
+                                            >
+                                                <span className="truncate">{c.name}</span>
+                                                {selectedCenterId === c.id && <Check className="w-3 h-3" />}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-brand-gray/20 p-4 rounded-2xl border border-white/5 backdrop-blur-sm">
@@ -417,7 +471,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [] }:
                         placeholder="Buscar por nombre o @usuario..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="bg-black/60 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white focus:border-brand-red outline-none w-full md:w-80 shadow-inner"
+                        className="bg-black/60 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:border-brand-red outline-none w-full md:w-80 shadow-inner"
                     />
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">
@@ -759,7 +813,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [] }:
                                                 value={profileSearchQuery}
                                                 onChange={(e) => handleProfileSearch(e.target.value)}
                                                 placeholder="Buscar por @usuario o nombre..."
-                                                className="w-full bg-black/60 border border-white/10 rounded-xl p-3 pl-10 text-white outline-none focus:border-brand-red text-xs shadow-inner"
+                                                className="w-full bg-black/60 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white outline-none focus:border-brand-red text-xs shadow-inner"
                                             />
                                             {isSearching && (
                                                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -939,7 +993,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [] }:
                                                     value={profileSearchQuery}
                                                     onChange={(e) => handleProfileSearch(e.target.value)}
                                                     placeholder="Buscar atleta por nombre o @usuario..."
-                                                    className="w-full bg-black/60 border border-white/10 rounded-xl p-2.5 sm:p-3 pl-12 text-white outline-none focus:border-brand-red text-xs sm:text-xs"
+                                                    className="w-full bg-black/60 border border-white/10 rounded-xl py-2.5 sm:py-3 pl-12 pr-4 text-white outline-none focus:border-brand-red text-xs sm:text-xs"
                                                 />
                                                 {isSearching && <Loader2 className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-brand-red animate-spin" />}
                                             </div>

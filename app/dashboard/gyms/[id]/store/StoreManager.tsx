@@ -1,16 +1,37 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Trash2, Tag, ShoppingBag, Edit2, CreditCard, Banknote, User, Search, Loader2, X, Check } from "lucide-react";
-import { createProduct, updateProduct, deleteProduct, searchAthletes, processStoreSale } from "../../management-actions"; // Added imports
+import { useState, useEffect } from "react";
+import { Plus, Trash2, Tag, ShoppingBag, Edit2, CreditCard, Banknote, User, Search, Loader2, X, Check, Building2, ChevronDown } from "lucide-react";
+import { createProduct, updateProduct, deleteProduct, searchAthletes, processStoreSale, getCenterProducts } from "../../management-actions"; // Added imports
 
 import clsx from "clsx"; // Added clsx
 
-export default function StoreManager({ centerId, initialProducts }: any) {
+export default function StoreManager({ centerId, initialProducts, centers = [], orgDetails }: any) {
+    const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const centerIdParam = searchParams?.get('centerId');
     const [products, setProducts] = useState(initialProducts);
+    const [selectedCenterId, setSelectedCenterId] = useState<string | null>(centerIdParam || (centers.length > 0 ? centers[0].id : null));
+    const [centerDropdownOpen, setCenterDropdownOpen] = useState(false);
+    const isMultiCenter = orgDetails?.is_multi_center;
     const [showModal, setShowModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState<any>(null); // For edit mode
     const [isSaving, setIsSaving] = useState(false);
+
+    // Sync state
+    useEffect(() => {
+        if (!isMultiCenter) {
+            setProducts(initialProducts);
+            return;
+        }
+
+        const fetchByCenter = async () => {
+            const idToFetch = selectedCenterId || centerId;
+            const isSede = !!selectedCenterId;
+            const data = await getCenterProducts(idToFetch, isSede);
+            setProducts(data);
+        };
+        fetchByCenter();
+    }, [initialProducts, selectedCenterId, centerId, isMultiCenter]);
 
     // Sales Modal State
     const [showSalesModal, setShowSalesModal] = useState(false);
@@ -48,6 +69,12 @@ export default function StoreManager({ centerId, initialProducts }: any) {
         const formData = new FormData(e.target as HTMLFormElement); // Reads all form fields (name, price, stock, category, description, image)
 
         let res;
+        const finalCenterId = selectedCenterId || centerId;
+
+        if (selectedCenterId) {
+            formData.append('center_id', selectedCenterId);
+        }
+
         if (editingProduct) {
             res = await updateProduct(centerId, editingProduct.id, formData);
         } else {
@@ -128,9 +155,44 @@ export default function StoreManager({ centerId, initialProducts }: any) {
     return (
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-3 text-gray-400 text-sm">
-                    <ShoppingBag className="w-5 h-5 shrink-0" />
-                    <span>Manage your merchandise, supplements, and gear.</span>
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-3 text-gray-400 text-sm">
+                        <ShoppingBag className="w-5 h-5 shrink-0" />
+                        <span>Manage your merchandise, supplements, and gear.</span>
+                    </div>
+                    {isMultiCenter && (
+                        <div className="relative mt-2">
+                            <button
+                                onClick={() => setCenterDropdownOpen(!centerDropdownOpen)}
+                                className="flex items-center gap-2 bg-purple-500/10 text-purple-500 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border border-purple-500/20 hover:bg-purple-500/20 transition-all"
+                            >
+                                <Building2 className="w-4 h-4" />
+                                {centers.find((c: any) => c.id === selectedCenterId)?.name || 'Seleccionar Sede'}
+                                <ChevronDown className={`w-3 h-3 transition-transform ${centerDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {centerDropdownOpen && (
+                                <div className="absolute top-full left-0 mt-2 w-56 bg-brand-gray border border-white/10 rounded-xl shadow-2xl z-40 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                                    <div className="p-2 border-b border-white/5 bg-purple-500/5">
+                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-purple-500/60 ml-2 mb-1">Cambiar Ubicación</p>
+                                    </div>
+                                    {centers.map((c: any) => (
+                                        <button
+                                            key={c.id}
+                                            onClick={() => {
+                                                setSelectedCenterId(c.id);
+                                                setCenterDropdownOpen(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-white/5 flex items-center justify-between ${selectedCenterId === c.id ? 'text-purple-500 bg-purple-500/5' : 'text-muted-foreground'}`}
+                                        >
+                                            <span className="truncate">{c.name}</span>
+                                            {selectedCenterId === c.id && <Check className="w-3 h-3" />}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
                 <button
                     onClick={handleOpenCreate}

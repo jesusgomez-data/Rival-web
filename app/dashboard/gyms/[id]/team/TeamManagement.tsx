@@ -297,7 +297,7 @@ export default function TeamManagement({ centerId, initialTeam }: { centerId: st
                                         value={profileSearchQuery}
                                         onChange={(e) => handleProfileSearch(e.target.value)}
                                         placeholder="Buscar coach por @usuario..."
-                                        className="w-full bg-black/60 border border-white/10 rounded-xl p-3 pl-10 text-white outline-none focus:border-brand-red text-xs"
+                                        className="w-full bg-black/60 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white outline-none focus:border-brand-red text-xs"
                                     />
                                     {isSearching && <Loader2 className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-brand-red animate-spin" />}
                                 </div>
@@ -363,7 +363,7 @@ export default function TeamManagement({ centerId, initialTeam }: { centerId: st
                                             value={inviteUsername}
                                             onChange={e => setInviteUsername(e.target.value)}
                                             placeholder="Nombre del Coach..."
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-white focus:border-brand-red outline-none text-sm"
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white focus:border-brand-red outline-none text-sm"
                                         />
                                     </div>
                                 </div>
@@ -376,7 +376,7 @@ export default function TeamManagement({ centerId, initialTeam }: { centerId: st
                                             value={inviteEmail}
                                             onChange={e => setInviteEmail(e.target.value)}
                                             placeholder="correo@ejemplo.com (Enviará link de registro)"
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-white focus:border-brand-red outline-none text-sm"
+                                            className="w-full bg-black/40 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white focus:border-brand-red outline-none text-sm"
                                         />
                                     </div>
                                 </div>

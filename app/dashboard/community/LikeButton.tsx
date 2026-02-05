@@ -21,7 +21,7 @@ export default function LikeButton({ postId, initialLikes, hasLikedInitial }: Li
         setIsPending(true);
 
         // Optimistic UI update
-        const newLikes = hasLiked ? likes - 1 : likes + 1;
+        const newLikes = hasLiked ? Math.max(0, likes - 1) : likes + 1;
         const newHasLiked = !hasLiked;
 
         setLikes(newLikes);

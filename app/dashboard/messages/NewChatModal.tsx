@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { X, Search, Trophy, Zap, UserPlus, Target } from 'lucide-react'
 import { clsx } from 'clsx'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useLanguage } from '@/app/LanguageContext'
 
 interface NewChatModalProps {
     friends: any[]
@@ -13,6 +14,7 @@ interface NewChatModalProps {
 }
 
 export default function NewChatModal({ friends, onClose, onSelect }: NewChatModalProps) {
+    const { t } = useLanguage()
     const [search, setSearch] = React.useState('')
 
     const filteredFriends = friends.filter(f =>
@@ -44,9 +46,9 @@ export default function NewChatModal({ friends, onClose, onSelect }: NewChatModa
                     <div>
                         <div className="flex items-center gap-3 mb-1">
                             <UserPlus className="w-5 h-5 text-brand-red" />
-                            <h3 className="text-2xl font-accent font-bold italic text-white uppercase tracking-tighter">RECLUTAR RIVAL</h3>
+                            <h3 className="text-2xl font-accent font-bold italic text-white uppercase tracking-tighter">{t.chat.recruitRival}</h3>
                         </div>
-                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em]">Inicia una nueva línea de comunicación</p>
+                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em]">{t.chat.recruitSubtitle}</p>
                     </div>
                     <button
                         onClick={onClose}
@@ -64,10 +66,10 @@ export default function NewChatModal({ friends, onClose, onSelect }: NewChatModa
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600 group-focus-within:text-brand-red transition-all" />
                             <input
                                 type="text"
-                                placeholder="Buscar alias o nombre real..."
+                                placeholder={t.chat.searchRival}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="w-full bg-transparent py-4 pl-12 pr-4 text-sm text-white placeholder:text-gray-600 focus:outline-none"
+                                className="w-full bg-transparent py-4 pl-14 pr-4 text-sm text-white placeholder:text-gray-600 focus:outline-none"
                             />
                         </div>
                     </div>
@@ -85,8 +87,8 @@ export default function NewChatModal({ friends, onClose, onSelect }: NewChatModa
                                 <div className="w-20 h-20 rounded-[2rem] bg-white/[0.02] flex items-center justify-center mx-auto mb-6 border border-white/[0.05]">
                                     <Zap className="w-8 h-8 text-gray-800" />
                                 </div>
-                                <h4 className="text-gray-500 text-lg font-accent italic uppercase tracking-tighter mb-1">Sin Firmas en el Radar</h4>
-                                <p className="text-gray-700 text-[10px] font-black italic uppercase tracking-[0.2em]">Sigue a leyendas para empezar la disputa</p>
+                                <h4 className="text-gray-500 text-lg font-accent italic uppercase tracking-tighter mb-1">{t.chat.noFriends}</h4>
+                                <p className="text-gray-700 text-[10px] font-black italic uppercase tracking-[0.2em]">{t.chat.noFriendsSubtitle}</p>
                             </motion.div>
                         ) : (
                             filteredFriends.map((friend, idx) => (
@@ -99,7 +101,7 @@ export default function NewChatModal({ friends, onClose, onSelect }: NewChatModa
                                     className="w-full flex items-center gap-5 p-4 rounded-[1.8rem] transition-all group relative overflow-hidden hover:bg-white/[0.03] border border-transparent hover:border-white/[0.05]"
                                 >
                                     <div className="relative shrink-0">
-                                        <div className="w-14 h-14 rounded-[1.25rem] overflow-hidden border-2 border-white/10 group-hover:border-brand-red/50 group-hover:scale-105 transition-all duration-300 shadow-xl">
+                                        <div className="relative w-14 h-14 rounded-[1.25rem] overflow-hidden border-2 border-white/10 group-hover:border-brand-red/50 group-hover:scale-105 transition-all duration-300 shadow-xl">
                                             <Image
                                                 src={friend.avatar_url || '/placeholder-avatar.jpg'}
                                                 alt={friend.full_name}
@@ -129,7 +131,7 @@ export default function NewChatModal({ friends, onClose, onSelect }: NewChatModa
                 {/* Secure Footer */}
                 <footer className="p-8 bg-black/40 border-t border-white/[0.05] flex items-center justify-center gap-3">
                     <Trophy className="w-4 h-4 text-brand-red/50" />
-                    <p className="text-[9px] text-gray-700 font-black uppercase tracking-[0.3em]">Solo puedes chatear con atletas que sigues</p>
+                    <p className="text-[9px] text-gray-700 font-black uppercase tracking-[0.3em]">{t.chat.onlyFollowed}</p>
                 </footer>
             </motion.div>
         </div>

@@ -7,6 +7,7 @@ import { es } from 'date-fns/locale'
 import { Search, MessageSquarePlus, Zap, Trophy, ChevronRight, User } from 'lucide-react'
 import { clsx } from 'clsx'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useLanguage } from '@/app/LanguageContext'
 
 interface ChatListProps {
     conversations: any[]
@@ -17,6 +18,8 @@ interface ChatListProps {
 }
 
 export default function ChatList({ conversations, activeId, onSearch, onSelect, onNewChat }: ChatListProps) {
+    const { t, language } = useLanguage()
+
     return (
         <div className="flex flex-col h-full bg-[#090909]">
             {/* Cabecera compacta */}
@@ -24,7 +27,7 @@ export default function ChatList({ conversations, activeId, onSearch, onSelect, 
                 <div className="flex items-center justify-between mb-6">
                     <h2 className="text-xl font-accent font-bold italic text-white uppercase tracking-tighter flex items-center gap-2">
                         <div className="w-1 h-6 bg-brand-red rounded-full" />
-                        MENSAJES
+                        {t.chat.title}
                     </h2>
                     <button
                         onClick={onNewChat}
@@ -38,7 +41,7 @@ export default function ChatList({ conversations, activeId, onSearch, onSelect, 
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
                     <input
                         type="text"
-                        placeholder="Buscar..."
+                        placeholder={t.chat.searchPlaceholder}
                         onChange={(e) => onSearch(e.target.value)}
                         className="w-full bg-white/5 border border-white/5 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-brand-red/40 transition-all shadow-inner"
                     />
@@ -51,7 +54,7 @@ export default function ChatList({ conversations, activeId, onSearch, onSelect, 
                     {conversations.length === 0 ? (
                         <div className="py-10 text-center px-4">
                             <Zap className="w-10 h-10 text-gray-800 mx-auto mb-4 opacity-20" />
-                            <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest">Sin chats activos</p>
+                            <p className="text-[10px] text-gray-600 font-black uppercase tracking-widest">{t.chat.noChats}</p>
                         </div>
                     ) : (
                         conversations.map((conv) => {
@@ -115,7 +118,7 @@ export default function ChatList({ conversations, activeId, onSearch, onSelect, 
                                             </span>
                                         </div>
                                         <p className="text-xs text-gray-500 truncate leading-tight font-medium">
-                                            {conv.last_message_text || 'Comienza el chat...'}
+                                            {conv.last_message_text || t.chat.startChat}
                                         </p>
                                     </div>
 

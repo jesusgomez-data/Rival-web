@@ -472,7 +472,9 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                     <h1 className={`text-3xl md:text-5xl font-black italic uppercase tracking-tighter ${textContrast}`}>
                                         {org.name}
                                     </h1>
-                                    <CheckCircle2 className="w-6 h-6 text-blue-500 fill-blue-500/10" />
+                                    {org.plan && org.plan !== 'free' && (
+                                        <CheckCircle2 className="w-6 h-6 text-blue-500 fill-blue-500/10" />
+                                    )}
                                 </div>
 
                                 {/* Bio */}

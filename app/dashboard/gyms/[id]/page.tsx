@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Users, DollarSign, Calendar, ShoppingBag, Settings, CreditCard, ChevronDown } from "lucide-react";
+import { Activity, Users, DollarSign, Calendar, ShoppingBag, Settings, CreditCard, ChevronDown, Building2, MapPin } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
@@ -11,6 +11,42 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import ActivityFeed from "./ActivityFeed";
 import TeamChat from "./TeamChat";
 import { checkStaffRole } from "../team-actions";
+import { getCenterDetails, getOrganizationCenters, createCenter, deleteCenter } from "../actions";
+import { Trash2 } from "lucide-react";
+import { useLanguage } from "@/app/LanguageContext";
+import { translations } from "@/utils/i18n";
+
+function DashboardCard({ title, value, icon: Icon, trend, subtext, onClick, description, className }: any) {
+    return (
+        <div
+            onClick={onClick}
+            className={clsx(
+                "bg-card border border-border p-6 rounded-2xl flex flex-col justify-between hover:border-purple-500/50 transition-all group cursor-pointer h-full",
+                className
+            )}
+        >
+            <div className="flex justify-between items-start mb-4">
+                <div className="bg-purple-500/10 p-3 rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-colors text-purple-500">
+                    <Icon className="w-6 h-6" />
+                </div>
+                {trend && (
+                    <span className={clsx(
+                        "text-xs font-bold px-2 py-1 rounded-full uppercase tracking-widest",
+                        trend === 'up' ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
+                    )}>
+                        {trend === 'up' ? '+12%' : '-5%'}
+                    </span>
+                )}
+            </div>
+            <div>
+                <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest mb-1">{title}</p>
+                {value && <h3 className="text-2xl font-black text-foreground italic">{value}</h3>}
+                {description && <h3 className="text-base font-bold text-foreground">{description}</h3>}
+                {subtext && <p className="text-xs text-muted-foreground mt-2 font-medium">{subtext}</p>}
+            </div>
+        </div>
+    );
+}
 
 export default function CenterDashboardHome() {
     const params = useParams();
@@ -19,17 +55,63 @@ export default function CenterDashboardHome() {
     const [loading, setLoading] = useState(true);
     const [isKpiExpanded, setIsKpiExpanded] = useState(false);
     const [userRole, setUserRole] = useState<string | null>(null);
+    const [isMounted, setIsMounted] = useState(false);
 
+    const [centerDetails, setCenterDetails] = useState<any>(null);
+    const [centers, setCenters] = useState<any[]>([]);
+    const [showAddCenter, setShowAddCenter] = useState(false);
+    const [isCreatingCenter, setIsCreatingCenter] = useState(false);
+    const { language } = useLanguage();
+    const t = translations[language];
     useEffect(() => {
+        setIsMounted(true);
         async function load() {
-            const data = await getCenterAnalytics(id);
+            const analyticalData = await getCenterAnalytics(id);
             const { role } = await checkStaffRole(id);
-            setAnalytics(data);
+            const details = await getCenterDetails(id);
+
+            setAnalytics(analyticalData);
             setUserRole(role);
+            setCenterDetails(details);
+
+            // Always fetch centers to check if there are sedes
+            const centerList = await getOrganizationCenters(id);
+            setCenters(centerList);
+
             setLoading(false);
         }
         load();
     }, [id]);
+
+    async function handleAddCenter(e: React.FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+        setIsCreatingCenter(true);
+        const formData = new FormData(e.currentTarget);
+        const res = await createCenter(id, formData);
+        setIsCreatingCenter(false);
+
+        if (res.error) {
+            alert(res.error);
+        } else {
+            setShowAddCenter(false);
+            const updatedCenters = await getOrganizationCenters(id);
+            setCenters(updatedCenters);
+        }
+    }
+
+    async function handleDeleteCenter(centerId: string, centerName: string) {
+        if (!window.confirm(`¿Estás seguro de que quieres eliminar la sede "${centerName}"? Esta acción borrará todos sus datos y no se puede deshacer.`)) {
+            return;
+        }
+
+        const res = await deleteCenter(id, centerId);
+        if (res.error) {
+            alert(res.error);
+        } else {
+            const updatedCenters = await getOrganizationCenters(id);
+            setCenters(updatedCenters);
+        }
+    }
 
     const currentMonth = analytics.length > 0 ? analytics[analytics.length - 1] : { members: 0, revenue: 0 };
     const prevMonth = analytics.length > 1 ? analytics[analytics.length - 2] : { members: 0, revenue: 0 };
@@ -131,13 +213,72 @@ export default function CenterDashboardHome() {
                                 description="Venta de productos y bonos"
                             />
                             <QuickAction
-                                href={`/center-owner/centers/${id}/edit`}
                                 icon={Settings}
                                 label="Configuración"
                                 description="Ajustes de perfil y pagos"
+                                onClick={() => window.location.href = `/center-owner/centers/${id}/edit`}
+                            />
+                            <QuickAction
+                                icon={Building2}
+                                label="Registrar Sede"
+                                description="Añadir nueva ubicación"
+                                onClick={() => setShowAddCenter(true)}
                             />
                         </div>
                     </section>
+
+                    {/* MULTI-CENTER SECTION - Only visible if there are sedes to list */}
+                    {canViewKPIs && centers.length > 0 && (
+                        <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-150">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-lg font-bold text-foreground font-heading uppercase tracking-widest text-xs opacity-50 flex items-center gap-2">
+                                    <Building2 className="w-4 h-4 text-purple-500" /> Sedes de la Empresa
+                                </h3>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {Array.isArray(centers) && centers.map((center) => (
+                                    <div
+                                        key={center.id}
+                                        className="bg-card border border-border p-4 rounded-2xl flex items-center justify-between group hover:border-purple-500/30 transition-all"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+                                                {center.logo_url ? (
+                                                    <img src={center.logo_url} alt="" className="w-full h-full object-cover rounded-xl" />
+                                                ) : (
+                                                    <MapPin className="w-5 h-5" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-black uppercase italic italic">{center.name}</h4>
+                                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-1">
+                                                    <MapPin className="w-3 h-3" /> {center.city}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                            <Link
+                                                href={`/dashboard/gyms/${id}/sedes/${center.id}`}
+                                                className="text-[10px] font-black uppercase tracking-widest p-2 opacity-0 group-hover:opacity-100 transition-opacity text-purple-500 hover:text-purple-400"
+                                            >
+                                                Gestionar
+                                            </Link>
+                                            {userRole === 'owner' && (
+                                                <button
+                                                    onClick={() => handleDeleteCenter(center.id, center.name)}
+                                                    className="p-2 opacity-0 group-hover:opacity-100 transition-opacity text-red-500/50 hover:text-red-500"
+                                                    title="Eliminar Sede"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </section>
+                    )}
 
                     {/* Analytics Chart (Owner Only) */}
                     {canViewKPIs && (
@@ -150,26 +291,28 @@ export default function CenterDashboardHome() {
                                     <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">Cargando Analíticas...</div>
                                 ) : (
                                     <div className="absolute inset-0">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <LineChart data={analytics} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                                <defs>
-                                                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor="#DC2626" stopOpacity={0.3} />
-                                                        <stop offset="95%" stopColor="#DC2626" stopOpacity={0} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
-                                                <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
-                                                <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `€${value}`} />
-                                                <Tooltip
-                                                    contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)', borderRadius: '12px' }}
-                                                    labelStyle={{ color: 'var(--foreground)', fontWeight: 'bold' }}
-                                                    itemStyle={{ color: 'var(--foreground)' }}
-                                                />
-                                                <Line type="monotone" dataKey="revenue" stroke="#DC2626" strokeWidth={3} dot={{ r: 4, fill: "#DC2626" }} activeDot={{ r: 6 }} />
-                                                <Line type="monotone" dataKey="members" stroke="#2563EB" strokeWidth={2} dot={false} />
-                                            </LineChart>
-                                        </ResponsiveContainer>
+                                        {isMounted && (
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <LineChart data={analytics} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                                    <defs>
+                                                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                                            <stop offset="5%" stopColor="#DC2626" stopOpacity={0.3} />
+                                                            <stop offset="95%" stopColor="#DC2626" stopOpacity={0} />
+                                                        </linearGradient>
+                                                    </defs>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.5} />
+                                                    <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                                                    <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `€${value}`} />
+                                                    <Tooltip
+                                                        contentStyle={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)', color: 'var(--foreground)', borderRadius: '12px' }}
+                                                        labelStyle={{ color: 'var(--foreground)', fontWeight: 'bold' }}
+                                                        itemStyle={{ color: 'var(--foreground)' }}
+                                                    />
+                                                    <Line type="monotone" dataKey="revenue" stroke="#DC2626" strokeWidth={3} dot={{ r: 4, fill: "#DC2626" }} activeDot={{ r: 6 }} />
+                                                    <Line type="monotone" dataKey="members" stroke="#2563EB" strokeWidth={2} dot={false} />
+                                                </LineChart>
+                                            </ResponsiveContainer>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -203,10 +346,49 @@ export default function CenterDashboardHome() {
                 </div>
             </div>
 
-            {/* Bottom Section (Coach View Only: Team Chat Full Width) */}
-            {!canViewKPIs && (
-                <div className="w-full animate-fade-in-up">
-                    <TeamChat centerId={id} className="h-[600px] w-full" />
+            {/* Modal para Añadir Sede */}
+            {showAddCenter && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                    <div className="bg-card border border-border rounded-[40px] max-w-lg w-full p-8 relative animate-in zoom-in-95 duration-300">
+                        <button onClick={() => setShowAddCenter(false)} className="absolute top-6 right-8 text-muted-foreground hover:text-white transition-colors">
+                            <ChevronDown className="w-6 h-6 rotate-180" />
+                        </button>
+
+                        <div className="mb-8">
+                            <h2 className="text-3xl font-black italic uppercase italic tracking-tight text-foreground">Nueva Sede</h2>
+                            <p className="text-muted-foreground text-sm">Añade una nueva ubicación a tu red de centros.</p>
+                        </div>
+
+                        <form onSubmit={handleAddCenter} className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Nombre de la Sede</label>
+                                <input name="name" required placeholder="e.g. Rival North" className="w-full bg-background border border-border rounded-xl p-4 outline-none focus:border-purple-500 transition-all" />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Ciudad</label>
+                                    <input name="city" required placeholder="Madrid" className="w-full bg-background border border-border rounded-xl p-4 outline-none focus:border-purple-500 transition-all" />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">País</label>
+                                    <input name="country" required placeholder="España" className="w-full bg-background border border-border rounded-xl p-4 outline-none focus:border-purple-500 transition-all" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Dirección</label>
+                                <input name="address" required placeholder="Calle Ejemplo 123" className="w-full bg-background border border-border rounded-xl p-4 outline-none focus:border-purple-500 transition-all" />
+                            </div>
+                            <div className="pt-4">
+                                <button
+                                    disabled={isCreatingCenter}
+                                    type="submit"
+                                    className="w-full bg-purple-500 text-white font-black uppercase tracking-[0.2em] py-5 rounded-2xl shadow-glow hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-2"
+                                >
+                                    {isCreatingCenter ? 'Creando...' : 'Añadir Sede'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             )}
         </div>
@@ -236,7 +418,7 @@ function StatCard({ title, value, subtext, icon: Icon, trend }: any) {
     )
 }
 
-function QuickAction({ href, icon: Icon, label, description, disabled }: any) {
+function QuickAction({ href, icon: Icon, label, description, disabled, onClick }: any) {
     if (disabled) {
         return (
             <div className="bg-card border border-border rounded-xl p-4 sm:p-5 flex flex-col items-center justify-center text-center gap-2 opacity-50 cursor-not-allowed">
@@ -245,11 +427,9 @@ function QuickAction({ href, icon: Icon, label, description, disabled }: any) {
             </div>
         )
     }
-    return (
-        <Link
-            href={href}
-            className="bg-card border border-border rounded-2xl p-4 sm:p-6 flex flex-col items-center justify-center text-center gap-2 hover:bg-muted/30 hover:border-brand-red/20 hover:-translate-y-1 transition-all group relative overflow-hidden shadow-sm"
-        >
+
+    const content = (
+        <>
             {/* Subtle background glow */}
             <div className="absolute -right-4 -top-4 w-16 h-16 bg-brand-red/5 blur-2xl group-hover:bg-brand-red/10 transition-colors" />
 
@@ -261,6 +441,25 @@ function QuickAction({ href, icon: Icon, label, description, disabled }: any) {
                 <span className="font-black text-foreground text-sm sm:text-base block mb-0.5">{label}</span>
                 {description && <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest leading-none block">{description}</span>}
             </div>
+        </>
+    );
+
+    if (onClick) {
+        return (
+            <button
+                onClick={onClick}
+                className="bg-card border border-border rounded-2xl p-4 sm:p-6 flex flex-col items-center justify-center text-center gap-2 hover:bg-muted/30 hover:border-brand-red/20 hover:-translate-y-1 transition-all group relative overflow-hidden shadow-sm"
+            >
+                {content}
+            </button>
+        )
+    }
+    return (
+        <Link
+            href={href}
+            className="bg-card border border-border rounded-2xl p-4 sm:p-6 flex flex-col items-center justify-center text-center gap-2 hover:bg-muted/30 hover:border-brand-red/20 hover:-translate-y-1 transition-all group relative overflow-hidden shadow-sm"
+        >
+            {content}
         </Link>
     )
 }

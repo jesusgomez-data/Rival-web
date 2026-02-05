@@ -277,6 +277,10 @@ export async function saveWorkout(workoutData: any) {
 
         if (workoutData.sportType === 'Running' && workoutData.metrics) {
             caption = `🏃‍♂️ Carrera completada: ${(workoutData.metrics.distance / 1000).toFixed(2)}km en ${Math.floor(workoutData.duration / 60)}min. Ritmo: ${workoutData.metrics.pace}/km.`;
+        } else if (workoutData.sportType === 'OCR') {
+            caption = `💪 ¡Carrera de Obstáculos completada! Superando límites en OCR. 🔥`;
+        } else if (workoutData.sportType === 'Otros') {
+            caption = `🔥 ¡Sesión completada! Manteniendo la disciplina en cada entrenamiento. 💪`;
         } else if (workoutData.sportType === 'CrossFit' && workoutData.metrics) {
             if (workoutData.metrics.type === 'FOR_TIME' && workoutData.metrics.time) {
                 caption = `🏋️‍♀️ WOD Finalizado en ${workoutData.metrics.time}. 🔥`;

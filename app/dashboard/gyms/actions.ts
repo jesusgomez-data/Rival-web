@@ -133,6 +133,8 @@ export async function createOrganization(formData: FormData) {
         }
     }
 
+    const isMultiCenter = formData.get('is_multi_center') === 'true';
+
     const { data, error } = await supabase
         .from('organizations')
         .insert({
@@ -151,7 +153,8 @@ export async function createOrganization(formData: FormData) {
             plan: plan || 'free',
             member_count: 1,
             logo_url: logoUrl,
-            cover_photo_url: coverUrl
+            cover_photo_url: coverUrl,
+            is_multi_center: isMultiCenter
         })
         .select()
         .single();
@@ -160,6 +163,112 @@ export async function createOrganization(formData: FormData) {
 
     revalidatePath('/dashboard/gyms');
     return { success: true, org: data };
+}
+
+export async function getOrganizationCenters(orgId: string) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('centers')
+        .select('*')
+        .eq('organization_id', orgId)
+        .order('name', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching centers:", error);
+        return [];
+    }
+    return data || [];
+}
+
+export async function getSedeDetails(sedeId: string) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('centers')
+        .select('*')
+        .eq('id', sedeId)
+        .single();
+
+    if (error) {
+        console.error("Error fetching sede details:", error);
+        return null;
+    }
+    return data;
+}
+
+export async function updateSedeDetails(sedeId: string, formData: FormData) {
+    const supabase = await createClient();
+    const name = formData.get('name') as string;
+    const city = formData.get('city') as string;
+    const country = formData.get('country') as string;
+    const address = formData.get('address') as string;
+
+    const { error } = await supabase
+        .from('centers')
+        .update({
+            name,
+            city,
+            country,
+            address
+        })
+        .eq('id', sedeId);
+
+    if (error) return { error: error.message };
+    return { success: true };
+}
+
+export async function createCenter(orgId: string, formData: FormData) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "Not authenticated" };
+
+    const name = formData.get('name') as string;
+    const city = formData.get('city') as string;
+    const country = formData.get('country') as string;
+    const address = formData.get('address') as string;
+    const zipCode = formData.get('zip_code') as string;
+    const phone = formData.get('phone') as string;
+    const type = formData.get('type') as string;
+    const logoFile = formData.get('logo') as File;
+
+    if (!name || !city || !country) return { error: "Faltan campos obligatorios" };
+
+    let logoUrl = null;
+    if (logoFile && logoFile.size > 0) {
+        const fileExt = logoFile.name.split('.').pop();
+        const fileName = `centers/${orgId}/${Date.now()}_logo.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+            .from('center-media')
+            .upload(fileName, logoFile);
+
+        if (!uploadError) {
+            const { data: { publicUrl } } = supabase.storage
+                .from('center-media')
+                .getPublicUrl(fileName);
+            logoUrl = publicUrl;
+        }
+    }
+
+    const { data, error } = await supabase
+        .from('centers')
+        .insert({
+            organization_id: orgId,
+            name,
+            city,
+            country,
+            address,
+            zip_code: zipCode,
+            phone,
+            center_type: type,
+            logo_url: logoUrl,
+            status: 'active'
+        })
+        .select()
+        .single();
+
+    if (error) return { error: error.message };
+
+    revalidatePath(`/dashboard/gyms/${orgId}`);
+    return { success: true, center: data };
 }
 
 export async function getCenterTeam(centerId: string) {
@@ -373,6 +482,24 @@ export async function searchOrganizations(query: string) {
         ...o,
         member_count: countMap[o.id] || 0
     }));
+}
+
+export async function deleteCenter(orgId: string, centerId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "No autenticado" };
+
+    // Delete the center
+    const { error } = await supabase
+        .from('centers')
+        .delete()
+        .eq('id', centerId)
+        .eq('organization_id', orgId);
+
+    if (error) return { error: error.message };
+
+    revalidatePath(`/dashboard/gyms/${orgId}`);
+    return { success: true };
 }
 
 export async function deleteOrganization(centerId: string) {

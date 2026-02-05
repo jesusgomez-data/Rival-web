@@ -1,5 +1,5 @@
 import { getCenterClasses } from "../../management-actions";
-import { getCenterTeam } from "../../actions";
+import { getCenterTeam, getCenterDetails, getOrganizationCenters } from "../../actions";
 import { checkStaffRole } from "../../team-actions";
 import ScheduleManager from "./ScheduleManager";
 import { Calendar } from "lucide-react";
@@ -8,10 +8,12 @@ export default async function SchedulePage({ params }: { params: { id: string } 
     const { id } = await params;
 
     // Fetch data parallelly
-    const [classes, coaches, { role }] = await Promise.all([
+    const [classes, coaches, { role }, details, centers] = await Promise.all([
         getCenterClasses(id),
         getCenterTeam(id),
-        checkStaffRole(id)
+        checkStaffRole(id),
+        getCenterDetails(id),
+        getOrganizationCenters(id)
     ]);
 
     return (
@@ -26,7 +28,14 @@ export default async function SchedulePage({ params }: { params: { id: string } 
                 </div>
             </div>
 
-            <ScheduleManager centerId={id} initialClasses={classes} coaches={coaches} userRole={role} />
+            <ScheduleManager
+                centerId={id}
+                initialClasses={classes}
+                coaches={coaches}
+                userRole={role}
+                centers={centers}
+                organizationDetails={details}
+            />
         </div>
     );
 }

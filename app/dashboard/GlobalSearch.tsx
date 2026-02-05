@@ -68,7 +68,7 @@ export default function GlobalSearch() {
                     onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => { if (results.length > 0) setIsOpen(true); }}
                     placeholder="Buscar atletas, gimnasios..."
-                    className="w-full h-10 pl-10 pr-4 bg-gray-100 dark:bg-white/5 border-transparent border focus:border-brand-red/50 rounded-xl text-sm outline-none transition-all placeholder:text-gray-500 text-gray-900 dark:text-white dark:focus:bg-black/50"
+                    className="w-full h-10 pl-11 pr-4 bg-gray-100 dark:bg-white/5 border-transparent border focus:border-brand-red/50 rounded-xl text-sm outline-none transition-all placeholder:text-gray-500 text-gray-900 dark:text-white dark:focus:bg-black/50"
                 />
                 {query && (
                     <button

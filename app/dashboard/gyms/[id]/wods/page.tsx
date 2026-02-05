@@ -3,10 +3,21 @@ import { checkStaffRole } from "../../team-actions";
 import WodManager from "./WodManager";
 import { Dumbbell } from "lucide-react";
 
-export default async function WodsPage({ params }: { params: { id: string } }) {
+export default async function WodsPage({
+    params,
+    searchParams
+}: {
+    params: Promise<{ id: string }>,
+    searchParams: Promise<{ centerId?: string }>
+}) {
     const { id } = await params;
+    const { centerId } = await searchParams;
+
+    const idToFetch = centerId || id;
+    const isSede = !!centerId;
+
     const [posts, center, { role }] = await Promise.all([
-        getCenterPosts(id),
+        getCenterPosts(idToFetch, true, isSede),
         getPublicCenter(id),
         checkStaffRole(id)
     ]);

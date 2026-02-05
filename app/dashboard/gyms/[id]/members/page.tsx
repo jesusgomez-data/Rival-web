@@ -1,12 +1,28 @@
 import { Suspense } from "react";
 import { getCenterMembers, getMembershipPlans } from "../../management-actions";
+import { getCenterDetails, getOrganizationCenters } from "../../actions";
 import MembersManager from "./MembersManager";
 import { Users, Loader2 } from "lucide-react";
 
-export default async function MembersPage({ params }: { params: { id: string } }) {
+export default async function MembersPage({
+    params,
+    searchParams
+}: {
+    params: Promise<{ id: string }>,
+    searchParams: Promise<{ centerId?: string }>
+}) {
     const { id } = await params;
-    const members = await getCenterMembers(id);
-    const plans = await getMembershipPlans(id);
+    const { centerId } = await searchParams;
+
+    const idToFetch = centerId || id;
+    const isSede = !!centerId;
+
+    const [members, plans, details, centers] = await Promise.all([
+        getCenterMembers(idToFetch, isSede),
+        getMembershipPlans(id),
+        getCenterDetails(id),
+        getOrganizationCenters(id)
+    ]);
 
     return (
         <div className="px-2 py-4 sm:p-8 space-y-6 sm:space-y-8 animate-fade-in">
@@ -23,7 +39,13 @@ export default async function MembersPage({ params }: { params: { id: string } }
                     <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Cargando base de datos...</p>
                 </div>
             }>
-                <MembersManager centerId={id} initialMembers={members} plans={plans} />
+                <MembersManager
+                    centerId={id}
+                    initialMembers={members}
+                    plans={plans}
+                    centers={centers}
+                    orgDetails={details}
+                />
             </Suspense>
         </div>
     );

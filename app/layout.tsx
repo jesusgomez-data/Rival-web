@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Outfit, Lexend } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./ThemeContext";
-import FloatingThemeToggle from "@/components/FloatingThemeToggle";
+import { LanguageProvider } from "./LanguageContext";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -62,10 +62,11 @@ export default function RootLayout({
         className={`${inter.variable} ${outfit.variable} ${lexend.variable} antialiased bg-background text-foreground transition-colors duration-300`}
         suppressHydrationWarning
       >
-        <ThemeProvider>
-          {children}
-          <FloatingThemeToggle />
-        </ThemeProvider>
+        <LanguageProvider>
+          <ThemeProvider>
+            {children}
+          </ThemeProvider>
+        </LanguageProvider>
       </body>
     </html>
   );

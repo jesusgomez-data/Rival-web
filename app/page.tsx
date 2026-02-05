@@ -5,9 +5,12 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Trophy, Activity, Users, Play, BarChart3, Dumbbell, Flame, Check, Star, TrendingUp, Zap, Layout, CalendarCheck, UploadCloud, Building2, ShoppingBag, Globe } from "lucide-react";
 import { useState } from "react";
+import { useLanguage } from "@/app/LanguageContext";
+import ThemeToggle from "@/components/ThemeToggle";
 
 
 export default function Home() {
+  const { language, setLanguage, t } = useLanguage();
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [viewMode, setViewMode] = useState<'choice' | 'athlete' | 'business'>('choice');
 
@@ -41,21 +44,19 @@ export default function Home() {
             <span className="font-heading font-black text-3xl tracking-[ -0.05em] italic group-hover:text-brand-red transition-all text-white drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]">RIVAL</span>
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-            <a href="#features" className="hover:text-brand-red transition-colors">Características</a>
-            <a href="#stats" className="hover:text-brand-red transition-colors">¿Por qué Rival?</a>
-            <a href="#pricing" className="hover:text-brand-red transition-colors">Precios</a>
-            <Link href="/for-centers" className="text-red-600 hover:text-red-400 transition-colors font-bold">Para Centros</Link>
+            <a href="#features" className="hover:text-brand-red transition-colors">{t.nav.features}</a>
+            <a href="#stats" className="hover:text-brand-red transition-colors">{t.nav.whyRival}</a>
+            <a href="#pricing" className="hover:text-brand-red transition-colors">{t.nav.pricing}</a>
+            <Link href="/for-centers" className="text-red-600 hover:text-red-400 transition-colors font-bold">{t.nav.forCenters}</Link>
           </div>
           <div className="flex items-center gap-4">
-            <div className="hidden sm:flex items-center bg-muted/50 rounded-full p-1 border border-border">
-              <button className="px-2 py-1 text-[10px] font-bold bg-background rounded-full text-foreground shadow-sm">ES</button>
-              <button className="px-2 py-1 text-[10px] font-bold text-muted-foreground hover:text-foreground transition-colors">EN</button>
-            </div>
+            <ThemeToggle className="hidden sm:flex" />
+
             <Link href="/login" className="hidden sm:block text-sm font-medium hover:text-brand-red transition-colors text-muted-foreground">
-              Iniciar sesión
+              {t.nav.login}
             </Link>
             <Link href="/signup" className="bg-brand-red hover:bg-brand-accent text-white px-5 py-2.5 rounded-full font-bold text-sm transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(220,38,38,0.4)]">
-              Únete
+              {t.nav.join}
             </Link>
           </div>
         </div>
@@ -80,7 +81,7 @@ export default function Home() {
               <Image src="/logo.svg" alt="Logo" width={60} height={60} className="w-16 h-16 drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]" />
               <span className="font-heading font-black text-5xl tracking-tighter italic text-white drop-shadow-[0_0_30px_rgba(239,68,68,0.5)]">RIVAL</span>
             </div>
-            <h2 className="text-xl font-bold text-white/80 uppercase tracking-[0.2em] mb-2 px-4 italic">Elige tu campo de batalla</h2>
+            <h2 className="text-xl font-bold text-white/80 uppercase tracking-[0.2em] mb-2 px-4 italic">{t.choice.title}</h2>
             <div className="h-0.5 w-12 bg-brand-red mx-auto mt-4" />
           </motion.div>
 
@@ -90,25 +91,25 @@ export default function Home() {
               className="w-full py-6 rounded-2xl bg-brand-red text-white font-black text-xl uppercase tracking-widest shadow-[0_0_40px_rgba(239,68,68,0.4)] active:scale-95 transition-all flex items-center justify-center gap-3 group"
             >
               <Dumbbell className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-              Soy Deportista
+              {t.choice.athlete}
             </button>
             <button
               onClick={() => setViewMode('business')}
               className="w-full py-6 rounded-2xl bg-white/5 border border-white/20 text-white font-black text-xl uppercase tracking-widest backdrop-blur-md active:scale-95 transition-all flex items-center justify-center gap-3 group"
             >
               <Building2 className="w-6 h-6 group-hover:scale-110 transition-transform" />
-              Soy un Centro
+              {t.choice.business}
             </button>
           </div>
 
           <div className="mt-8 animate-pulse">
             <Link href="/login" className="text-white/60 text-sm font-medium hover:text-white transition-colors">
-              ¿Ya eres miembro? <span className="text-brand-red font-bold underline underline-offset-4">Iniciar sesión</span>
+              {t.choice.alreadyMember} <span className="text-brand-red font-bold underline underline-offset-4">{t.choice.login}</span>
             </Link>
           </div>
 
           <p className="absolute bottom-12 text-white/40 text-xs font-bold uppercase tracking-widest">
-            Face Yourself. Conquer All.
+            {t.choice.footer}
           </p>
         </div>
       </div>
@@ -142,31 +143,31 @@ export default function Home() {
             >
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-xs font-bold mb-8 animate-pulse">
                 <Zap className="w-4 h-4 fill-brand-red" />
-                EL FUTURO DEL FITNESS 2026
+                {t.hero.future}
               </div>
               <h1 className="font-heading text-4xl sm:text-7xl lg:text-8xl font-black leading-[0.9] mb-8 tracking-tighter text-white break-words sm:break-normal">
-                ENFRÉNTATE <br />
+                {t.hero.title} <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-red via-brand-orange to-brand-neon-orange drop-shadow-[0_0_20px_rgba(239,68,68,0.4)]">
-                  A TI MISMO.
+                  {t.hero.subtitle}
                 </span>
               </h1>
               <p className="text-muted-foreground text-lg lg:text-xl mb-8 leading-relaxed max-w-lg">
-                La primera red social creada para la <span className="text-foreground font-bold">mentalidad del 1%</span>. Registra cada repetición, compite globalmente y <span className="text-brand-red font-bold">proximamente</span> accede a gimnasios de élite en todo el mundo.
+                {t.hero.description}
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
                   href="/signup"
-                  aria-label="Regístrate gratis en Rival"
+                  aria-label={t.hero.ctaStart}
                   className="bg-brand-red hover:bg-brand-accent text-white px-8 py-4 rounded-full font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-[0_0_30px_rgba(220,38,38,0.3)] hover:shadow-[0_0_50px_rgba(220,38,38,0.5)] transform hover:scale-105 active:scale-95"
                 >
-                  Empieza gratis <ArrowRight className="w-5 h-5" />
+                  {t.hero.ctaStart} <ArrowRight className="w-5 h-5" />
                 </Link>
                 <button
                   onClick={() => setShowVideoModal(true)}
-                  aria-label="Ver video de demostración"
+                  aria-label={t.hero.ctaDemo}
                   className="px-8 py-4 rounded-full font-bold text-lg border hover:bg-foreground/5 transition-all flex items-center justify-center gap-2 transform hover:scale-105 active:scale-95 border-border text-foreground"
                 >
-                  <Play className="w-5 h-5 fill-current" /> Ver demo
+                  <Play className="w-5 h-5 fill-current" /> {t.hero.ctaDemo}
                 </button>
               </div>
 
@@ -455,6 +456,46 @@ export default function Home() {
                 Registra tu centro gratis
                 <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
               </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Sección de Precios para Centros */}
+        <section className="py-32 border-t border-border bg-background">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="text-center mb-12 sm:mb-16">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold mb-4 sm:mb-6 text-foreground">Precios para <span className="text-brand-red">Centros</span></h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg px-4 sm:px-0">Escala tu negocio con planes flexibles. Sin permanencia.</p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              <PricingCard
+                name="FREE"
+                price="€0"
+                description="Ideal para empezar"
+                features={["Perfil público", "Hasta 10 clases/semana", "Check-in manual", "Hasta 50 miembros", "Chat básico"]}
+                cta="Empezar Gratis"
+                ctaHref="/center-signup"
+              />
+              <PricingCard
+                name="STARTER"
+                price="€49.99"
+                period="por mes"
+                description="Oferta Lanzamiento: Primeros 50 centros"
+                features={["Todo de Free", "Clases ilimitadas", "Sistema de pruebas", "Tienda básica", "Google Calendar sync"]}
+                cta="Prueba Gratis"
+                ctaHref="/center-signup"
+                featured
+              />
+              <PricingCard
+                name="PRO"
+                price="€99.99"
+                period="por mes"
+                description="Oferta Lanzamiento: Primeros 50 centros"
+                features={["Todo de Starter", "WOD Generator", "Churn Prediction", "Tienda avanzada", "Reportes automáticos"]}
+                cta="Hablar con Ventas"
+                ctaHref="/center-signup"
+              />
             </div>
           </div>
         </section>

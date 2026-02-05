@@ -1,16 +1,22 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Calendar as CalIcon, Clock, Users, ChevronLeft, ChevronRight, LayoutGrid, List as ListIcon, ChevronDown, Check } from "lucide-react";
+import { Plus, Trash2, Calendar as CalIcon, Clock, Users, ChevronLeft, ChevronRight, LayoutGrid, List as ListIcon, ChevronDown, Check, Building2 } from "lucide-react";
 import { createClass, deleteClass, getClassesRange } from "../../management-actions";
 
-export default function ScheduleManager({ centerId, initialClasses, coaches, userRole }: any) {
+export default function ScheduleManager({ centerId, initialClasses, coaches, userRole, centers = [], organizationDetails }: any) {
+    const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const centerIdParam = searchParams?.get('centerId');
+
     const [viewMode, setViewMode] = useState<'list' | 'week'>('week');
+    const [selectedCenterId, setSelectedCenterId] = useState<string | null>(centerIdParam || (centers.length > 0 ? centers[0].id : null));
     const [classes, setClasses] = useState(initialClasses);
     const [currentDate, setCurrentDate] = useState(new Date());
     const [showModal, setShowModal] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [coachDropdownOpen, setCoachDropdownOpen] = useState(false);
+    const [centerDropdownOpen, setCenterDropdownOpen] = useState(false);
 
+    const isMultiCenter = organizationDetails?.is_multi_center;
     const canEdit = userRole === 'owner' || userRole === 'head_coach';
 
     // Form State
@@ -41,21 +47,20 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
 
     // Fetch classes when date/mode changes
     useEffect(() => {
-        if (viewMode === 'week') {
-            const { start, end } = getWeekRange(currentDate);
-            console.log("Fetching classes for range:", start.toISOString(), "to", end.toISOString());
-            getClassesRange(centerId, start.toISOString(), end.toISOString())
-                .then(data => {
-                    console.log("Received classes:", data);
-                    console.log("Number of classes:", data?.length || 0);
-                    setClasses(data);
-                });
-        } else {
-            // For list view we might stick to initial or fetch "from today"
-            // For simplicity, we use the same week range or default logic.
-            // Let's reload the initial filtered list or just keep current classes.
-        }
-    }, [currentDate, viewMode, centerId]);
+        const fetchClasses = async () => {
+            if (viewMode === 'week') {
+                const { start, end } = getWeekRange(currentDate);
+                // If it's multi-center, we filter by selected center.
+                // Otherwise we use centerId (which is the org id)
+                const idToFetch = selectedCenterId || centerId;
+                const isSede = !!selectedCenterId;
+
+                const data = await getClassesRange(idToFetch, start.toISOString(), end.toISOString(), isSede);
+                setClasses(data);
+            }
+        };
+        fetchClasses();
+    }, [currentDate, viewMode, centerId, selectedCenterId]);
 
     const handlePrev = () => {
         const newDate = new Date(currentDate);
@@ -83,9 +88,11 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
         setIsSaving(true);
 
         const scheduled_time = new Date(`${formData.date}T${formData.time}:00`).toISOString();
-        console.log("Creating class with data:", { ...formData, scheduled_time });
-
-        const res = await createClass(centerId, { ...formData, scheduled_time });
+        const res = await createClass(centerId, {
+            ...formData,
+            scheduled_time,
+            center_id: selectedCenterId // Assign to the currently selected center
+        });
         console.log("Create class response:", res);
 
         setIsSaving(false);
@@ -156,6 +163,39 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {isMultiCenter && (
+                        <div className="relative">
+                            <button
+                                onClick={() => setCenterDropdownOpen(!centerDropdownOpen)}
+                                className="flex items-center gap-2 bg-purple-500/10 text-purple-500 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest border border-purple-500/20 hover:bg-purple-500/20 transition-all"
+                            >
+                                <Building2 className="w-4 h-4" />
+                                {centers.find((c: any) => c.id === selectedCenterId)?.name || 'Seleccionar Sede'}
+                                <ChevronDown className={`w-3 h-3 transition-transform ${centerDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {centerDropdownOpen && (
+                                <div className="absolute top-full right-0 mt-2 w-56 bg-card border border-border rounded-xl shadow-2xl z-40 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
+                                    <div className="p-2 border-b border-white/5 bg-purple-500/5">
+                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-purple-500/60 ml-2 mb-1">Cambiar Ubicación</p>
+                                    </div>
+                                    {centers.map((c: any) => (
+                                        <button
+                                            key={c.id}
+                                            onClick={() => {
+                                                setSelectedCenterId(c.id);
+                                                setCenterDropdownOpen(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-white/5 flex items-center justify-between ${selectedCenterId === c.id ? 'text-purple-500 bg-purple-500/5' : 'text-muted-foreground'}`}
+                                        >
+                                            <span className="truncate">{c.name}</span>
+                                            {selectedCenterId === c.id && <Check className="w-3 h-3" />}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                     {canEdit && (
                         <button
                             onClick={() => openCreateModal()}

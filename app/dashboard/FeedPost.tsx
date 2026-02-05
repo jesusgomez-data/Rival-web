@@ -599,7 +599,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     </div>
                                 ) : (
                                     <div className="relative w-full h-full">
-                                        <Image src={image} alt="Post content" fill className="object-contain" />
+                                        <Image src={image} alt="Post content" fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
                                     </div>
                                 )}
                             </div>
@@ -607,32 +607,41 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                     )}
 
                     {workoutData && (
-                        <div className="px-4 pb-6 mt-2">
-                            {(() => {
-                                const sets = workoutData.workout_sets || [];
-                                const centerName = workoutData.location_name || 'Gimnasio';
+                        (() => {
+                            const w = Array.isArray(workoutData) ? workoutData[0] : workoutData;
+                            if (!w) return null;
 
-                                // Group by exercise name
-                                const grouped: { [key: string]: any } = {};
-                                sets.forEach(s => {
-                                    if (!grouped[s.exercise_name] || s.weight_kg > grouped[s.exercise_name].maxWeight) {
-                                        grouped[s.exercise_name] = {
-                                            name: s.exercise_name,
-                                            maxWeight: s.weight_kg,
-                                            sets: (grouped[s.exercise_name]?.sets || 0) + 1,
-                                            reps: s.reps
-                                        };
-                                    } else {
-                                        grouped[s.exercise_name].sets++;
-                                    }
-                                });
+                            const sets = w.workout_sets || [];
+                            const centerName = w.location_name || 'Gimnasio';
 
-                                const exercises = Object.values(grouped);
-                                const summary = exercises.length > 1 ? `${exercises.length} EJERCICIOS` : (exercises[0]?.name || 'ENTRENAMIENTO');
-                                const displayCenterName = centerName && !['Centro Deportivo', 'Gimnasio', 'Gimnasio RIVAL HQ'].includes(centerName) ? ` @ ${centerName}` : '';
+                            // Group by exercise name
+                            const grouped: { [key: string]: any } = {};
+                            sets.forEach((s: any) => {
+                                const name = s.exercise_name || 'Ejercicio';
+                                if (!grouped[name]) {
+                                    grouped[name] = {
+                                        name: name,
+                                        maxWeight: 0,
+                                        totalReps: 0,
+                                        allSets: []
+                                    };
+                                }
+                                grouped[name].allSets.push(s);
+                                if ((s.weight_kg || 0) > (grouped[name].maxWeight || 0)) {
+                                    grouped[name].maxWeight = s.weight_kg;
+                                }
+                                grouped[name].totalReps += (s.reps || 0);
+                            });
 
-                                if (!isExpanded) {
-                                    return (
+                            const exercises = Object.values(grouped);
+                            if (exercises.length === 0 && !image) return null;
+
+                            const summary = exercises.length > 1 ? `${exercises.length} EJERCICIOS` : (exercises[0]?.name || 'ENTRENAMIENTO');
+                            const displayCenterName = centerName && !['Centro Deportivo', 'Gimnasio', 'Gimnasio RIVAL HQ'].includes(centerName) ? ` @ ${centerName}` : '';
+
+                            return (
+                                <div className="w-full">
+                                    {!isExpanded ? (
                                         <button
                                             onClick={() => setIsExpanded(true)}
                                             className={clsx(
@@ -663,93 +672,102 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                 <ChevronDown className="w-4 h-4" />
                                             </div>
                                         </button>
-                                    );
-                                }
+                                    ) : (
+                                        <div className={clsx(
+                                            "border rounded-[24px] md:rounded-[32px] p-4 md:p-6 relative overflow-hidden group/card shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300",
+                                            theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-md"
+                                        )}>
+                                            {/* Accent Background Glow */}
+                                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
 
-                                return (
-                                    <div className={clsx(
-                                        "border rounded-[24px] md:rounded-[32px] p-4 md:p-6 relative overflow-hidden group/card shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300",
-                                        theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-md"
-                                    )}>
-                                        {/* Accent Background Glow */}
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
+                                            <div className="relative z-10">
+                                                <div className="flex items-center justify-between mb-4 md:mb-6">
+                                                    <p className="text-[8px] md:text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] italic">ENTRENAMIENTO PERSONAL</p>
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
+                                                        className="text-[8px] md:text-[9px] text-brand-red font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
+                                                    >
+                                                        CONTRAER <ChevronUp className="w-3 h-3" />
+                                                    </button>
+                                                </div>
 
-                                        <div className="relative z-10">
-                                            <div className="flex items-center justify-between mb-4 md:mb-6">
-                                                <p className="text-[8px] md:text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] italic">ENTRENAMIENTO PERSONAL</p>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
-                                                    className="text-[8px] md:text-[9px] text-brand-red font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
-                                                >
-                                                    CONTRAER <ChevronUp className="w-3 h-3" />
-                                                </button>
-                                            </div>
+                                                <div className="relative z-10 space-y-4 md:space-y-6">
+                                                    {exercises.map((ex: any, idx) => {
+                                                        const isInnerExpanded = expandedInnerBlocks.includes(idx + 100); // Offset for personal workouts
 
-                                            <div className="relative z-10 space-y-4 md:space-y-6">
-                                                {exercises.map((ex: any, idx) => {
-                                                    const isInnerExpanded = expandedInnerBlocks.includes(idx + 100); // Offset for personal workouts
+                                                        return (
+                                                            <div key={idx} className={clsx(
+                                                                "border rounded-[20px] md:rounded-[24px] relative overflow-hidden group/card shadow-2xl transition-all",
+                                                                theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-md",
+                                                                isInnerExpanded ? "p-4 md:p-6" : "p-3 md:p-4 hover:bg-white/[0.02] cursor-pointer"
+                                                            )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx + 100)}>
+                                                                {/* Accent Background Glow */}
+                                                                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
 
-                                                    return (
-                                                        <div key={idx} className={clsx(
-                                                            "border rounded-[20px] md:rounded-[24px] relative overflow-hidden group/card shadow-2xl transition-all",
-                                                            theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-md",
-                                                            isInnerExpanded ? "p-4 md:p-6" : "p-3 md:p-4 hover:bg-white/[0.02] cursor-pointer"
-                                                        )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx + 100)}>
-                                                            {/* Accent Background Glow */}
-                                                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
-
-                                                            <div className="relative z-10 space-y-1.5 md:space-y-3">
-                                                                <div className="flex items-start justify-between gap-4">
-                                                                    <div className="min-w-0 flex-1">
-                                                                        <p className="text-[7px] md:text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] mb-0.5 md:mb-1 italic">EJERCICIO</p>
-                                                                        <h3 className={clsx(
-                                                                            "text-base md:text-2xl font-heading font-black italic uppercase tracking-tighter leading-tight pr-2",
-                                                                            theme === 'dark' ? "text-white" : "text-gray-900"
-                                                                        )}>
-                                                                            {ex.name}
-                                                                        </h3>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-3">
-                                                                        {ex.maxWeight > 0 && (
-                                                                            <div className="text-right shrink-0 pt-2 md:pt-3">
-                                                                                <span className="text-lg md:text-3xl font-heading font-black text-brand-red italic tracking-tighter leading-none">
-                                                                                    {ex.maxWeight}
-                                                                                </span>
-                                                                                <span className="text-[7px] md:text-xs font-black text-brand-red ml-1 uppercase">KG</span>
-                                                                            </div>
-                                                                        )}
-                                                                        <button
-                                                                            onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx + 100); }}
-                                                                            className="p-1 hover:bg-white/5 rounded-lg transition-colors mt-2"
-                                                                        >
-                                                                            {isInnerExpanded ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-
-                                                                {isInnerExpanded && (
-                                                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-2">
-                                                                        <div className="w-full h-1 md:h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                                                            <div className="bg-brand-red h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(220,38,38,0.5)]" style={{ width: '85%' }}></div>
+                                                                <div className="relative z-10 space-y-1.5 md:space-y-3">
+                                                                    <div className="flex items-start justify-between gap-4">
+                                                                        <div className="min-w-0 flex-1">
+                                                                            <p className="text-[7px] md:text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] mb-0.5 md:mb-1 italic">EJERCICIO</p>
+                                                                            <h3 className={clsx(
+                                                                                "text-base md:text-2xl font-heading font-black italic uppercase tracking-tighter leading-tight pr-2",
+                                                                                theme === 'dark' ? "text-white" : "text-gray-900"
+                                                                            )}>
+                                                                                {ex.name}
+                                                                            </h3>
                                                                         </div>
-
-                                                                        <p className="text-[8px] md:text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                                                                            {ex.reps > 0 ? (
-                                                                                ex.reps > 500 ? `${ex.reps} M/CAL REALIZADAS` : `${ex.reps} REPS REALIZADAS`
-                                                                            ) : "COMPLETADO"}
-                                                                        </p>
+                                                                        <div className="flex items-center gap-3">
+                                                                            {ex.maxWeight > 0 && (
+                                                                                <div className="text-right shrink-0 pt-2 md:pt-3">
+                                                                                    <span className="text-lg md:text-3xl font-heading font-black text-brand-red italic tracking-tighter leading-none">
+                                                                                        {ex.maxWeight}
+                                                                                    </span>
+                                                                                    <span className="text-[7px] md:text-xs font-black text-brand-red ml-1 uppercase">KG</span>
+                                                                                </div>
+                                                                            )}
+                                                                            <button
+                                                                                onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx + 100); }}
+                                                                                className="p-1 hover:bg-white/5 rounded-lg transition-colors mt-2"
+                                                                            >
+                                                                                {isInnerExpanded ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
-                                                                )}
+
+                                                                    {isInnerExpanded && (
+                                                                        <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-2">
+                                                                            <div className="w-full h-1 md:h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                                                                <div className="bg-brand-red h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(220,38,38,0.5)]" style={{ width: '85%' }}></div>
+                                                                            </div>
+
+                                                                            <div className="space-y-2 mt-4">
+                                                                                {ex.allSets.map((set: any, sIdx: number) => (
+                                                                                    <div key={sIdx} className="flex justify-between items-center bg-white/5 rounded-xl px-4 py-2.5 border border-white/5 group/set hover:border-brand-red/30 transition-colors">
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <span className="text-[9px] font-black text-brand-red uppercase tracking-widest bg-brand-red/10 px-2 py-0.5 rounded border border-brand-red/10 group-hover/set:bg-brand-red group-hover/set:text-white transition-colors">SET {sIdx + 1}</span>
+                                                                                        </div>
+                                                                                        <p className={clsx(
+                                                                                            "text-xs md:text-sm font-bold tracking-tight",
+                                                                                            theme === 'dark' ? "text-white" : "text-black"
+                                                                                        )}>
+                                                                                            {set.weight_kg > 0 && <span className="text-brand-red mr-1">{set.weight_kg}KG</span>}
+                                                                                            <span className="opacity-60">x</span> {set.reps > 0 ? (set.reps > 500 ? `${set.reps} M/CAL` : `${set.reps} REPS`) : "COMPLETADO"}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            })()}
-                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()
                     )}
                 </div>
             ) : null}
@@ -872,7 +890,7 @@ function LikeButtonWithText({ postId, initialLikes, hasLikedInitial, text }: { p
         if (isPending) return;
         setIsPending(true);
 
-        const newLikes = hasLiked ? likes - 1 : likes + 1;
+        const newLikes = hasLiked ? Math.max(0, likes - 1) : likes + 1;
         const newHasLiked = !hasLiked;
 
         setLikes(newLikes);

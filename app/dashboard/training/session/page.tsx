@@ -18,7 +18,7 @@ export default function SessionPage() {
     );
 }
 
-type SportMode = 'gym' | 'running' | 'crossfit' | 'hyrox' | 'calisthenics' | null;
+type SportMode = 'gym' | 'running' | 'crossfit' | 'hyrox' | 'calisthenics' | 'ocr' | 'other' | null;
 
 function SessionContent() {
     const router = useRouter();
@@ -214,8 +214,8 @@ function SessionContent() {
                 title: workoutTitle,
                 startTime: startTime.toISOString(),
                 duration: elapsedSeconds,
-                sportType: sportMode === 'gym' ? 'Fitness' : (sportMode === 'running' ? 'Running' : (sportMode === 'hyrox' ? 'Hyrox' : (sportMode === 'calisthenics' ? 'Calistenia' : 'CrossFit'))),
-                exercises: sportMode === 'gym' ? exercises : [], // Only send exercises for gym for now
+                sportType: sportMode === 'gym' ? 'Fitness' : (sportMode === 'running' ? 'Running' : (sportMode === 'hyrox' ? 'Hyrox' : (sportMode === 'calisthenics' ? 'Calistenia' : (sportMode === 'ocr' ? 'OCR' : (sportMode === 'other' ? 'Otros' : 'CrossFit'))))),
+                exercises: (sportMode === 'gym' || sportMode === 'crossfit' || sportMode === 'calisthenics' || sportMode === 'ocr' || sportMode === 'other') ? exercises : [],
                 metrics: {
                     distance: runDistance,
                     rounds: roundsCompleted,
@@ -258,13 +258,17 @@ function SessionContent() {
         sportMode === 'running' ? 'text-blue-500' :
             sportMode === 'hyrox' ? 'text-yellow-500' :
                 sportMode === 'crossfit' ? 'text-orange-500' :
-                    'text-brand-red';
+                    sportMode === 'ocr' ? 'text-emerald-500' :
+                        sportMode === 'other' ? 'text-gray-400' :
+                            'text-brand-red';
 
     const bgTheme =
         sportMode === 'running' ? 'bg-blue-500/10 border-blue-500/20' :
             sportMode === 'hyrox' ? 'bg-yellow-500/10 border-yellow-500/20' :
                 sportMode === 'crossfit' ? 'bg-orange-500/10 border-orange-500/20' :
-                    'bg-brand-red/10 border-brand-red/20';
+                    sportMode === 'ocr' ? 'bg-emerald-500/10 border-emerald-500/20' :
+                        sportMode === 'other' ? 'bg-white/5 border-white/10' :
+                            'bg-brand-red/10 border-brand-red/20';
 
     return (
         <div className={overlayClasses}>
@@ -274,7 +278,9 @@ function SessionContent() {
                 sportMode === 'running' ? "bg-blue-950/80" :
                     sportMode === 'hyrox' ? "bg-yellow-950/80" :
                         sportMode === 'crossfit' ? "bg-orange-950/80" :
-                            "bg-[#0a0a0a]/90"
+                            sportMode === 'ocr' ? "bg-emerald-950/80" :
+                                sportMode === 'other' ? "bg-gray-900/80" :
+                                    "bg-[#0a0a0a]/90"
             )}>
                 <div className="flex items-center gap-4">
                     <button onClick={() => setSportMode(null)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
@@ -306,7 +312,9 @@ function SessionContent() {
                         className={clsx("text-white p-3 rounded-xl shadow-glow hover:scale-105 active:scale-95 transition-all",
                             sportMode === 'running' ? 'bg-blue-600' :
                                 sportMode === 'hyrox' ? 'bg-yellow-600' :
-                                    sportMode === 'crossfit' ? 'bg-orange-600' : 'bg-brand-red'
+                                    sportMode === 'crossfit' ? 'bg-orange-600' :
+                                        sportMode === 'ocr' ? 'bg-emerald-600' :
+                                            sportMode === 'other' ? 'bg-gray-600' : 'bg-brand-red'
                         )}
                     >
                         {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
@@ -326,6 +334,8 @@ function SessionContent() {
                 {(sportMode === 'gym' || sportMode === 'calisthenics') && <GymView exercises={exercises} setExercises={setExercises} />}
                 {sportMode === 'running' && <RunningView distance={runDistance} setDistance={setRunDistance} time={elapsedSeconds} />}
                 {sportMode === 'crossfit' && <CrossFitView rounds={roundsCompleted} setRounds={setRoundsCompleted} type={wodType} setType={setWodType} exercises={exercises} setExercises={setExercises} />}
+                {sportMode === 'ocr' && <GymView exercises={exercises} setExercises={setExercises} />}
+                {sportMode === 'other' && <GymView exercises={exercises} setExercises={setExercises} />}
                 {sportMode === 'hyrox' && <HyroxView time={elapsedSeconds} />}
 
                 {/* Common Finish Options */}
@@ -411,7 +421,9 @@ function SessionContent() {
                             "w-full py-6 rounded-[32px] text-white font-heading font-black italic text-2xl uppercase tracking-tighter hover:scale-[1.02] active:scale-95 transition-all shadow-glow flex items-center justify-center gap-3",
                             sportMode === 'running' ? 'bg-blue-600' :
                                 sportMode === 'hyrox' ? 'bg-yellow-600' :
-                                    sportMode === 'crossfit' ? 'bg-orange-600' : 'bg-brand-red'
+                                    sportMode === 'crossfit' ? 'bg-orange-600' :
+                                        sportMode === 'ocr' ? 'bg-emerald-600' :
+                                            sportMode === 'other' ? 'bg-gray-600' : 'bg-brand-red'
                         )}
                     >
                         <Save className="w-6 h-6" /> FINALIZAR SESIÓN
@@ -583,6 +595,22 @@ function SportSelector({ onSelect }: { onSelect: (mode: SportMode) => void }) {
                     color="hover:border-purple-500/50"
                     image="https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?q=80&w=600&auto=format&fit=crop"
                 />
+                <SportCard
+                    title="OCR"
+                    icon={<div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-500 mb-4"><Activity className="w-6 h-6" /></div>}
+                    desc="Obstacle Course Racing. Superación de obstáculos y trail."
+                    onClick={() => handleSportClick('ocr')}
+                    color="hover:border-emerald-500/50"
+                    image="https://images.unsplash.com/photo-1594911772125-07fc7a2d8d9f?q=80&w=600&auto=format&fit=crop"
+                />
+                <SportCard
+                    title="Otros"
+                    icon={<div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-white mb-4"><Plus className="w-6 h-6" /></div>}
+                    desc="Cualquier otra actividad o deporte."
+                    onClick={() => handleSportClick('other')}
+                    color="hover:border-white/30"
+                    image="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=600&auto=format&fit=crop"
+                />
             </div>
         </div>
     )
@@ -611,7 +639,7 @@ function SportCard({ title, icon, desc, onClick, color, image }: any) {
 
 /* ================= SPECIFIC VIEWS ================= */
 
-function RunningView({ distance, setDistance, time }: { distance: number, setDistance: (d: number) => void, time: number }) {
+function RunningView({ distance, setDistance, time }: { distance: number, setDistance: React.Dispatch<React.SetStateAction<number>>, time: number }) {
     const pace = distance > 0 ? (time / 60) / (distance / 1000) : 0;
     const paceMin = Math.floor(pace);
     const paceSec = Math.floor((pace - paceMin) * 60);
@@ -624,11 +652,11 @@ function RunningView({ distance, setDistance, time }: { distance: number, setDis
         if (gpsActive && !isPausedGlobal) { // Requires passing isPaused state or managing it here
             interval = setInterval(() => {
                 // Simulate generic running pace (approx 5:00 min/km = ~3.3 m/s)
-                setDistance(d => d + 3.5);
+                setDistance((d: number) => d + 3.5);
             }, 1000);
         }
         return () => clearInterval(interval);
-    }, [gpsActive]);
+    }, [gpsActive, setDistance]);
 
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-10 fade-in duration-500">

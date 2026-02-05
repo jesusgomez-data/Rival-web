@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Plus, Minus, Trash2, FileText, Image as ImageIcon, X, Video, ChevronDown, Check, Edit2, Search } from "lucide-react";
+import { Plus, Minus, Trash2, FileText, Image as ImageIcon, X, Video, ChevronDown, Check, Edit2, Search, Clock } from "lucide-react";
 import { createWod, updateWod, deletePost } from "../../management-actions";
 import clsx from "clsx";
 import { useTheme } from "../../../../ThemeContext";
@@ -59,7 +59,18 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
     const [editingId, setEditingId] = useState<string | null>(null);
     const [warmup, setWarmup] = useState("");
     const [blocks, setBlocks] = useState<WodBlock[]>([]);
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const getLocalDate = () => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    };
+
+    const getLocalTime = () => {
+        const d = new Date();
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    };
+
+    const [date, setDate] = useState(getLocalDate());
+    const [time, setTime] = useState(getLocalTime());
     const [isPosting, setIsPosting] = useState(false);
     // Default to center if allowed, otherwise force false
     const [postAsCenter, setPostAsCenter] = useState(canPostAsCenter);
@@ -92,7 +103,8 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
         setEditingId(null);
         setWarmup("");
         setBlocks([]);
-        setDate(new Date().toISOString().split('T')[0]);
+        setDate(getLocalDate());
+        setTime(getLocalTime());
         setBlockFiles({});
         setExerciseFiles({});
         setGlobalFiles([]);
@@ -137,7 +149,14 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
             }
         }
 
-        setDate(post.scheduled_for ? new Date(post.scheduled_for).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+        const scheduledDate = post.scheduled_for ? new Date(post.scheduled_for) : new Date();
+
+        // Use local values to avoid UTC date shift
+        const localDate = `${scheduledDate.getFullYear()}-${String(scheduledDate.getMonth() + 1).padStart(2, '0')}-${String(scheduledDate.getDate()).padStart(2, '0')}`;
+        const localTime = `${String(scheduledDate.getHours()).padStart(2, '0')}:${String(scheduledDate.getMinutes()).padStart(2, '0')}`;
+
+        setDate(localDate);
+        setTime(localTime);
         setPostAsCenter(post.post_as_center || false);
 
         // Scroll to top
@@ -152,7 +171,9 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
         const formData = new FormData();
         formData.append("warmup", warmup);
         formData.append("blocks", JSON.stringify(blocks));
-        formData.append("scheduled_for", date);
+        // Combine date and time
+        const scheduledDateTime = new Date(`${date}T${time}`).toISOString();
+        formData.append("scheduled_for", scheduledDateTime);
         formData.append("postAsCenter", String(postAsCenter));
 
         // Append Block Files
@@ -728,15 +749,25 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                             <Plus className="w-4 h-4" /> Add Block
                         </button>
 
-                        {/* Schedule & Submit */}
                         <div className="border-t border-white/10 pt-4">
-                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Schedule For</label>
-                            <input
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white outline-none focus:border-brand-red text-sm mb-4"
-                            />
+                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Programar Publicación</label>
+                            <div className="grid grid-cols-2 gap-3 mb-4">
+                                <input
+                                    type="date"
+                                    value={date}
+                                    onChange={(e) => setDate(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white outline-none focus:border-brand-red text-sm"
+                                />
+                                <div className="relative">
+                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                    <input
+                                        type="time"
+                                        value={time}
+                                        onChange={(e) => setTime(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-white outline-none focus:border-brand-red text-sm"
+                                    />
+                                </div>
+                            </div>
 
                             <div className="flex items-center justify-between p-3 bg-black/40 border border-white/10 rounded-xl mb-6">
                                 <div className="flex items-center gap-3">
@@ -789,9 +820,10 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                         }
 
                         const isExpanded = expandedPosts[post.id];
+                        const isFuture = new Date(post.scheduled_for) > new Date();
 
                         return (
-                            <div key={post.id} className="bg-brand-gray border border-white/5 rounded-2xl overflow-hidden animate-fade-in text-left">
+                            <div key={post.id} className={`bg-brand-gray border rounded-2xl overflow-hidden animate-fade-in text-left transition-all ${isFuture ? 'border-brand-red/30 bg-brand-red/[0.02]' : 'border-white/5'}`}>
                                 {/* Header / Toggle Button */}
                                 <button
                                     onClick={() => togglePost(post.id)}
@@ -806,11 +838,20 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                             )}
                                         </div>
                                         <div>
-                                            <h4 className="text-white font-black italic uppercase text-sm sm:text-base tracking-tighter shrink-0">
-                                                ENTRENAMIENTO - {new Date(post.scheduled_for || post.created_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                            </h4>
-                                            <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase">
+                                            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                                <h4 className="text-white font-black italic uppercase text-sm sm:text-base tracking-tighter shrink-0">
+                                                    ENTRENAMIENTO - {new Date(post.scheduled_for || post.created_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                                </h4>
+                                                {isFuture && (
+                                                    <span className="flex items-center gap-1.5 bg-brand-red text-white text-[8px] font-black italic px-2.5 py-1 rounded-lg shadow-lg shadow-brand-red/20 border border-white/10">
+                                                        <Clock className="w-2.5 h-2.5" />
+                                                        PROGRAMADO
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase flex items-center gap-2">
                                                 {post.post_as_center ? (center?.name || 'Centro') : (post.author?.full_name || 'Coach')}
+                                                {isFuture && <span>• {new Date(post.scheduled_for).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}hs</span>}
                                             </p>
                                         </div>
                                     </div>

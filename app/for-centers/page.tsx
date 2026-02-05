@@ -57,7 +57,7 @@ const plans = [
       'Perfil público',
       'Hasta 10 clases/semana',
       'Check-in manual',
-      'Hasta 100 miembros',
+      'Hasta 50 miembros',
       'Chat básico',
     ],
     cta: 'Empezar Gratis',
@@ -66,7 +66,7 @@ const plans = [
   },
   {
     name: 'STARTER',
-    price: '€9.99',
+    price: '€49.99',
     description: 'Oferta de Lanzamiento: Primeros 50 centros',
     features: [
       'Todo de Free',
@@ -82,7 +82,7 @@ const plans = [
   },
   {
     name: 'PRO',
-    price: '€29.99',
+    price: '€99.99',
     description: 'Oferta de Lanzamiento: Primeros 50 centros',
     features: [
       'Todo de Starter',

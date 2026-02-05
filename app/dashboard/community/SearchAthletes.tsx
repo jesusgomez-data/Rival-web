@@ -31,7 +31,7 @@ export default function SearchAthletes() {
                 value={query}
                 onChange={(e) => handleSearch(e.target.value)}
                 placeholder="Buscar atletas o rivales..."
-                className="w-full bg-brand-gray border border-white/5 rounded-xl md:rounded-2xl py-2.5 md:py-3 pl-10 md:pl-11 pr-10 text-xs md:text-sm text-white focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/20 transition-all placeholder:text-gray-600"
+                className="w-full bg-brand-gray border border-white/5 rounded-xl md:rounded-2xl py-2.5 md:py-3 pl-11 md:pl-12 pr-10 text-xs md:text-sm text-white focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/20 transition-all placeholder:text-gray-600"
             />
             {query && (
                 <button

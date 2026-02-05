@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import clsx from "clsx";
-import { MessageCircle, Heart, Share2, MoreHorizontal, Send, Trash2, X, Building2, Dumbbell, Zap, Flame, TrendingUp, ChevronDown, Plus, Play } from "lucide-react";
+import { MessageCircle, Heart, Share2, MoreHorizontal, Send, Trash2, X, Building2, Dumbbell, Zap, Flame, TrendingUp, ChevronDown, Plus, Play, Clock } from "lucide-react";
 import { toggleCenterPostLike, addCenterPostComment, getCenterPostComments, deletePost, deleteCenterPostComment } from "./management-actions";
 import Link from "next/link";
 
@@ -132,10 +132,19 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                                 post.author?.full_name || "Gym Admin"
                             )}
                         </h4>
-                        <p className="text-muted-foreground text-xs">
-                            {isMounted ? new Date(post.created_at).toLocaleDateString(undefined, {
-                                month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
-                            }) : '...'}
+                        <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                            {isMounted ? (
+                                <>
+                                    {new Date(post.scheduled_for || post.created_at).toLocaleDateString(undefined, {
+                                        month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                                    })}
+                                    {new Date(post.scheduled_for) > new Date() && (
+                                        <span className="bg-brand-red text-white text-[8px] px-1.5 py-0.5 rounded flex items-center gap-1">
+                                            <Clock className="w-2 h-2" /> PROGRAMADO
+                                        </span>
+                                    )}
+                                </>
+                            ) : '...'}
                         </p>
                     </div>
                 </div>
