@@ -33,6 +33,7 @@ function SessionContent() {
     const [startTime] = useState(new Date());
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [isPaused, setIsPaused] = useState(true);
+    const [countdown, setCountdown] = useState<number | null>(null);
     const [workoutTitle, setWorkoutTitle] = useState("Sesión de entrenamiento");
     const [locationName, setLocationName] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -86,6 +87,7 @@ function SessionContent() {
     // CrossFit/Hyrox State
     const [wodType, setWodType] = useState<'fortime' | 'amrap' | 'emom'>('fortime');
     const [roundsCompleted, setRoundsCompleted] = useState(0);
+    const [emomTotalTime, setEmomTotalTime] = useState(0); // Minutes
 
     // Timer Logic
     useEffect(() => {
@@ -95,6 +97,53 @@ function SessionContent() {
         }, 1000);
         return () => clearInterval(timer);
     }, [isPaused]);
+
+    // Countdown and Sound Logic
+    const playBeep = (freq = 440) => {
+        try {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = freq;
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.2);
+            osc.stop(ctx.currentTime + 0.2);
+        } catch (e) { console.warn("Audio not supported or blocked", e) }
+    };
+
+    useEffect(() => {
+        if (countdown === null) return;
+        if (countdown > 0) {
+            playBeep(440);
+            const t = setTimeout(() => setCountdown(countdown - 1), 1000);
+            return () => clearTimeout(t);
+        } else {
+            playBeep(880);
+            setIsPaused(false);
+            setCountdown(null);
+        }
+    }, [countdown]);
+
+    const toggleTimer = () => {
+        if (isPaused && elapsedSeconds === 0 && countdown === null) {
+            setCountdown(3);
+        } else {
+            setIsPaused(!isPaused);
+            setCountdown(null);
+        }
+    };
+
+    const handleManualTimeChange = (val: string) => {
+        const parts = val.split(':').reverse();
+        let total = 0;
+        if (parts[0]) total += parseInt(parts[0]) || 0;
+        if (parts[1]) total += (parseInt(parts[1]) || 0) * 60;
+        if (parts[2]) total += (parseInt(parts[2]) || 0) * 3600;
+        setElapsedSeconds(total);
+    };
 
     // Data Initialization
     useEffect(() => {
@@ -209,6 +258,10 @@ function SessionContent() {
                 finalPace = `${pMin}:${pSec < 10 ? '0' + pSec : pSec}`;
             }
 
+            // Capture final time for CrossFit 'fortime'
+            const finalTimeStr = formatTime(elapsedSeconds);
+            setIsPaused(true);
+
             const payload = {
                 id: editId,
                 title: workoutTitle,
@@ -219,7 +272,10 @@ function SessionContent() {
                 metrics: {
                     distance: runDistance,
                     rounds: roundsCompleted,
-                    pace: finalPace
+                    pace: finalPace,
+                    type: wodType,
+                    time: finalTimeStr,
+                    emomTime: emomTotalTime
                 },
                 locationName,
                 imageUrl,
@@ -297,14 +353,32 @@ function SessionContent() {
 
                 <div className="flex items-center gap-3">
                     <div className="text-right hidden sm:block">
-                        <div className={clsx("font-mono text-xl font-black leading-none", themeColor)}>{formatTime(elapsedSeconds)}</div>
-                        <p className="text-[8px] text-white/40 font-bold uppercase tracking-widest text-right">TIEMPO</p>
+                        <input
+                            type="text"
+                            value={formatTime(elapsedSeconds)}
+                            onChange={(e) => handleManualTimeChange(e.target.value)}
+                            disabled={!isPaused}
+                            className={clsx(
+                                "font-mono text-xl font-black bg-transparent text-right outline-none w-24 transition-colors",
+                                !isPaused ? themeColor : "text-white/60 focus:text-white"
+                            )}
+                        />
+                        <p className="text-[8px] text-white/40 font-bold uppercase tracking-widest text-right">TIEMPO {isPaused && "(Manual)"}</p>
                     </div>
                     <button
-                        onClick={() => setIsPaused(!isPaused)}
-                        className={clsx("p-3 rounded-xl transition-all", isPaused ? "bg-white/10 text-white" : "bg-white/10 text-white hover:bg-white/20")}
+                        onClick={toggleTimer}
+                        className={clsx(
+                            "p-3 rounded-xl transition-all relative",
+                            isPaused ? "bg-white/10 text-white" : "bg-white/10 text-white hover:bg-white/20"
+                        )}
                     >
-                        {isPaused ? <Play className="w-5 h-5 fill-current" /> : <Pause className="w-5 h-5 fill-current" />}
+                        {countdown !== null ? (
+                            <span className="text-xl font-black text-brand-red animate-ping">{countdown}</span>
+                        ) : isPaused ? (
+                            <Play className="w-5 h-5 fill-current" />
+                        ) : (
+                            <Pause className="w-5 h-5 fill-current" />
+                        )}
                     </button>
                     <button
                         onClick={handleFinish}
@@ -324,19 +398,107 @@ function SessionContent() {
 
             <div className="pt-28 px-4 max-w-2xl mx-auto space-y-8">
                 <div className="sm:hidden text-center mb-6">
-                    <div className={clsx("text-6xl font-mono font-black tracking-tighter", themeColor)}>
-                        {formatTime(elapsedSeconds)}
-                    </div>
-                    <p className="text-gray-500 text-xs font-black uppercase tracking-[0.3em]">Tiempo Transcurrido</p>
+                    <input
+                        type="text"
+                        value={formatTime(elapsedSeconds)}
+                        onChange={(e) => handleManualTimeChange(e.target.value)}
+                        disabled={!isPaused}
+                        className={clsx(
+                            "text-6xl font-mono font-black tracking-tighter bg-transparent text-center outline-none w-full",
+                            !isPaused ? themeColor : "text-white/40"
+                        )}
+                    />
+                    <p className="text-gray-500 text-xs font-black uppercase tracking-[0.3em]">
+                        {countdown !== null ? `INICIO EN ${countdown}...` : isPaused ? "Tiempo (Click para Editar)" : "Tiempo Transcurrido"}
+                    </p>
                 </div>
+
+                {/* Header for selected format */}
+                {(sportMode === 'crossfit' || sportMode === 'ocr') && (
+                    <div className="text-center pb-4">
+                        <h2 className="text-3xl font-heading font-black italic text-white uppercase tracking-tighter">
+                            MODO <span className="text-orange-500">{wodType === 'fortime' ? 'FOR TIME' : wodType.toUpperCase()}</span>
+                        </h2>
+                        <div className="w-12 h-1 bg-orange-500 mx-auto mt-2 rounded-full" />
+                    </div>
+                )}
 
                 {/* Specific Views */}
                 {(sportMode === 'gym' || sportMode === 'calisthenics') && <GymView exercises={exercises} setExercises={setExercises} />}
                 {sportMode === 'running' && <RunningView distance={runDistance} setDistance={setRunDistance} time={elapsedSeconds} />}
-                {sportMode === 'crossfit' && <CrossFitView rounds={roundsCompleted} setRounds={setRoundsCompleted} type={wodType} setType={setWodType} exercises={exercises} setExercises={setExercises} />}
-                {sportMode === 'ocr' && <GymView exercises={exercises} setExercises={setExercises} />}
+                {(sportMode === 'crossfit' || sportMode === 'ocr') && (
+                    <CrossFitView
+                        rounds={roundsCompleted}
+                        setRounds={setRoundsCompleted}
+                        type={wodType}
+                        setType={setWodType}
+                        exercises={exercises}
+                        setExercises={setExercises}
+                        emomTime={emomTotalTime}
+                        setEmomTime={setEmomTotalTime}
+                        distance={runDistance}
+                        setDistance={setRunDistance}
+                        isOCR={sportMode === 'ocr'}
+                    />
+                )}
                 {sportMode === 'other' && <GymView exercises={exercises} setExercises={setExercises} />}
-                {sportMode === 'hyrox' && <HyroxView time={elapsedSeconds} />}
+                {sportMode === 'hyrox' && <HyroxView time={elapsedSeconds} exercises={exercises} setExercises={setExercises} />}
+
+                {/* Final Summary Display */}
+                <div className="bg-[#111] border border-white/10 rounded-[40px] p-8 space-y-6">
+                    <h3 className="text-white font-heading font-black italic text-lg flex items-center gap-2">
+                        <Activity className={clsx("w-5 h-5", themeColor)} />
+                        RESUMEN DE RESULTADOS
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-white/5 p-4 rounded-2xl">
+                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">
+                                {wodType === 'amrap' ? 'Tiempo Activo' : 'Tiempo Final'}
+                            </p>
+                            <p className="text-xl font-mono font-black text-white">{formatTime(elapsedSeconds)}</p>
+                        </div>
+                        {(sportMode === 'crossfit' || sportMode === 'ocr') && wodType === 'amrap' && (
+                            <>
+                                <div className="bg-white/5 p-6 rounded-[32px] col-span-2 border border-orange-500/20 shadow-glow shadow-orange-500/5">
+                                    <p className="text-orange-500 text-[10px] font-black uppercase tracking-[0.3em] mb-4 text-center">Rondas Completadas</p>
+                                    <div className="flex items-center justify-center gap-8">
+                                        <button onClick={() => setRoundsCompleted(Math.max(0, roundsCompleted - 1))} className="w-14 h-14 rounded-full bg-white/5 hover:bg-white/10 text-white flex items-center justify-center text-2xl font-black transition-all active:scale-95 border border-white/5">-</button>
+                                        <div className="text-7xl font-heading font-black italic text-white tabular-nums">{roundsCompleted}</div>
+                                        <button onClick={() => setRoundsCompleted(roundsCompleted + 1)} className="w-14 h-14 rounded-full bg-orange-600 hover:bg-orange-500 text-white flex items-center justify-center text-2xl font-black transition-all active:scale-95 shadow-lg shadow-orange-500/30">+</button>
+                                    </div>
+                                </div>
+                                <div className="bg-white/5 p-4 rounded-2xl">
+                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Duración AMRAP</p>
+                                    <p className="text-lg font-black text-white uppercase italic">{emomTotalTime || '---'}' min</p>
+                                </div>
+                            </>
+                        )}
+                        {(sportMode === 'crossfit' || sportMode === 'ocr') && wodType === 'emom' && (
+                            <div className="bg-white/5 p-4 rounded-2xl">
+                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Formato EMOM</p>
+                                <p className="text-lg font-black text-orange-500 uppercase italic">{emomTotalTime || '---'}' min</p>
+                            </div>
+                        )}
+                        {(sportMode === 'crossfit' || sportMode === 'ocr') && wodType === 'fortime' && (
+                            <>
+                                <div className="bg-orange-500/10 p-4 rounded-2xl border border-orange-500/20 col-span-2">
+                                    <p className="text-orange-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">RESULTADO FINAL</p>
+                                    <p className="text-4xl font-mono font-black text-white italic">{formatTime(elapsedSeconds)}</p>
+                                </div>
+                                <div className="bg-white/5 p-4 rounded-2xl">
+                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Time Cap</p>
+                                    <p className="text-lg font-black text-orange-500 uppercase italic">{emomTotalTime || '---'}' min</p>
+                                </div>
+                            </>
+                        )}
+                        {sportMode === 'running' && (
+                            <div className="bg-white/5 p-4 rounded-2xl">
+                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Distancia</p>
+                                <p className="text-xl font-mono font-black text-white">{(runDistance / 1000).toFixed(2)} km</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
 
                 {/* Common Finish Options */}
                 <div className="border-t border-white/5 pt-8 mt-12 bg-white/[0.02] p-6 rounded-[40px] border border-white/5">
@@ -349,19 +511,18 @@ function SessionContent() {
                         <button
                             onClick={() => setShareToArena(!shareToArena)}
                             className={clsx(
-                                "w-full p-4 rounded-3xl border flex items-center gap-4 transition-all group",
+                                "w-full p-2.5 rounded-2xl border flex items-center gap-3 transition-all group",
                                 shareToArena ? bgTheme + " shadow-lg" : "bg-black/40 border-white/5"
                             )}
                         >
-                            <div className={clsx("w-12 h-12 rounded-2xl flex items-center justify-center transition-colors", shareToArena ? "bg-black/20 text-white" : "bg-white/5 text-gray-500")}>
-                                <Activity className="w-6 h-6" />
+                            <div className={clsx("w-8 h-8 rounded-xl flex items-center justify-center transition-colors", shareToArena ? "bg-black/20 text-white" : "bg-white/5 text-gray-500")}>
+                                <Activity className="w-4 h-4" />
                             </div>
                             <div className="text-left flex-1">
-                                <p className={clsx("font-black text-sm uppercase italic", shareToArena ? "text-white" : "text-gray-500")}>Publicar en Arena</p>
-                                <p className="text-[10px] uppercase tracking-wider opacity-60 text-gray-400">Tu entrenamiento se publicará automáticamente en el feed</p>
+                                <p className={clsx("font-black text-[10px] uppercase italic", shareToArena ? "text-white" : "text-gray-500")}>Publicar en Arena</p>
                             </div>
-                            <div className={clsx("w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all", shareToArena ? "border-transparent bg-white text-black" : "border-white/10")}>
-                                {shareToArena && <CheckCircle className="w-4 h-4" />}
+                            <div className={clsx("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all", shareToArena ? "border-transparent bg-white text-black" : "border-white/10")}>
+                                {shareToArena && <CheckCircle className="w-3 h-3" />}
                             </div>
                         </button>
 
@@ -756,15 +917,20 @@ function RunningView({ distance, setDistance, time }: { distance: number, setDis
 // Helper var for mock
 let isPausedGlobal = false;
 
-function CrossFitView({ rounds, setRounds, type, setType, exercises, setExercises }: any) {
+function CrossFitView({ rounds, setRounds, type, setType, exercises, setExercises, emomTime, setEmomTime, distance, setDistance, isOCR }: any) {
     const [showAddModal, setShowAddModal] = useState(false);
     const [catalog, setCatalog] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
 
+    const calculatedEmomRounds = useMemo(() => {
+        if (type !== 'emom' || emomTime <= 0 || exercises.length === 0) return 0;
+        return Math.floor(emomTime / exercises.length);
+    }, [type, emomTime, exercises.length]);
+
     // Load catalog only when modal opens
     useEffect(() => {
         if (showAddModal && catalog.length === 0) {
-            getExercises('crossfit').then(setCatalog);
+            getExercises(isOCR ? 'ocr' : 'crossfit').then(setCatalog);
         }
     }, [showAddModal, catalog.length]);
 
@@ -778,7 +944,7 @@ function CrossFitView({ rounds, setRounds, type, setType, exercises, setExercise
         const newEx = {
             id: Math.random().toString(36).substr(2, 9),
             name: template.name,
-            target: "-", // WODs usually don't have target per se in this context, or maybe yes for strength part
+            target: "-",
             prev: prev,
             sets: [{ order: 1, weight: 0, reps: 0, completed: false }]
         };
@@ -801,7 +967,7 @@ function CrossFitView({ rounds, setRounds, type, setType, exercises, setExercise
         const lastSet = copy[exIndex].sets[copy[exIndex].sets.length - 1];
         copy[exIndex].sets.push({
             order: copy[exIndex].sets.length + 1,
-            weight: lastSet ? lastSet.weight : 0, // Auto-fill with prev set data
+            weight: lastSet ? lastSet.weight : 0,
             reps: lastSet ? lastSet.reps : 0,
             completed: false
         });
@@ -824,6 +990,33 @@ function CrossFitView({ rounds, setRounds, type, setType, exercises, setExercise
 
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-10 fade-in duration-500">
+            {isOCR && (
+                <div className="bg-[#111] border border-emerald-500/20 p-8 rounded-[40px] text-center space-y-4 relative overflow-hidden group shadow-lg shadow-emerald-500/5">
+                    <div className="absolute -top-10 -right-10 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
+                        <MapPin className="w-64 h-64 text-emerald-500" />
+                    </div>
+
+                    <p className="text-emerald-500 text-xs font-black uppercase tracking-[0.3em]">Carrera / Distancia Total (KM)</p>
+                    <div className="flex items-center justify-center gap-4 relative z-10">
+                        <input
+                            type="number"
+                            step="0.01"
+                            value={distance > 0 ? (distance / 1000) : ''}
+                            onChange={(e) => setDistance(parseFloat(e.target.value) * 1000 || 0)}
+                            placeholder="0.00"
+                            className="bg-transparent text-center text-6xl font-heading font-black italic text-white outline-none w-48 placeholder-white/5"
+                        />
+                        <span className="text-xl font-black text-gray-500 mt-6">KM</span>
+                    </div>
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-2xl inline-block mx-auto">
+                        <p className="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-2">
+                            <RefreshCw className="w-3 h-3" /> {(distance / 1000).toFixed(2)} km recorridos
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Format Selector - Always at top */}
             <div className="grid grid-cols-3 gap-2 bg-[#111] p-1.5 rounded-2xl border border-white/10">
                 {['fortime', 'amrap', 'emom'].map(t => (
                     <button
@@ -839,18 +1032,73 @@ function CrossFitView({ rounds, setRounds, type, setType, exercises, setExercise
                 ))}
             </div>
 
-            <div className="bg-[#111] border border-white/10 p-12 rounded-[40px] text-center space-y-6 relative overflow-hidden group">
-                <div className="absolute -top-10 -right-10 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
-                    <RefreshCw className="w-64 h-64 rotate-45" />
-                </div>
+            {/* Mode-Specific Input Area */}
+            {type === 'amrap' && (
+                <div className="bg-[#111] border border-white/10 p-10 rounded-[40px] text-center space-y-6 relative overflow-hidden group">
+                    <div className="absolute -top-10 -right-10 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
+                        <Timer className="w-64 h-64" />
+                    </div>
 
-                <p className="text-orange-500 text-xs font-black uppercase tracking-[0.3em]">Rondas Completadas</p>
-                <div className="flex items-center justify-center gap-8 relative z-10">
-                    <button onClick={() => setRounds(Math.max(0, rounds - 1))} className="w-16 h-16 rounded-full bg-white/5 hover:bg-white/10 text-white flex items-center justify-center text-3xl font-black transition-all active:scale-95 border border-white/5 hover:border-white/20">-</button>
-                    <div className="text-8xl font-heading font-black italic text-white tabular-nums">{rounds}</div>
-                    <button onClick={() => setRounds(rounds + 1)} className="w-16 h-16 rounded-full bg-orange-600 hover:bg-orange-500 text-white flex items-center justify-center text-3xl font-black transition-all active:scale-95 shadow-lg shadow-orange-500/30">+</button>
+                    <p className="text-orange-500 text-xs font-black uppercase tracking-[0.3em]">Tiempo del AMRAP (min)</p>
+                    <div className="flex items-center justify-center gap-4 relative z-10">
+                        <input
+                            type="number"
+                            value={emomTime === 0 ? '' : emomTime}
+                            onChange={(e) => setEmomTime(parseInt(e.target.value) || 0)}
+                            placeholder="0"
+                            className="bg-transparent text-center text-7xl font-heading font-black italic text-white outline-none w-32 placeholder-white/5"
+                        />
+                        <span className="text-xl font-black text-gray-500 mt-6">MINUTOS</span>
+                    </div>
                 </div>
-            </div>
+            )}
+
+            {type === 'emom' && (
+                <div className="bg-[#111] border border-white/10 p-10 rounded-[40px] text-center space-y-6 relative overflow-hidden group">
+                    <div className="absolute -top-10 -right-10 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
+                        <Timer className="w-64 h-64" />
+                    </div>
+
+                    <p className="text-orange-500 text-xs font-black uppercase tracking-[0.3em]">Duración EMOM (min)</p>
+                    <div className="flex items-center justify-center gap-4 relative z-10">
+                        <input
+                            type="number"
+                            value={emomTime === 0 ? '' : emomTime}
+                            onChange={(e) => setEmomTime(parseInt(e.target.value) || 0)}
+                            placeholder="0"
+                            className="bg-transparent text-center text-7xl font-heading font-black italic text-white outline-none w-32 placeholder-white/5"
+                        />
+                        <span className="text-xl font-black text-gray-500 mt-6">MINUTOS</span>
+                    </div>
+                    {exercises.length > 0 && emomTime > 0 && (
+                        <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-2xl inline-block mx-auto animate-in zoom-in-95">
+                            <p className="text-[10px] font-black text-orange-500 uppercase tracking-widest">
+                                {calculatedEmomRounds} Rondas detectadas ({exercises.length} ejercicios)
+                            </p>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            {type === 'fortime' && (
+                <div className="bg-[#111] border border-white/10 p-10 rounded-[40px] text-center space-y-6 relative overflow-hidden group">
+                    <div className="absolute -top-10 -right-10 p-12 opacity-5 pointer-events-none group-hover:scale-110 transition-transform duration-700">
+                        <Timer className="w-64 h-64" />
+                    </div>
+
+                    <p className="text-orange-500 text-xs font-black uppercase tracking-[0.3em]">Time Cap / Objetivo (min)</p>
+                    <div className="flex items-center justify-center gap-4 relative z-10">
+                        <input
+                            type="number"
+                            value={emomTime === 0 ? '' : emomTime}
+                            onChange={(e) => setEmomTime(parseInt(e.target.value) || 0)}
+                            placeholder="0"
+                            className="bg-transparent text-center text-7xl font-heading font-black italic text-white outline-none w-32 placeholder-white/5"
+                        />
+                        <span className="text-xl font-black text-gray-500 mt-6">MINUTOS</span>
+                    </div>
+                </div>
+            )}
 
             <div className="bg-white/5 border border-white/10 rounded-[32px] p-6">
                 <h3 className="text-white font-black uppercase tracking-widest text-sm mb-4 flex items-center gap-2">
@@ -888,22 +1136,26 @@ function CrossFitView({ rounds, setRounds, type, setType, exercises, setExercise
                                     <div className="flex items-center gap-2 bg-white/5 rounded-lg p-1.5 flex-1">
                                         <input
                                             type="number"
-                                            placeholder="kg"
+                                            placeholder={(ex.name.toLowerCase().includes('run') || ex.name.toLowerCase().includes('carrera')) ? "km" : "kg"}
                                             value={set.weight || ''}
                                             onChange={(e) => updateSet(i, j, 'weight', e.target.value)}
                                             className="bg-transparent text-white font-mono text-sm w-full text-center outline-none"
                                         />
-                                        <span className="text-gray-600 text-[10px] uppercase">KG</span>
+                                        <span className="text-gray-600 text-[10px] uppercase">
+                                            {(ex.name.toLowerCase().includes('run') || ex.name.toLowerCase().includes('carrera')) ? 'DIST' : 'KG'}
+                                        </span>
                                     </div>
                                     <div className="flex items-center gap-2 bg-white/5 rounded-lg p-1.5 flex-1">
                                         <input
                                             type="number"
-                                            placeholder="reps"
+                                            placeholder={(ex.name.toLowerCase().includes('run') || ex.name.toLowerCase().includes('carrera')) ? "min" : "reps"}
                                             value={set.reps || ''}
                                             onChange={(e) => updateSet(i, j, 'reps', e.target.value)}
                                             className="bg-transparent text-white font-mono text-sm w-full text-center outline-none"
                                         />
-                                        <span className="text-gray-600 text-[10px] uppercase">REPS</span>
+                                        <span className="text-gray-600 text-[10px] uppercase">
+                                            {(ex.name.toLowerCase().includes('run') || ex.name.toLowerCase().includes('carrera')) ? 'TIEMPO' : 'REPS'}
+                                        </span>
                                     </div>
                                 </div>
                             ))}
@@ -932,6 +1184,18 @@ function CrossFitView({ rounds, setRounds, type, setType, exercises, setExercise
                             <button onClick={() => setShowAddModal(false)} className="p-2 bg-white/10 rounded-full hover:bg-white/20 text-white"><X className="w-5 h-5" /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-4 space-y-2 custom-scrollbar">
+                            {searchQuery && filteredCatalog.length === 0 && (
+                                <button
+                                    onClick={() => addExercise({ name: searchQuery })}
+                                    className="w-full text-left p-6 rounded-2xl bg-brand-red/10 border border-brand-red/30 hover:bg-brand-red/20 transition-all group"
+                                >
+                                    <div className="flex items-center justify-between mb-2">
+                                        <h4 className="text-white font-bold uppercase text-sm">Crear "{searchQuery}"</h4>
+                                        <Plus className="w-5 h-5 text-brand-red" />
+                                    </div>
+                                    <p className="text-gray-500 text-[10px] uppercase tracking-wider">¿No encuentras el ejercicio? Créalo ahora mismo.</p>
+                                </button>
+                            )}
                             {filteredCatalog.map((ex) => (
                                 <button
                                     key={ex.id}
@@ -942,12 +1206,6 @@ function CrossFitView({ rounds, setRounds, type, setType, exercises, setExercise
                                     <p className="text-gray-500 text-[10px] uppercase tracking-wider">{ex.muscle_group}</p>
                                 </button>
                             ))}
-                            {filteredCatalog.length === 0 && (
-                                <div className="text-center py-20 text-gray-500">
-                                    <Activity className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                                    <p className="uppercase text-xs font-bold tracking-widest">No encontrado</p>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -956,37 +1214,155 @@ function CrossFitView({ rounds, setRounds, type, setType, exercises, setExercise
     )
 }
 
-function HyroxView({ time }: { time: number }) {
+function HyroxView({ time, exercises, setExercises }: { time: number, exercises: any[], setExercises: any }) {
+    const [hyroxMode, setHyroxMode] = useState<'race' | 'pft' | 'any'>('race');
+    const [initialized, setInitialized] = useState(false);
+
+    // Templates
+    const raceTemplate = [
+        { name: '1km Run', target: '1000m' }, { name: '1km Ski Erg', target: '1000m' },
+        { name: '1km Run', target: '1000m' }, { name: 'Sled Push', target: '50m' },
+        { name: '1km Run', target: '1000m' }, { name: 'Sled Pull', target: '50m' },
+        { name: '1km Run', target: '1000m' }, { name: 'Burpees Broad Jump', target: '80m' },
+        { name: '1km Run', target: '1000m' }, { name: 'Row', target: '1000m' },
+        { name: '1km Run', target: '1000m' }, { name: 'Farmers Carry', target: '200m' },
+        { name: '1km Run', target: '1000m' }, { name: 'Sandbag Lunges', target: '100m' },
+        { name: '1km Run', target: '1000m' }, { name: 'Wall Balls', target: '100 reps' }
+    ];
+
+    const pftTemplate = [
+        { name: '1km Run', target: '1000m' },
+        { name: 'Burpee Broad Jump', target: '50 reps' },
+        { name: 'Stationary Lunges', target: '100 reps' },
+        { name: 'Row', target: '1000m' },
+        { name: 'Wall Balls', target: '30 reps' }
+    ];
+
+    // Initialize exercises based on mode
+    useEffect(() => {
+        if (!initialized && exercises.length === 0) {
+            loadTemplate(hyroxMode);
+            setInitialized(true);
+        }
+    }, [hyroxMode, initialized]);
+
+    const loadTemplate = (mode: string) => {
+        let template = [];
+        if (mode === 'race') template = raceTemplate;
+        else if (mode === 'pft') template = pftTemplate;
+        else return; // 'any' mode starts empty
+
+        const newExercises = template.map(t => ({
+            id: Math.random().toString(36).substr(2, 9),
+            name: t.name,
+            target: t.target,
+            sets: [{ order: 1, weight: 0, reps: 0, completed: false, notes: '' }] // using notes for split time?
+        }));
+        setExercises(newExercises);
+    };
+
+    const toggleStation = (index: number) => {
+        const copy = [...exercises];
+        if (copy[index] && copy[index].sets[0]) {
+            copy[index].sets[0].completed = !copy[index].sets[0].completed;
+            // Auto-record split time if completing and time is recorded? 
+            // For now just toggle.
+            setExercises(copy);
+        }
+    };
+
+    const updateSplit = (index: number, val: string) => {
+        const copy = [...exercises];
+        if (copy[index] && copy[index].sets[0]) {
+            // We can use the 'reps' field to store numeric split or just 'notes' field for text
+            // Let's use specific metadata if possible, but strict typing might prevent it.
+            // We'll stick to 'weight' for data value if needed, or just let them complete it.
+            // Simplest: Just toggle completion for now as per user request "doy clic y no hace nada".
+        }
+    };
+
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-10 fade-in duration-500">
-            <div className="bg-[#111] border border-white/10 p-6 rounded-[32px]">
-                <p className="text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em] mb-6 border-b border-white/5 pb-2">Estaciones Hyrox</p>
-                <div className="grid grid-cols-2 gap-3">
-                    {[
-                        '1km Run 1', '1km Ski',
-                        '1km Run 2', 'Sled Push',
-                        '1km Run 3', 'Sled Pull',
-                        '1km Run 4', 'Burpees',
-                        '1km Run 5', 'Row',
-                        '1km Run 6', 'Farmers',
-                        '1km Run 7', 'Lunges',
-                        '1km Run 8', 'Wall Balls'
-                    ].map((station, i) => (
-                        <div key={i} className={clsx(
-                            "p-4 rounded-xl border flex items-center justify-between transition-all cursor-pointer group",
-                            station.includes('Run') ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-yellow-500/5 border-yellow-500/10 hover:bg-yellow-500/10 hover:border-yellow-500/30"
-                        )}>
-                            <span className={clsx("font-bold text-[10px] uppercase tracking-wide", station.includes('Run') ? "text-gray-400" : "text-yellow-500")}>{station}</span>
-                            <div className="w-4 h-4 rounded-md border border-white/10 group-hover:border-yellow-500 transition-colors bg-black/40" />
-                        </div>
-                    ))}
-                </div>
+            {/* Mode Selector */}
+            <div className="grid grid-cols-3 gap-2 bg-[#111] p-1.5 rounded-2xl border border-white/10">
+                {['race', 'pft', 'any'].map(m => (
+                    <button
+                        key={m}
+                        onClick={() => { setHyroxMode(m as any); setExercises([]); setInitialized(false); }}
+                        className={clsx(
+                            "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                            hyroxMode === m ? "bg-yellow-500 text-black shadow-lg" : "text-gray-500 hover:text-white"
+                        )}
+                    >
+                        {m === 'any' ? 'Libre / Intervalos' : m.toUpperCase()}
+                    </button>
+                ))}
             </div>
+
+            {hyroxMode === 'any' ? (
+                <div className="mt-4">
+                    <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-4 px-2">
+                        Arma tu propio entrenamiento Hyrox seleccionando los ejercicios.
+                    </p>
+                    <GymView exercises={exercises} setExercises={setExercises} mode="hyrox" />
+                </div>
+            ) : (
+                <div className="bg-[#111] border border-white/10 p-6 rounded-[32px]">
+                    <p className="text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em] mb-6 border-b border-white/5 pb-2">
+                        {hyroxMode === 'race' ? 'Estaciones Hyrox (Race)' : 'Hyrox PFT'}
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {exercises.map((ex, i) => {
+                            const isCompleted = ex.sets[0]?.completed;
+                            const isRun = ex.name.includes('Run');
+
+                            return (
+                                <div
+                                    key={ex.id || i}
+                                    onClick={() => toggleStation(i)}
+                                    className={clsx(
+                                        "p-4 rounded-xl border flex items-center justify-between transition-all cursor-pointer group relative overflow-hidden",
+                                        isCompleted
+                                            ? (isRun ? "bg-white/10 border-white/20" : "bg-yellow-500/20 border-yellow-500/40")
+                                            : (isRun ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-yellow-500/5 border-yellow-500/10 hover:bg-yellow-500/10")
+                                    )}
+                                >
+                                    <div className="relative z-10 flex items-center gap-3">
+                                        <div className={clsx(
+                                            "w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs transition-colors",
+                                            isCompleted ? "bg-white text-black" : "bg-black/40 text-gray-500"
+                                        )}>
+                                            {i + 1}
+                                        </div>
+                                        <div>
+                                            <p className={clsx("font-bold text-[10px] uppercase tracking-wide", isRun ? "text-gray-300" : "text-yellow-500")}>
+                                                {ex.name}
+                                            </p>
+                                            <p className="text-[9px] text-gray-500 font-mono mt-0.5">{ex.target}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className={clsx(
+                                        "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all relative z-10",
+                                        isCompleted
+                                            ? (isRun ? "border-white bg-white text-black" : "border-yellow-500 bg-yellow-500 text-black")
+                                            : "border-white/10 group-hover:border-white/30"
+                                    )}>
+                                        {isCompleted && <CheckCircle className="w-3.5 h-3.5" />}
+                                    </div>
+
+                                    {isCompleted && <div className={clsx("absolute inset-0 opacity-10 z-0", isRun ? "bg-white" : "bg-yellow-500")} />}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
 
-function GymView({ exercises, setExercises }: any) {
+function GymView({ exercises, setExercises, mode = 'gym' }: any) {
     const [showAddModal, setShowAddModal] = useState(false);
     const [catalog, setCatalog] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
@@ -994,9 +1370,9 @@ function GymView({ exercises, setExercises }: any) {
     // Load catalog only when modal opens
     useEffect(() => {
         if (showAddModal && catalog.length === 0) {
-            getExercises('gym').then(setCatalog);
+            getExercises(mode).then(setCatalog);
         }
-    }, [showAddModal, catalog.length]);
+    }, [showAddModal, catalog.length, mode]);
 
     const filteredCatalog = useMemo(() => {
         if (!searchQuery) return catalog;
@@ -1074,14 +1450,16 @@ function GymView({ exercises, setExercises }: any) {
                                 "grid grid-cols-12 gap-2 p-3 rounded-2xl items-center",
                                 set.completed ? "bg-green-500/10 border border-green-500/20" : "bg-white/5 border border-white/5"
                             )}>
-                                <div className="col-span-1 text-center font-black text-white">{j + 1}</div>
-                                <div className="col-span-4">
-                                    <input type="number" placeholder="Kg" className="w-full bg-black/40 text-center text-white font-bold py-3 rounded-xl outline-none focus:ring-1 focus:ring-brand-red border border-transparent focus:border-brand-red/50 transition-all placeholder-white/10"
-                                        value={set.weight || ''} onChange={(e) => updateSet(i, j, 'weight', parseFloat(e.target.value))} />
+                                <div className="col-span-1 text-center font-black text-white/50 text-[10px]">{j + 1}</div>
+                                <div className="col-span-4 flex items-center bg-black/40 rounded-xl px-2 border border-transparent focus-within:border-brand-red/50 transition-all">
+                                    <input type="number" placeholder="---" className="w-full bg-transparent text-center text-white font-bold py-3 outline-none placeholder-white/5 text-sm"
+                                        value={set.weight || ''} onChange={(e) => updateSet(i, j, 'weight', e.target.value === '' ? null : parseFloat(e.target.value))} />
+                                    <span className="text-[8px] font-black text-gray-600 uppercase">KG</span>
                                 </div>
-                                <div className="col-span-4">
-                                    <input type="number" placeholder="Reps" className="w-full bg-black/40 text-center text-white font-bold py-3 rounded-xl outline-none focus:ring-1 focus:ring-brand-red border border-transparent focus:border-brand-red/50 transition-all placeholder-white/10"
-                                        value={set.reps || ''} onChange={(e) => updateSet(i, j, 'reps', parseFloat(e.target.value))} />
+                                <div className="col-span-4 flex items-center bg-black/40 rounded-xl px-2 border border-transparent focus-within:border-brand-red/50 transition-all">
+                                    <input type="number" placeholder="---" className="w-full bg-transparent text-center text-white font-bold py-3 outline-none placeholder-white/5 text-sm"
+                                        value={set.reps || ''} onChange={(e) => updateSet(i, j, 'reps', e.target.value === '' ? null : parseFloat(e.target.value))} />
+                                    <span className="text-[8px] font-black text-gray-600 uppercase">REPS</span>
                                 </div>
                                 <div className="col-span-3 flex justify-center">
                                     <button onClick={() => toggleSet(i, j)} className={clsx(
@@ -1117,6 +1495,18 @@ function GymView({ exercises, setExercises }: any) {
                         <input autoFocus type="text" placeholder="Buscar ejercicio, máquina o grupo muscular..." className="w-full bg-transparent text-white font-bold outline-none placeholder-gray-500 text-lg" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                     </div>
                     <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pb-10">
+                        {searchQuery && filteredCatalog.length === 0 && (
+                            <button
+                                onClick={() => addExercise({ name: searchQuery })}
+                                className="w-full text-left p-6 bg-brand-red/10 rounded-2xl border border-brand-red/30 hover:bg-brand-red/20 transition-all group"
+                            >
+                                <div className="flex items-center justify-between mb-2">
+                                    <h4 className="text-white font-bold uppercase text-lg">Cargar "{searchQuery}"</h4>
+                                    <Plus className="w-6 h-6 text-brand-red" />
+                                </div>
+                                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Crear ejercicio personalizado ahora.</p>
+                            </button>
+                        )}
                         {filteredCatalog.map(item => (
                             <button key={item.id} onClick={() => addExercise(item)} className="w-full text-left p-5 bg-[#111] rounded-2xl border border-white/5 hover:border-brand-red hover:bg-white/5 transition-all group">
                                 <p className="font-bold text-white uppercase text-lg group-hover:text-brand-red transition-colors">{item.name}</p>

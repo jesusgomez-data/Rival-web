@@ -19,7 +19,12 @@ export async function createCheckoutSession(priceId: string) {
         .eq('id', user.id)
         .single();
 
-    // 2. Create Stripe Checkout Session
+    // 2. Calculate the 1st of the next month for billing cycle anchor
+    const now = new Date();
+    const firstOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const anchorTimestamp = Math.floor(firstOfNextMonth.getTime() / 1000);
+
+    // 3. Create Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
         customer_email: user.email,
         line_items: [
@@ -29,6 +34,10 @@ export async function createCheckoutSession(priceId: string) {
             },
         ],
         mode: 'subscription',
+        subscription_data: {
+            billing_cycle_anchor: anchorTimestamp,
+            proration_behavior: 'create_prorations', // Charges the remaining days of current month now
+        },
         success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/settings/billing?status=success`,
         cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/settings/billing?status=canceled`,
         metadata: {
@@ -64,4 +73,34 @@ export async function createPortalSession() {
     });
 
     redirect(session.url);
+}
+
+export async function createOrganizationCheckoutSession(priceId: string, organizationId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) throw new Error("No autorizado");
+
+    // 1. Calculate anchor for the 1st of next month
+    const now = new Date();
+    const firstOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const anchorTimestamp = Math.floor(firstOfNextMonth.getTime() / 1000);
+
+    const session = await stripe.checkout.sessions.create({
+        customer_email: user.email,
+        line_items: [{ price: priceId, quantity: 1 }],
+        mode: 'subscription',
+        subscription_data: {
+            billing_cycle_anchor: anchorTimestamp,
+            proration_behavior: 'create_prorations',
+        },
+        success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/gyms/${organizationId}?status=success`,
+        cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/gyms/${organizationId}?status=canceled`,
+        metadata: {
+            userId: user.id,
+            organizationId: organizationId
+        },
+    });
+
+    if (session.url) redirect(session.url);
 }

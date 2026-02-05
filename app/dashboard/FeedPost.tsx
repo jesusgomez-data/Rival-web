@@ -508,19 +508,15 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     return (
 
                                         <div key={idx} className={clsx(
-                                            "border rounded-[20px] md:rounded-[24px] relative overflow-hidden group/card shadow-2xl transition-all",
-                                            theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-md",
-                                            isInnerExpanded ? "p-4 md:p-5" : "p-3 md:p-4 hover:bg-white/[0.02] cursor-pointer"
+                                            "border rounded-xl md:rounded-2xl relative overflow-hidden group/card transition-all",
+                                            theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-sm",
+                                            isInnerExpanded ? "p-3 md:p-4" : "p-2 md:p-3 hover:bg-white/[0.02] cursor-pointer"
                                         )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx)}>
-                                            {/* Accent Background Glow */}
-                                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
-
-                                            <div className="relative z-10 space-y-2.5 md:space-y-3">
-                                                <div className="flex items-end justify-between gap-4">
+                                            <div className="relative z-10 space-y-1 md:space-y-2">
+                                                <div className="flex items-center justify-between gap-3">
                                                     <div className="min-w-0 flex-1">
-                                                        <p className="text-[8px] md:text-[9px] text-gray-500 uppercase tracking-[0.2em] mb-0.5 md:mb-1 italic">EJERCICIO</p>
                                                         <h3 className={clsx(
-                                                            "text-lg md:text-2xl font-accent font-semibold tracking-tighter leading-none truncate pr-2",
+                                                            "text-sm md:text-lg font-accent font-semibold tracking-tighter leading-none truncate pr-2",
                                                             theme === 'dark' ? "text-white" : "text-gray-900"
                                                         )}>
                                                             {title}
@@ -645,49 +641,48 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                         <button
                                             onClick={() => setIsExpanded(true)}
                                             className={clsx(
-                                                "w-full border rounded-[18px] md:rounded-[24px] p-3 md:p-4 flex items-center justify-between hover:border-brand-red/50 transition-all group shadow-2xl relative overflow-hidden",
+                                                "w-full border rounded-xl md:rounded-2xl p-2 md:p-3 flex items-center justify-between hover:border-brand-red/50 transition-all group shadow-xl relative overflow-hidden",
                                                 theme === 'dark' ? "bg-[#121212] border-white/5 hover:bg-white/[0.04]" : "bg-gray-50 border-gray-100 hover:bg-white shadow-md"
                                             )}
                                         >
-                                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
-                                            <div className="flex items-center gap-3 md:gap-4 relative z-10 w-full overflow-hidden">
-                                                <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 group-hover:scale-110 transition-transform shrink-0">
-                                                    <Trophy className="w-4 h-4 md:w-5 md:h-5" />
+                                            <div className="absolute top-0 right-0 w-24 h-24 bg-brand-red/5 blur-3xl -mr-8 -mt-8" />
+                                            <div className="flex items-center gap-2 md:gap-3 relative z-10 w-full overflow-hidden">
+                                                <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 group-hover:scale-110 transition-transform shrink-0">
+                                                    <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
                                                 </div>
                                                 <div className="text-left flex-1 min-w-0">
-                                                    <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] mb-0.5 italic">RESUMEN</p>
                                                     <h4 className={clsx(
-                                                        "text-sm md:text-lg font-heading font-black italic uppercase tracking-tighter group-hover:text-brand-red transition-colors leading-none truncate pr-2",
+                                                        "text-xs md:text-sm font-heading font-black italic uppercase tracking-tighter group-hover:text-brand-red transition-colors leading-none truncate pr-2",
                                                         theme === 'dark' ? "text-white" : "text-gray-900"
                                                     )}>
-                                                        ENTRENAMIENTO DEL DÍA
+                                                        {summary}
                                                     </h4>
-                                                    <p className="text-[8px] md:text-[9px] text-brand-red/70 font-bold uppercase tracking-widest mt-1 flex items-center gap-2 truncate">
-                                                        <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red animate-pulse"></span>
-                                                        {summary}{displayCenterName}
+                                                    <p className="text-[7px] md:text-[8px] text-brand-red/70 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 truncate">
+                                                        <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red"></span>
+                                                        {displayCenterName || 'ENTRENAMIENTO'}
                                                     </p>
                                                 </div>
                                             </div>
-                                            <div className="hidden sm:flex bg-white/5 rounded-xl p-2.5 group-hover:bg-brand-red group-hover:text-white transition-all border border-white/5 shrink-0">
-                                                <ChevronDown className="w-4 h-4" />
+                                            <div className="flex bg-white/5 rounded-lg p-1.5 group-hover:bg-brand-red group-hover:text-white transition-all border border-white/5 shrink-0">
+                                                <ChevronDown className="w-3 h-3" />
                                             </div>
                                         </button>
                                     ) : (
                                         <div className={clsx(
-                                            "border rounded-[24px] md:rounded-[32px] p-4 md:p-6 relative overflow-hidden group/card shadow-2xl animate-in fade-in slide-in-from-top-4 duration-300",
+                                            "border rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden group/card shadow-xl animate-in fade-in slide-in-from-top-4 duration-300",
                                             theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-md"
                                         )}>
                                             {/* Accent Background Glow */}
                                             <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
 
                                             <div className="relative z-10">
-                                                <div className="flex items-center justify-between mb-4 md:mb-6">
-                                                    <p className="text-[8px] md:text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] italic">ENTRENAMIENTO PERSONAL</p>
+                                                <div className="flex items-center justify-between mb-3 md:mb-4">
+                                                    <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] italic">RESULTADOS</p>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
-                                                        className="text-[8px] md:text-[9px] text-brand-red font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
+                                                        className="text-[7px] md:text-[8px] text-brand-red font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
                                                     >
-                                                        CONTRAER <ChevronUp className="w-3 h-3" />
+                                                        CERRAR <ChevronUp className="w-3 h-3" />
                                                     </button>
                                                 </div>
 
@@ -697,38 +692,34 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
                                                         return (
                                                             <div key={idx} className={clsx(
-                                                                "border rounded-[20px] md:rounded-[24px] relative overflow-hidden group/card shadow-2xl transition-all",
-                                                                theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-md",
-                                                                isInnerExpanded ? "p-4 md:p-6" : "p-3 md:p-4 hover:bg-white/[0.02] cursor-pointer"
+                                                                "border rounded-xl md:rounded-2xl relative overflow-hidden group/card transition-all",
+                                                                theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-sm",
+                                                                isInnerExpanded ? "p-3 md:p-4" : "p-2 md:p-3 hover:bg-white/[0.02] cursor-pointer"
                                                             )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx + 100)}>
-                                                                {/* Accent Background Glow */}
-                                                                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
-
-                                                                <div className="relative z-10 space-y-1.5 md:space-y-3">
-                                                                    <div className="flex items-start justify-between gap-4">
+                                                                <div className="relative z-10 space-y-1 md:space-y-2">
+                                                                    <div className="flex items-start justify-between gap-3">
                                                                         <div className="min-w-0 flex-1">
-                                                                            <p className="text-[7px] md:text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] mb-0.5 md:mb-1 italic">EJERCICIO</p>
                                                                             <h3 className={clsx(
-                                                                                "text-base md:text-2xl font-heading font-black italic uppercase tracking-tighter leading-tight pr-2",
+                                                                                "text-sm md:text-lg font-heading font-black italic uppercase tracking-tighter leading-tight pr-2",
                                                                                 theme === 'dark' ? "text-white" : "text-gray-900"
                                                                             )}>
                                                                                 {ex.name}
                                                                             </h3>
                                                                         </div>
-                                                                        <div className="flex items-center gap-3">
+                                                                        <div className="flex items-center gap-2">
                                                                             {ex.maxWeight > 0 && (
-                                                                                <div className="text-right shrink-0 pt-2 md:pt-3">
-                                                                                    <span className="text-lg md:text-3xl font-heading font-black text-brand-red italic tracking-tighter leading-none">
+                                                                                <div className="text-right shrink-0">
+                                                                                    <span className="text-sm md:text-xl font-heading font-black text-brand-red italic tracking-tighter leading-none">
                                                                                         {ex.maxWeight}
                                                                                     </span>
-                                                                                    <span className="text-[7px] md:text-xs font-black text-brand-red ml-1 uppercase">KG</span>
+                                                                                    <span className="text-[7px] md:text-[9px] font-black text-brand-red ml-0.5 uppercase">KG</span>
                                                                                 </div>
                                                                             )}
                                                                             <button
                                                                                 onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx + 100); }}
-                                                                                className="p-1 hover:bg-white/5 rounded-lg transition-colors mt-2"
+                                                                                className="p-1 hover:bg-white/5 rounded-lg transition-colors"
                                                                             >
-                                                                                {isInnerExpanded ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                                                                                {isInnerExpanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />}
                                                                             </button>
                                                                         </div>
                                                                     </div>
@@ -773,7 +764,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             ) : null}
 
             {/* Actions */}
-            <div className="px-4 pb-4 flex items-center gap-4">
+            <div className="px-4 pb-4 pt-4 flex items-center gap-4 border-t border-white/5 mt-2">
                 {(workoutData || mediaType === 'class_result') ? (
                     <>
                         <div className="flex-1 flex gap-2">

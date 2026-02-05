@@ -38,11 +38,14 @@ export default function SignupPage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-l from-background/50 to-background pointer-events-none" />
                 <div className="absolute bottom-12 right-12 z-10 text-right">
-                    <h2 className="text-5xl font-heading font-bold mb-4 text-foreground">
-                        {t.signup.sidebarTitle.split('.').map((part: string, i: number) => (
-                            <span key={i}>
-                                {part} {i === 0 ? <br /> : ''}
-                                {i === 1 ? <span className="text-brand-red">.</span> : ''}
+                    <h2 className="text-5xl font-heading font-bold mb-4 text-foreground leading-[1.1]">
+                        {t.signup.sidebarTitle.split('.').filter((p: string) => p.trim() !== '').map((part: string, i: number) => (
+                            <span key={i} className="block">
+                                {i < 2 ? (
+                                    <>{part.trim()}.</>
+                                ) : (
+                                    <span className="text-brand-red">{part.trim()}..</span>
+                                )}
                             </span>
                         ))}
                     </h2>

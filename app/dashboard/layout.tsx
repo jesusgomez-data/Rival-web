@@ -21,7 +21,9 @@ import {
     X,
     Sun,
     Moon,
-    Shield
+    Shield,
+    ChevronRight,
+    ChevronLeft
 } from "lucide-react";
 import clsx from "clsx";
 import { useRouter, usePathname } from "next/navigation";
@@ -43,6 +45,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const [profile, setProfile] = useState<any>(null);
     const [showMobileSearch, setShowMobileSearch] = useState(false);
     const [unreadMessages, setUnreadMessages] = useState(0);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { userStories, openStory } = useStories();
     const supabase = createClient();
 
@@ -53,7 +56,6 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         }
         loadProfile();
 
-        // Pedir permiso de notificaciones al entrar al dashboard
         if ("Notification" in window && Notification.permission === "default") {
             Notification.requestPermission();
         }
@@ -64,9 +66,6 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // Simple listener for new messages
-            // In a real app, we might want to check if the message is for a conversation the user is in
-            // But RLS should restrict this anyway if configured correctly.
             const channel = supabase
                 .channel('global-chat-notifications')
                 .on(
@@ -77,9 +76,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         table: 'messages'
                     },
                     (payload) => {
-                        // Solo notificar si el mensaje NO es mío
                         if (payload.new.sender_id !== user.id) {
-                            // Si NO estoy en la página de mensajes, aumentar contador y lanzar push
                             if (!pathname?.startsWith('/dashboard/messages')) {
                                 setUnreadMessages(prev => prev + 1);
 
@@ -87,7 +84,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                                     new Notification("Rival: Nuevo Mensaje", {
                                         body: payload.new.text,
                                         icon: "/logo.svg",
-                                        tag: payload.new.conversation_id // Agrupar por chat
+                                        tag: payload.new.conversation_id
                                     });
                                 }
                             }
@@ -115,6 +112,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         router.push("/");
     };
 
+    useEffect(() => {
+        setIsMenuOpen(false);
+    }, [pathname]);
+
     const navItems = [
         { name: t.navDashboard.home, href: "/dashboard", icon: Home },
         { name: t.navDashboard.messages, href: "/dashboard/messages", icon: MessageSquarePlus },
@@ -128,12 +129,26 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         { name: "Rival Command", href: "/dashboard/admin", icon: Shield },
     ];
 
-    const isGymView = pathname?.startsWith('/dashboard/gyms/') && pathname.split('/').length > 3;
+    const hideSidebarDefault = (pathname?.startsWith('/dashboard/gyms/') && pathname.split('/').length > 3) || pathname === '/dashboard/admin';
+    const showSidebar = !hideSidebarDefault || isMenuOpen;
 
     return (
         <div className="min-h-screen bg-background flex font-sans text-foreground selection:bg-brand-red selection:text-white transition-colors duration-300">
+            {/* Sidebar Toggle Button (Floating) */}
+            {hideSidebarDefault && (
+                <button
+                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                    className={clsx(
+                        "fixed top-1/2 -translate-y-1/2 z-[101] bg-brand-red text-white p-2 rounded-r-2xl shadow-[0_0_20px_rgba(220,38,38,0.5)] transition-all duration-300",
+                        isMenuOpen ? "left-64" : "left-0"
+                    )}
+                >
+                    {isMenuOpen ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                </button>
+            )}
+
             {/* Sidebar Navigation (Desktop) */}
-            {!isGymView && (
+            {showSidebar && (
                 <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-card h-screen fixed left-0 top-0 z-50">
                     <div className="p-6 flex items-center justify-between border-b border-border">
                         <div className="flex items-center gap-3">
@@ -228,48 +243,121 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 </aside>
             )}
 
-            <main className={clsx("flex-1 min-h-screen relative bg-background w-full overflow-x-hidden", !isGymView && "lg:ml-64")}>
-                {/* Mobile Header */}
-                <div className="lg:hidden h-16 border-b border-border flex items-center justify-between px-4 sticky top-0 bg-background/95 backdrop-blur-md z-[70]">
-                    <div className="flex items-center gap-2">
-                        {!showMobileSearch ? (
-                            <>
-                                <Image src="/logo.svg" alt="Rival Logo" width={24} height={24} className="w-6 h-6" />
-                                <span className="font-heading font-bold text-xl text-foreground uppercase italic">RIVAL</span>
-                            </>
-                        ) : (
-                            <div className="flex-1 mr-2">
-                                <GlobalSearch />
-                            </div>
-                        )}
+            <main className={clsx("flex-1 min-h-screen relative bg-background w-full overflow-x-hidden transition-all duration-300", showSidebar && "lg:ml-64")}>
+                {/* Mobile Header Bar */}
+                <div className="lg:hidden h-20 border-b border-white/5 flex items-center justify-between px-6 sticky top-0 bg-[#0a0a0a]/95 backdrop-blur-xl z-[200]">
+                    <div className="flex items-center gap-3">
+                        <Image src="/logo.svg" alt="Rival Logo" width={28} height={28} className="w-7 h-7" />
+                        <span className="font-heading font-bold text-xl text-white uppercase italic tracking-tighter">RIVAL</span>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <button onClick={() => setShowMobileSearch(!showMobileSearch)} className="p-2 text-gray-400 hover:text-foreground">
-                            {showMobileSearch ? <X className="w-5 h-5" /> : <SearchIcon className="w-5 h-5" />}
+                    <div className="flex items-center gap-1">
+                        <button onClick={() => setShowMobileSearch(!showMobileSearch)} className="p-2.5 text-gray-400 hover:text-white transition-colors">
+                            {showMobileSearch ? <X className="w-6 h-6" /> : <SearchIcon className="w-6 h-6" />}
                         </button>
-                        {!showMobileSearch && (
-                            <>
-                                <ThemeToggle className="bg-transparent border-none p-2 shadow-none" />
-                                <NotificationBell />
-                                <Link href="/dashboard/profile" className="relative group shrink-0">
-                                    <div className="relative w-9 h-9 rounded-full overflow-hidden border border-white/10 group-hover:border-brand-red transition-all">
-                                        {profile?.avatar_url ? (
-                                            <Image src={profile.avatar_url} alt="Profile" fill className="object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                                                <User className="w-4 h-4 text-gray-400" />
-                                            </div>
-                                        )}
+
+                        <button
+                            onClick={() => setIsMenuOpen(!isMenuOpen)}
+                            className="p-2.5 text-gray-400 hover:text-brand-red transition-all"
+                        >
+                            {isMenuOpen ? <X className="w-7 h-7 text-white" /> : (
+                                <div className="space-y-1.5 w-6 flex flex-col items-end">
+                                    <div className="h-0.5 w-6 bg-current rounded-full" />
+                                    <div className="h-0.5 w-4 bg-brand-red rounded-full" />
+                                    <div className="h-0.5 w-6 bg-current rounded-full" />
+                                </div>
+                            )}
+                        </button>
+
+                        <Link href="/dashboard/profile" className="ml-2 relative shrink-0">
+                            <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/10">
+                                {profile?.avatar_url ? (
+                                    <Image src={profile.avatar_url} alt="Profile" fill className="object-cover" />
+                                ) : (
+                                    <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                        <User className="w-4 h-4 text-gray-400" />
                                     </div>
-                                </Link>
-                            </>
-                        )}
+                                )}
+                            </div>
+                        </Link>
                     </div>
                 </div>
 
-                <div className={clsx("mx-auto", isGymView ? "h-full p-0 max-w-none" : "p-4 pb-24 lg:p-8 max-w-7xl")}>
-                    {!isGymView && (
+                {/* Mobile Menu Overlay */}
+                {isMenuOpen && (
+                    <div className="fixed inset-0 top-20 bg-black z-[999] lg:hidden overflow-y-auto pb-32 animate-in fade-in slide-in-from-right-4 duration-300">
+                        <div className="p-6 space-y-8">
+                            {/* Profile Summary in Menu */}
+                            <div className="flex items-center justify-between bg-white/[0.03] border border-white/5 p-5 rounded-[2.5rem]">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-brand-red shadow-glow relative">
+                                        {profile?.avatar_url ? (
+                                            <Image src={profile.avatar_url} alt="User" fill className="object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center bg-gray-800 text-brand-red font-black text-xl italic">
+                                                {(profile?.full_name || 'A')[0]}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-base font-black text-white uppercase italic tracking-tighter leading-none">{profile?.full_name || 'Atleta Rival'}</p>
+                                        <p className="text-[9px] text-brand-red font-black uppercase tracking-[0.2em] mt-1.5 opacity-80">Nivel {profile?.level || 1} • {profile?.subscription_tier || 'Free'}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <ThemeToggle className="bg-white/5 border-none p-2.5" />
+                                    <NotificationBell />
+                                </div>
+                            </div>
+
+                            {/* Menu Items Grid */}
+                            <div className="grid grid-cols-1 gap-2.5">
+                                {navItems.map((item) => {
+                                    const Icon = item.icon;
+                                    const isActive = pathname === item.href;
+                                    return (
+                                        <Link
+                                            key={item.href}
+                                            href={item.href}
+                                            onClick={() => setIsMenuOpen(false)}
+                                            className={clsx(
+                                                "flex items-center gap-4 px-6 py-4.5 rounded-2xl font-black transition-all group border",
+                                                isActive ? "bg-brand-red border-brand-red text-white shadow-glow-sm" : "bg-white/[0.02] border-white/5 text-gray-400 active:bg-white/5"
+                                            )}
+                                        >
+                                            <Icon className={clsx("w-6 h-6", isActive ? "text-white" : "group-active:text-white")} />
+                                            <div className="flex-1 flex items-center justify-between">
+                                                <span className="uppercase text-[11px] tracking-widest">{item.name}</span>
+                                            </div>
+                                            <ChevronRight className={clsx("w-4 h-4 opacity-20", isActive && "opacity-100")} />
+                                        </Link>
+                                    )
+                                })}
+                            </div>
+
+                            {/* Menu Actions */}
+                            <div className="space-y-4 pt-4 border-t border-white/5">
+                                <Link
+                                    href="/dashboard/training/session"
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="w-full bg-brand-red text-white py-5 rounded-2xl font-black flex items-center justify-center gap-3 shadow-glow-sm uppercase text-[11px] tracking-widest active:scale-[0.98] transition-all"
+                                >
+                                    <PlusCircle className="w-5 h-5" /> Iniciar Entrenamiento
+                                </Link>
+                                <button
+                                    onClick={() => { setIsMenuOpen(false); handleLogout(); }}
+                                    className="w-full bg-white/[0.02] text-gray-500 py-4.5 rounded-2xl font-black flex items-center justify-center gap-3 uppercase text-[10px] tracking-widest border border-white/5"
+                                >
+                                    <LogOut className="w-4 h-4" /> Cerrar Sesión
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Main Content Area */}
+                <div className={clsx("mx-auto transition-all duration-300", hideSidebarDefault && !isMenuOpen ? "h-full p-0 max-w-none" : "p-5 pt-8 pb-32 lg:p-8 max-w-7xl")}>
+                    {(!hideSidebarDefault || isMenuOpen) && (
                         <header className="hidden lg:flex items-center justify-between mb-8">
                             <div className="flex-1 max-w-xl">
                                 <GlobalSearch />
@@ -293,22 +381,22 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 </div>
             </main>
 
-            {!isGymView && (
-                <nav className="lg:hidden fixed bottom-0 w-full bg-[#0a0a0a]/80 backdrop-blur-xl border-t border-white/5 py-2 px-4 z-[100] safe-area-inset-bottom">
-                    <div className="flex justify-between items-center h-16 relative">
+            {/* Mobile Bottom Navigation */}
+            {(!hideSidebarDefault || isMenuOpen) && (
+                <nav className="lg:hidden fixed bottom-4 left-4 right-4 bg-[#0a0a0a]/90 backdrop-blur-2xl border border-white/10 py-3 px-6 z-[100] rounded-[2rem] shadow-2xl safe-area-inset-bottom">
+                    <div className="flex justify-between items-center h-12 relative">
                         {navItems.filter(i => [t.navDashboard.home, t.navDashboard.messages, t.navDashboard.onlineCoach, t.navDashboard.community].includes(i.name)).map((item, idx) => {
                             const Icon = item.icon;
                             const isActive = pathname === item.href;
-                            // Add a spacer for the central FAB if needed, or just let them group
                             return (
                                 <Link
                                     key={item.href}
                                     href={item.href}
                                     className={clsx(
                                         "flex flex-col items-center justify-center w-12 h-12 rounded-2xl transition-all relative group",
-                                        isActive ? "text-brand-red" : "text-gray-500 hover:text-foreground",
-                                        idx === 1 && "mr-12", // Leave space for FAB
-                                        idx === 2 && "ml-12"  // Leave space for FAB
+                                        isActive ? "text-brand-red" : "text-gray-500 hover:text-white",
+                                        idx === 1 && "mr-10",
+                                        idx === 2 && "ml-10"
                                     )}
                                 >
                                     <div className="relative">
@@ -326,19 +414,19 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                             )
                         })}
 
-                        {/* Improved Floating Action Button */}
-                        <div className="absolute left-1/2 -translate-x-1/2 -top-8">
+                        {/* Floating Center Button */}
+                        <div className="absolute left-1/2 -translate-x-1/2 -top-10">
                             <Link
                                 href="/dashboard/training/session"
-                                className="flex flex-col items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-brand-red to-[#991b1b] text-white shadow-[0_8px_20px_rgba(220,38,38,0.5)] border-4 border-[#0a0a0a] hover:scale-110 active:scale-95 transition-all duration-300 group"
+                                className="flex flex-col items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-brand-red to-[#991b1b] text-white shadow-[0_8px_25px_rgba(220,38,38,0.6)] border-4 border-[#0a0a0a] hover:scale-110 active:scale-95 transition-all duration-300 group"
                             >
                                 <PlusCircle className="w-8 h-8 group-hover:rotate-90 transition-transform duration-500" />
-                                <div className="absolute inset-0 rounded-full bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                             </Link>
                         </div>
                     </div>
                 </nav>
             )}
+
             <PendingReviewPrompt />
         </div>
     );

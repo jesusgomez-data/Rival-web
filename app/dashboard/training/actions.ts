@@ -277,17 +277,19 @@ export async function saveWorkout(workoutData: any) {
 
         if (workoutData.sportType === 'Running' && workoutData.metrics) {
             caption = `🏃‍♂️ Carrera completada: ${(workoutData.metrics.distance / 1000).toFixed(2)}km en ${Math.floor(workoutData.duration / 60)}min. Ritmo: ${workoutData.metrics.pace}/km.`;
-        } else if (workoutData.sportType === 'OCR') {
-            caption = `💪 ¡Carrera de Obstáculos completada! Superando límites en OCR. 🔥`;
-        } else if (workoutData.sportType === 'Otros') {
-            caption = `🔥 ¡Sesión completada! Manteniendo la disciplina en cada entrenamiento. 💪`;
-        } else if (workoutData.sportType === 'CrossFit' && workoutData.metrics) {
-            if (workoutData.metrics.type === 'FOR_TIME' && workoutData.metrics.time) {
-                caption = `🏋️‍♀️ WOD Finalizado en ${workoutData.metrics.time}. 🔥`;
-            } else if (workoutData.metrics.rounds) {
-                caption = `🏋️‍♀️ WOD Completado: ${workoutData.metrics.rounds} Rondas. 🔥`;
+        } else if ((workoutData.sportType === 'CrossFit' || workoutData.sportType === 'OCR') && workoutData.metrics) {
+            const { type, time, rounds, emomTime, distance } = workoutData.metrics;
+            const formatStr = type === 'fortime' ? 'FOR TIME' : (type || 'WOD').toUpperCase();
+            const distStr = (distance > 0 && workoutData.sportType === 'OCR') ? ` [${(distance / 1000).toFixed(2)}km] ` : '';
+
+            if (type === 'fortime' && time) {
+                caption = `🏋️‍♀️ ${formatStr}${distStr} Finalizado en ${time}. [Cap: ${emomTime || '---'}'] 🔥`;
+            } else if (type === 'amrap') {
+                caption = `🏋️‍♀️ AMRAP ${emomTime || '---'} min${distStr}: ${rounds || 0} Rondas completadas. 🔥`;
+            } else if (type === 'emom') {
+                caption = `🏋️‍♀️ EMOM ${emomTime || '---'} min${distStr} completado con éxito. 🔥`;
             } else {
-                caption = `🏋️‍♀️ WOD CrossFit completado con éxito! 🔥`;
+                caption = `🏋️‍♀️ WOD ${workoutData.sportType}${distStr} completado con éxito! 🔥`;
             }
         } else if (workoutData.metrics && sessionMaxWeight > 0) {
             caption += ` Levanté un máximo de ${sessionMaxWeight}kg.`;
@@ -301,7 +303,7 @@ export async function saveWorkout(workoutData: any) {
                 user_id: user.id,
                 workout_id: workout.id,
                 caption: caption,
-                media_url: workoutData.imageUrl || null, // Optional image
+                media_url: workoutData.imageUrl || null,
             })
     }
 
@@ -340,7 +342,7 @@ export async function uploadWorkoutMedia(formData: FormData) {
     return { success: true, url: publicUrl }
 }
 
-export async function getExercises(sport: 'gym' | 'crossfit' = 'gym') {
+export async function getExercises(sport: 'gym' | 'crossfit' | 'ocr' | 'hyrox' = 'gym') {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
@@ -457,7 +459,46 @@ export async function getExercises(sport: 'gym' | 'crossfit' = 'gym') {
         { name: 'Weighted Pull Up', muscle_group: 'Back' },
     ];
 
-    const targetList = sport === 'crossfit' ? crossFitExercises : gymExercises;
+    const ocrExercises = [
+        { name: 'Rope Climb', muscle_group: 'Full Body' },
+        { name: 'Monkey Bars', muscle_group: 'Grip' },
+        { name: 'Wall Climb', muscle_group: 'Full Body' },
+        { name: 'Spear Throw', muscle_group: 'Skill' },
+        { name: 'Sandbag Carry', muscle_group: 'Legs/Core' },
+        { name: 'Bucket Carry', muscle_group: 'Legs/Grip' },
+        { name: 'Atlas Stone Carry', muscle_group: 'Strongman' },
+        { name: 'Sled Push', muscle_group: 'Legs' },
+        { name: 'Sled Pull', muscle_group: 'Back' },
+        { name: 'Burpee Broad Jump', muscle_group: 'Full Body' },
+        { name: 'Bear Crawl', muscle_group: 'Core' },
+        { name: 'Z Wall Traverse', muscle_group: 'Grip/Balance' },
+        { name: 'Tyre Flip', muscle_group: 'Full Body' },
+        { name: 'Log Carry', muscle_group: 'Strongman' },
+        { name: 'Trail Run Interval', muscle_group: 'Cardio' },
+        { name: 'Farmers Carry', muscle_group: 'Grip' },
+        { name: 'Sandbag Lunges', muscle_group: 'Legs' },
+        { name: 'Barbed Wire Crawl', muscle_group: 'Full Body' },
+        { name: 'Hercules Hoist', muscle_group: 'Back/Grip' },
+        { name: 'Run', muscle_group: 'Cardio' },
+    ];
+
+    const hyroxExercises = [
+        { name: 'Ski Erg', muscle_group: 'Cardio' },
+        { name: 'Sled Push', muscle_group: 'Legs' },
+        { name: 'Sled Pull', muscle_group: 'Back' },
+        { name: 'Burpee Broad Jump', muscle_group: 'Full Body' },
+        { name: 'Row', muscle_group: 'Cardio' },
+        { name: 'Farmers Carry', muscle_group: 'Grip' },
+        { name: 'Sandbag Lunges', muscle_group: 'Legs' },
+        { name: 'Wall Balls', muscle_group: 'Full Body' },
+        { name: 'Run', muscle_group: 'Cardio' },
+    ];
+
+    let targetList = [];
+    if (sport === 'ocr') targetList = ocrExercises;
+    else if (sport === 'hyrox') targetList = hyroxExercises;
+    else if (sport === 'crossfit') targetList = crossFitExercises;
+    else targetList = gymExercises;
 
     if (error) {
         console.error('Error fetching exercises:', error)

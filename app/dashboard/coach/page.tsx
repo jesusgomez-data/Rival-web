@@ -302,6 +302,7 @@ export default function CoachPage() {
             const sportMapping: Record<string, string> = {
                 'crossfit': 'CrossFit',
                 'hyrox': 'Hyrox',
+                'ocr': 'OCR',
                 'running': 'Running',
                 'calistenia': 'Fitness',
                 'gym': 'Fitness'
@@ -529,6 +530,7 @@ export default function CoachPage() {
                     {/* Quick Actions */}
                     <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar bg-black/20 border-t border-white/5 pb-4">
                         <QuickAction label="Crossfit" onClick={() => handleSend("Dame un WOD de Crossfit del día. Profesional y exigente.")} />
+                        <QuickAction label="OCR" onClick={() => handleSend("Dame un entrenamiento de OCR (Obstacle Course Racing). Incluye carrera y obstáculos técnicos.")} />
                         <QuickAction label="Hyrox" onClick={() => handleSend("Dame una sesión de entrenamiento estilo Hyrox.")} />
                         <QuickAction label="Running" onClick={() => handleSend("Dame un plan de Running para hoy.")} />
                         <QuickAction label="Calistenia" onClick={() => handleSend("Entrenamiento de Calistenia para dominio corporal.")} />

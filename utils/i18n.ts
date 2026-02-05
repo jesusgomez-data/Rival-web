@@ -14,7 +14,10 @@ export const translations = {
             future: 'EL FUTURO DEL FITNESS 2026',
             title: 'ENFRÉNTATE',
             subtitle: 'A TI MISMO.',
-            description: 'La primera red social creada para la mentalidad del 1%. Registra cada repetición, compite globalmente y accede a gimnasios de élite en todo el mundo.',
+            description: 'La primera red social creada para la mentalidad del 1%. Registra cada repetición, compite globalmente y próximamente accede a gimnasios de élite en todo el mundo.',
+            descPrefix: 'La primera red social creada para la mentalidad del 1%. Registra cada repetición, compite globalmente y ',
+            descHighlight: 'próximamente',
+            descSuffix: ' accede a gimnasios de élite en todo el mundo.',
             ctaStart: 'Empieza gratis',
             ctaDemo: 'Ver demo'
         },
@@ -33,7 +36,7 @@ export const translations = {
             joinUs: 'Únete a las filas'
         },
         signup: {
-            sidebarTitle: 'Gánate tu Lugar.',
+            sidebarTitle: 'Esfuerzo. Respeto. Gánate tu Lugar.',
             sidebarDesc: 'Únete a la única comunidad donde el respeto se mide en sudor, no en seguidores.',
             backHome: 'Volver al Inicio',
             title: 'Crear Cuenta',
@@ -154,6 +157,9 @@ export const translations = {
             title: 'FACE',
             subtitle: 'YOURSELF.',
             description: 'The first social network created for the 1% mindset. Track every rep, compete globally and access elite gyms worldwide.',
+            descPrefix: 'The first social network created for the 1% mindset. Track every rep, compete globally and ',
+            descHighlight: '',
+            descSuffix: 'access elite gyms worldwide.',
             ctaStart: 'Start for free',
             ctaDemo: 'Watch demo'
         },
@@ -172,7 +178,7 @@ export const translations = {
             joinUs: 'Join the ranks'
         },
         signup: {
-            sidebarTitle: 'Earn your Place.',
+            sidebarTitle: 'Effort. Respect. Earn your Place.',
             sidebarDesc: 'Join the only community where respect is measured in sweat, not followers.',
             backHome: 'Back Home',
             title: 'Create Account',

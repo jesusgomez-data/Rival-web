@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Trophy, Activity, Users, Play, BarChart3, Dumbbell, Flame, Check, Star, TrendingUp, Zap, Layout, CalendarCheck, UploadCloud, Building2, ShoppingBag, Globe } from "lucide-react";
+import { ArrowRight, Trophy, Activity, Users, Play, BarChart3, Dumbbell, Flame, Check, Star, TrendingUp, Zap, Layout, CalendarCheck, UploadCloud, Building2, ShoppingBag, Globe, Mail, Instagram } from "lucide-react";
 import { useState } from "react";
 import { useLanguage } from "@/app/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -152,7 +152,9 @@ export default function Home() {
                 </span>
               </h1>
               <p className="text-muted-foreground text-lg lg:text-xl mb-8 leading-relaxed max-w-lg">
-                {t.hero.description}
+                {t.hero.descPrefix}
+                {t.hero.descHighlight && <span className="text-brand-red font-bold">{t.hero.descHighlight}</span>}
+                {t.hero.descSuffix}
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Link
@@ -523,11 +525,19 @@ export default function Home() {
           <div className="text-sm flex gap-6 text-muted-foreground">
             <a href="#features" className="hover:text-brand-red transition-colors">Características</a>
             <a href="#pricing" className="hover:text-brand-red transition-colors">Precios</a>
-            <a href="#" className="hover:text-brand-red transition-colors">Términos</a>
-            <a href="#" className="hover:text-brand-red transition-colors">Privacidad</a>
+            <Link href="/legal/terms" className="hover:text-brand-red transition-colors">Términos</Link>
+            <Link href="/legal/privacy" className="hover:text-brand-red transition-colors">Privacidad</Link>
           </div>
           <div className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} Rival Inc. Todos los derechos reservados.
+          </div>
+          <div className="flex gap-4 items-center order-first md:order-last">
+            <a href="https://instagram.com/rival.app" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-white/5 hover:bg-brand-red text-white transition-all transform hover:scale-110">
+              <Instagram className="w-4 h-4" />
+            </a>
+            <a href="mailto:rival.app.official@gmail.com" className="p-2 rounded-full bg-white/5 hover:bg-brand-red text-white transition-all transform hover:scale-110">
+              <Mail className="w-4 h-4" />
+            </a>
           </div>
         </div>
       </footer>

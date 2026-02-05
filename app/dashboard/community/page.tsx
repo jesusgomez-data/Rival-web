@@ -8,10 +8,12 @@ import LikeButton from "./LikeButton";
 import FollowButton from "./FollowButton";
 import DuelButton from "./DuelButton";
 import SearchAthletes from "./SearchAthletes";
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, Fragment } from "react";
 import FeedPost from "../FeedPost";
 import StoryBar from "../stories/StoryBar";
 import { useLanguage } from "@/app/LanguageContext";
+import SidebarAd from "./SidebarAd";
+import FeedAd from "./FeedAd";
 
 export default function CommunityPage({
     searchParams
@@ -175,29 +177,33 @@ export default function CommunityPage({
                     )}
 
                     {data.posts && data.posts.length > 0 ? (
-                        data.posts.map((post: any) => (
-                            <FeedPost
-                                key={post.id}
-                                postId={post.id}
-                                username={post.profiles?.username}
-                                user={post.profiles?.full_name || "Atleta Desconocido"}
-                                action={post.workout_id ? t.community.completedWorkout : t.community.postedUpdate}
-                                time={formatTimeAgo(post.created_at)}
-                                avatar={post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.profiles?.full_name || 'User')}&background=random`}
-                                image={post.media_url}
-                                initialLikes={post.likes ? post.likes.length : (post.likes_count || 0)}
-                                hasLikedInitial={post.likes?.some((l: any) => l.user_id === data.user?.id)}
-                                comments={post.comments_count || 0}
-                                highlight={post.workouts?.title}
-                                mediaType={post.media_type}
-                                caption={post.caption}
-                                currentUserId={data.user?.id}
-                                authorId={post.user_id}
-                                workoutData={post.workouts}
-                                music_url={post.music_url}
-                                music_title={post.music_title}
-                                music_artist={post.music_artist}
-                            />
+                        data.posts.map((post: any, index: number) => (
+                            <Fragment key={post.id}>
+                                <FeedPost
+                                    postId={post.id}
+                                    username={post.profiles?.username}
+                                    user={post.profiles?.full_name || "Atleta Desconocido"}
+                                    action={post.workout_id ? t.community.completedWorkout : t.community.postedUpdate}
+                                    time={formatTimeAgo(post.created_at)}
+                                    avatar={post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.profiles?.full_name || 'User')}&background=random`}
+                                    image={post.media_url}
+                                    initialLikes={post.likes ? post.likes.length : (post.likes_count || 0)}
+                                    hasLikedInitial={post.likes?.some((l: any) => l.user_id === data.user?.id)}
+                                    comments={post.comments_count || 0}
+                                    highlight={post.workouts?.title}
+                                    mediaType={post.media_type}
+                                    caption={post.caption}
+                                    currentUserId={data.user?.id}
+                                    authorId={post.user_id}
+                                    workoutData={post.workouts}
+                                    music_url={post.music_url}
+                                    music_title={post.music_title}
+                                    music_artist={post.music_artist}
+                                />
+                                {(index + 1) % 3 === 0 && (
+                                    <FeedAd tier={data.profile?.subscription_tier} />
+                                )}
+                            </Fragment>
                         ))
                     ) : (
                         <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl bg-brand-gray/10">
@@ -206,46 +212,8 @@ export default function CommunityPage({
                     )}
                 </div>
 
-                <div className="lg:col-span-4 space-y-6">
-                    {data.profile?.subscription_tier === 'free' ? (
-                        <div className="space-y-6 sticky top-24">
-                            <div className="bg-brand-gray border border-white/5 rounded-3xl p-6 overflow-hidden relative group">
-                                <div className="absolute inset-0 bg-gradient-to-br from-brand-red/20 via-transparent to-transparent opacity-50 group-hover:opacity-100 transition-opacity" />
-                                <div className="relative z-10">
-                                    <p className="text-[10px] font-black text-brand-red uppercase tracking-[0.3em] mb-2">Publicidad</p>
-                                    <h3 className="text-xl font-heading font-black italic text-white uppercase mb-4 tracking-tighter leading-tight">Mejora a Premium para eliminar anuncios</h3>
-                                    <p className="text-gray-400 text-xs mb-6 font-medium leading-relaxed">Disfruta de una experiencia limpia, análisis avanzados y rutinas exclusivas.</p>
-                                    <Link href="/dashboard/profile" className="w-full bg-brand-red hover:bg-red-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all active:scale-95 shadow-lg shadow-brand-red/20 uppercase text-[10px] tracking-widest">
-                                        Subir de Nivel
-                                    </Link>
-                                </div>
-                            </div>
-
-                            <div className="bg-brand-gray border border-white/5 rounded-3xl p-1 relative overflow-hidden aspect-[4/5] group">
-                                <Image
-                                    src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop"
-                                    alt="Rival Gear Ad"
-                                    fill
-                                    className="object-cover group-hover:scale-105 transition-transform duration-700"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
-                                <div className="absolute bottom-6 left-6 right-6">
-                                    <p className="text-[8px] font-black text-white/50 uppercase tracking-[0.3em] mb-1">Patrocinado</p>
-                                    <h4 className="text-white font-heading font-black italic text-lg uppercase tracking-tight leading-none mb-3">RIVAL GEAR: ARMADURA PARA EL 1%</h4>
-                                    <button className="text-[9px] font-black text-brand-red uppercase tracking-widest hover:text-white transition-colors">Comprar Ahora →</button>
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="hidden lg:block space-y-6 sticky top-24">
-                            <div className="bg-gradient-to-br from-brand-red/10 to-transparent border border-brand-red/20 rounded-3xl p-6 backdrop-blur-sm">
-                                <Trophy className="w-8 h-8 text-brand-red mb-4" />
-                                <h3 className="text-lg font-heading font-bold text-white uppercase italic tracking-tighter">Beneficios Premium Activos</h3>
-                                <p className="text-gray-400 text-xs mt-2 font-medium">Gracias por apoyar a la comunidad. Tienes acceso total a todas las funciones sin interrupciones.</p>
-                            </div>
-                            {/* Pro-specific content could go here instead of ads */}
-                        </div>
-                    )}
+                <div className="lg:col-span-4 space-y-6 sticky top-24">
+                    <SidebarAd tier={data.profile?.subscription_tier} />
                 </div>
             </div>
         </div>

@@ -38,10 +38,14 @@ export default function LoginPage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-background/50 to-background pointer-events-none" />
                 <div className="absolute bottom-12 left-12 z-10">
-                    <h2 className="text-5xl font-heading font-bold mb-4 text-foreground">
-                        {t.login.sidebarTitle.split('.').map((part: string, i: number) => (
-                            <span key={i}>
-                                {i < 2 ? <>{part}. <br /></> : <span className="text-brand-red">{part}.</span>}
+                    <h2 className="text-5xl font-heading font-bold mb-4 text-foreground leading-[1.1]">
+                        {t.login.sidebarTitle.split('.').filter((p: string) => p.trim() !== '').map((part: string, i: number) => (
+                            <span key={i} className="block">
+                                {i < 2 ? (
+                                    <>{part.trim()}.</>
+                                ) : (
+                                    <span className="text-brand-red">{part.trim()}..</span>
+                                )}
                             </span>
                         ))}
                     </h2>

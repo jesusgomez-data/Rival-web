@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Logo Rival</title>
+    <style>
+        body {
+            background-color: #111;
+            color: white;
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            gap: 20px;
+        }
+
+        canvas {
+            border: 1px solid #333;
+            box-shadow: 0 0 20px rgba(220, 38, 38, 0.5);
+            border-radius: 20px;
+        }
+
+        button {
+            background-color: #DC2626;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            background-color: #b91c1c;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Tu Logo Oficial (Generado desde SVG)</h1>
+    <canvas id="canvas" width="1024" height="1024"></canvas>
+    <button onclick="downloadLogo()">Descargar PNG (Alta Calidad)</button>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // 1. Fill Black Background
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // 2. Load SVG
+        const svgData = `
+        <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Modified viewbox/scale to fit 1024 canvas if needed, but drawing image handles scaling -->
+            <path d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z" fill="#DC2626"/>
+            <path d="M160 100L145 310H220L235 100H160Z" fill="#991B1B"/>
+        </svg>
+        `.trim();
+
+        const img = new Image();
+        const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(svgBlob);
+
+        img.onload = function () {
+            // Draw logo centered and scaled
+            // Canvas is 1024x1024. SVG is 512x512. 
+            // We want to scale it up to fill nicely but leave padding.
+            const scale = 1.5;
+            const drawWidth = 512 * scale;
+            const drawHeight = 512 * scale;
+            const x = (canvas.width - drawWidth) / 2;
+            const y = (canvas.height - drawHeight) / 2;
+
+            ctx.drawImage(img, x, y, drawWidth, drawHeight);
+            URL.revokeObjectURL(url);
+        };
+        img.src = url;
+
+        function downloadLogo() {
+            const link = document.createElement('a');
+            link.download = 'rival_official_profile.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+    </script>
+</body>
+
+</html>

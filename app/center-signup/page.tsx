@@ -314,7 +314,11 @@ export default function CenterSignup() {
           {step === 4 && (
             <div className="space-y-6">
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Plan</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Plan</label>
+                <p className="text-[10px] text-brand-red font-bold uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <span className="w-1 h-1 rounded-full bg-brand-red animate-pulse" />
+                  Los cobros se realizarán automáticamente los días 1 de cada mes
+                </p>
                 <p className="text-sm text-gray-400 mb-4">Todos incluyen 30 días gratis.</p>
                 <div className="space-y-3">
                   {plans.map((plan) => (

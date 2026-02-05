@@ -139,11 +139,39 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         const file = e.target.files?.[0]
         if (!file) return
 
-        if (file.size > 10 * 1024 * 1024) {
-            alert('El archivo es demasiado grande. El límite es 10MB.')
+        if (file.size > 20 * 1024 * 1024) { // Pushed to 20MB for videos
+            alert('El archivo es demasiado grande. El límite es 20MB para mejores videos.')
             return
         }
 
+        if (file.type.startsWith('video/')) {
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+
+            video.onloadedmetadata = function () {
+                window.URL.revokeObjectURL(video.src);
+                const duration = video.duration;
+
+                if (duration > 30) {
+                    alert('LAS HISTORIAS TIENEN UN LÍMITE DE 30 SEGUNDOS. Tu video dura ' + Math.round(duration) + ' segundos.');
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                    return;
+                }
+
+                setupPreview(file);
+            };
+
+            video.onerror = function () {
+                alert('Error al procesar el video. Asegúrate de que sea un formato compatible.');
+            };
+
+            video.src = URL.createObjectURL(file);
+        } else {
+            setupPreview(file);
+        }
+    }
+
+    const setupPreview = (file: File) => {
         const url = URL.createObjectURL(file)
         setPreviewFile(file)
         setPreviewUrl(url)
@@ -434,6 +462,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUploading}
+                        title="Subir Historia (Máx 30s para videos)"
                         className="w-16 h-16 rounded-full border-2 border-dashed border-white/10 flex items-center justify-center hover:border-white transition-all group relative overflow-hidden"
                     >
                         {isUploading && !showPRCreator && !previewUrl ? (
@@ -445,7 +474,10 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                         )}
                         <input ref={fileInputRef} type="file" accept="image/*,video/*" onChange={handleFileChange} className="hidden" />
                     </button>
-                    <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Story</span>
+                    <div className="flex flex-col items-center">
+                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none">Story</span>
+                        <span className="text-[7px] font-bold text-brand-red uppercase tracking-tighter mt-1 opacity-60">Max 30s</span>
+                    </div>
                 </div>
 
                 <div className="flex flex-col items-center gap-2">

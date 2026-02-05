@@ -38,29 +38,36 @@ export async function POST(req: Request) {
             // You can get line items to be more specific
 
             if (userId) {
-                // Determine the tier (you can improve this by checking the price ID)
-                // Let's check line items
                 const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
                 const priceId = lineItems.data[0]?.price?.id;
+                const organizationId = session.metadata?.organizationId;
 
-                // MOCK MAPPING (Replace with your actual price IDs from Stripe)
-                let tier = 'free';
-                if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM) tier = 'premium';
-                if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE) tier = 'elite';
+                if (organizationId) {
+                    // CENTER UPGRADE
+                    let planName = 'free';
+                    if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER) planName = 'starter';
+                    if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) planName = 'pro';
 
-                const { error } = await supabase
-                    .from("profiles")
-                    .update({
-                        subscription_tier: tier,
-                        // Optionally store customerId too for future portal access
-                        // stripe_customer_id: customerId 
-                    })
-                    .eq("id", userId);
+                    const { error } = await supabase
+                        .from("organizations")
+                        .update({ plan: planName })
+                        .eq("id", organizationId);
 
-                if (error) {
-                    console.error("Error updating user tier:", error);
+                    if (error) console.error("Error updating organization plan:", error);
+                    else console.log(`Organization ${organizationId} upgraded to ${planName}`);
                 } else {
-                    console.log(`User ${userId} upgraded to ${tier}`);
+                    // ATHLETE UPGRADE
+                    let tier = 'free';
+                    if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM) tier = 'premium';
+                    if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE) tier = 'elite';
+
+                    const { error } = await supabase
+                        .from("profiles")
+                        .update({ subscription_tier: tier })
+                        .eq("id", userId);
+
+                    if (error) console.error("Error updating user tier:", error);
+                    else console.log(`User ${userId} upgraded to ${tier}`);
                 }
             }
             break;

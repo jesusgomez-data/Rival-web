@@ -209,7 +209,10 @@ export default function ForCenters() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-heading font-bold mb-6 text-foreground">Planes de <span className="text-brand-red">Crecimiento</span></h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">Sin costes ocultos. Sin complicaciones. Cancela cuando quieras.</p>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg mb-2">Sin costes ocultos. Sin complicaciones. Cancela cuando quieras.</p>
+            <p className="text-[10px] text-brand-red font-black uppercase tracking-[0.2em]">
+              Facturación automática los días 1 de cada mes
+            </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
