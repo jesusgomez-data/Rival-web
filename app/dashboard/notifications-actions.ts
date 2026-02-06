@@ -46,6 +46,8 @@ export async function markAllAsRead() {
     return { success: true };
 }
 
+import { sendPushNotification } from "./push-actions";
+
 export async function createNotification({ userId, type, title, content, link }: {
     userId: string,
     type: string,
@@ -65,5 +67,11 @@ export async function createNotification({ userId, type, title, content, link }:
         });
 
     if (error) return { error: error.message };
+
+    // Send Push Notification
+    // Don't await this to avoid slowing down the response
+    sendPushNotification(userId, title, content || '', link || '/')
+        .catch(err => console.error("Failed to send push:", err));
+
     return { success: true };
 }

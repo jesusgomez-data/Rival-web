@@ -44,6 +44,10 @@ export default function InstallAppPrompt() {
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW fail', err));
+        }
+
         // Mostrar prompt después de un tiempo si es iOS (ya que no tienen evento)
         // O si es Android y por alguna razón no saltó el evento (fallback a instrucciones manuales)
         if (isIosDevice || isAndroidDevice) {
@@ -52,7 +56,7 @@ export default function InstallAppPrompt() {
                 const timer = setTimeout(() => {
                     // Solo activar si no se activó ya por el evento nativo
                     setShowPrompt(prev => prev || true);
-                }, 3000);
+                }, 100); // Casi inmediato
                 return () => {
                     clearTimeout(timer);
                     window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);

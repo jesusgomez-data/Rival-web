@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "./ThemeContext";
 import { LanguageProvider } from "./LanguageContext";
 import InstallAppPrompt from "@/components/pwa/InstallAppPrompt";
+import PushNotificationManager from "@/components/pwa/PushNotificationManager";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -66,6 +67,7 @@ export default function RootLayout({
         <LanguageProvider>
           <ThemeProvider>
             <InstallAppPrompt />
+            <PushNotificationManager />
             {children}
           </ThemeProvider>
         </LanguageProvider>

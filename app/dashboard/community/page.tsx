@@ -76,7 +76,7 @@ export default function CommunityPage({
                     .select(`
                         *,
                         profiles:user_id (id, full_name, avatar_url, username),
-                        workouts:workout_id (title, total_volume_kg, workout_sets(*), location_name),
+                        workouts:workout_id (title, total_volume_kg, workout_sets(*), location_name, metrics),
                         likes:likes(user_id)
                     `)
                     .order('created_at', { ascending: false })

@@ -602,38 +602,17 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         </div>
                     )}
 
-                    {workoutData && (
-                        (() => {
-                            const w = Array.isArray(workoutData) ? workoutData[0] : workoutData;
-                            if (!w) return null;
+                    {workoutData && ((() => {
+                        const w = Array.isArray(workoutData) ? workoutData[0] : workoutData;
+                        if (!w) return null;
 
-                            const sets = w.workout_sets || [];
+                        // CHECK FOR MULTI-BLOCK METRICS
+                        if (w.metrics && w.metrics.blocks && w.metrics.blocks.length > 0) {
+                            const blocks = w.metrics.blocks;
                             const centerName = w.location_name || 'Gimnasio';
-
-                            // Group by exercise name
-                            const grouped: { [key: string]: any } = {};
-                            sets.forEach((s: any) => {
-                                const name = s.exercise_name || 'Ejercicio';
-                                if (!grouped[name]) {
-                                    grouped[name] = {
-                                        name: name,
-                                        maxWeight: 0,
-                                        totalReps: 0,
-                                        allSets: []
-                                    };
-                                }
-                                grouped[name].allSets.push(s);
-                                if ((s.weight_kg || 0) > (grouped[name].maxWeight || 0)) {
-                                    grouped[name].maxWeight = s.weight_kg;
-                                }
-                                grouped[name].totalReps += (s.reps || 0);
-                            });
-
-                            const exercises = Object.values(grouped);
-                            if (exercises.length === 0 && !image) return null;
-
-                            const summary = exercises.length > 1 ? `${exercises.length} EJERCICIOS` : (exercises[0]?.name || 'ENTRENAMIENTO');
                             const displayCenterName = centerName && !['Centro Deportivo', 'Gimnasio', 'Gimnasio RIVAL HQ'].includes(centerName) ? ` @ ${centerName}` : '';
+
+                            const summary = `${blocks.length} BLOQUES`;
 
                             return (
                                 <div className="w-full">
@@ -655,11 +634,11 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                         "text-xs md:text-sm font-heading font-black italic uppercase tracking-tighter group-hover:text-brand-red transition-colors leading-none truncate pr-2",
                                                         theme === 'dark' ? "text-white" : "text-gray-900"
                                                     )}>
-                                                        {summary}
+                                                        RESUMEN DE SESIÓN
                                                     </h4>
                                                     <p className="text-[7px] md:text-[8px] text-brand-red/70 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 truncate">
                                                         <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red"></span>
-                                                        {displayCenterName || 'ENTRENAMIENTO'}
+                                                        {summary}{displayCenterName}
                                                     </p>
                                                 </div>
                                             </div>
@@ -677,7 +656,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
                                             <div className="relative z-10">
                                                 <div className="flex items-center justify-between mb-3 md:mb-4">
-                                                    <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] italic">RESULTADOS</p>
+                                                    <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] italic">RESULTADOS POR BLOQUE</p>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
                                                         className="text-[7px] md:text-[8px] text-brand-red font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
@@ -686,71 +665,59 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                     </button>
                                                 </div>
 
-                                                <div className="relative z-10 space-y-4 md:space-y-6">
-                                                    {exercises.map((ex: any, idx) => {
-                                                        const isInnerExpanded = expandedInnerBlocks.includes(idx + 100); // Offset for personal workouts
+                                                <div className="relative z-10 space-y-3">
+                                                    {blocks.map((block: any, idx: number) => {
+                                                        const isInnerExpanded = expandedInnerBlocks.includes(idx + 1000); // Unique ID offset
+                                                        const resultStr = block.type === 'fortime' ? block.result?.time : (block.type === 'emom' ? `${block.duration}' - ${block.result?.rounds || 0} Rds` : `${block.result?.rounds} Rds`);
 
                                                         return (
                                                             <div key={idx} className={clsx(
                                                                 "border rounded-xl md:rounded-2xl relative overflow-hidden group/card transition-all",
                                                                 theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-sm",
                                                                 isInnerExpanded ? "p-3 md:p-4" : "p-2 md:p-3 hover:bg-white/[0.02] cursor-pointer"
-                                                            )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx + 100)}>
-                                                                <div className="relative z-10 space-y-1 md:space-y-2">
-                                                                    <div className="flex items-start justify-between gap-3">
-                                                                        <div className="min-w-0 flex-1">
-                                                                            <h3 className={clsx(
-                                                                                "text-sm md:text-lg font-heading font-black italic uppercase tracking-tighter leading-tight pr-2",
-                                                                                theme === 'dark' ? "text-white" : "text-gray-900"
-                                                                            )}>
-                                                                                {ex.name}
-                                                                            </h3>
+                                                            )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx + 1000)}>
+                                                                <div className="flex items-center justify-between gap-3">
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <h3 className={clsx(
+                                                                            "text-sm md:text-base font-heading font-black italic uppercase tracking-tighter leading-none truncate pr-2",
+                                                                            theme === 'dark' ? "text-white" : "text-gray-900"
+                                                                        )}>
+                                                                            {block.title || `BLOQUE ${idx + 1}`} <span className="text-[9px] text-gray-500 ml-1 not-italic font-bold tracking-widest">({block.type.toUpperCase()})</span>
+                                                                        </h3>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="text-right shrink-0">
+                                                                            <span className="text-sm md:text-lg font-heading font-black text-brand-red italic tracking-tighter leading-none">
+                                                                                {resultStr}
+                                                                            </span>
                                                                         </div>
-                                                                        <div className="flex items-center gap-2">
-                                                                            {ex.maxWeight > 0 && (
-                                                                                <div className="text-right shrink-0">
-                                                                                    <span className="text-sm md:text-xl font-heading font-black text-brand-red italic tracking-tighter leading-none">
-                                                                                        {ex.maxWeight}
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx + 1000); }}
+                                                                            className="p-1 hover:bg-white/5 rounded-lg transition-colors"
+                                                                        >
+                                                                            {isInnerExpanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+
+                                                                {isInnerExpanded && (
+                                                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-3 mt-2 border-t border-white/5">
+                                                                        {block.notes && <p className="text-xs text-gray-400 italic mb-2">"{block.notes}"</p>}
+                                                                        <div className="space-y-2">
+                                                                            {block.exercises?.map((ex: any, eIdx: number) => (
+                                                                                <div key={eIdx} className="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2 border border-white/5">
+                                                                                    <span className={clsx("text-xs font-bold uppercase", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</span>
+                                                                                    {/* Try to show some detail if avail */}
+                                                                                    <span className="text-xs text-brand-red font-mono font-bold">
+                                                                                        {ex.sets?.[0]?.weight > 0 ? `${ex.sets[0].weight}kg` : ''}
                                                                                     </span>
-                                                                                    <span className="text-[7px] md:text-[9px] font-black text-brand-red ml-0.5 uppercase">KG</span>
                                                                                 </div>
-                                                                            )}
-                                                                            <button
-                                                                                onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx + 100); }}
-                                                                                className="p-1 hover:bg-white/5 rounded-lg transition-colors"
-                                                                            >
-                                                                                {isInnerExpanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />}
-                                                                            </button>
+                                                                            ))}
                                                                         </div>
                                                                     </div>
-
-                                                                    {isInnerExpanded && (
-                                                                        <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-2">
-                                                                            <div className="w-full h-1 md:h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                                                                <div className="bg-brand-red h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(220,38,38,0.5)]" style={{ width: '85%' }}></div>
-                                                                            </div>
-
-                                                                            <div className="space-y-2 mt-4">
-                                                                                {ex.allSets.map((set: any, sIdx: number) => (
-                                                                                    <div key={sIdx} className="flex justify-between items-center bg-white/5 rounded-xl px-4 py-2.5 border border-white/5 group/set hover:border-brand-red/30 transition-colors">
-                                                                                        <div className="flex items-center gap-2">
-                                                                                            <span className="text-[9px] font-black text-brand-red uppercase tracking-widest bg-brand-red/10 px-2 py-0.5 rounded border border-brand-red/10 group-hover/set:bg-brand-red group-hover/set:text-white transition-colors">SET {sIdx + 1}</span>
-                                                                                        </div>
-                                                                                        <p className={clsx(
-                                                                                            "text-xs md:text-sm font-bold tracking-tight",
-                                                                                            theme === 'dark' ? "text-white" : "text-black"
-                                                                                        )}>
-                                                                                            {set.weight_kg > 0 && <span className="text-brand-red mr-1">{set.weight_kg}KG</span>}
-                                                                                            <span className="opacity-60">x</span> {set.reps > 0 ? (set.reps > 500 ? `${set.reps} M/CAL` : `${set.reps} REPS`) : "COMPLETADO"}
-                                                                                        </p>
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
+                                                                )}
                                                             </div>
-                                                        );
+                                                        )
                                                     })}
                                                 </div>
                                             </div>
@@ -758,7 +725,160 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     )}
                                 </div>
                             );
-                        })()
+                        }
+
+                        const sets = w.workout_sets || [];
+                        const centerName = w.location_name || 'Gimnasio';
+
+                        // Group by exercise name
+                        const grouped: { [key: string]: any } = {};
+                        sets.forEach((s: any) => {
+                            const name = s.exercise_name || 'Ejercicio';
+                            if (!grouped[name]) {
+                                grouped[name] = {
+                                    name: name,
+                                    maxWeight: 0,
+                                    totalReps: 0,
+                                    allSets: []
+                                };
+                            }
+                            grouped[name].allSets.push(s);
+                            if ((s.weight_kg || 0) > (grouped[name].maxWeight || 0)) {
+                                grouped[name].maxWeight = s.weight_kg;
+                            }
+                            grouped[name].totalReps += (s.reps || 0);
+                        });
+
+                        const exercises = Object.values(grouped);
+                        if (exercises.length === 0 && !image) return null;
+
+                        const summary = exercises.length > 1 ? `${exercises.length} EJERCICIOS` : (exercises[0]?.name || 'ENTRENAMIENTO');
+                        const displayCenterName = centerName && !['Centro Deportivo', 'Gimnasio', 'Gimnasio RIVAL HQ'].includes(centerName) ? ` @ ${centerName}` : '';
+
+                        return (
+                            <div className="w-full">
+                                {!isExpanded ? (
+                                    <button
+                                        onClick={() => setIsExpanded(true)}
+                                        className={clsx(
+                                            "w-full border rounded-xl md:rounded-2xl p-2 md:p-3 flex items-center justify-between hover:border-brand-red/50 transition-all group shadow-xl relative overflow-hidden",
+                                            theme === 'dark' ? "bg-[#121212] border-white/5 hover:bg-white/[0.04]" : "bg-gray-50 border-gray-100 hover:bg-white shadow-md"
+                                        )}
+                                    >
+                                        <div className="absolute top-0 right-0 w-24 h-24 bg-brand-red/5 blur-3xl -mr-8 -mt-8" />
+                                        <div className="flex items-center gap-2 md:gap-3 relative z-10 w-full overflow-hidden">
+                                            <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 group-hover:scale-110 transition-transform shrink-0">
+                                                <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                            </div>
+                                            <div className="text-left flex-1 min-w-0">
+                                                <h4 className={clsx(
+                                                    "text-xs md:text-sm font-heading font-black italic uppercase tracking-tighter group-hover:text-brand-red transition-colors leading-none truncate pr-2",
+                                                    theme === 'dark' ? "text-white" : "text-gray-900"
+                                                )}>
+                                                    {summary}
+                                                </h4>
+                                                <p className="text-[7px] md:text-[8px] text-brand-red/70 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 truncate">
+                                                    <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red"></span>
+                                                    {displayCenterName || 'ENTRENAMIENTO'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex bg-white/5 rounded-lg p-1.5 group-hover:bg-brand-red group-hover:text-white transition-all border border-white/5 shrink-0">
+                                            <ChevronDown className="w-3 h-3" />
+                                        </div>
+                                    </button>
+                                ) : (
+                                    <div className={clsx(
+                                        "border rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden group/card shadow-xl animate-in fade-in slide-in-from-top-4 duration-300",
+                                        theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-md"
+                                    )}>
+                                        {/* Accent Background Glow */}
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
+
+                                        <div className="relative z-10">
+                                            <div className="flex items-center justify-between mb-3 md:mb-4">
+                                                <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] italic">RESULTADOS</p>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
+                                                    className="text-[7px] md:text-[8px] text-brand-red font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
+                                                >
+                                                    CERRAR <ChevronUp className="w-3 h-3" />
+                                                </button>
+                                            </div>
+
+                                            <div className="relative z-10 space-y-4 md:space-y-6">
+                                                {exercises.map((ex: any, idx) => {
+                                                    const isInnerExpanded = expandedInnerBlocks.includes(idx + 100); // Offset for personal workouts
+
+                                                    return (
+                                                        <div key={idx} className={clsx(
+                                                            "border rounded-xl md:rounded-2xl relative overflow-hidden group/card transition-all",
+                                                            theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-sm",
+                                                            isInnerExpanded ? "p-3 md:p-4" : "p-2 md:p-3 hover:bg-white/[0.02] cursor-pointer"
+                                                        )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx + 100)}>
+                                                            <div className="relative z-10 space-y-1 md:space-y-2">
+                                                                <div className="flex items-start justify-between gap-3">
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <h3 className={clsx(
+                                                                            "text-sm md:text-lg font-heading font-black italic uppercase tracking-tighter leading-tight pr-2",
+                                                                            theme === 'dark' ? "text-white" : "text-gray-900"
+                                                                        )}>
+                                                                            {ex.name}
+                                                                        </h3>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        {ex.maxWeight > 0 && (
+                                                                            <div className="text-right shrink-0">
+                                                                                <span className="text-sm md:text-xl font-heading font-black text-brand-red italic tracking-tighter leading-none">
+                                                                                    {ex.maxWeight}
+                                                                                </span>
+                                                                                <span className="text-[7px] md:text-[9px] font-black text-brand-red ml-0.5 uppercase">KG</span>
+                                                                            </div>
+                                                                        )}
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx + 100); }}
+                                                                            className="p-1 hover:bg-white/5 rounded-lg transition-colors"
+                                                                        >
+                                                                            {isInnerExpanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+
+                                                                {isInnerExpanded && (
+                                                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-2">
+                                                                        <div className="w-full h-1 md:h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                                                            <div className="bg-brand-red h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(220,38,38,0.5)]" style={{ width: '85%' }}></div>
+                                                                        </div>
+
+                                                                        <div className="space-y-2 mt-4">
+                                                                            {ex.allSets.map((set: any, sIdx: number) => (
+                                                                                <div key={sIdx} className="flex justify-between items-center bg-white/5 rounded-xl px-4 py-2.5 border border-white/5 group/set hover:border-brand-red/30 transition-colors">
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <span className="text-[9px] font-black text-brand-red uppercase tracking-widest bg-brand-red/10 px-2 py-0.5 rounded border border-brand-red/10 group-hover/set:bg-brand-red group-hover/set:text-white transition-colors">SET {sIdx + 1}</span>
+                                                                                    </div>
+                                                                                    <p className={clsx(
+                                                                                        "text-xs md:text-sm font-bold tracking-tight",
+                                                                                        theme === 'dark' ? "text-white" : "text-black"
+                                                                                    )}>
+                                                                                        {set.weight_kg > 0 && <span className="text-brand-red mr-1">{set.weight_kg}KG</span>}
+                                                                                        <span className="opacity-60">x</span> {set.reps > 0 ? (set.reps > 500 ? `${set.reps} M/CAL` : `${set.reps} REPS`) : "COMPLETADO"}
+                                                                                    </p>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()
                     )}
                 </div>
             ) : null}

@@ -140,6 +140,7 @@ export async function saveWorkout(workoutData: any) {
                 effort_rpe: workoutData.rpe,
                 location_name: workoutData.locationName || null,
                 sport_type: workoutData.sportType || 'fitness',
+                metrics: workoutData.metrics || null,
             })
             .eq('id', workoutData.id)
             .eq('user_id', user.id)
@@ -165,6 +166,7 @@ export async function saveWorkout(workoutData: any) {
                 effort_rpe: workoutData.rpe,
                 location_name: workoutData.locationName || null,
                 sport_type: workoutData.sportType || 'fitness',
+                metrics: workoutData.metrics || null,
             })
             .select()
             .single();
@@ -278,18 +280,17 @@ export async function saveWorkout(workoutData: any) {
         if (workoutData.sportType === 'Running' && workoutData.metrics) {
             caption = `🏃‍♂️ Carrera completada: ${(workoutData.metrics.distance / 1000).toFixed(2)}km en ${Math.floor(workoutData.duration / 60)}min. Ritmo: ${workoutData.metrics.pace}/km.`;
         } else if ((workoutData.sportType === 'CrossFit' || workoutData.sportType === 'OCR') && workoutData.metrics) {
-            const { type, time, rounds, emomTime, distance } = workoutData.metrics;
-            const formatStr = type === 'fortime' ? 'FOR TIME' : (type || 'WOD').toUpperCase();
-            const distStr = (distance > 0 && workoutData.sportType === 'OCR') ? ` [${(distance / 1000).toFixed(2)}km] ` : '';
+            const { type, blocks, time } = workoutData.metrics;
 
-            if (type === 'fortime' && time) {
-                caption = `🏋️‍♀️ ${formatStr}${distStr} Finalizado en ${time}. [Cap: ${emomTime || '---'}'] 🔥`;
-            } else if (type === 'amrap') {
-                caption = `🏋️‍♀️ AMRAP ${emomTime || '---'} min${distStr}: ${rounds || 0} Rondas completadas. 🔥`;
-            } else if (type === 'emom') {
-                caption = `🏋️‍♀️ EMOM ${emomTime || '---'} min${distStr} completado con éxito. 🔥`;
+            if (blocks && blocks.length > 0) {
+                // Multi-block caption
+                // Use total time if available, otherwise generic
+                const timeStr = (time && time !== '00:00' && time !== '0:00') ? `en ${time}` : '';
+                caption = `🏋️‍♀️ Sesión ${workoutData.sportType} Completada ${timeStr}!`;
             } else {
-                caption = `🏋️‍♀️ WOD ${workoutData.sportType}${distStr} completado con éxito! 🔥`;
+                // Fallback for legacy or single block
+                const formatStr = type === 'fortime' ? 'FOR TIME' : (type || 'WOD').toUpperCase();
+                caption = `🏋️‍♀️ ${formatStr} Finalizado en ${time} 🔥`;
             }
         } else if (workoutData.metrics && sessionMaxWeight > 0) {
             caption += ` Levanté un máximo de ${sessionMaxWeight}kg.`;

@@ -155,7 +155,7 @@ export default function DashboardHome() {
                 const idsToFetch = [...followingIds, user.id];
                 const { data: posts } = await supabase
                     .from('posts')
-                    .select('*, profiles:user_id(*), workouts:workout_id(*, workout_sets(*)), likes:likes(user_id)')
+                    .select('*, profiles:user_id(*), workouts:workout_id(*, metrics, workout_sets(*)), likes:likes(user_id)')
                     .in('user_id', idsToFetch)
                     .order('created_at', { ascending: false })
                     .limit(10);

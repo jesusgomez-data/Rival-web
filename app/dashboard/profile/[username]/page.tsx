@@ -46,7 +46,7 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
         .select(`
             *,
             profiles:user_id (full_name, avatar_url, username),
-            workouts:workout_id (title, total_volume_kg, workout_sets(*), location_name),
+            workouts:workout_id (title, total_volume_kg, workout_sets(*), location_name, metrics),
             likes:likes(user_id)
         `)
         .eq('user_id', profile.id)
