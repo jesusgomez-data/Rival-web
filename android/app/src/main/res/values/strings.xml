@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Rival Fit</string>
+    <string name="title_activity_main">Rival Fit</string>
+    <string name="package_name">com.rivalfit.app</string>
+    <string name="custom_url_scheme">com.rivalfit.app</string>
+</resources>
