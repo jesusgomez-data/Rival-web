@@ -3,6 +3,7 @@ import { Inter, Outfit, Lexend } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./ThemeContext";
 import { LanguageProvider } from "./LanguageContext";
+import InstallAppPrompt from "@/components/pwa/InstallAppPrompt";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -64,6 +65,7 @@ export default function RootLayout({
       >
         <LanguageProvider>
           <ThemeProvider>
+            <InstallAppPrompt />
             {children}
           </ThemeProvider>
         </LanguageProvider>

@@ -35,7 +35,6 @@ import { useTheme } from "../ThemeContext";
 import { useLanguage } from "@/app/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import PendingReviewPrompt from "./PendingReviewPrompt";
-import InstallAppPrompt from "@/components/pwa/InstallAppPrompt";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -435,7 +434,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 </nav>
             )}
 
-            <InstallAppPrompt />
+
             <PendingReviewPrompt />
         </div>
     );
