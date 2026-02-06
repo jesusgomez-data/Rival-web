@@ -272,9 +272,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         <Link href="/dashboard/profile" className="ml-2 relative shrink-0">
                             <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/10">
                                 {profile?.avatar_url ? (
-                                    <Image src={profile.avatar_url} alt="Profile" fill className="object-cover" />
+                                    <Image src={profile.avatar_url} alt="Profile" fill className="object-cover rounded-full" />
                                 ) : (
-                                    <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                    <div className="w-full h-full bg-gray-800 flex items-center justify-center rounded-full">
                                         <User className="w-4 h-4 text-gray-400" />
                                     </div>
                                 )}
@@ -282,6 +282,13 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         </Link>
                     </div>
                 </div>
+
+                {/* Mobile Search Overlay */}
+                {showMobileSearch && (
+                    <div className="lg:hidden px-6 pb-6 pt-2 bg-[#0a0a0a]/95 backdrop-blur-xl border-b border-white/5 sticky top-20 z-[190] animate-in slide-in-from-top-2 fade-in">
+                        <GlobalSearch />
+                    </div>
+                )}
 
                 {/* Mobile Menu Overlay */}
                 {isMenuOpen && (

@@ -12,7 +12,16 @@ interface CoachProfile {
 }
 
 export async function generateCoachResponse(userMessage: string, userProfile: CoachProfile) {
-    const API_KEY = (process.env.GEMINI_API_KEY || "AIzaSyBO7BGkMVHQtGc4w5kW09agk7zsxVWT99c").trim();
+    const API_KEY = process.env.GEMINI_API_KEY;
+
+    if (!API_KEY) {
+        console.error("GEMINI_API_KEY is missing");
+        return {
+            replyText: "Error de configuración: Clave de API no encontrada.",
+            workout: null
+        };
+    }
+
     const genAI = new GoogleGenerativeAI(API_KEY);
 
     const { level, main_sport, full_name, recent_activity_score } = userProfile;
@@ -40,9 +49,9 @@ export async function generateCoachResponse(userMessage: string, userProfile: Co
     }
     Si no hay entreno, workout: null.`;
 
-    // Modelos con mayor disponibilidad y nombres corregidos para v1beta
-    const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-flash-8b", "gemini-pro"];
-    let lastError: any = null;
+    // Intentar con el modelo más rápido y luego fallback al estándar
+    const modelsToTry = ["gemini-1.5-flash", "gemini-pro"];
+    let errors: string[] = [];
 
     for (const modelName of modelsToTry) {
         try {
@@ -58,7 +67,7 @@ export async function generateCoachResponse(userMessage: string, userProfile: Co
             return JSON.parse(cleanJson);
         } catch (error: any) {
             console.error(`[COACH AI] Error en ${modelName}:`, error.message);
-            lastError = error;
+            errors.push(`${modelName}: ${error.message}`);
 
             // Si es un error de cuota (429), esperamos un poco antes del siguiente modelo
             if (error.message.includes("429")) {
@@ -69,7 +78,7 @@ export async function generateCoachResponse(userMessage: string, userProfile: Co
     }
 
     return {
-        replyText: `Soldado, Google ha bloqueado temporalmente el acceso (Error: ${lastError?.message || 'Quota Limit'}). Protocolo de entrenamiento manual activado.`,
+        replyText: `Soldado, hubo un error de comunicación con el cuartel general. Detalles: ${errors.join(" | ")}. Protocolo de entrenamiento manual activado.`,
         workout: {
             title: "Plan de Resistencia Civil",
             duration: "20 min",

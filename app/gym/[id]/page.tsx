@@ -26,6 +26,15 @@ export default async function PublicCenterPage({ params }: { params: { id: strin
         .select('id', { count: 'exact', head: true })
         .eq('organization_id', id);
 
+    // Get Coaches
+    const { data: coachesData } = await supabase
+        .from('center_roles')
+        .select('*, profiles:user_id(id, full_name, username, avatar_url, bio)')
+        .eq('organization_id', id)
+        .eq('role', 'coach');
+
+    const coaches = coachesData?.map((c: any) => c.profiles) || [];
+
     const { data: { user } } = await supabase.auth.getUser();
 
     return (
@@ -37,6 +46,7 @@ export default async function PublicCenterPage({ params }: { params: { id: strin
             products={products}
             currentUserId={user?.id}
             memberStatus={memberStatus}
+            coaches={coaches}
         />
     );
 }

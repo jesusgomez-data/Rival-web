@@ -5,7 +5,7 @@ import Image from "next/image";
 import { getUserMedia } from "./community/actions";
 import { Play, X } from "lucide-react";
 
-export default function UserMediaGallery({ userId }: { userId: string }) {
+export default function UserMediaGallery({ userId, limit }: { userId: string, limit?: number }) {
     const [mediaItems, setMediaItems] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -44,7 +44,7 @@ export default function UserMediaGallery({ userId }: { userId: string }) {
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
-                    {mediaItems.slice(0, 9).map((item, index) => (
+                    {(limit ? mediaItems.slice(0, limit) : mediaItems).map((item, index) => (
                         <div
                             key={item.id}
                             className="relative aspect-square bg-gray-900 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity border border-white/5"
@@ -69,7 +69,7 @@ export default function UserMediaGallery({ userId }: { userId: string }) {
                     ))}
                 </div>
 
-                {mediaItems.length > 9 && (
+                {limit && mediaItems.length > limit && (
                     <button className="w-full text-center text-xs text-gray-400 hover:text-white mt-2">
                         View all
                     </button>

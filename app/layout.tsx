@@ -20,7 +20,7 @@ const lexend = Lexend({
 });
 
 export const metadata: Metadata = {
-  title: "Rival | El Futuro del Fitness 2026",
+  title: "Rival Fit | El Futuro del Fitness 2026",
   description: "La primera red social creada para la mentalidad del 1%. Registra tus progresos, compite globalmente y accede a gimnasios de élite.",
   manifest: "/manifest.json",
   icons: {
@@ -28,16 +28,16 @@ export const metadata: Metadata = {
     apple: "/logo.svg",
   },
   openGraph: {
-    title: "Rival | Face Yourself. Conquer All.",
+    title: "Rival Fit | Face Yourself. Conquer All.",
     description: "Únete a la elite del fitness. Registra, compite y evoluciona en la red social definitiva para atletas.",
-    url: "https://rival.fitness",
-    siteName: "Rival",
+    url: "https://rivalfit.app",
+    siteName: "Rival Fit",
     images: [
       {
         url: "/assets/hero-cinematic.png",
         width: 1200,
         height: 630,
-        alt: "Rival Fitness App",
+        alt: "Rival Fit App",
       },
     ],
     locale: "es_ES",
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Rival | El Futuro del Fitness",
+    title: "Rival Fit | El Futuro del Fitness",
     description: "Competencia real, progreso real.",
     images: ["/assets/hero-cinematic.png"],
   },

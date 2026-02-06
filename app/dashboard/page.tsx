@@ -1,7 +1,7 @@
 'use client'
 
 import Image from "next/image";
-import { Flame, MoreHorizontal, MessageCircle, Heart, Share2, TrendingUp, Trophy, Dumbbell, ArrowRight, ArrowLeft, Swords } from "lucide-react";
+import { Flame, MoreHorizontal, MessageCircle, Heart, Share2, TrendingUp, Trophy, Dumbbell, ArrowRight, ArrowLeft, Swords, ChevronDown, Plus } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import clsx from "clsx";
@@ -54,10 +54,55 @@ function StatCard({ label, value, subtext, icon }: { label: string, value: strin
     )
 }
 
+
+function CollapsibleCreatePost({ currentUser, language }: { currentUser: any, language: string }) {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div className="mb-8">
+            {!isOpen ? (
+                <button
+                    onClick={() => setIsOpen(true)}
+                    className="w-full bg-brand-gray/30 border border-white/10 rounded-[32px] p-4 flex items-center justify-between group hover:border-brand-red/50 hover:bg-brand-gray/50 transition-all cursor-pointer"
+                >
+                    <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-full border border-white/10 bg-black/40 overflow-hidden relative shrink-0">
+                            {currentUser?.user_metadata?.avatar_url ? (
+                                <Image src={currentUser.user_metadata.avatar_url} alt="User" fill className="object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[10px] bg-gray-800 font-bold text-gray-400">ME</div>
+                            )}
+                        </div>
+                        <span className="text-gray-500 text-sm font-medium group-hover:text-gray-300 transition-colors">
+                            {language === 'es' ? 'Crear nueva publicación...' : 'Create new post...'}
+                        </span>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-brand-red/10 border border-brand-red/30 flex items-center justify-center text-brand-red group-hover:bg-brand-red group-hover:text-white transition-all">
+                        <Plus className="w-4 h-4" />
+                    </div>
+                </button>
+            ) : (
+                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex justify-end mb-2">
+                        <button
+                            onClick={() => setIsOpen(false)}
+                            className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors flex items-center gap-1"
+                        >
+                            {language === 'es' ? 'Cancelar' : 'Cancel'} <ChevronDown className="w-3 h-3 rotate-180" />
+                        </button>
+                    </div>
+                    <CreatePost currentUser={currentUser} />
+                </div>
+            )}
+        </div>
+    )
+}
+
 export default function DashboardHome() {
     const { language, t } = useLanguage();
     const supabase = createClient();
     const [loading, setLoading] = useState(true);
+    const [showStats, setShowStats] = useState(false);
     const [data, setData] = useState<any>({
         profile: null,
         workoutCount: 0,
@@ -191,7 +236,7 @@ export default function DashboardHome() {
                 {/* Left Column: Feed */}
                 <div className="lg:col-span-7 space-y-8">
 
-                    {/* My Gyms Section */}
+                    {/* 1. My Gyms Section (Moved here) */}
                     {data.myGyms.length > 0 && (
                         <div className="mb-8">
                             <h2 className="text-xl font-black text-foreground italic uppercase tracking-tighter mb-4 flex items-center gap-2">
@@ -220,7 +265,68 @@ export default function DashboardHome() {
                         </div>
                     )}
 
-                    {/* Header */}
+                    {/* 2. Stories Bar (Moved here as requested) */}
+                    <div>
+                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] ml-2 mb-4">{t.dashboard.stories}</h3>
+                        <StoryBar currentUser={data.currentUser} />
+                    </div>
+
+                    {/* 3. Stats Grid (Collapsible on Mobile) */}
+                    <div>
+                        {/* Mobile Toggle Button */}
+                        <button
+                            onClick={() => setShowStats(!showStats)}
+                            className="w-full flex lg:hidden items-center justify-between bg-white/5 border border-white/5 p-4 rounded-2xl mb-4 text-xs font-black uppercase tracking-widest text-gray-400"
+                        >
+                            <span>Tus Estadísticas</span>
+                            <div className="flex items-center gap-2">
+                                <span className="text-brand-red">{showStats ? 'Ocultar' : 'Ver'}</span>
+                                <ChevronDown className={clsx("w-4 h-4 transition-transform", showStats ? "rotate-180" : "")} />
+                            </div>
+                        </button>
+
+                        <div className={clsx(
+                            "grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 transition-all duration-300",
+                            !showStats ? "hidden lg:grid" : "grid"
+                        )}>
+                            <Link href="/dashboard/training" className="group">
+                                <StatCard
+                                    label={t.dashboard.statsEntrenamientos}
+                                    value={data.workoutCount?.toString() || "0"}
+                                    icon={<Dumbbell className="w-4 h-4 text-brand-red" />}
+                                    subtext={t.dashboard.statsSesionesTotales}
+                                />
+                            </Link>
+                            <Link href="/dashboard/community" className="group">
+                                <StatCard
+                                    label={t.dashboard.statsRivales}
+                                    value={data.rivalsCount?.toString() || "0"}
+                                    icon={<Flame className="w-4 h-4 text-orange-500" />}
+                                    subtext={t.dashboard.statsSeguidos}
+                                />
+                            </Link>
+                            <Link href="/dashboard/leaderboard" className="group">
+                                <StatCard
+                                    label={t.dashboard.statsRacha}
+                                    value={data.workoutCount ? (language === 'es' ? "1 Día" : "1 Day") : "0"}
+                                    icon={<Trophy className="w-4 h-4 text-yellow-500" />}
+                                    subtext={t.dashboard.statsContinuo}
+                                />
+                            </Link>
+                            <Link href="/dashboard/analytics" className="group">
+                                <StatCard
+                                    label={t.dashboard.statsRango}
+                                    value={data.profile?.level ? `${t.dashboard.level} ${data.profile.level}` : t.dashboard.revelLevel}
+                                    icon={<TrendingUp className="w-4 h-4 text-purple-500" />}
+                                    subtext={t.dashboard.statsPrestigio}
+                                />
+                            </Link>
+                        </div>
+                    </div>
+
+
+
+                    {/* 4. Feed Header & Feed */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
                             <h2 className="text-2xl md:text-3xl font-heading font-black text-foreground italic tracking-tighter uppercase">
@@ -255,50 +361,11 @@ export default function DashboardHome() {
                         </div>
                     </div>
 
-                    {/* Performance Snapshot */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-                        <Link href="/dashboard/training" className="group">
-                            <StatCard
-                                label={t.dashboard.statsEntrenamientos}
-                                value={data.workoutCount?.toString() || "0"}
-                                icon={<Dumbbell className="w-4 h-4 text-brand-red" />}
-                                subtext={t.dashboard.statsSesionesTotales}
-                            />
-                        </Link>
-                        <Link href="/dashboard/community" className="group">
-                            <StatCard
-                                label={t.dashboard.statsRivales}
-                                value={data.rivalsCount?.toString() || "0"}
-                                icon={<Flame className="w-4 h-4 text-orange-500" />}
-                                subtext={t.dashboard.statsSeguidos}
-                            />
-                        </Link>
-                        <Link href="/dashboard/leaderboard" className="group">
-                            <StatCard
-                                label={t.dashboard.statsRacha}
-                                value={data.workoutCount ? (language === 'es' ? "1 Día" : "1 Day") : "0"}
-                                icon={<Trophy className="w-4 h-4 text-yellow-500" />}
-                                subtext={t.dashboard.statsContinuo}
-                            />
-                        </Link>
-                        <Link href="/dashboard/analytics" className="group">
-                            <StatCard
-                                label={t.dashboard.statsRango}
-                                value={data.profile?.level ? `${t.dashboard.level} ${data.profile.level}` : t.dashboard.revelLevel}
-                                icon={<TrendingUp className="w-4 h-4 text-purple-500" />}
-                                subtext={t.dashboard.statsPrestigio}
-                            />
-                        </Link>
-                    </div>
-
                     {/* Social Feed */}
                     <div className="space-y-8">
-                        <div>
-                            <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] ml-2 mb-4">{t.dashboard.stories}</h3>
-                            <StoryBar currentUser={data.currentUser} />
-                        </div>
+                        {/* Old StoryBar location removed */}
 
-                        <CreatePost currentUser={data.currentUser} />
+                        <CollapsibleCreatePost currentUser={data.currentUser} language={language} />
 
                         <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] ml-2">{t.dashboard.recentActivity}</h3>
                         {data.feedPosts && data.feedPosts.length > 0 ? (

@@ -10,7 +10,8 @@ import { Plus } from "lucide-react";
 import clsx from "clsx";
 import { useTheme } from "../../ThemeContext";
 
-export default function PublicCenterProfile({ org, initialPosts, isFollowing, followersCount, products, currentUserId, memberStatus }: any) {
+// Update function signature (line 13)
+export default function PublicCenterProfile({ org, initialPosts, isFollowing, followersCount, products, currentUserId, memberStatus, coaches }: any) {
     // --- STATE ---
 
     // Theme
@@ -500,6 +501,27 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                         <div>
                                             <p className={`text-[10px] font-black uppercase tracking-widest ${textMuted}`}>Head Coach</p>
                                             <p className={`text-sm font-bold ${textContrast}`}>{org.head_coach.full_name || org.head_coach.username}</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Coaches List */}
+                                {coaches && coaches.length > 0 && (
+                                    <div className="pt-4">
+                                        <p className={`text-[10px] font-black uppercase tracking-widest ${textMuted} mb-2`}>Coaches</p>
+                                        <div className="flex flex-wrap gap-4">
+                                            {coaches.map((coach: any) => (
+                                                <Link key={coach.id} href={`/dashboard/profile/${coach.username}`} className="flex items-center gap-2 group/coach">
+                                                    <div className={`w-6 h-6 rounded-full border overflow-hidden ${theme === 'dark' ? 'bg-gray-800 border-white/10' : 'bg-gray-200 border-gray-300'}`}>
+                                                        {coach.avatar_url ? (
+                                                            <img src={coach.avatar_url} alt={coach.username} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center bg-gray-700 text-[8px] font-black">{coach.username[0]}</div>
+                                                        )}
+                                                    </div>
+                                                    <p className={`text-xs font-bold ${textContrast} group-hover/coach:text-brand-red transition-colors`}>{coach.full_name || coach.username}</p>
+                                                </Link>
+                                            ))}
                                         </div>
                                     </div>
                                 )}

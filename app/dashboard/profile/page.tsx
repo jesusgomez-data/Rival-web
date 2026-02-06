@@ -5,7 +5,7 @@ import { getUserProfile } from "../training/actions";
 import { getUpcomingTrial } from "../gyms/trial-booking-actions";
 
 import { createClient } from "@/utils/supabase/client";
-import { User, Camera, Save, Loader2, Mail, Hash, MapPin, Trophy, Dumbbell, Swords, Award, ExternalLink, TrendingUp, Building2, Smile, Edit2, Move, Check, X, Calendar } from "lucide-react";
+import { User, Camera, Save, Loader2, Mail, Hash, MapPin, Trophy, Dumbbell, Swords, Award, ExternalLink, TrendingUp, Building2, Smile, Edit2, Move, Check, X, Calendar, LayoutGrid, Settings } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -42,6 +42,7 @@ export default function ProfilePage() {
     const [isDragging, setIsDragging] = useState(false);
     const [startY, setStartY] = useState(0);
     const [startPos, setStartPos] = useState(50);
+    const [mobileTab, setMobileTab] = useState<'gallery' | 'stats' | 'workouts' | 'settings'>('gallery');
 
     // New state for upcoming trial reminder
     const [upcomingTrial, setUpcomingTrial] = useState<any>(null);
@@ -487,62 +488,110 @@ export default function ProfilePage() {
                 </div>
             )}
 
-            <div className="pt-8 grid lg:grid-cols-12 gap-8">
+            {/* Mobile Tabs Navigation */}
+            <div className="flex lg:hidden items-center justify-around border-b border-white/5 pb-0 mb-6">
+                <button
+                    onClick={() => setMobileTab('gallery')}
+                    className={clsx(
+                        "flex flex-col items-center gap-2 pb-3 px-4 transition-all relative",
+                        mobileTab === 'gallery' ? "text-brand-red" : "text-gray-500 hover:text-gray-300"
+                    )}
+                >
+                    <LayoutGrid className="w-6 h-6" />
+                    {mobileTab === 'gallery' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red rounded-t-full" />}
+                </button>
+                <button
+                    onClick={() => setMobileTab('stats')}
+                    className={clsx(
+                        "flex flex-col items-center gap-2 pb-3 px-4 transition-all relative",
+                        mobileTab === 'stats' ? "text-brand-red" : "text-gray-500 hover:text-gray-300"
+                    )}
+                >
+                    <Trophy className="w-6 h-6" />
+                    {mobileTab === 'stats' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red rounded-t-full" />}
+                </button>
+                <button
+                    onClick={() => setMobileTab('workouts')}
+                    className={clsx(
+                        "flex flex-col items-center gap-2 pb-3 px-4 transition-all relative",
+                        mobileTab === 'workouts' ? "text-brand-red" : "text-gray-500 hover:text-gray-300"
+                    )}
+                >
+                    <Dumbbell className="w-6 h-6" />
+                    {mobileTab === 'workouts' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red rounded-t-full" />}
+                </button>
+                <button
+                    onClick={() => setMobileTab('settings')}
+                    className={clsx(
+                        "flex flex-col items-center gap-2 pb-3 px-4 transition-all relative",
+                        mobileTab === 'settings' ? "text-brand-red" : "text-gray-500 hover:text-gray-300"
+                    )}
+                >
+                    <Settings className="w-6 h-6" />
+                    {mobileTab === 'settings' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red rounded-t-full" />}
+                </button>
+            </div>
+
+            <div className="pt-2 lg:pt-8 grid lg:grid-cols-12 gap-8">
                 {/* Left side: Stats & Info */}
                 <div className="lg:col-span-4 space-y-6">
-                    {profile?.id && <UserMediaGallery userId={profile.id} />}
-
-                    <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
-                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Estado de Nivel</h3>
-                        <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5 mb-4">
-                            <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center text-brand-red">
-                                <Trophy className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <p className="text-foreground dark:text-white font-bold">{profile?.level || 'Principiante'}</p>
-                                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Rango Actual</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
-                            <div className="w-12 h-12 bg-yellow-400/10 rounded-xl flex items-center justify-center text-yellow-500">
-                                <TrendingUp className="w-6 h-6" />
-                            </div>
-                            <div>
-                                <p className="text-foreground dark:text-white font-bold">{profile?.xp_points?.toLocaleString() || 0} XP</p>
-                                <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Experiencia Total</p>
-                            </div>
-                        </div>
+                    <div className={clsx(mobileTab !== 'gallery' && "hidden lg:block")}>
+                        {profile?.id && <UserMediaGallery userId={profile.id} />}
                     </div>
 
-                    <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
-                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Registro de Combate</h3>
-                        <div className="grid grid-cols-3 gap-2 mb-4">
-                            <div className="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
-                                <p className="text-white font-black italic">{combatStats.wins}</p>
-                                <p className="text-[8px] text-green-500 font-black uppercase mt-1">Victorias</p>
+                    <div className={clsx("space-y-6", mobileTab !== 'stats' && "hidden lg:block")}>
+                        <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
+                            <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Estado de Nivel</h3>
+                            <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5 mb-4">
+                                <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center text-brand-red">
+                                    <Trophy className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <p className="text-foreground dark:text-white font-bold">{profile?.level || 'Principiante'}</p>
+                                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Rango Actual</p>
+                                </div>
                             </div>
-                            <div className="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
-                                <p className="text-white font-black italic">{combatStats.losses}</p>
-                                <p className="text-[8px] text-brand-red font-black uppercase mt-1">Derrotas</p>
-                            </div>
-                            <div className="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
-                                <p className="text-white font-black italic text-xs leading-none mt-1">{(combatStats.total > 0 ? (combatStats.wins / combatStats.total) * 100 : 0).toFixed(0)}%</p>
-                                <p className="text-[8px] text-gray-500 font-black uppercase mt-1">Tasa</p>
+                            <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
+                                <div className="w-12 h-12 bg-yellow-400/10 rounded-xl flex items-center justify-center text-yellow-500">
+                                    <TrendingUp className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <p className="text-foreground dark:text-white font-bold">{profile?.xp_points?.toLocaleString() || 0} XP</p>
+                                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Experiencia Total</p>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
-                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Progreso de Trofeos</h3>
-                        <div className="flex flex-wrap gap-2">
-                            <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20" title="Iron Beast">
-                                <Dumbbell className="w-5 h-5" />
+                        <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
+                            <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Registro de Combate</h3>
+                            <div className="grid grid-cols-3 gap-2 mb-4">
+                                <div className="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
+                                    <p className="text-white font-black italic">{combatStats.wins}</p>
+                                    <p className="text-[8px] text-green-500 font-black uppercase mt-1">Victorias</p>
+                                </div>
+                                <div className="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
+                                    <p className="text-white font-black italic">{combatStats.losses}</p>
+                                    <p className="text-[8px] text-brand-red font-black uppercase mt-1">Derrotas</p>
+                                </div>
+                                <div className="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
+                                    <p className="text-white font-black italic text-xs leading-none mt-1">{(combatStats.total > 0 ? (combatStats.wins / combatStats.total) * 100 : 0).toFixed(0)}%</p>
+                                    <p className="text-[8px] text-gray-500 font-black uppercase mt-1">Tasa</p>
+                                </div>
                             </div>
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${combatStats.wins > 0 ? 'bg-brand-red/10 text-brand-red border-brand-red/20' : 'bg-white/5 text-gray-700 border-white/5 opacity-50'}`} title="Arena Gladiator">
-                                <Swords className="w-5 h-5" />
-                            </div>
-                            <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20" title="Hardened Veteran">
-                                <Award className="w-5 h-5" />
+                        </div>
+
+                        <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
+                            <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Progreso de Trofeos</h3>
+                            <div className="flex flex-wrap gap-2">
+                                <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20" title="Iron Beast">
+                                    <Dumbbell className="w-5 h-5" />
+                                </div>
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${combatStats.wins > 0 ? 'bg-brand-red/10 text-brand-red border-brand-red/20' : 'bg-white/5 text-gray-700 border-white/5 opacity-50'}`} title="Arena Gladiator">
+                                    <Swords className="w-5 h-5" />
+                                </div>
+                                <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20" title="Hardened Veteran">
+                                    <Award className="w-5 h-5" />
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -550,7 +599,7 @@ export default function ProfilePage() {
 
                 {/* Right side: Form y Workouts */}
                 <div className="lg:col-span-8 space-y-8">
-                    <div className="bg-brand-gray/30 border border-white/5 rounded-3xl p-8 backdrop-blur-xl">
+                    <div className={clsx("bg-brand-gray/30 border border-white/5 rounded-3xl p-8 backdrop-blur-xl", mobileTab !== 'settings' && "hidden lg:block")}>
                         <form onSubmit={handleSave} className="space-y-6">
                             <div className="grid md:grid-cols-2 gap-6">
                                 <FormInput
@@ -658,7 +707,7 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Lista de entrenamientos */}
-                    <div className="bg-brand-gray/30 border border-white/5 rounded-3xl p-8 backdrop-blur-xl">
+                    <div className={clsx("bg-brand-gray/30 border border-white/5 rounded-3xl p-8 backdrop-blur-xl", mobileTab !== 'workouts' && "hidden lg:block")}>
                         <h3 className="text-lg font-bold text-white mb-4">Tus Entrenamientos</h3>
                         {workouts.length === 0 ? (
                             <p className="text-gray-400">No has registrado entrenamientos aún.</p>

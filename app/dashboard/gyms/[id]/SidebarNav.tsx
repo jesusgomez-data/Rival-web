@@ -10,7 +10,8 @@ import {
     Dumbbell,
     Zap,
     ShoppingBag,
-    Edit
+    Edit,
+    CreditCard
 } from "lucide-react";
 import SupportModal from "../SupportModal";
 
@@ -38,6 +39,7 @@ export default function SidebarNav({ id, isAdmin }: { id: string, isAdmin: boole
         { name: 'Entrenamientos (WODs)', href: `/dashboard/gyms/${id}/wods${query}`, icon: Dumbbell },
         { name: 'Muro Social', href: `/dashboard/gyms/${id}/feed${query}`, icon: Zap },
         { name: 'Tienda', href: `/dashboard/gyms/${id}/store${query}`, icon: ShoppingBag },
+        { name: 'Facturación', href: `/dashboard/gyms/${id}/settings/billing`, icon: CreditCard, adminOnly: true },
     ];
 
     const navItems = navigation.filter(item => !item.adminOnly || isAdmin);

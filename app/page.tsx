@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Trophy, Activity, Users, Play, BarChart3, Dumbbell, Flame, Check, Star, TrendingUp, Zap, Layout, CalendarCheck, UploadCloud, Building2, ShoppingBag, Globe, Mail, Instagram } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/app/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
 
@@ -13,6 +13,19 @@ export default function Home() {
   const { language, setLanguage, t } = useLanguage();
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [viewMode, setViewMode] = useState<'choice' | 'athlete' | 'business'>('choice');
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth > 1024);
+    };
+
+    // Set initial value
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col font-sans selection:bg-brand-red selection:text-white transition-colors duration-300 bg-background text-foreground overflow-x-hidden">
@@ -115,7 +128,7 @@ export default function Home() {
       </div>
 
       {/* Hero Section Athlete / Desktop */}
-      <div className={(viewMode === 'athlete' || typeof window !== 'undefined' && window.innerWidth > 1024) ? 'block' : 'lg:block hidden'}>
+      <div className={(viewMode === 'athlete' || isDesktop) ? 'block' : 'lg:block hidden'}>
         <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden flex items-center min-h-[90vh]">
 
 
@@ -293,7 +306,7 @@ export default function Home() {
 
       {/* Secciones de Atleta (Visibles en desktop o cuando se elige Athlete en móvil) */}
 
-      <div className={(viewMode === 'athlete' || typeof window !== 'undefined' && window.innerWidth > 1024) ? 'block' : 'lg:block hidden'}>
+      <div className={(viewMode === 'athlete' || isDesktop) ? 'block' : 'lg:block hidden'}>
         {/* Sección de Estadísticas */}
         <section id="stats" className="py-12 sm:py-20 border-y border-border bg-gradient-to-b from-background to-card/50">
           <div className="max-w-7xl mx-auto px-6">
@@ -392,7 +405,7 @@ export default function Home() {
       </div>
 
       {/* Secciones de B2B (Visibles en desktop o cuando se elige Business en móvil) */}
-      <div className={(viewMode === 'business' || typeof window !== 'undefined' && window.innerWidth > 1024) ? 'block' : 'lg:block hidden'}>
+      <div className={(viewMode === 'business' || isDesktop) ? 'block' : 'lg:block hidden'}>
         <section className="py-32 border-t border-border bg-gradient-to-b from-card/50 to-background relative overflow-hidden">
           <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-brand-red/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2" />
 

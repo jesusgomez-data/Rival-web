@@ -1,120 +1,118 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { Check, Star, Zap, Trophy, CreditCard, Shield, ArrowRight } from "lucide-react";
+import { useState, useEffect, Suspense, use } from "react";
+import { Check, Shield, CreditCard, Building2, Crown, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 import clsx from "clsx";
 import { useSearchParams } from "next/navigation";
-import { getUserProfile } from "../../training/actions";
 import { createClient } from "@/utils/supabase/client";
-import { createCheckoutSession, createPortalSession, verifyStripeSubscription } from "./stripe-actions";
+import { createOrganizationCheckoutSession } from "@/app/dashboard/settings/billing/stripe-actions";
 
 const plans = [
     {
         id: 'free',
-        name: 'Atleta',
-        price: 'Gratis',
-        description: 'Perfecto para comenzar tu viaje',
+        name: 'FREE',
+        price: '€0',
+        description: 'Ideal para empezar',
         features: [
-            'Registro ilimitado de entrenamientos',
-            'Acceso a la comunidad Rival',
-            'Analíticas básicas de rendimiento',
-            'Rankings globales (Top 100)',
-            'Perfil público'
+            'Perfil público',
+            'Hasta 10 clases/semana',
+            'Check-in manual',
+            'Hasta 50 miembros',
+            'Chat básico'
         ],
         cta: 'Plan Actual',
         color: 'gray'
     },
     {
-        id: 'premium',
-        name: 'Premium',
-        price: '$4.99',
+        id: 'starter',
+        name: 'STARTER',
+        price: '€49.99',
         period: '/mes',
-        description: 'Oferta de Lanzamiento: Potencia tu entrenamiento con IA',
+        description: 'Oferta Lanzamiento: Primeros 50 centros',
         features: [
-            'Todo lo de Atleta',
-            'Coach IA: Programación adaptativa',
-            'Analíticas avanzadas y fatiga',
-            'Duelos ilimitados con rivales',
-            'Sin anuncios y modo pro',
-            'Soporte prioritario'
+            'Todo de Free',
+            'Clases ilimitadas',
+            'Sistema de pruebas',
+            'Tienda básica',
+            'Google Calendar sync',
+            'Notificaciones push'
         ],
-        cta: 'Mejorar a Premium',
+        cta: 'Mejorar a Starter',
         highlight: true,
         color: 'brand-red'
     },
     {
-        id: 'elite',
-        name: 'Élite',
-        price: '$9.99',
+        id: 'pro',
+        name: 'PRO',
+        price: '€99.99',
         period: '/mes',
-        description: 'Oferta de Lanzamiento: Para los que no aceptan límites',
+        description: 'Oferta Lanzamiento: Primeros 50 centros',
         features: [
-            'Todo lo de Premium',
-            'Sesiones 1-a-1 con Head Coaches',
-            'Acceso Global a Centros Partner',
-            'Programas personalizados exclusivos',
-            'Badge de Verificado de Élite',
-            'Acceso a eventos VIP'
+            'Todo de Starter',
+            'WOD Generator',
+            'Churn Prediction',
+            'Benchmarking Competitivo',
+            'Tienda avanzada',
+            'Reportes automáticos'
         ],
-        cta: 'Obtener Élite',
+        cta: 'Obtener Pro',
         color: 'yellow'
     }
 ];
 
-export default function BillingPage() {
+export default function GymBillingPage({ params }: { params: Promise<{ id: string }> }) {
+    const { id } = use(params);
     return (
         <Suspense fallback={<div className="p-8 text-center text-gray-500 font-black uppercase tracking-widest animate-pulse">Cargando Protocolos...</div>}>
-            <BillingContent />
+            <BillingContent organizationId={id} />
         </Suspense>
     );
 }
 
-function BillingContent() {
+function BillingContent({ organizationId }: { organizationId: string }) {
     const searchParams = useSearchParams();
     const status = searchParams.get('status');
-    const [profile, setProfile] = useState<any>(null);
+    const [org, setOrg] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [updating, setUpdating] = useState<string | null>(null);
 
     useEffect(() => {
         async function load() {
-            if (status === 'success') {
-                // Manually sync subscription status on success return (for localhost mainly)
-                await verifyStripeSubscription();
-            }
-
-            const data = await getUserProfile();
-            setProfile(data);
+            const supabase = createClient();
+            const { data } = await supabase.from('organizations').select('plan').eq('id', organizationId).single();
+            setOrg(data);
             setLoading(false);
         }
         load();
-    }, [status]);
+    }, [organizationId, status]);
 
     const handleUpgrade = async (plan: any) => {
-        if (plan.id === profile?.subscription_tier) return;
+        if (plan.id === org?.plan) return;
 
         setUpdating(plan.id);
 
         try {
             if (plan.id === 'free') {
-                // Downgrade to free logic
-                // Downgrade request -> Redirect to Portal
-                // Users must cancel via Stripe Portal to stop billing
-                const url = await createPortalSession();
-                if (url) window.location.href = url;
-                return;
+                // Para cancelar suscripciones de centros, redirigimos al portal o mostramos mensaje de contacto
+                // Por ahora, asumimos que deben contactar soporte o usar el portal si implementamos portal para orgs
+                alert("Para cancelar tu suscripción de Centro, por favor contacta a soporte o usa el Portal de Facturación.");
             } else {
                 // PAID PLANS -> Stripe
-                // We'll use the price IDs from environment variables or HARDCODED FALLBACKS for testing
-                let priceId = plan.id === 'premium'
-                    ? 'price_1SxdaPCpwHwK9MuevBVancPf'.trim()
-                    : 'price_1SxdavCpwHwK9Mueeesvlq6T'.trim();
+                // We'll use the price IDs from environment variables or HARDCODED FALLBACKS
+                let priceId = plan.id === 'starter'
+                    ? process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 'price_1SxdaPCpwHwK9MuevBVancPf' // Reemplazar con ID real Starter
+                    : process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 'price_1SxdavCpwHwK9Mueeesvlq6T'; // Reemplazar con ID real Pro
 
-                console.log("Using Price ID:", priceId);
+                // NOTA: Usando IDs de ejemplo. Asegúrate de configurar IDs reales para Starter/Pro
+                // Si no tienes IDs distintos para PRO/STARTER creados aun, usa el Premium/Elite de atletas como placeholder temporal
+                if (!process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER) {
+                    console.warn("Using Fallback Price IDs for Gyms");
+                    priceId = plan.id === 'starter' ? 'price_1SxdaPCpwHwK9MuevBVancPf' : 'price_1SxdavCpwHwK9Mueeesvlq6T';
+                }
 
-                const url = await createCheckoutSession(priceId);
-                if (url) window.location.href = url;
+                await createOrganizationCheckoutSession(priceId, organizationId);
+                // Redirect happens in server action
             }
         } catch (error: any) {
             alert("Error: " + error.message);
@@ -123,32 +121,37 @@ function BillingContent() {
         }
     };
 
-    if (loading) return <div className="p-8 text-center text-gray-500 font-black uppercase tracking-widest animate-pulse">Cargando Protocolos...</div>;
+    if (loading) return <div className="p-8 text-center text-gray-500 font-black uppercase tracking-widest animate-pulse">Cargando Datos del Centro...</div>;
 
     return (
         <div className="max-w-6xl mx-auto space-y-12">
             {status === 'success' && (
                 <div className="bg-green-500/10 border border-green-500/50 p-4 rounded-2xl text-green-500 text-center font-bold animate-in fade-in zoom-in">
-                    ✅ ¡Suscripción activada con éxito! Bienvenido al siguiente nivel.
+                    ✅ ¡Plan del centro actualizado con éxito!
                 </div>
             )}
             {status === 'canceled' && (
                 <div className="bg-brand-red/10 border border-brand-red/50 p-4 rounded-2xl text-brand-red text-center font-bold">
-                    ⚠️ El proceso de pago fue cancelado. No se ha realizado ningún cargo.
+                    ⚠️ Operación cancelada.
                 </div>
             )}
+
             <header className="text-center space-y-4">
+                <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-1.5 rounded-full mb-4">
+                    <Building2 className="w-4 h-4 text-brand-red" />
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Planes para Centros</span>
+                </div>
                 <h1 className="text-4xl lg:text-5xl font-heading font-extrabold italic uppercase tracking-tighter text-white">
-                    Suscripción <span className="text-brand-red">Rival</span>
+                    Potencia tu <span className="text-brand-red">Centro</span>
                 </h1>
                 <p className="text-gray-400 max-w-xl mx-auto text-sm leading-relaxed">
-                    Selecciona el nivel de acceso que se adapte a tu ambición. Actualiza o cancela en cualquier momento.
+                    Herramientas profesionales para gestionar, medir y escalar tu comunidad fitness.
                 </p>
             </header>
 
             <div className="grid md:grid-cols-3 gap-8">
                 {plans.map((plan) => {
-                    const isCurrent = profile?.subscription_tier === plan.id;
+                    const isCurrent = (org?.plan || 'free') === plan.id;
                     return (
                         <motion.div
                             key={plan.id}
@@ -162,7 +165,7 @@ function BillingContent() {
                         >
                             {plan.highlight && (
                                 <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-red text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg">
-                                    Recomendado
+                                    Más Popular
                                 </div>
                             )}
 
@@ -181,7 +184,7 @@ function BillingContent() {
                                     <li key={i} className="flex items-start gap-3">
                                         <div className={clsx(
                                             "mt-1 shrink-0 p-0.5 rounded-full",
-                                            plan.id === 'elite' ? "bg-yellow-500/20 text-yellow-500" : "bg-brand-red/20 text-brand-red"
+                                            plan.id === 'pro' ? "bg-yellow-500/20 text-yellow-500" : "bg-brand-red/20 text-brand-red"
                                         )}>
                                             <Check className="w-3 h-3" />
                                         </div>
@@ -191,19 +194,8 @@ function BillingContent() {
                             </ul>
 
                             <button
-                                onClick={async () => {
-                                    if (isCurrent) {
-                                        setUpdating('portal');
-                                        try {
-                                            const url = await createPortalSession();
-                                            if (url) window.location.href = url;
-                                        } catch (e: any) { alert(e.message); }
-                                        setUpdating(null);
-                                    } else {
-                                        handleUpgrade(plan);
-                                    }
-                                }}
-                                disabled={updating !== null}
+                                onClick={() => handleUpgrade(plan)}
+                                disabled={updating !== null || isCurrent}
                                 className={clsx(
                                     "w-full py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all transform active:scale-95",
                                     isCurrent
@@ -213,7 +205,7 @@ function BillingContent() {
                                             : "bg-white text-black hover:bg-gray-200"
                                 )}
                             >
-                                {updating === plan.id ? "Procesando..." : isCurrent ? "Gestionar" : plan.cta}
+                                {updating === plan.id ? "Procesando..." : isCurrent ? "Plan Actual" : plan.cta}
                             </button>
                         </motion.div>
                     );
@@ -226,15 +218,10 @@ function BillingContent() {
                         <Shield className="w-10 h-10 text-brand-red" />
                     </div>
                     <div className="flex-1 space-y-4">
-                        <h4 className="text-xl font-bold text-white italic uppercase">Seguridad Rival</h4>
+                        <h4 className="text-xl font-bold text-white italic uppercase">Facturación Segura</h4>
                         <p className="text-xs text-gray-400 leading-relaxed max-w-2xl">
-                            Utilizamos encriptación de grado militar para procesar tus pagos. No almacenamos datos de tu tarjeta directamente. Al suscribirte, aceptas nuestros términos de servicio y política de privacidad.
+                            Tus pagos están protegidos por Stripe. Puedes solicitar facturas detalladas para deducir impuestos de tu empresa.
                         </p>
-                    </div>
-                    <div className="flex gap-4">
-                        <div className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center opacity-50 grayscale hover:grayscale-0 transition-all cursor-crosshair">
-                            <CreditCard className="w-6 h-6 text-white" />
-                        </div>
                     </div>
                 </div>
             </section>

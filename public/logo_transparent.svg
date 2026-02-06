@@ -1,4 +1,8 @@
 <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<!-- Scaled down slightly (0.85) and moved up to make room for big text -->
+<g transform="translate(38.4, -40) scale(0.85)">
 <path d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z" fill="#DC2626"/>
 <path d="M160 100L145 310H220L235 100H160Z" fill="#991B1B"/>
+</g>
+<text x="256" y="460" fill="#FFFFFF" font-family="'Arial Black', 'Arial Bold', sans-serif" font-weight="900" font-size="110" letter-spacing="4" text-anchor="middle">FIT</text>
 </svg>

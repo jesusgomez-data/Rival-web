@@ -1,36 +1,38 @@
 'use server'
 
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
+const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
+
+// Note: We use supabaseAdmin to bypass RLS for admin actions
+// Ensure SUPABASE_SERVICE_ROLE_KEY is set in .env.local
+
 export async function getAdminStats() {
-    const supabase = await createClient();
-
-    // Check authentication
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: "No autorizado" };
-
     // 1. Total Users
-    const { count: userCount } = await supabase
+    const { count: userCount } = await supabaseAdmin
         .from('profiles')
         .select('*', { count: 'exact', head: true });
 
     // 2. Total Organizations
-    const { count: orgCount } = await supabase
+    const { count: orgCount } = await supabaseAdmin
         .from('organizations')
         .select('*', { count: 'exact', head: true });
 
     // 3. Total Workouts
-    const { count: workoutCount } = await supabase
+    const { count: workoutCount } = await supabaseAdmin
         .from('workouts')
         .select('*', { count: 'exact', head: true });
 
     // Calculate MRR based on active plans
-    const { data: orgs } = await supabase
+    const { data: orgs } = await supabaseAdmin
         .from('organizations')
         .select('plan');
 
-    const mrr = orgs?.reduce((acc, org) => {
+    const mrr = orgs?.reduce((acc: number, org: any) => {
         if (org.plan === 'starter') return acc + 49.99;
         if (org.plan === 'pro') return acc + 99.99;
         return acc;
@@ -45,9 +47,7 @@ export async function getAdminStats() {
 }
 
 export async function getRecentOrganizations() {
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
         .from('organizations')
         .select('*')
         .order('created_at', { ascending: false });
@@ -64,13 +64,11 @@ export async function getRecentOrganizations() {
 }
 
 export async function getAllUsers() {
-    const supabase = await createClient();
-
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false })
-        .limit(50); // Limit for now
+        .limit(50);
 
     if (error) {
         console.error("Error fetching users:", error);
@@ -81,10 +79,7 @@ export async function getAllUsers() {
 }
 
 export async function updateOrganizationPlan(orgId: string, plan: string) {
-    const supabase = await createClient();
-
-    // In real app, check admin role
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
         .from('organizations')
         .update({ plan })
         .eq('id', orgId);
@@ -94,9 +89,7 @@ export async function updateOrganizationPlan(orgId: string, plan: string) {
 }
 
 export async function updateUserPlan(userId: string, tier: string) {
-    const supabase = await createClient();
-
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
         .from('profiles')
         .update({ subscription_tier: tier })
         .eq('id', userId);
@@ -106,9 +99,7 @@ export async function updateUserPlan(userId: string, tier: string) {
 }
 
 export async function deleteOrganization(orgId: string) {
-    const supabase = await createClient();
-
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
         .from('organizations')
         .delete()
         .eq('id', orgId);

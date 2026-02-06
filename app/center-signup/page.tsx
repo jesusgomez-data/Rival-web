@@ -19,8 +19,8 @@ const centerTypes = [
 
 const plans = [
   { id: 'free', name: 'FREE', price: '€0', description: 'Ideal para empezar' },
-  { id: 'starter', name: 'STARTER', price: '€9.99', description: 'Lanzamiento: Primeros 50 centros.' },
-  { id: 'pro', name: 'PRO', price: '€29.99', description: 'Lanzamiento: Primeros 50 centros.' },
+  { id: 'starter', name: 'STARTER', price: '€49.99', description: 'Lanzamiento: Primeros 50 centros.' },
+  { id: 'pro', name: 'PRO', price: '€99.99', description: 'Lanzamiento: Primeros 50 centros.' },
 ]
 
 export default function CenterSignup() {

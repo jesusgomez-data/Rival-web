@@ -44,9 +44,12 @@ export async function POST(req: Request) {
 
                 if (organizationId) {
                     // CENTER UPGRADE
+                    const starterPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 'price_1SxdaPCpwHwK9MuevBVancPf'; // Placeholder
+                    const proPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 'price_1SxdavCpwHwK9Mueeesvlq6T'; // Placeholder
+
                     let planName = 'free';
-                    if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER) planName = 'starter';
-                    if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) planName = 'pro';
+                    if (priceId === starterPrice) planName = 'starter';
+                    if (priceId === proPrice) planName = 'pro';
 
                     const { error } = await supabase
                         .from("organizations")
@@ -57,9 +60,13 @@ export async function POST(req: Request) {
                     else console.log(`Organization ${organizationId} upgraded to ${planName}`);
                 } else {
                     // ATHLETE UPGRADE
+                    // Add fallbacks to match stripe-actions.ts
+                    const premiumPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || 'price_1SxdaPCpwHwK9MuevBVancPf';
+                    const elitePrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE || 'price_1SxdavCpwHwK9Mueeesvlq6T';
+
                     let tier = 'free';
-                    if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM) tier = 'premium';
-                    if (priceId === process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE) tier = 'elite';
+                    if (priceId === premiumPrice) tier = 'premium';
+                    if (priceId === elitePrice) tier = 'elite';
 
                     const { error } = await supabase
                         .from("profiles")
