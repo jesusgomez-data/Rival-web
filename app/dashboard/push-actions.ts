@@ -3,11 +3,15 @@
 import { createClient } from '@/utils/supabase/server';
 import webpush from 'web-push';
 
-webpush.setVapidDetails(
-    'mailto:support@rivalfit.app',
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!
-);
+if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    webpush.setVapidDetails(
+        'mailto:support@rivalfit.app',
+        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+        process.env.VAPID_PRIVATE_KEY
+    );
+} else {
+    console.warn("VAPID keys not found. Push notifications will not work.");
+}
 
 export async function savePushSubscription(subscription: any) {
     const supabase = await createClient();

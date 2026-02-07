@@ -209,7 +209,7 @@ export default function Home() {
                         <Image src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=200&auto=format&fit=crop" alt="User" fill className="object-cover" />
                       </div>
                       <div>
-                        <p className="font-bold text-white text-lg">Sarah Jenkins</p>
+                        <p className="font-bold text-white text-lg">Alex Sterling</p>
                         <p className="text-xs text-brand-red font-bold uppercase tracking-wider">Nuevo PR • CrossFit</p>
                       </div>
                     </div>
@@ -545,7 +545,7 @@ export default function Home() {
             © {new Date().getFullYear()} Rival Inc. Todos los derechos reservados.
           </div>
           <div className="flex gap-4 items-center order-first md:order-last">
-            <a href="https://instagram.com/rival.app" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-white/5 hover:bg-brand-red text-white transition-all transform hover:scale-110">
+            <a href="https://instagram.com/rivalfit.app" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-white/5 hover:bg-brand-red text-white transition-all transform hover:scale-110">
               <Instagram className="w-4 h-4" />
             </a>
             <a href="mailto:rival.app.official@gmail.com" className="p-2 rounded-full bg-white/5 hover:bg-brand-red text-white transition-all transform hover:scale-110">

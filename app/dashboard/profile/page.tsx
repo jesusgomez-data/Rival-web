@@ -266,9 +266,9 @@ export default function ProfilePage() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Limit file size to 10MB to avoid server action timeouts
-        if (file.size > 10 * 1024 * 1024) {
-            alert('El archivo es demasiado grande. El límite es 10MB.');
+        // Limit file size to 50MB to avoid server action timeouts
+        if (file.size > 50 * 1024 * 1024) {
+            alert('El archivo es demasiado grande. El límite es 50MB.');
             return;
         }
 
@@ -607,7 +607,7 @@ export default function ProfilePage() {
                                     name="full_name"
                                     value={formData.full_name}
                                     onChange={handleChange}
-                                    placeholder="ej. Sarah Jenkins"
+                                    placeholder="ej. Alex Sterling"
                                     icon={<User className="w-4 h-4" />}
                                 />
                                 <FormInput
@@ -615,7 +615,7 @@ export default function ProfilePage() {
                                     name="username"
                                     value={formData.username}
                                     onChange={handleChange}
-                                    placeholder="sarah_fit"
+                                    placeholder="alex_sterling"
                                     icon={<Hash className="w-4 h-4" />}
                                 />
                             </div>
