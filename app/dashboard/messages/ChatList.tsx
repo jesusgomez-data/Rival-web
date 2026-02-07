@@ -21,11 +21,11 @@ export default function ChatList({ conversations, activeId, onSearch, onSelect, 
     const { t, language } = useLanguage()
 
     return (
-        <div className="flex flex-col h-full bg-[#090909]">
+        <div className="flex flex-col h-full bg-card">
             {/* Cabecera compacta */}
-            <div className="p-6 border-b border-white/5">
+            <div className="p-6 border-b border-border">
                 <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-accent font-bold italic text-white uppercase tracking-tighter flex items-center gap-2">
+                    <h2 className="text-xl font-accent font-bold italic text-foreground uppercase tracking-tighter flex items-center gap-2">
                         <div className="w-1 h-6 bg-brand-red rounded-full" />
                         {t.chat.title}
                     </h2>
@@ -38,12 +38,12 @@ export default function ChatList({ conversations, activeId, onSearch, onSelect, 
                 </div>
 
                 <div className="relative group">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-600" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                         type="text"
                         placeholder={t.chat.searchPlaceholder}
                         onChange={(e) => onSearch(e.target.value)}
-                        className="w-full bg-white/5 border border-white/5 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-brand-red/40 transition-all shadow-inner"
+                        className="w-full bg-background border border-border rounded-xl py-2.5 pl-10 pr-4 text-sm text-foreground focus:outline-none focus:border-brand-red/40 transition-all shadow-inner"
                     />
                 </div>
             </div>
@@ -71,8 +71,8 @@ export default function ChatList({ conversations, activeId, onSearch, onSelect, 
                                     className={clsx(
                                         "w-full flex items-center gap-4 p-4 rounded-2xl transition-all relative group overflow-hidden border",
                                         isActive
-                                            ? "bg-white/5 border-white/10 shadow-xl"
-                                            : "bg-transparent border-transparent hover:bg-white/[0.03]"
+                                            ? "bg-muted border-border shadow-xl"
+                                            : "bg-transparent border-transparent hover:bg-muted/50"
                                     )}
                                 >
                                     {isActive && (
@@ -85,17 +85,17 @@ export default function ChatList({ conversations, activeId, onSearch, onSelect, 
                                     <div className="relative shrink-0">
                                         <div className={clsx(
                                             "w-12 h-12 rounded-xl overflow-hidden border relative",
-                                            isActive ? "border-brand-red/50 shadow-glow-sm" : "border-white/10"
+                                            isActive ? "border-brand-red/50 shadow-glow-sm" : "border-border"
                                         )}>
                                             {person?.avatar_url ? (
                                                 <Image src={person.avatar_url} alt="" fill className="object-cover" />
                                             ) : (
-                                                <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                                                    <User className="w-5 h-5 text-gray-600" />
+                                                <div className="w-full h-full bg-muted flex items-center justify-center">
+                                                    <User className="w-5 h-5 text-muted-foreground" />
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-[#090909] rounded-full" />
+                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-card rounded-full" />
                                     </div>
 
                                     <div className="flex-1 min-w-0 text-left">
@@ -103,7 +103,7 @@ export default function ChatList({ conversations, activeId, onSearch, onSelect, 
                                             <div className="flex items-center gap-2 overflow-hidden">
                                                 <h4 className={clsx(
                                                     "font-bold text-sm truncate",
-                                                    isActive ? "text-white font-accent italic tracking-tight" : "text-gray-300"
+                                                    isActive ? "text-foreground font-accent italic tracking-tight" : "text-foreground/80"
                                                 )}>
                                                     {person?.full_name || person?.username}
                                                 </h4>

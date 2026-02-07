@@ -282,11 +282,34 @@ export default function CenterDashboardHome() {
 
                     {/* Analytics Chart (Owner Only) */}
                     {canViewKPIs && (
-                        <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 flex flex-col min-h-[420px]">
-                            <h3 className="text-lg font-bold text-foreground mb-4 sm:mb-6 flex items-center gap-2">
+                        <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 flex flex-col min-h-[420px] relative overflow-hidden group">
+                            {/* ... (existing chart code) ... */}
+                            <h3 className="text-lg font-bold text-foreground mb-4 sm:mb-6 flex items-center gap-2 relative z-10">
                                 <Activity className="w-5 h-5 text-brand-red" /> Rendimiento del Negocio
                             </h3>
-                            <div className="flex-1 w-full relative">
+
+                            {/* Free Plan Restriction Overlay */}
+                            {(centerDetails?.plan || 'free') === 'free' && (
+                                <div className="absolute inset-0 z-20 bg-background/60 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center">
+                                    <div className="w-16 h-16 rounded-2xl bg-brand-red/10 flex items-center justify-center mb-4 border border-brand-red/20">
+                                        <Activity className="w-8 h-8 text-brand-red" />
+                                    </div>
+                                    <h3 className="text-xl font-heading font-black text-foreground italic uppercase tracking-tighter mb-2">
+                                        Métricas Avanzadas
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground max-w-sm mb-6 font-medium">
+                                        Desbloquea el análisis detallado de ingresos y crecimiento con el plan <span className="text-brand-red font-bold">Starter</span> o <span className="text-brand-red font-bold">Pro</span>.
+                                    </p>
+                                    <Link
+                                        href={`/dashboard/gyms/${id}/settings/billing`}
+                                        className="bg-brand-red text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-[0.2em] hover:bg-red-600 transition-all shadow-glow"
+                                    >
+                                        Ver Planes
+                                    </Link>
+                                </div>
+                            )}
+
+                            <div className={clsx("flex-1 w-full relative transition-opacity", (centerDetails?.plan || 'free') === 'free' ? "opacity-20 pointer-events-none" : "opacity-100")}>
                                 {loading ? (
                                     <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs">Cargando Analíticas...</div>
                                 ) : (
@@ -318,26 +341,33 @@ export default function CenterDashboardHome() {
                             </div>
                         </div>
                     )}
+
+                    {/* Activity Feed for Coaches (Below Quick Actions) */}
+                    {!canViewKPIs && (
+                        <div className="flex flex-col">
+                            <h3 className="text-lg font-bold text-foreground mb-4 font-heading uppercase tracking-widest text-xs opacity-50">
+                                Actividad Reciente
+                            </h3>
+                            <div className="bg-card border border-border rounded-2xl p-1 min-h-[400px]">
+                                <ActivityFeed centerId={id} />
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Right Column (Side Content) */}
                 <div className={clsx(
-                    "space-y-8",
-                    canViewKPIs ? "lg:col-span-1" : "md:col-span-1 flex flex-col h-full"
+                    "lg:col-span-1 space-y-8 flex flex-col h-full"
                 )}>
-                    {canViewKPIs ? (
-                        /* Owner/Head Coach View: Chat + Activity Stacked */
-                        <>
-                            <TeamChat centerId={id} />
-                            <div>
-                                <h3 className="text-lg font-bold text-foreground mb-4">Actividad Reciente</h3>
-                                <ActivityFeed centerId={id} />
-                            </div>
-                        </>
-                    ) : (
-                        /* Coach View: Activity Feed Expanded */
+                    {userRole && ['owner', 'head_coach', 'coach'].includes(userRole) && (
+                        <TeamChat centerId={id} />
+                    )}
+
+                    {canViewKPIs && (
                         <div className="flex-1 flex flex-col">
-                            <h3 className="text-lg font-bold text-foreground mb-4">Actividad Reciente</h3>
+                            <h3 className="text-lg font-bold text-foreground mb-4 font-heading uppercase tracking-widest text-xs opacity-50">
+                                Actividad Reciente
+                            </h3>
                             <div className="flex-1 bg-card border border-border rounded-2xl p-1 min-h-[400px]">
                                 <ActivityFeed centerId={id} />
                             </div>

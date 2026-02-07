@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { isUserAdmin } from "@/utils/admin";
 
 export async function createSupportTicket(subject: string, message: string, category: string = 'technical') {
     const supabase = await createClient();
@@ -40,6 +41,7 @@ export async function createSupportTicket(subject: string, message: string, cate
 }
 
 export async function getSupportTickets() {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const supabase = await createClient();
 
     // In a real app, verify admin role here. 
@@ -60,6 +62,10 @@ export async function getSupportTickets() {
 
 export async function getTicketDetails(ticketId: string) {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "No autenticado" };
+
+    const isAdmin = await isUserAdmin();
 
     // Fetch Ticket Info
     const { data: ticket, error: ticketError } = await supabase
@@ -72,6 +78,11 @@ export async function getTicketDetails(ticketId: string) {
         .single();
 
     if (ticketError) return { error: ticketError.message };
+
+    // Check if user is owner or admin
+    if (ticket.user_id !== user.id && !isAdmin) {
+        return { error: "No autorizado" };
+    }
 
     // Fetch Messages
     const { data: messages, error: messagesError } = await supabase
@@ -93,6 +104,10 @@ export async function sendReply(ticketId: string, content: string, isAdmin: bool
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) return { error: "No autenticado" };
+
+    if (isAdmin && !(await isUserAdmin())) {
+        return { error: "No autorizado para responder como admin" };
+    }
 
     const { error } = await supabase
         .from('support_messages')
@@ -118,7 +133,9 @@ export async function sendReply(ticketId: string, content: string, isAdmin: bool
     return { success: true };
 }
 
+
 export async function resolveTicket(ticketId: string) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const supabase = await createClient();
 
     await supabase

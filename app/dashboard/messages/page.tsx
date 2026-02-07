@@ -79,7 +79,7 @@ export default function MessagesPage() {
                 schema: 'public',
                 table: 'messages'
             }, async (payload) => {
-                // Refrescamos siempre la lista para que aparezca el punto rojo
+                // Si el mensaje es para nosotros, refrescamos la lista
                 await loadConversations()
 
                 // Si el mensaje no es del usuario actual, avisar
@@ -109,10 +109,34 @@ export default function MessagesPage() {
                 table: 'messages',
                 filter: `conversation_id=eq.${activeConversationId}`
             }, (payload) => {
+                const newMessage = payload.new
+
                 setMessages(prev => {
-                    if (prev.find(m => m.id === payload.new.id)) return prev
-                    const newMsgs = [...prev, payload.new]
-                    return newMsgs
+                    // 1. Evitar duplicado exacto por ID
+                    if (prev.find(m => m.id === newMessage.id)) return prev
+
+                    // 2. Si es nuestro, buscar el mensaje temporal por contenido reciente
+                    // Esto evita el duplicado instantáneo que ocurre al recibir el evento
+                    // de un mensaje que nosotros mismos acabamos de enviar
+                    if (newMessage.sender_id === currentUserId) {
+                        const tempMsgIndex = prev.findIndex(m =>
+                            m.sender_id === currentUserId &&
+                            m.text === newMessage.text &&
+                            m.id.toString().startsWith('temp-')
+                        )
+
+                        if (tempMsgIndex !== -1) {
+                            const updatedMsgs = [...prev]
+                            updatedMsgs[tempMsgIndex] = newMessage
+                            return updatedMsgs
+                        }
+
+                        // Si ya está el mensaje real pero sin ID temporal (raro pero posible)
+                        // no lo añadimos de nuevo
+                        return prev
+                    }
+
+                    return [...prev, newMessage]
                 })
             })
             .on('postgres_changes', {
@@ -138,7 +162,7 @@ export default function MessagesPage() {
             .subscribe()
 
         return () => { supabase.removeChannel(channel) }
-    }, [activeConversationId])
+    }, [activeConversationId, currentUserId])
 
     const handleSelectConversation = async (id: string, person: any) => {
         try {
@@ -155,7 +179,7 @@ export default function MessagesPage() {
         if (!activeConversationId) return
 
         // Optimistic UI: Añadir el mensaje localmente rápido
-        const tempId = Math.random().toString()
+        const tempId = `temp-${Date.now()}-${Math.random()}`
         const tempMsg = {
             id: tempId,
             conversation_id: activeConversationId,
@@ -169,12 +193,18 @@ export default function MessagesPage() {
         const result = await sendMessage(activeConversationId, text, imageUrl)
 
         if (result.error) {
-            // Revertir si falla
             setMessages(prev => prev.filter(m => m.id !== tempId))
             alert(`Error al enviar: ${result.error}`)
         } else {
-            // Reemplazar mensaje temporal con el real (el listener también lo hará)
-            setMessages(prev => prev.map(m => m.id === tempId ? result.message : m))
+            // Reemplazar mensaje temporal con el real de forma segura
+            setMessages(prev => {
+                // Si el listener ya lo reemplazó o lo añadió por ID real
+                if (prev.find(m => m.id === result.message.id)) {
+                    return prev.filter(m => m.id !== tempId)
+                }
+                // Si no, reemplazamos el temporal
+                return prev.map(m => m.id === tempId ? result.message : m)
+            })
             await loadConversations()
         }
     }
@@ -209,13 +239,13 @@ export default function MessagesPage() {
     )
 
     if (isLoadingConversations) {
-        return <div className="h-screen flex items-center justify-center bg-[#090909]"><Loader2 className="animate-spin text-brand-red w-10 h-10" /></div>
+        return <div className="h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-brand-red w-10 h-10" /></div>
     }
 
     return (
-        <div className="h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] bg-[#090909] flex text-white overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-white/5 shadow-2xl mx-auto max-w-[1600px] my-0 md:my-4 transition-all duration-500">
+        <div className="h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] bg-background flex text-foreground overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-border shadow-2xl mx-auto max-w-[1600px] my-0 md:my-4 transition-all duration-500">
             <div className={clsx(
-                "w-full md:w-[350px] lg:w-[420px] shrink-0 border-r border-white/5 flex flex-col bg-[#090909]",
+                "w-full md:w-[350px] lg:w-[420px] shrink-0 border-r border-border flex flex-col bg-card",
                 !isMobileListVisible ? 'hidden md:flex' : 'flex'
             )}>
                 <ChatList
@@ -228,9 +258,9 @@ export default function MessagesPage() {
             </div>
 
             <div className={clsx(
-                "flex-1 flex flex-col transition-all duration-300 bg-[#070707] overflow-hidden",
+                "flex-1 flex flex-col transition-all duration-300 bg-background overflow-hidden",
                 !isMobileListVisible
-                    ? "fixed inset-0 z-[110] bg-[#070707] animate-in slide-in-from-right duration-300 lg:relative lg:inset-auto lg:z-auto lg:animate-none"
+                    ? "fixed inset-0 z-[110] bg-background animate-in slide-in-from-right duration-300 lg:relative lg:inset-auto lg:z-auto lg:animate-none top-0 bottom-0 left-0 right-0"
                     : "hidden md:flex"
             )}>
                 <ChatWindow

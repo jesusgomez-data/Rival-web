@@ -586,7 +586,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             <div className="relative aspect-video bg-black cursor-pointer group shadow-2xl overflow-hidden rounded-xl" onClick={() => setIsLightboxOpen(true)}>
                                 {isVideo ? (
                                     <div className="relative w-full h-full">
-                                        <video src={image} className="w-full h-full object-cover" muted playsInline />
+                                        <video src={image} className="w-full h-full object-cover" autoPlay loop playsInline />
                                         <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
                                             <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-glow">
                                                 <Play className="w-5 h-5 text-white fill-white ml-1" />

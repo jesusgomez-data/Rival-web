@@ -212,6 +212,9 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
 
         if (res.error) {
             alert(res.error);
+        } else if (res.checkoutUrl) {
+            // Redirect to Stripe Checkout or SCA Action
+            window.location.href = res.checkoutUrl as string;
         } else {
             alert(method === 'card'
                 ? "¡Compra exitosa! El artículo se ha añadido a tu cuenta."

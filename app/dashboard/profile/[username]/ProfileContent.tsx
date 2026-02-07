@@ -114,7 +114,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
             </div>
 
             {/* Mobile Tabs */}
-            <div className="flex md:hidden border-b border-white/10 mb-4 sticky top-0 bg-black/80 backdrop-blur-xl z-40">
+            <div className="flex md:hidden border-b border-white/10 mb-4 sticky top-20 bg-black/80 backdrop-blur-xl z-40">
                 <button
                     onClick={() => setMobileTab('activity')}
                     className={clsx(

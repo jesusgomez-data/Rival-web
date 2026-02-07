@@ -54,7 +54,7 @@ export default function Home() {
               <Image src="/logo.svg" alt="Logo de Rival" width={40} height={40} className="w-10 h-10 group-hover:scale-110 transition-transform duration-500" />
               <div className="absolute inset-0 bg-brand-red blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
             </div>
-            <span className="font-heading font-black text-3xl tracking-[ -0.05em] italic group-hover:text-brand-red transition-all text-white drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]">RIVAL</span>
+            <span className="font-heading font-black text-3xl tracking-[-0.05em] italic group-hover:text-brand-red transition-all text-foreground drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]">RIVAL</span>
           </Link>
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <a href="#features" className="hover:text-brand-red transition-colors">{t.nav.features}</a>
@@ -63,7 +63,7 @@ export default function Home() {
             <Link href="/for-centers" className="text-red-600 hover:text-red-400 transition-colors font-bold">{t.nav.forCenters}</Link>
           </div>
           <div className="flex items-center gap-4">
-            <ThemeToggle className="hidden sm:flex" />
+            <ThemeToggle />
 
             <Link href="/login" className="hidden sm:block text-sm font-medium hover:text-brand-red transition-colors text-muted-foreground">
               {t.nav.login}

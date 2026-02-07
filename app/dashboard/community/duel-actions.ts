@@ -9,6 +9,25 @@ export async function createDuel(opponentId: string) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: "Not authenticated" };
 
+    // Check Plan Restrictions
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('subscription_tier')
+        .eq('id', user.id)
+        .single();
+
+    if (profile?.subscription_tier === 'free') {
+        const { count } = await supabase
+            .from('duels')
+            .select('id', { count: 'exact', head: true })
+            .or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`)
+            .in('status', ['active', 'pending']);
+
+        if ((count || 0) >= 1) {
+            return { error: "Plan Gratuito limitado a 1 Duelo activo. Mejora a Premium para duelos ilimitados." };
+        }
+    }
+
     const startDate = new Date().toISOString().split('T')[0];
     const endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -42,6 +61,28 @@ export async function createDuel(opponentId: string) {
 
 export async function acceptDuel(duelId: string) {
     const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Not authenticated" };
+
+    // Check Plan Restrictions
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('subscription_tier')
+        .eq('id', user.id)
+        .single();
+
+    if (profile?.subscription_tier === 'free') {
+        const { count } = await supabase
+            .from('duels')
+            .select('id', { count: 'exact', head: true })
+            .or(`and(status.eq.active,or(challenger_id.eq.${user.id},opponent_id.eq.${user.id})),and(status.eq.pending,challenger_id.eq.${user.id})`);
+
+        if ((count || 0) >= 1) {
+            return { error: "Plan Gratuito limitado a 1 Duelo activo. Termina o cancela tu duelo actual para aceptar este." };
+        }
+    }
+
     const { data, error } = await supabase
         .from('duels')
         .update({ status: 'active' })

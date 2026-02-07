@@ -87,6 +87,15 @@ export default function AdminDashboard() {
     useEffect(() => {
         async function loadData() {
             try {
+                const supabase = createClient();
+                const { data: { user } } = await supabase.auth.getUser();
+
+                const adminEmails = ['gomezsantiagojesus@icloud.com', 'jesusgomez.s@hotmail.com'];
+                if (!user || !adminEmails.includes(user.email || '')) {
+                    window.location.href = '/dashboard';
+                    return;
+                }
+
                 await refreshData();
             } catch (e) {
                 console.error("Error loading admin data", e);

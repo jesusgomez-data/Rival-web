@@ -2,9 +2,12 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { isUserAdmin } from "@/utils/admin";
 
 export async function getAds() {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const supabase = await createClient();
+
     const { data, error } = await supabase
         .from('advertisements')
         .select('*')
@@ -18,6 +21,7 @@ export async function getAds() {
 }
 
 export async function createAd(formData: { title: string, description: string, image_url: string, link_url: string }) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const supabase = await createClient();
     const { error } = await supabase
         .from('advertisements')
@@ -28,6 +32,7 @@ export async function createAd(formData: { title: string, description: string, i
 }
 
 export async function updateAd(id: string, formData: { title: string, description: string, image_url: string, link_url: string }) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const supabase = await createClient();
     const { error } = await supabase
         .from('advertisements')
@@ -39,6 +44,7 @@ export async function updateAd(id: string, formData: { title: string, descriptio
 }
 
 export async function toggleAd(id: string, currentStatus: boolean) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const supabase = await createClient();
     const { error } = await supabase
         .from('advertisements')
@@ -50,6 +56,7 @@ export async function toggleAd(id: string, currentStatus: boolean) {
 }
 
 export async function deleteAd(id: string) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const supabase = await createClient();
     const { error } = await supabase
         .from('advertisements')
@@ -61,6 +68,7 @@ export async function deleteAd(id: string) {
 }
 
 export async function uploadAdMedia(formData: FormData) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const supabase = await createClient();
     const file = formData.get('file') as File;
     if (!file) throw new Error("No file provided");

@@ -104,7 +104,7 @@ export default function ChatWindow({ messages, otherPerson, currentUserId, onSen
 
     if (!otherPerson) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-[#070707] relative overflow-hidden">
+            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-background relative overflow-hidden">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -114,16 +114,16 @@ export default function ChatWindow({ messages, otherPerson, currentUserId, onSen
                         <MessageSquarePlus className="w-12 h-12 text-brand-red/40" />
                     </div>
                 </motion.div>
-                <h3 className="text-2xl font-accent font-bold italic text-white mb-2 uppercase tracking-tighter">{t.chat.commandCenter}</h3>
-                <p className="text-gray-500 text-sm max-w-xs leading-relaxed font-medium">{t.chat.commandSubtitle}</p>
+                <h3 className="text-2xl font-accent font-bold italic text-foreground mb-2 uppercase tracking-tighter">{t.chat.commandCenter}</h3>
+                <p className="text-muted-foreground text-sm max-w-xs leading-relaxed font-medium">{t.chat.commandSubtitle}</p>
             </div>
         )
     }
 
     return (
-        <div className="flex-1 flex flex-col bg-[#070707] relative overflow-hidden h-full">
+        <div className="flex-1 flex flex-col bg-background relative overflow-hidden h-full">
             {/* Header más contacto/compacto */}
-            <header className="px-4 md:px-6 py-4 border-b border-white/[0.05] flex items-center justify-between relative z-30 bg-black/40 backdrop-blur-xl">
+            <header className="px-4 md:px-6 py-4 border-b border-border flex items-center justify-between relative z-30 bg-card/40 backdrop-blur-xl">
                 <div className="flex items-center gap-3 md:gap-4">
                     {onBack && (
                         <button onClick={onBack} className="lg:hidden p-2 -ml-2 text-gray-400 hover:text-white transition-colors">
@@ -131,16 +131,16 @@ export default function ChatWindow({ messages, otherPerson, currentUserId, onSen
                         </button>
                     )}
                     <div className="relative group cursor-pointer">
-                        <div className="relative w-10 h-10 md:w-11 md:h-11 rounded-full md:rounded-2xl overflow-hidden border-2 border-brand-red/40 group-hover:border-brand-red transition-all shadow-[0_0_15px_rgba(239,68,68,0.2)]">
+                        <div className="relative w-10 h-10 md:w-11 md:h-11 rounded-full md:rounded-2xl overflow-hidden border border-border group-hover:border-brand-red transition-all">
                             <Image src={otherPerson.avatar_url || '/placeholder-avatar.jpg'} alt="" fill className="object-cover" />
                         </div>
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-[#070707] rounded-full shadow-lg" />
+                        <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 border-2 border-background rounded-full shadow-lg" />
                     </div>
                     <div>
-                        <h4 className="font-accent font-bold text-white italic uppercase text-base md:text-lg leading-none tracking-tight">{otherPerson.full_name}</h4>
-                        <div className="flex items-center gap-1.5 mt-0.5">
+                        <h4 className="font-accent font-black text-foreground italic uppercase text-base md:text-lg leading-tight tracking-tight">{otherPerson.full_name}</h4>
+                        <div className="flex items-center gap-1.5 mt-0">
                             <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                            <span className="text-[10px] text-green-500/80 font-black uppercase tracking-[0.1em]">{t.chat.online}</span>
+                            <span className="text-[9px] text-green-500 font-black uppercase tracking-[0.15em]">{t.chat.online}</span>
                         </div>
                     </div>
                 </div>
@@ -213,14 +213,14 @@ export default function ChatWindow({ messages, otherPerson, currentUserId, onSen
 
                                             <div
                                                 className={clsx(
-                                                    "relative transition-all duration-200 overflow-hidden",
+                                                    "relative transition-all duration-300 overflow-hidden",
                                                     msg.image_url
-                                                        ? "rounded-[1.5rem] p-0 shadow-2xl bg-[#141414] border border-white/5 group-hover:scale-[1.01]"
+                                                        ? "rounded-[1.5rem] p-0 shadow-2xl bg-card border border-border group-hover:scale-[1.01]"
                                                         : clsx(
-                                                            "px-5 py-3 shadow-lg",
+                                                            "px-5 py-3 shadow-md",
                                                             isMine
-                                                                ? "bg-gradient-to-br from-brand-red to-rose-700 text-white rounded-[1.8rem] rounded-br-sm"
-                                                                : "bg-[#141414] border border-white/[0.08] text-gray-100 rounded-[1.8rem] rounded-bl-sm backdrop-blur-sm"
+                                                                ? "bg-gradient-to-br from-brand-red via-brand-red to-rose-600 text-white rounded-[1.8rem] rounded-br-sm shadow-brand-red/10"
+                                                                : "bg-card border border-border text-foreground rounded-[1.8rem] rounded-bl-sm backdrop-blur-sm shadow-sm"
                                                         )
                                                 )}
                                                 onClick={() => handleMessageClick(msg)}
@@ -240,7 +240,7 @@ export default function ChatWindow({ messages, otherPerson, currentUserId, onSen
                                                         <textarea
                                                             value={editValue}
                                                             onChange={(e) => setEditValue(e.target.value)}
-                                                            className="bg-black/40 border border-white/10 rounded-xl p-3 text-sm text-white focus:outline-none focus:border-white/20 resize-none font-medium"
+                                                            className="bg-background/40 border border-border rounded-xl p-3 text-sm text-foreground focus:outline-none focus:border-brand-red/20 resize-none font-medium"
                                                             rows={2}
                                                             autoFocus
                                                         />
@@ -349,9 +349,9 @@ export default function ChatWindow({ messages, otherPerson, currentUserId, onSen
             </AnimatePresence>
 
             {/* Input más cómodo y centrado */}
-            <div className="px-4 pb-4 md:pb-8 pt-2 bg-[#070707] border-t border-white/[0.03] relative z-20">
+            <div className="px-4 pb-4 md:pb-8 pt-2 bg-background border-t border-border relative z-20">
                 <div className="max-w-4xl mx-auto flex items-center gap-2 md:gap-4">
-                    <div className="flex-1 bg-white/[0.03] rounded-[2.2rem] border border-white/[0.08] focus-within:border-brand-red/30 transition-all flex items-center px-4 md:px-6 shadow-inner">
+                    <div className="flex-1 bg-muted rounded-[2.2rem] border border-border focus-within:border-brand-red/30 transition-all flex items-center px-4 md:px-6 shadow-inner">
                         <input
                             type="file"
                             className="hidden"
@@ -371,7 +371,7 @@ export default function ChatWindow({ messages, otherPerson, currentUserId, onSen
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyPress}
                             placeholder={t.chat.placeholder}
-                            className="flex-1 bg-transparent border-none py-4 px-2 text-xs md:text-sm text-white placeholder:text-gray-600 focus:outline-none"
+                            className="flex-1 bg-transparent border-none py-4 px-2 text-xs md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                         />
                         <div className="flex items-center gap-1">
                             <button className="hidden sm:block p-2 text-gray-500 hover:text-white transition-colors">

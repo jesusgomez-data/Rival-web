@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getDetailedAnalytics, getPerformanceStats } from "../training/actions";
+import { getDetailedAnalytics, getPerformanceStats, getUserProfile } from "../training/actions";
 import {
     BarChart2,
     TrendingUp,
@@ -46,16 +46,19 @@ interface Stats {
 export default function AnalyticsPage() {
     const [stats, setStats] = useState<Stats | null>(null);
     const [weeklyStats, setWeeklyStats] = useState<WeeklyStats | null>(null);
+    const [profile, setProfile] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         async function loadData() {
-            const [detailed, weekly] = await Promise.all([
+            const [detailed, weekly, userProfile] = await Promise.all([
                 getDetailedAnalytics(),
-                getPerformanceStats()
+                getPerformanceStats(),
+                getUserProfile()
             ]);
             setStats(detailed);
             setWeeklyStats(weekly);
+            setProfile(userProfile);
             setIsLoading(false);
         }
         loadData();
@@ -73,6 +76,7 @@ export default function AnalyticsPage() {
     const muscleLabels = Object.keys(stats?.muscleGroups || {});
     const muscleValues = Object.values(stats?.muscleGroups || {}) as number[];
     const maxMuscleVolume = Math.max(...muscleValues, 1);
+    const isPremium = profile?.subscription_tier === 'premium' || profile?.subscription_tier === 'elite';
 
     return (
         <div className="space-y-10 pb-20">
@@ -126,9 +130,26 @@ export default function AnalyticsPage() {
                 />
             </div>
 
-            <div className="grid lg:grid-cols-3 gap-8">
+            <div className="grid lg:grid-cols-3 gap-8 relative">
+
+                {/* Free Plan Lock Overlay */}
+                {!isPremium && (
+                    <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center rounded-[40px] border border-white/10 h-full">
+                        <div className="w-16 h-16 rounded-2xl bg-brand-red/20 flex items-center justify-center mb-4 border border-brand-red/30 shadow-[0_0_30px_rgba(220,38,38,0.2)]">
+                            <TrendingUp className="w-8 h-8 text-brand-red" />
+                        </div>
+                        <h3 className="text-2xl font-heading font-black text-white italic uppercase tracking-tighter mb-2">Análiticas Avanzadas</h3>
+                        <p className="text-sm text-gray-400 max-w-sm mb-6 font-medium">
+                            Desbloquea el análisis de progresión de volumen, distribución muscular y fatiga acumulada con el plan <span className="text-brand-red font-bold">Premium</span> o <span className="text-brand-red font-bold">Élite</span>.
+                        </p>
+                        <Link href="/dashboard/settings/billing" className="bg-brand-red text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-[0.2em] hover:bg-red-600 transition-all shadow-glow">
+                            Mejorar Plan Ahora
+                        </Link>
+                    </div>
+                )}
+
                 {/* Volume Progression Chart */}
-                <div className="lg:col-span-2 bg-brand-gray border border-white/5 rounded-[40px] p-8 relative overflow-hidden group shadow-2xl">
+                <div className={clsx("lg:col-span-2 bg-brand-gray border border-white/5 rounded-[40px] p-8 relative overflow-hidden group shadow-2xl transition-opacity", !isPremium && "opacity-20 pointer-events-none")}>
                     <div className="absolute -top-10 -right-10 text-white/[0.02] group-hover:text-brand-red/[0.04] transition-colors -rotate-12">
                         <TrendingUp className="w-64 h-64" />
                     </div>
@@ -185,7 +206,7 @@ export default function AnalyticsPage() {
                 </div>
 
                 {/* Muscle Distribution */}
-                <div className="bg-brand-gray border border-white/5 rounded-[40px] p-8 shadow-2xl">
+                <div className={clsx("bg-brand-gray border border-white/5 rounded-[40px] p-8 shadow-2xl transition-opacity", !isPremium && "opacity-20 pointer-events-none")}>
                     <h3 className="text-xl font-heading font-black text-white mb-10 flex items-center gap-3 uppercase italic tracking-widest">
                         <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
                             <PieChart className="w-5 h-5 text-blue-500" />
@@ -231,7 +252,7 @@ export default function AnalyticsPage() {
                         Avances Recientes
                     </h3>
                     <div className="space-y-4 relative z-10">
-                        {stats?.prHistory && stats.prHistory.length > 0 ? stats.prHistory.map((pr, i) => (
+                        {stats?.prHistory && stats.prHistory.length > 0 ? stats.prHistory.slice(0, 5).map((pr, i) => (
                             <div key={i} className="flex items-center justify-between p-5 bg-black/40 border border-white/5 rounded-3xl hover:border-brand-red/40 hover:bg-brand-red/[0.02] transition-all group">
                                 <div className="flex items-center gap-5">
                                     <div className="w-12 h-12 bg-brand-red/10 rounded-2xl flex items-center justify-center text-brand-red border border-brand-red/20 group-hover:bg-brand-red group-hover:text-white transition-all transform group-hover:scale-110">

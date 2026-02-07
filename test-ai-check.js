@@ -21,13 +21,13 @@ async function test() {
         console.log("Gemini 1.5 Flash: FAILED", e.message);
     }
 
-    // Test 2.0 Flash Exp
+    // Test 2.0 Flash
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
-        const result = await model.generateContent("Say Hello");
-        console.log("Gemini 2.0 Flash Exp: SUCCESS", result.response.text());
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const result = await model.generateContent("Say 'SYSTEM READY'");
+        console.log("Gemini 2.0 Flash: SUCCESS", result.response.text());
     } catch (e) {
-        console.log("Gemini 2.0 Flash Exp: FAILED", e.message);
+        console.log("Gemini 2.0 Flash: FAILED", e.message);
     }
 }
 

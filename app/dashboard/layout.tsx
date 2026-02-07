@@ -43,6 +43,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const { language, setLanguage, t } = useLanguage();
 
     const [profile, setProfile] = useState<any>(null);
+    const [userEmail, setUserEmail] = useState<string | null>(null);
     const [showMobileSearch, setShowMobileSearch] = useState(false);
     const [unreadMessages, setUnreadMessages] = useState(0);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -50,16 +51,24 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const supabase = createClient();
 
     useEffect(() => {
+        let isMounted = true;
         async function loadProfile() {
-            const data = await getUserProfile();
-            setProfile(data);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (isMounted) {
+                const email = user?.email?.toLowerCase() || null;
+                setUserEmail(email);
+                const data = await getUserProfile();
+                if (isMounted) setProfile(data);
+            }
         }
         loadProfile();
 
         if ("Notification" in window && Notification.permission === "default") {
             Notification.requestPermission();
         }
-    }, []);
+
+        return () => { isMounted = false; };
+    }, [supabase]);
 
     useEffect(() => {
         const setupRealtime = async () => {
@@ -116,6 +125,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         setIsMenuOpen(false);
     }, [pathname]);
 
+    const ADMIN_EMAILS = ['gomezsantiagojesus@icloud.com', 'jesusgomez.s@hotmail.com'];
+    const isAdmin = !!userEmail && ADMIN_EMAILS.includes(userEmail);
+
     const navItems = [
         { name: t.navDashboard.home, href: "/dashboard", icon: Home },
         { name: t.navDashboard.messages, href: "/dashboard/messages", icon: MessageSquarePlus },
@@ -126,7 +138,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         { name: t.navDashboard.leaderboard, href: "/dashboard/leaderboard", icon: Trophy },
         { name: t.navDashboard.analytics, href: "/dashboard/analytics", icon: BarChart2 },
         { name: t.navDashboard.profile, href: "/dashboard/profile", icon: Settings },
-        { name: "Rival Command", href: "/dashboard/admin", icon: Shield },
+        ...(isAdmin ? [{ name: "RIVAL COMMAND (ADMIN)", href: "/dashboard/admin", icon: Shield }] : []),
     ];
 
     const hideSidebarDefault = (pathname?.startsWith('/dashboard/gyms/') && pathname.split('/').length > 3) || pathname === '/dashboard/admin';
@@ -245,7 +257,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
             <main className={clsx("flex-1 min-h-screen relative bg-background w-full overflow-x-hidden transition-all duration-300", showSidebar && "lg:ml-64")}>
                 {/* Mobile Header Bar */}
-                <div className="lg:hidden h-20 border-b border-white/5 flex items-center justify-between px-6 sticky top-0 bg-[#0a0a0a]/95 backdrop-blur-xl z-[200]">
+                <div className="lg:hidden h-20 border-b border-border flex items-center justify-between px-6 sticky top-0 bg-background/95 backdrop-blur-xl z-[200]">
                     <div className="flex items-center gap-3">
                         <Image src="/logo.svg" alt="Rival Logo" width={28} height={28} className="w-7 h-7" />
                         <span className="font-heading font-bold text-xl text-white uppercase italic tracking-tighter">RIVAL</span>
@@ -285,17 +297,17 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
                 {/* Mobile Search Overlay */}
                 {showMobileSearch && (
-                    <div className="lg:hidden px-6 pb-6 pt-2 bg-[#0a0a0a]/95 backdrop-blur-xl border-b border-white/5 sticky top-20 z-[190] animate-in slide-in-from-top-2 fade-in">
+                    <div className="lg:hidden px-6 pb-6 pt-2 bg-background/95 backdrop-blur-xl border-b border-border sticky top-20 z-[190] animate-in slide-in-from-top-2 fade-in">
                         <GlobalSearch />
                     </div>
                 )}
 
                 {/* Mobile Menu Overlay */}
                 {isMenuOpen && (
-                    <div className="fixed inset-0 top-20 bg-black z-[999] lg:hidden overflow-y-auto pb-32 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <div className="fixed inset-0 top-20 bg-background z-[999] lg:hidden overflow-y-auto pb-32 animate-in fade-in slide-in-from-right-4 duration-300">
                         <div className="p-6 space-y-8">
                             {/* Profile Summary in Menu */}
-                            <div className="flex items-center justify-between bg-white/[0.03] border border-white/5 p-5 rounded-[2.5rem]">
+                            <div className="flex items-center justify-between bg-card border border-border p-5 rounded-[2.5rem]">
                                 <div className="flex items-center gap-4">
                                     <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-brand-red shadow-glow relative">
                                         {profile?.avatar_url ? (
@@ -390,7 +402,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
             {/* Mobile Bottom Navigation */}
             {(!hideSidebarDefault || isMenuOpen) && (
-                <nav className="lg:hidden fixed bottom-4 left-4 right-4 bg-[#0a0a0a]/90 backdrop-blur-2xl border border-white/10 py-3 px-6 z-[100] rounded-[2rem] shadow-2xl safe-area-inset-bottom">
+                <nav className="lg:hidden fixed bottom-4 left-4 right-4 bg-background/90 backdrop-blur-2xl border border-border py-3 px-6 z-[100] rounded-[2rem] shadow-2xl safe-area-inset-bottom">
                     <div className="flex justify-between items-center h-12 relative">
                         {navItems.filter(i => [t.navDashboard.home, t.navDashboard.messages, t.navDashboard.onlineCoach, t.navDashboard.community].includes(i.name)).map((item, idx) => {
                             const Icon = item.icon;
@@ -409,7 +421,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                                     <div className="relative">
                                         <Icon className={clsx("w-6 h-6 transition-transform group-active:scale-90", isActive && "drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]")} />
                                         {item.name === t.navDashboard.messages && unreadMessages > 0 && !isActive && (
-                                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-red text-white text-[8px] font-black rounded-full flex items-center justify-center border border-[#0a0a0a] animate-pulse">
+                                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-red text-white text-[8px] font-black rounded-full flex items-center justify-center border border-background animate-pulse">
                                                 {unreadMessages}
                                             </span>
                                         )}
@@ -425,7 +437,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         <div className="absolute left-1/2 -translate-x-1/2 -top-10">
                             <Link
                                 href="/dashboard/training/session"
-                                className="flex flex-col items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-brand-red to-[#991b1b] text-white shadow-[0_8px_25px_rgba(220,38,38,0.6)] border-4 border-[#0a0a0a] hover:scale-110 active:scale-95 transition-all duration-300 group"
+                                className="flex flex-col items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-brand-red to-[#991b1b] text-white shadow-[0_8px_25px_rgba(220,38,38,0.6)] border-4 border-background hover:scale-110 active:scale-95 transition-all duration-300 group"
                             >
                                 <PlusCircle className="w-8 h-8 group-hover:rotate-90 transition-transform duration-500" />
                             </Link>

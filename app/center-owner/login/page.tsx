@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { Mail, Lock, ArrowRight, AlertCircle, Loader2 } from 'lucide-react'
+import { Mail, Lock, ArrowRight, AlertCircle, Loader2, MoveLeft } from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 
@@ -12,6 +13,7 @@ export default function CenterOwnerLogin() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [fullName, setFullName] = useState('') // New state
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState<'login' | 'signup'>('login')
@@ -38,11 +40,15 @@ export default function CenterOwnerLogin() {
           router.push('/center-owner/centers')
         }
       } else {
+        // Signup Mode
         const { data, error: authError } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: `${location.origin}/auth/callback`,
+            data: {
+              full_name: fullName, // Add metadata
+            }
           },
         })
 
@@ -52,17 +58,19 @@ export default function CenterOwnerLogin() {
         }
 
         if (data.user) {
-          // Create user profile
+          // Create user profile in 'users' table
           const { error: profileError } = await supabase
             .from('users')
             .insert({
               id: data.user.id,
               email: data.user.email,
+              full_name: fullName, // Insert Name
               role: 'center_owner',
             })
 
           if (profileError) {
             console.error('Error creating profile:', profileError)
+            // Continue anyway as auth user is created
           }
 
           setError('Cuenta creada. Por favor verifica tu email para continuar.')
@@ -89,19 +97,24 @@ export default function CenterOwnerLogin() {
       </div>
 
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative">
+        <Link href="/" className="absolute top-8 left-8 p-2 text-gray-500 hover:text-white transition-colors rounded-full hover:bg-white/5">
+          <MoveLeft className="w-6 h-6" />
+        </Link>
         <div className="max-w-md w-full">
           <div className="mb-10">
             <Image src="/logo.svg" alt="Rival" width={40} height={40} className="mb-6 w-10 h-10" />
             <h1 className="text-4xl font-heading font-bold text-white mb-2">
               {mode === 'login' ? 'Inicia Sesión' : 'Crea tu Cuenta'}
             </h1>
-            <p className="text-gray-400">Acceso para propietarios de centros</p>
+            <p className="text-gray-400">
+              {mode === 'login' ? 'Acceso para propietarios de centros' : 'Registra tu perfil de propietario'}
+            </p>
           </div>
 
           {error && (
-            <div className={`flex gap-2 p-3 rounded-xl text-sm mb-6 ${error.includes('verificar')
-                ? 'bg-blue-500/10 border border-blue-500/50 text-blue-400'
-                : 'bg-red-500/10 border border-red-500/50 text-red-400'
+            <div className={`flex gap-2 p-3 rounded-xl text-sm mb-6 ${error.includes('verificar') || error.includes('creada')
+              ? 'bg-green-500/10 border border-green-500/50 text-green-400'
+              : 'bg-red-500/10 border border-red-500/50 text-red-400'
               }`}>
               <AlertCircle size={18} className="flex-shrink-0 mt-0.5" />
               <span>{error}</span>
@@ -109,10 +122,30 @@ export default function CenterOwnerLogin() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Full Name Field - Only for Signup */}
+            {mode === 'signup' && (
+              <div className="animate-in slide-in-from-top-2 duration-300">
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Nombre Completo</label>
+                <div className="relative group">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 flex items-center justify-center pointer-events-none">
+                    <span className="font-bold text-xs">Aa</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full bg-brand-gray border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all placeholder:text-gray-600"
+                    placeholder="Ej. Juan Pérez"
+                    required={mode === 'signup'}
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Email</label>
               <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-brand-red transition-colors" />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-brand-red transition-colors pointer-events-none" />
                 <input
                   type="email"
                   value={email}
@@ -127,7 +160,7 @@ export default function CenterOwnerLogin() {
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Contraseña</label>
               <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-brand-red transition-colors" />
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-brand-red transition-colors pointer-events-none" />
                 <input
                   type="password"
                   value={password}
@@ -163,11 +196,12 @@ export default function CenterOwnerLogin() {
               {mode === 'login' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}
             </p>
             <button
+              type="button"
               onClick={() => {
                 setMode(mode === 'login' ? 'signup' : 'login')
                 setError('')
               }}
-              className="text-brand-red font-bold hover:text-brand-accent transition-colors"
+              className="text-brand-red font-bold hover:text-brand-accent transition-colors outline-none"
             >
               {mode === 'login' ? 'Regístrate aquí' : 'Inicia sesión aquí'}
             </button>

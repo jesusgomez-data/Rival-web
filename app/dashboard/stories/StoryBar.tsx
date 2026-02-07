@@ -9,6 +9,7 @@ import PRCard from '../community/PRCard'
 import { Trophy, Activity } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useStories } from './StoryContext'
+import { motion, AnimatePresence } from 'framer-motion'
 import MusicPicker from '../MusicPicker'
 import { MusicTrack } from '../music-data'
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
@@ -757,7 +758,32 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             <div className="w-2/3 h-full cursor-pointer" onClick={nextStory} />
                         </div>
 
-                        <div className="w-full h-full relative">
+                        <motion.div
+                            key={`${selectedUserIndex}-${activeStoryIndex}`}
+                            drag="x"
+                            dragConstraints={{ left: 0, right: 0 }}
+                            onDragEnd={(_: any, info: any) => {
+                                if (info.offset.x < -100) {
+                                    // Swipe left -> Next User
+                                    if (selectedUserIndex < userStories.length - 1) {
+                                        setSelectedUserIndex(selectedUserIndex + 1)
+                                        setActiveStoryIndex(0)
+                                        recordView(userStories[selectedUserIndex + 1].stories[0].id)
+                                    } else {
+                                        setSelectedUserIndex(null)
+                                    }
+                                } else if (info.offset.x > 100) {
+                                    // Swipe right -> Previous User
+                                    if (selectedUserIndex > 0) {
+                                        setSelectedUserIndex(selectedUserIndex - 1)
+                                        const lastStoryIdx = userStories[selectedUserIndex - 1].stories.length - 1
+                                        setActiveStoryIndex(lastStoryIdx)
+                                        recordView(userStories[selectedUserIndex - 1].stories[lastStoryIdx].id)
+                                    }
+                                }
+                            }}
+                            className="w-full h-full relative cursor-grab active:cursor-grabbing touch-none"
+                        >
                             {currentStory.media_type === 'pr' ? (
                                 (() => {
                                     try {
@@ -778,9 +804,9 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     }
                                 })()
                             ) : currentStory.media_type === 'video' ? (
-                                <video src={currentStory.media_url} autoPlay muted playsInline className="w-full h-full object-cover" />
+                                <video src={currentStory.media_url} autoPlay playsInline className="w-full h-full object-cover pointer-events-none" />
                             ) : (
-                                <Image src={currentStory.media_url} alt="Story content" fill className="object-cover" />
+                                <Image src={currentStory.media_url} alt="Story content" fill className="object-cover pointer-events-none" />
                             )}
                             {/* Render Viewer Overlays */}
                             {currentStory.metadata?.overlays && currentStory.metadata.overlays.map((overlay: OverlayElement) => (
@@ -801,7 +827,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     )}
                                 </div>
                             ))}
-                        </div>
+                        </motion.div>
 
                         <div className="absolute bottom-10 left-0 right-0 px-6 flex items-center justify-between z-50 pointer-events-none">
                             <div className="pointer-events-auto">

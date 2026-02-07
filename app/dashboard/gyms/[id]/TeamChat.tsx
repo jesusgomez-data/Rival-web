@@ -113,7 +113,7 @@ export default function TeamChat({ centerId, className }: { centerId: string, cl
     if (isStaff === null) return null; // Or a skeleton
 
     return (
-        <div className={clsx("bg-card border border-border rounded-2xl flex flex-col overflow-hidden shadow-xl", className || "h-[500px]")}>
+        <div className={clsx("bg-card border border-border rounded-2xl flex flex-col overflow-hidden shadow-xl", className || "h-[700px]")}>
             {/* Header */}
             <div className="p-4 border-b border-border bg-muted/30 flex items-center justify-between">
                 <div className="flex items-center gap-2">

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Plus, Search, User, CheckCircle, Trash2, Edit2, X, CreditCard, Phone, Mail, Landmark, Power, Cake, Calendar, Link as LinkIcon, Loader2, ChevronDown, Check, Send, Download, Upload, FileText, AlertCircle, Building2 } from "lucide-react";
-import { addMember, addGuestMember, approveTrialRequest, removeMember, updateMemberDetails, toggleMemberStatus, searchAthletes, linkMemberToUser, bulkImportMembers, getCenterMembers } from "../../management-actions";
+import { addMember, addGuestMember, requestMemberPayment, approveTrialRequest, removeMember, updateMemberDetails, toggleMemberStatus, searchAthletes, linkMemberToUser, bulkImportMembers, getCenterMembers } from "../../management-actions";
 
 export default function MembersManager({ centerId, initialMembers, plans = [], centers = [], orgDetails }: any) {
     const searchParams = useSearchParams();
@@ -172,6 +172,18 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
         if (plan === 'guest') {
             res = await addGuestMember(centerId, username, email, {
                 ...extraData,
+                notes,
+                center_id: selectedCenterId
+            });
+        } else if (paymentMethod === 'payment_request') {
+            if (!selectedProfile) {
+                alert("Debes vincular un perfil de atleta Rival para enviar una solicitud de pago.");
+                setIsSaving(false);
+                return;
+            }
+            res = await requestMemberPayment(centerId, plan, selectedProfile.id, {
+                ...extraData,
+                fullName: username,
                 notes,
                 center_id: selectedCenterId
             });
@@ -579,6 +591,8 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                             <span className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-400">
                                                 {m.payment_method === 'card' ? (
                                                     <><CreditCard className="w-3.5 h-3.5 text-blue-400" /> ****{m.card_last4 || '0000'}</>
+                                                ) : m.payment_method === 'payment_request' ? (
+                                                    <><Send className="w-3.5 h-3.5 text-blue-400" /> Solicitud Pago</>
                                                 ) : (
                                                     <><Landmark className="w-3.5 h-3.5 text-green-400" /> Efectivo</>
                                                 )}
@@ -591,9 +605,9 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                 <CheckCircle className="w-3.5 h-3.5" /> Aprobar
                                             </button>
                                         ) : (
-                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider ${m.status === 'active' ? 'bg-green-500/10 text-green-500' : m.status === 'paused' ? 'bg-yellow-500/10 text-yellow-500' : m.status === 'trial' ? 'bg-blue-500/10 text-blue-500' : 'bg-red-500/10 text-red-500'}`}>
-                                                <span className={`w-1.5 h-1.5 rounded-full ${m.status === 'active' ? 'bg-green-500' : m.status === 'paused' ? 'bg-yellow-500' : m.status === 'trial' ? 'bg-blue-500' : 'bg-red-500'}`} />
-                                                {m.status === 'active' ? 'Activo' : m.status === 'paused' ? 'Pausado' : m.status === 'trial' ? 'Prueba' : 'De Baja'}
+                                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider ${m.status === 'active' ? 'bg-green-500/10 text-green-500' : m.status === 'pending' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : m.status === 'paused' ? 'bg-yellow-500/10 text-yellow-500' : m.status === 'trial' ? 'bg-purple-500/10 text-purple-500' : 'bg-red-500/10 text-red-500'}`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${m.status === 'active' ? 'bg-green-500' : m.status === 'pending' ? 'bg-blue-400' : m.status === 'paused' ? 'bg-yellow-500' : m.status === 'trial' ? 'bg-purple-500' : 'bg-red-500'}`} />
+                                                {m.status === 'active' ? 'Activo' : m.status === 'pending' ? 'Pendiente' : m.status === 'paused' ? 'Pausado' : m.status === 'trial' ? 'Prueba' : 'De Baja'}
                                             </span>
                                         )}
                                     </td>
@@ -906,6 +920,28 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                             <>
                                                 {/* Status Actions */}
                                                 <div className="flex flex-col gap-2 w-full">
+                                                    {viewingMember.status === 'pending' && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={async () => {
+                                                                setIsSaving(true);
+                                                                const res = await requestMemberPayment(centerId, plan, viewingMember.user_id || viewingMember.userId, {
+                                                                    fullName: username,
+                                                                    email,
+                                                                    phone,
+                                                                    birth_date: birthDate,
+                                                                    notes,
+                                                                    center_id: selectedCenterId
+                                                                });
+                                                                setIsSaving(false);
+                                                                if (res.error) alert(res.error);
+                                                                else alert("Solicitud de pago reenviada con éxito.");
+                                                            }}
+                                                            className="w-full bg-blue-500/10 text-blue-400 py-3 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-500/20 border border-blue-500/20 transition-all text-center"
+                                                        >
+                                                            <Send className="w-3 h-3 inline mr-2" /> Re-enviar Solicitud de Pago
+                                                        </button>
+                                                    )}
                                                     {viewingMember.status === 'active' && (
                                                         <button
                                                             type="button"

@@ -103,17 +103,17 @@ export default function NotificationBell() {
                         className="fixed inset-0 z-[200]"
                         onClick={() => setIsOpen(false)}
                     />
-                    <div className="absolute right-0 top-full mt-2 w-screen max-w-[320px] bg-brand-gray border border-white/10 rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[210] overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                        <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
+                    <div className="absolute right-0 top-full mt-2 w-screen max-w-[320px] bg-card border border-border rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[210] overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                        <div className="p-4 border-b border-border bg-muted flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Zap className="w-4 h-4 text-brand-red animate-pulse" />
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white">Centro de Señales</h3>
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground">Centro de Señales</h3>
                             </div>
                             <div className="flex items-center gap-3">
                                 {unreadCount > 0 && (
                                     <button
                                         onClick={handleMarkAllAsRead}
-                                        className="text-[8px] font-black text-gray-500 hover:text-brand-red uppercase tracking-widest transition-colors"
+                                        className="text-[8px] font-black text-muted-foreground hover:text-brand-red uppercase tracking-widest transition-colors"
                                     >
                                         Limpiar Todo
                                     </button>
@@ -129,7 +129,7 @@ export default function NotificationBell() {
                                     <div
                                         key={n.id}
                                         className={clsx(
-                                            "p-4 border-b border-white/5 hover:bg-white/5 transition-all cursor-pointer relative group",
+                                            "p-4 border-b border-border hover:bg-muted transition-all cursor-pointer relative group",
                                             !n.is_read ? "bg-brand-red/[0.05]" : ""
                                         )}
                                         onClick={() => {
@@ -139,16 +139,16 @@ export default function NotificationBell() {
                                         }}
                                     >
                                         <div className="flex gap-4">
-                                            <div className="mt-1 flex-shrink-0 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center border border-white/5 group-hover:scale-110 transition-transform">
+                                            <div className="mt-1 flex-shrink-0 w-8 h-8 rounded-full bg-background flex items-center justify-center border border-border group-hover:scale-110 transition-transform">
                                                 {getTypeIcon(n.type)}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className={clsx("text-xs text-white leading-tight", !n.is_read ? "font-black" : "font-medium")}>
+                                                <p className={clsx("text-xs text-foreground leading-tight", !n.is_read ? "font-black" : "font-medium")}>
                                                     {n.title}
                                                 </p>
-                                                <p className="text-[10px] text-gray-500 mt-1 line-clamp-2 leading-relaxed font-medium">{n.content}</p>
+                                                <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2 leading-relaxed font-medium">{n.content}</p>
                                                 <div className="flex items-center gap-2 mt-2">
-                                                    <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest">
+                                                    <p className="text-[8px] text-muted-foreground/60 font-bold uppercase tracking-widest">
                                                         {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(n.created_at).toLocaleDateString()}
                                                     </p>
                                                 </div>
@@ -172,7 +172,7 @@ export default function NotificationBell() {
                             <Link
                                 href="/dashboard/notifications"
                                 onClick={() => setIsOpen(false)}
-                                className="block p-4 text-center bg-black/40 text-[10px] font-black text-brand-red uppercase tracking-[0.3em] hover:bg-brand-red hover:text-white transition-all border-t border-white/5"
+                                className="block p-4 text-center bg-muted text-[10px] font-black text-brand-red uppercase tracking-[0.3em] hover:bg-brand-red hover:text-white transition-all border-t border-border"
                             >
                                 VER TODAS LAS SEÑALES
                             </Link>

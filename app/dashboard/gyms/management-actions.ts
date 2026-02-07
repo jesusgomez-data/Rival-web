@@ -5,6 +5,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath, unstable_noStore } from "next/cache";
 import { createNotification } from "../notifications-actions";
 import { updateMissionProgress } from "../training/actions";
+import { stripe } from "@/utils/stripe/config";
 // --- HELPERS ---
 const sanitizeDate = (date: string | null | undefined) => {
     if (!date || date.trim() === "") return null;
@@ -191,13 +192,42 @@ export async function createClass(centerId: string, data: any) {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return { error: "Unauthorized" };
 
-        // PERMISSION CHECK
-        const { data: org } = await supabase.from('organizations').select('owner_id, head_coach_id').eq('id', centerId).single();
+        // PERMISSION CHECK & PLAN LIMITS
+        const { data: org } = await supabase.from('organizations').select('owner_id, head_coach_id, plan').eq('id', centerId).single();
+
         const isOwnerOrHead = org && (org.owner_id === user.id || org.head_coach_id === user.id);
         if (!isOwnerOrHead) {
             const { data: roleData } = await supabase.from('center_roles').select('role').eq('organization_id', centerId).eq('user_id', user.id).maybeSingle();
             if (roleData?.role !== 'head_coach') return { error: "Unauthorized: Only Owners and Head Coaches can manage classes." };
         }
+
+        // Check Free Plan Limits (10 classes/week)
+        if (org?.plan === 'free') {
+            const targetDate = new Date(data.scheduled_time);
+            const day = targetDate.getDay(); // 0 (Sun) to 6 (Sat)
+            // Adjust to Monday start
+            const diff = targetDate.getDate() - day + (day === 0 ? -6 : 1);
+
+            const startOfWeek = new Date(targetDate);
+            startOfWeek.setDate(diff);
+            startOfWeek.setHours(0, 0, 0, 0);
+
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            endOfWeek.setHours(23, 59, 59, 999);
+
+            const { count } = await supabase
+                .from('classes')
+                .select('id', { count: 'exact', head: true })
+                .eq('organization_id', centerId)
+                .gte('scheduled_time', startOfWeek.toISOString())
+                .lte('scheduled_time', endOfWeek.toISOString());
+
+            if ((count || 0) >= 10) {
+                return { error: "Plan Gratuito limitado a 10 clases/semana. Mejora a Starter para clases ilimitadas." };
+            }
+        }
+
         const scheduledDate = new Date(data.scheduled_time);
         const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         const dayOfWeek = days[scheduledDate.getUTCDay()];
@@ -618,6 +648,20 @@ export async function removeMember(centerId: string, memberId: string) {
 export async function addMember(centerId: string, fullName: string, plan: string, extraData: any, userId?: string) {
     const admin = createAdminClient();
 
+    // 1. Check Plan Limits
+    const { data: org } = await admin.from('organizations').select('plan').eq('id', centerId).single();
+    if (org?.plan === 'free') {
+        const { count } = await admin
+            .from('members')
+            .select('id', { count: 'exact', head: true })
+            .eq('center_id', centerId)
+            .in('status', ['active', 'trial', 'pending']); // Count all active-ish members
+
+        if ((count || 0) >= 50) {
+            return { error: "Plan Gratuito limitado a 50 miembros. Mejora a Starter para miembros ilimitados." };
+        }
+    }
+
     const { error } = await admin
         .from('members')
         .insert({
@@ -666,6 +710,124 @@ export async function addGuestMember(centerId: string, fullName: string, email: 
     revalidatePath(`/dashboard/gyms/${centerId}/members`);
     revalidatePath('/dashboard/gyms');
     return { success: true };
+}
+
+export async function requestMemberPayment(centerId: string, planId: string, userId: string, extraData: any) {
+    const supabase = await createClient();
+    const admin = createAdminClient();
+
+    try {
+        // 1. Get plan details
+        const { data: plan } = await supabase.from('membership_plans').select('*').eq('id', planId).single();
+        if (!plan) return { error: "Plan no encontrado" };
+
+        // 2. Get user profile for Stripe customer
+        const { data: profile } = await supabase.from('profiles').select('stripe_customer_id, email, full_name').eq('id', userId).single();
+        if (!profile) return { error: "Perfil no encontrado" };
+
+        let customerId = profile.stripe_customer_id;
+        if (!customerId) {
+            const stripeCustomer = await stripe.customers.create({
+                email: profile.email || extraData.email,
+                name: profile.full_name || extraData.fullName,
+                metadata: { userId }
+            });
+            customerId = stripeCustomer.id;
+            await admin.from('profiles').update({ stripe_customer_id: customerId }).eq('id', userId);
+        }
+
+        // 3. Create Checkout Session
+        const session = await stripe.checkout.sessions.create({
+            customer: customerId,
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: 'eur',
+                    product_data: {
+                        name: `Membresía: ${plan.name}`,
+                        description: `Pago de membresía para el centro`,
+                    },
+                    unit_amount: Math.round(plan.price * 100),
+                },
+                quantity: 1,
+            }],
+            mode: 'payment',
+            success_url: `${process.env.NEXT_PUBLIC_APP_URL}/gym/${centerId}?status=success_payment`,
+            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/gym/${centerId}?status=canceled_payment`,
+            metadata: {
+                type: 'membership_payment',
+                centerId,
+                planId,
+                userId,
+                extraData: JSON.stringify(extraData)
+            }
+        });
+
+
+        // 4. Create or Update Member as 'pending_payment'
+        const { data: existingMember } = await admin
+            .from('members')
+            .select('id, status')
+            .eq('center_id', centerId)
+            .eq('user_id', userId)
+            .single();
+
+        let memberError;
+
+        if (existingMember) {
+            if (existingMember.status === 'active') {
+                return { error: "El usuario ya es un miembro activo de este centro." };
+            }
+
+            const { error: updateError } = await admin
+                .from('members')
+                .update({
+                    plan: plan.name,
+                    status: 'pending',
+                    payment_method: 'payment_request',
+                    notes: extraData.notes,
+                    full_name: extraData.fullName || profile.full_name,
+                    phone: extraData.phone,
+                    birth_date: sanitizeDate(extraData.birth_date)
+                })
+                .eq('id', existingMember.id);
+            memberError = updateError;
+        } else {
+            const { error: insertError } = await admin.from('members').insert({
+                center_id: centerId,
+                user_id: userId,
+                full_name: extraData.fullName || profile.full_name,
+                email: extraData.email || profile.email,
+                phone: extraData.phone,
+                birth_date: sanitizeDate(extraData.birth_date),
+                plan: plan.name,
+                status: 'pending',
+                payment_method: 'payment_request',
+                notes: extraData.notes
+            });
+            memberError = insertError;
+        }
+
+        if (memberError) return { error: memberError.message };
+
+        // 5. Notify User
+        const { data: org } = await supabase.from('organizations').select('name').eq('id', centerId).single();
+        const gymName = org?.name || 'Tu Centro';
+
+        await createNotification({
+            userId,
+            type: 'payment_requested',
+            title: `Solicitud de Pago: ${gymName}`,
+            content: `Tu centro ha solicitado el pago de tu membresía (${plan.name}). Haz clic aquí para completar el proceso de forma segura.`,
+            link: session.url!
+        });
+
+        revalidatePath(`/dashboard/gyms/${centerId}/members`);
+        return { success: true, checkoutUrl: session.url };
+    } catch (err: any) {
+        console.error("Error in requestMemberPayment:", err);
+        return { error: err.message || "Error al procesar la solicitud de pago" };
+    }
 }
 
 export async function approveTrialRequest(centerId: string, requestId: string, userId: string, fullName: string, avatarUrl: string) {
@@ -850,69 +1012,139 @@ export async function purchaseProduct(centerId: string, productId: string, payme
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: "Login required" };
 
+    // 1. Get Member & Profile
     const { data: member } = await supabase
         .from('members')
-        .select('id, card_last4')
+        .select('id, user_id')
         .eq('center_id', centerId)
         .eq('user_id', user.id)
         .maybeSingle();
 
-    // Check if 'center_id' was used in the original function. The viewed code said 'center_id'. 
-    // However, in other files we use 'organization_id'. 
-    // Let me check the ORIGINAL content again carefully.
-    // The original checks 'center_id'. If the code works now, 'center_id' must be the column or view name.
-    // BUT looking at 'management-actions.ts' generally, it uses 'organization_id' mostly.
-    // Let's stick to what was there: 'center_id' IF it was there, OR 'organization_id'.
-    // The previous view_code_item output (Step 1140) used 'center_id'. 
-    // WAIT. Step 1140 used `eq('center_id', centerId)`.
-    // I should probably keep it consistent.
-
     if (!member) return { error: "Debes ser miembro para comprar." };
 
-    // Only check card if payment method is card
-    if (paymentMethod === 'card' && !member.card_last4) return { error: "Agrega un método de pago en tu perfil." };
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('stripe_customer_id, full_name, email')
+        .eq('id', user.id)
+        .single();
 
+    // 2. Product Info
     const { data: product } = await supabase
-        .from('products') // Fixed: was 'center_products' in previous view?
-        // Step 1140 showed `from('center_products')`. 
-        // My previous StoreManager used `from('products')`.
-        // This implies there might be inconsistencies or view_code_item shown older code?
-        // Let's use what I see in Step 1140 for table name but I suspect 'products' is correct based on my StoreManager edits.
-        // Let's check `getCenterProducts` or similar.
-        // Actually, `processStoreSale` used `from('products')`.
-        // `purchaseProduct` in Step 1140 used `from('center_products')`.
-        // This suggests `purchaseProduct` might be legacy code or pointing to a view.
-        // I will stick to the exact code I see in view_code_item but with the paymentMethod change.
+        .from('center_products')
         .select('*')
         .eq('id', productId)
         .single();
 
     if (!product) return { error: "Producto no encontrado" };
-    if (product.stock_quantity < 1) return { error: "Sin stock" };
+    if (product.stock_quantity <= 0) return { error: "Sin stock" };
 
-    const { error: saleError } = await supabase
-        .from('sales')
-        .insert({
-            organization_id: centerId, // Fixed: Step 1140 used `center_id: centerId`. 'sales' table usually has organization_id.
-            // I will use `organization_id` if the table schema changed, or keep `center_id` if legacy.
-            // BUT `processStoreSale` used `organization_id`.
-            // I'll bet `organization_id` is the correct column now.
+    if (paymentMethod === 'cash') {
+        const { error: saleError } = await supabase.from('sales').insert({
+            center_id: centerId,
             member_id: member.id,
             product_id: productId,
-            quantity: 1, // Added quantity
-            total_price: product.price, // Changed from amount/total_amount to total_price based on processStoreSale
-            payment_method: paymentMethod
+            quantity: 1,
+            total_amount: product.price,
+            payment_status: 'pending_cash'
+        });
+        if (saleError) return { error: saleError.message };
+        return { success: true, message: 'cash_registered' };
+    }
+
+    // 3. Card Flow (Stripe)
+    let customerId = profile?.stripe_customer_id;
+    if (!customerId) {
+        try {
+            const customer = await stripe.customers.create({
+                email: user.email!,
+                name: profile?.full_name || user.email!,
+                metadata: { userId: user.id }
+            });
+            customerId = customer.id;
+            await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', user.id);
+        } catch (e: any) {
+            return { error: `Stripe Error: ${e.message}` };
+        }
+    }
+
+    // Check for saved cards
+    const paymentMethods = await stripe.paymentMethods.list({
+        customer: customerId,
+        type: 'card',
+    });
+
+    const savedCard = paymentMethods.data?.[0];
+
+    if (savedCard) {
+        try {
+            const intent = await stripe.paymentIntents.create({
+                amount: Math.round(product.price * 100),
+                currency: 'eur',
+                customer: customerId,
+                payment_method: savedCard.id,
+                off_session: true,
+                confirm: true,
+                metadata: {
+                    type: 'store_purchase',
+                    productId: productId,
+                    centerId: centerId,
+                    userId: user.id,
+                    memberId: member.id
+                }
+            });
+
+            if (intent.status === 'succeeded') {
+                await supabase.from('sales').insert({
+                    center_id: centerId,
+                    member_id: member.id,
+                    product_id: productId,
+                    quantity: 1,
+                    total_amount: product.price,
+                    payment_status: 'completed'
+                });
+                await supabase.from('center_products').update({ stock_quantity: product.stock_quantity - 1 }).eq('id', productId);
+
+                revalidatePath(`/gym/${centerId}`);
+                return { success: true };
+            } else if (intent.status === 'requires_action') {
+                return { checkoutUrl: intent.next_action?.redirect_to_url?.url || intent.next_action?.use_stripe_sdk?.stripe_js };
+            }
+        } catch (e: any) {
+            console.error("Payment Intent failed", e);
+        }
+    }
+
+    try {
+        const session = await stripe.checkout.sessions.create({
+            customer: customerId,
+            payment_method_types: ['card'],
+            line_items: [{
+                price_data: {
+                    currency: 'eur',
+                    product_data: {
+                        name: product.name,
+                        images: product.image_url ? [product.image_url] : [],
+                    },
+                    unit_amount: Math.round(product.price * 100),
+                },
+                quantity: 1,
+            }],
+            mode: 'payment',
+            success_url: `${process.env.NEXT_PUBLIC_APP_URL}/gym/${centerId}?status=success&session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/gym/${centerId}?status=canceled`,
+            metadata: {
+                type: 'store_purchase',
+                productId: productId,
+                centerId: centerId,
+                userId: user.id,
+                memberId: member.id
+            }
         });
 
-    if (saleError) return { error: `Error: ${saleError.message}` };
-
-    await supabase
-        .from(product.table || 'products') // Use dynamic or fallback
-        .update({ stock_quantity: product.stock_quantity - 1 })
-        .eq('id', productId);
-
-    revalidatePath(`/gym/${centerId}`);
-    return { success: true };
+        return { checkoutUrl: session.url };
+    } catch (e: any) {
+        return { error: `Error: ${e.message}` };
+    }
 }
 
 // --- ANALYTICS ---
@@ -2153,25 +2385,24 @@ export async function processStoreSale(centerId: string, saleData: any) {
     if (!user) return { error: "No autorizado" };
 
     // 1. Verify Stock
-    const { data: product } = await supabase.from('products').select('*').eq('id', saleData.product_id).single();
+    const { data: product } = await supabase.from('center_products').select('*').eq('id', saleData.product_id).single();
     if (!product) return { error: "Producto no encontrado" };
     if (product.stock_quantity <= 0) return { error: "Sin stock" };
 
     // 2. Create Sale Record
     const { error: saleError } = await supabase.from('sales').insert({
-        organization_id: centerId,
-        member_id: saleData.member_id || null, // Optional for guests
+        center_id: centerId,
+        member_id: saleData.member_id || null,
         product_id: saleData.product_id,
         quantity: 1,
-        total_price: product.price,
-        payment_method: saleData.payment_method, // 'cash' or 'card'
-        processed_by: user.id
+        total_amount: product.price,
+        payment_status: 'completed'
     });
 
     if (saleError) return { error: saleError.message };
 
     // 3. Update Inventory
-    await supabase.from('products').update({
+    await supabase.from('center_products').update({
         stock_quantity: product.stock_quantity - 1
     }).eq('id', product.id);
 

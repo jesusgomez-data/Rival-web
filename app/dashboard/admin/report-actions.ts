@@ -2,8 +2,10 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { isUserAdmin } from "@/utils/admin";
 
 export async function getModerationReports() {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const supabase = await createClient();
 
     const { data: { user } } = await supabase.auth.getUser();
@@ -35,6 +37,7 @@ export async function getModerationReports() {
 }
 
 export async function takeModerationAction(reportId: string, action: 'ignore' | 'delete' | 'ban', targetType: string, targetId: string, reporterId?: string) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const supabase = await createClient();
     const { data: { user: adminUser } } = await supabase.auth.getUser();
     if (!adminUser) throw new Error("No autorizado");
@@ -92,5 +95,6 @@ export async function takeModerationAction(reportId: string, action: 'ignore' | 
 }
 
 export async function resolveReport(reportId: string) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     return takeModerationAction(reportId, 'ignore', '', '');
 }

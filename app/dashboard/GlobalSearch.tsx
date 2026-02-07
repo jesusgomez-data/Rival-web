@@ -68,7 +68,7 @@ export default function GlobalSearch() {
                     onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => { if (results.length > 0) setIsOpen(true); }}
                     placeholder="Buscar atletas, gimnasios..."
-                    className="w-full h-10 pl-11 pr-4 bg-gray-100 dark:bg-white/5 border-transparent border focus:border-brand-red/50 rounded-xl text-sm outline-none transition-all placeholder:text-gray-500 text-gray-900 dark:text-white dark:focus:bg-black/50"
+                    className="w-full h-10 pl-11 pr-4 bg-muted border-border border focus:border-brand-red/50 rounded-xl text-sm outline-none transition-all placeholder:text-muted-foreground text-foreground"
                 />
                 {query && (
                     <button
@@ -82,7 +82,7 @@ export default function GlobalSearch() {
 
             {/* Results Dropdown */}
             {isOpen && (results.length > 0 || loading) && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-black border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="max-h-[60vh] overflow-y-auto py-2">
                         {loading && results.length === 0 && (
                             <div className="p-4 text-center text-xs text-gray-500">Buscando...</div>
@@ -92,7 +92,7 @@ export default function GlobalSearch() {
                             <button
                                 key={`${result.type}-${result.id}-${idx}`}
                                 onClick={() => handleSelect(result.url)}
-                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left"
+                                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted transition-colors text-left"
                             >
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${result.type === 'gym' ? 'bg-blue-500/10 text-blue-500' : 'bg-brand-red/10 text-brand-red'}`}>
                                     {result.image ? (
@@ -102,13 +102,13 @@ export default function GlobalSearch() {
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{result.title}</p>
-                                    <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate flex items-center gap-1">
+                                    <p className="text-xs font-bold text-foreground truncate">{result.title}</p>
+                                    <p className="text-[10px] text-muted-foreground truncate flex items-center gap-1">
                                         {result.type === 'gym' ? <MapPin className="w-3 h-3" /> : '@'}
                                         {result.subtitle}
                                     </p>
                                 </div>
-                                <div className="text-[9px] font-black uppercase tracking-wider text-gray-400 border border-gray-200 dark:border-white/10 px-1.5 py-0.5 rounded">
+                                <div className="text-[9px] font-black uppercase tracking-wider text-muted-foreground border border-border px-1.5 py-0.5 rounded">
                                     {result.type === 'gym' ? 'CENTRO' : 'ATLETA'}
                                 </div>
                             </button>

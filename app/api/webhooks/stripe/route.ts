@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { stripe } from "@/utils/stripe/config";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { createNotification } from "@/app/dashboard/notifications-actions";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -42,7 +43,67 @@ export async function POST(req: Request) {
                 const priceId = lineItems.data[0]?.price?.id;
                 const organizationId = session.metadata?.organizationId;
 
-                if (organizationId) {
+                if (session.metadata?.type === 'store_purchase') {
+                    const { productId, centerId, userId, memberId } = session.metadata;
+
+                    // 1. Create Sale Record (Admin Client)
+                    const { error: saleError } = await supabase.from('sales').insert({
+                        center_id: centerId,
+                        member_id: memberId || null,
+                        product_id: productId,
+                        quantity: 1,
+                        total_amount: session.amount_total ? session.amount_total / 100 : 0,
+                        payment_status: 'completed'
+                    });
+
+                    if (saleError) console.error("Error saving store sale:", saleError);
+
+                    // 2. Decrement Stock
+                    const { data: product } = await supabase.from('center_products').select('name, stock_quantity').eq('id', productId).single();
+                    if (product) {
+                        await supabase.from('center_products').update({ stock_quantity: product.stock_quantity - 1 }).eq('id', productId);
+                    }
+
+                    // 3. Notify User
+                    if (userId) {
+                        await createNotification({
+                            userId: userId,
+                            type: 'purchase',
+                            title: 'Compra Confirmada',
+                            content: `Tu compra de ${product?.name || 'producto'} ha sido procesada con éxito.`,
+                            link: `/gym/${centerId}`
+                        });
+                    }
+
+                    console.log(`Store purchase completed for user ${userId}, product ${productId}`);
+                } else if (session.metadata?.type === 'membership_payment') {
+                    const { centerId, userId, planId } = session.metadata;
+
+                    // 1. Update Member status to 'active'
+                    const { error: memberError } = await supabase
+                        .from('members')
+                        .update({
+                            status: 'active',
+                            membership_start_date: new Date().toISOString()
+                        })
+                        .eq('center_id', centerId)
+                        .eq('user_id', userId);
+
+                    if (memberError) console.error("Error activating member:", memberError);
+
+                    // 2. Notify User
+                    if (userId) {
+                        await createNotification({
+                            userId: userId,
+                            type: 'membership_activated',
+                            title: 'Membresía Activada',
+                            content: `¡Bienvenido! Tu membresía ha sido activada correctamente tras confirmar tu pago.`,
+                            link: `/gym/${centerId}`
+                        });
+                    }
+
+                    console.log(`Membership payment completed for user ${userId}, center ${centerId}`);
+                } else if (organizationId) {
                     // CENTER UPGRADE
                     const starterPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 'price_1SxdaPCpwHwK9MuevBVancPf'; // Placeholder
                     const proPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 'price_1SxdavCpwHwK9Mueeesvlq6T'; // Placeholder

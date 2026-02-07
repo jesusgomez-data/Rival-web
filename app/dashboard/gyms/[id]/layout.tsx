@@ -120,9 +120,9 @@ export default async function CenterLayout({
                 </header>
 
                 {/* Mobile Navigation */}
-                <div className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-white/10">
-                    <div className="px-4 py-3 border-b border-white/5 flex items-center justify-between gap-2">
-                        <h1 className="font-heading font-black text-lg italic text-white truncate">{org.name}</h1>
+                <div className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border">
+                    <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
+                        <h1 className="font-heading font-black text-lg italic text-foreground truncate">{org.name}</h1>
                         <div className="flex items-center gap-2 shrink-0">
                             <ThemeToggle className="bg-transparent border-none p-1.5 shadow-none" />
                             <div className="text-[9px] font-bold text-brand-red uppercase tracking-widest bg-brand-red/10 px-2 py-1 rounded border border-brand-red/20">{userRole === 'owner' ? 'Propietario' : 'Coach'}</div>

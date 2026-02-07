@@ -50,7 +50,13 @@ export async function generateCoachResponse(userMessage: string, userProfile: Co
     Si no hay entreno, workout: null.`;
 
     // Intentar con el modelo más rápido y luego fallback al estándar
-    const modelsToTry = ["gemini-1.5-flash", "gemini-pro"];
+    const modelsToTry = [
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-flash-latest",
+        "gemini-1.5-pro",
+        "gemini-pro-latest"
+    ];
     let errors: string[] = [];
 
     for (const modelName of modelsToTry) {

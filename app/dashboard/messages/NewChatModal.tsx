@@ -36,7 +36,7 @@ export default function NewChatModal({ friends, onClose, onSelect }: NewChatModa
                 initial={{ opacity: 0, scale: 0.9, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                className="bg-[#0a0a0c] border border-white/[0.08] w-full max-w-lg rounded-[2.5rem] overflow-hidden relative z-10 shadow-[0_0_80px_rgba(0,0,0,1)] flex flex-col max-h-[85vh]"
+                className="bg-card border border-border w-full max-w-lg rounded-[2.5rem] overflow-hidden relative z-10 shadow-[0_0_80px_rgba(0,0,0,0.5)] flex flex-col max-h-[85vh]"
             >
                 {/* Visual Accent */}
                 <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-brand-red to-transparent opacity-50" />
@@ -46,13 +46,13 @@ export default function NewChatModal({ friends, onClose, onSelect }: NewChatModa
                     <div>
                         <div className="flex items-center gap-3 mb-1">
                             <UserPlus className="w-5 h-5 text-brand-red" />
-                            <h3 className="text-2xl font-accent font-bold italic text-white uppercase tracking-tighter">{t.chat.recruitRival}</h3>
+                            <h3 className="text-2xl font-accent font-bold italic text-foreground uppercase tracking-tighter">{t.chat.recruitRival}</h3>
                         </div>
-                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em]">{t.chat.recruitSubtitle}</p>
+                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em]">{t.chat.recruitSubtitle}</p>
                     </div>
                     <button
                         onClick={onClose}
-                        className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center text-gray-500 hover:text-white hover:bg-brand-red hover:border-brand-red transition-all group"
+                        className="w-12 h-12 rounded-2xl bg-muted border border-border flex items-center justify-center text-muted-foreground hover:text-white hover:bg-brand-red hover:border-brand-red transition-all group"
                     >
                         <X className="w-6 h-6 group-hover:rotate-90 transition-transform duration-300" />
                     </button>
@@ -62,14 +62,14 @@ export default function NewChatModal({ friends, onClose, onSelect }: NewChatModa
                 <div className="px-8 mb-6">
                     <div className="relative group">
                         <div className="absolute -inset-0.5 bg-brand-red/20 rounded-[1.25rem] opacity-0 group-focus-within:opacity-100 transition-opacity blur-md" />
-                        <div className="relative bg-[#121215] border border-white/[0.08] rounded-[1.25rem] group-focus-within:border-brand-red/40 transition-all">
-                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600 group-focus-within:text-brand-red transition-all" />
+                        <div className="relative bg-muted border border-border rounded-[1.25rem] group-focus-within:border-brand-red/40 transition-all">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-brand-red transition-all" />
                             <input
                                 type="text"
                                 placeholder={t.chat.searchRival}
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                className="w-full bg-transparent py-4 pl-14 pr-4 text-sm text-white placeholder:text-gray-600 focus:outline-none"
+                                className="w-full bg-transparent py-4 pl-14 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                             />
                         </div>
                     </div>
@@ -114,10 +114,10 @@ export default function NewChatModal({ friends, onClose, onSelect }: NewChatModa
                                         </div>
                                     </div>
                                     <div className="text-left flex-1 min-w-0">
-                                        <p className="font-accent font-bold text-lg text-white italic uppercase tracking-tighter leading-none mb-1 group-hover:text-brand-red transition-colors">
+                                        <p className="font-accent font-bold text-lg text-foreground italic uppercase tracking-tighter leading-none mb-1 group-hover:text-brand-red transition-colors">
                                             {friend.full_name}
                                         </p>
-                                        <p className="text-xs text-gray-600 font-medium truncate tracking-tight">@{friend.username}</p>
+                                        <p className="text-xs text-muted-foreground font-medium truncate tracking-tight">@{friend.username}</p>
                                     </div>
                                     <div className="opacity-0 group-hover:opacity-100 transition-all -translate-x-4 group-hover:translate-x-0">
                                         <Target className="w-6 h-6 text-brand-red" />

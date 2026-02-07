@@ -7,6 +7,7 @@ import { login } from "./actions";
 import { useActionState } from "react";
 import { useLanguage } from "@/app/LanguageContext";
 import { createClient } from "@/utils/supabase/client";
+import ThemeToggle from "@/components/ThemeToggle";
 
 
 export default function LoginPage() {
@@ -55,6 +56,10 @@ export default function LoginPage() {
 
             {/* Form Side */}
             <div className="w-full lg:w-1/2 flex items-center justify-center p-8 pt-24 lg:pt-8 relative min-h-screen lg:min-h-0">
+                <div className="absolute top-8 right-8 flex items-center gap-4">
+                    <ThemeToggle />
+                </div>
+
                 <Link href="/" className="text-muted-foreground hover:text-foreground absolute top-8 left-8 flex items-center gap-2 transition-colors">
                     <ArrowLeft className="w-4 h-4" /> {t.login.backHome}
                 </Link>

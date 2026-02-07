@@ -11,7 +11,7 @@ interface MusicPickerProps {
     variant?: 'button' | 'embedded';
 }
 
-export default function MusicPicker({ onSelect, selectedTrackId, variant = 'button' }: MusicPickerProps) {
+export default function MusicPicker({ onSelect, selectedTrackId, variant = 'button', placement = 'top' }: MusicPickerProps & { placement?: 'top' | 'bottom' }) {
     const [isOpen, setIsOpen] = useState(variant === 'embedded');
     const [searchQuery, setSearchQuery] = useState("");
     const [previewingId, setPreviewingId] = useState<string | null>(null);
@@ -152,7 +152,10 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
             </button>
 
             {isOpen && (
-                <div className="absolute bottom-12 left-0 w-72 md:w-80 bg-brand-gray border border-white/10 rounded-[24px] shadow-2xl p-4 z-[100] animate-in slide-in-from-bottom-2 duration-200">
+                <div className={clsx(
+                    "absolute left-0 w-72 md:w-80 bg-brand-gray border border-white/10 rounded-[24px] shadow-2xl p-4 z-[200] animate-in duration-200",
+                    placement === 'top' ? "bottom-12 slide-in-from-bottom-2" : "top-12 slide-in-from-top-2"
+                )}>
                     <div className="flex items-center justify-between mb-4">
                         <h4 className="text-xs font-black text-white uppercase tracking-widest italic flex items-center gap-2">
                             <Music className="w-3 h-3 text-brand-red" />

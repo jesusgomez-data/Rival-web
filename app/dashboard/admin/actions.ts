@@ -3,6 +3,8 @@
 import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
+import { isUserAdmin } from "@/utils/admin";
+
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -12,6 +14,8 @@ const supabaseAdmin = createClient(
 // Ensure SUPABASE_SERVICE_ROLE_KEY is set in .env.local
 
 export async function getAdminStats() {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
+
     // 1. Total Users
     const { count: userCount } = await supabaseAdmin
         .from('profiles')
@@ -47,6 +51,7 @@ export async function getAdminStats() {
 }
 
 export async function getRecentOrganizations() {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const { data, error } = await supabaseAdmin
         .from('organizations')
         .select('*')
@@ -64,6 +69,7 @@ export async function getRecentOrganizations() {
 }
 
 export async function getAllUsers() {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const { data, error } = await supabaseAdmin
         .from('profiles')
         .select('*')
@@ -79,6 +85,7 @@ export async function getAllUsers() {
 }
 
 export async function updateOrganizationPlan(orgId: string, plan: string) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const { error } = await supabaseAdmin
         .from('organizations')
         .update({ plan })
@@ -89,6 +96,7 @@ export async function updateOrganizationPlan(orgId: string, plan: string) {
 }
 
 export async function updateUserPlan(userId: string, tier: string) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const { error } = await supabaseAdmin
         .from('profiles')
         .update({ subscription_tier: tier })
@@ -99,6 +107,7 @@ export async function updateUserPlan(userId: string, tier: string) {
 }
 
 export async function deleteOrganization(orgId: string) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const { error } = await supabaseAdmin
         .from('organizations')
         .delete()
