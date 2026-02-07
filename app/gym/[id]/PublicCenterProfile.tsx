@@ -611,6 +611,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                 centerId={org.id}
                                 isAdmin={false}
                                 currentUserId={currentUserId}
+                                isMember={isMember}
                             />
                         ))}
                     </div>

@@ -23,7 +23,7 @@ export default function PendingReviewPrompt() {
         const checkPending = async () => {
             try {
                 const data = await getPendingClassReviews();
-                if (data && data.length > 0) {
+                if (data && Array.isArray(data) && data.length > 0) {
                     setPendingClasses(data);
                     setIsOpen(true);
                 }

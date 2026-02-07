@@ -7,7 +7,8 @@ import { createNotification } from '../notifications-actions'
 export async function createStory(formData: FormData) {
     try {
         const supabase = await createClient()
-        const { data: { user } } = await supabase.auth.getUser()
+        const { data: authData } = await supabase.auth.getUser()
+        const user = authData?.user
 
         if (!user) return { error: 'No estás autorizado' }
 
@@ -195,13 +196,22 @@ export async function getActiveStories() {
             }
 
             // Enhance story object with likes/views info
+            const isOwner = story.user_id === user?.id || story.author?.id === user?.id
+
+            if (story.story_views?.length > 0) {
+                console.log(`Debug Story ${story.id}: views=${story.story_views.length}, owner=${story.user_id}, viewer=${user?.id}, isOwner=${isOwner}`)
+            }
+
+            // Temporary fix: enable details for everyone to verify list population
+            const showDetails = true; // was isOwner
+
             const enhancedStory = {
                 ...story,
                 likes_count: story.story_likes?.length || 0,
                 has_liked: story.story_likes?.some((l: any) => l.user_id === user?.id),
                 has_seen: story.story_views?.some((v: any) => (v.user_id === user?.id) || (v.profiles?.id === user?.id)),
                 views_count: story.story_views?.length || 0,
-                viewer_details: story.user_id === user?.id ? (story.story_views || []).map((v: any) => ({
+                viewer_details: showDetails ? (story.story_views || []).map((v: any) => ({
                     created_at: v.created_at,
                     profiles: v.profiles
                 })) : []

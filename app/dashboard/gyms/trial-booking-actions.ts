@@ -30,6 +30,7 @@ export async function bookTrialClass(classId: string, centerId: string) {
             scheduled_time,
             max_capacity,
             organization_id,
+            center_id,
             enrollments:class_enrollments(count)
         `)
         .eq('id', classId)
@@ -110,6 +111,7 @@ export async function bookTrialClass(classId: string, centerId: string) {
         .insert({
             user_id: user.id,
             organization_id: centerId,
+            center_id: classData.center_id,
             class_id: classId,
             scheduled_date: classData.scheduled_time,
             status: 'approved'

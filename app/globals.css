@@ -39,23 +39,24 @@
 }
 
 [data-theme='light'] {
-  --background: #f8fafc;
-  --foreground: #0f172a;
+  --background: #ffffff;
+  --foreground: #000000;
   --card: #ffffff;
-  --card-foreground: #0f172a;
-  --border: rgba(0, 0, 0, 0.08);
+  --card-foreground: #000000;
+  --border: #94a3b8;
+  /* Gris más oscuro para bordes visibles */
   --muted: #f1f5f9;
-  --muted-foreground: #64748b;
+  --muted-foreground: #000000;
   --input: #ffffff;
 }
 
 /* Ensure common color utilities respect the theme, but respect dark containers */
-[data-theme='light'] .text-white:not(.bg-brand-red *):not(.bg-brand-red):not(.dark-section *):not(.keep-white) {
-  color: var(--foreground) !important;
+[data-theme='light'] .text-white:not(.bg-brand-red *):not(.bg-brand-red):not(.keep-white) {
+  color: #000000 !important;
 }
 
 [data-theme='light'] .bg-brand-gray:not(.keep-bg) {
-  background-color: var(--muted) !important;
+  background-color: #ffffff !important;
 }
 
 [data-theme='light'] .border-white\/5:not(.keep-border),
@@ -64,8 +65,12 @@
   border-color: var(--border) !important;
 }
 
-[data-theme='light'] .bg-black:not(.keep-bg):not(.dark-section *) {
-  background-color: var(--background) !important;
+[data-theme='light'] .bg-black:not(.keep-bg),
+[data-theme='light'] .bg-black\/40,
+[data-theme='light'] .bg-black\/60,
+[data-theme='light'] .bg-white\/5,
+[data-theme='light'] .bg-white\/10 {
+  background-color: #ffffff !important;
 }
 
 [data-theme='light'] .bg-black\/40:not(.keep-bg):not(.dark-section *),
@@ -75,24 +80,84 @@
   background-color: var(--muted) !important;
 }
 
-[data-theme='light'] .text-gray-100:not(.dark-section *),
-[data-theme='light'] .text-gray-200:not(.dark-section *),
-[data-theme='light'] .text-gray-300:not(.dark-section *) {
-  color: var(--foreground) !important;
+[data-theme='light'] .text-white:not(.bg-brand-red *):not(.bg-brand-red):not(.keep-white),
+[data-theme='light'] .text-gray-50,
+[data-theme='light'] .text-gray-100,
+[data-theme='light'] .text-gray-200,
+[data-theme='light'] .text-gray-300,
+[data-theme='light'] .text-gray-400,
+[data-theme='light'] .text-gray-500,
+[data-theme='light'] .text-gray-600,
+[data-theme='light'] .text-slate-400,
+[data-theme='light'] .text-slate-500,
+[data-theme='light'] .text-muted-foreground {
+  color: #000000 !important;
+  --tw-text-opacity: 1 !important;
 }
 
-[data-theme='light'] .text-gray-400:not(.dark-section *),
-[data-theme='light'] .text-gray-500:not(.dark-section *) {
-  color: var(--muted-foreground) !important;
+[data-theme='light'] .text-white\/20,
+[data-theme='light'] .text-white\/30,
+[data-theme='light'] .text-white\/40,
+[data-theme='light'] .text-white\/50,
+[data-theme='light'] .text-white\/60,
+[data-theme='light'] .text-white\/70,
+[data-theme='light'] .text-white\/80 {
+  color: #000000 !important;
+  opacity: 1 !important;
 }
 
-[data-theme='light'] .bg-card\/50:not(.keep-bg) {
-  background-color: rgba(255, 255, 255, 0.5) !important;
+[data-theme='light'] .bg-card:not(.keep-bg),
+[data-theme='light'] .bg-white\/5:not(.keep-bg),
+[data-theme='light'] .bg-white\/10:not(.keep-bg),
+[data-theme='light'] .bg-white\/20:not(.keep-bg),
+[data-theme='light'] .dark\:bg-\[\#0a0a0a\],
+[data-theme='light'] .dark\:bg-black\/20 {
+  background-color: #ffffff !important;
+}
+
+[data-theme='light'] .placeholder\:text-gray-400::placeholder,
+[data-theme='light'] .placeholder\:text-gray-600::placeholder {
+  color: #000000 !important;
+  opacity: 0.7 !important;
+}
+
+[data-theme='light'] .hover\:text-white:hover:not(.bg-brand-red *):not(.bg-brand-red) {
+  color: #000000 !important;
 }
 
 [data-theme='light'] .selection\:bg-brand-red ::selection {
   background-color: #EF4444 !important;
   color: white !important;
+}
+
+[data-theme='light'] .shadow-sm,
+[data-theme='light'] .shadow-md,
+[data-theme='light'] .shadow-lg,
+[data-theme='light'] .dark\:shadow-none {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05), 0 0 0 1px rgb(0 0 0 / 0.05) !important;
+}
+
+[data-theme='light'] .bg-white.border,
+[data-theme='light'] .bg-background.border {
+  border-color: #94a3b8 !important;
+  border-width: 1.5px !important;
+}
+
+[data-theme='light'] .text-xs.font-black.uppercase.tracking-widest {
+  color: #000000 !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.15em !important;
+}
+
+[data-theme='light'] th {
+  color: #000000 !important;
+  border-bottom: 2px solid #94a3b8 !important;
+  font-weight: 900 !important;
+  background-color: #f8fafc !important;
+}
+
+[data-theme='light'] .border-gray-200 {
+  border-color: #94a3b8 !important;
 }
 
 body {

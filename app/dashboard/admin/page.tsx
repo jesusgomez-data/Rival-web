@@ -18,9 +18,11 @@ import {
     Flag,
     Plus,
     Trash2,
-    Edit2
+    Edit2,
+    Sun,
+    Moon
 } from 'lucide-react';
-import { getAdminStats, getRecentOrganizations, getAllUsers } from './actions';
+import { getAdminStats, getRecentOrganizations, getAllUsers, deleteUser } from './actions';
 import { getSupportTickets } from './support-actions';
 import { getModerationReports, takeModerationAction } from './report-actions';
 import { getAds, toggleAd, deleteAd, updateAd } from './ad-actions';
@@ -36,8 +38,10 @@ import { createClient } from '@/utils/supabase/client';
 import Image from 'next/image';
 import Link from 'next/link';
 import { cn } from '@/lib/utils'; // Use utils for conditional classes
+import { useTheme } from '@/app/ThemeContext';
 
 export default function AdminDashboard() {
+    const { theme, toggleTheme } = useTheme();
     const [stats, setStats] = useState<any>({ users: 0, centers: 0, workouts: 0, mrr: 0 });
     const [centers, setCenters] = useState<any[]>([]);
     const [users, setUsers] = useState<any[]>([]);
@@ -134,34 +138,47 @@ export default function AdminDashboard() {
 
 
     if (loading) return (
-        <div className="flex h-screen items-center justify-center bg-black text-brand-red font-black uppercase tracking-widest animate-pulse">
+        <div className="flex h-screen items-center justify-center bg-gray-50 dark:bg-[#050505] text-brand-red font-black uppercase tracking-widest animate-pulse transition-colors duration-500">
             Iniciando Protocolo de Mando...
         </div>
     );
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white font-sans selection:bg-brand-red selection:text-black">
+        <div key={theme} className="min-h-screen bg-background text-foreground font-sans selection:bg-brand-red selection:text-white transition-colors duration-300">
             {/* Header */}
-            <header className="border-b border-white/5 bg-[#0a0a0a]/50 backdrop-blur-xl sticky top-0 z-50">
+            <header className="border-b border-gray-200 dark:border-white/5 bg-white/80 dark:bg-[#0a0a0a]/50 backdrop-blur-xl sticky top-0 z-50 transition-colors duration-300">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-brand-red flex items-center justify-center rounded-lg shadow-[0_0_20px_rgba(220,38,38,0.5)]">
                             <Shield className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                            <h1 className="text-xl font-heading font-black italic uppercase tracking-tighter">Rival <span className="text-brand-red">Command</span></h1>
+                            <h1 className="text-xl font-heading font-black italic uppercase tracking-tighter text-foreground transition-colors duration-300">Rival <span className="text-brand-red">Fit Command</span></h1>
                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Panel de Control Global</p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-4">
+                        <button
+                            onClick={toggleTheme}
+                            className="p-2 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-all active:scale-95 shadow-sm dark:shadow-none border border-gray-200 dark:border-white/10"
+                            title={theme === 'dark' ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+                        >
+                            {theme === 'dark' ? (
+                                <Sun className="w-5 h-5 text-amber-500 animate-in spin-in-90 duration-500" />
+                            ) : (
+                                <Moon className="w-5 h-5 text-blue-400 animate-in spin-in-90 duration-500" />
+                            )}
+                        </button>
                         <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_#22c55e]" />
-                        <span className="text-xs font-mono text-green-500">SYSTEM ONLINE</span>
+                        <span className="text-xs font-mono text-green-500 hidden sm:inline-block italic uppercase">
+                            System Online • {theme}
+                        </span>
                     </div>
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-6 py-8 space-y-12">
+            <main className="max-w-7xl mx-auto px-6 py-8 space-y-12 transition-colors duration-300 min-h-screen">
 
                 {/* KPI Grid */}
                 <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -207,12 +224,12 @@ export default function AdminDashboard() {
 
                         {/* Control Bar (Tabs & Filters) */}
                         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                            <div className="flex p-1 bg-white/5 rounded-xl self-start overflow-x-auto max-w-full no-scrollbar">
+                            <div className="flex p-1 bg-gray-200 dark:bg-white/5 rounded-xl self-start overflow-x-auto max-w-full no-scrollbar transition-colors">
                                 <button
                                     onClick={() => setActiveTab('centers')}
                                     className={cn(
                                         "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap",
-                                        activeTab === 'centers' ? "bg-brand-red text-white shadow-lg" : "text-gray-500 hover:text-white"
+                                        activeTab === 'centers' ? "bg-brand-red text-white shadow-lg" : "text-gray-500 hover:text-black dark:hover:text-white"
                                     )}
                                 >
                                     Centros
@@ -221,7 +238,7 @@ export default function AdminDashboard() {
                                     onClick={() => setActiveTab('users')}
                                     className={cn(
                                         "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap",
-                                        activeTab === 'users' ? "bg-brand-red text-white shadow-lg" : "text-gray-500 hover:text-white"
+                                        activeTab === 'users' ? "bg-brand-red text-white shadow-lg" : "text-gray-500 hover:text-black dark:hover:text-white"
                                     )}
                                 >
                                     Atletas
@@ -230,7 +247,7 @@ export default function AdminDashboard() {
                                     onClick={() => setActiveTab('plans')}
                                     className={cn(
                                         "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap",
-                                        activeTab === 'plans' ? "bg-brand-red text-white shadow-lg" : "text-gray-500 hover:text-white"
+                                        activeTab === 'plans' ? "bg-brand-red text-white shadow-lg" : "text-gray-500 hover:text-black dark:hover:text-white"
                                     )}
                                 >
                                     Planes
@@ -239,7 +256,7 @@ export default function AdminDashboard() {
                                     onClick={() => setActiveTab('ads')}
                                     className={cn(
                                         "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap",
-                                        activeTab === 'ads' ? "bg-brand-red text-white shadow-lg" : "text-gray-500 hover:text-white"
+                                        activeTab === 'ads' ? "bg-brand-red text-white shadow-lg" : "text-gray-500 hover:text-black dark:hover:text-white"
                                     )}
                                 >
                                     Publicidad
@@ -248,7 +265,7 @@ export default function AdminDashboard() {
                                     onClick={() => setActiveTab('reports')}
                                     className={cn(
                                         "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap",
-                                        activeTab === 'reports' ? "bg-brand-red text-white shadow-lg" : "text-gray-500 hover:text-white"
+                                        activeTab === 'reports' ? "bg-brand-red text-white shadow-lg" : "text-gray-500 hover:text-black dark:hover:text-white"
                                     )}
                                 >
                                     Reportes
@@ -257,20 +274,21 @@ export default function AdminDashboard() {
 
                             <div className="flex flex-col sm:flex-row gap-2 w-full xl:w-auto">
                                 <div className="relative group flex-1 sm:flex-none">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-white transition-colors" />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-black dark:group-focus-within:text-white transition-colors" />
                                     <input
                                         type="text"
                                         placeholder="Buscar..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="bg-[#0a0a0a] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:border-brand-red outline-none w-full sm:w-48 xl:w-64 transition-all"
+                                        className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-foreground focus:border-brand-red outline-none w-full sm:w-48 xl:w-64 transition-all placeholder:text-gray-400 dark:placeholder:text-gray-600"
                                     />
                                 </div>
                                 <select
                                     value={filterPlan}
                                     onChange={(e) => setFilterPlan(e.target.value)}
-                                    className="bg-[#0a0a0a] border border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-400 focus:border-brand-red outline-none appearance-none cursor-pointer hover:text-white transition-colors w-full sm:w-auto min-w-[140px]"
+                                    className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-gray-500 dark:text-gray-400 focus:border-brand-red outline-none appearance-none cursor-pointer hover:text-black dark:hover:text-white transition-colors w-full sm:w-auto min-w-[140px]"
                                 >
+
                                     <option value="all">Todos los Planes</option>
                                     <option value="free">Free</option>
                                     <option value={activeTab === 'centers' ? 'starter' : 'premium'}>{activeTab === 'centers' ? 'Starter' : 'Premium'}</option>
@@ -280,9 +298,9 @@ export default function AdminDashboard() {
                         </div>
 
                         {/* DATA TABLE */}
-                        <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl overflow-hidden min-h-[400px]">
-                            <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                                <h3 className="text-lg font-bold italic uppercase flex items-center gap-2">
+                        <div className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/5 rounded-3xl overflow-hidden min-h-[400px] shadow-sm dark:shadow-none transition-colors duration-300">
+                            <div className="p-6 border-b border-gray-200 dark:border-white/5 flex items-center justify-between">
+                                <h3 className="text-lg font-bold italic uppercase flex items-center gap-2 text-foreground transition-colors duration-300">
                                     {activeTab === 'centers' ? <Building2 className="w-5 h-5 text-brand-red" /> :
                                         activeTab === 'users' ? <Users className="w-5 h-5 text-brand-red" /> :
                                             activeTab === 'plans' ? <Zap className="w-5 h-5 text-brand-red" /> :
@@ -316,7 +334,7 @@ export default function AdminDashboard() {
 
                             <div className="overflow-x-auto">
                                 <table className="w-full text-sm text-left">
-                                    <thead className="text-[10px] text-gray-500 uppercase bg-white/5 font-black tracking-widest">
+                                    <thead className="text-[10px] text-gray-500 uppercase bg-gray-50 dark:bg-white/5 font-black tracking-widest">
                                         <tr>
                                             <th className="px-6 py-4">
                                                 {activeTab === 'centers' ? 'Organización' :
@@ -344,13 +362,13 @@ export default function AdminDashboard() {
                                             <th className="px-6 py-4 text-right">Acciones</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-white/5">
+                                    <tbody className="divide-y divide-gray-200 dark:divide-white/5">
                                         {activeTab === 'centers' ? (
                                             filteredCenters.map((center) => (
-                                                <tr key={center.id} className="hover:bg-white/5 transition-colors group">
+                                                <tr key={center.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
                                                     <td className="px-6 py-4 font-medium">
                                                         <Link href={`/gym/${center.id}`} className="flex items-center gap-3 group/link">
-                                                            <div className="w-8 h-8 rounded bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                                            <div className="w-8 h-8 rounded bg-gray-100 dark:bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
                                                                 {center.logo_url ? (
                                                                     <Image src={center.logo_url} width={32} height={32} alt={center.name} className="w-full h-full object-cover" />
                                                                 ) : (
@@ -358,7 +376,7 @@ export default function AdminDashboard() {
                                                                 )}
                                                             </div>
                                                             <div>
-                                                                <div className="text-white group-hover/link:text-brand-red transition-colors font-bold">{center.name}</div>
+                                                                <div className="text-foreground group-hover/link:text-brand-red transition-colors font-bold">{center.name}</div>
                                                                 <div className="text-[10px] text-gray-500 truncate max-w-[150px]">{center.city || 'N/A'}, {center.country}</div>
                                                             </div>
                                                         </Link>
@@ -369,13 +387,13 @@ export default function AdminDashboard() {
                                                     <td className="px-6 py-4">
                                                         <StatusBadge active={true} />
                                                     </td>
-                                                    <td className="px-6 py-4 text-gray-300 font-mono">
+                                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300 font-mono">
                                                         {center.plan === 'pro' ? '99.99€' : center.plan === 'starter' ? '49.99€' : '0.00€'}
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
                                                         <button
                                                             onClick={() => setEditingCenter(center)}
-                                                            className="p-1.5 hover:bg-white/10 rounded-lg text-gray-500 hover:text-white transition-colors"
+                                                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-black dark:hover:text-white transition-colors"
                                                         >
                                                             <MoreHorizontal className="w-4 h-4" />
                                                         </button>
@@ -384,10 +402,10 @@ export default function AdminDashboard() {
                                             ))
                                         ) : activeTab === 'users' ? (
                                             filteredUsers.map((user) => (
-                                                <tr key={user.id} className="hover:bg-white/5 transition-colors group">
+                                                <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
                                                     <td className="px-6 py-4 font-medium">
                                                         <Link href={`/dashboard/profile/${user.username || user.id}`} className="flex items-center gap-3 group/link">
-                                                            <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                                            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
                                                                 {user.avatar_url ? (
                                                                     <Image src={user.avatar_url} width={32} height={32} alt={user.full_name || 'U'} className="w-full h-full object-cover" />
                                                                 ) : (
@@ -395,7 +413,7 @@ export default function AdminDashboard() {
                                                                 )}
                                                             </div>
                                                             <div>
-                                                                <div className="text-white group-hover/link:text-brand-red transition-colors font-bold">{user.full_name || 'Usuario'}</div>
+                                                                <div className="text-foreground group-hover/link:text-brand-red transition-colors font-bold">{user.full_name || 'Usuario'}</div>
                                                                 <div className="text-[10px] text-gray-500 truncate max-w-[150px]">{user.email}</div>
                                                             </div>
                                                         </Link>
@@ -406,28 +424,47 @@ export default function AdminDashboard() {
                                                     <td className="px-6 py-4">
                                                         <StatusBadge active={true} />
                                                     </td>
-                                                    <td className="px-6 py-4 text-gray-300 font-mono text-xs">
+                                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300 font-mono text-xs">
                                                         Lvl {user.level || '1'}
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
-                                                        <button
-                                                            onClick={() => setEditingUser(user)}
-                                                            className="p-1.5 hover:bg-white/10 rounded-lg text-gray-500 hover:text-white transition-colors"
-                                                        >
-                                                            <MoreHorizontal className="w-4 h-4" />
-                                                        </button>
+                                                        <div className="flex justify-end gap-2">
+                                                            <button
+                                                                onClick={() => setEditingUser(user)}
+                                                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                                                            >
+                                                                <MoreHorizontal className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={async () => {
+                                                                    if (confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario ${user.full_name || user.email}? Esta acción no se puede deshacer.`)) {
+                                                                        try {
+                                                                            await deleteUser(user.id);
+                                                                            await refreshData();
+                                                                            alert('Usuario eliminado correctamente.');
+                                                                        } catch (error: any) {
+                                                                            alert('Error al eliminar usuario: ' + error.message);
+                                                                        }
+                                                                    }
+                                                                }}
+                                                                className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-500 transition-colors"
+                                                                title="Eliminar Usuario"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))
                                         ) : activeTab === 'plans' ? (
                                             mockPlans.map((plan) => (
-                                                <tr key={plan.id} className="hover:bg-white/5 transition-colors group">
+                                                <tr key={plan.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
                                                     <td className="px-6 py-4 font-medium">
                                                         <div className="flex items-center gap-3">
                                                             <div className="w-8 h-8 rounded bg-brand-red/10 flex items-center justify-center shrink-0">
                                                                 <Zap className="w-4 h-4 text-brand-red" />
                                                             </div>
-                                                            <div className="text-white font-bold">{plan.name}</div>
+                                                            <div className="text-foreground font-bold">{plan.name}</div>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 text-brand-red font-black">
@@ -443,7 +480,7 @@ export default function AdminDashboard() {
                                                         <div className="flex justify-end gap-2">
                                                             <button
                                                                 onClick={() => setEditingPlan(plan)}
-                                                                className="p-1.5 hover:bg-white/10 rounded-lg text-gray-500 hover:text-white transition-colors"
+                                                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-black dark:hover:text-white transition-colors"
                                                             >
                                                                 <Edit2 className="w-4 h-4" />
                                                             </button>
@@ -459,17 +496,17 @@ export default function AdminDashboard() {
                                             ))
                                         ) : activeTab === 'ads' ? (
                                             ads.map((ad) => (
-                                                <tr key={ad.id} className="hover:bg-white/5 transition-colors group">
+                                                <tr key={ad.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
                                                     <td className="px-6 py-4">
                                                         <div
                                                             className="flex items-center gap-3 cursor-pointer group/item"
                                                             onClick={() => setEditingAd(ad)}
                                                         >
-                                                            <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-white/10 group-hover/item:border-brand-red transition-colors">
+                                                            <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-gray-200 dark:border-white/10 group-hover/item:border-brand-red transition-colors">
                                                                 <img src={ad.image_url} alt="" className="w-full h-full object-cover group-hover/item:scale-110 transition-transform" />
                                                             </div>
                                                             <div>
-                                                                <div className="font-bold text-white leading-none mb-1 group-hover/item:text-brand-red transition-colors">{ad.title}</div>
+                                                                <div className="font-bold text-foreground leading-none mb-1 group-hover/item:text-brand-red transition-colors">{ad.title}</div>
                                                                 <div className="text-[10px] text-gray-500 uppercase font-black truncate max-w-[150px]">{ad.description}</div>
                                                             </div>
                                                         </div>
@@ -502,12 +539,12 @@ export default function AdminDashboard() {
                                                         <div className="flex justify-end gap-2">
                                                             <button
                                                                 onClick={() => setEditingAd(ad)}
-                                                                className="p-1.5 hover:bg-white/10 rounded-lg text-gray-500 hover:text-white transition-colors"
+                                                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-black dark:hover:text-white transition-colors"
                                                             >
                                                                 <Edit2 className="w-4 h-4" />
                                                             </button>
                                                             {ad.link_url && (
-                                                                <a href={ad.link_url} target="_blank" className="p-1.5 hover:bg-white/10 rounded-lg text-gray-500 hover:text-white transition-colors">
+                                                                <a href={ad.link_url} target="_blank" className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-black dark:hover:text-white transition-colors">
                                                                     <ExternalLink className="w-4 h-4" />
                                                                 </a>
                                                             )}
@@ -523,17 +560,17 @@ export default function AdminDashboard() {
                                             ))
                                         ) : (
                                             reports.map((report) => (
-                                                <tr key={report.id} className="hover:bg-white/5 transition-colors group">
+                                                <tr key={report.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
                                                     <td className="px-6 py-4 font-medium">
                                                         <div className="flex items-center gap-3">
                                                             <div className={cn(
                                                                 "w-2 h-2 rounded-full",
                                                                 report.severity === 'high' ? "bg-red-500 animate-ping" : "bg-yellow-500"
                                                             )} />
-                                                            <div className="text-white font-bold">{report.type}</div>
+                                                            <div className="text-foreground font-bold">{report.type}</div>
                                                         </div>
                                                     </td>
-                                                    <td className="px-6 py-4 text-gray-300">
+                                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
                                                         @{report.user}
                                                     </td>
                                                     <td className="px-6 py-4">
@@ -550,7 +587,7 @@ export default function AdminDashboard() {
                                                     <td className="px-6 py-4 text-right">
                                                         <button
                                                             onClick={() => setReviewingReport(report)}
-                                                            className="bg-white/5 hover:bg-brand-red px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all"
+                                                            className="bg-gray-100 dark:bg-white/5 hover:bg-brand-red px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all"
                                                         >
                                                             Revisar
                                                         </button>
@@ -578,17 +615,17 @@ export default function AdminDashboard() {
                     {/* Right Column: Support & Tools */}
                     <div className="space-y-6">
                         {/* Revenue/Growth Panel (Simplified Visual) */}
-                        <div className="bg-gradient-to-b from-[#111] to-[#0a0a0a] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
+                        <div className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/5 rounded-3xl p-6 relative overflow-hidden group transition-colors duration-300 shadow-sm dark:shadow-none">
                             <div className="absolute top-0 right-0 p-4 opacity-50 group-hover:opacity-100 transition-opacity">
                                 <TrendingUp className="w-16 h-16 text-brand-red/10" />
                             </div>
-                            <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Crecimiento Mensual</h3>
-                            <div className="text-4xl font-heading font-black italic text-white mb-6">
+                            <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Crecimiento Mensual</h3>
+                            <div className="text-4xl font-heading font-black italic text-foreground mb-6 transition-colors duration-300">
                                 +24.5% <span className="text-sm not-italic font-sans text-green-500 font-bold">vs last month</span>
                             </div>
                             <div className="h-24 flex items-end gap-1.5">
                                 {[40, 65, 45, 78, 55, 80, 70, 95, 60, 85].map((h, i) => (
-                                    <div key={i} style={{ height: `${h}%` }} className="flex-1 bg-white/10 hover:bg-brand-red transition-colors rounded-t-sm" />
+                                    <div key={i} style={{ height: `${h}%` }} className="flex-1 bg-gray-200 dark:bg-white/10 hover:bg-brand-red transition-colors rounded-t-sm" />
                                 ))}
                             </div>
                         </div>
@@ -600,13 +637,13 @@ export default function AdminDashboard() {
 
                         {/* Quick Actions Grid */}
                         <div className="grid grid-cols-2 gap-3">
-                            <button className="bg-[#0a0a0a] border border-white/5 hover:bg-brand-red hover:text-white hover:border-brand-red transition-all p-4 rounded-3xl flex flex-col items-center justify-center gap-3 group h-32">
+                            <button className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/5 hover:bg-brand-red hover:text-white dark:hover:text-white hover:border-brand-red transition-all p-4 rounded-3xl flex flex-col items-center justify-center gap-3 group h-32 text-muted-foreground font-bold shadow-sm dark:shadow-none">
                                 <Zap className="w-8 h-8 text-brand-red group-hover:text-white" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Broadcast Global</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-foreground group-hover:text-white transition-colors">Broadcast Global</span>
                             </button>
-                            <button className="bg-[#0a0a0a] border border-white/5 hover:bg-blue-600 hover:text-white hover:border-blue-600 transition-all p-4 rounded-3xl flex flex-col items-center justify-center gap-3 group h-32">
+                            <button className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/5 hover:bg-blue-600 hover:text-white dark:hover:text-white hover:border-blue-600 transition-all p-4 rounded-3xl flex flex-col items-center justify-center gap-3 group h-32 text-muted-foreground font-bold shadow-sm dark:shadow-none">
                                 <Download className="w-8 h-8 text-blue-500 group-hover:text-white" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Exportar Datos</span>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-foreground group-hover:text-white transition-colors">Exportar Datos</span>
                             </button>
                         </div>
                     </div>
@@ -663,19 +700,19 @@ export default function AdminDashboard() {
 }
 
 // Sub-components for cleanliness
-function KpiCard({ title, value, trend, icon: Icon, color, delay }: any) {
+const KpiCard = ({ title, value, trend, icon: Icon, color, delay }: any) => {
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay, duration: 0.5 }}
-            className="bg-[#0a0a0a] border border-white/5 p-6 rounded-3xl relative overflow-hidden group hover:border-white/10 transition-colors"
+            className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/5 p-6 rounded-3xl relative overflow-hidden group hover:border-gray-300 dark:hover:border-white/10 transition-colors shadow-sm dark:shadow-none"
         >
-            <div className={`absolute top-4 right-4 p-2 rounded-lg bg-white/5 ${color} opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all`}>
+            <div className={`absolute top-4 right-4 p-2 rounded-lg bg-gray-100 dark:bg-white/5 ${color} opacity-50 group-hover:opacity-100 group-hover:scale-110 transition-all`}>
                 <Icon className="w-5 h-5" />
             </div>
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 mb-2">{title}</h3>
-            <div className="text-3xl font-heading font-black italic text-white mb-2">{value}</div>
+            <div className="text-3xl font-heading font-black italic text-foreground mb-2 transition-colors duration-300">{value}</div>
             <div className={`text-xs font-bold ${color.replace('text-', 'text-opacity-80-')} flex items-center gap-1`}>
                 <TrendingUp className="w-3 h-3" /> {trend}
             </div>
@@ -689,7 +726,7 @@ function PlanBadge({ plan, type }: { plan: string, type: 'center' | 'user' }) {
     const isPaid = plan !== 'free' && plan;
 
     // Customize colors
-    let colorClass = "bg-gray-500/10 text-gray-400 border-gray-500/20";
+    let colorClass = "bg-gray-200 dark:bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-500/20";
     if (plan === 'starter' || plan === 'premium') colorClass = "bg-brand-red/10 text-brand-red border-brand-red/20";
     if (plan === 'pro' || plan === 'elite') colorClass = "bg-purple-500/10 text-purple-500 border-purple-500/20";
 
@@ -702,10 +739,10 @@ function PlanBadge({ plan, type }: { plan: string, type: 'center' | 'user' }) {
 
 function StatusBadge({ active }: { active: boolean }) {
     return (
-        <div className="flex items-center gap-2">
-            <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-gray-500'}`} />
-            <span className={`${active ? 'text-green-500' : 'text-gray-500'} font-bold text-xs`}>
-                {active ? 'Active' : 'Inactive'}
+        <div className="flex items-center gap-2 text-black dark:text-white transition-colors duration-300">
+            <div className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-gray-400 dark:bg-gray-600'}`} />
+            <span className={`${active ? 'text-green-500' : 'text-gray-500 dark:text-gray-400'} font-bold text-xs uppercase tracking-tighter`}>
+                {active ? 'Activo' : 'Inactivo'}
             </span>
         </div>
     );

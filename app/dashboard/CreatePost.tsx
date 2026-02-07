@@ -78,11 +78,12 @@ export default function CreatePost({ currentUser }: { currentUser: any }) {
                 setPostType('standard');
                 setSelectedTrack(null);
                 if (fileInputRef.current) fileInputRef.current.value = "";
+
                 // Optional: Show success toast/message here if we had a toast system
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Post error:", error);
-            alert("Ocurrió un error inesperado al publicar. Por favor intenta de nuevo.");
+            alert(`Ocurrió un error inesperado al publicar: ${error?.message || String(error)}`);
         } finally {
             setIsPosting(false);
         }
@@ -91,6 +92,12 @@ export default function CreatePost({ currentUser }: { currentUser: any }) {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            if (file.size > 20 * 1024 * 1024) { // 20MB limit
+                alert("El archivo es demasiado grande (máximo 20MB).");
+                if (fileInputRef.current) fileInputRef.current.value = "";
+                setPreview(null);
+                return;
+            }
             setPreview(URL.createObjectURL(file));
         } else {
             setPreview(null);

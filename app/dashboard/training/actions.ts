@@ -103,7 +103,8 @@ export async function saveWorkout(workoutData: any) {
     const supabase = await createClient()
 
     // 1. Get Current User
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: authData } = await supabase.auth.getUser()
+    const user = authData?.user
     if (!user) {
         return { error: 'Unauthorized' }
     }
@@ -584,7 +585,8 @@ export async function getRecentPRs() {
 // 9. Get User Profile
 export async function getUserProfile() {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: authData } = await supabase.auth.getUser()
+    const user = authData?.user
     if (!user) return null
 
     const { data: profile } = await supabase

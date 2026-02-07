@@ -868,6 +868,55 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     </span>
                                 )}
                             </button>
+
+                            {/* Viewers List Modal */}
+                            {showViewers && (
+                                <div className="absolute inset-0 z-[60] bg-black/95 backdrop-blur-md animate-in slide-in-from-bottom-full duration-300 flex flex-col pointer-events-auto">
+                                    <div className="flex items-center justify-between p-6 border-b border-white/10 bg-black/50">
+                                        <div className="flex items-center gap-2">
+                                            <Eye className="w-5 h-5 text-brand-red" />
+                                            <h3 className="text-white font-black uppercase tracking-widest text-sm">
+                                                Vistas ({(currentStory as any).views_count})
+                                            </h3>
+                                        </div>
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); setShowViewers(false); }}
+                                            className="p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors"
+                                        >
+                                            <X className="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto p-4 space-y-2 no-scrollbar">
+                                        {(currentStory as any).viewer_details?.map((viewer: any, idx: number) => (
+                                            <div key={idx} className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
+                                                <div className="w-10 h-10 rounded-full border border-brand-red overflow-hidden relative shrink-0">
+                                                    <Image
+                                                        src={viewer.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${viewer.profiles?.full_name || 'User'}`}
+                                                        alt={viewer.profiles?.username || 'User'}
+                                                        fill
+                                                        className="object-cover"
+                                                    />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-white font-bold text-sm truncate">{viewer.profiles?.full_name || 'Usuario Desconocido'}</p>
+                                                    <p className="text-xs text-gray-400 truncate">@{viewer.profiles?.username || 'user'}</p>
+                                                </div>
+                                                <span className="text-[10px] text-gray-500 font-mono font-bold shrink-0">
+                                                    {viewer.created_at ? new Date(viewer.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        {(!(currentStory as any).viewer_details || (currentStory as any).viewer_details.length === 0) && (
+                                            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 pb-20">
+                                                <Eye className="w-12 h-12 mb-4 opacity-20" />
+                                                <p className="text-sm font-medium">
+                                                    {(currentStory as any).views_count > 0 ? 'Cargando vistas...' : 'Aún no hay vistas'}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

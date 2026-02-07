@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Plus, Search, User, CheckCircle, Trash2, Edit2, X, CreditCard, Phone, Mail, Landmark, Power, Cake, Calendar, Link as LinkIcon, Loader2, ChevronDown, Check, Send, Download, Upload, FileText, AlertCircle, Building2 } from "lucide-react";
 import { addMember, addGuestMember, requestMemberPayment, approveTrialRequest, removeMember, updateMemberDetails, toggleMemberStatus, searchAthletes, linkMemberToUser, bulkImportMembers, getCenterMembers } from "../../management-actions";
+import { sendRegistrationEmail } from "../../email-actions";
 
 export default function MembersManager({ centerId, initialMembers, plans = [], centers = [], orgDetails }: any) {
     const searchParams = useSearchParams();
@@ -28,6 +29,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
 
     // Profile search state
     const [profileSearchQuery, setProfileSearchQuery] = useState("");
+    const [isSendingEmail, setIsSendingEmail] = useState(false);
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [selectedProfile, setSelectedProfile] = useState<any>(null);
@@ -1032,6 +1034,41 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                     className="w-full bg-black/60 border border-white/10 rounded-xl py-2.5 sm:py-3 pl-12 pr-4 text-white outline-none focus:border-brand-red text-xs sm:text-xs"
                                                 />
                                                 {isSearching && <Loader2 className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-brand-red animate-spin" />}
+
+                                                {!selectedProfile && (
+                                                    <button
+                                                        type="button"
+                                                        disabled={isSendingEmail}
+                                                        onClick={async () => {
+                                                            if (!email) {
+                                                                alert("Por favor, introduce el correo electrónico en el campo de abajo primero.");
+                                                                return;
+                                                            }
+                                                            setIsSendingEmail(true);
+                                                            try {
+                                                                const result = await sendRegistrationEmail(email, username || "Atleta", orgDetails?.name || "Tu Centro Fitness");
+                                                                if (result.success) {
+                                                                    alert("¡Enlace enviado con éxito!");
+                                                                } else {
+                                                                    alert("Error: " + (result.error || "No se pudo enviar el correo. Verifica tu configuración."));
+                                                                }
+                                                            } catch (error) {
+                                                                console.error(error);
+                                                                alert("Error de conexión al enviar el correo.");
+                                                            } finally {
+                                                                setIsSendingEmail(false);
+                                                            }
+                                                        }}
+                                                        className="absolute right-0 -bottom-6 text-[9px] text-brand-red font-bold hover:underline flex items-center gap-1 opacity-80 hover:opacity-100 transition-opacity disabled:opacity-50"
+                                                    >
+                                                        {isSendingEmail ? (
+                                                            <Loader2 className="w-3 h-3 animate-spin" />
+                                                        ) : (
+                                                            <Mail className="w-3 h-3" />
+                                                        )}
+                                                        {isSendingEmail ? "Enviando..." : "¿No tiene cuenta? Enviar link de registro al correo"}
+                                                    </button>
+                                                )}
                                             </div>
 
                                             {isSearching && profileSearchQuery.length >= 2 ? (
@@ -1121,114 +1158,48 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                     <div className="grid md:grid-cols-2 gap-3 sm:gap-6">
                                         <div className="relative">
                                             <label className="block text-[8px] font-black uppercase tracking-widest text-gray-500 mb-1 sm:mb-2">Plan</label>
-                                            <button
-                                                type="button"
-                                                onClick={() => setPlanDropdownOpen(!planDropdownOpen)}
-                                                className="w-full bg-black/60 border border-white/10 rounded-xl p-3 sm:p-4 text-white outline-none focus:border-brand-red text-sm flex justify-between items-center"
-                                            >
-                                                <span className="capitalize flex items-center gap-2">
+                                            <div className="relative">
+                                                <select
+                                                    required
+                                                    value={plan}
+                                                    onChange={e => setPlan(e.target.value)}
+                                                    className="w-full bg-black/60 border border-white/10 rounded-xl p-3 sm:p-4 text-white outline-none focus:border-brand-red text-sm appearance-none"
+                                                >
                                                     {plans.length > 0 ? (
                                                         <>
-                                                            <span>{plans.find((p: any) => p.id === plan)?.name || 'Selecciona Plan'}</span>
-                                                            {plans.find((p: any) => p.id === plan) && (
-                                                                <span className="text-xs bg-white/10 px-2 py-0.5 rounded text-gray-300">
-                                                                    {plans.find((p: any) => p.id === plan)?.price}€
-                                                                </span>
-                                                            )}
+                                                            <option value="" disabled>Selecciona un plan</option>
+                                                            {plans.map((p: any) => (
+                                                                <option key={p.id} value={p.id}>
+                                                                    {p.name} ({p.price}€)
+                                                                </option>
+                                                            ))}
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <span>
-                                                                {[
-                                                                    { value: 'unlimited', label: 'Unlimited Access', price: '60€' },
-                                                                    { value: '3x_week', label: '3x Per Week', price: '45€' },
-                                                                    { value: 'punch_card', label: '10 Class Pack', price: '80€' },
-                                                                    { value: 'trial', label: 'Trial Pass', price: 'Free' }
-                                                                ].find(p => p.value === plan)?.label}
-                                                            </span>
-                                                            <span className="text-xs bg-white/10 px-2 py-0.5 rounded text-gray-300">
-                                                                {[
-                                                                    { value: 'unlimited', label: 'Unlimited Access', price: '60€' },
-                                                                    { value: '3x_week', label: '3x Per Week', price: '45€' },
-                                                                    { value: 'punch_card', label: '10 Class Pack', price: '80€' },
-                                                                    { value: 'trial', label: 'Trial Pass', price: 'Free' }
-                                                                ].find(p => p.value === plan)?.price}
-                                                            </span>
+                                                            <option value="unlimited">Unlimited Access (60€)</option>
+                                                            <option value="3x_week">3x Per Week (45€)</option>
+                                                            <option value="punch_card">10 Class Pack (80€)</option>
+                                                            <option value="trial">Trial Pass (Free)</option>
                                                         </>
                                                     )}
-                                                </span>
-                                                <ChevronDown className={`w-4 h-4 transition-transform ${planDropdownOpen ? 'rotate-180' : ''}`} />
-                                            </button>
-
-                                            {planDropdownOpen && (
-                                                <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-20 overflow-hidden">
-                                                    {plans.length > 0 ? (
-                                                        plans.map((opt: any) => (
-                                                            <button
-                                                                key={opt.id}
-                                                                type="button"
-                                                                onClick={() => { setPlan(opt.id); setPlanDropdownOpen(false); }}
-                                                                className={`w-full text-left p-3 text-sm flex items-center justify-between hover:bg-white/5 ${plan === opt.id ? 'text-brand-red font-bold bg-brand-red/5' : 'text-gray-300'}`}
-                                                            >
-                                                                <span className="capitalize">{opt.name}</span>
-                                                                <span className="text-xs bg-white/10 px-2 py-0.5 rounded text-gray-300">{opt.price}€</span>
-                                                            </button>
-                                                        ))
-                                                    ) : (
-                                                        [
-                                                            { value: 'unlimited', label: 'Unlimited Access', price: '60€' },
-                                                            { value: '3x_week', label: '3x Per Week', price: '45€' },
-                                                            { value: 'punch_card', label: '10 Class Pack', price: '80€' },
-                                                            { value: 'trial', label: 'Trial Pass', price: 'Free' }
-                                                        ].map((opt) => (
-                                                            <button
-                                                                key={opt.value}
-                                                                type="button"
-                                                                onClick={() => { setPlan(opt.value); setPlanDropdownOpen(false); }}
-                                                                className={`w-full text-left p-3 text-sm flex items-center justify-between hover:bg-white/5 ${plan === opt.value ? 'text-brand-red font-bold bg-brand-red/5' : 'text-gray-300'}`}
-                                                            >
-                                                                <span className="capitalize">{opt.label}</span>
-                                                                <span className="text-xs bg-white/10 px-2 py-0.5 rounded text-gray-300">{opt.price}</span>
-                                                            </button>
-                                                        ))
-                                                    )}
-                                                </div>
-                                            )}
+                                                </select>
+                                                <ChevronDown className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                                            </div>
                                         </div>
 
                                         <div className="relative">
                                             <label className="block text-[8px] font-black uppercase tracking-widest text-gray-500 mb-1 sm:mb-2">Método Pago</label>
-                                            <button
-                                                type="button"
-                                                onClick={() => setPaymentDropdownOpen(!paymentDropdownOpen)}
-                                                className="w-full bg-black/60 border border-white/10 rounded-xl p-3 sm:p-4 text-white outline-none focus:border-brand-red text-sm flex justify-between items-center"
-                                            >
-                                                <span className="capitalize flex items-center gap-2">
-                                                    {paymentMethod === 'payment_request' ? <Send className="w-4 h-4" /> : <Landmark className="w-4 h-4" />}
-                                                    {paymentMethod === 'payment_request' ? 'Solicitud (App)' : 'Efectivo'}
-                                                </span>
-                                                <ChevronDown className={`w-4 h-4 transition-transform ${paymentDropdownOpen ? 'rotate-180' : ''}`} />
-                                            </button>
-
-                                            {paymentDropdownOpen && (
-                                                <div className="absolute top-full left-0 right-0 mt-2 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl z-20 overflow-hidden">
-                                                    {[
-                                                        { value: 'cash', label: 'Efectivo', icon: Landmark },
-                                                        { value: 'payment_request', label: 'Solicitar Pago (App)', icon: Send }
-                                                    ].map((opt) => (
-                                                        <button
-                                                            key={opt.value}
-                                                            type="button"
-                                                            onClick={() => { setPaymentMethod(opt.value); setPaymentDropdownOpen(false); }}
-                                                            className={`w-full text-left p-3 text-sm flex items-center gap-2 hover:bg-white/5 ${paymentMethod === opt.value ? 'text-brand-red font-bold bg-brand-red/5' : 'text-gray-300'}`}
-                                                        >
-                                                            <opt.icon className="w-4 h-4" />
-                                                            {opt.label}
-                                                            {paymentMethod === opt.value && <Check className="w-3 h-3 ml-auto" />}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            )}
+                                            <div className="relative">
+                                                <select
+                                                    value={paymentMethod}
+                                                    onChange={e => setPaymentMethod(e.target.value)}
+                                                    className="w-full bg-black/60 border border-white/10 rounded-xl p-3 sm:p-4 text-white outline-none focus:border-brand-red text-sm appearance-none"
+                                                >
+                                                    <option value="cash">Efectivo</option>
+                                                    <option value="payment_request">Solicitar Pago (App)</option>
+                                                </select>
+                                                <ChevronDown className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
+                                            </div>
                                         </div>
                                     </div>
 

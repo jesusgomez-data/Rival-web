@@ -22,7 +22,7 @@ export async function getCenterClasses(id: string, date?: string, isCenterId: bo
         .from('classes')
         .select(`
             *,
-            coach:coach_id (full_name, avatar_url),
+            coach:profiles!coach_id (full_name, avatar_url),
             enrollments:class_enrollments(count)
         `)
         .order('scheduled_time', { ascending: true });
@@ -2306,7 +2306,7 @@ export async function getPendingClassReviews() {
                 name, 
                 scheduled_time, 
                 organization_id,
-                coach:coach_id(full_name),
+                coach:profiles!coach_id(full_name),
                 organization:organizations(name, logo_url)
             ),
             member:member_id!inner(user_id)

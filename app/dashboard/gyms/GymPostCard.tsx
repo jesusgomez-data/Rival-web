@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from "react";
 import clsx from "clsx";
-import { MessageCircle, Heart, Share2, MoreHorizontal, Send, Trash2, X, Building2, Dumbbell, Zap, Flame, TrendingUp, ChevronDown, Plus, Play, Clock } from "lucide-react";
+import { MessageCircle, Heart, Share2, MoreHorizontal, Send, Trash2, X, Building2, Dumbbell, Zap, Flame, TrendingUp, ChevronDown, Plus, Play, Clock, ArrowRight } from "lucide-react";
 import { toggleCenterPostLike, addCenterPostComment, getCenterPostComments, deletePost, deleteCenterPostComment } from "./management-actions";
 import Link from "next/link";
 
-export default function GymPostCard({ post, centerId, isAdmin = false, currentUserId }: any) {
+export default function GymPostCard({ post, centerId, isAdmin = false, currentUserId, isMember = false }: any) {
     const [likes, setLikes] = useState(post.likes_count || 0);
     const [isLiked, setIsLiked] = useState(post.is_liked || false);
     const [showComments, setShowComments] = useState(false);
@@ -161,90 +161,106 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
             {/* Content */}
             <div className="p-4">
                 {post.post_type === 'wod' && wodData ? (
-                    <div className="space-y-4">
-                        {wodData.warmup && (
-                            <div className="bg-black/5 rounded-2xl border border-border overflow-hidden">
-                                <button
-                                    onClick={() => toggleBlock('warmup')}
-                                    className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
-                                >
-                                    <h5 className="text-brand-red font-heading font-black text-xs uppercase tracking-widest flex items-center gap-2 italic">
-                                        <Zap className="w-3.5 h-3.5" /> Calentamiento
-                                    </h5>
-                                    <ChevronDown className={clsx("w-4 h-4 text-muted-foreground transition-transform", expandedBlocks['warmup'] ? "rotate-180" : "")} />
-                                </button>
-                                {expandedBlocks['warmup'] && (
-                                    <div className="px-4 pb-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                                        <div className="text-foreground/80 text-sm whitespace-pre-wrap font-medium leading-relaxed pl-4 border-l-2 border-brand-red/20">
-                                            {wodData.warmup}
-                                        </div>
-                                    </div>
-                                )}
+                    (!isMember && !isAdmin) ? (
+                        <div className="bg-muted/10 border border-border border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center gap-4">
+                            <div className="w-12 h-12 rounded-full bg-brand-red/10 flex items-center justify-center mb-1 shadow-glow border border-brand-red/20">
+                                <Dumbbell className="w-5 h-5 text-brand-red" />
                             </div>
-                        )}
-
-                        {(wodData.blocks || []).map((block: any, idx: number) => {
-                            const blockKey = `block-${idx}`;
-                            const isExpanded = expandedBlocks[blockKey];
-                            const lines = (block.exercises && block.exercises.length > 0)
-                                ? block.exercises
-                                : (block.content || '').split('\n').filter((l: string) => l.trim().length > 0);
-
-                            const title = (block.title || (block.format && block.format !== 'free' ? block.format : (block.type === 'wod' ? 'Workout' : block.type))).toUpperCase();
-                            const value = block.duration || block.value || "";
-
-                            return (
-                                <div key={idx} className="bg-black/5 rounded-2xl border border-border overflow-hidden">
+                            <div>
+                                <h3 className="font-heading font-black italic uppercase text-lg text-foreground">Entrenamiento del Día</h3>
+                                <p className="text-xs text-muted-foreground font-medium max-w-[250px] mx-auto mt-1">
+                                    Este WOD es exclusivo para los atletas de {post.organization?.name || "este centro"}.
+                                </p>
+                            </div>
+                            <Link href={`/gym/${centerId}`} className="mt-2 px-6 py-3 bg-brand-red text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-colors shadow-lg flex items-center gap-2">
+                                Ver Planes <ArrowRight className="w-3 h-3" />
+                            </Link>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {wodData.warmup && (
+                                <div className="bg-black/5 rounded-2xl border border-border overflow-hidden">
                                     <button
-                                        onClick={() => toggleBlock(blockKey)}
+                                        onClick={() => toggleBlock('warmup')}
                                         className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red shadow-[0_0_10px_rgba(239,68,68,0.2)]">
-                                                <Dumbbell className="w-4 h-4" />
-                                            </div>
-                                            <div className="text-left">
-                                                <h5 className="text-foreground font-black italic uppercase text-sm tracking-tight flex items-center gap-2">
-                                                    {title}
-                                                    {value && <span className="text-[10px] text-brand-red font-black uppercase tracking-widest opacity-80">{value}</span>}
-                                                </h5>
-                                            </div>
-                                        </div>
-                                        <ChevronDown className={clsx("w-4 h-4 text-muted-foreground transition-transform", (expandedBlocks[blockKey] ?? true) ? "rotate-180" : "")} />
+                                        <h5 className="text-brand-red font-heading font-black text-xs uppercase tracking-widest flex items-center gap-2 italic">
+                                            <Zap className="w-3.5 h-3.5" /> Calentamiento
+                                        </h5>
+                                        <ChevronDown className={clsx("w-4 h-4 text-muted-foreground transition-transform", expandedBlocks['warmup'] ? "rotate-180" : "")} />
                                     </button>
-                                    {(expandedBlocks[blockKey] ?? true) && (
-                                        <div className="px-4 pb-4 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                                            {lines.map((lineItem: any, i: number) => {
-                                                let text;
-                                                if (typeof lineItem === 'string') {
-                                                    text = lineItem;
-                                                } else {
-                                                    const prefix = [lineItem.sets, lineItem.reps].filter(Boolean).join('x');
-                                                    const suffix = lineItem.value ? `@ ${lineItem.value}` : '';
-                                                    text = `${prefix ? prefix + ' ' : ''}${lineItem.name} ${suffix}`.trim();
-                                                }
-                                                return (
-                                                    <div key={i} className="flex items-center gap-2 text-sm font-medium text-foreground/90 pl-4 border-l-2 border-border/50">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-brand-red shrink-0" />
-                                                        {text}
-                                                    </div>
-                                                );
-                                            })}
+                                    {expandedBlocks['warmup'] && (
+                                        <div className="px-4 pb-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                                            <div className="text-foreground/80 text-sm whitespace-pre-wrap font-medium leading-relaxed pl-4 border-l-2 border-brand-red/20">
+                                                {wodData.warmup}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
-                            );
-                        })}
+                            )}
 
-                        <div className="pt-2">
-                            <Link
-                                href={`/dashboard/training/session?wodId=${post.id}`}
-                                className="flex items-center justify-center gap-2 w-full py-3 bg-foreground text-background rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all shadow-lg group"
-                            >
-                                <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" /> Registrar Entrenamiento
-                            </Link>
+                            {(wodData.blocks || []).map((block: any, idx: number) => {
+                                const blockKey = `block-${idx}`;
+                                const lines = (block.exercises && block.exercises.length > 0)
+                                    ? block.exercises
+                                    : (block.content || '').split('\n').filter((l: string) => l.trim().length > 0);
+
+                                const title = (block.title || (block.format && block.format !== 'free' ? block.format : (block.type === 'wod' ? 'Workout' : block.type))).toUpperCase();
+                                const value = block.duration || block.value || "";
+
+                                return (
+                                    <div key={idx} className="bg-black/5 rounded-2xl border border-border overflow-hidden">
+                                        <button
+                                            onClick={() => toggleBlock(blockKey)}
+                                            className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+                                                    <Dumbbell className="w-4 h-4" />
+                                                </div>
+                                                <div className="text-left">
+                                                    <h5 className="text-foreground font-black italic uppercase text-sm tracking-tight flex items-center gap-2">
+                                                        {title}
+                                                        {value && <span className="text-[10px] text-brand-red font-black uppercase tracking-widest opacity-80">{value}</span>}
+                                                    </h5>
+                                                </div>
+                                            </div>
+                                            <ChevronDown className={clsx("w-4 h-4 text-muted-foreground transition-transform", (expandedBlocks[blockKey] ?? false) ? "rotate-180" : "")} />
+                                        </button>
+                                        {(expandedBlocks[blockKey] ?? false) && (
+                                            <div className="px-4 pb-4 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                                                {lines.map((lineItem: any, i: number) => {
+                                                    let text;
+                                                    if (typeof lineItem === 'string') {
+                                                        text = lineItem;
+                                                    } else {
+                                                        const prefix = [lineItem.sets, lineItem.reps].filter(Boolean).join('x');
+                                                        const suffix = lineItem.value ? `@ ${lineItem.value}` : '';
+                                                        text = `${prefix ? prefix + ' ' : ''}${lineItem.name} ${suffix}`.trim();
+                                                    }
+                                                    return (
+                                                        <div key={i} className="flex items-center gap-2 text-sm font-medium text-foreground/90 pl-4 border-l-2 border-border/50">
+                                                            <div className="w-1.5 h-1.5 rounded-full bg-brand-red shrink-0" />
+                                                            {text}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+
+                            <div className="pt-2">
+                                <Link
+                                    href={`/dashboard/training/session?wodId=${post.id}`}
+                                    className="flex items-center justify-center gap-2 w-full py-3 bg-foreground text-background rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all shadow-lg group"
+                                >
+                                    <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" /> Registrar Entrenamiento
+                                </Link>
+                            </div>
                         </div>
-                    </div>
+                    )
                 ) : post.content && (
                     <p className={clsx(
                         "text-sm sm:text-base whitespace-pre-wrap mb-4 leading-relaxed font-accent font-medium tracking-tight",

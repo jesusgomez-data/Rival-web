@@ -58,15 +58,15 @@ export default function CreateAdModal({ open, onClose, onUpdate }: CreateAdModal
     }
 
     return (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/90 backdrop-blur-md" onClick={onClose} />
-            <div className="relative bg-[#0a0a0a] border border-white/10 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl">
-                <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/[0.02]">
-                    <h3 className="text-lg font-bold uppercase italic tracking-tighter text-white flex items-center gap-2">
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 transition-colors duration-300">
+            <div className="absolute inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/10 w-full max-w-md rounded-3xl overflow-hidden shadow-2xl">
+                <div className="p-6 border-b border-gray-200 dark:border-white/10 flex justify-between items-center bg-gray-50 dark:bg-white/[0.02]">
+                    <h3 className="text-lg font-bold uppercase italic tracking-tighter text-black dark:text-white flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-brand-red" />
                         Nueva Publicidad
                     </h3>
-                    <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
+                    <button onClick={onClose} className="text-gray-400 hover:text-black dark:hover:text-white transition-colors">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -80,7 +80,7 @@ export default function CreateAdModal({ open, onClose, onUpdate }: CreateAdModal
                             placeholder="Ej: Oferta Suplementos"
                             value={formData.title}
                             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                            className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-brand-red outline-none transition-all"
+                            className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm text-black dark:text-white focus:border-brand-red outline-none transition-all placeholder:text-gray-400"
                         />
                     </div>
 
@@ -91,7 +91,7 @@ export default function CreateAdModal({ open, onClose, onUpdate }: CreateAdModal
                             placeholder="Ej: 20% descuento hoy"
                             value={formData.description}
                             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-brand-red outline-none transition-all"
+                            className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm text-black dark:text-white focus:border-brand-red outline-none transition-all placeholder:text-gray-400"
                         />
                     </div>
 
@@ -107,7 +107,7 @@ export default function CreateAdModal({ open, onClose, onUpdate }: CreateAdModal
                                 placeholder="URL de la imagen/video..."
                                 value={formData.image_url}
                                 onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                                className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-[10px] focus:border-brand-red outline-none transition-all font-mono"
+                                className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-3 text-[10px] text-black dark:text-white focus:border-brand-red outline-none transition-all font-mono placeholder:text-gray-400"
                             />
 
                             <div className="flex items-center gap-2">
@@ -128,7 +128,7 @@ export default function CreateAdModal({ open, onClose, onUpdate }: CreateAdModal
                                 type="button"
                                 disabled={uploading}
                                 onClick={() => fileInputRef.current?.click()}
-                                className="w-full bg-white/5 hover:bg-white/10 border border-dashed border-white/10 hover:border-brand-red/50 py-3 rounded-xl flex items-center justify-center gap-2 transition-all text-[10px] font-black uppercase tracking-widest"
+                                className="w-full bg-gray-50 dark:bg-white/5 hover:bg-gray-100 dark:hover:bg-white/10 border border-dashed border-gray-200 dark:border-white/10 hover:border-brand-red/50 py-3 rounded-xl flex items-center justify-center gap-2 transition-all text-[10px] font-black uppercase tracking-widest text-black dark:text-gray-300"
                             >
                                 {uploading ? <Loader2 className="w-4 h-4 animate-spin text-brand-red" /> : <Upload className="w-4 h-4 text-brand-red" />}
                                 {formData.image_url ? 'Cambiar Archivo' : 'Subir Imagen/Video'}
@@ -154,7 +154,7 @@ export default function CreateAdModal({ open, onClose, onUpdate }: CreateAdModal
                             placeholder="Ej: https://rival.com/promo o /ruta/interna"
                             value={formData.link_url}
                             onChange={(e) => setFormData({ ...formData, link_url: e.target.value })}
-                            className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 text-sm focus:border-brand-red outline-none transition-all"
+                            className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm text-black dark:text-white focus:border-brand-red outline-none transition-all placeholder:text-gray-400"
                         />
                     </div>
 

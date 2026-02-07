@@ -23,19 +23,31 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         if (savedTheme) {
             setTheme(savedTheme);
             document.documentElement.setAttribute('data-theme', savedTheme);
+            if (savedTheme === 'dark') document.documentElement.classList.add('dark');
+            else document.documentElement.classList.remove('dark');
         } else {
             // Explicitly set default to dark
             setTheme('dark');
             document.documentElement.setAttribute('data-theme', 'dark');
+            document.documentElement.classList.add('dark');
         }
         setMounted(true);
     }, []);
 
+    useEffect(() => {
+        if (!mounted) return;
+
+        document.documentElement.setAttribute('data-theme', theme);
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+        localStorage.setItem('rival_theme', theme);
+    }, [theme, mounted]);
+
     const toggleTheme = () => {
-        const newTheme = theme === 'dark' ? 'light' : 'dark';
-        setTheme(newTheme);
-        document.documentElement.setAttribute('data-theme', newTheme);
-        localStorage.setItem('rival_theme', newTheme);
+        setTheme(prev => prev === 'dark' ? 'light' : 'dark');
     };
 
     return (

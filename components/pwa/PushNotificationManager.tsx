@@ -31,14 +31,22 @@ export default function PushNotificationManager() {
 
                     if (!subscription) {
                         const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-                        if (!vapidPublicKey) return;
+                        if (!vapidPublicKey || vapidPublicKey.trim() === "") {
+                            console.warn("VAPID public key is missing. Push subscription skipped.");
+                            return;
+                        }
 
-                        const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+                        try {
+                            const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
-                        subscription = await registration.pushManager.subscribe({
-                            userVisibleOnly: true,
-                            applicationServerKey: convertedVapidKey
-                        });
+                            subscription = await registration.pushManager.subscribe({
+                                userVisibleOnly: true,
+                                applicationServerKey: convertedVapidKey
+                            });
+                        } catch (subError) {
+                            console.error("Error subscribing to push:", subError);
+                            return;
+                        }
                     }
 
                     if (subscription) {
@@ -54,19 +62,11 @@ export default function PushNotificationManager() {
 
         // Try to register/sync push on mount (if already granted) or ask?
         // Usually we should ask user explicitly. For now, we check permission.
-        if (Notification.permission === 'granted') {
-            registerPush();
-        } else if (Notification.permission !== 'denied') {
-            // Optional: Auto-ask or wait for user action. 
-            // In many apps, asking immediately on login is acceptable if context is clear.
-            // Let's rely on a user action elsewhere or auto-ask here if comfortable.
-            // For this requirement "al recibir notificacion le llegue al movil", we need persistent permission.
-            // Let's trigger it.
-            Notification.requestPermission().then(permission => {
-                if (permission === 'granted') {
-                    registerPush();
-                }
-            });
+        if (typeof Notification !== 'undefined') {
+            if (Notification.permission === 'granted') {
+                registerPush();
+            }
+            // Do not auto-request permission. Wait for user action in UI.
         }
     }, []);
 

@@ -53,7 +53,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         let isMounted = true;
         async function loadProfile() {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: authData } = await supabase.auth.getUser();
+            const user = authData?.user;
             if (isMounted) {
                 const email = user?.email?.toLowerCase() || null;
                 setUserEmail(email);
@@ -63,7 +64,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         }
         loadProfile();
 
-        if ("Notification" in window && Notification.permission === "default") {
+        if (typeof Notification !== 'undefined' && Notification.permission === "default") {
             Notification.requestPermission();
         }
 
@@ -72,7 +73,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const setupRealtime = async () => {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: authData } = await supabase.auth.getUser();
+            const user = authData?.user;
             if (!user) return;
 
             const channel = supabase
@@ -89,7 +91,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                             if (!pathname?.startsWith('/dashboard/messages')) {
                                 setUnreadMessages(prev => prev + 1);
 
-                                if ("Notification" in window && Notification.permission === "granted") {
+                                if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
                                     new Notification("Rival: Nuevo Mensaje", {
                                         body: payload.new.text,
                                         icon: "/logo.svg",

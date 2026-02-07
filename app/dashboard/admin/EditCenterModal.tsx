@@ -40,15 +40,15 @@ export default function EditCenterModal({ open, onClose, center, onUpdate }: Edi
     }
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-[#0a0a0a] border border-white/10 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white z-10 p-2">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 transition-colors duration-300">
+            <div className="absolute inset-0 bg-black/50 dark:bg-black/80 backdrop-blur-sm" onClick={onClose} />
+            <div className="relative bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/10 w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-black dark:hover:text-white z-10 p-2">
                     <X className="w-5 h-5" />
                 </button>
 
-                <div className="p-6 border-b border-white/10 bg-white/[0.02]">
-                    <h3 className="text-lg font-bold italic uppercase text-white flex items-center gap-2">
+                <div className="p-6 border-b border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.02]">
+                    <h3 className="text-lg font-bold italic uppercase text-black dark:text-white flex items-center gap-2">
                         <Edit className="w-5 h-5 text-brand-red" />
                         Editar Centro
                     </h3>
@@ -56,15 +56,15 @@ export default function EditCenterModal({ open, onClose, center, onUpdate }: Edi
 
                 <form onSubmit={handleUpdate} className="p-6 space-y-6">
                     <div className="flex items-center gap-4">
-                        <div className="w-16 h-16 bg-white/10 rounded-xl overflow-hidden flex items-center justify-center">
+                        <div className="w-16 h-16 bg-gray-100 dark:bg-white/10 rounded-xl overflow-hidden flex items-center justify-center border border-gray-200 dark:border-white/10">
                             {center.logo_url ? (
                                 <Image src={center.logo_url} width={64} height={64} alt={center.name} className="object-cover w-full h-full" />
                             ) : (
-                                <span className="text-2xl font-black text-gray-500">{(center.name || 'C')[0]}</span>
+                                <span className="text-2xl font-black text-gray-400">{(center.name || 'C')[0]}</span>
                             )}
                         </div>
                         <div>
-                            <h4 className="text-xl font-bold text-white">{center.name}</h4>
+                            <h4 className="text-xl font-bold text-black dark:text-white">{center.name}</h4>
                             <p className="text-xs text-gray-500">{center.city || 'Ubicación no definida'}</p>
                         </div>
                     </div>
@@ -74,11 +74,11 @@ export default function EditCenterModal({ open, onClose, center, onUpdate }: Edi
                         <select
                             name="plan"
                             defaultValue={center.plan || 'free'}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:border-brand-red outline-none appearance-none"
+                            className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-black dark:text-white focus:border-brand-red outline-none appearance-none transition-colors"
                         >
-                            <option className="bg-[#0a0a0a]" value="free">Rival Free (0€)</option>
-                            <option className="bg-[#0a0a0a]" value="starter">Rival Starter (49.99€)</option>
-                            <option className="bg-[#0a0a0a]" value="pro">Rival Pro (99.99€)</option>
+                            <option className="bg-white dark:bg-[#0a0a0a]" value="free">Rival Free (0€)</option>
+                            <option className="bg-white dark:bg-[#0a0a0a]" value="starter">Rival Starter (49.99€)</option>
+                            <option className="bg-white dark:bg-[#0a0a0a]" value="pro">Rival Pro (99.99€)</option>
                         </select>
                     </div>
 
@@ -89,7 +89,7 @@ export default function EditCenterModal({ open, onClose, center, onUpdate }: Edi
                             type="button"
                             onClick={handleDelete}
                             disabled={loading}
-                            className="flex-1 bg-white/5 hover:bg-red-500/20 hover:text-red-500 text-gray-400 font-bold py-3 rounded-xl transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2"
+                            className="flex-1 bg-gray-100 dark:bg-white/5 hover:bg-red-500/20 hover:text-red-500 text-gray-500 dark:text-gray-400 font-bold py-3 rounded-xl transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2 border border-gray-200 dark:border-white/10"
                         >
                             <Trash2 className="w-4 h-4" /> Eliminar
                         </button>

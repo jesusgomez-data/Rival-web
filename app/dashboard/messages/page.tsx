@@ -40,11 +40,12 @@ export default function MessagesPage() {
         const init = async () => {
             try {
                 // Pedir permiso para notificaciones
-                if ("Notification" in window && Notification.permission === "default") {
+                if (typeof Notification !== 'undefined' && Notification.permission === "default") {
                     Notification.requestPermission()
                 }
 
-                const { data: { user } } = await supabase.auth.getUser()
+                const { data: authData } = await supabase.auth.getUser()
+                const user = authData?.user
                 if (user) {
                     setCurrentUserId(user.id)
                     await loadConversations()
@@ -84,7 +85,7 @@ export default function MessagesPage() {
 
                 // Si el mensaje no es del usuario actual, avisar
                 if (payload.new.sender_id !== currentUserId) {
-                    if ("Notification" in window && Notification.permission === "granted") {
+                    if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
                         new Notification("Rival: Nuevo mensaje", {
                             body: payload.new.text,
                             icon: "/logo.svg"

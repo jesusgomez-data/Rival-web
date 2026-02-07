@@ -115,7 +115,8 @@ export default function ProfilePage() {
         e.preventDefault();
         setSaving(true);
         try {
-            const { data: { user } } = await supabase.auth.getUser();
+            const { data: authData } = await supabase.auth.getUser();
+            const user = authData?.user;
             if (!user) return;
 
             const { error } = await supabase

@@ -65,121 +65,132 @@ export async function toggleLike(postId: string) {
 
 
 export async function createPRPost(formData: FormData) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) return { error: 'Unauthorized' }
+        if (!user) return { error: 'Unauthorized' }
 
-    const exercise = formData.get('exercise') as string
-    const weight = formData.get('weight') as string
-    const sport = formData.get('sport') as string
-    const media = formData.get('media') as File
+        const exercise = formData.get('exercise') as string
+        const weight = formData.get('weight') as string
+        const sport = formData.get('sport') as string
+        const media = formData.get('media') as File
 
-    if (!exercise || !weight) {
-        return { error: "Exercise and weight are required for a PR post" }
-    }
-
-    let mediaUrl = null
-
-    // If they uploaded a custom background image
-    if (media && media.size > 0) {
-        const fileExt = media.name.split('.').pop()
-        const fileName = `${user.id}/pr_${Date.now()}.${fileExt}`
-
-        const { error: uploadError } = await supabase.storage
-            .from('posts')
-            .upload(fileName, media)
-
-        if (!uploadError) {
-            const { data: { publicUrl } } = supabase.storage
-                .from('posts')
-                .getPublicUrl(fileName)
-            mediaUrl = publicUrl
+        if (!exercise || !weight) {
+            return { error: "Exercise and weight are required for a PR post" }
         }
-    }
 
-    // Wrap PR data in JSON
-    const prData = JSON.stringify({
-        exerciseName: exercise,
-        weight: weight,
-        sport: sport || 'CrossFit',
-        unit: 'kg',
-        backgroundImage: mediaUrl
-    })
+        let mediaUrl = null
 
-    const { error } = await supabase
-        .from('posts')
-        .insert({
-            user_id: user.id,
-            caption: `¡NUEVO PR! ${exercise}: ${weight}kg`,
-            media_url: prData,
-            media_type: 'pr',
-            music_url: formData.get('music_url') as string || null,
-            music_title: formData.get('music_title') as string || null,
-            music_artist: formData.get('music_artist') as string || null
+        // If they uploaded a custom background image
+        if (media && media.size > 0) {
+            const fileExt = media.name.split('.').pop()
+            const fileName = `${user.id}/pr_${Date.now()}.${fileExt}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('posts')
+                .upload(fileName, media)
+
+            if (!uploadError) {
+                const { data: { publicUrl } } = supabase.storage
+                    .from('posts')
+                    .getPublicUrl(fileName)
+                mediaUrl = publicUrl
+            }
+        }
+
+        // Wrap PR data in JSON
+        const prData = JSON.stringify({
+            exerciseName: exercise,
+            weight: weight,
+            sport: sport || 'CrossFit',
+            unit: 'kg',
+            backgroundImage: mediaUrl
         })
 
-    if (error) return { error: error.message }
+        const { error } = await supabase
+            .from('posts')
+            .insert({
+                user_id: user.id,
+                caption: `¡NUEVO PR! ${exercise}: ${weight}kg`,
+                media_url: prData,
+                media_type: 'pr',
+                music_url: formData.get('music_url') as string || null,
+                music_title: formData.get('music_title') as string || null,
+                music_artist: formData.get('music_artist') as string || null
+            })
 
-    revalidatePath('/dashboard/community')
-    revalidatePath('/dashboard')
-    return { success: true }
+        if (error) return { error: error.message }
+
+        revalidatePath('/dashboard/community')
+        revalidatePath('/dashboard')
+        return { success: true }
+    } catch (e: any) {
+        console.error("Error creating PR post:", e)
+        return { error: e.message || "Error al crear post de PR" }
+    }
 }
 
 export async function createUserPost(formData: FormData) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) return { error: 'Unauthorized' }
+        if (!user) return { error: 'Unauthorized' }
 
-    const content = formData.get('content') as string
-    const media = formData.get('media') as File
+        const content = formData.get('content') as string
+        const media = formData.get('media') as File
 
-    if (!content && (!media || media.size === 0)) {
-        return { error: "Post cannot be empty" }
-    }
-
-    let mediaUrl = null
-    let mediaType = null
-
-    if (media && media.size > 0) {
-        const fileExt = media.name.split('.').pop()
-        // Simplify path to match potential RLS restrictions (avoiding deeply nested folders if not explicitly allowed)
-        const fileName = `${user.id}/${Date.now()}.${fileExt}`
-
-        const { error: uploadError } = await supabase.storage
-            .from('posts')
-            .upload(fileName, media)
-
-        if (uploadError) {
-            console.error("Upload error:", uploadError)
-            return { error: "Failed to upload media. Please try again." }
+        if (!content && (!media || media.size === 0)) {
+            return { error: "Post cannot be empty" }
         }
 
-        const { data: { publicUrl } } = supabase.storage
+        let mediaUrl = null
+        let mediaType = null
+
+        if (media && media.size > 0) {
+            const fileExt = media.name.split('.').pop()
+            // Simplify path to match potential RLS restrictions (avoiding deeply nested folders if not explicitly allowed)
+            const fileName = `${user.id}/${Date.now()}.${fileExt}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('posts')
+                .upload(fileName, media)
+
+            if (uploadError) {
+                console.error("Upload error:", uploadError)
+                return { error: "Failed to upload media. Please try again." }
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('posts')
+                .getPublicUrl(fileName)
+
+            mediaUrl = publicUrl
+            mediaType = media.type.startsWith('video/') ? 'video' : 'image'
+        }
+
+        const { error } = await supabase
             .from('posts')
-            .getPublicUrl(fileName)
+            .insert({
+                user_id: user.id,
+                caption: content,
+                media_url: mediaUrl, // Table column is media_url, schema says singular
+                media_type: mediaType,
+                music_url: formData.get('music_url') as string || null,
+                music_title: formData.get('music_title') as string || null,
+                music_artist: formData.get('music_artist') as string || null
+            })
 
-        mediaUrl = publicUrl
-        mediaType = media.type.startsWith('video/') ? 'video' : 'image'
+        if (error) return { error: error.message }
+
+        revalidatePath('/dashboard/community')
+        revalidatePath('/dashboard')
+        return { success: true }
+    } catch (e: any) {
+        console.error("Error creating user post:", e)
+        return { error: e.message || "Error al crear publicación" }
     }
-
-    const { error } = await supabase
-        .from('posts')
-        .insert({
-            user_id: user.id,
-            caption: content,
-            media_url: mediaUrl, // Table column is media_url, schema says singular
-            media_type: mediaType,
-            music_url: formData.get('music_url') as string || null,
-            music_title: formData.get('music_title') as string || null,
-            music_artist: formData.get('music_artist') as string || null
-        })
-
-    if (error) return { error: error.message }
-
-    revalidatePath('/dashboard/community')
-    return { success: true }
 }
 
 export async function addComment(postId: string, content: string, parentId?: string) {
