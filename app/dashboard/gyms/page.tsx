@@ -197,7 +197,7 @@ export default function CenterListPage() {
                                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                                             <div>
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Nombre del Campo de Batalla</label>
-                                                <input name="name" required placeholder="e.g. Iron Forge CrossFit" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                <input name="name" required placeholder="e.g. Iron Forge Cross Training" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
                                             </div>
                                             <div>
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Manifiesto / Bio</label>
@@ -207,7 +207,7 @@ export default function CenterListPage() {
                                                 <div>
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Tipo de Centro</label>
                                                     <select name="type" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 appearance-none ${bgInput}`}>
-                                                        <option value="crossfit">Box de CrossFit</option>
+                                                        <option value="cross_training">Box de Cross Training</option>
                                                         <option value="gym">Gimnasio Comercial</option>
                                                         <option value="studio">Estudio Personal</option>
                                                         <option value="club">Club Deportivo</option>

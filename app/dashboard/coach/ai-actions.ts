@@ -43,7 +43,7 @@ export async function generateCoachResponse(userMessage: string, userProfile: Co
         "title": "Nombre",
         "duration": "Tiempo",
         "intensity": "${level}",
-        "sportType": "OCR | CrossFit | Gym...",
+        "sportType": "OCR | Cross Training | Gym...",
         "exercises": [{"name": "Ejercicio (Carga)", "sets": "X", "reps": "Y"}]
       }
     }

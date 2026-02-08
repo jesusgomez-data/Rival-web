@@ -18,7 +18,7 @@ export default function CreatePost({ currentUser }: { currentUser: any }) {
     const [postType, setPostType] = useState<'standard' | 'pr'>('standard');
     const [exercise, setExercise] = useState("");
     const [weight, setWeight] = useState("");
-    const [sport, setSport] = useState("CrossFit");
+    const [sport, setSport] = useState("Cross Training");
     const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -175,7 +175,7 @@ export default function CreatePost({ currentUser }: { currentUser: any }) {
                                     <label className="text-[9px] md:text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Disciplina / Comentario</label>
                                     <input
                                         type="text"
-                                        placeholder="p.ej. CrossFit / Levantamiento"
+                                        placeholder="p.ej. Cross Training / Levantamiento"
                                         value={sport}
                                         onChange={(e) => setSport(e.target.value)}
                                         className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-red/50 text-sm"

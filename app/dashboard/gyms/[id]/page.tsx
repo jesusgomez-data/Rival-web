@@ -1,11 +1,11 @@
 "use client";
 
-import { Activity, Users, DollarSign, Calendar, ShoppingBag, Settings, CreditCard, ChevronDown, Building2, MapPin } from "lucide-react";
+import { Activity, Users, DollarSign, Calendar, ShoppingBag, Settings, CreditCard, ChevronDown, Building2, MapPin, UserPlus, UserMinus } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import clsx from "clsx";
-import { getCenterAnalytics } from "../management-actions";
+import { getCenterAnalytics, getDashboardMetrics } from "../management-actions";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 import ActivityFeed from "./ActivityFeed";
@@ -61,21 +61,24 @@ export default function CenterDashboardHome() {
     const [centers, setCenters] = useState<any[]>([]);
     const [showAddCenter, setShowAddCenter] = useState(false);
     const [isCreatingCenter, setIsCreatingCenter] = useState(false);
+    const [metrics, setMetrics] = useState<any>(null);
     const { language } = useLanguage();
     const t = translations[language];
     useEffect(() => {
         setIsMounted(true);
         async function load() {
-            const analyticalData = await getCenterAnalytics(id);
-            const { role } = await checkStaffRole(id);
-            const details = await getCenterDetails(id);
+            const [analyticalData, metricData, { role }, details, centerList] = await Promise.all([
+                getCenterAnalytics(id),
+                getDashboardMetrics(id),
+                checkStaffRole(id),
+                getCenterDetails(id),
+                getOrganizationCenters(id)
+            ]);
 
             setAnalytics(analyticalData);
+            setMetrics(metricData);
             setUserRole(role);
             setCenterDetails(details);
-
-            // Always fetch centers to check if there are sedes
-            const centerList = await getOrganizationCenters(id);
             setCenters(centerList);
 
             setLoading(false);
@@ -141,7 +144,7 @@ export default function CenterDashboardHome() {
             {/* KPI Cards Container */}
             {canViewKPIs && (
                 <div className={clsx(
-                    "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:max-h-none overflow-hidden transition-all duration-500",
+                    "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 lg:max-h-none overflow-hidden transition-all duration-500",
                     isKpiExpanded ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0 lg:max-h-none lg:opacity-100"
                 )}>
                     <StatCard
@@ -159,17 +162,25 @@ export default function CenterDashboardHome() {
                         icon={DollarSign}
                     />
                     <StatCard
-                        title="Clases esta Semana"
-                        value="15"
-                        subtext="3 Próximas"
-                        icon={Calendar}
-                    />
-                    <StatCard
-                        title="Ocupación Media"
-                        value="78%"
-                        subtext="vs 72% semana anterior"
+                        title="Asistencia (Semana)"
+                        value={metrics?.weeklyAttendance ?? 0}
+                        subtext="Atletas únicos"
                         trend="up"
                         icon={Activity}
+                    />
+                    <StatCard
+                        title="Nuevas Altas"
+                        value={metrics?.newMembersMonth ?? 0}
+                        subtext={`${metrics?.newMembersWeek ?? 0} esta semana`}
+                        trend="up"
+                        icon={UserPlus}
+                    />
+                    <StatCard
+                        title="Bajas (Mes)"
+                        value={metrics?.cancelledMonth ?? 0}
+                        subtext={`${metrics?.cancelledWeek ?? 0} esta semana`}
+                        trend="down"
+                        icon={UserMinus}
                     />
                 </div>
             )}

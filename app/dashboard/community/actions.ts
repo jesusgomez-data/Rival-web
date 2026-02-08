@@ -103,7 +103,7 @@ export async function createPRPost(formData: FormData) {
         const prData = JSON.stringify({
             exerciseName: exercise,
             weight: weight,
-            sport: sport || 'CrossFit',
+            sport: sport || 'Cross Training',
             unit: 'kg',
             backgroundImage: mediaUrl
         })

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap, Share2, Camera, Award, AlertTriangle, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect, Suspense, useMemo, useRef } from "react";
 import { saveWorkout, getExercises, getExercisePreviousRecord, getWorkoutDetails, uploadWorkoutMedia } from "../actions";
@@ -18,7 +18,7 @@ export default function SessionPage() {
     );
 }
 
-type SportMode = 'gym' | 'running' | 'crossfit' | 'hyrox' | 'calisthenics' | 'ocr' | 'other' | null;
+type SportMode = 'gym' | 'running' | 'cross_training' | 'hybrid' | 'calisthenics' | 'ocr' | 'other' | null;
 
 function SessionContent() {
     const router = useRouter();
@@ -27,7 +27,7 @@ function SessionContent() {
     const editId = searchParams.get('editId');
 
     const [sportMode, setSportMode] = useState<SportMode>(null);
-    const [isLoadingData, setIsLoadingData] = useState(!!wodId || !!editId);
+    const [isLoadingData, setIsLoadingData] = useState(!!wodId || !!editId || searchParams.get('mode') === 'ai-coach');
 
     // Common State
     const [startTime] = useState(new Date());
@@ -38,8 +38,11 @@ function SessionContent() {
     const [locationName, setLocationName] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [shareToArena, setShareToArena] = useState(true);
+    const [shareToStory, setShareToStory] = useState(false);
+    const [showFinishModal, setShowFinishModal] = useState(false);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [targetDuration, setTargetDuration] = useState<number | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,12 +66,142 @@ function SessionContent() {
 
     const [exercises, setExercises] = useState<any[]>([]);
 
-    // ... logic to pre-fill from recommendation
+    // Data pre-fill effect
     useEffect(() => {
+        // Pre-fill from AI Coach
+        if (searchParams.get('mode') === 'ai-coach' && searchParams.get('workout')) {
+            try {
+                const workout = JSON.parse(decodeURIComponent(searchParams.get('workout')!));
+                setWorkoutTitle(workout.title);
+                if (workout.duration_min) setTargetDuration(workout.duration_min);
+                else if (workout.duration) setTargetDuration(parseInt(workout.duration));
+
+                const sportInput = (workout.sportType || 'cross_training').toLowerCase();
+                let mode: SportMode = 'cross_training';
+                if (sportInput.includes('gym') || sportInput.includes('fitness')) mode = 'gym';
+                else if (sportInput.includes('run')) mode = 'running';
+                else if (sportInput.includes('hybrid')) mode = 'hybrid';
+                else if (sportInput.includes('calisthenic')) mode = 'calisthenics';
+                else if (sportInput.includes('ocr')) mode = 'ocr';
+
+                setSportMode(mode);
+
+                if (workout.exercises) {
+                    const allMapped = workout.exercises.map((ex: any, idx: number) => {
+                        let defaultUnit = 'kg';
+                        let defaultMeasure = 'reps';
+                        const nameLower = ex.name.toLowerCase();
+                        if (nameLower.includes('run') || nameLower.includes('carrera') || nameLower.includes('row') || nameLower.includes('ski') || nameLower.includes('bike')) {
+                            defaultUnit = 'm';
+                            defaultMeasure = 'cal';
+                        } else if (nameLower.includes('plank') || nameLower.includes('hold')) {
+                            defaultUnit = 'sec';
+                        }
+
+                        // Extract clean name without prefix
+                        let cleanName = ex.name;
+                        let group = 'workout';
+                        if (ex.name.toUpperCase().startsWith('WARM-UP:')) {
+                            cleanName = ex.name.substring(8).trim();
+                            group = 'warmup';
+                        } else if (ex.name.toUpperCase().startsWith('WORKOUT:')) {
+                            cleanName = ex.name.substring(8).trim();
+                            group = 'workout';
+                        } else if (ex.name.toUpperCase().startsWith('COOL-DOWN:')) {
+                            cleanName = ex.name.substring(10).trim();
+                            group = 'cooldown';
+                        }
+
+                        return {
+                            id: `ai-${idx}`,
+                            name: cleanName,
+                            originalName: ex.name,
+                            target: `${ex.sets} x ${ex.reps}`,
+                            group,
+                            sets: Array.from({ length: parseInt(ex.sets) || 1 }).map((_, sIdx) => ({
+                                order: sIdx + 1,
+                                weight: 0,
+                                reps: parseInt(ex.reps) || 0,
+                                completed: false,
+                                unit: defaultUnit,
+                                measure: defaultMeasure
+                            }))
+                        };
+                    });
+
+                    setExercises(allMapped);
+
+                    // Create blocks based on grouping
+                    const warmUpEx = allMapped.filter((e: any) => e.group === 'warmup');
+                    const workoutEx = allMapped.filter((e: any) => e.group === 'workout');
+                    const coolDownEx = allMapped.filter((e: any) => e.group === 'cooldown');
+
+                    const newBlocks = [];
+
+                    if (warmUpEx.length > 0) {
+                        newBlocks.push({
+                            id: 'ai-warmup',
+                            type: 'other',
+                            title: 'CALENTAMIENTO (WARM-UP)',
+                            exercises: warmUpEx,
+                            result: { rounds: 0, time: '' }
+                        });
+                    }
+
+                    if (workoutEx.length > 0) {
+                        // Detect format from title: "TITLE (FORMAT)"
+                        let format = 'fortime';
+                        const titleUpper = workout.title.toUpperCase();
+                        if (titleUpper.includes('AMRAP')) format = 'amrap';
+                        else if (titleUpper.includes('EMOM')) format = 'emom';
+                        else if (titleUpper.includes('TABATA')) format = 'tabata';
+                        else if (titleUpper.includes('INTERVAL')) format = 'other';
+
+                        newBlocks.push({
+                            id: 'ai-workout',
+                            type: format,
+                            title: `BLOQUE PRINCIPAL (${format.toUpperCase()})`,
+                            exercises: workoutEx,
+                            result: { rounds: 0, time: '' },
+                            duration: parseInt(workout.duration) || 0
+                        });
+                    }
+
+                    if (coolDownEx.length > 0) {
+                        newBlocks.push({
+                            id: 'ai-cooldown',
+                            type: 'other',
+                            title: 'ENFRIAMIENTO / MOBILITY (COOL-DOWN)',
+                            exercises: coolDownEx,
+                            result: { rounds: 0, time: '' }
+                        });
+                    }
+
+                    if (newBlocks.length > 0) {
+                        setBlocks(newBlocks);
+                    } else if (allMapped.length > 0) {
+                        // If no groups detected but we have exercises, fallback to one block
+                        setBlocks([{
+                            id: 'ai-block-1',
+                            type: 'fortime',
+                            title: workout.title,
+                            exercises: allMapped,
+                            result: { rounds: 0, time: '' }
+                        }]);
+                    }
+                }
+                setIsLoadingData(false);
+            } catch (e) {
+                console.error("Error parsing AI workout", e);
+                setIsLoadingData(false);
+            }
+        }
+
         if (searchParams.get('mode') === 'recommendation' && searchParams.get('plan')) {
             try {
                 const plan = JSON.parse(decodeURIComponent(searchParams.get('plan')!)) as TrainingPlan;
                 setWorkoutTitle(plan.title);
+                if (plan.duration_min) setTargetDuration(plan.duration_min);
                 if (plan.sport === 'gym' && plan.exercises) {
                     setExercises(plan.exercises.map((ex: any) => ({
                         ...ex,
@@ -84,7 +217,7 @@ function SessionContent() {
     const [runDistance, setRunDistance] = useState<number>(0); // Meters
     const [runPace, setRunPace] = useState("0:00"); // Min/km
 
-    // CrossFit/Hyrox State
+    // Cross Training/Hybrid State
     type BlockType = 'fortime' | 'amrap' | 'emom' | 'tabata' | 'other';
     const [blocks, setBlocks] = useState<any[]>([
         { id: 'b1', type: 'fortime', title: 'Bloque 1', duration: 0, exercises: [], result: { rounds: 0, time: '' } }
@@ -165,7 +298,7 @@ function SessionContent() {
             } else if (wodId) {
                 const wod = await getCenterPost(wodId);
                 if (wod) {
-                    setShortcutMode('crossfit'); // WODs usually CrossFit
+                    setShortcutMode('cross_training'); // WODs usually Cross Training
                     setWorkoutTitle(`WOD: ${new Date(wod.scheduled_for || wod.created_at).toLocaleDateString()}`);
                     setLocationName(wod.organization?.name || "Box Workout");
 
@@ -239,8 +372,8 @@ function SessionContent() {
 
     const setShortcutMode = (mode: string) => {
         if (mode.includes('run')) setSportMode('running');
-        else if (mode.includes('crossfit')) setSportMode('crossfit');
-        else if (mode.includes('hyrox')) setSportMode('hyrox');
+        else if (mode.includes('crossfit') || mode.includes('cross_training')) setSportMode('cross_training');
+        else if (mode.includes('hyrox') || mode.includes('hybrid')) setSportMode('hybrid');
         else setSportMode('gym');
     }
 
@@ -263,13 +396,13 @@ function SessionContent() {
                 finalPace = `${pMin}:${pSec < 10 ? '0' + pSec : pSec}`;
             }
 
-            // Capture final time for CrossFit
+            // Capture final time for Cross Training
             const finalTimeStr = formatTime(elapsedSeconds);
             setIsPaused(true);
 
             // Prepare exercises list (Flatten blocks if needed)
             let finalExercises = exercises;
-            if (sportMode === 'crossfit' || sportMode === 'ocr') {
+            if (sportMode === 'cross_training' || sportMode === 'ocr') {
                 finalExercises = blocks.flatMap((b, bIdx) =>
                     b.exercises.map((ex: any) => ({
                         ...ex,
@@ -284,7 +417,7 @@ function SessionContent() {
                 title: workoutTitle,
                 startTime: startTime.toISOString(),
                 duration: elapsedSeconds,
-                sportType: sportMode === 'gym' ? 'Fitness' : (sportMode === 'running' ? 'Running' : (sportMode === 'hyrox' ? 'Hyrox' : (sportMode === 'calisthenics' ? 'Calistenia' : (sportMode === 'ocr' ? 'OCR' : (sportMode === 'other' ? 'Otros' : 'CrossFit'))))),
+                sportType: sportMode === 'gym' ? 'Fitness' : (sportMode === 'running' ? 'Running' : (sportMode === 'hybrid' ? 'Hybrid' : (sportMode === 'calisthenics' ? 'Calistenia' : (sportMode === 'ocr' ? 'OCR' : (sportMode === 'other' ? 'Otros' : 'Cross Training'))))),
                 exercises: finalExercises,
                 metrics: {
                     distance: runDistance,
@@ -295,7 +428,8 @@ function SessionContent() {
                 },
                 locationName,
                 imageUrl,
-                shareToArena
+                shareToArena,
+                shareToStory
             };
 
             const result = await saveWorkout(payload);
@@ -328,19 +462,68 @@ function SessionContent() {
     // Dynamic styles based on sport
     const themeColor =
         sportMode === 'running' ? 'text-blue-500' :
-            sportMode === 'hyrox' ? 'text-yellow-500' :
-                sportMode === 'crossfit' ? 'text-orange-500' :
+            sportMode === 'hybrid' ? 'text-yellow-500' :
+                sportMode === 'cross_training' ? 'text-orange-500' :
                     sportMode === 'ocr' ? 'text-emerald-500' :
                         sportMode === 'other' ? 'text-gray-400' :
                             'text-brand-red';
 
     const bgTheme =
         sportMode === 'running' ? 'bg-blue-500/10 border-blue-500/20' :
-            sportMode === 'hyrox' ? 'bg-yellow-500/10 border-yellow-500/20' :
-                sportMode === 'crossfit' ? 'bg-orange-500/10 border-orange-500/20' :
+            sportMode === 'hybrid' ? 'bg-yellow-500/10 border-yellow-500/20' :
+                sportMode === 'cross_training' ? 'bg-orange-500/10 border-orange-500/20' :
                     sportMode === 'ocr' ? 'bg-emerald-500/10 border-emerald-500/20' :
                         sportMode === 'other' ? 'bg-white/5 border-white/10' :
                             'bg-brand-red/10 border-brand-red/20';
+
+    const isAiCoach = searchParams.get('mode') === 'ai-coach';
+
+    if (isAiCoach && sportMode) {
+        return (
+            <div className={overlayClasses}>
+                <CoachAiView
+                    workoutTitle={workoutTitle}
+                    exercises={exercises}
+                    setExercises={setExercises}
+                    elapsedSeconds={elapsedSeconds}
+                    isPaused={isPaused}
+                    toggleTimer={toggleTimer}
+                    handleFinish={() => {
+                        setIsPaused(true);
+                        setShowFinishModal(true);
+                    }}
+                    isSaving={isSaving}
+                    shareToArena={shareToArena}
+                    setShareToArena={setShareToArena}
+                    shareToStory={shareToStory}
+                    setShareToStory={setShareToStory}
+                    sportMode={sportMode}
+                    blocks={blocks}
+                    setBlocks={setBlocks}
+                    formatTime={formatTime}
+                    countdown={countdown}
+                    targetDuration={targetDuration}
+                />
+
+                {showFinishModal && (
+                    <FinishModal
+                        onConfirm={handleFinish}
+                        onCancel={() => setShowFinishModal(false)}
+                        shareToArena={shareToArena}
+                        setShareToArena={setShareToArena}
+                        shareToStory={shareToStory}
+                        setShareToStory={setShareToStory}
+                        isSaving={isSaving}
+                        imageUrl={imageUrl}
+                        setImageUrl={setImageUrl}
+                        isUploading={isUploading}
+                        onImageUpload={handleImageUpload}
+                        fileInputRef={fileInputRef}
+                    />
+                )}
+            </div>
+        );
+    }
 
     return (
         <div className={overlayClasses}>
@@ -348,8 +531,8 @@ function SessionContent() {
             <header className={clsx(
                 "sticky top-0 inset-x-0 z-50 backdrop-blur-xl border-b border-white/5 px-4 py-3 flex items-center justify-between transition-colors duration-500",
                 sportMode === 'running' ? "bg-blue-950/80" :
-                    sportMode === 'hyrox' ? "bg-yellow-950/80" :
-                        sportMode === 'crossfit' ? "bg-orange-950/80" :
+                    sportMode === 'hybrid' ? "bg-yellow-950/80" :
+                        sportMode === 'cross_training' ? "bg-orange-950/80" :
                             sportMode === 'ocr' ? "bg-emerald-950/80" :
                                 sportMode === 'other' ? "bg-gray-900/80" :
                                     "bg-[#0a0a0a]/90"
@@ -358,12 +541,19 @@ function SessionContent() {
                     <button onClick={() => setSportMode(null)} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
                         <ArrowLeft className="w-5 h-5 text-white" />
                     </button>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className={clsx("w-2 h-2 rounded-full animate-pulse", isPaused ? "bg-yellow-500" : "bg-green-500")} />
-                            <p className={clsx("text-[10px] font-black uppercase tracking-widest", themeColor)}>{sportMode}</p>
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5">
+                            <span className={clsx("w-1.5 h-1.5 rounded-full animate-pulse", isPaused ? "bg-yellow-500" : "bg-green-500")} />
+                            <p className={clsx("text-[9px] font-black uppercase tracking-[0.2em]", themeColor)}>{sportMode?.replace('_', ' ')}</p>
+                            {targetDuration && (
+                                <span className="text-[8px] text-white/30 font-bold ml-1">
+                                    • {targetDuration} MIN.
+                                </span>
+                            )}
                         </div>
-                        <h1 className="text-white font-heading font-black italic text-lg uppercase truncate max-w-[150px] sm:max-w-xs">{workoutTitle}</h1>
+                        <h1 className="text-white font-heading font-black italic text-lg uppercase truncate max-w-[180px] sm:max-w-xs leading-none">
+                            {workoutTitle}
+                        </h1>
                     </div>
                 </div>
 
@@ -401,8 +591,8 @@ function SessionContent() {
                         disabled={isSaving}
                         className={clsx("text-white p-3 rounded-xl shadow-glow hover:scale-105 active:scale-95 transition-all",
                             sportMode === 'running' ? 'bg-blue-600' :
-                                sportMode === 'hyrox' ? 'bg-yellow-600' :
-                                    sportMode === 'crossfit' ? 'bg-orange-600' :
+                                sportMode === 'hybrid' ? 'bg-yellow-600' :
+                                    sportMode === 'cross_training' ? 'bg-orange-600' :
                                         sportMode === 'ocr' ? 'bg-emerald-600' :
                                             sportMode === 'other' ? 'bg-gray-600' : 'bg-brand-red'
                         )}
@@ -410,7 +600,7 @@ function SessionContent() {
                         {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                     </button>
                 </div>
-            </header>
+            </header >
 
             <div className="pt-28 px-4 max-w-2xl mx-auto space-y-8">
                 <div className="sm:hidden text-center mb-6">
@@ -432,8 +622,8 @@ function SessionContent() {
                 {/* Specific Views */}
                 {(sportMode === 'gym' || sportMode === 'calisthenics') && <GymView exercises={exercises} setExercises={setExercises} />}
                 {sportMode === 'running' && <RunningView distance={runDistance} setDistance={setRunDistance} time={elapsedSeconds} />}
-                {(sportMode === 'crossfit' || sportMode === 'ocr') && (
-                    <CrossFitView
+                {(sportMode === 'cross_training' || sportMode === 'ocr') && (
+                    <CrossTrainingView
                         blocks={blocks}
                         setBlocks={setBlocks}
                         distance={runDistance}
@@ -442,7 +632,7 @@ function SessionContent() {
                     />
                 )}
                 {sportMode === 'other' && <GymView exercises={exercises} setExercises={setExercises} />}
-                {sportMode === 'hyrox' && <HyroxView time={elapsedSeconds} exercises={exercises} setExercises={setExercises} />}
+                {sportMode === 'hybrid' && <HybridView time={elapsedSeconds} exercises={exercises} setExercises={setExercises} />}
 
                 {/* Final Summary Display */}
                 <div className="bg-[#111] border border-white/10 rounded-[40px] p-8 space-y-6">
@@ -460,7 +650,7 @@ function SessionContent() {
                     </div>
 
                     {/* Blocks Summary */}
-                    {(sportMode === 'crossfit' || sportMode === 'ocr') && blocks.length > 0 && (
+                    {(sportMode === 'cross_training' || sportMode === 'ocr') && blocks.length > 0 && (
                         <div className="space-y-4">
                             {blocks.map((block: any, i: number) => (
                                 <div key={i} className="bg-white/5 p-4 rounded-2xl border border-white/5">
@@ -592,8 +782,8 @@ function SessionContent() {
                         className={clsx(
                             "w-full py-6 rounded-[32px] text-white font-heading font-black italic text-2xl uppercase tracking-tighter hover:scale-[1.02] active:scale-95 transition-all shadow-glow flex items-center justify-center gap-3",
                             sportMode === 'running' ? 'bg-blue-600' :
-                                sportMode === 'hyrox' ? 'bg-yellow-600' :
-                                    sportMode === 'crossfit' ? 'bg-orange-600' :
+                                sportMode === 'hybrid' ? 'bg-yellow-600' :
+                                    sportMode === 'cross_training' ? 'bg-orange-600' :
                                         sportMode === 'ocr' ? 'bg-emerald-600' :
                                             sportMode === 'other' ? 'bg-gray-600' : 'bg-brand-red'
                         )}
@@ -602,7 +792,7 @@ function SessionContent() {
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }
 
@@ -744,18 +934,18 @@ function SportSelector({ onSelect }: { onSelect: (mode: SportMode) => void }) {
                     image="https://images.unsplash.com/photo-1530143311094-34d807799e8f?q=80&w=600&auto=format&fit=crop"
                 />
                 <SportCard
-                    title="CrossFit"
+                    title="Cross Training"
                     icon={<div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-500 mb-4"><Timer className="w-6 h-6" /></div>}
                     desc="Alta intensidad. WODs, AMRAP, EMOM y For Time."
-                    onClick={() => handleSportClick('crossfit')}
+                    onClick={() => handleSportClick('cross_training')}
                     color="hover:border-orange-500/50"
                     image="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=600&auto=format&fit=crop"
                 />
                 <SportCard
-                    title="Hyrox"
+                    title="Hybrid"
                     icon={<div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-500 mb-4"><Trophy className="w-6 h-6" /></div>}
                     desc="Competición híbrida. Carrera + Funcionales."
-                    onClick={() => handleSportClick('hyrox')}
+                    onClick={() => handleSportClick('hybrid')}
                     color="hover:border-yellow-500/50"
                     image="https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=600&auto=format&fit=crop"
                 />
@@ -928,7 +1118,7 @@ function RunningView({ distance, setDistance, time }: { distance: number, setDis
 // Helper var for mock
 let isPausedGlobal = false;
 
-function CrossFitView({ blocks, setBlocks, distance, setDistance, isOCR }: any) {
+function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR }: any) {
     const [showAddModal, setShowAddModal] = useState(false);
     const [activeBlockIndex, setActiveBlockIndex] = useState(0);
     const [catalog, setCatalog] = useState<any[]>([]);
@@ -1029,7 +1219,7 @@ function CrossFitView({ blocks, setBlocks, distance, setDistance, isOCR }: any) 
     // Load catalog only when modal opens
     useEffect(() => {
         if (showAddModal && catalog.length === 0) {
-            getExercises(isOCR ? 'ocr' : 'crossfit').then(setCatalog);
+            getExercises(isOCR ? 'ocr' : 'cross_training').then(setCatalog);
         }
     }, [showAddModal, catalog.length]);
 
@@ -1216,7 +1406,7 @@ function CrossFitView({ blocks, setBlocks, distance, setDistance, isOCR }: any) 
                         )}
                     </div>
 
-                    {/* Presets Button for CrossFit */}
+                    {/* Presets Button for Cross Training */}
                     {!isOCR && (
                         <div className="relative">
                             <button
@@ -1481,8 +1671,9 @@ function CrossFitView({ blocks, setBlocks, distance, setDistance, isOCR }: any) 
     )
 }
 
-function HyroxView({ time, exercises, setExercises }: { time: number, exercises: any[], setExercises: any }) {
-    const [hyroxMode, setHyroxMode] = useState<'race' | 'pft' | 'any'>('race');
+function HybridView({ time, exercises, setExercises }: { time: number, exercises: any[], setExercises: any }) {
+    const searchParams = useSearchParams();
+    const [hybridMode, setHybridMode] = useState<'race' | 'pft' | 'any'>(searchParams.get('mode') === 'ai-coach' ? 'any' : 'race');
     const [initialized, setInitialized] = useState(false);
 
     // Templates
@@ -1508,10 +1699,10 @@ function HyroxView({ time, exercises, setExercises }: { time: number, exercises:
     // Initialize exercises based on mode
     useEffect(() => {
         if (!initialized && exercises.length === 0) {
-            loadTemplate(hyroxMode);
+            loadTemplate(hybridMode);
             setInitialized(true);
         }
-    }, [hyroxMode, initialized]);
+    }, [hybridMode, initialized]);
 
     const loadTemplate = (mode: string) => {
         let template = [];
@@ -1555,10 +1746,10 @@ function HyroxView({ time, exercises, setExercises }: { time: number, exercises:
                 {['race', 'pft', 'any'].map(m => (
                     <button
                         key={m}
-                        onClick={() => { setHyroxMode(m as any); setExercises([]); setInitialized(false); }}
+                        onClick={() => { setHybridMode(m as any); setExercises([]); setInitialized(false); }}
                         className={clsx(
                             "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                            hyroxMode === m ? "bg-yellow-500 text-black shadow-lg" : "text-gray-500 hover:text-white"
+                            hybridMode === m ? "bg-yellow-500 text-black shadow-lg" : "text-gray-500 hover:text-white"
                         )}
                     >
                         {m === 'any' ? 'Libre / Intervalos' : m.toUpperCase()}
@@ -1566,17 +1757,17 @@ function HyroxView({ time, exercises, setExercises }: { time: number, exercises:
                 ))}
             </div>
 
-            {hyroxMode === 'any' ? (
+            {hybridMode === 'any' ? (
                 <div className="mt-4">
                     <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-4 px-2">
-                        Arma tu propio entrenamiento Hyrox seleccionando los ejercicios.
+                        Arma tu propio entrenamiento Híbrido seleccionando los ejercicios.
                     </p>
-                    <GymView exercises={exercises} setExercises={setExercises} mode="hyrox" />
+                    <GymView exercises={exercises} setExercises={setExercises} mode="hybrid" />
                 </div>
             ) : (
                 <div className="bg-[#111] border border-white/10 p-6 rounded-[32px]">
                     <p className="text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em] mb-6 border-b border-white/5 pb-2">
-                        {hyroxMode === 'race' ? 'Estaciones Hyrox (Race)' : 'Hyrox PFT'}
+                        {hybridMode === 'race' ? 'Estaciones Hybrid (Race)' : 'Hybrid PFT'}
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {exercises.map((ex, i) => {
@@ -1829,4 +2020,303 @@ function GymView({ exercises, setExercises, mode = 'gym' }: any) {
             )}
         </div>
     )
+}
+
+function FinishModal({
+    onConfirm,
+    onCancel,
+    shareToArena,
+    setShareToArena,
+    shareToStory,
+    setShareToStory,
+    isSaving,
+    imageUrl,
+    setImageUrl,
+    isUploading,
+    onImageUpload,
+    fileInputRef
+}: any) {
+    return (
+        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4">
+            <div className="bg-[#111] w-full max-w-md rounded-[40px] border border-white/10 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+                <div className="p-6 md:p-8 text-center space-y-6">
+                    <div className="w-16 h-16 md:w-20 md:h-20 bg-brand-red/20 rounded-full flex items-center justify-center mx-auto mb-2 border border-brand-red/30">
+                        <Trophy className="w-8 h-8 md:w-10 md:h-10 text-brand-red" />
+                    </div>
+                    <div>
+                        <h2 className="text-2xl md:text-3xl font-heading font-black italic text-white uppercase tracking-tighter">Victoria Lograda</h2>
+                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mt-1">Misión Completada, Atleta.</p>
+                    </div>
+
+                    {/* Image Upload Area */}
+                    <div className="relative group">
+                        {imageUrl ? (
+                            <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10">
+                                <img src={imageUrl} alt="Workout" className="w-full h-full object-cover" />
+                                <button
+                                    onClick={() => setImageUrl(null)}
+                                    className="absolute top-2 right-2 p-2 bg-black/60 rounded-full text-white hover:bg-brand-red transition-colors"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isUploading}
+                                className="w-full aspect-video rounded-3xl border-2 border-dashed border-white/10 bg-white/5 flex flex-col items-center justify-center gap-2 hover:border-brand-red/50 hover:bg-white/10 transition-all group"
+                            >
+                                {isUploading ? (
+                                    <Loader2 className="w-8 h-8 animate-spin text-brand-red" />
+                                ) : (
+                                    <>
+                                        <Camera className="w-8 h-8 text-gray-400 group-hover:text-brand-red transition-colors" />
+                                        <div className="text-[10px] font-black uppercase text-gray-500 tracking-widest group-hover:text-white">Añadir Foto del WOD</div>
+                                    </>
+                                )}
+                            </button>
+                        )}
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={onImageUpload}
+                        />
+                    </div>
+
+                    <div className="space-y-3">
+                        <button
+                            onClick={() => setShareToArena(!shareToArena)}
+                            className={clsx(
+                                "w-full p-4 rounded-2xl border flex items-center gap-4 transition-all",
+                                shareToArena ? "bg-brand-red border-transparent text-white shadow-lg shadow-brand-red/20" : "bg-white/5 border-white/10 text-gray-500"
+                            )}
+                        >
+                            <Activity className="w-5 h-5" />
+                            <div className="text-left flex-1">
+                                <p className="font-black text-xs uppercase italic">Publicar en el Muro</p>
+                                <p className="text-[10px] opacity-70">Comparte tu hazaña con la comunidad.</p>
+                            </div>
+                            <div className={clsx("w-6 h-6 rounded-full border-2 flex items-center justify-center", shareToArena ? "bg-white text-black" : "border-white/10")}>
+                                {shareToArena && <CheckCircle className="w-4 h-4 fill-current" />}
+                            </div>
+                        </button>
+
+                        <button
+                            onClick={() => setShareToStory(!shareToStory)}
+                            className={clsx(
+                                "w-full p-4 rounded-2xl border flex items-center gap-4 transition-all",
+                                shareToStory ? "bg-purple-600 border-transparent text-white shadow-lg shadow-purple-900/20" : "bg-white/5 border-white/10 text-gray-500"
+                            )}
+                        >
+                            <Camera className="w-5 h-5" />
+                            <div className="text-left flex-1">
+                                <p className="font-black text-xs uppercase italic">Añadir a Historia</p>
+                                <p className="text-[10px] opacity-70">Desaparece en 24 horas.</p>
+                            </div>
+                            <div className={clsx("w-6 h-6 rounded-full border-2 flex items-center justify-center", shareToStory ? "bg-white text-black" : "border-white/10")}>
+                                {shareToStory && <CheckCircle className="w-4 h-4 fill-current" />}
+                            </div>
+                        </button>
+                    </div>
+
+                    <div className="pt-2 grid grid-cols-2 gap-3">
+                        <button
+                            onClick={onCancel}
+                            disabled={isSaving}
+                            className="bg-white/5 text-gray-400 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all font-heading"
+                        >
+                            Volver
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            disabled={isSaving || isUploading}
+                            className="bg-white text-black py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all flex items-center justify-center gap-2 shadow-glow font-heading"
+                        >
+                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Publicar Ahora"}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function CoachAiView({
+    workoutTitle,
+    blocks,
+    setBlocks,
+    elapsedSeconds,
+    isPaused,
+    toggleTimer,
+    handleFinish,
+    isSaving,
+    formatTime,
+    countdown,
+    sportMode,
+    targetDuration
+}: any) {
+    return (
+        <div className="min-h-screen bg-black flex flex-col pt-12 md:pt-20 pb-40 px-4 max-w-xl mx-auto space-y-8 md:space-y-12 relative">
+            {/* Header / Coach Intro */}
+            <div className="text-center space-y-3 md:space-y-4 pt-4 md:pt-8">
+                <div className="flex items-center justify-center gap-3 mb-1">
+                    <div className="flex items-center gap-2">
+                        <Zap className="w-4 h-4 md:w-5 md:h-5 text-brand-red fill-current" />
+                        <span className="text-brand-red text-[10px] md:text-xs font-black uppercase tracking-[0.3em]">IA Coach Protocol</span>
+                    </div>
+                    {targetDuration && (
+                        <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                            <Clock className="w-3 h-3 text-gray-400" />
+                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{targetDuration} MIN</span>
+                        </div>
+                    )}
+                </div>
+                <h2 className="text-3xl md:text-4xl font-heading font-black italic text-white uppercase leading-none tracking-tighter">
+                    {workoutTitle}
+                </h2>
+                <div className="bg-brand-red/10 border border-brand-red/20 p-3 md:p-4 rounded-2xl max-w-[280px] md:max-w-sm mx-auto">
+                    <p className="text-[9px] md:text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-relaxed">
+                        Sigue el orden de los bloques para garantizar resultados óptimos. Tiempo estimado: {targetDuration || '--'} min.
+                    </p>
+                </div>
+            </div>
+
+            {/* Blocks List */}
+            <div className="space-y-12 md:space-y-16">
+                {blocks.map((block: any, bIdx: number) => (
+                    <div key={block.id || bIdx} className="space-y-4 md:space-y-6">
+                        {/* Block Title Header */}
+                        <div className="flex items-center gap-3 md:gap-4 px-2">
+                            <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/10" />
+                            <div className="flex flex-col items-center">
+                                <span className="text-[8px] md:text-[10px] text-brand-red font-black uppercase tracking-[0.4em] mb-1">Bloque {bIdx + 1}</span>
+                                <h3 className="text-lg md:text-xl font-heading font-black italic text-white uppercase tracking-tighter">
+                                    {block.title}
+                                </h3>
+                            </div>
+                            <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/10" />
+                        </div>
+
+                        {/* Exercises in Block */}
+                        <div className="space-y-3 md:space-y-4">
+                            {block.exercises.map((ex: any, eIdx: number) => (
+                                <div key={ex.id || eIdx} className="bg-[#111] border border-white/5 rounded-[28px] md:rounded-[32px] p-5 md:p-6 space-y-4 shadow-2xl relative overflow-hidden group hover:border-brand-red/30 transition-all duration-500">
+                                    <div className="absolute top-0 right-0 p-6 opacity-0 md:group-hover:opacity-5 transition-opacity pointer-events-none">
+                                        <Activity className="w-16 h-16 text-brand-red" />
+                                    </div>
+
+                                    <div className="flex items-center justify-between relative z-10">
+                                        <div className="flex items-center gap-3 md:gap-4">
+                                            <div className="w-8 h-8 md:w-10 md:h-10 bg-white/5 rounded-xl flex items-center justify-center font-heading font-black italic text-xs md:text-sm text-brand-red border border-white/5">
+                                                {eIdx + 1}
+                                            </div>
+                                            <div>
+                                                <h4 className="text-base md:text-lg font-heading font-black italic text-white uppercase tracking-tight leading-none">{ex.name}</h4>
+                                                <p className="text-brand-red text-[8px] md:text-[9px] font-black uppercase tracking-widest mt-1 opacity-70">{ex.target}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 md:gap-3 relative z-10">
+                                        <div className="bg-black/40 border border-white/5 p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all">
+                                            <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">Peso</p>
+                                            <div className="flex items-end gap-1">
+                                                <input
+                                                    type="number"
+                                                    placeholder="0"
+                                                    value={ex.sets[0]?.weight || ''}
+                                                    onChange={(e) => {
+                                                        const newBlocks = [...blocks];
+                                                        newBlocks[bIdx].exercises[eIdx].sets[0].weight = parseFloat(e.target.value) || 0;
+                                                        setBlocks(newBlocks);
+                                                    }}
+                                                    className="bg-transparent text-lg md:text-xl font-mono font-black text-white w-full outline-none"
+                                                />
+                                                <span className="text-[9px] md:text-[10px] font-black text-gray-600 mb-0.5">KG</span>
+                                            </div>
+                                        </div>
+                                        <div className="bg-black/40 border border-white/5 p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all">
+                                            <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">
+                                                {ex.target.toLowerCase().includes('reps') ? 'Reps' : 'Log'}
+                                            </p>
+                                            <div className="flex items-end gap-1">
+                                                <input
+                                                    type="number"
+                                                    placeholder="0"
+                                                    value={ex.sets[0]?.reps || ''}
+                                                    onChange={(e) => {
+                                                        const newBlocks = [...blocks];
+                                                        newBlocks[bIdx].exercises[eIdx].sets[0].reps = parseInt(e.target.value) || 0;
+                                                        setBlocks(newBlocks);
+                                                    }}
+                                                    className="bg-transparent text-lg md:text-xl font-mono font-black text-white w-full outline-none"
+                                                />
+                                                <span className="text-[9px] md:text-[10px] font-black text-gray-600 mb-0.5 uppercase">VAL</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Motivational Footer */}
+            <div className="py-6 md:py-10 text-center">
+                <p className="text-gray-600 text-[8px] md:text-[9px] font-black uppercase tracking-[0.4em]">Sin excusas. Finaliza el protocolo para registrar puntos.</p>
+            </div>
+
+            {/* Sticky Timer Bar */}
+            <div className="fixed bottom-0 inset-x-0 z-[150] bg-black/80 backdrop-blur-2xl border-t border-white/10 p-5 md:p-8 animate-in slide-in-from-bottom duration-500">
+                <div className="max-w-xl mx-auto flex items-center justify-between gap-4 md:gap-6">
+                    <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Clock className="w-3 h-3 text-brand-red" />
+                            <span className="text-[9px] text-gray-500 font-black uppercase tracking-widest">Tiempo Activo</span>
+                        </div>
+                        <div className={clsx(
+                            "text-3xl md:text-4xl font-mono font-black transition-colors leading-none",
+                            isPaused ? "text-white/40" : "text-white"
+                        )}>
+                            {formatTime(elapsedSeconds)}
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 md:gap-3">
+                        <button
+                            onClick={toggleTimer}
+                            className={clsx(
+                                "w-14 h-14 md:w-16 md:h-16 rounded-[20px] md:rounded-[24px] flex items-center justify-center transition-all active:scale-90",
+                                isPaused ? "bg-white text-black shadow-lg" : "bg-white/10 text-white"
+                            )}
+                        >
+                            {countdown !== null ? (
+                                <span className="text-xl md:text-2xl font-black text-brand-red">{countdown}</span>
+                            ) : isPaused ? (
+                                <Play className="w-5 h-5 md:w-6 md:h-6 fill-current" />
+                            ) : (
+                                <Pause className="w-5 h-5 md:w-6 md:h-6 fill-current" />
+                            )}
+                        </button>
+
+                        <button
+                            onClick={handleFinish}
+                            disabled={isSaving}
+                            className="bg-brand-red text-white px-6 md:px-8 h-14 md:h-16 rounded-[20px] md:rounded-[24px] font-black text-[10px] md:text-xs uppercase tracking-widest shadow-glow hover:bg-red-600 transition-all flex items-center justify-center gap-2 md:gap-3"
+                        >
+                            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                                <>
+                                    <CheckCircle className="w-4 h-4 md:w-5 md:h-5" />
+                                    <span>Finalizar</span>
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
 }

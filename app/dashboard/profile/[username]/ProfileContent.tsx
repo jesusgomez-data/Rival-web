@@ -322,6 +322,26 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Featured RMs Card */}
+                            {profile.featured_rms && profile.featured_rms.length > 0 && (
+                                <div className="bg-brand-gray/30 border border-white/10 rounded-[40px] p-8 backdrop-blur-md">
+                                    <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-6">Récords Personales</h3>
+                                    <div className="space-y-4">
+                                        {profile.featured_rms.map((rm: any) => (
+                                            <div key={rm.id} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors rounded-lg px-2 -mx-2">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 bg-brand-red/10 rounded-lg flex items-center justify-center text-brand-red shrink-0">
+                                                        <Dumbbell className="w-4 h-4" />
+                                                    </div>
+                                                    <span className="text-[11px] md:text-xs font-black uppercase text-gray-300 tracking-wide">{rm.exercise}</span>
+                                                </div>
+                                                <span className="text-sm md:text-base font-black text-white italic">{rm.weight} {rm.unit}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </>
                     ) : (
                         <div className="bg-brand-gray/30 border border-white/5 rounded-[40px] p-8 backdrop-blur-md opacity-50 grayscale select-none">

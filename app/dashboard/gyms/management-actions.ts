@@ -2436,3 +2436,75 @@ export async function processStoreSale(centerId: string, saleData: any) {
     revalidatePath(`/dashboard/gyms/${centerId}/store`);
     return { success: true };
 }
+
+export async function getDashboardMetrics(centerId: string) {
+    const admin = createAdminClient();
+    const now = new Date();
+
+    // Week calc: Monday as start of week
+    const startOfWeek = new Date(now);
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Adjust when day is Sunday
+    startOfWeek.setDate(diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const weekISO = startOfWeek.toISOString();
+    const monthISO = startOfMonth.toISOString();
+
+    // 1. Attendance this week (unique members who attended at least one class)
+    // We need to query class_enrollments joined with classes to filter by date and center
+    const { data: attendanceData, error: attError } = await admin
+        .from('class_enrollments')
+        .select(`
+            member_id,
+            class:classes!inner(
+                organization_id,
+                scheduled_time
+            )
+        `)
+        .eq('attended', true)
+        .eq('class.organization_id', centerId)
+        .gte('class.scheduled_time', weekISO);
+
+    const weeklyAttendance = new Set(attendanceData?.map((a: any) => a.member_id)).size;
+
+    // 2. New Enrollments (Week & Month)
+    // We use createAdminClient to ensure we count all members
+    const { count: newMembersWeek } = await admin
+        .from('members')
+        .select('id', { count: 'exact', head: true })
+        .eq('center_id', centerId)
+        .gte('created_at', weekISO);
+
+    const { count: newMembersMonth } = await admin
+        .from('members')
+        .select('id', { count: 'exact', head: true })
+        .eq('center_id', centerId)
+        .gte('created_at', monthISO);
+
+    // 3. Cancellations (Week & Month)
+    // Approximate using updated_at + numeric status check if historical data isn't available
+    const { count: cancelledWeek } = await admin
+        .from('members')
+        .select('id', { count: 'exact', head: true })
+        .eq('center_id', centerId)
+        .in('status', ['inactive', 'cancelled', 'banned'])
+        .gte('updated_at', weekISO);
+
+    const { count: cancelledMonth } = await admin
+        .from('members')
+        .select('id', { count: 'exact', head: true })
+        .eq('center_id', centerId)
+        .in('status', ['inactive', 'cancelled', 'banned'])
+        .gte('updated_at', monthISO);
+
+    return {
+        weeklyAttendance,
+        newMembersWeek: newMembersWeek || 0,
+        newMembersMonth: newMembersMonth || 0,
+        cancelledWeek: cancelledWeek || 0,
+        cancelledMonth: cancelledMonth || 0
+    };
+}

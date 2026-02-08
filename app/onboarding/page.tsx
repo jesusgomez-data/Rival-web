@@ -20,11 +20,11 @@ import {
 import { createClient } from '@/utils/supabase/client';
 
 const sports = [
-    { id: "crossfit", name: "CrossFit", icon: <Activity className="w-8 h-8" />, desc: "Funcional de alta intensidad" },
+    { id: "cross_training", name: "Cross Training", icon: <Activity className="w-8 h-8" />, desc: "Funcional de alta intensidad" },
     { id: "powerlifting", name: "Powerlifting", icon: <Dumbbell className="w-8 h-8" />, desc: "Fuerza máxima y técnica" },
     { id: "boxing", name: "Boxeo / MMA", icon: <Zap className="w-8 h-8" />, desc: "Combate y cardio explosivo" },
     { id: "bodybuilding", name: "Culturismo", icon: <Flame className="w-8 h-8" />, desc: "Estética y volumen" },
-    { id: "hyrox", name: "Hyrox / Running", icon: <Mountain className="w-8 h-8" />, desc: "Resistencia extrema" },
+    { id: "hybrid", name: "Hybrid / Running", icon: <Mountain className="w-8 h-8" />, desc: "Resistencia extrema" },
     { id: "other", name: "Otro", icon: <Target className="w-8 h-8" />, desc: "Cualquier otra disciplina" },
 ];
 

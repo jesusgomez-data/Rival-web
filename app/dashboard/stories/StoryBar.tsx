@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin } from 'lucide-react'
 import { createStory, createPRStory, toggleStoryLike, recordStoryView, deleteStory } from './actions'
 import { clsx } from 'clsx'
 import PRCard from '../community/PRCard'
@@ -62,7 +62,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const [showPRCreator, setShowPRCreator] = useState(false)
     const [prExercise, setPrExercise] = useState("")
     const [prWeight, setPrWeight] = useState("")
-    const [prSport, setPrSport] = useState("CrossFit")
+    const [prSport, setPrSport] = useState("Cross Training")
     const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null)
     const audioRef = useRef<HTMLAudioElement | null>(null)
     const router = useRouter()
@@ -808,6 +808,73 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             ) : (
                                 <Image src={currentStory.media_url} alt="Story content" fill className="object-cover pointer-events-none" />
                             )}
+
+                            {/* Workout Summary Overlay */}
+                            {currentStory.metadata?.type === 'workout' && currentStory.metadata.summary && (
+                                <div className="absolute inset-0 z-30 flex flex-col justify-end p-8 pointer-events-none">
+                                    <div className="bg-black/60 backdrop-blur-md rounded-[32px] p-6 border border-white/10 space-y-4 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300">
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2.5 bg-brand-red rounded-xl shadow-lg shadow-brand-red/20">
+                                                <Zap className="w-5 h-5 text-white animate-pulse" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <h4 className="text-white font-black uppercase italic tracking-tighter text-xl leading-tight truncate">
+                                                    {currentStory.metadata.summary.title}
+                                                </h4>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[9px] text-brand-red font-black uppercase tracking-[0.2em]">
+                                                        {currentStory.metadata.summary.sportType} PROTOCOL
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <Clock className="w-3.5 h-3.5 text-brand-red" />
+                                                    <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Duración</p>
+                                                </div>
+                                                <p className="text-sm font-black text-white italic">
+                                                    {Math.floor(currentStory.metadata.summary.duration / 60)}:{(currentStory.metadata.summary.duration % 60).toString().padStart(2, '0')} <span className="text-[10px] opacity-60">MIN</span>
+                                                </p>
+                                            </div>
+
+                                            {currentStory.metadata.summary.metrics?.distance > 0 ? (
+                                                <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <Activity className="w-3.5 h-3.5 text-brand-red" />
+                                                        <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Distancia</p>
+                                                    </div>
+                                                    <p className="text-sm font-black text-white italic">
+                                                        {(currentStory.metadata.summary.metrics.distance / 1000).toFixed(2)} <span className="text-[10px] opacity-60">KM</span>
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <Trophy className="w-3.5 h-3.5 text-brand-red" />
+                                                        <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Estado</p>
+                                                    </div>
+                                                    <p className="text-sm font-black text-white italic">
+                                                        COMPLETADO
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {currentStory.metadata.caption && (
+                                            <div className="bg-brand-red/10 rounded-2xl p-4 border border-brand-red/20 relative overflow-hidden">
+                                                <div className="absolute top-0 left-0 w-1 h-full bg-brand-red" />
+                                                <p className="text-xs text-white/90 font-medium leading-relaxed italic">
+                                                    "{currentStory.metadata.caption}"
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Render Viewer Overlays */}
                             {currentStory.metadata?.overlays && currentStory.metadata.overlays.map((overlay: OverlayElement) => (
                                 <div
@@ -968,7 +1035,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Disciplina</label>
                                 <input
                                     type="text"
-                                    placeholder="p.ej. CrossFit"
+                                    placeholder="p.ej. Cross Training"
                                     value={prSport}
                                     onChange={(e) => setPrSport(e.target.value)}
                                     className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-brand-red/50 text-sm"

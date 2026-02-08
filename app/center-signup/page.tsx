@@ -8,7 +8,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 
 const centerTypes = [
-  { id: 'crossfit', label: 'CrossFit Box', emoji: '🏋️' },
+  { id: 'cross_training', label: 'Cross Training Box', emoji: '🏋️' },
   { id: 'gym', label: 'Gym Convencional', emoji: '💪' },
   { id: 'running', label: 'Club de Running', emoji: '🏃' },
   { id: 'yoga', label: 'Estudio Yoga/Pilates', emoji: '🧘' },

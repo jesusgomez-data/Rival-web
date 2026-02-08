@@ -6,7 +6,7 @@ export type TrainingPlan = {
     id: string;
     title: string;
     description: string;
-    sport: 'gym' | 'running' | 'crossfit' | 'hyrox';
+    sport: 'gym' | 'running' | 'cross_training' | 'hybrid';
     difficulty: 'beginner' | 'intermediate' | 'elite';
     duration_min: number;
     exercises: any[]; // Structure matches the one used in GymView/RunningView
@@ -74,16 +74,16 @@ export async function getAiRecommendation(sport: string, userTier: 'free' | 'pre
                 ]
             });
         }
-    } else if (sport === 'crossfit') {
+    } else if (sport === 'cross_training') {
         recommendations.push({
             id: 'cf-fran',
             title: 'WOD: Fran',
             description: '21-15-9 Thrusters + Pull-ups. El clásico test de capacidad.',
-            sport: 'crossfit',
+            sport: 'cross_training',
             difficulty: 'intermediate',
             duration_min: 10,
             is_premium: false,
-            exercises: [] // CrossFit view just needs text usually
+            exercises: [] // Cross Training view just needs text usually
         });
     }
 

@@ -44,6 +44,10 @@ export default function ProfilePage() {
     const [startPos, setStartPos] = useState(50);
     const [mobileTab, setMobileTab] = useState<'gallery' | 'stats' | 'workouts' | 'settings'>('gallery');
 
+    // Featured RMs State
+    const [featuredRms, setFeaturedRms] = useState<any[]>([]);
+    const [newRm, setNewRm] = useState({ exercise: 'Snatch', weight: '', unit: 'kg' });
+
     // New state for upcoming trial reminder
     const [upcomingTrial, setUpcomingTrial] = useState<any>(null);
 
@@ -97,6 +101,11 @@ export default function ProfilePage() {
                 if (data.cover_position !== undefined) {
                     setCoverPosition(Number(data.cover_position) || 50);
                 }
+
+
+                if (data.featured_rms) {
+                    setFeaturedRms(data.featured_rms);
+                }
             }
             setLoading(false);
         }
@@ -128,6 +137,8 @@ export default function ProfilePage() {
                     main_sport: formData.main_sport,
                     gym_home: formData.gym_home,
                     privacy_setting: formData.privacy_setting,
+
+                    featured_rms: featuredRms,
                     updated_at: new Date().toISOString(),
                 })
                 .eq('id', user.id);
@@ -248,6 +259,16 @@ export default function ProfilePage() {
         } finally {
             setSaving(false);
         }
+    };
+
+    const addRm = () => {
+        if (!newRm.weight) return;
+        setFeaturedRms([...featuredRms, { ...newRm, id: Date.now() }]);
+        setNewRm({ ...newRm, weight: '' }); // Reset weight but keep exercise/unit for convenience
+    };
+
+    const removeRm = (id: number) => {
+        setFeaturedRms(featuredRms.filter(rm => rm.id !== id));
     };
 
     const { userStories, openStory } = useStories();
@@ -664,7 +685,7 @@ export default function ProfilePage() {
                                         className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-brand-red transition-all appearance-none"
                                     >
                                         <option value="General">Fitness General</option>
-                                        <option value="CrossFit">CrossFit</option>
+                                        <option value="Cross Training">Cross Training</option>
                                         <option value="Powerlifting">Powerlifting</option>
                                         <option value="Bodybuilding">Culturismo</option>
                                         <option value="Running">Running</option>
@@ -681,18 +702,88 @@ export default function ProfilePage() {
                                 />
                             </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Ajustes de Privacidad</label>
-                                <select
-                                    name="privacy_setting"
-                                    value={formData.privacy_setting}
-                                    onChange={handleChange}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-brand-red transition-all appearance-none"
-                                >
-                                    <option value="public">Público - Todos pueden ver mis posts</option>
-                                    <option value="private">Privado - Solo mis seguidores pueden ver mis posts</option>
-                                </select>
+                            <div className="space-y-4 pt-4 border-t border-white/5">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Récords Personales Destacados</label>
+
+                                <div className="space-y-3">
+                                    {featuredRms.map((rm: any) => (
+                                        <div key={rm.id} className="flex items-center justify-between bg-black/40 p-3 rounded-xl border border-white/5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 bg-brand-red/10 rounded-lg flex items-center justify-center text-brand-red">
+                                                    <Dumbbell className="w-4 h-4" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-white">{rm.exercise}</p>
+                                                    <p className="text-[10px] text-gray-500 font-bold uppercase">{rm.weight} {rm.unit}</p>
+                                                </div>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => removeRm(rm.id)}
+                                                className="p-2 text-gray-600 hover:text-red-500 transition-colors"
+                                            >
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="flex gap-2">
+                                    <select
+                                        value={newRm.exercise}
+                                        onChange={(e) => setNewRm({ ...newRm, exercise: e.target.value })}
+                                        className="flex-1 bg-black/40 border border-white/10 rounded-xl p-3 text-white text-xs font-bold outline-none focus:border-brand-red/50"
+                                    >
+                                        <option value="Snatch">Snatch</option>
+                                        <option value="Clean & Jerk">Clean & Jerk</option>
+                                        <option value="Deadlift">Deadlift</option>
+                                        <option value="Back Squat">Back Squat</option>
+                                        <option value="Front Squat">Front Squat</option>
+                                        <option value="Bench Press">Bench Press</option>
+                                        <option value="Overhead Press">Overhead Press</option>
+                                        <option value="Strict Press">Strict Press</option>
+                                        <option value="Push Press">Push Press</option>
+                                        <option value="Overhead Squat">Overhead Squat</option>
+                                        <option value="Squat Clean">Squat Clean</option>
+                                        <option value="Power Clean">Power Clean</option>
+                                        <option value="Weighted Pull-up">Weighted Pull-up</option>
+                                        <option value="Murph">Murph</option>
+                                        <option value="Fran">Fran</option>
+                                        <option value="Grace">Grace</option>
+                                        <option value="Isabel">Isabel</option>
+                                        <option value="5k Run">5k Run</option>
+                                        <option value="Hyrox">Hyrox</option>
+                                        <option value="Deka">Deka</option>
+                                        <option value="21k Run">21k Run</option>
+                                        <option value="42k Run">42k Run</option>
+                                    </select>
+                                    <input
+                                        type="text"
+                                        placeholder="0"
+                                        value={newRm.weight}
+                                        onChange={(e) => setNewRm({ ...newRm, weight: e.target.value })}
+                                        className="w-20 bg-black/40 border border-white/10 rounded-xl p-3 text-white text-center text-xs font-bold outline-none focus:border-brand-red/50"
+                                    />
+                                    <select
+                                        value={newRm.unit}
+                                        onChange={(e) => setNewRm({ ...newRm, unit: e.target.value })}
+                                        className="w-20 bg-black/40 border border-white/10 rounded-xl p-3 text-white text-xs font-bold outline-none focus:border-brand-red/50"
+                                    >
+                                        <option value="kg">kg</option>
+                                        <option value="lb">lb</option>
+                                        <option value="min">min</option>
+                                        <option value="time">time</option>
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={addRm}
+                                        className="p-3 bg-white/10 hover:bg-brand-red text-white rounded-xl transition-colors"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </button>
+                                </div>
                             </div>
+
 
                             <div className="pt-4 flex justify-end">
                                 <button
@@ -748,8 +839,8 @@ export default function ProfilePage() {
                         )}
                     </div>
                 </div>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 }
 

@@ -99,15 +99,36 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
         }
     }, [memberIdParam, members, router, searchParams]);
 
+    const [statusFilter, setStatusFilter] = useState("all");
+
     const filteredMembers = members.filter((m: any) => {
         const name = (m.user?.full_name || m.full_name || "").toLowerCase();
         const user = (m.user?.username || "").toLowerCase();
         const emailMatch = (m.email || "").toLowerCase().includes(searchQuery.toLowerCase());
         const phoneMatch = (m.phone || "").includes(searchQuery);
-        return name.includes(searchQuery.toLowerCase()) ||
+
+        const matchesSearch = name.includes(searchQuery.toLowerCase()) ||
             user.includes(searchQuery.toLowerCase()) ||
             emailMatch ||
             phoneMatch;
+
+
+        const s = (m.status || "").toLowerCase();
+
+        if (statusFilter === 'all') return matchesSearch;
+
+        // Specific status checks
+        if (statusFilter === 'active') return matchesSearch && s === 'active';
+        if (statusFilter === 'pending') return matchesSearch && s === 'pending';
+        if (statusFilter === 'trial') return matchesSearch && s === 'trial';
+        if (statusFilter === 'paused') return matchesSearch && s === 'paused';
+
+        // "inactive" catches everything else that isn't the above (De Baja)
+        if (statusFilter === 'inactive') {
+            return matchesSearch && !['active', 'pending', 'trial', 'paused'].includes(s);
+        }
+
+        return matchesSearch;
     });
 
     const resetForm = () => {
@@ -520,14 +541,32 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                 </div>
             </div>
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-brand-gray/20 p-4 rounded-2xl border border-white/5 backdrop-blur-sm">
-                <div className="relative w-full md:w-auto">
-                    <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
-                    <input
-                        placeholder="Buscar por nombre o @usuario..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="bg-black/60 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:border-brand-red outline-none w-full md:w-80 shadow-inner"
-                    />
+                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto flex-1 mr-4">
+                    <div className="relative w-full sm:w-auto flex-1 max-w-md">
+                        <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                        <input
+                            placeholder="Buscar por nombre o @usuario..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="bg-black/60 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:border-brand-red outline-none w-full shadow-inner transition-all hover:bg-black/80 focus:bg-black/80"
+                        />
+                    </div>
+
+                    <div className="relative w-full sm:w-auto">
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="bg-black/60 border border-white/10 rounded-xl px-4 py-3 pr-10 text-sm text-white focus:border-brand-red outline-none shadow-inner w-full sm:w-40 appearance-none cursor-pointer transition-all hover:bg-black/80 focus:bg-black/80"
+                        >
+                            <option value="all">Todos</option>
+                            <option value="active">Activos</option>
+                            <option value="inactive">De Baja</option>
+                            <option value="pending">Pendientes</option>
+                            <option value="trial">En Prueba</option>
+                            <option value="paused">Pausados</option>
+                        </select>
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                    </div>
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">
                     <button

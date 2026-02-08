@@ -27,7 +27,7 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
         time: "17:00",
         duration: "60",
         capacity: "20",
-        type: "crossfit",
+        type: "cross_training",
         difficulty: "intermediate",
         description: ""
     });

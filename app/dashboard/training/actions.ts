@@ -273,23 +273,23 @@ export async function saveWorkout(workoutData: any) {
         await updateMissionProgress(user.id, 'volume_kg', totalVolume)
     }
 
-    // 6. AUTO-POST to Community Feed
-    // We only post if it's a new workout (not an edit) or if specifically requested
-    if (!workoutData.id) {
+    // 6. AUTO-POST to Community Feed & Stories
+    const isNewWorkout = !workoutData.id;
+    const shouldPostToArena = workoutData.shareToArena || (isNewWorkout && workoutData.shareToArena !== false);
+    const shouldPostToStory = workoutData.shareToStory;
+
+    if (shouldPostToArena || shouldPostToStory) {
         let caption = `¡Sesión completada! 🏁`;
 
         if (workoutData.sportType === 'Running' && workoutData.metrics) {
             caption = `🏃‍♂️ Carrera completada: ${(workoutData.metrics.distance / 1000).toFixed(2)}km en ${Math.floor(workoutData.duration / 60)}min. Ritmo: ${workoutData.metrics.pace}/km.`;
-        } else if ((workoutData.sportType === 'CrossFit' || workoutData.sportType === 'OCR') && workoutData.metrics) {
+        } else if ((workoutData.sportType === 'Cross Training' || workoutData.sportType === 'OCR') && workoutData.metrics) {
             const { type, blocks, time } = workoutData.metrics;
 
             if (blocks && blocks.length > 0) {
-                // Multi-block caption
-                // Use total time if available, otherwise generic
                 const timeStr = (time && time !== '00:00' && time !== '0:00') ? `en ${time}` : '';
                 caption = `🏋️‍♀️ Sesión ${workoutData.sportType} Completada ${timeStr}!`;
             } else {
-                // Fallback for legacy or single block
                 const formatStr = type === 'fortime' ? 'FOR TIME' : (type || 'WOD').toUpperCase();
                 caption = `🏋️‍♀️ ${formatStr} Finalizado en ${time} 🔥`;
             }
@@ -299,14 +299,41 @@ export async function saveWorkout(workoutData: any) {
             caption += ` ¡Gran esfuerzo en el ${workoutData.sportType}!`;
         }
 
-        await supabase
-            .from('posts')
-            .insert({
-                user_id: user.id,
-                workout_id: workout.id,
-                caption: caption,
-                media_url: workoutData.imageUrl || null,
-            })
+        // 6a. Post to Arena (Feed)
+        if (shouldPostToArena) {
+            await supabase
+                .from('posts')
+                .insert({
+                    user_id: user.id,
+                    workout_id: workout.id,
+                    caption: caption,
+                    media_url: workoutData.imageUrl || null,
+                });
+        }
+
+        // 6b. Post to Stories
+        if (shouldPostToStory && workoutData.imageUrl) {
+            await supabase
+                .from('stories')
+                .insert({
+                    user_id: user.id,
+                    media_url: workoutData.imageUrl,
+                    media_type: 'image',
+                    duration_seconds: 15,
+                    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+                    metadata: {
+                        type: 'workout',
+                        workout_id: workout.id,
+                        caption: caption,
+                        summary: {
+                            title: workoutData.title,
+                            sportType: workoutData.sportType,
+                            duration: workoutData.duration,
+                            metrics: workoutData.metrics
+                        }
+                    }
+                });
+        }
     }
 
     // 7. Give XP Points for completion
@@ -344,7 +371,7 @@ export async function uploadWorkoutMedia(formData: FormData) {
     return { success: true, url: publicUrl }
 }
 
-export async function getExercises(sport: 'gym' | 'crossfit' | 'ocr' | 'hyrox' = 'gym') {
+export async function getExercises(sport: 'gym' | 'cross_training' | 'ocr' | 'hybrid' = 'gym') {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
@@ -409,7 +436,7 @@ export async function getExercises(sport: 'gym' | 'crossfit' | 'ocr' | 'hyrox' =
         { name: 'Tricep Extension (Overhead)', muscle_group: 'Arms' },
     ];
 
-    const crossFitExercises = [
+    const crossTrainingExercises = [
         { name: 'Air Squat', muscle_group: 'Legs' },
         { name: 'Assault Bike', muscle_group: 'Cardio' },
         { name: 'Back Parallel Squat', muscle_group: 'Legs' },
@@ -484,7 +511,7 @@ export async function getExercises(sport: 'gym' | 'crossfit' | 'ocr' | 'hyrox' =
         { name: 'Run', muscle_group: 'Cardio' },
     ];
 
-    const hyroxExercises = [
+    const hybridExercises = [
         { name: 'Ski Erg', muscle_group: 'Cardio' },
         { name: 'Sled Push', muscle_group: 'Legs' },
         { name: 'Sled Pull', muscle_group: 'Back' },
@@ -498,8 +525,8 @@ export async function getExercises(sport: 'gym' | 'crossfit' | 'ocr' | 'hyrox' =
 
     let targetList = [];
     if (sport === 'ocr') targetList = ocrExercises;
-    else if (sport === 'hyrox') targetList = hyroxExercises;
-    else if (sport === 'crossfit') targetList = crossFitExercises;
+    else if (sport === 'hybrid') targetList = hybridExercises;
+    else if (sport === 'cross_training') targetList = crossTrainingExercises;
     else targetList = gymExercises;
 
     if (error) {

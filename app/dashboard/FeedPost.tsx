@@ -416,7 +416,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             <PRCard
                                 userName={user}
                                 avatarUrl={avatar}
-                                sport={prData.sport || "CrossFit"}
+                                sport={prData.sport || "Cross Training"}
                                 exerciseName={prData.exerciseName || "Ejercicio"}
                                 weight={prData.weight || "0"}
                                 unit={prData.unit || "kg"}

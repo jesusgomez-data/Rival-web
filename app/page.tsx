@@ -210,7 +210,7 @@ export default function Home() {
                       </div>
                       <div>
                         <p className="font-bold text-white text-lg">Alex Sterling</p>
-                        <p className="text-xs text-brand-red font-bold uppercase tracking-wider">Nuevo PR • CrossFit</p>
+                        <p className="text-xs text-brand-red font-bold uppercase tracking-wider">Nuevo PR • Cross Training</p>
                       </div>
                     </div>
                   </div>
@@ -342,7 +342,7 @@ export default function Home() {
             <div className="grid md:grid-cols-3 gap-6">
               <FeatureCard icon={<Activity className="w-6 h-6 text-brand-red" />} title="Registro Inteligente" desc="Registra tus entrenamientos en segundos. Nuestro sistema aprende tus curvas de fuerza y ajusta tu próxima sesión automáticamente." />
               <FeatureCard icon={<Users className="w-6 h-6 text-brand-red" />} title="Comunidad de Tribu" desc="Conecta con atletas que comparten tu pasión. Filtra el feed por deporte, nivel o ubicación." />
-              <FeatureCard icon={<Dumbbell className="w-6 h-6 text-brand-red" />} title="Coach Online" desc="Obtén un programa personalizado que evoluciona contigo. Desde hipertrofia hasta preparación para Hyrox." />
+              <FeatureCard icon={<Dumbbell className="w-6 h-6 text-brand-red" />} title="Coach Online" desc="Obtén un programa personalizado que evoluciona contigo. Desde hipertrofia hasta preparación para Hybird." />
               <FeatureCard icon={<Trophy className="w-6 h-6 text-brand-red" />} title="Rankings en Vivo" desc="Compite en desafíos en tiempo real. Mira tu posición en tu ciudad, país o globalmente." />
               <FeatureCard icon={<BarChart3 className="w-6 h-6 text-brand-red" />} title="Analíticas Pro" desc="Visualiza tu progreso con gráficos profesionales. Volumen, intensidad y gestión de fatiga." />
               <FeatureCard icon={<Zap className="w-6 h-6 text-brand-red" />} title="Duelos en Tiempo Real" desc="Reta a tus rivales a duelos de 7 días. Compara volumen, fuerza y constancia cara a cara." />
@@ -359,7 +359,7 @@ export default function Home() {
 
             <div className="grid md:grid-cols-3 gap-6">
               <TestimonialCard name="Marcus Johnson" role="Powerlifter Competitivo" avatar="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&q=80" text="Rival cambió cómo registro mi progreso. La comunidad me mantiene motivado. He logrado 3 PRs desde que me uní." rating={5} />
-              <TestimonialCard name="Sofía Rodríguez" role="Coach de CrossFit" avatar="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&q=80" text="A mis atletas les encanta el aspecto competitivo. Los rankings los motivan como nada más." rating={5} />
+              <TestimonialCard name="Sofía Rodríguez" role="Coach de Cross Training" avatar="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&q=80" text="A mis atletas les encanta el aspecto competitivo. Los rankings los motivan como nada más." rating={5} />
               <TestimonialCard name="Alex Chen" role="Influencer Fitness" avatar="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&q=80" text="Por fin una plataforma que combina analíticas, comunidad y competencia. Esto es otro nivel." rating={5} />
             </div>
           </div>

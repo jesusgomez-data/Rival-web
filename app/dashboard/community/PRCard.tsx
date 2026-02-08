@@ -9,7 +9,7 @@ import { useTheme } from "../../ThemeContext";
 interface PRCardProps {
     userName: string;
     avatarUrl: string;
-    sport: string; // e.g., 'CROSSFIT'
+    sport: string; // e.g., 'Cross Training'
     exerciseName: string; // e.g., 'Back Squat'
     weight: string; // e.g., '140'
     unit?: string; // e.g., 'kg'
