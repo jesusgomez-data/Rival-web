@@ -722,7 +722,8 @@ export async function requestMemberPayment(centerId: string, planId: string, use
         if (!plan) return { error: "Plan no encontrado" };
 
         // 2. Get user profile for Stripe customer
-        const { data: profile } = await supabase.from('profiles').select('stripe_customer_id, email, full_name').eq('id', userId).single();
+        // We use admin client here to bypass RLS policies that might hide email/stripe_id
+        const { data: profile } = await admin.from('profiles').select('stripe_customer_id, email, full_name').eq('id', userId).single();
         if (!profile) return { error: "Perfil no encontrado" };
 
         let customerId = profile.stripe_customer_id;
