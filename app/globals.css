@@ -80,28 +80,28 @@
   background-color: var(--muted) !important;
 }
 
-[data-theme='light'] .text-white:not(.bg-brand-red *):not(.bg-brand-red):not(.keep-white),
-[data-theme='light'] .text-gray-50,
-[data-theme='light'] .text-gray-100,
-[data-theme='light'] .text-gray-200,
-[data-theme='light'] .text-gray-300,
-[data-theme='light'] .text-gray-400,
-[data-theme='light'] .text-gray-500,
-[data-theme='light'] .text-gray-600,
-[data-theme='light'] .text-slate-400,
-[data-theme='light'] .text-slate-500,
-[data-theme='light'] .text-muted-foreground {
+[data-theme='light'] .text-white:not(.bg-brand-red *):not(.bg-brand-red):not(.keep-white):not(.dark-section *),
+[data-theme='light'] .text-gray-50:not(.dark-section *),
+[data-theme='light'] .text-gray-100:not(.dark-section *),
+[data-theme='light'] .text-gray-200:not(.dark-section *),
+[data-theme='light'] .text-gray-300:not(.dark-section *),
+[data-theme='light'] .text-gray-400:not(.dark-section *),
+[data-theme='light'] .text-gray-500:not(.dark-section *),
+[data-theme='light'] .text-gray-600:not(.dark-section *),
+[data-theme='light'] .text-slate-400:not(.dark-section *),
+[data-theme='light'] .text-slate-500:not(.dark-section *),
+[data-theme='light'] .text-muted-foreground:not(.dark-section *) {
   color: #000000 !important;
   --tw-text-opacity: 1 !important;
 }
 
-[data-theme='light'] .text-white\/20,
-[data-theme='light'] .text-white\/30,
-[data-theme='light'] .text-white\/40,
-[data-theme='light'] .text-white\/50,
-[data-theme='light'] .text-white\/60,
-[data-theme='light'] .text-white\/70,
-[data-theme='light'] .text-white\/80 {
+[data-theme='light'] .text-white\/20:not(.dark-section *),
+[data-theme='light'] .text-white\/30:not(.dark-section *),
+[data-theme='light'] .text-white\/40:not(.dark-section *),
+[data-theme='light'] .text-white\/50:not(.dark-section *),
+[data-theme='light'] .text-white\/60:not(.dark-section *),
+[data-theme='light'] .text-white\/70:not(.dark-section *),
+[data-theme='light'] .text-white\/80:not(.dark-section *) {
   color: #000000 !important;
   opacity: 1 !important;
 }

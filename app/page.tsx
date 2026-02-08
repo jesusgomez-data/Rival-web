@@ -7,6 +7,7 @@ import { ArrowRight, Trophy, Activity, Users, Play, BarChart3, Dumbbell, Flame, 
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/app/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
+import DemoModal from "@/components/DemoModal";
 
 
 export default function Home() {
@@ -30,21 +31,8 @@ export default function Home() {
   return (
     <div className="min-h-screen flex flex-col font-sans selection:bg-brand-red selection:text-white transition-colors duration-300 bg-background text-foreground overflow-x-hidden">
 
-      {/* Video Modal */}
-      {showVideoModal && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setShowVideoModal(false)}>
-          <div className="relative w-full max-w-2xl aspect-video rounded-2xl overflow-hidden shadow-2xl border border-border" onClick={(e) => e.stopPropagation()}>
-            <iframe
-              className="w-full h-full"
-              src="https://www.youtube.com/embed/dQw4w9WgXcQ"
-              title="Video Rival"
-              frameBorder="0"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            ></iframe>
-          </div>
-        </div>
-      )}
+      {/* Video Modal / Demo */}
+      {showVideoModal && <DemoModal onClose={() => setShowVideoModal(false)} />}
 
       {/* Navbar */}
       <nav className="fixed w-full z-50 backdrop-blur-md border-b border-border bg-background/90 transition-colors">
