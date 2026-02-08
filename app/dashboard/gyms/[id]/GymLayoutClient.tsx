@@ -37,10 +37,10 @@ export default function GymLayoutClient({
                 />
             )}
 
-            {/* Sidebar */}
+            {/* Sidebar - Siempre fixed para permitir expansión total cuando está cerrado */}
             <div className={`
                 w-64 border-r border-border bg-card flex flex-col h-full
-                fixed lg:relative inset-y-0 left-0 z-50
+                fixed inset-y-0 left-0 z-50
                 transform transition-transform duration-300 ease-in-out
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             `}>
@@ -68,8 +68,12 @@ export default function GymLayoutClient({
                 </div>
             </div>
 
-            {/* Main Content */}
-            <div className="flex-1 flex flex-col h-full min-w-0 bg-background/50">
+            {/* Main Content - Con margen izquierdo solo cuando el sidebar está abierto en desktop */}
+            <div className={`
+                flex-1 flex flex-col h-full min-w-0 bg-background/50
+                transition-all duration-300 ease-in-out
+                ${sidebarOpen ? 'lg:ml-64' : 'ml-0'}
+            `}>
                 {/* Center Dashboard Header - Desktop con botón hamburguesa */}
                 <header className="hidden lg:flex h-16 border-b border-border bg-background/80 backdrop-blur px-4 lg:px-6 items-center justify-between shrink-0 z-20">
                     <div className="flex items-center gap-4 w-full max-w-xl">
