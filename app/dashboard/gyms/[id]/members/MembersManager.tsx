@@ -249,8 +249,20 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
             return;
         }
 
+
         // If payment_method is 'payment_request', send payment link
         if (paymentMethod === 'payment_request' && (viewingMember.user_id || viewingMember.userId)) {
+            // Check if the selected plan exists in membership_plans
+            const selectedPlan = plans.find((p: any) => p.id === plan);
+
+            if (!selectedPlan) {
+                setIsSaving(false);
+                alert('Datos actualizados, pero no se puede enviar la solicitud de pago: El plan seleccionado no está configurado en "Planes de Membresía". Por favor, ve a la sección de Planes y crea el plan primero.');
+                setIsEditing(false);
+                window.location.reload();
+                return;
+            }
+
             const paymentRes = await requestMemberPayment(centerId, plan, viewingMember.user_id || viewingMember.userId, {
                 fullName: username,
                 email,
