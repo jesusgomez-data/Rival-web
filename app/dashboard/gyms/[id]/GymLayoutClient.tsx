@@ -25,7 +25,7 @@ export default function GymLayoutClient({
     profile,
     children
 }: GymLayoutClientProps) {
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(true); // Abierto por defecto
 
     return (
         <div className="flex h-[100dvh] bg-background overflow-hidden font-sans">
@@ -40,9 +40,9 @@ export default function GymLayoutClient({
             {/* Sidebar */}
             <div className={`
                 w-64 border-r border-border bg-card flex flex-col h-full
-                fixed lg:static inset-y-0 left-0 z-50
+                fixed lg:relative inset-y-0 left-0 z-50
                 transform transition-transform duration-300 ease-in-out
-                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+                ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             `}>
                 <div className="p-6 border-b border-border flex justify-between items-start shrink-0">
                     <div className="flex-1 min-w-0 pr-2">
@@ -51,10 +51,11 @@ export default function GymLayoutClient({
                         </Link>
                         <p className="text-xs text-brand-red font-bold uppercase tracking-widest mt-1">{roleLabel}</p>
                     </div>
-                    {/* Botón cerrar en móvil */}
+                    {/* Botón cerrar */}
                     <button
                         onClick={() => setSidebarOpen(false)}
-                        className="lg:hidden p-2 hover:bg-white/5 rounded-lg transition-colors"
+                        className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+                        title="Cerrar menú"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -69,10 +70,23 @@ export default function GymLayoutClient({
 
             {/* Main Content */}
             <div className="flex-1 flex flex-col h-full min-w-0 bg-background/50">
-                {/* Center Dashboard Header - Desktop */}
+                {/* Center Dashboard Header - Desktop con botón hamburguesa */}
                 <header className="hidden lg:flex h-16 border-b border-border bg-background/80 backdrop-blur px-4 lg:px-6 items-center justify-between shrink-0 z-20">
-                    <div className="w-full max-w-xl">
-                        <GlobalSearch />
+                    <div className="flex items-center gap-4 w-full max-w-xl">
+                        {/* Botón hamburguesa para desktop */}
+                        {!sidebarOpen && (
+                            <button
+                                onClick={() => setSidebarOpen(true)}
+                                className="p-2 hover:bg-white/5 rounded-lg transition-colors shrink-0"
+                                aria-label="Abrir menú"
+                                title="Abrir menú"
+                            >
+                                <Menu className="w-5 h-5" />
+                            </button>
+                        )}
+                        <div className="flex-1">
+                            <GlobalSearch />
+                        </div>
                     </div>
                     <div className="flex items-center gap-4 pl-4">
                         <ThemeToggle />
