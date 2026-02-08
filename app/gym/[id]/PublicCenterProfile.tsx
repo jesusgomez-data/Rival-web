@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { UserPlus, UserCheck, MapPin, Globe, CheckCircle2, Grid, Dumbbell, ShoppingBag, X, CreditCard, Check, Lock, Calendar, Moon, Sun, ArrowRight, ArrowLeft, Trophy, List, LayoutGrid, ChevronRight, ChevronLeft, Clock, ChevronDown, Zap, Flame, TrendingUp, Info, Play, Banknote } from "lucide-react";
-import { toggleFollow, requestTrial, purchaseProduct, getClassesForDate, getClassesForRange, enrollInClass, getClassAttendees, saveClassResult, getDayRankings } from "../../dashboard/gyms/management-actions";
+import { toggleFollow, requestTrial, purchaseProduct, getClassesForDate, getClassesForRange, enrollInClass, getClassAttendees, saveClassResult, getDayRankings, requestMemberPayment } from "../../dashboard/gyms/management-actions";
 import { bookTrialClass } from "../../dashboard/gyms/trial-booking-actions";
 import GymPostCard from "../../dashboard/gyms/GymPostCard";
 import Link from "next/link";
@@ -11,7 +11,7 @@ import clsx from "clsx";
 import { useTheme } from "../../ThemeContext";
 
 // Update function signature (line 13)
-export default function PublicCenterProfile({ org, initialPosts, isFollowing, followersCount, products, currentUserId, memberStatus, coaches }: any) {
+export default function PublicCenterProfile({ org, initialPosts, isFollowing, followersCount, products, currentUserId, memberStatus, coaches, membershipPlans }: any) {
     // --- STATE ---
 
     // Theme
@@ -53,6 +53,12 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
     const [attendeesList, setAttendeesList] = useState<any[] | null>(null);
     const [isLoadingAttendees, setIsLoadingAttendees] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+
+    // Membership State
+    const [selectedMembership, setSelectedMembership] = useState<any>(null);
+    const [showMembershipModal, setShowMembershipModal] = useState(false);
+    const [isProcessingMembership, setIsProcessingMembership] = useState(false);
+
 
     useEffect(() => {
         setIsMounted(true);
@@ -252,6 +258,48 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
         setAttendeesList(list);
         setIsLoadingAttendees(false);
     }
+
+    // Membership Subscription Handler
+    async function handleSubscribeMembership(plan: any) {
+        if (!currentUserId) {
+            alert("Por favor, inicia sesión para suscribirte a una membresía.");
+            return;
+        }
+
+        // Check if already a member
+        if (isMember) {
+            alert("Ya eres miembro de este centro.");
+            return;
+        }
+
+        setSelectedMembership(plan);
+        setShowMembershipModal(true);
+    }
+
+    async function confirmMembershipSubscription() {
+        if (!selectedMembership || !currentUserId) return;
+
+        setIsProcessingMembership(true);
+        const res = await requestMemberPayment(org.id, selectedMembership.id, currentUserId, {
+            fullName: "",  // Will be fetched from user profile
+            phone: "",
+            birth_date: "",
+            notes: ""
+        });
+        setIsProcessingMembership(false);
+
+        if (res.error) {
+            alert(res.error);
+        } else if (res.checkoutUrl) {
+            // Redirect to Stripe Checkout
+            window.location.href = res.checkoutUrl as string;
+        } else {
+            alert("¡Solicitud procesada! El centro te contactará pronto.");
+            setShowMembershipModal(false);
+            setSelectedMembership(null);
+        }
+    }
+
 
     // Result Logging Handlers
     // --- REFACKTOR: Result Logging Handlers (Sections & Exercises) ---
@@ -593,6 +641,12 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                             <ShoppingBag className="w-3.5 h-3.5 md:w-4 md:h-4" /> Tienda
                         </button>
                         <button
+                            onClick={() => setActiveTab('memberships')}
+                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[9px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'memberships' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                        >
+                            <CreditCard className="w-3.5 h-3.5 md:w-4 md:h-4" /> Membresías
+                        </button>
+                        <button
                             onClick={() => setActiveTab('schedule')}
                             className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[9px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'schedule' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
                         >
@@ -921,6 +975,76 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                 <button className={`mt-auto w-full py-3 ${theme === 'dark' ? 'bg-white/5 hover:bg-white hover:text-black text-white' : 'bg-black/5 hover:bg-black hover:text-white text-black'} rounded-xl text-[10px] font-black uppercase tracking-wider transition-all border border-transparent`}>Ver Detalles</button>
                             </div>
                         ))}
+                    </div>
+                )}
+
+                {activeTab === 'memberships' && (
+                    <div className="max-w-5xl mx-auto">
+                        <div className="mb-8">
+                            <h2 className={`text-3xl font-black italic uppercase mb-2 ${textContrast}`}>Planes de Membresía</h2>
+                            <p className={`text-sm ${textMuted}`}>Elige el plan que mejor se adapte a tus necesidades y comienza tu journey de fitness</p>
+                        </div>
+
+                        {membershipPlans && membershipPlans.length > 0 ? (
+                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {membershipPlans.filter((plan: any) => plan.is_active).map((plan: any) => (
+                                    <div key={plan.id} className={`${bgCard} border rounded-3xl p-6 flex flex-col justify-between hover:border-brand-red/30 transition-all group overflow-hidden relative shadow-xl`}>
+                                        {/* Glow Effect */}
+                                        <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-red/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+
+                                        <div>
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="p-3 bg-brand-red/10 rounded-2xl text-brand-red">
+                                                    <CreditCard className="w-6 h-6" />
+                                                </div>
+                                            </div>
+
+                                            <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-1">{plan.name}</h3>
+                                            <p className="text-xs text-gray-500 mb-4 line-clamp-2">{plan.description || "Plan de membresía para el centro."}</p>
+
+                                            <div className="flex items-baseline gap-1 mb-6">
+                                                <span className="text-3xl font-black text-white italic">{plan.price}€</span>
+                                                <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">/ {plan.duration_months === 1 ? "mes" : `${plan.duration_months} meses`}</span>
+                                            </div>
+
+                                            <div className="space-y-2 mb-6 border-t border-white/5 pt-4">
+                                                {plan.features?.length > 0 ? (
+                                                    plan.features.map((feature: string, idx: number) => (
+                                                        <div key={idx} className="flex items-center gap-2 text-[11px] text-gray-300">
+                                                            <Check className="w-3 h-3 text-green-500 shrink-0" />
+                                                            <span>{feature}</span>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <p className="text-[10px] text-gray-600 italic">Acceso estándar al centro.</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={() => handleSubscribeMembership(plan)}
+                                            disabled={isMember || !currentUserId}
+                                            className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg ${isMember
+                                                ? 'bg-gray-500/20 text-gray-500 cursor-not-allowed'
+                                                : !currentUserId
+                                                    ? 'bg-gray-500/20 text-gray-500 cursor-not-allowed'
+                                                    : 'bg-brand-red text-white hover:bg-red-600 hover:scale-105'
+                                                }`}
+                                        >
+                                            {isMember ? 'Ya eres miembro' : !currentUserId ? 'Inicia sesión' : 'Suscribirme'}
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className={`col-span-full py-20 rounded-3xl border border-dashed ${theme === 'dark' ? 'bg-brand-gray/20 border-white/10' : 'bg-gray-50 border-gray-200'} flex flex-col items-center justify-center text-center px-10`}>
+                                <div className={`p-4 rounded-full mb-4 ${theme === 'dark' ? 'bg-white/5' : 'bg-gray-100'}`}>
+                                    <CreditCard className={`w-8 h-8 ${textMuted}`} />
+                                </div>
+                                <h4 className={`text-lg font-bold uppercase italic mb-2 ${textContrast}`}>No hay planes disponibles</h4>
+                                <p className={`text-xs max-w-sm uppercase tracking-widest font-medium ${textMuted}`}>Este centro aún no ha configurado planes de membresía.</p>
+                            </div>
+                        )}
                     </div>
                 )}
 
@@ -1684,6 +1808,83 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                     </div>
                 )}
             </div>
+
+            {/* Membership Confirmation Modal */}
+            {showMembershipModal && selectedMembership && (
+                <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-4" onClick={() => setShowMembershipModal(false)}>
+                    <div className={`${bgCard} border rounded-3xl p-6 sm:p-8 w-full max-w-lg relative animate-in fade-in zoom-in duration-300`} onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => setShowMembershipModal(false)} className="absolute top-4 right-4 bg-white/5 p-2 rounded-full text-gray-500 hover:text-white transition-colors">
+                            <X className="w-6 h-6" />
+                        </button>
+
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-2 bg-brand-red/10 rounded-xl text-brand-red">
+                                <CreditCard className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">
+                                    Confirmar Suscripción
+                                </h3>
+                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Revisa los detalles de tu membresía</p>
+                            </div>
+                        </div>
+
+                        <div className={`${theme === 'dark' ? 'bg-black/40' : 'bg-gray-50'} rounded-2xl p-6 mb-6 border ${theme === 'dark' ? 'border-white/10' : 'border-gray-200'}`}>
+                            <h4 className="text-xl font-black text-white uppercase italic tracking-tighter mb-2">{selectedMembership.name}</h4>
+                            <p className="text-xs text-gray-500 mb-4">{selectedMembership.description || "Plan de membresía para el centro."}</p>
+
+                            <div className="flex items-baseline gap-1 mb-4">
+                                <span className="text-3xl font-black text-white italic">{selectedMembership.price}€</span>
+                                <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">/ {selectedMembership.duration_months === 1 ? "mes" : `${selectedMembership.duration_months} meses`}</span>
+                            </div>
+
+                            {selectedMembership.features?.length > 0 && (
+                                <div className="space-y-2 pt-4 border-t border-white/5">
+                                    {selectedMembership.features.map((feature: string, idx: number) => (
+                                        <div key={idx} className="flex items-center gap-2 text-[11px] text-gray-300">
+                                            <Check className="w-3 h-3 text-green-500 shrink-0" />
+                                            <span>{feature}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className={`${theme === 'dark' ? 'bg-blue-500/10' : 'bg-blue-50'} border ${theme === 'dark' ? 'border-blue-500/20' : 'border-blue-200'} rounded-xl p-4 mb-6`}>
+                            <p className={`text-xs ${theme === 'dark' ? 'text-blue-300' : 'text-blue-600'}`}>
+                                <strong>Nota:</strong> Serás redirigido a una página de pago segura para completar tu suscripción.
+                            </p>
+                        </div>
+
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => setShowMembershipModal(false)}
+                                className={`flex-1 py-4 rounded-xl text-sm font-black uppercase tracking-widest transition-colors ${theme === 'dark' ? 'bg-white/5 text-gray-400 hover:bg-white/10' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmMembershipSubscription}
+                                disabled={isProcessingMembership}
+                                className="flex-[2] bg-brand-red text-white py-4 rounded-xl text-sm font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-2 hover:bg-red-600 transition-all disabled:opacity-50"
+                            >
+                                {isProcessingMembership ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                                        Procesando...
+                                    </>
+                                ) : (
+                                    <>
+                                        <CreditCard className="w-5 h-5" />
+                                        Continuar al Pago
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Exercise Media Lightbox */}
             {exerciseMedia && (
                 <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setExerciseMedia(null)}>

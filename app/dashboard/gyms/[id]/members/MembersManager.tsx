@@ -240,12 +240,37 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
             data.status = 'active';
         }
 
+        // First, update member details
         const res = await updateMemberDetails(centerId, viewingMember.id, data);
 
-        setIsSaving(false);
         if (res.error) {
+            setIsSaving(false);
             alert(res.error);
+            return;
+        }
+
+        // If payment_method is 'payment_request', send payment link
+        if (paymentMethod === 'payment_request' && (viewingMember.user_id || viewingMember.userId)) {
+            const paymentRes = await requestMemberPayment(centerId, plan, viewingMember.user_id || viewingMember.userId, {
+                fullName: username,
+                email,
+                phone,
+                birth_date: birthDate,
+                notes,
+                center_id: selectedCenterId
+            });
+
+            setIsSaving(false);
+
+            if (paymentRes.error) {
+                alert('Datos actualizados, pero hubo un error al enviar la solicitud de pago: ' + paymentRes.error);
+            } else {
+                alert('¡Perfecto! Datos actualizados y solicitud de pago enviada al atleta.');
+                setIsEditing(false);
+                window.location.reload();
+            }
         } else {
+            setIsSaving(false);
             setIsEditing(false);
             window.location.reload();
         }
@@ -726,17 +751,70 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                             )}
                                         </div>
 
+
                                         <div>
                                             <label className="block text-[7px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Estado de Cuenta</label>
-                                            <div className={`p-2 rounded-lg border flex items-center justify-between ${viewingMember.status === 'active' ? 'bg-green-500/10 border-green-500/20' : 'bg-red-500/10 border-red-500/20'}`}>
-                                                <span className={`text-[9px] font-black uppercase tracking-widest ${viewingMember.status === 'active' ? 'text-green-500' : viewingMember.status === 'paused' ? 'text-yellow-500' : 'text-red-500'}`}>
-                                                    {viewingMember.status === 'active' ? 'ACTIVO' : viewingMember.status === 'paused' ? 'PAUSADO' : 'DE BAJA'}
-                                                </span>
-                                                {/* Actions are handled in the footer now */}
-                                                <div className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all ${viewingMember.status === 'active' ? 'bg-green-500/20 text-green-500' : viewingMember.status === 'paused' ? 'bg-yellow-500/20 text-yellow-500' : 'bg-red-500/20 text-red-500'}`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${viewingMember.status === 'active' ? 'bg-green-500' : viewingMember.status === 'paused' ? 'bg-yellow-500' : 'bg-red-500'}`} />
-                                                    {viewingMember.status === 'active' ? 'Online' : viewingMember.status === 'paused' ? 'En Pausa' : 'Offline'}
+                                            <div className="flex gap-1.5">
+                                                {/* Status Display - Shows current status (NOT CLICKABLE) */}
+                                                <div className={`flex-1 p-1.5 rounded-lg border flex items-center justify-between ${viewingMember.status === 'active' ? 'bg-green-500/10 border-green-500/20' :
+                                                    viewingMember.status === 'paused' ? 'bg-yellow-500/10 border-yellow-500/20' :
+                                                        'bg-red-500/10 border-red-500/20'
+                                                    }`}>
+                                                    <span className={`text-[8px] font-black uppercase tracking-widest ${viewingMember.status === 'active' ? 'text-green-500' :
+                                                        viewingMember.status === 'paused' ? 'text-yellow-500' :
+                                                            'text-red-500'
+                                                        }`}>
+                                                        {viewingMember.status === 'active' ? 'ACTIVO' : viewingMember.status === 'paused' ? 'PAUSADO' : 'DE BAJA'}
+                                                    </span>
+                                                    <div className={`px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-widest flex items-center gap-1 ${viewingMember.status === 'active' ? 'bg-green-500/20 text-green-500' :
+                                                        viewingMember.status === 'paused' ? 'bg-yellow-500/20 text-yellow-500' :
+                                                            'bg-red-500/20 text-red-500'
+                                                        }`}>
+                                                        <span className={`w-1 h-1 rounded-full ${viewingMember.status === 'active' ? 'bg-green-500' :
+                                                            viewingMember.status === 'paused' ? 'bg-yellow-500' :
+                                                                'bg-red-500'
+                                                            }`} />
+                                                        {viewingMember.status === 'active' ? 'Online' : viewingMember.status === 'paused' ? 'En Pausa' : 'Offline'}
+                                                    </div>
                                                 </div>
+
+                                                {/* Quick Action Button - Dar de Baja or Re-activate */}
+                                                {isEditing && viewingMember.status !== 'inactive' && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            if (!confirm("¿CANCELAR membresía definitivamente? El usuario perderá acceso inmediato.")) return;
+                                                            setIsSaving(true);
+                                                            await toggleMemberStatus(centerId, viewingMember.id, 'inactive');
+                                                            window.location.reload();
+                                                        }}
+                                                        className="px-2 py-1.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-all flex items-center gap-1 shrink-0"
+                                                        title="Dar de baja"
+                                                    >
+                                                        <X className="w-2.5 h-2.5" />
+                                                        <span className="text-[7px] font-black uppercase tracking-widest">Baja</span>
+                                                    </button>
+                                                )}
+
+                                                {/* Re-activate Button - Only show when inactive */}
+                                                {isEditing && viewingMember.status === 'inactive' && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={async (e) => {
+                                                            e.stopPropagation();
+                                                            if (!confirm("¿Reactivar la membresía?")) return;
+                                                            setIsSaving(true);
+                                                            await toggleMemberStatus(centerId, viewingMember.id, 'active');
+                                                            window.location.reload();
+                                                        }}
+                                                        className="px-2 py-1.5 bg-green-500/10 text-green-500 border border-green-500/20 rounded-lg hover:bg-green-500/20 transition-all flex items-center gap-1 shrink-0"
+                                                        title="Reactivar"
+                                                    >
+                                                        <CheckCircle className="w-2.5 h-2.5" />
+                                                        <span className="text-[7px] font-black uppercase tracking-widest">Activar</span>
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
 

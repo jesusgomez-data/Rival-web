@@ -1,4 +1,4 @@
-import { getCenterPosts, getPublicCenter, checkFollowStatus, getCenterProducts, getMemberStatus } from "../../dashboard/gyms/management-actions";
+import { getCenterPosts, getPublicCenter, checkFollowStatus, getCenterProducts, getMemberStatus, getMembershipPlans } from "../../dashboard/gyms/management-actions";
 import PublicCenterProfile from "./PublicCenterProfile";
 import { notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
@@ -7,12 +7,13 @@ export default async function PublicCenterPage({ params }: { params: { id: strin
     const { id } = await params;
 
     // Parallel fetching
-    const [org, posts, isFollowing, products, memberStatus] = await Promise.all([
+    const [org, posts, isFollowing, products, memberStatus, membershipPlans] = await Promise.all([
         getPublicCenter(id),
         getCenterPosts(id),
         checkFollowStatus(id),
         getCenterProducts(id),
-        getMemberStatus(id)
+        getMemberStatus(id),
+        getMembershipPlans(id)
     ]);
 
     if (!org) {
@@ -47,6 +48,7 @@ export default async function PublicCenterPage({ params }: { params: { id: strin
             currentUserId={user?.id}
             memberStatus={memberStatus}
             coaches={coaches}
+            membershipPlans={membershipPlans}
         />
     );
 }
