@@ -51,7 +51,10 @@ export const translations = {
             submitting: 'Creando Cuenta...',
             terms: 'Al unirte, aceptas nuestros Términos de Servicio. Sé respetuoso, entrena duro.',
             alreadyHaveAccount: '¿Ya tienes cuenta?',
-            login: 'Inicia Sesión'
+            login: 'Inicia Sesión',
+            successTitle: '¡Casi listo!',
+            successMessage: 'Hemos enviado un enlace de confirmación a tu correo. Por favor revísalo para activar tu cuenta.',
+            goToLogin: 'Ir a Iniciar Sesión'
         },
         choice: {
             title: 'Elige tu campo de batalla',
@@ -193,7 +196,10 @@ export const translations = {
             submitting: 'Creating Account...',
             terms: 'By joining, you agree to our Terms of Service. Be respectful, train hard.',
             alreadyHaveAccount: 'Already have an account?',
-            login: 'Log In'
+            login: 'Log In',
+            successTitle: 'Almost there!',
+            successMessage: 'We have sent a confirmation link to your email. Please check it to activate your account.',
+            goToLogin: 'Go to Login'
         },
         choice: {
             title: 'Choose your battlefield',

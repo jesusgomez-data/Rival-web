@@ -73,6 +73,13 @@ export async function signup(prevState: any, formData: FormData) {
         }
     }
 
-    revalidatePath('/', 'layout')
-    redirect('/onboarding')
+    if (data.session) {
+        revalidatePath('/', 'layout')
+        redirect('/onboarding')
+    } else {
+        return {
+            success: true,
+            message: "Account created successfully! Please check your email to confirm your registration before logging in."
+        }
+    }
 }

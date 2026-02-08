@@ -71,87 +71,107 @@ export default function SignupPage() {
                         <p className="text-muted-foreground">{t.signup.subtitle}</p>
                     </div>
 
-                    <form className="space-y-5" action={formAction}>
-                        {state?.error && (
-                            <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-lg text-sm text-center font-bold">
-                                {state.error}
+                    {state?.success ? (
+                        <div className="bg-green-500/10 border border-green-500/50 p-6 rounded-2xl text-center space-y-4 animate-in fade-in zoom-in duration-300">
+                            <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Mail className="w-8 h-8 text-green-500" />
                             </div>
-                        )}
-                        <div className="grid grid-cols-2 gap-4">
+                            <h3 className="text-xl font-bold text-green-500">{t.signup.successTitle}</h3>
+                            <p className="text-muted-foreground text-lg">
+                                {t.signup.successMessage}
+                            </p>
+                            <div className="pt-4">
+                                <Link
+                                    href="/login"
+                                    className="w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 group bg-foreground text-background hover:opacity-80"
+                                >
+                                    {t.signup.goToLogin} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                </Link>
+                            </div>
+                        </div>
+                    ) : (
+                        <form className="space-y-5" action={formAction}>
+                            {state?.error && (
+                                <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-lg text-sm text-center font-bold">
+                                    {state.error}
+                                </div>
+                            )}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">{t.signup.firstName}</label>
+                                    <input
+                                        name="firstName"
+                                        type="text"
+                                        required
+                                        className="w-full border border-border rounded-xl py-4 px-4 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all bg-card text-foreground placeholder:text-muted-foreground"
+                                        placeholder="Juan"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">{t.signup.lastName}</label>
+                                    <input
+                                        name="lastName"
+                                        type="text"
+                                        required
+                                        className="w-full border border-border rounded-xl py-4 px-4 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all bg-card text-foreground placeholder:text-muted-foreground"
+                                        placeholder="Pérez"
+                                    />
+                                </div>
+                            </div>
+
                             <div>
-                                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">{t.signup.firstName}</label>
-                                <input
-                                    name="firstName"
-                                    type="text"
-                                    required
-                                    className="w-full border border-border rounded-xl py-4 px-4 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all bg-card text-foreground placeholder:text-muted-foreground"
-                                    placeholder="Juan"
-                                />
+                                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">{t.signup.username}</label>
+                                <div className="relative group">
+                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-brand-red transition-colors" />
+                                    <input
+                                        name="username"
+                                        type="text"
+                                        required
+                                        className="w-full border border-border rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all bg-card text-foreground placeholder:text-muted-foreground"
+                                        placeholder="rival_legend"
+                                    />
+                                </div>
                             </div>
+
                             <div>
-                                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">{t.signup.lastName}</label>
-                                <input
-                                    name="lastName"
-                                    type="text"
-                                    required
-                                    className="w-full border border-border rounded-xl py-4 px-4 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all bg-card text-foreground placeholder:text-muted-foreground"
-                                    placeholder="Pérez"
-                                />
+                                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">{t.signup.email}</label>
+                                <div className="relative group">
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-brand-red transition-colors" />
+                                    <input
+                                        name="email"
+                                        type="email"
+                                        required
+                                        className="w-full border border-border rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all bg-card text-foreground placeholder:text-muted-foreground"
+                                        placeholder="tu@ejemplo.com"
+                                    />
+                                </div>
                             </div>
-                        </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">{t.signup.username}</label>
-                            <div className="relative group">
-                                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-brand-red transition-colors" />
-                                <input
-                                    name="username"
-                                    type="text"
-                                    required
-                                    className="w-full border border-border rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all bg-card text-foreground placeholder:text-muted-foreground"
-                                    placeholder="rival_legend"
-                                />
+                            <div>
+                                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">{t.signup.password}</label>
+                                <div className="relative group">
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-brand-red transition-colors" />
+                                    <input
+                                        name="password"
+                                        type="password"
+                                        required
+                                        className="w-full border border-border rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all bg-card text-foreground placeholder:text-muted-foreground"
+                                        placeholder={t.signup.passwordHint}
+                                    />
+                                </div>
                             </div>
-                        </div>
 
-                        <div>
-                            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">{t.signup.email}</label>
-                            <div className="relative group">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-brand-red transition-colors" />
-                                <input
-                                    name="email"
-                                    type="email"
-                                    required
-                                    className="w-full border border-border rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all bg-card text-foreground placeholder:text-muted-foreground"
-                                    placeholder="tu@ejemplo.com"
-                                />
+                            <div className="pt-2">
+                                <button
+                                    disabled={isPending}
+                                    className="w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed bg-foreground text-background hover:opacity-80"
+                                >
+                                    {isPending ? t.signup.submitting : t.signup.submit} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                </button>
+                                <p className="text-xs text-muted-foreground mt-4 text-center">{t.signup.terms}</p>
                             </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">{t.signup.password}</label>
-                            <div className="relative group">
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-brand-red transition-colors" />
-                                <input
-                                    name="password"
-                                    type="password"
-                                    required
-                                    className="w-full border border-border rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all bg-card text-foreground placeholder:text-muted-foreground"
-                                    placeholder={t.signup.passwordHint}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="pt-2">
-                            <button
-                                disabled={isPending}
-                                className="w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed bg-foreground text-background hover:opacity-80"
-                            >
-                                {isPending ? t.signup.submitting : t.signup.submit} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                            </button>
-                            <p className="text-xs text-muted-foreground mt-4 text-center">{t.signup.terms}</p>
-                        </div>
-                    </form>
+                        </form>
+                    )}
 
                     {/* Temporarily hidden until OAuth is configured in Supabase */}
                     {/* <div className="mt-8 space-y-4">
