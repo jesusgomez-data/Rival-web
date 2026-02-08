@@ -707,9 +707,18 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                                             {block.exercises?.map((ex: any, eIdx: number) => (
                                                                                 <div key={eIdx} className="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2 border border-white/5">
                                                                                     <span className={clsx("text-xs font-bold uppercase", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</span>
-                                                                                    {/* Try to show some detail if avail */}
                                                                                     <span className="text-xs text-brand-red font-mono font-bold">
-                                                                                        {ex.sets?.[0]?.weight > 0 ? `${ex.sets[0].weight}kg` : ''}
+                                                                                        {(() => {
+                                                                                            const s = ex.sets?.[0];
+                                                                                            if (!s) return '';
+                                                                                            // Filter out 'kg' if weight is 0, handle different units
+                                                                                            const w = s.weight > 0 ? `${s.weight}${s.unit || 'kg'}` : '';
+                                                                                            // Handle reps/time/distance
+                                                                                            const r = s.reps > 0 ? `${s.reps}${s.measure === 'reps' ? '' : (s.measure || '')}` : '';
+
+                                                                                            if (w && r) return `${w} x ${r}`;
+                                                                                            return w || r;
+                                                                                        })()}
                                                                                     </span>
                                                                                 </div>
                                                                             ))}
