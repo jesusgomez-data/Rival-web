@@ -262,8 +262,16 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 {/* Mobile Header Bar */}
                 <div className="lg:hidden h-20 border-b border-border flex items-center justify-between px-6 sticky top-0 bg-background/95 backdrop-blur-xl z-[200]">
                     <div className="flex items-center gap-3">
-                        <Image src="/logo.svg" alt="Rival Logo" width={28} height={28} className="w-7 h-7" />
-                        <span className="font-heading font-bold text-xl text-white uppercase italic tracking-tighter">RIVAL</span>
+                        <div className="flex items-center gap-2">
+                            <Image src="/logo.svg" alt="Rival Logo" width={28} height={28} className="w-7 h-7" />
+                            <span className="font-heading font-bold text-xl text-white uppercase italic tracking-tighter">RIVAL</span>
+                        </div>
+
+                        {/* Icons moved next to logo */}
+                        <div className="flex items-center gap-1 ml-1 border-l border-white/10 pl-2">
+                            <ThemeToggle className="bg-transparent border-none p-1.5" />
+                            <NotificationBell />
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-1">
@@ -309,28 +317,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 {isMenuOpen && (
                     <div className="fixed inset-0 top-20 bg-background z-[999] lg:hidden overflow-y-auto pb-32 animate-in fade-in slide-in-from-right-4 duration-300">
                         <div className="p-6 space-y-8">
-                            {/* Profile Summary in Menu */}
-                            <div className="flex items-center justify-between bg-card border border-border p-5 rounded-[2.5rem]">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-14 h-14 rounded-full overflow-hidden border-2 border-brand-red shadow-glow relative">
-                                        {profile?.avatar_url ? (
-                                            <Image src={profile.avatar_url} alt="User" fill className="object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center bg-gray-800 text-brand-red font-black text-xl italic">
-                                                {(profile?.full_name || 'A')[0]}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-base font-black text-white uppercase italic tracking-tighter leading-none">{profile?.full_name || 'Atleta Rival'}</p>
-                                        <p className="text-[9px] text-brand-red font-black uppercase tracking-[0.2em] mt-1.5 opacity-80">Nivel {profile?.level || 1} • {profile?.subscription_tier || 'Free'}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <ThemeToggle className="bg-white/5 border-none p-2.5" />
-                                    <NotificationBell />
-                                </div>
-                            </div>
+                            {/* Profile Summary Removed by User Request */}
 
                             {/* Menu Items Grid */}
                             <div className="grid grid-cols-1 gap-2.5">

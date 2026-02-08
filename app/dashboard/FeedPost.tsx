@@ -975,8 +975,11 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             {
                 isLightboxOpen && (
                     <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsLightboxOpen(false)}>
-                        <button className="absolute top-6 right-6 text-white/50 hover:text-white focus:outline-none transition-colors">
-                            <X className="w-10 h-10" />
+                        <button
+                            onClick={() => setIsLightboxOpen(false)}
+                            className="absolute top-6 right-6 text-white hover:text-brand-red focus:outline-none transition-colors z-[110] bg-black/20 p-2 rounded-full"
+                        >
+                            <X className="w-8 h-8 md:w-10 md:h-10" />
                         </button>
                         <div className="relative w-full max-w-5xl max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                             {isVideo ? (

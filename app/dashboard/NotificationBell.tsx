@@ -103,7 +103,7 @@ export default function NotificationBell() {
                         className="fixed inset-0 z-[200]"
                         onClick={() => setIsOpen(false)}
                     />
-                    <div className="absolute right-0 top-full mt-2 w-screen max-w-[320px] bg-card border border-border rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[210] overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                    <div className="absolute -left-16 md:left-auto md:right-0 top-full mt-2 w-[280px] sm:w-[320px] bg-card border border-border rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[210] overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-left md:origin-top-right">
                         <div className="p-4 border-b border-border bg-muted flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <Zap className="w-4 h-4 text-brand-red animate-pulse" />
