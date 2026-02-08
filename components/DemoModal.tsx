@@ -12,7 +12,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
     const [view, setView] = useState<'athlete' | 'center'>('athlete');
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4 overflow-hidden" onClick={onClose}>
+        <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center sm:p-4 overflow-hidden" onClick={onClose}>
 
             {/* Container Principal */}
             <motion.div
@@ -20,7 +20,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="dark-section relative w-full max-w-5xl h-[85vh] sm:h-[600px] bg-[#0A0A0A] rounded-3xl overflow-y-auto overflow-x-hidden shadow-2xl border border-white/10 flex flex-col"
+                className="dark-section relative w-full h-full max-h-[95vh] sm:h-[600px] sm:max-h-none sm:w-full sm:max-w-5xl bg-[#0A0A0A] rounded-none sm:rounded-3xl overflow-y-auto overflow-x-hidden shadow-2xl border-0 sm:border border-white/10 flex flex-col"
                 onClick={(e) => e.stopPropagation()}
             >
 
@@ -92,7 +92,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                 </div>
 
                 {/* Main Content Area */}
-                <div className="relative z-40 flex-1 flex items-center justify-center p-6 sm:p-12 pb-12">
+                <div className="relative z-40 flex-1 flex items-center justify-center p-6 sm:p-12 pb-24 sm:pb-12">
 
                     {/* Dynamic Layout */}
                     <motion.div
