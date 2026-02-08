@@ -49,7 +49,15 @@ export async function signup(prevState: any, formData: FormData) {
 
     if (error) {
         console.error("Signup Error Detail:", error);
-        return { error: error.message + (error.stack ? ` (Stack: ${error.stack})` : '') }
+        let errorMessage = error.message;
+
+        // Handle rate limiting specifically
+        if (error.message.includes("security purposes") || error.code === '429') {
+            errorMessage = "Demasiados intentos. Por favor espera unos segundos antes de intentar de nuevo.";
+        }
+
+        // Don't leak stack traces to user
+        return { error: errorMessage }
     }
 
     // Explicitly create profile to ensure it exists and prevent "ghost" profiles
