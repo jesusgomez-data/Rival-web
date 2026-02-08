@@ -39,6 +39,9 @@ export async function signup(prevState: any, formData: FormData) {
         email,
         password,
         options: {
+            // Explicitly set the redirect URL using the environment variable
+            // This ensures production uses rivalfit.app and local uses localhost
+            emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
             data: {
                 full_name: `${firstName} ${lastName}`,
                 username: username,
