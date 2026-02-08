@@ -1084,7 +1084,8 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                             onClick={() => {
                                                                 setSelectedProfile(p);
                                                                 setUsername(p.full_name);
-                                                                setEmail(p.email || ""); // Profiles might not have public emails
+                                                                setEmail(p.email || "");
+                                                                setPhone(p.phone || "");
                                                                 setBirthDate(p.birth_date || "");
                                                                 setSearchResults([]);
                                                                 setProfileSearchQuery(p.full_name);
