@@ -49,13 +49,13 @@ export async function generateCoachResponse(userMessage: string, userProfile: Co
     }
     Si no hay entreno, workout: null.`;
 
-    // Intentar con los modelos más eficientes y estables
+    // Lista de modelos priorizando los de mayor cuota en Free Tier
     const modelsToTry = [
         "gemini-1.5-flash",
-        "gemini-2.0-flash",
-        "gemini-1.5-pro"
+        "gemini-1.5-flash-8b",
+        "gemini-2.0-flash"
     ];
-    let errors: string[] = [];
+    let lastError = "";
 
     for (const modelName of modelsToTry) {
         try {
@@ -70,7 +70,7 @@ export async function generateCoachResponse(userMessage: string, userProfile: Co
             const result = await model.generateContent(systemPrompt + "\n\nUsuario: " + userMessage);
 
             if (!result || !result.response) {
-                throw new Error("Respuesta de IA vacía o inválida");
+                throw new Error("Respuesta vacía");
             }
 
             const text = result.response.text();
@@ -78,25 +78,34 @@ export async function generateCoachResponse(userMessage: string, userProfile: Co
             try {
                 return JSON.parse(text);
             } catch (parseError) {
-                console.error("[COACH AI] Error parseando JSON, intentando limpieza manual");
                 const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
                 return JSON.parse(cleanJson);
             }
         } catch (error: any) {
             console.error(`[COACH AI] Error en ${modelName}:`, error.message);
-            errors.push(`${modelName}: ${error.message}`);
+            lastError = error.message;
 
-            if (error.message.includes("429")) {
-                await new Promise(resolve => setTimeout(resolve, 1000));
+            // Si es un error de cuota (429), no quemamos más modelos en cadena
+            // porque suelen compartir la cuota del mismo proyecto
+            if (error.message.includes("429") || error.message.includes("quota")) {
+                console.warn("[COACH AI] Cuota excedida detectada. Saltando a protocolo manual.");
+                break;
             }
+
+            // Para otros errores, intentamos el siguiente modelo
             continue;
         }
     }
 
+    // Mensaje amigable para el usuario si todo falla
+    const friendlyError = lastError.includes("429") || lastError.includes("quota")
+        ? "El Cuartel General de IA está saturado en este momento. He activado el Protocolo de Entrenamiento Manual para no perder el ritmo."
+        : "Hubo un fallo en las comunicaciones tácticas. Activando protocolo de entrenamiento manual.";
+
     return {
-        replyText: `Soldado, hubo un error de comunicación con el cuartel general. Detalles: ${errors.join(" | ")}. Protocolo de entrenamiento manual activado.`,
+        replyText: `Soldado, ${friendlyError}`,
         workout: {
-            title: "Plan de Resistencia Civil",
+            title: "Protocolo de Emergencia",
             duration: "20 min",
             intensity: "Alta",
             sportType: "Calistenia",
@@ -108,3 +117,4 @@ export async function generateCoachResponse(userMessage: string, userProfile: Co
         }
     };
 }
+
