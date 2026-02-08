@@ -20,7 +20,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="dark-section relative w-full max-w-5xl aspect-video sm:aspect-auto sm:h-[600px] bg-[#0A0A0A] rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex flex-col"
+                className="dark-section relative w-full max-w-5xl h-[85vh] sm:h-[600px] bg-[#0A0A0A] rounded-3xl overflow-y-auto overflow-x-hidden shadow-2xl border border-white/10 flex flex-col"
                 onClick={(e) => e.stopPropagation()}
             >
 
@@ -92,7 +92,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                 </div>
 
                 {/* Main Content Area */}
-                <div className="relative z-40 flex-1 flex items-center justify-center p-8 sm:p-12">
+                <div className="relative z-40 flex-1 flex items-center justify-center p-6 sm:p-12 pb-12">
 
                     {/* Dynamic Layout */}
                     <motion.div
@@ -104,7 +104,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                         className="w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
                     >
                         {/* Text Content */}
-                        <div className="space-y-6 text-left">
+                        <div className="space-y-6 text-left pb-8 lg:pb-0">
                             <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest ${view === 'athlete' ? 'borderColor-red-500/30 text-red-500 bg-red-500/10' : 'borderColor-orange-500/30 text-orange-500 bg-orange-500/10'}`}>
                                 {view === 'athlete' ? <Activity size={12} /> : <TrendingUp size={12} />}
                                 {view === 'athlete' ? 'Performance Tracking' : 'Business Intelligence'}
@@ -144,7 +144,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                         </div>
 
                         {/* Visual Content (Cards / Mockups) */}
-                        <div className="relative h-full min-h-[300px] flex items-center justify-center">
+                        <div className="relative w-full h-full min-h-[300px] flex items-center justify-center pb-8 lg:pb-0">
 
                             {/* Glassmorphism Card */}
                             <motion.div
