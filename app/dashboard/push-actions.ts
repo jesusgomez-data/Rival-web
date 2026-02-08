@@ -3,24 +3,26 @@
 import { createClient } from '@/utils/supabase/server';
 import webpush from 'web-push';
 
-try {
-    const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
-    const privateKey = process.env.VAPID_PRIVATE_KEY?.trim();
+// La inicialización se hace dentro de las funciones para evitar que se ejecute en el top-level si se importa en el cliente
+function setupWebPush() {
+    try {
+        const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
+        const privateKey = process.env.VAPID_PRIVATE_KEY?.trim();
 
-    if (publicKey && privateKey) {
-        console.log(`VAPID Keys: PubLen(${publicKey.length}), PrivLen(${privateKey.length})`);
-        webpush.setVapidDetails(
-            'mailto:support@rivalfit.app',
-            publicKey,
-            privateKey
-        );
-        console.log("VAPID details set successfully.");
-    } else {
-        console.warn("VAPID keys not found. Push notifications will not work.");
+        if (publicKey && privateKey) {
+            webpush.setVapidDetails(
+                'mailto:support@rivalfit.app',
+                publicKey,
+                privateKey
+            );
+            return true;
+        }
+    } catch (error) {
+        console.error("Error setting VAPID details:", error);
     }
-} catch (error) {
-    console.error("Error setting VAPID details:", error);
+    return false;
 }
+
 
 export async function savePushSubscription(subscription: any) {
     const supabase = await createClient();
@@ -47,6 +49,7 @@ export async function savePushSubscription(subscription: any) {
 }
 
 export async function sendPushNotification(userId: string, title: string, body: string, url: string = '/') {
+    setupWebPush();
     const supabase = await createClient();
 
     // Fetch valid subscriptions for the user

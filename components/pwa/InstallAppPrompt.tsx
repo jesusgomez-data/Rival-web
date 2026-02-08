@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { X, Share, MoreVertical, PlusSquare, Download } from "lucide-react";
+import { X, Share, MoreVertical, SquarePlus, Download } from "lucide-react";
 import Image from "next/image";
 import clsx from "clsx";
 
@@ -142,7 +142,7 @@ export default function InstallAppPrompt() {
                                     </div>
                                     <div className="flex items-center gap-3 text-sm text-gray-300">
                                         <span className="flex items-center justify-center w-6 h-6 bg-white/10 rounded-full text-xs font-bold text-white shrink-0">2</span>
-                                        <p>Selecciona <span className="text-white font-bold inline-flex items-center gap-1"><PlusSquare className="w-3.5 h-3.5" /> Añadir a inicio</span>.</p>
+                                        <p>Selecciona <span className="text-white font-bold inline-flex items-center gap-1"><SquarePlus className="w-3.5 h-3.5" /> Añadir a inicio</span>.</p>
                                     </div>
                                 </div>
                             )}

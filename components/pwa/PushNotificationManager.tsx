@@ -60,14 +60,16 @@ export default function PushNotificationManager() {
             }
         }
 
-        // Try to register/sync push on mount (if already granted) or ask?
-        // Usually we should ask user explicitly. For now, we check permission.
-        if (typeof Notification !== 'undefined') {
-            if (Notification.permission === 'granted') {
-                registerPush();
+        if (typeof window !== 'undefined' && 'Notification' in window) {
+            try {
+                if (Notification.permission === 'granted') {
+                    registerPush();
+                }
+            } catch (e) {
+                console.error("Error checking notification permission:", e);
             }
-            // Do not auto-request permission. Wait for user action in UI.
         }
+
     }, []);
 
     return null; // Logic component only
