@@ -326,10 +326,10 @@ export default function ChatWindow({ messages, otherPerson, currentUserId, onSen
                         className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 md:p-10 cursor-zoom-out"
                     >
                         <motion.button
-                            className="absolute top-6 right-6 p-3 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all z-10"
+                            className="absolute top-6 right-6 text-white hover:text-brand-red focus:outline-none transition-colors z-[110] bg-black/20 p-2 rounded-full shadow-lg"
                             onClick={(e) => { e.stopPropagation(); setLightboxImage(null); }}
                         >
-                            <X className="w-6 h-6" />
+                            <X className="w-8 h-8 md:w-10 md:h-10" />
                         </motion.button>
                         <motion.div
                             initial={{ scale: 0.9, y: 20 }}

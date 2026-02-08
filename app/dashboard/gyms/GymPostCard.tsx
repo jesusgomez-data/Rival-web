@@ -18,6 +18,7 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
     const [commentAsCenter, setCommentAsCenter] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const [expandedBlocks, setExpandedBlocks] = useState<Record<string, boolean>>({});
+    const [isLightboxOpen, setIsLightboxOpen] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
@@ -270,18 +271,27 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                     </p>
                 )}
                 {post.image_urls && post.image_urls.length > 0 && (
-                    <div className="rounded-xl overflow-hidden border border-border bg-muted/50">
+                    <div
+                        className="rounded-xl overflow-hidden border border-border bg-muted/50 cursor-pointer group relative shadow-lg"
+                        onClick={() => setIsLightboxOpen(true)}
+                    >
                         {/\.(mp4|webm|ogg|mov)$/i.test(post.image_urls[0]) ? (
-                            <video
-                                src={post.image_urls[0]}
-                                controls
-                                className="w-full max-h-[600px] object-contain bg-black"
-                            />
+                            <div className="relative w-full h-full">
+                                <video
+                                    src={post.image_urls[0]}
+                                    className="w-full max-h-[600px] object-contain bg-black"
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+                                    <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-glow">
+                                        <Play className="w-5 h-5 text-white fill-white ml-1" />
+                                    </div>
+                                </div>
+                            </div>
                         ) : (
                             <img
                                 src={post.image_urls[0]}
                                 alt="Post Media"
-                                className="w-full max-h-[600px] object-contain bg-black/5"
+                                className="w-full max-h-[600px] object-contain bg-black/5 group-hover:scale-[1.02] transition-transform duration-500"
                             />
                         )}
                     </div>
@@ -414,6 +424,36 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                             </div>
                         </div>
                     </form>
+                </div>
+            )}
+            {/* Lightbox */}
+            {isLightboxOpen && (
+                <div
+                    className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm"
+                    onClick={() => setIsLightboxOpen(false)}
+                >
+                    <button
+                        onClick={() => setIsLightboxOpen(false)}
+                        className="absolute top-6 right-6 text-white hover:text-brand-red focus:outline-none transition-colors z-[110] bg-black/20 p-2 rounded-full cursor-pointer shadow-lg"
+                    >
+                        <X className="w-8 h-8 md:w-10 md:h-10" />
+                    </button>
+                    <div className="relative w-full max-w-5xl max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                        {/\.(mp4|webm|ogg|mov)$/i.test(post.image_urls?.[0]) ? (
+                            <video
+                                src={post.image_urls?.[0]}
+                                controls
+                                autoPlay
+                                className="max-w-full max-h-[90vh] rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)]"
+                            />
+                        ) : (
+                            <img
+                                src={post.image_urls?.[0]}
+                                alt="Full size"
+                                className="max-w-full max-h-[90vh] object-contain rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)]"
+                            />
+                        )}
+                    </div>
                 </div>
             )}
         </div>

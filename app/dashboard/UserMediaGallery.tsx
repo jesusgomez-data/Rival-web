@@ -84,9 +84,9 @@ export default function UserMediaGallery({ userId, limit }: { userId: string, li
                 >
                     <button
                         onClick={() => setLightboxIndex(null)}
-                        className="absolute top-4 right-4 text-white/50 hover:text-white p-2 rounded-full hover:bg-white/10 transition-all z-10"
+                        className="absolute top-6 right-6 text-white hover:text-brand-red focus:outline-none transition-colors z-[110] bg-black/20 p-2 rounded-full"
                     >
-                        <X className="w-8 h-8" />
+                        <X className="w-8 h-8 md:w-10 md:h-10" />
                     </button>
 
                     <div

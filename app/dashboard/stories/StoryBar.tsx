@@ -747,8 +747,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                         <Trash2 className="w-5 h-5 group-hover/delete:scale-110 transition-transform" />
                                     </button>
                                 )}
-                                <button onClick={() => setSelectedUserIndex(null)} className="p-2 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-md">
-                                    <X className="w-5 h-5" />
+                                <button onClick={() => setSelectedUserIndex(null)} className="p-2 bg-black/40 hover:text-brand-red text-white rounded-full backdrop-blur-md transition-colors border border-white/5 shadow-lg">
+                                    <X className="w-8 h-8" />
                                 </button>
                             </div>
                         </div>
