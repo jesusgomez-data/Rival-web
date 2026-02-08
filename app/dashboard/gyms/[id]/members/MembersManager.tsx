@@ -263,7 +263,11 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                 return;
             }
 
-            const paymentRes = await requestMemberPayment(centerId, plan, viewingMember.user_id || viewingMember.userId, {
+
+            const userId = viewingMember.user_id || viewingMember.userId;
+            console.log('[MembersManager] Enviando solicitud de pago para userId:', userId, 'planId:', plan);
+
+            const paymentRes = await requestMemberPayment(centerId, plan, userId, {
                 fullName: username,
                 email,
                 phone,
