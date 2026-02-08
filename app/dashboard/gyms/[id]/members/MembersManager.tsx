@@ -771,7 +771,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                         <div>
                                             <label className="block text-[7px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Estado de Cuenta</label>
                                             <div className="flex gap-1.5">
-                                                {/* Status Display - Shows current status (NOT CLICKABLE) */}
+                                                {/* Status Display */}
                                                 <div className={`flex-1 p-1.5 rounded-lg border flex items-center justify-between ${viewingMember.status === 'active' ? 'bg-green-500/10 border-green-500/20' :
                                                     viewingMember.status === 'paused' ? 'bg-yellow-500/10 border-yellow-500/20' :
                                                         'bg-red-500/10 border-red-500/20'
@@ -794,42 +794,51 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                     </div>
                                                 </div>
 
-                                                {/* Quick Action Button - Dar de Baja or Re-activate */}
-                                                {isEditing && viewingMember.status !== 'inactive' && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={async (e) => {
-                                                            e.stopPropagation();
-                                                            if (!confirm("¿CANCELAR membresía definitivamente? El usuario perderá acceso inmediato.")) return;
-                                                            setIsSaving(true);
-                                                            await toggleMemberStatus(centerId, viewingMember.id, 'inactive');
-                                                            window.location.reload();
-                                                        }}
-                                                        className="px-2 py-1.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-all flex items-center gap-1 shrink-0"
-                                                        title="Dar de baja"
-                                                    >
-                                                        <X className="w-2.5 h-2.5" />
-                                                        <span className="text-[7px] font-black uppercase tracking-widest">Baja</span>
-                                                    </button>
-                                                )}
-
-                                                {/* Re-activate Button - Only show when inactive */}
-                                                {isEditing && viewingMember.status === 'inactive' && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={async (e) => {
-                                                            e.stopPropagation();
-                                                            if (!confirm("¿Reactivar la membresía?")) return;
-                                                            setIsSaving(true);
-                                                            await toggleMemberStatus(centerId, viewingMember.id, 'active');
-                                                            window.location.reload();
-                                                        }}
-                                                        className="px-2 py-1.5 bg-green-500/10 text-green-500 border border-green-500/20 rounded-lg hover:bg-green-500/20 transition-all flex items-center gap-1 shrink-0"
-                                                        title="Reactivar"
-                                                    >
-                                                        <CheckCircle className="w-2.5 h-2.5" />
-                                                        <span className="text-[7px] font-black uppercase tracking-widest">Activar</span>
-                                                    </button>
+                                                {/* Action Buttons */}
+                                                {isEditing && (
+                                                    <div className="flex gap-1.5">
+                                                        {viewingMember.status !== 'active' ? (
+                                                            <button
+                                                                type="button"
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!confirm("¿Reactivar la membresía de este atleta?")) return;
+                                                                    setIsSaving(true);
+                                                                    const res = await toggleMemberStatus(centerId, viewingMember.id, 'active');
+                                                                    if (res.error) {
+                                                                        alert(res.error);
+                                                                    } else {
+                                                                        window.location.reload();
+                                                                    }
+                                                                }}
+                                                                className="px-3 py-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-all flex items-center gap-1.5 shrink-0"
+                                                                title="Reactivar Atleta"
+                                                            >
+                                                                <CheckCircle className="w-3 h-3" />
+                                                                <span className="text-[8px] font-black uppercase tracking-widest">Activar Alta</span>
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!confirm("¿CANCELAR membresía definitivamente? El usuario perderá acceso inmediato.")) return;
+                                                                    setIsSaving(true);
+                                                                    const res = await toggleMemberStatus(centerId, viewingMember.id, 'inactive');
+                                                                    if (res.error) {
+                                                                        alert(res.error);
+                                                                    } else {
+                                                                        window.location.reload();
+                                                                    }
+                                                                }}
+                                                                className="px-2 py-1.5 bg-red-500/10 text-red-500 border border-red-500/20 rounded-lg hover:bg-red-500/20 transition-all flex items-center gap-1 shrink-0"
+                                                                title="Dar de baja"
+                                                            >
+                                                                <X className="w-2.5 h-2.5" />
+                                                                <span className="text-[7px] font-black uppercase tracking-widest">Baja</span>
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
