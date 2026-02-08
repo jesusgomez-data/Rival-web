@@ -724,7 +724,7 @@ export async function requestMemberPayment(centerId: string, planId: string, use
         // 2. Get user profile for Stripe customer
         // We use admin client here to bypass RLS policies that might hide email/stripe_id
         console.log('[requestMemberPayment] Buscando perfil para userId:', userId);
-        const { data: profile, error: profileError } = await admin.from('profiles').select('stripe_customer_id, email, full_name').eq('id', userId).single();
+        const { data: profile, error: profileError } = await admin.from('profiles').select('stripe_customer_id, full_name').eq('id', userId).single();
 
         if (profileError) {
             console.error('[requestMemberPayment] Error al buscar perfil:', profileError);
@@ -736,12 +736,12 @@ export async function requestMemberPayment(centerId: string, planId: string, use
             return { error: `Perfil no encontrado para el usuario. Verifica que el atleta tenga una cuenta Rival vinculada.` };
         }
 
-        console.log('[requestMemberPayment] Perfil encontrado:', profile.email);
+        console.log('[requestMemberPayment] Perfil encontrado:', profile.full_name);
 
         let customerId = profile.stripe_customer_id;
         if (!customerId) {
             const stripeCustomer = await stripe.customers.create({
-                email: profile.email || extraData.email,
+                email: extraData.email,
                 name: profile.full_name || extraData.fullName,
                 metadata: { userId }
             });
