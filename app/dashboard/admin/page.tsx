@@ -95,7 +95,10 @@ export default function AdminDashboard() {
                 const { data: { user } } = await supabase.auth.getUser();
 
                 const adminEmails = ['gomezsantiagojesus@icloud.com', 'jesusgomez.s@hotmail.com'];
-                if (!user || !adminEmails.includes(user.email || '')) {
+                const userEmail = user?.email?.toLowerCase().trim();
+
+                if (!user || !userEmail || !adminEmails.includes(userEmail)) {
+                    console.warn('[ADMIN] Unauthorized access attempt blocked');
                     window.location.href = '/dashboard';
                     return;
                 }

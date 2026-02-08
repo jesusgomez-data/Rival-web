@@ -127,8 +127,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         setIsMenuOpen(false);
     }, [pathname]);
 
+    // Strict admin whitelist - ONLY these specific emails can access admin panel
     const ADMIN_EMAILS = ['gomezsantiagojesus@icloud.com', 'jesusgomez.s@hotmail.com'];
-    const isAdmin = !!userEmail && ADMIN_EMAILS.includes(userEmail);
+    const isAdmin = userEmail && typeof userEmail === 'string' && ADMIN_EMAILS.includes(userEmail.toLowerCase().trim());
 
     const navItems = [
         { name: t.navDashboard.home, href: "/dashboard", icon: Home },
@@ -140,7 +141,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         { name: t.navDashboard.leaderboard, href: "/dashboard/leaderboard", icon: Trophy },
         { name: t.navDashboard.analytics, href: "/dashboard/analytics", icon: BarChart2 },
         { name: t.navDashboard.profile, href: "/dashboard/profile", icon: Settings },
-        ...(isAdmin ? [{ name: "RIVAL COMMAND (ADMIN)", href: "/dashboard/admin", icon: Shield }] : []),
+        ...(isAdmin === true ? [{ name: "RIVAL COMMAND (ADMIN)", href: "/dashboard/admin", icon: Shield }] : []),
     ];
 
     const hideSidebarDefault = (pathname?.startsWith('/dashboard/gyms/') && pathname.split('/').length > 3) || pathname === '/dashboard/admin';
