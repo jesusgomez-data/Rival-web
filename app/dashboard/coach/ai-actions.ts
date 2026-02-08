@@ -49,35 +49,45 @@ export async function generateCoachResponse(userMessage: string, userProfile: Co
     }
     Si no hay entreno, workout: null.`;
 
-    // Intentar con el modelo más rápido y luego fallback al estándar
+    // Intentar con los modelos más eficientes y estables
     const modelsToTry = [
-        "gemini-2.0-flash",
         "gemini-1.5-flash",
-        "gemini-flash-latest",
-        "gemini-1.5-pro",
-        "gemini-pro-latest"
+        "gemini-2.0-flash",
+        "gemini-1.5-pro"
     ];
     let errors: string[] = [];
 
     for (const modelName of modelsToTry) {
         try {
             console.log(`[COACH AI] Intentando con: ${modelName}`);
-            const model = genAI.getGenerativeModel({ model: modelName });
-
-            const result = await model.generateContent({
-                contents: [{ role: 'user', parts: [{ text: systemPrompt + "\n\nUsuario: " + userMessage }] }],
+            const model = genAI.getGenerativeModel({
+                model: modelName,
+                generationConfig: {
+                    responseMimeType: "application/json",
+                }
             });
 
+            const result = await model.generateContent(systemPrompt + "\n\nUsuario: " + userMessage);
+
+            if (!result || !result.response) {
+                throw new Error("Respuesta de IA vacía o inválida");
+            }
+
             const text = result.response.text();
-            const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
-            return JSON.parse(cleanJson);
+
+            try {
+                return JSON.parse(text);
+            } catch (parseError) {
+                console.error("[COACH AI] Error parseando JSON, intentando limpieza manual");
+                const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+                return JSON.parse(cleanJson);
+            }
         } catch (error: any) {
             console.error(`[COACH AI] Error en ${modelName}:`, error.message);
             errors.push(`${modelName}: ${error.message}`);
 
-            // Si es un error de cuota (429), esperamos un poco antes del siguiente modelo
             if (error.message.includes("429")) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                await new Promise(resolve => setTimeout(resolve, 1000));
             }
             continue;
         }
