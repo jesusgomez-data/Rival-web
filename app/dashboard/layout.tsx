@@ -279,18 +279,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                             {showMobileSearch ? <X className="w-6 h-6" /> : <SearchIcon className="w-6 h-6" />}
                         </button>
 
-                        <button
-                            onClick={() => setIsMenuOpen(!isMenuOpen)}
-                            className="p-2.5 text-gray-400 hover:text-brand-red transition-all"
-                        >
-                            {isMenuOpen ? <X className="w-7 h-7 text-white" /> : (
-                                <div className="space-y-1.5 w-6 flex flex-col items-end">
-                                    <div className="h-0.5 w-6 bg-current rounded-full" />
-                                    <div className="h-0.5 w-4 bg-brand-red rounded-full" />
-                                    <div className="h-0.5 w-6 bg-current rounded-full" />
-                                </div>
-                            )}
-                        </button>
+
 
                         <Link href="/dashboard/profile" className="ml-2 relative shrink-0">
                             <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/10">

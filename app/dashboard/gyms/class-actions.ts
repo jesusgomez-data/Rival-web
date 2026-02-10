@@ -1,0 +1,241 @@
+'use server';
+
+import { createClient } from "@/utils/supabase/server";
+import { revalidatePath } from "next/cache";
+import { updateMissionProgress } from "../training/actions";
+
+// Extracted from management-actions.ts to avoid bundling 'stripe' (server-only) in client components like PendingReviewPrompt
+
+export async function saveClassResult(classId: string, resultData: any, notes: string, shareToFeed: boolean = false, datePerformed: string = new Date().toISOString()) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "Debes iniciar sesión" };
+
+    // 1. Get Class & Org Info
+    const { data: classData } = await supabase
+        .from('classes')
+        .select(`
+            organization_id, 
+            scheduled_time
+        `)
+        .eq('id', classId)
+        .single();
+
+    if (!classData) return { error: "Clase no encontrada" };
+
+    // Fetch Organization Name explicitly to ensure it exists
+    const { data: orgData } = await supabase
+        .from('organizations')
+        .select('name')
+        .eq('id', classData.organization_id)
+        .single();
+
+    // @ts-ignore
+    classData.organizations = orgData;
+
+    // 2. Check if enrolled
+    const { data: enrollments, error: enrollmentError } = await supabase
+        .from('class_enrollments')
+        .select(`id, member:member_id!inner(user_id)`)
+        .eq('class_id', classId)
+        .eq('member.user_id', user.id);
+
+    if (enrollmentError || !enrollments || enrollments.length === 0) {
+        return { error: "No estás inscrito en esta clase" };
+    }
+
+    // 3. Save result
+    const { error } = await supabase
+        .from('class_results')
+        .upsert({
+            class_id: classId,
+            user_id: user.id,
+            result_type: 'custom',
+            result_value: 'Detailed Result',
+            data: resultData,
+            notes: notes,
+            date_performed: datePerformed,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'class_id, user_id' });
+
+    if (error) return { error: error.message };
+
+    // 4. Update Missions & XP
+    // Track session count
+    await updateMissionProgress(user.id, 'sessions_count', 1);
+
+    // Calculate Volume from resultData
+    let totalVolume = 0;
+    if (resultData && Array.isArray(resultData)) {
+        resultData.forEach((block: any) => {
+            if (block.type === 'weight' && block.exercises) {
+                block.exercises.forEach((ex: any) => {
+                    const w = parseFloat(ex.value) || 0;
+                    const r = parseInt(ex.reps) || 0;
+                    const s = parseInt(ex.sets) || 1;
+                    totalVolume += w * r * s;
+                });
+            } else if (block.wod_weight) {
+                totalVolume += parseFloat(block.wod_weight) || 0;
+            }
+        });
+    }
+
+    if (totalVolume > 0) {
+        await updateMissionProgress(user.id, 'volume_kg', totalVolume);
+    }
+
+    // Give XP
+    await supabase.rpc('increment_xp', { amount: 100, profile_id: user.id });
+
+    // 5. Share to Feed
+    if (shareToFeed) {
+        let caption = `🔥 ¡WOD FINALIZADO!\n\n`;
+
+        if (resultData && Array.isArray(resultData)) {
+            resultData.forEach((block: any) => {
+                const title = (block.title || 'RESULTADOS').toUpperCase();
+                caption += `\n ${title}\n`;
+                caption += ` ----------------------------\n`;
+
+                if (block.type === 'weight') {
+                    if (block.exercises) {
+                        block.exercises.forEach((ex: any) => {
+                            if (ex.name) {
+                                let line = ` • ${ex.name.trim().toUpperCase()}`;
+                                if (ex.sets && ex.reps) line += ` (${ex.sets} X ${ex.reps})`;
+                                if (ex.value) line += `: ${ex.value}KG`;
+                                caption += line + '\n';
+                            }
+                        });
+                    }
+                } else {
+                    if (block.value) {
+                        caption += ` RESULTADO: ${block.value.trim().toUpperCase()}`;
+                        if (block.wod_weight) caption += ` (${block.wod_weight}KG)`;
+                        caption += '\n';
+                    }
+                    if (block.exercises && block.exercises.length > 0) {
+                        block.exercises.forEach((ex: any) => {
+                            if (ex.name) caption += ` - ${ex.name.trim().toUpperCase()}\n`;
+                        });
+                    }
+                }
+            });
+        }
+
+        if (notes) caption += `\n📝 COMENTARIO: ${notes}`;
+
+        // Inject Metadata for FeedPost
+        const feedData = Array.isArray(resultData) ? [...resultData] : [];
+        // @ts-ignore
+        const centerName = classData.organizations?.name || 'Centro Deportivo';
+
+        feedData.push({
+            type: 'metadata',
+            centerName: centerName
+        });
+
+        await supabase.from('posts').insert({
+            user_id: user.id,
+            caption: caption,
+            media_type: 'class_result',
+            media_url: JSON.stringify(feedData)
+        });
+    }
+
+    // Revalidate relevant paths
+    const { data: c } = await supabase.from('classes').select('organization_id').eq('id', classId).single();
+    if (c) {
+        revalidatePath(`/gym/${c.organization_id}`);
+        revalidatePath('/dashboard');
+        revalidatePath('/dashboard/community');
+    }
+
+    return { success: true };
+}
+
+export async function getPendingClassReviews() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return [];
+
+    // Find class enrollments where attended is true OR date is past
+    // And user has NOT submitted a result
+
+    // 1. Get Enrollments (past)
+    const now = new Date();
+    // Allow reviewing classes from last 24h that passed
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: enrollments } = await supabase
+        .from('class_enrollments')
+        .select(`
+            class_id,
+            class:classes!inner (
+                id,
+                name,
+                scheduled_time,
+                organization_id,
+                coach:profiles!coach_id (full_name)
+            ),
+            member:member_id!inner (
+                user_id
+            )
+        `)
+        .eq('member.user_id', user.id)
+        .gte('class.scheduled_time', yesterday)
+        .lte('class.scheduled_time', now.toISOString());
+
+    if (!enrollments || enrollments.length === 0) return [];
+
+    // 2. Get Existing Results
+    const classIds = enrollments.map(e => e.class_id);
+    const { data: results } = await supabase
+        .from('class_results')
+        .select('class_id')
+        .eq('user_id', user.id)
+        .in('class_id', classIds);
+
+    const completedClassIds = new Set(results?.map(r => r.class_id));
+
+    // 3. Filter pending
+    const pending = enrollments.filter(e => !completedClassIds.has(e.class_id));
+
+    if (pending.length === 0) return [];
+
+    // 4. Fetch WODs for pending classes (optimized)
+    // Supabase join return types can be tricky (array vs object)
+    // @ts-ignore
+    const orgIds = [...new Set(pending.map((p: any) => {
+        const cls = Array.isArray(p.class) ? p.class[0] : p.class;
+        return cls?.organization_id;
+    }).filter(Boolean))];
+
+    const { data: wods } = await supabase
+        .from('center_posts')
+        .select('organization_id, scheduled_for, content')
+        .eq('post_type', 'wod')
+        .in('organization_id', orgIds)
+        .gte('scheduled_for', yesterday)
+        .lte('scheduled_for', now.toISOString());
+
+    // Attach WOD to class
+    return pending.map((p: any) => {
+        const cls = Array.isArray(p.class) ? p.class[0] : p.class;
+        if (!cls) return null;
+
+        const dateStr = cls.scheduled_time ? cls.scheduled_time.split('T')[0] : '';
+        const wod = wods?.find(w => w.organization_id === cls.organization_id && w.scheduled_for.split('T')[0] === dateStr);
+
+        const coach = Array.isArray(cls.coach) ? cls.coach[0] : cls.coach;
+
+        return {
+            ...cls,
+            coach: coach,
+            wod: wod
+        };
+    }).filter(Boolean);
+}

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Tag, ShoppingBag, Edit2, CreditCard, Banknote, User, Search, Loader2, X, Check, Building2, ChevronDown } from "lucide-react";
-import { createProduct, updateProduct, deleteProduct, searchAthletes, processStoreSale, getCenterProducts } from "../../management-actions"; // Added imports
+import { createProduct, updateProduct, deleteProduct, processStoreSale, getCenterProducts } from "../../store-actions";
+import { searchAthletes } from "../../member-actions"; // Added imports
 
 import clsx from "clsx"; // Added clsx
 

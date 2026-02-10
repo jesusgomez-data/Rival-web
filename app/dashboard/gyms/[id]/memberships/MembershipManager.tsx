@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2, Edit2, X, CreditCard, ChevronDown, Check, Loader2, DollarSign, Clock, ListChecks } from "lucide-react";
-import { createMembershipPlan, updateMembershipPlan, deleteMembershipPlan } from "../../management-actions";
+import { createMembershipPlan, updateMembershipPlan, deleteMembershipPlan } from "../../membership-plan-actions";
 
 export default function MembershipManager({ centerId, initialPlans }: any) {
     const [plans, setPlans] = useState(initialPlans);

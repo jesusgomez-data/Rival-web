@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Check, X, Loader2 } from "lucide-react";
-import { markAttendance } from "../../../management-actions";
+import { markAttendance } from "../../../schedule-actions";
 
 export default function AttendanceToggle({ enrollmentId, initialAttended, path }: any) {
     const [status, setStatus] = useState<boolean | null>(initialAttended);

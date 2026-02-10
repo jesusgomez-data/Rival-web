@@ -37,16 +37,17 @@ export default function GymLayoutClient({
                 />
             )}
 
-            {/* Sidebar - Siempre fixed para permitir expansión total cuando está cerrado */}
+            {/* Sidebar - Desktop Only */}
             <div className={`
-                w-64 border-r border-border bg-card flex flex-col h-full
+                hidden lg:flex
+                w-64 border-r border-border bg-card flex-col h-full
                 fixed inset-y-0 left-0 z-50
                 transform transition-transform duration-300 ease-in-out
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             `}>
                 <div className="p-6 border-b border-border flex justify-between items-start shrink-0">
                     <div className="flex-1 min-w-0 pr-2">
-                        <Link href={`/gym/${org.id}`} className="hover:opacity-80 transition-opacity block">
+                        <Link href={`/dashboard/gyms/${org.id}`} className="hover:opacity-80 transition-opacity block">
                             <h2 className="font-heading font-black text-foreground italic truncate" title={org.name}>{org.name}</h2>
                         </Link>
                         <p className="text-xs text-brand-red font-bold uppercase tracking-widest mt-1">{roleLabel}</p>
@@ -68,16 +69,15 @@ export default function GymLayoutClient({
                 </div>
             </div>
 
-            {/* Main Content - Con margen izquierdo solo cuando el sidebar está abierto en desktop */}
+            {/* Main Content */}
             <div className={`
                 flex-1 flex flex-col h-full min-w-0 bg-background/50
                 transition-all duration-300 ease-in-out
                 ${sidebarOpen ? 'lg:ml-64' : 'ml-0'}
             `}>
-                {/* Center Dashboard Header - Desktop con botón hamburguesa */}
+                {/* Center Dashboard Header - Desktop */}
                 <header className="hidden lg:flex h-16 border-b border-border bg-background/80 backdrop-blur px-4 lg:px-6 items-center justify-between shrink-0 z-20">
                     <div className="flex items-center gap-4 w-full max-w-xl">
-                        {/* Botón hamburguesa para desktop */}
                         {!sidebarOpen && (
                             <button
                                 onClick={() => setSidebarOpen(true)}
@@ -111,25 +111,29 @@ export default function GymLayoutClient({
                     </div>
                 </header>
 
-                {/* Mobile Header con botón hamburguesa */}
+                {/* Mobile Header - No Hamburger */}
                 <div className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-border">
                     <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-2">
-                        {/* Botón hamburguesa */}
-                        <button
-                            onClick={() => setSidebarOpen(true)}
-                            className="p-2 hover:bg-white/5 rounded-lg transition-colors shrink-0"
-                            aria-label="Abrir menú"
-                        >
-                            <Menu className="w-5 h-5" />
-                        </button>
-
-                        <h1 className="font-heading font-black text-lg italic text-foreground truncate">{org.name}</h1>
+                        {/* Title & Role */}
+                        <div className="flex flex-col justify-center">
+                            <h1 className="font-heading font-black text-lg italic text-foreground truncate">{org.name}</h1>
+                            <div className="text-[9px] font-bold text-brand-red uppercase tracking-widest leading-none mt-0.5">
+                                {userRole === 'owner' ? 'Propietario' : 'Coach'}
+                            </div>
+                        </div>
 
                         <div className="flex items-center gap-2 shrink-0">
                             <ThemeToggle className="bg-transparent border-none p-1.5 shadow-none" />
-                            <div className="text-[9px] font-bold text-brand-red uppercase tracking-widest bg-brand-red/10 px-2 py-1 rounded border border-brand-red/20">
-                                {userRole === 'owner' ? 'Propietario' : 'Coach'}
-                            </div>
+                            {/* User Profile for Mobile */}
+                            <Link href="/dashboard/profile" className="w-7 h-7 rounded-full bg-brand-gray border border-white/10 overflow-hidden">
+                                {profile?.avatar_url ? (
+                                    <img src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full bg-gray-800 flex items-center justify-center text-[10px] text-gray-400">
+                                        {(profile?.full_name || 'A')[0].toUpperCase()}
+                                    </div>
+                                )}
+                            </Link>
                         </div>
                     </div>
                     <SidebarNav id={org.id} isAdmin={isAdmin} />

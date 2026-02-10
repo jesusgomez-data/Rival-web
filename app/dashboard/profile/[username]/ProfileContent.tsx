@@ -50,8 +50,8 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} />
                         </div>
                     )}
-                    {/* Manifiesto Overlay - Mobile Only - Bottom Right */}
-                    <div className="absolute bottom-4 right-2 z-10 md:hidden max-w-[120px]">
+                    {/* Manifiesto Overlay - Mobile Only - Moved to Top to avoid overlap */}
+                    <div className="absolute top-16 right-2 z-10 md:hidden max-w-[120px]">
                         <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-xl p-2 shadow-lg">
                             <h3 className="text-[6px] font-black text-brand-red uppercase tracking-widest mb-0.5 text-right">Manifiesto</h3>
                             <p className="text-[8px] text-gray-100 italic leading-tight line-clamp-3 text-right">

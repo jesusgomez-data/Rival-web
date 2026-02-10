@@ -264,7 +264,7 @@ export default function ChatWindow({ messages, otherPerson, currentUserId, onSen
                                                                     }
                                                                 }}
                                                             >
-                                                                <div className="relative min-w-[180px] max-w-[280px] sm:max-w-[340px] aspect-[4/5] sm:aspect-auto">
+                                                                <div className="relative min-w-[150px] max-w-[200px] sm:max-w-[340px] aspect-[4/5] sm:aspect-auto">
                                                                     <Image
                                                                         src={msg.image_url}
                                                                         alt="Media"
@@ -371,7 +371,7 @@ export default function ChatWindow({ messages, otherPerson, currentUserId, onSen
                             onChange={(e) => setInputValue(e.target.value)}
                             onKeyDown={handleKeyPress}
                             placeholder={t.chat.placeholder}
-                            className="flex-1 bg-transparent border-none py-4 px-2 text-xs md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                            className="flex-1 bg-transparent border-none py-4 px-2 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
                         />
                         <div className="flex items-center gap-1">
                             <button className="hidden sm:block p-2 text-gray-500 hover:text-white transition-colors">

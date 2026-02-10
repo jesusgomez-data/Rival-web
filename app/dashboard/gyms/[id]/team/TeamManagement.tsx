@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Plus, Shield, Trash2, User, Mail, MoreHorizontal, Search, Loader2, X, Link as LinkIcon, Check, Users, Clock } from "lucide-react";
 import { inviteTeamMember, removeTeamMember, updateTeamMemberRole } from "../../actions";
-import { searchAthletes } from "../../management-actions";
+import { searchAthletes } from "../../member-actions";
 import Image from "next/image";
 import CoachShifts from "./CoachShifts";
 import clsx from "clsx";

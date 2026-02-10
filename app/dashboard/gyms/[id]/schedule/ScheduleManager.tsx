@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Plus, Trash2, Calendar as CalIcon, Clock, Users, ChevronLeft, ChevronRight, LayoutGrid, List as ListIcon, ChevronDown, Check, Building2 } from "lucide-react";
-import { createClass, deleteClass, getClassesRange } from "../../management-actions";
+import { createClass, deleteClass, getClassesRange } from "../../schedule-actions";
 
 export default function ScheduleManager({ centerId, initialClasses, coaches, userRole, centers = [], organizationDetails }: any) {
     const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;

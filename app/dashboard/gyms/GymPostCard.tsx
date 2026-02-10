@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import clsx from "clsx";
 import { MessageCircle, Heart, Share2, MoreHorizontal, Send, Trash2, X, Building2, Dumbbell, Zap, Flame, TrendingUp, ChevronDown, Plus, Play, Clock, ArrowRight } from "lucide-react";
-import { toggleCenterPostLike, addCenterPostComment, getCenterPostComments, deletePost, deleteCenterPostComment } from "./management-actions";
+import { toggleCenterPostLike, addCenterPostComment, getCenterPostComments, deletePost, deleteCenterPostComment } from "./feed-actions";
 import Link from "next/link";
 
 export default function GymPostCard({ post, centerId, isAdmin = false, currentUserId, isMember = false }: any) {

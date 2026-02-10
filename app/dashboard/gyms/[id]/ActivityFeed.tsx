@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getCenterActivity } from "../management-actions";
+import { getCenterActivity } from "../analytics-actions";
 import { UserPlus, ShoppingBag, Calendar, AlertCircle, Clock } from "lucide-react";
 
 export default function ActivityFeed({ centerId }: { centerId: string }) {

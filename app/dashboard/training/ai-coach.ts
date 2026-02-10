@@ -6,7 +6,7 @@ export type TrainingPlan = {
     id: string;
     title: string;
     description: string;
-    sport: 'gym' | 'running' | 'cross_training' | 'hybrid';
+    sport: 'gym' | 'running' | 'cross_training' | 'hybrid' | 'calisthenics' | 'ocr' | 'other';
     difficulty: 'beginner' | 'intermediate' | 'elite';
     duration_min: number;
     exercises: any[]; // Structure matches the one used in GymView/RunningView
@@ -53,9 +53,9 @@ export async function getAiRecommendation(sport: string, userTier: 'free' | 'pre
             duration_min: 60,
             is_premium: false,
             exercises: [
-                { id: 'bp', name: 'Press de Banca', target: '4 series x 6-8 reps', prev: '80kg', sets: [{}, {}, {}, {}] },
-                { id: 'ip', name: 'Press Inclinado Mancuernas', target: '3 series x 10-12 reps', prev: '24kg', sets: [{}, {}, {}] },
-                { id: 'le', name: 'Extensiones Tríceps', target: '3 series x 15 reps', prev: '20kg', sets: [{}, {}, {}] },
+                { id: 'bp', name: 'Bench Press', target: '4 series x 6-8 reps', prev: '80kg', video_url: 'https://www.youtube.com/watch?v=rT7DgCr-3pg', sets: [{ reps: 8, weight: 60 }, { reps: 8, weight: 60 }, { reps: 8, weight: 60 }, { reps: 8, weight: 60 }] },
+                { id: 'ip', name: 'Incline Dumbbell Press', target: '3 series x 10-12 reps', prev: '24kg', video_url: 'https://www.youtube.com/watch?v=8iPEnn-ltC8', sets: [{ reps: 10, weight: 20 }, { reps: 10, weight: 20 }, { reps: 10, weight: 20 }] },
+                { id: 'le', name: 'Triceps Extensions', target: '3 series x 15 reps', prev: '20kg', video_url: 'https://www.youtube.com/watch?v=X-iV27N00Xc', sets: [{ reps: 15, weight: 15 }, { reps: 15, weight: 15 }, { reps: 15, weight: 15 }] },
             ]
         });
 
@@ -69,8 +69,8 @@ export async function getAiRecommendation(sport: string, userTier: 'free' | 'pre
                 duration_min: 75,
                 is_premium: true,
                 exercises: [
-                    { id: 'dl', name: 'Peso Muerto', target: '5 series x 3-5 reps', prev: '140kg', sets: [{}, {}, {}, {}, {}] },
-                    { id: 'sq', name: 'Sentadilla Hack', target: '4 series x 8 reps', prev: '100kg', sets: [{}, {}, {}, {}] },
+                    { id: 'dl', name: 'Deadlift', target: '5 series x 3-5 reps', prev: '140kg', video_url: 'https://www.youtube.com/watch?v=op9kVnSso6Q', sets: [{ reps: 5, weight: 100 }, { reps: 5, weight: 110 }, { reps: 3, weight: 120 }, { reps: 3, weight: 130 }, { reps: 3, weight: 140 }] },
+                    { id: 'sq', name: 'Back Squat', target: '4 series x 8 reps', prev: '100kg', video_url: 'https://www.youtube.com/watch?v=MVMh0HiJCXQ', sets: [{ reps: 8, weight: 70 }, { reps: 8, weight: 70 }, { reps: 8, weight: 70 }, { reps: 8, weight: 70 }] },
                 ]
             });
         }

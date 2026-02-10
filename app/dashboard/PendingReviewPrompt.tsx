@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getPendingClassReviews, saveClassResult } from './gyms/management-actions';
+import { getPendingClassReviews, saveClassResult } from './gyms/class-actions';
 import { X, Check, Timer, Activity } from 'lucide-react';
 import clsx from 'clsx';
 import Link from 'next/link';

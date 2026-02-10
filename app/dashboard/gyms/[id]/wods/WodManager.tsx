@@ -2,7 +2,8 @@
 
 import { useState, useRef } from "react";
 import { Plus, Minus, Trash2, FileText, Image as ImageIcon, X, Video, ChevronDown, Check, Edit2, Search, Clock } from "lucide-react";
-import { createWod, updateWod, deletePost } from "../../management-actions";
+import { createWod, updateWod } from "../../wod-actions";
+import { deletePost } from "../../feed-actions";
 import clsx from "clsx";
 import { useTheme } from "../../../../ThemeContext";
 

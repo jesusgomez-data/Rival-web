@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Edit, X, Trash2, ChevronDown, Check } from "lucide-react";
-import { updateClass, deleteClass } from "../../../management-actions";
+import { updateClass, deleteClass } from "../../../schedule-actions";
 import { useRouter } from "next/navigation";
 
 export default function EditClassButton({ centerId, classData, coaches, userRole }: any) {

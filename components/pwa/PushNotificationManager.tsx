@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { savePushSubscription } from "@/app/dashboard/push-actions";
+import { savePushSubscription } from "@/app/dashboard/subscription-actions";
 
 function urlBase64ToUint8Array(base64String: string) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);

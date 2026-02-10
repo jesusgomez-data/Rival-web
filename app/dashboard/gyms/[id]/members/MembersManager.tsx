@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Plus, Search, User, CheckCircle, Trash2, Edit2, X, CreditCard, Phone, Mail, Landmark, Power, Cake, Calendar, Link as LinkIcon, Loader2, ChevronDown, Check, Send, Download, Upload, FileText, AlertCircle, Building2 } from "lucide-react";
-import { addMember, addGuestMember, requestMemberPayment, approveTrialRequest, removeMember, updateMemberDetails, toggleMemberStatus, searchAthletes, linkMemberToUser, bulkImportMembers, getCenterMembers } from "../../management-actions";
+import { addMember, addGuestMember, requestMemberPayment, approveTrialRequest, removeMember, updateMemberDetails, toggleMemberStatus, searchAthletes, linkMemberToUser, bulkImportMembers, getCenterMembers } from "../../member-actions";
 import { sendRegistrationEmail } from "../../email-actions";
 
 export default function MembersManager({ centerId, initialMembers, plans = [], centers = [], orgDetails }: any) {

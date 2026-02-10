@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Send, Image as ImageIcon, Trash2, Building2 } from "lucide-react";
-import { createPost, deletePost } from "../../management-actions";
+import { createPost, deletePost } from "../../feed-actions";
 import { useRouter } from "next/navigation";
 
 import GymPostCard from "../../GymPostCard";

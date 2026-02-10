@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { getUserMedia } from "./community/actions";
-import { Play, X } from "lucide-react";
+import { Play, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 export default function UserMediaGallery({ userId, limit }: { userId: string, limit?: number }) {
     const [mediaItems, setMediaItems] = useState<any[]>([]);
@@ -84,13 +84,34 @@ export default function UserMediaGallery({ userId, limit }: { userId: string, li
                 >
                     <button
                         onClick={() => setLightboxIndex(null)}
-                        className="absolute top-6 right-6 text-white hover:text-brand-red focus:outline-none transition-colors z-[110] bg-black/20 p-2 rounded-full"
+                        className="absolute top-12 right-6 text-white hover:text-brand-red focus:outline-none transition-colors z-[110] bg-black/20 p-2 rounded-full"
                     >
                         <X className="w-8 h-8 md:w-10 md:h-10" />
                     </button>
 
+                    {/* Navigation Buttons */}
+                    <button
+                        className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white transition-colors z-[110]"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setLightboxIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : mediaItems.length - 1));
+                        }}
+                    >
+                        <ChevronLeft className="w-8 h-8 md:w-12 md:h-12" />
+                    </button>
+
+                    <button
+                        className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white transition-colors z-[110]"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setLightboxIndex((prev) => (prev !== null && prev < mediaItems.length - 1 ? prev + 1 : 0));
+                        }}
+                    >
+                        <ChevronRight className="w-8 h-8 md:w-12 md:h-12" />
+                    </button>
+
                     <div
-                        className="relative w-full max-w-5xl max-h-[90vh] flex items-center justify-center"
+                        className="relative w-full max-w-5xl max-h-[80vh] flex items-center justify-center px-8 md:px-0"
                         onClick={(e) => e.stopPropagation()}
                     >
                         {mediaItems[lightboxIndex].media_type === 'video' ? (
@@ -98,13 +119,13 @@ export default function UserMediaGallery({ userId, limit }: { userId: string, li
                                 src={mediaItems[lightboxIndex].media_url}
                                 controls
                                 autoPlay
-                                className="max-w-full max-h-[90vh] rounded-lg shadow-2xl"
+                                className="max-w-full max-h-[80vh] rounded-lg shadow-2xl"
                             />
                         ) : (
                             <img
                                 src={mediaItems[lightboxIndex].media_url}
                                 alt="Full size"
-                                className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                                className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
                             />
                         )}
                     </div>
