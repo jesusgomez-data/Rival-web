@@ -128,6 +128,30 @@ export default function ProfilePage() {
             const user = authData?.user;
             if (!user) return;
 
+            // Check if username is being changed
+            if (formData.username !== profile?.username) {
+                // Validate username uniqueness
+                const { data: existingUser, error: checkError } = await supabase
+                    .from('profiles')
+                    .select('username')
+                    .eq('username', formData.username)
+                    .neq('id', user.id) // Exclude current user
+                    .maybeSingle()
+
+                if (checkError && checkError.code !== 'PGRST116') {
+                    console.error("Username check error:", checkError);
+                    alert("Error al verificar el nombre de usuario. Por favor intenta de nuevo.");
+                    setSaving(false);
+                    return;
+                }
+
+                if (existingUser) {
+                    alert(`El nombre de usuario "${formData.username}" ya está en uso. Por favor elige otro.`);
+                    setSaving(false);
+                    return;
+                }
+            }
+
             const { error } = await supabase
                 .from('profiles')
                 .update({
@@ -143,8 +167,18 @@ export default function ProfilePage() {
                 })
                 .eq('id', user.id);
 
-            if (error) throw error;
-            router.refresh();
+            if (error) {
+                // Check if it's a unique constraint violation on username
+                if (error.code === '23505' && error.message.includes('username')) {
+                    alert(`El nombre de usuario "${formData.username}" ya está en uso. Por favor elige otro.`);
+                } else {
+                    throw error;
+                }
+            } else {
+                // Update local profile state
+                setProfile((prev: any) => ({ ...prev, username: formData.username }));
+                router.refresh();
+            }
         } catch (error) {
             console.error("Error updating profile:", error);
             alert("Error updating profile. Check console.");
@@ -690,6 +724,9 @@ export default function ProfilePage() {
                                         <option value="Bodybuilding">Culturismo</option>
                                         <option value="Running">Running</option>
                                         <option value="Calisthenics">Calistenia</option>
+                                        <option value="Hybrid">Hybrid</option>
+                                        <option value="OCR">OCR</option>
+                                        <option value="Otros">Otros</option>
                                     </select>
                                 </div>
                                 <FormInput

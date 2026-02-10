@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { UserPlus, UserCheck, MapPin, Globe, CheckCircle2, Grid, Dumbbell, ShoppingBag, X, CreditCard, Check, Lock, Calendar, Moon, Sun, ArrowRight, ArrowLeft, Trophy, List, LayoutGrid, ChevronRight, ChevronLeft, Clock, ChevronDown, Zap, Flame, TrendingUp, Info, Play, Banknote } from "lucide-react";
-import { toggleFollow, requestTrial, purchaseProduct, getClassesForDate, getClassesForRange, enrollInClass, getClassAttendees, saveClassResult, getDayRankings, requestMemberPayment } from "../../dashboard/gyms/management-actions";
+import { toggleFollow, requestTrial, purchaseProduct, getClassesForDate, getClassesRange, enrollInClass, getClassAttendees, saveClassResult, getDayRankings, requestMemberPayment } from "../../dashboard/gyms/management-actions";
 import { bookTrialClass } from "../../dashboard/gyms/trial-booking-actions";
 import GymPostCard from "../../dashboard/gyms/GymPostCard";
 import Link from "next/link";
@@ -137,7 +137,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
             const start = new Date(date);
             const end = new Date(date);
             end.setDate(end.getDate() + 6);
-            const classesRange = await getClassesForRange(org.id, start.toISOString(), end.toISOString());
+            const classesRange = await getClassesRange(org.id, start.toISOString(), end.toISOString());
             setWeeklyClasses(classesRange);
         } else {
             const classes = await getClassesForDate(org.id, date);

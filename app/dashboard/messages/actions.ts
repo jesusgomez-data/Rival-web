@@ -160,6 +160,13 @@ export async function editMessage(id: string, text: string) {
     return { error: error?.message }
 }
 
+export async function deleteConversation(id: string) {
+    const supabase = await createClient()
+    const { error } = await supabase.from('conversations').delete().eq('id', id)
+    if (error) return { error: error.message }
+    return { success: true }
+}
+
 export async function toggleMessageLike(id: string, currentStatus: boolean) {
     const supabase = await createClient()
     const { error } = await supabase

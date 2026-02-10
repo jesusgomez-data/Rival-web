@@ -14,9 +14,6 @@ export type TrainingPlan = {
 }
 
 export async function getAiRecommendation(sport: string, userTier: 'free' | 'premium' = 'free'): Promise<TrainingPlan[]> {
-    // In a real app, this would query an AI model or a complex algorithm based on user history.
-    // For now, we utilize static elite programming logic.
-
     const recommendations: TrainingPlan[] = [];
 
     if (sport === 'running') {
@@ -28,7 +25,7 @@ export async function getAiRecommendation(sport: string, userTier: 'free' | 'pre
             difficulty: 'intermediate',
             duration_min: 45,
             is_premium: false,
-            exercises: [] // Running view handles logic differently
+            exercises: []
         });
 
         if (userTier === 'premium') {
@@ -74,6 +71,69 @@ export async function getAiRecommendation(sport: string, userTier: 'free' | 'pre
                 ]
             });
         }
+    } else if (sport === 'hybrid') {
+        recommendations.push({
+            id: 'hybrid-power',
+            title: 'Hybrid: Power & Run',
+            description: 'Combinación de fuerza explosiva y carrera. 1km + 50 Burpee Broad Jumps + 1km.',
+            sport: 'hybrid',
+            difficulty: 'intermediate',
+            duration_min: 45,
+            is_premium: false,
+            exercises: [
+                { id: 'run1', name: 'Run 1km', sets: [{ reps: 1 }] },
+                { id: 'bbj', name: 'Burpee Broad Jump', sets: [{ reps: 50 }] },
+                { id: 'run2', name: 'Run 1km', sets: [{ reps: 1 }] }
+            ]
+        });
+
+        if (userTier === 'premium') {
+            recommendations.push({
+                id: 'hybrid-hyrox',
+                title: 'RIVAL Hyrox Prep',
+                description: 'Simulación de 3 estaciones Hyrox: Ski, Sled Push y Burpee Broad Jumps con carrera intercalada.',
+                sport: 'hybrid',
+                difficulty: 'elite',
+                duration_min: 60,
+                is_premium: true,
+                exercises: [
+                    { id: 'run1', name: 'Run 1km', sets: [{ reps: 1 }] },
+                    { id: 'ski', name: 'Ski Erg 1000m', sets: [{ reps: 1 }] },
+                    { id: 'run2', name: 'Run 1km', sets: [{ reps: 1 }] },
+                    { id: 'sled', name: 'Sled Push 50m', sets: [{ reps: 1 }] }
+                ]
+            });
+        }
+    } else if (sport === 'ocr') {
+        recommendations.push({
+            id: 'ocr-base',
+            title: 'OCR: Obstacle Skills',
+            description: 'Enfoque en agarre y técnica de obstáculos.',
+            sport: 'ocr',
+            difficulty: 'intermediate',
+            duration_min: 50,
+            is_premium: false,
+            exercises: [
+                { id: 'hang', name: 'Dead Hang', sets: [{ reps: 3, weight: 60 }] },
+                { id: 'pu', name: 'Pull Ups', sets: [{ reps: 10 }] },
+                { id: 'run', name: 'Trail Run 5km', sets: [{ reps: 1 }] }
+            ]
+        });
+    } else if (sport === 'calisthenics') {
+        recommendations.push({
+            id: 'cali-skills',
+            title: 'Cali Mastery: Muscle Up Prep',
+            description: 'Ejercicios de transferencia para Muscle Up.',
+            sport: 'calisthenics',
+            difficulty: 'intermediate',
+            duration_min: 45,
+            is_premium: false,
+            exercises: [
+                { id: 'hpu', name: 'High Pull Ups', sets: [{ reps: 8 }] },
+                { id: 'dips', name: 'Straight Bar Dips', sets: [{ reps: 12 }] },
+                { id: 'neg', name: 'Negative Muscle Ups', sets: [{ reps: 5 }] }
+            ]
+        });
     } else if (sport === 'cross_training') {
         recommendations.push({
             id: 'cf-fran',
@@ -83,7 +143,10 @@ export async function getAiRecommendation(sport: string, userTier: 'free' | 'pre
             difficulty: 'intermediate',
             duration_min: 10,
             is_premium: false,
-            exercises: [] // Cross Training view just needs text usually
+            exercises: [
+                { id: 'thrusters', name: 'Thrusters', sets: [{ reps: 21, weight: 43 }] },
+                { id: 'pullups', name: 'Pull Ups', sets: [{ reps: 21 }] }
+            ]
         });
     }
 

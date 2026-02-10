@@ -18,11 +18,12 @@ interface ChatWindowProps {
     onDeleteMessage?: (id: string) => void
     onEditMessage?: (id: string, text: string) => void
     onToggleLike?: (id: string, currentStatus: boolean) => void
+    onDeleteConversation?: () => void
     isLoading?: boolean
     onBack?: () => void
 }
 
-export default function ChatWindow({ messages, otherPerson, currentUserId, onSendMessage, onUploadImage, onDeleteMessage, onEditMessage, onToggleLike, isLoading, onBack }: ChatWindowProps) {
+export default function ChatWindow({ messages, otherPerson, currentUserId, onSendMessage, onUploadImage, onDeleteMessage, onEditMessage, onToggleLike, onDeleteConversation, isLoading, onBack }: ChatWindowProps) {
     const { t, language } = useLanguage()
     const messagesEndRef = useRef<HTMLDivElement>(null)
     const [inputValue, setInputValue] = useState('')
@@ -146,6 +147,19 @@ export default function ChatWindow({ messages, otherPerson, currentUserId, onSen
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {onDeleteConversation && (
+                        <button
+                            onClick={() => {
+                                if (confirm(t.chat.deleteConfirm || '¿Estás seguro de que quieres borrar esta conversación?')) {
+                                    onDeleteConversation();
+                                }
+                            }}
+                            className="p-2 text-gray-500 hover:text-brand-red transition-colors"
+                            title="Borrar conversación"
+                        >
+                            <Trash2 className="w-5 h-5" />
+                        </button>
+                    )}
                     <button className="p-2 text-gray-500 hover:text-white transition-colors">
                         <Info className="w-5 h-5" />
                     </button>

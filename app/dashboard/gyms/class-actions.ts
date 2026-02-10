@@ -239,3 +239,105 @@ export async function getPendingClassReviews() {
         };
     }).filter(Boolean);
 }
+
+export async function getDayRankings(centerId: string, date: string) {
+    const supabase = await createClient();
+
+    // 1. Get classes for that day/center
+    const startOfDay = new Date(date).toISOString();
+    const endOfDay = new Date(new Date(date).setHours(23, 59, 59, 999)).toISOString();
+
+    const { data: classes } = await supabase
+        .from('classes')
+        .select('id')
+        .eq('organization_id', centerId)
+        .gte('scheduled_time', startOfDay)
+        .lte('scheduled_time', endOfDay);
+
+    if (!classes || classes.length === 0) return {};
+
+    const classIds = classes.map(c => c.id);
+
+    // 2. Get results for these classes
+    const { data: results } = await supabase
+        .from('class_results')
+        .select(`
+            data,
+            user:profiles!user_id (full_name, username, avatar_url)
+        `)
+        .in('class_id', classIds);
+
+    if (!results) return {};
+
+    // 3. Group by Block Title
+    const leaderboard: Record<string, any[]> = {};
+
+    results.forEach((r: any) => {
+        if (!r.data || !Array.isArray(r.data)) return;
+
+        r.data.forEach((block: any) => {
+            const title = (block.title || 'WORKOUT').toUpperCase();
+
+            // Only include blocks that have a value
+            if (block.type === 'weight') {
+                // For weight, we might want to list top lifts.
+                // For now, let's include if any exercise has value.
+                if (block.exercises && block.exercises.some((e: any) => e.value)) {
+                    // Weight usually logic is max weight lifted. 
+                    // This is simplified. We take the max value found in any exercise of this block.
+                    const maxWeight = Math.max(...block.exercises.map((e: any) => parseFloat(e.value) || 0));
+
+                    if (maxWeight > 0) {
+                        if (!leaderboard[title]) leaderboard[title] = [];
+                        leaderboard[title].push({
+                            user: r.user,
+                            value: maxWeight + " KG",
+                            raw_value: maxWeight,
+                            type: 'weight',
+                            rx_level: block.rx_level || 'Intermedio'
+                        });
+                    }
+                }
+            } else {
+                if (block.value) {
+                    if (!leaderboard[title]) leaderboard[title] = [];
+                    leaderboard[title].push({
+                        user: r.user,
+                        value: block.value,
+                        wod_weight: block.wod_weight,
+                        type: block.type, // 'rounds' or 'time'
+                        rx_level: block.rx_level || 'Intermedio'
+                    });
+                }
+            }
+        });
+    });
+
+    // 4. Sort Rankings
+    Object.keys(leaderboard).forEach(key => {
+        leaderboard[key].sort((a, b) => {
+            // Priority 1: Rx Level (Avanzado > Intermedio > Escalado)
+            const rxScore = { 'Avanzado': 3, 'Intermedio': 2, 'Escalado': 1 };
+            // @ts-ignore
+            const diffRx = (rxScore[b.rx_level] || 0) - (rxScore[a.rx_level] || 0);
+            if (diffRx !== 0) return diffRx;
+
+            // Priority 2: Value
+            if (a.type === 'time') {
+                // Lower time is better. 
+                // BUT value is a string "MM:SS" or just number.
+                // Simple string compare works for MM:SS if format is consistent.
+                return a.value.localeCompare(b.value);
+            } else if (a.type === 'rounds' || a.type === 'weight') {
+                // Higher rounds/weight is better.
+                // Use raw_value for weight if available
+                const valA = a.raw_value || parseFloat(a.value) || 0;
+                const valB = b.raw_value || parseFloat(b.value) || 0;
+                return valB - valA;
+            }
+            return 0;
+        });
+    });
+
+    return leaderboard;
+}

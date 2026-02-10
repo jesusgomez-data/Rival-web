@@ -67,6 +67,11 @@ export default function GlobalSearch() {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     onFocus={() => { if (results.length > 0) setIsOpen(true); }}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && query) {
+                            handleSelect(`/dashboard/community?q=${encodeURIComponent(query)}`);
+                        }
+                    }}
                     placeholder="Buscar atletas, gimnasios..."
                     className="w-full h-10 pl-11 pr-4 bg-muted border-border border focus:border-brand-red/50 rounded-xl text-sm outline-none transition-all placeholder:text-muted-foreground text-foreground"
                 />
@@ -117,6 +122,17 @@ export default function GlobalSearch() {
                         {results.length === 0 && !loading && (
                             <div className="p-4 text-center text-xs text-gray-500">
                                 No se encontraron resultados para "{query}"
+                            </div>
+                        )}
+
+                        {results.length > 0 && (
+                            <div className="p-2 border-t border-border">
+                                <button
+                                    onClick={() => handleSelect(`/dashboard/community?q=${encodeURIComponent(query)}`)}
+                                    className="w-full py-2 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest text-brand-red bg-brand-red/10 hover:bg-brand-red hover:text-white transition-all text-center"
+                                >
+                                    Ver todos los resultados para "{query}"
+                                </button>
                             </div>
                         )}
                     </div>

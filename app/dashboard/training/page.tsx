@@ -38,56 +38,100 @@ export default function TrainingPage() {
         fetchData();
     }, []);
 
-    const routines: Record<string, TrainingPlan> = {
-        'Beginner': {
-            id: 'beginner-base',
-            title: "Constructor de Base",
-            description: "Programa fundamental para establecer una base sólida de fuerza y técnica.",
-            sport: 'gym',
-            difficulty: 'beginner',
-            duration_min: 45,
-            is_premium: false,
-            exercises: [
-                { id: '1', name: "Sentadillas Goblet", target: "3 series x 12 reps", sets: [{}, {}, {}] },
-                { id: '2', name: "Flexiones", target: "3 series x Max reps", sets: [{}, {}, {}] },
-                { id: '3', name: "Remo con Mancuerna", target: "3 series x 12 reps", sets: [{}, {}, {}] },
-                { id: '4', name: "Plancha", target: "3 series x 45 seg", sets: [{}, {}, {}] }
-            ]
-        },
-        'Intermediate': {
-            id: 'inter-hyper',
-            title: "Empuje de Hipertrofia",
-            description: "Enfoque en volumen para maximizar el crecimiento muscular.",
-            sport: 'gym',
-            difficulty: 'intermediate',
-            duration_min: 75,
-            is_premium: false,
-            exercises: [
-                { id: '1', name: "Press de Banca", target: "4 series x 8 reps", sets: [{}, {}, {}, {}] },
-                { id: '2', name: "Press Militar", target: "3 series x 10 reps", sets: [{}, {}, {}] },
-                { id: '3', name: "Aperturas Inclinadas", target: "3 series x 12 reps", sets: [{}, {}, {}] },
-                { id: '4', name: "Elevaciones Laterales", target: "4 series x 15 reps", sets: [{}, {}, {}, {}] }
-            ]
-        },
-        'Elite': {
-            id: 'elite-power',
-            title: "Bloque de Poder Élite",
-            description: "Alta intensidad y baja repetición para picos de fuerza máxima.",
-            sport: 'gym',
-            difficulty: 'elite',
-            duration_min: 90,
-            is_premium: true,
-            exercises: [
-                { id: '1', name: "Sentadilla Trasera", target: "5 series x 3 reps", sets: [{}, {}, {}, {}, {}], note: "Singles Pesados" },
-                { id: '2', name: "Peso Muerto con Pausa", target: "3 series x 5 reps", sets: [{}, {}, {}] },
-                { id: '3', name: "Dominadas Lastradas", target: "4 series x 6 reps", sets: [{}, {}, {}, {}] },
-                { id: '4', name: "Paseo del Granjero", target: "3 series x 40m", sets: [{}, {}, {}] }
-            ]
-        }
+    // Unified Level to Difficulty Mapping
+    const getLevelCategory = (level: number): 'beginner' | 'intermediate' | 'elite' => {
+        if (level >= 15) return 'elite';
+        if (level >= 7) return 'intermediate';
+        return 'beginner';
     };
 
-    const userLevel = profile?.level || 'Beginner';
-    const activeRoutine = routines[userLevel] || routines['Beginner'];
+    const currentDayOfWeek = new Date().getDay(); // 0 is Sunday, 1 is Monday...
+
+    const routinePool: Record<string, TrainingPlan[]> = {
+        'beginner': [
+            {
+                id: 'beg-1',
+                title: "Constructor de Base (A)",
+                description: "Enfoque en fuerza básica y técnica de ejecución.",
+                sport: 'gym', difficulty: 'beginner', duration_min: 45, is_premium: false,
+                exercises: [
+                    { id: 'b1', name: "Sentadillas Goblet", target: "3 series x 12 reps" },
+                    { id: 'b2', name: "Flexiones (Push-ups)", target: "3 series x Max reps" },
+                    { id: 'b3', name: "Remo con Mancuerna", target: "3 series x 12 reps" },
+                    { id: 'b4', name: "Plancha", target: "3 series x 45 seg" }
+                ]
+            },
+            {
+                id: 'beg-h',
+                title: "Hybrid Starter",
+                description: "Iniciación al entrenamiento híbrido: Carrera suave y calistenia.",
+                sport: 'hybrid', difficulty: 'beginner', duration_min: 40, is_premium: false,
+                exercises: [
+                    { id: 'bh1', name: "Run 2km", target: "Z2 Pace" },
+                    { id: 'bh2', name: "Air Squats", target: "3 series x 20 reps" },
+                    { id: 'bh3', name: "Push Ups", target: "3 series x 10 reps" }
+                ]
+            }
+        ],
+        'intermediate': [
+            {
+                id: 'int-1',
+                title: "Empuje de Hipertrofia (Push)",
+                description: "Día de empuje enfocado en pecho, hombros y tríceps.",
+                sport: 'gym', difficulty: 'intermediate', duration_min: 75, is_premium: false,
+                exercises: [
+                    { id: 'i1', name: "Press de Banca", target: "4 series x 8 reps" },
+                    { id: 'i2', name: "Press Militar Barra", target: "3 series x 10 reps" },
+                    { id: 'i3', name: "Aperturas Inclinadas", target: "3 series x 12 reps" },
+                    { id: 'i4', name: "Elevaciones Laterales", target: "4 series x 15 reps" }
+                ]
+            },
+            {
+                id: 'int-h',
+                title: "WOD Híbrido: RIVAL 500",
+                description: "Reto metabólico combinando remo y ejercicios de peso corporal.",
+                sport: 'hybrid', difficulty: 'intermediate', duration_min: 35, is_premium: false,
+                exercises: [
+                    { id: 'ih1', name: "Row 500m", target: "Max Effort" },
+                    { id: 'ih2', name: "Burpees", target: "50 reps" },
+                    { id: 'ih3', name: "Kettlebell Swings", target: "50 reps" },
+                    { id: 'ih4', name: "Row 500m", target: "Finish strong" }
+                ]
+            }
+        ],
+        'elite': [
+            {
+                id: 'eli-1',
+                title: "Bloque de Poder Élite (Squat)",
+                description: "Alta intensidad para picos de fuerza máxima.",
+                sport: 'gym', difficulty: 'elite', duration_min: 90, is_premium: true,
+                exercises: [
+                    { id: 'e1', name: "Sentadilla Trasera", target: "5 series x 3 reps", note: "Singles Pesados" },
+                    { id: 'e2', name: "Peso Muerto con Pausa", target: "3 series x 5 reps" },
+                    { id: 'e3', name: "Dominadas Lastradas", target: "4 series x 6 reps" },
+                    { id: 'e4', name: "Paseo del Granjero", target: "3 series x 40m" }
+                ]
+            },
+            {
+                id: 'eli-h',
+                title: "Hyrox Simulation: Elite",
+                description: "Entrenamiento de volumen Hyrox para atletas avanzados.",
+                sport: 'hybrid', difficulty: 'elite', duration_min: 80, is_premium: true,
+                exercises: [
+                    { id: 'eh1', name: "Run 1km", target: "4:00 pace" },
+                    { id: 'eh2', name: "Sled Push 50m", target: "Heavy" },
+                    { id: 'eh3', name: "Run 1km", target: "4:15 pace" },
+                    { id: 'eh4', name: "Burpee Broad Jumps", target: "80 meters" }
+                ]
+            }
+        ]
+    };
+
+    const userDifficulty = getLevelCategory(profile?.level || 1);
+    const pool = routinePool[userDifficulty];
+    // Simple rotation logic: Day 1,3,5 -> Routine A, Day 2,4,6 -> Routine B
+    const routineIndex = currentDayOfWeek % pool.length;
+    const activeRoutine = pool[routineIndex];
 
     // Generate current week days
     const today = new Date();

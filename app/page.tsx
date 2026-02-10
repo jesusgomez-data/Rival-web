@@ -184,13 +184,14 @@ export default function Home() {
             >
               {/* App UI Concept */}
               <div className="relative z-10 w-full max-w-[320px] sm:max-w-md mx-auto aspect-[9/16] bg-black rounded-[2.5rem] sm:rounded-[3rem] border-4 sm:border-8 shadow-2xl overflow-hidden ring-1 ring-white/10 border-gray-900">
+                {/* Background training image */}
                 <Image
-                  src="/assets/hero-cinematic.png"
+                  src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop"
                   alt="Background workout"
                   fill
-                  className="object-cover opacity-60"
+                  className="object-cover opacity-50"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col justify-end p-6">
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/30 flex flex-col justify-end p-6">
                   <div className="mb-4">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 rounded-full border-2 border-brand-red overflow-hidden relative">

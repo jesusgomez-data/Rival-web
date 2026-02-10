@@ -384,150 +384,166 @@ export async function getExercises(sport: string | null | undefined = 'gym') {
     const gymExercises = [
         { name: 'Abdominal Crunches', muscle_group: 'Core', video_url: 'https://www.youtube.com/watch?v=Xyd_fa5zoEU' },
         { name: 'Adductor Machine', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=FfC5WzM9Fxo' },
-        { name: 'Abductor Machine', muscle_group: 'Legs' },
+        { name: 'Abductor Machine', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=Um5s7yF3djk' },
         { name: 'Arnold Press', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=3tOj07f4_e4' },
-        { name: 'Back Extension', muscle_group: 'Posterior Chain' },
+        { name: 'Back Extension', muscle_group: 'Posterior Chain', video_url: 'https://www.youtube.com/watch?v=ph3pddpKzzw' },
         { name: 'Barbell Bicep Curl', muscle_group: 'Arms', video_url: 'https://www.youtube.com/watch?v=kwG2ipFRgfo' },
         { name: 'Barbell Row', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=G8l_8chR5BE' },
-        { name: 'Barbell Shrug', muscle_group: 'Shoulders' },
+        { name: 'Barbell Shrug', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=M2ygZ46vYUE' },
         { name: 'Bench Press', muscle_group: 'Chest', video_url: 'https://www.youtube.com/watch?v=rT7DgCr-3pg' },
         { name: 'Bulgarian Split Squat', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=2C-uNgKwPLE' },
-        { name: 'Cable Crossover', muscle_group: 'Chest' },
-        { name: 'Cable Face Pull', muscle_group: 'Shoulders' },
-        { name: 'Cable Lateral Raise', muscle_group: 'Shoulders' },
-        { name: 'Cable Tricep Pushdown', muscle_group: 'Arms' },
-        { name: 'Calf Raise (Seated)', muscle_group: 'Legs' },
-        { name: 'Calf Raise (Standing)', muscle_group: 'Legs' },
-        { name: 'Chest Fly (Machine)', muscle_group: 'Chest' },
-        { name: 'Chest Press (Machine)', muscle_group: 'Chest' },
-        { name: 'Chin Up', muscle_group: 'Back' },
+        { name: 'Cable Crossover', muscle_group: 'Chest', video_url: 'https://www.youtube.com/watch?v=taI4XduLpTk' },
+        { name: 'Cable Face Pull', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=V8dZqdIdeCc' },
+        { name: 'Cable Lateral Raise', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=b_LEX4n9lOs' },
+        { name: 'Cable Tricep Pushdown', muscle_group: 'Arms', video_url: 'https://www.youtube.com/watch?v=2-LAMcpzODU' },
+        { name: 'Calf Raise (Seated)', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=JbyjNymZOt0' },
+        { name: 'Calf Raise (Standing)', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=YMmgqO8Jo-k' },
+        { name: 'Chest Fly (Machine)', muscle_group: 'Chest', video_url: 'https://www.youtube.com/watch?v=Z57CtFmRMkA' },
+        { name: 'Chest Press (Machine)', muscle_group: 'Chest', video_url: 'https://www.youtube.com/watch?v=xUm0BiZCWlQ' },
+        { name: 'Chin Up', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=brhRXlOhsAM' },
         { name: 'Deadlift', muscle_group: 'Posterior Chain', video_url: 'https://www.youtube.com/watch?v=op9kVnSso6Q' },
-        { name: 'Dip', muscle_group: 'Arms' },
-        { name: 'Dumbbell Bicep Curl', muscle_group: 'Arms' },
-        { name: 'Dumbbell Chest Fly', muscle_group: 'Chest' },
-        { name: 'Dumbbell Incline Bench Press', muscle_group: 'Chest' },
-        { name: 'Dumbbell Lateral Raise', muscle_group: 'Shoulders' },
-        { name: 'Dumbbell Press (Seated)', muscle_group: 'Shoulders' },
-        { name: 'Dumbbell Row', muscle_group: 'Back' },
-        { name: 'Dumbbell Shoulder Press', muscle_group: 'Shoulders' },
+        { name: 'Dip', muscle_group: 'Arms', video_url: 'https://www.youtube.com/watch?v=2z8DdDvMcXc' },
+        { name: 'Dumbbell Bicep Curl', muscle_group: 'Arms', video_url: 'https://www.youtube.com/watch?v=ykJmrZ5v0Oo' },
+        { name: 'Dumbbell Chest Fly', muscle_group: 'Chest', video_url: 'https://www.youtube.com/watch?v=eozdVDA78K0' },
+        { name: 'Dumbbell Incline Bench Press', muscle_group: 'Chest', video_url: 'https://www.youtube.com/watch?v=8iPEnn-ltC8' },
+        { name: 'Dumbbell Lateral Raise', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=3VcKaXpzqRo' },
+        { name: 'Dumbbell Press (Seated)', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=qEwKCR5JCog' },
+        { name: 'Dumbbell Row', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=pYcpY20QaE8' },
+        { name: 'Dumbbell Shoulder Press', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=qEwKCR5JCog' },
         { name: 'Front Squat', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=HHxN6GMdphE' },
-        { name: 'Hack Squat', muscle_group: 'Legs' },
-        { name: 'Hammer Curl', muscle_group: 'Arms' },
+        { name: 'Hack Squat', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=0tn5K9NlCfo' },
+        { name: 'Hammer Curl', muscle_group: 'Arms', video_url: 'https://www.youtube.com/watch?v=zC3nLlEvin4' },
         { name: 'Hip Thrust', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=SEdqd1n0cvg' },
-        { name: 'Incline Bench Press', muscle_group: 'Chest' },
+        { name: 'Incline Bench Press', muscle_group: 'Chest', video_url: 'https://www.youtube.com/watch?v=SrqOu55lrJU' },
         { name: 'Lat Pulldown', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=CAwf7n6Luuc' },
-        { name: 'Leg Curl (Lying)', muscle_group: 'Legs' },
-        { name: 'Leg Curl (Seated)', muscle_group: 'Legs' },
-        { name: 'Leg Extension', muscle_group: 'Legs' },
-        { name: 'Leg Press', muscle_group: 'Legs' },
-        { name: 'Lunge (Dumbbell)', muscle_group: 'Legs' },
-        { name: 'Military Press', muscle_group: 'Shoulders' },
-        { name: 'Pec Deck', muscle_group: 'Chest' },
-        { name: 'Preacher Curl', muscle_group: 'Arms' },
+        { name: 'Leg Curl (Lying)', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=1Tq3QdYUuHs' },
+        { name: 'Leg Curl (Seated)', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=OrxowZ4GTts' },
+        { name: 'Leg Extension', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=YyvSfVjQeL0' },
+        { name: 'Leg Press', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=IZxyjW7MPJQ' },
+        { name: 'Lunge (Dumbbell)', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=D7KaRcUTQeE' },
+        { name: 'Military Press', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=2yjwXTZQDDI' },
+        { name: 'Pec Deck', muscle_group: 'Chest', video_url: 'https://www.youtube.com/watch?v=eOrL2YjP75I' },
+        { name: 'Preacher Curl', muscle_group: 'Arms', video_url: 'https://www.youtube.com/watch?v=fIWP-FRFNU0' },
         { name: 'Pull Up', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=eGo4IYlbE5g' },
         { name: 'Push Up', muscle_group: 'Chest', video_url: 'https://www.youtube.com/watch?v=IODxDxX7oi4' },
         { name: 'Romanian Deadlift', muscle_group: 'Posterior Chain', video_url: 'https://www.youtube.com/watch?v=JCXUYuzwNrM' },
-        { name: 'Seated Row (Cable)', muscle_group: 'Back' },
-        { name: 'Shoulder Press (Machine)', muscle_group: 'Shoulders' },
-        { name: 'Skull Crusher', muscle_group: 'Arms' },
-        { name: 'Smith Machine Squat', muscle_group: 'Legs' },
+        { name: 'Seated Row (Cable)', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=GZbfZ033f74' },
+        { name: 'Shoulder Press (Machine)', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=Wp4BlxcFTkE' },
+        { name: 'Skull Crusher', muscle_group: 'Arms', video_url: 'https://www.youtube.com/watch?v=d_KZxkY_0cM' },
+        { name: 'Smith Machine Squat', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=dFzUj0zW8dM' },
         { name: 'Squat', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=MVMh0HiJCXQ' },
-        { name: 'T-Bar Row', muscle_group: 'Back' },
-        { name: 'Tricep Extension (Overhead)', muscle_group: 'Arms' },
+        { name: 'T-Bar Row', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=j3Igk5nyZE4' },
+        { name: 'Tricep Extension (Overhead)', muscle_group: 'Arms', video_url: 'https://www.youtube.com/watch?v=nRiJVZDpdL0' },
     ];
 
     const crossTrainingExercises = [
-        { name: 'Air Squat', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=C_VtOYc6j5c' },
-        { name: 'Assault Bike', muscle_group: 'Cardio' },
-        { name: 'Back Parallel Squat', muscle_group: 'Legs' },
-        { name: 'Back Squat', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=MVMh0HiJCXQ' },
-        { name: 'Bar Muscle Up', muscle_group: 'Full Body' },
-        { name: 'Bar Facing Burpee', muscle_group: 'Full Body' },
-        { name: 'Bench Press', muscle_group: 'Chest' },
-        { name: 'Box Jump', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=52r_Ul5k03g' },
-        { name: 'Box Jump Over', muscle_group: 'Legs' },
-        { name: 'Burpee', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=TU8QYVW0gDU' },
-        { name: 'Burpee Box Jump Over', muscle_group: 'Full Body' },
-        { name: 'Chest to Bar Pull Up', muscle_group: 'Back' },
-        { name: 'Clean', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=KzW315a6b7Y' },
-        { name: 'Clean & Jerk', muscle_group: 'Full Body' },
-        { name: 'Deadlift', muscle_group: 'Posterior Chain', video_url: 'https://www.youtube.com/watch?v=op9kVnSso6Q' },
-        { name: 'Devil Press', muscle_group: 'Full Body' },
-        { name: 'Double Under', muscle_group: 'Cardio', video_url: 'https://www.youtube.com/watch?v=82jNjDS19lg' },
-        { name: 'Dumbbell Snatch', muscle_group: 'Full Body' },
-        { name: 'Echo Bike', muscle_group: 'Cardio' },
-        { name: 'Front Squat', muscle_group: 'Legs' },
-        { name: 'GHD Sit Up', muscle_group: 'Core' },
-        { name: 'Goblet Squat', muscle_group: 'Legs' },
-        { name: 'Handstand Push Up', muscle_group: 'Shoulders' },
-        { name: 'Handstand Walk', muscle_group: 'Shoulders' },
-        { name: 'Hang Clean', muscle_group: 'Full Body' },
-        { name: 'Hang Snatch', muscle_group: 'Full Body' },
-        { name: 'Kettlebell Swing', muscle_group: 'Posterior Chain', video_url: 'https://www.youtube.com/watch?v=sV4r7t7tQiw' },
-        { name: 'Lunges', muscle_group: 'Legs' },
-        { name: 'Muscle Up', muscle_group: 'Full Body' },
-        { name: 'Overhead Squat', muscle_group: 'Full Body' },
-        { name: 'Pistol Squat', muscle_group: 'Legs' },
-        { name: 'Power Clean', muscle_group: 'Full Body' },
-        { name: 'Power Snatch', muscle_group: 'Full Body' },
-        { name: 'Pull Up', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=eGo4IYlbE5g' },
-        { name: 'Push Jerk', muscle_group: 'Shoulders' },
-        { name: 'Push Press', muscle_group: 'Shoulders' },
-        { name: 'Ring Muscle Up', muscle_group: 'Full Body' },
-        { name: 'Rope Climb', muscle_group: 'Full Body' },
-        { name: 'Row', muscle_group: 'Cardio' },
-        { name: 'Run', muscle_group: 'Cardio' },
-        { name: 'Ski Erg', muscle_group: 'Cardio' },
-        { name: 'Snatch', muscle_group: 'Full Body' },
-        { name: 'Strict Press', muscle_group: 'Shoulders' },
-        { name: 'Sumo Deadlift High Pull', muscle_group: 'Full Body' },
-        { name: 'Thruster', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=L219ltL15zk' },
-        { name: 'Toes to Bar', muscle_group: 'Core', video_url: 'https://www.youtube.com/watch?v=_03p6QPB3gQ' },
-        { name: 'Wall Ball', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=EqjWD8zM66s' },
-        { name: 'Walking Lunge', muscle_group: 'Legs' },
-        { name: 'Weighted Pull Up', muscle_group: 'Back' },
+        { name: 'Air Squat', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=rMCN4HlgSCA' }, // WODprep
+        { name: 'Assault Bike', muscle_group: 'Cardio', video_url: 'https://www.youtube.com/watch?v=OBrX2Y6qfVc' }, // Assault Fitness
+        { name: 'Back Parallel Squat', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=UltWZBBL8p4' }, // CrossFit (reliable)
+        { name: 'Back Squat', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=UltWZBBL8p4' }, // CrossFit (reliable)
+        { name: 'Bar Muscle Up', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=OCMJj10G1QM' }, // WODprep
+        { name: 'Bar Facing Burpee', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=TU8QYVW0gDU' }, // CrossFit
+        { name: 'Bench Press', muscle_group: 'Chest', video_url: 'https://www.youtube.com/watch?v=SCVCLChPQFY' }, // CrossFit
+        { name: 'Box Jump', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=bxVzL0gq0-0' }, // WODprep
+        { name: 'Box Jump Over', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=bxVzL0gq0-0' }, // WODprep
+        { name: 'Burpee', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=0h09e-7T8rI' }, // WODprep
+        { name: 'Burpee Box Jump Over', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=bxVzL0gq0-0' }, // WODprep
+        { name: 'Chest to Bar Pull Up', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=Pr1ieGZ5atk' }, // Misfit
+        { name: 'Clean', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=KzW315a6b7Y' }, // CrossFit
+        { name: 'Clean & Jerk', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=TjGZ9T3Fj_M' }, // Catalyst Athletics
+        { name: 'Deadlift', muscle_group: 'Posterior Chain', video_url: 'https://www.youtube.com/watch?v=op9kVnSso6Q' }, // CrossFit
+        { name: 'Devil Press', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=XX1f3r6Hqco' }, // CrossFit
+        { name: 'Double Under', muscle_group: 'Cardio', video_url: 'https://www.youtube.com/watch?v=h3C5lX5-y-U' }, // WODprep
+        { name: 'Dumbbell Snatch', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=9520DJiFmvE' }, // CrossFit
+        { name: 'Echo Bike', muscle_group: 'Cardio', video_url: 'https://www.youtube.com/watch?v=rXjE3n6eCgE' }, // Rogue
+        { name: 'Front Squat', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=uYumuL_G_V0' }, // CrossFit
+        { name: 'GHD Sit Up', muscle_group: 'Core', video_url: 'https://www.youtube.com/watch?v=1t22r4g7hJs' }, // CrossFit
+        { name: 'Goblet Squat', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=MeIiIdhvXT4' }, // CrossFit
+        { name: 'Handstand Push Up', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=_L-e07eXw9s' }, // CrossFit
+        { name: 'Handstand Walk', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=d_k6k3k5e5k' }, // CrossFit
+        { name: 'Hang Clean', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=wc4IqM2Pjts' }, // CrossFit
+        { name: 'Hang Snatch', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=b4N3d0x2QVY' }, // CrossFit
+        { name: 'Kettlebell Swing', muscle_group: 'Posterior Chain', video_url: 'https://www.youtube.com/watch?v=v1Z3R3Cp2yw' }, // CrossFit
+        { name: 'Lunges', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=QOVaHwm-Q6U' }, // CrossFit
+        { name: 'Muscle Up', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=vSa4O6r3T4k' }, // CrossFit
+        { name: 'Overhead Squat', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=pn8mqlG0nkE' }, // CrossFit
+        { name: 'Pistol Squat', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=qDcniqddTeE' }, // CrossFit
+        { name: 'Power Clean', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=KwYJTpQ_x5A' }, // CrossFit
+        { name: 'Power Snatch', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=TL8SMp7PsnA' }, // CrossFit
+        { name: 'Pull Up', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=HRV5YKKaeVw' }, // WODprep
+        { name: 'Push Jerk', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=V-MEmyJd8bU' }, // CrossFit
+        { name: 'Push Press', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=X6-DMh-t4nQ' }, // CrossFit
+        { name: 'Ring Muscle Up', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=vSa4O6r3T4k' }, // CrossFit
+        { name: 'Rope Climb', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=F3G1jioK6J0' }, // CrossFit
+        { name: 'Row', muscle_group: 'Cardio', video_url: 'https://www.youtube.com/watch?v=H0r_Z7p7b_k' }, // Concept2
+        { name: 'Run', muscle_group: 'Cardio', video_url: 'https://www.youtube.com/watch?v=_kGEMtdqbHQ' }, // Global Triathlon (Good form)
+        { name: 'Ski Erg', muscle_group: 'Cardio', video_url: 'https://www.youtube.com/watch?v=4T1f-F2_Bzo' }, // Concept2
+        { name: 'Snatch', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=_T0wvtkaonk' }, // WODprep
+        { name: 'Strict Press', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=5yWaNOvgFCM' }, // CrossFit
+        { name: 'Sumo Deadlift High Pull', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=gh57d7zO6kI' }, // CrossFit
+        { name: 'Thruster', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=aea5Z9-FzXg' }, // WODprep
+        { name: 'Toes to Bar', muscle_group: 'Core', video_url: 'https://www.youtube.com/watch?v=_03p6QPB3gQ' }, // WODprep
+        { name: 'Wall Ball', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=EqjWD8zM66s' }, // CrossFit
+        { name: 'Walking Lunge', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=L8fvMqT8o2M' }, // CrossFit
+        { name: 'Weighted Pull Up', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=HRV5YKKaeVw' }, // WODprep
     ];
 
     const ocrExercises = [
         { name: 'Rope Climb', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=F3G1jioK6J0' },
         { name: 'Dead Hang', muscle_group: 'Grip', video_url: 'https://www.youtube.com/watch?v=iM_0rRl9dJs' },
         { name: 'Monkey Bars', muscle_group: 'Grip', video_url: 'https://www.youtube.com/watch?v=q6t87K8G8c4' },
-        { name: 'Wall Climb', muscle_group: 'Full Body' },
-        { name: 'Spear Throw', muscle_group: 'Skill' },
-        { name: 'Sandbag Carry', muscle_group: 'Legs/Core' },
-        { name: 'Bucket Carry', muscle_group: 'Legs/Grip' },
-        { name: 'Atlas Stone Carry', muscle_group: 'Strongman' },
-        { name: 'Sled Push', muscle_group: 'Legs' },
-        { name: 'Sled Pull', muscle_group: 'Back' },
-        { name: 'Burpee Broad Jump', muscle_group: 'Full Body' },
-        { name: 'Bear Crawl', muscle_group: 'Core' },
-        { name: 'Z Wall Traverse', muscle_group: 'Grip/Balance' },
-        { name: 'Tyre Flip', muscle_group: 'Full Body' },
-        { name: 'Log Carry', muscle_group: 'Strongman' },
-        { name: 'Trail Run Interval', muscle_group: 'Cardio' },
-        { name: 'Farmers Carry', muscle_group: 'Grip' },
-        { name: 'Sandbag Lunges', muscle_group: 'Legs' },
-        { name: 'Barbed Wire Crawl', muscle_group: 'Full Body' },
-        { name: 'Hercules Hoist', muscle_group: 'Back/Grip' },
-        { name: 'Run', muscle_group: 'Cardio' },
+        { name: 'Wall Climb', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=NK36bFVw7oU' },
+        { name: 'Spear Throw', muscle_group: 'Skill', video_url: 'https://www.youtube.com/watch?v=7uI6vjE7q6U' },
+        { name: 'Sandbag Carry', muscle_group: 'Legs/Core', video_url: 'https://www.youtube.com/watch?v=8qJ3n3K3gqM' },
+        { name: 'Bucket Carry', muscle_group: 'Legs/Grip', video_url: 'https://www.youtube.com/watch?v=8qJ3n3K3gqM' },
+        { name: 'Atlas Stone Carry', muscle_group: 'Strongman', video_url: 'https://www.youtube.com/watch?v=7M7F3k9q5qM' },
+        { name: 'Sled Push', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=8qJ3n3K3gqM' },
+        { name: 'Sled Pull', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=8qJ3n3K3gqM' },
+        { name: 'Burpee Broad Jump', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=52r_Ul5k03g' },
+        { name: 'Bear Crawl', muscle_group: 'Core', video_url: 'https://www.youtube.com/watch?v=8qJ3n3K3gqM' },
+        { name: 'Z Wall Traverse', muscle_group: 'Grip/Balance', video_url: 'https://www.youtube.com/watch?v=8qJ3n3K3gqM' },
+        { name: 'Tyre Flip', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=8qJ3n3K3gqM' },
+        { name: 'Log Carry', muscle_group: 'Strongman', video_url: 'https://www.youtube.com/watch?v=8qJ3n3K3gqM' },
+        { name: 'Trail Run Interval', muscle_group: 'Cardio', video_url: 'https://www.youtube.com/watch?v=_kGEMtdqbHQ' },
+        { name: 'Farmers Carry', muscle_group: 'Grip', video_url: 'https://www.youtube.com/watch?v=rt11P1rP6kM' },
+        { name: 'Sandbag Lunges', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=8qJ3n3K3gqM' },
+        { name: 'Barbed Wire Crawl', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=8qJ3n3K3gqM' },
+        { name: 'Hercules Hoist', muscle_group: 'Back/Grip', video_url: 'https://www.youtube.com/watch?v=8qJ3n3K3gqM' },
+        { name: 'Run', muscle_group: 'Cardio', video_url: 'https://www.youtube.com/watch?v=_kGEMtdqbHQ' },
     ];
 
     const hybridExercises = [
-        { name: 'Ski Erg', muscle_group: 'Cardio' },
-        { name: 'Sled Push', muscle_group: 'Legs' },
-        { name: 'Sled Pull', muscle_group: 'Back' },
-        { name: 'Burpee Broad Jump', muscle_group: 'Full Body' },
-        { name: 'Row', muscle_group: 'Cardio' },
-        { name: 'Farmers Carry', muscle_group: 'Grip' },
-        { name: 'Sandbag Lunges', muscle_group: 'Legs' },
-        { name: 'Wall Balls', muscle_group: 'Full Body' },
-        { name: 'Run', muscle_group: 'Cardio' },
+        { name: 'Ski Erg', muscle_group: 'Cardio', video_url: 'https://www.youtube.com/watch?v=4dF1DOW1r0s' },
+        { name: 'Sled Push', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=8qJ3n3K3gqM' },
+        { name: 'Sled Pull', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=8qJ3n3K3gqM' },
+        { name: 'Burpee Broad Jump', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=52r_Ul5k03g' },
+        { name: 'Row', muscle_group: 'Cardio', video_url: 'https://www.youtube.com/watch?v=H0r_Z7p7b_k' },
+        { name: 'Farmers Carry', muscle_group: 'Grip', video_url: 'https://www.youtube.com/watch?v=rt11P1rP6kM' },
+        { name: 'Sandbag Lunges', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=8qJ3n3K3gqM' },
+        { name: 'Wall Balls', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=EqjWD8zM66s' },
+        { name: 'Run', muscle_group: 'Cardio', video_url: 'https://www.youtube.com/watch?v=_kGEMtdqbHQ' },
+    ];
+
+    const calisthenicsExercises = [
+        { name: 'Muscle Up', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=f7w7fXWkI1k' },
+        { name: 'Pull Up', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=eGo4IYlbE5g' },
+        { name: 'Push Up', muscle_group: 'Chest', video_url: 'https://www.youtube.com/watch?v=IODxDxX7oi4' },
+        { name: 'Dip', muscle_group: 'Arms', video_url: 'https://www.youtube.com/watch?v=2z8DdDvMcXc' },
+        { name: 'Handstand Hold', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=_L-e07eXw9s' },
+        { name: 'Pistol Squat', muscle_group: 'Legs', video_url: 'https://www.youtube.com/watch?v=qDcniqddTeE' },
+        { name: 'Front Lever', muscle_group: 'Core/Back', video_url: 'https://www.youtube.com/watch?v=ym09f8xJqfQ' },
+        { name: 'Back Lever', muscle_group: 'Full Body', video_url: 'https://www.youtube.com/watch?v=BqB3G5mOqZM' },
+        { name: 'Planche Lean', muscle_group: 'Shoulders', video_url: 'https://www.youtube.com/watch?v=Vl3oKzXqM98' },
+        { name: 'L-Sit', muscle_group: 'Core', video_url: 'https://www.youtube.com/watch?v=re310q5SgJE' },
+        { name: 'Skin the Cat', muscle_group: 'Shoulders/Mobility', video_url: 'https://www.youtube.com/watch?v=5rXy1pPqf4I' },
+        { name: 'Chin Up', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=brhRXlOhsAM' },
     ];
 
     let targetList = [];
     if (sport === 'ocr') targetList = ocrExercises;
     else if (sport === 'hybrid') targetList = hybridExercises;
     else if (sport === 'cross_training') targetList = crossTrainingExercises;
+    else if (sport === 'calisthenics') targetList = calisthenicsExercises;
     else targetList = gymExercises;
 
     if (error) {
@@ -536,11 +552,21 @@ export async function getExercises(sport: string | null | undefined = 'gym') {
     }
 
     // Merge and Deduplicate
+    // Merge and Deduplicate with Fallback for video_url
     const dbData = data || [];
     const dbNames = new Set(dbData.map(e => e.name.toLowerCase()));
 
-    // Add missing CF exercises
-    const merged = [...dbData];
+    // 1. Process DB Data, enriching with video_url if missing in DB but present in Static
+    const enrichedDbData = dbData.map(dbEx => {
+        const staticEx = targetList.find(t => t.name.toLowerCase() === dbEx.name.toLowerCase());
+        return {
+            ...dbEx,
+            video_url: dbEx.video_url || staticEx?.video_url || null
+        };
+    });
+
+    // 2. Add missing exercises from Static
+    const merged = [...enrichedDbData];
     targetList.forEach((ex, index) => {
         if (!dbNames.has(ex.name.toLowerCase())) {
             merged.push({ id: `static-${sport}-${index}`, ...ex });
@@ -668,7 +694,7 @@ export async function getPerformanceStats() {
     const statsData = stats || []
 
     // Calculate Fatigue Score (Simplified Heuristic)
-    let fatigueScore = 20 // base
+    let fatigueScore = 15 // base reduced from 20
     const now = new Date()
     const fortyEightHoursAgo = new Date(now.getTime() - (48 * 60 * 60 * 1000))
 
@@ -677,9 +703,13 @@ export async function getPerformanceStats() {
         ? recentSessions.reduce((acc: number, s: any) => acc + (s.effort_rpe || 0), 0) / recentSessions.length
         : 0
 
-    fatigueScore += statsData.length * 8
-    if (avgRpe > 7) fatigueScore += 25
-    if (statsData.length > 5) fatigueScore += 20
+    fatigueScore += statsData.length * 5 // reduced from 8 to allow higher frequency
+    if (avgRpe > 7.5) fatigueScore += 20 // adjusted threshold
+    if (statsData.length > 7) fatigueScore += 15 // adjusted threshold
+
+    // Efficiency/Consistency Bonus: doing workouts can represent fitness
+    const consistencyBonus = Math.min(statsData.length * 2, 20);
+    fatigueScore = Math.max(fatigueScore - consistencyBonus, 10);
 
     return {
         daily: statsData,
@@ -731,23 +761,29 @@ export async function getDetailedAnalytics() {
         muscleGroups[group] = (muscleGroups[group] || 0) + volume
     })
 
-    // 2. PR History (Last 10)
-    const { data: prHistory } = await supabase
+    // 2. PR History (Last 28 days)
+    const fourWeeksAgo = new Date()
+    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28)
+
+    const { data: rawPrHistory } = await supabase
         .from('workout_sets')
         .select(`
             exercise_name,
             weight_kg,
-            created_at,
-            workouts!inner(user_id)
+            workouts!inner(user_id, created_at)
         `)
         .eq('workouts.user_id', user.id)
         .eq('is_pr', true)
-        .order('created_at', { ascending: false })
-        .limit(10)
+        .gte('workouts.created_at', fourWeeksAgo.toISOString())
+        .order('created_at', { foreignTable: 'workouts', ascending: false })
+
+    const prHistory = rawPrHistory?.map((pr: any) => ({
+        exercise_name: pr.exercise_name,
+        weight_kg: pr.weight_kg,
+        created_at: pr.workouts.created_at
+    })) || []
 
     // 3. Weekly Frequency (Last 4 weeks - Unified)
-    const fourWeeksAgo = new Date()
-    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28)
 
     // Independent Workouts
     const { data: independentFreq } = await supabase

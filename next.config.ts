@@ -27,8 +27,14 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: '50mb',
+      bodySizeLimit: '200mb',
     },
+    // @ts-ignore
+    middlewareClientMaxBodySize: '200mb',
+  },
+  // @ts-ignore
+  serverOptions: {
+    bodySizeLimit: '200mb',
   },
 
 };

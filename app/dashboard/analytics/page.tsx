@@ -114,7 +114,11 @@ export default function AnalyticsPage() {
                 />
                 <MetricCard
                     label="Intensidad Prom"
-                    value={`RPE ${((weeklyStats?.daily || []).reduce((acc, s) => acc + (s.effort_rpe || 0), 0) / ((weeklyStats?.daily || []).length || 1)).toFixed(1)}`}
+                    value={`RPE ${(() => {
+                        const validSessions = (weeklyStats?.daily || []).filter(s => (s.effort_rpe || 0) > 0);
+                        if (validSessions.length === 0) return '0.0';
+                        return (validSessions.reduce((acc, s) => acc + (s.effort_rpe || 0), 0) / validSessions.length).toFixed(1);
+                    })()}`}
                     trend="Estable"
                 />
                 <MetricCard
@@ -291,35 +295,38 @@ export default function AnalyticsPage() {
                         Frecuencia de Misiones
                     </h3>
                     <div className="flex justify-between items-end h-64 px-6">
-                        {stats?.weeklyFreq.map((count: number, i: number) => {
-                            const labels = ["S-3", "S-2", "S-1", "ESTA"];
-                            const isCurrent = i === 3;
-                            return (
-                                <div key={i} className="flex-1 flex flex-col items-center gap-4 group/freq h-full justify-end">
-                                    <div className={clsx(
-                                        "text-[10px] font-black transition-all",
-                                        isCurrent ? "text-brand-red text-xs scale-110" : "text-gray-500"
-                                    )}>{count}x</div>
-                                    <div className="w-full max-w-[48px] px-1 h-full flex items-end">
-                                        <div
-                                            className={clsx(
-                                                "w-full rounded-2xl transition-all duration-1000 ease-out relative group-hover/freq:scale-x-110",
-                                                isCurrent
-                                                    ? "bg-gradient-to-t from-brand-red/40 to-brand-red shadow-[0_0_30px_rgba(220,38,38,0.3)]"
-                                                    : "bg-white/5 border border-white/10 group-hover/freq:bg-white/10"
-                                            )}
-                                            style={{ height: `${Math.max((count / 7) * 100, 4)}%` }}
-                                        >
-                                            {isCurrent && count > 0 && <div className="absolute top-0 left-0 right-0 h-1 bg-white/40 rounded-t-2xl" />}
+                        {(() => {
+                            const maxFreq = Math.max(7, ... (stats?.weeklyFreq || []));
+                            return stats?.weeklyFreq.map((count: number, i: number) => {
+                                const labels = ["S-3", "S-2", "S-1", "ESTA"];
+                                const isCurrent = i === 3;
+                                return (
+                                    <div key={i} className="flex-1 flex flex-col items-center gap-4 group/freq h-full justify-end">
+                                        <div className={clsx(
+                                            "text-[10px] font-black transition-all",
+                                            isCurrent ? "text-brand-red text-xs scale-110" : "text-gray-500"
+                                        )}>{count}x</div>
+                                        <div className="w-full max-w-[48px] px-1 h-full flex items-end">
+                                            <div
+                                                className={clsx(
+                                                    "w-full rounded-2xl transition-all duration-1000 ease-out relative group-hover/freq:scale-x-110",
+                                                    isCurrent
+                                                        ? "bg-gradient-to-t from-brand-red/40 to-brand-red shadow-[0_0_30px_rgba(220,38,38,0.3)]"
+                                                        : "bg-white/5 border border-white/10 group-hover/freq:bg-white/10"
+                                                )}
+                                                style={{ height: `${Math.max((count / maxFreq) * 100, 4)}%` }}
+                                            >
+                                                {isCurrent && count > 0 && <div className="absolute top-0 left-0 right-0 h-1 bg-white/40 rounded-t-2xl" />}
+                                            </div>
                                         </div>
+                                        <div className={clsx(
+                                            "text-[9px] font-black uppercase tracking-widest transition-colors",
+                                            isCurrent ? "text-white" : "text-gray-600"
+                                        )}>{labels[i]} <span className="hidden md:inline">SEM</span></div>
                                     </div>
-                                    <div className={clsx(
-                                        "text-[9px] font-black uppercase tracking-widest transition-colors",
-                                        isCurrent ? "text-white" : "text-gray-600"
-                                    )}>{labels[i]} <span className="hidden md:inline">SEM</span></div>
-                                </div>
-                            )
-                        })}
+                                )
+                            });
+                        })()}
                     </div>
                     <div className="mt-12 p-6 bg-white/[0.03] border border-white/5 rounded-3xl flex items-center justify-between group hover:bg-white/[0.05] transition-all">
                         <div className="flex items-center gap-4">

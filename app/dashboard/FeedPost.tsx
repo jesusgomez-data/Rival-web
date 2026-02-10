@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus } from "lucide-react";
 import LikeButton from "./community/LikeButton";
 import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike } from "./community/actions";
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
@@ -11,6 +11,77 @@ import { clsx } from "clsx";
 import { useTheme } from "../ThemeContext";
 import { useStories } from "./stories/StoryContext";
 import PRCard from "./community/PRCard";
+
+function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5" }: { image?: string, workoutData?: any, mediaType?: string, postId?: string, className?: string, iconClassName?: string }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const handleShareLink = () => {
+        const url = `${window.location.origin}/dashboard`;
+        if (navigator.share) navigator.share({ title: 'RIVAL', url });
+        else { navigator.clipboard.writeText(url); alert("Copiado!"); }
+        setIsOpen(false);
+    };
+
+    const handleShareToStory = () => {
+        if (workoutData) {
+            window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'workout', data: workoutData, postId } }));
+        } else if (mediaType === 'class_result' && image) {
+            try {
+                const data = JSON.parse(image);
+                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'class_result', data, postId } }));
+            } catch (e) {
+                console.error("Error parsing class result", e);
+            }
+        } else if (mediaType === 'pr' && image) {
+            try {
+                const data = JSON.parse(image);
+                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'pr', data, postId } }));
+            } catch (e) {
+                console.error("Error parsing PR", e);
+            }
+        } else {
+            const isImageUrl = image && !image.startsWith('{') && !image.startsWith('[');
+            if (isImageUrl) {
+                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'image', url: image, postId } }));
+            } else {
+                alert("Este contenido no se puede convertir a historia automáticamente.");
+            }
+        }
+        setIsOpen(false);
+    };
+
+    return (
+        <div className="relative" ref={menuRef}>
+            <button
+                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                className={className}
+            >
+                <Share2 className={iconClassName} />
+            </button>
+            {isOpen && (
+                <div className="absolute right-0 bottom-full mb-2 w-48 bg-black border border-white/10 rounded-xl shadow-2xl z-[50] overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
+                    <button onClick={handleShareLink} className="w-full text-left px-4 py-3 text-xs font-bold text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-2">
+                        <Share2 className="w-3 h-3" /> Compartir enlace
+                    </button>
+                    <button onClick={handleShareToStory} className="w-full text-left px-4 py-3 text-xs font-bold text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-2 border-t border-white/5">
+                        <Plus className="w-3 h-3" /> Compartir en Historia
+                    </button>
+                </div>
+            )}
+        </div>
+    )
+}
 
 interface FeedPostProps {
     postId: string;
@@ -907,16 +978,14 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 Comentar
                             </button>
                         </div>
-                        <button
-                            onClick={() => {
-                                const url = `${window.location.origin}/dashboard`;
-                                if (navigator.share) navigator.share({ title: 'RIVAL', url });
-                                else { navigator.clipboard.writeText(url); alert("Copiado!"); }
-                            }}
+                        <ShareButton
+                            image={image}
+                            workoutData={workoutData}
+                            mediaType={mediaType}
+                            postId={postId}
                             className="p-3 md:p-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl md:rounded-2xl border border-white/5 transition-all"
-                        >
-                            <Share2 className="w-5 h-5" />
-                        </button>
+                            iconClassName="w-5 h-5"
+                        />
                     </>
                 ) : (
                     <div className="flex items-center gap-6 w-full">
@@ -928,16 +997,16 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             <MessageCircle className="w-6 h-6" />
                             <span className="font-bold text-sm">{commentsCount}</span>
                         </button>
-                        <button
-                            onClick={() => {
-                                const url = `${window.location.origin}/dashboard`;
-                                if (navigator.share) navigator.share({ title: 'RIVAL', url });
-                                else { navigator.clipboard.writeText(url); alert("Copiado!"); }
-                            }}
-                            className="ml-auto text-gray-400 hover:text-white"
-                        >
-                            <Share2 className="w-6 h-6" />
-                        </button>
+                        <div className="ml-auto">
+                            <ShareButton
+                                image={image}
+                                workoutData={workoutData}
+                                mediaType={mediaType}
+                                postId={postId}
+                                className="text-gray-400 hover:text-white"
+                                iconClassName="w-6 h-6"
+                            />
+                        </div>
                     </div>
                 )}
             </div>

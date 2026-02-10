@@ -41,6 +41,7 @@ function SessionContent() {
     const [shareToArena, setShareToArena] = useState(true);
     const [shareToStory, setShareToStory] = useState(false);
     const [showFinishModal, setShowFinishModal] = useState(false);
+    const [rpe, setRpe] = useState<number>(0);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [targetDuration, setTargetDuration] = useState<number | null>(null);
@@ -483,6 +484,7 @@ function SessionContent() {
                 title: workoutTitle,
                 startTime: startTime.toISOString(),
                 duration: elapsedSeconds,
+                rpe: rpe,
                 sportType: sportMode === 'gym' ? 'Fitness' : (sportMode === 'running' ? 'Running' : (sportMode === 'hybrid' ? 'Hybrid' : (sportMode === 'calisthenics' ? 'Calistenia' : (sportMode === 'ocr' ? 'OCR' : (sportMode === 'other' ? 'Otros' : 'Cross Training'))))),
                 exercises: finalExercises,
                 metrics: {
@@ -743,6 +745,8 @@ function SessionContent() {
                         onImageUpload={handleImageUpload}
                         fileInputRef={fileInputRef}
                         workoutTitle={workoutTitle}
+                        rpe={rpe}
+                        setRpe={setRpe}
                     />
                 )}
             </div>
@@ -934,11 +938,28 @@ function SessionContent() {
                     </div>
 
                     {/* General Time */}
-                    <div className="bg-white/5 p-4 rounded-2xl">
-                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">
-                            Tiempo Total de Sesión
-                        </p>
-                        <p className="text-xl font-mono font-black text-white">{formatTime(elapsedSeconds)}</p>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-white/5 p-4 rounded-2xl">
+                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">
+                                Tiempo Total
+                            </p>
+                            <p className="text-xl font-mono font-black text-white">{formatTime(elapsedSeconds)}</p>
+                        </div>
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">
+                                Intensidad (RPE)
+                            </p>
+                            <select
+                                value={rpe}
+                                onChange={(e) => setRpe(parseInt(e.target.value))}
+                                className="bg-transparent text-xl font-mono font-black text-brand-red outline-none w-full"
+                            >
+                                <option value="0" className="bg-black text-gray-400">0 - N/A</option>
+                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(val => (
+                                    <option key={val} value={val} className="bg-black text-white">{val} - {val <= 3 ? 'Ligero' : val <= 6 ? 'Moderado' : val <= 8 ? 'Intenso' : 'Máximo'}</option>
+                                ))}
+                            </select>
+                        </div>
                     </div>
 
                     {/* Blocks Summary */}
@@ -1142,19 +1163,19 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
     },
     hybrid: {
         'run-focus': [
-            { id: 'h-r-1', title: 'Interv. Híbridos', sport: 'hybrid', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Carrera con fatiga.', exercises: [{ name: 'Run 1km', sets: [{ reps: 1 }] }] },
-            { id: 'h-r-2', title: 'RIVAL Race Pace', sport: 'hybrid', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Burpees y carrera rápida.', exercises: [{ name: 'Burpees', sets: [{ reps: 80 }] }] },
-            { id: 'h-r-3', title: 'Tempo Híbrido', sport: 'hybrid', difficulty: 'intermediate', duration_min: 40, is_premium: false, description: 'Zonas de potencia.', exercises: [{ name: 'Row 500m', sets: [{ reps: 4 }] }] }
+            { id: 'h-r-1', title: 'Interv. Híbridos', sport: 'hybrid', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Carrera intercalada con ejercicios funcionales de alta repetición.', exercises: [{ name: 'Run 1km', sets: [{ reps: 1 }] }, { name: 'Burpees', sets: [{ reps: 30 }] }, { name: 'Run 1km', sets: [{ reps: 1 }] }, { name: 'Air Squats', sets: [{ reps: 50 }] }] },
+            { id: 'h-r-2', title: 'RIVAL Race Pace', sport: 'hybrid', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Ritmo de competición. Burpees, zancadas y carrera rápida.', exercises: [{ name: 'Run 2km', sets: [{ reps: 1 }] }, { name: 'Burpees', sets: [{ reps: 80 }] }, { name: 'Lunges', sets: [{ reps: 100 }] }] },
+            { id: 'h-r-3', title: 'Tempo Híbrido', sport: 'hybrid', difficulty: 'intermediate', duration_min: 40, is_premium: false, description: 'Zonas de potencia sostenida en remo y carrera.', exercises: [{ name: 'Row 500m', sets: [{ reps: 4 }] }, { name: 'Run 1km', sets: [{ reps: 3 }] }] }
         ],
         'strength-focus': [
-            { id: 'h-s-1', title: 'Strongman Cardio', sport: 'hybrid', difficulty: 'elite', duration_min: 55, is_premium: false, description: 'Sleds y Farmer Carries.', exercises: [{ name: 'Sled Push', sets: [{ reps: 1 }] }] },
-            { id: 'h-s-2', title: 'Burpee Broad Jump', sport: 'hybrid', difficulty: 'intermediate', duration_min: 40, is_premium: false, description: 'Saltos y resistencia.', exercises: [{ name: 'Broad Jumps', sets: [{ reps: 100 }] }] },
-            { id: 'h-s-3', title: 'Sandbag Carry Blast', sport: 'hybrid', difficulty: 'elite', duration_min: 45, is_premium: true, description: 'Cargas inestables.', exercises: [{ name: 'Sandbag Carry', sets: [{ reps: 2 }] }] }
+            { id: 'h-s-1', title: 'Strongman Cardio', sport: 'hybrid', difficulty: 'elite', duration_min: 55, is_premium: false, description: 'Sleds, Farmer Carries y empuje de potencia.', exercises: [{ name: 'Sled Push 50m', sets: [{ reps: 4 }] }, { name: 'Farmer Carry 100m', sets: [{ reps: 4 }] }, { name: 'Run 400m', sets: [{ reps: 4 }] }] },
+            { id: 'h-s-2', title: 'Burpee Broad Jump Flow', sport: 'hybrid', difficulty: 'intermediate', duration_min: 40, is_premium: false, description: 'Saltos de longitud combinados con resistencia muscular.', exercises: [{ name: 'Burpee Broad Jumps', sets: [{ reps: 100 }] }, { name: 'Run 800m', sets: [{ reps: 2 }] }] },
+            { id: 'h-s-3', title: 'Sandbag Carry Blast', sport: 'hybrid', difficulty: 'elite', duration_min: 45, is_premium: true, description: 'Cargas inestables para estabilidad central y potencia.', exercises: [{ name: 'Sandbag Carry 200m', sets: [{ reps: 3 }] }, { name: 'Sandbag Lunges', sets: [{ reps: 50 }] }, { name: 'Run 1km', sets: [{ reps: 1 }] }] }
         ],
         race: [
-            { id: 'h-ra-1', title: 'HYROX Simulation', sport: 'hybrid', difficulty: 'elite', duration_min: 70, is_premium: true, description: '8km + 8 estaciones.', exercises: [{ name: 'Ski Erg', sets: [{ reps: 1 }] }] },
-            { id: 'h-ra-2', title: 'Deka Strong Prep', sport: 'hybrid', difficulty: 'intermediate', duration_min: 30, is_premium: false, description: '10 estaciones fijas.', exercises: [{ name: 'Lunges', sets: [{ reps: 100 }] }] },
-            { id: 'h-ra-3', title: 'Obstacle Hybrid', sport: 'hybrid', difficulty: 'elite', duration_min: 60, is_premium: true, description: 'Trail + Funcionales.', exercises: [{ name: 'Step Ups', sets: [{ reps: 50 }] }] }
+            { id: 'h-ra-1', title: 'HYROX Full Sim', sport: 'hybrid', difficulty: 'elite', duration_min: 75, is_premium: true, description: 'Simulación completa: Ski Erg, Sleds y Burpee Broad Jumps.', exercises: [{ name: 'Ski Erg 1000m', sets: [{ reps: 1 }] }, { name: 'Sled Push 50m', sets: [{ reps: 2 }] }, { name: 'Sled Pull 50m', sets: [{ reps: 2 }] }, { name: 'Burpee Broad Jumps 80m', sets: [{ reps: 1 }] }] },
+            { id: 'h-ra-2', title: 'Deka Strong Prep', sport: 'hybrid', difficulty: 'intermediate', duration_min: 30, is_premium: false, description: 'Estaciones de alta intensidad para Deka Fit/Strong.', exercises: [{ name: 'Lunges', sets: [{ reps: 100 }] }, { name: 'Row 500m', sets: [{ reps: 1 }] }, { name: 'Box Jumps', sets: [{ reps: 30 }] }] },
+            { id: 'h-ra-3', title: 'Hybrid Power Trail', sport: 'hybrid', difficulty: 'elite', duration_min: 60, is_premium: true, description: 'Carrera por montaña combinada con ejercicios funcionales pesados.', exercises: [{ name: 'Mountain Run 2km', sets: [{ reps: 1 }] }, { name: 'Step Ups', sets: [{ reps: 50 }] }, { name: 'Sandbag Carry', sets: [{ reps: 1 }] }] }
         ]
     },
     ocr: {
@@ -2130,7 +2151,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                                     {ex.video_url && (
                                         <button
                                             onClick={() => setViewingVideo(ex.video_url)}
-                                            className="p-1.5 bg-red-600/10 hover:bg-red-600 rounded-full text-red-600 hover:text-white transition-all flex items-center justify-center"
+                                            className="p-1.5 bg-white/5 hover:bg-red-600 rounded-full text-gray-400 hover:text-white transition-all flex items-center justify-center"
                                             title="Ver Demo"
                                         >
                                             <Youtube className="w-4 h-4 fill-current" />
@@ -2563,7 +2584,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                                 {ex.video_url && (
                                     <button
                                         onClick={() => setViewingVideo(ex.video_url)}
-                                        className="group flex items-center gap-2 px-3 py-1.5 bg-brand-red/10 hover:bg-brand-red rounded-full text-brand-red hover:text-white transition-all shrink-0 border border-brand-red/20 shadow-glow"
+                                        className="group flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-red-600 rounded-full text-gray-400 hover:text-white transition-all shrink-0 border border-white/10 hover:border-red-600 shadow-sm"
                                     >
                                         <Youtube className="w-4 h-4 fill-current" />
                                         <span className="text-[8px] font-black uppercase tracking-widest hidden sm:block">Video</span>
@@ -2702,8 +2723,24 @@ function FinishModal({
     isUploading,
     onImageUpload,
     fileInputRef,
-    workoutTitle
+    workoutTitle,
+    rpe,
+    setRpe
 }: any) {
+    const rpeLabels: Record<number, string> = {
+        0: 'Sin definir',
+        1: 'Recuperación',
+        2: 'Muy Ligero',
+        3: 'Ligero',
+        4: 'Moderado',
+        5: 'Esfuerzo Estable',
+        6: 'Algo Intenso',
+        7: 'Intenso',
+        8: 'Muy Intenso',
+        9: 'Casi Máximo',
+        10: 'Esfuerzo Máximo'
+    };
+
     return (
         <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4">
             <div className="bg-[#111] w-full max-w-md rounded-[40px] border border-white/10 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
@@ -2753,59 +2790,83 @@ function FinishModal({
                             onChange={onImageUpload}
                         />
                     </div>
+                </div>
 
-                    <div className="space-y-3">
-                        <button
-                            onClick={() => setShareToArena(!shareToArena)}
-                            className={clsx(
-                                "w-full p-4 rounded-2xl border flex items-center gap-4 transition-all",
-                                shareToArena ? "bg-brand-red border-transparent text-white shadow-lg shadow-brand-red/20" : "bg-white/5 border-white/10 text-gray-500"
-                            )}
-                        >
-                            <Activity className="w-5 h-5" />
-                            <div className="text-left flex-1">
-                                <p className="font-black text-xs uppercase italic">Publicar en el Muro</p>
-                                <p className="text-[10px] opacity-70">Comparte tu hazaña con la comunidad.</p>
-                            </div>
-                            <div className={clsx("w-6 h-6 rounded-full border-2 flex items-center justify-center", shareToArena ? "bg-white text-black" : "border-white/10")}>
-                                {shareToArena && <CheckCircle className="w-4 h-4 fill-current" />}
-                            </div>
-                        </button>
-
-                        <button
-                            onClick={() => setShareToStory(!shareToStory)}
-                            className={clsx(
-                                "w-full p-4 rounded-2xl border flex items-center gap-4 transition-all",
-                                shareToStory ? "bg-purple-600 border-transparent text-white shadow-lg shadow-purple-900/20" : "bg-white/5 border-white/10 text-gray-500"
-                            )}
-                        >
-                            <Camera className="w-5 h-5" />
-                            <div className="text-left flex-1">
-                                <p className="font-black text-xs uppercase italic">Añadir a Historia</p>
-                                <p className="text-[10px] opacity-70">Desaparece en 24 horas.</p>
-                            </div>
-                            <div className={clsx("w-6 h-6 rounded-full border-2 flex items-center justify-center", shareToStory ? "bg-white text-black" : "border-white/10")}>
-                                {shareToStory && <CheckCircle className="w-4 h-4 fill-current" />}
-                            </div>
-                        </button>
+                {/* RPE Selector */}
+                <div className="space-y-3">
+                    <div className="flex justify-between items-center px-1">
+                        <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Esfuerzo Percibido (RPE)</p>
+                        <span className="text-xs font-black text-brand-red uppercase italic">{rpe > 0 ? `${rpe}/10 - ${rpeLabels[rpe]}` : 'Selecciona'}</span>
                     </div>
-
-                    <div className="pt-2 grid grid-cols-2 gap-3">
-                        <button
-                            onClick={onCancel}
-                            disabled={isSaving}
-                            className="bg-white/5 text-gray-400 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all font-heading"
-                        >
-                            Volver
-                        </button>
-                        <button
-                            onClick={onConfirm}
-                            disabled={isSaving || isUploading}
-                            className="bg-white text-black py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all flex items-center justify-center gap-2 shadow-glow font-heading"
-                        >
-                            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Publicar Ahora"}
-                        </button>
+                    <div className="flex justify-between gap-1 overflow-x-auto pb-2 px-1 scrollbar-hide">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((val) => (
+                            <button
+                                key={val}
+                                onClick={() => setRpe(val)}
+                                className={clsx(
+                                    "w-8 h-8 rounded-lg text-[10px] font-black transition-all flex items-center justify-center shrink-0 border",
+                                    rpe === val
+                                        ? "bg-brand-red border-brand-red text-white shadow-glow-sm scale-110"
+                                        : "bg-white/5 border-white/10 text-gray-500 hover:border-white/20"
+                                )}
+                            >
+                                {val}
+                            </button>
+                        ))}
                     </div>
+                </div>
+
+                <div className="space-y-3">
+                    <button
+                        onClick={() => setShareToArena(!shareToArena)}
+                        className={clsx(
+                            "w-full p-4 rounded-2xl border flex items-center gap-4 transition-all",
+                            shareToArena ? "bg-brand-red border-transparent text-white shadow-lg shadow-brand-red/20" : "bg-white/5 border-white/10 text-gray-500"
+                        )}
+                    >
+                        <Activity className="w-5 h-5" />
+                        <div className="text-left flex-1">
+                            <p className="font-black text-xs uppercase italic">Publicar en el Muro</p>
+                            <p className="text-[10px] opacity-70">Comparte tu hazaña con la comunidad.</p>
+                        </div>
+                        <div className={clsx("w-6 h-6 rounded-full border-2 flex items-center justify-center", shareToArena ? "bg-white text-black" : "border-white/10")}>
+                            {shareToArena && <CheckCircle className="w-4 h-4 fill-current" />}
+                        </div>
+                    </button>
+
+                    <button
+                        onClick={() => setShareToStory(!shareToStory)}
+                        className={clsx(
+                            "w-full p-4 rounded-2xl border flex items-center gap-4 transition-all",
+                            shareToStory ? "bg-purple-600 border-transparent text-white shadow-lg shadow-purple-900/20" : "bg-white/5 border-white/10 text-gray-500"
+                        )}
+                    >
+                        <Camera className="w-5 h-5" />
+                        <div className="text-left flex-1">
+                            <p className="font-black text-xs uppercase italic">Añadir a Historia</p>
+                            <p className="text-[10px] opacity-70">Desaparece en 24 horas.</p>
+                        </div>
+                        <div className={clsx("w-6 h-6 rounded-full border-2 flex items-center justify-center", shareToStory ? "bg-white text-black" : "border-white/10")}>
+                            {shareToStory && <CheckCircle className="w-4 h-4 fill-current" />}
+                        </div>
+                    </button>
+                </div>
+
+                <div className="pt-2 grid grid-cols-2 gap-3">
+                    <button
+                        onClick={onCancel}
+                        disabled={isSaving}
+                        className="bg-white/5 text-gray-400 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all font-heading"
+                    >
+                        Volver
+                    </button>
+                    <button
+                        onClick={onConfirm}
+                        disabled={isSaving || isUploading}
+                        className="bg-white text-black py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all flex items-center justify-center gap-2 shadow-glow font-heading"
+                    >
+                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Publicar Ahora"}
+                    </button>
                 </div>
             </div>
         </div>
@@ -2826,7 +2887,9 @@ function CoachAiView({
     sportMode,
     targetDuration,
     setViewingVideo,
-    timerMode
+    timerMode,
+    rpe,
+    setRpe
 }: any) {
     const displayTime = timerMode === 'down' && targetDuration
         ? Math.max(0, (targetDuration * 60) - elapsedSeconds)
@@ -2912,7 +2975,7 @@ function CoachAiView({
                                         {ex.video_url && (
                                             <button
                                                 onClick={() => setViewingVideo(ex.video_url)}
-                                                className="p-2 bg-red-600/10 hover:bg-red-600 rounded-xl text-red-600 hover:text-white transition-all border border-red-600/20"
+                                                className="p-2 bg-white/5 hover:bg-red-600 rounded-xl text-gray-400 hover:text-white transition-all border border-white/10 hover:border-red-600"
                                             >
                                                 <Youtube className="w-4 h-4 fill-current" />
                                             </button>

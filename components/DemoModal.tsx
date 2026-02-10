@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Dumbbell, Building2, Activity, TrendingUp, X, Users, Zap, CheckCircle2 } from "lucide-react";
 
 interface DemoModalProps {
@@ -10,6 +11,15 @@ interface DemoModalProps {
 
 export default function DemoModal({ onClose }: DemoModalProps) {
     const [view, setView] = useState<'athlete' | 'center'>('athlete');
+    const router = useRouter();
+
+    const handleCTA = () => {
+        if (view === 'athlete') {
+            router.push('/signup');
+        } else {
+            router.push('/center-signup');
+        }
+    };
 
     return (
         <div className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex items-center justify-center sm:p-4 overflow-hidden" onClick={onClose}>
@@ -138,7 +148,10 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                                 ))}
                             </div>
 
-                            <button className={`mt-6 px-8 py-4 rounded-xl font-bold text-sm uppercase tracking-widest text-white shadow-lg transition-transform active:scale-95 hover:scale-105 ${view === 'athlete' ? 'bg-red-600 hover:bg-red-700 shadow-red-600/20' : 'bg-orange-600 hover:bg-orange-700 shadow-orange-600/20'}`}>
+                            <button
+                                onClick={handleCTA}
+                                className={`mt-6 px-8 py-4 rounded-xl font-bold text-sm uppercase tracking-widest text-white shadow-lg transition-transform active:scale-95 hover:scale-105 ${view === 'athlete' ? 'bg-red-600 hover:bg-red-700 shadow-red-600/20' : 'bg-orange-600 hover:bg-orange-700 shadow-orange-600/20'}`}
+                            >
                                 {view === 'athlete' ? 'Empezar Gratis' : 'Registrar Centro'}
                             </button>
                         </div>
@@ -151,10 +164,21 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                                 initial={{ rotate: -5, y: 10 }}
                                 animate={{ rotate: 0, y: 0 }}
                                 transition={{ duration: 0.8, type: "spring" }}
-                                className="relative w-full max-w-sm aspect-[4/5] bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 p-6 flex flex-col justify-between shadow-2xl"
+                                className="relative w-full max-w-sm aspect-[4/5] bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 p-6 flex flex-col justify-between shadow-2xl overflow-hidden"
                             >
+                                {/* Background training image for athlete view */}
+                                {view === 'athlete' && (
+                                    <div className="absolute inset-0 z-0">
+                                        <img
+                                            src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop"
+                                            alt="Training background"
+                                            className="w-full h-full object-cover opacity-30"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40" />
+                                    </div>
+                                )}
                                 {/* Header of Card */}
-                                <div className="flex justify-between items-center mb-6">
+                                <div className="relative z-10 flex justify-between items-center mb-6">
                                     <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
                                         {view === 'athlete' ? <Users size={20} className="text-red-400" /> : <Building2 size={20} className="text-orange-400" />}
                                     </div>
@@ -164,7 +188,7 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                                 </div>
 
                                 {/* Middle Content */}
-                                <div className="flex-1 flex flex-col justify-center items-center text-center space-y-4">
+                                <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center space-y-4">
                                     {view === 'athlete' ? (
                                         <>
                                             <div className="w-24 h-24 rounded-full border-4 border-red-500/20 p-1">

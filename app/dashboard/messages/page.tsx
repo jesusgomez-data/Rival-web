@@ -5,7 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import ChatList from './ChatList'
 import ChatWindow from './ChatWindow'
 import NewChatModal from './NewChatModal'
-import { getConversations, getMessages, sendMessage, getOrCreateConversation, getFriendsToChat, deleteMessage, editMessage, uploadChatImage, toggleMessageLike } from './actions'
+import { getConversations, getMessages, sendMessage, getOrCreateConversation, getFriendsToChat, deleteMessage, editMessage, uploadChatImage, toggleMessageLike, deleteConversation } from './actions'
 import { Loader2 } from 'lucide-react'
 import { clsx } from 'clsx'
 
@@ -35,6 +35,21 @@ export default function MessagesPage() {
         setMessages(data)
         setIsLoadingMessages(false)
     }, [])
+
+    const handleDeleteConversation = async () => {
+        if (!activeConversationId) return;
+
+        const result = await deleteConversation(activeConversationId);
+        if (result.success) {
+            setActiveConversationId(null);
+            setOtherPerson(null);
+            setMessages([]);
+            setIsMobileListVisible(true);
+            await loadConversations();
+        } else {
+            alert(`Error: ${result.error}`);
+        }
+    }
 
     useEffect(() => {
         const init = async () => {
@@ -273,6 +288,7 @@ export default function MessagesPage() {
                     onDeleteMessage={deleteMessage}
                     onEditMessage={editMessage}
                     onToggleLike={handleToggleLike}
+                    onDeleteConversation={handleDeleteConversation}
                     isLoading={isLoadingMessages}
                     onBack={() => setIsMobileListVisible(true)}
                 />

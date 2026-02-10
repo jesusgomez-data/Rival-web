@@ -197,13 +197,7 @@ export async function getActiveStories() {
 
             // Enhance story object with likes/views info
             const isOwner = story.user_id === user?.id || story.author?.id === user?.id
-
-            if (story.story_views?.length > 0) {
-                console.log(`Debug Story ${story.id}: views=${story.story_views.length}, owner=${story.user_id}, viewer=${user?.id}, isOwner=${isOwner}`)
-            }
-
-            // Temporary fix: enable details for everyone to verify list population
-            const showDetails = true; // was isOwner
+            const showDetails = isOwner;
 
             const enhancedStory = {
                 ...story,

@@ -59,16 +59,30 @@ export default function CommunityPage({
                     .single();
 
                 const followedIds = new Set(myFollows?.map(f => f.following_id) || []);
-
                 let searchResults: any[] = [];
+
                 if (query) {
                     const { data: profiles } = await supabase
                         .from('profiles')
                         .select('*')
                         .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
                         .neq('id', user.id)
-                        .limit(10);
-                    searchResults = profiles || [];
+                        .limit(50); // Fetch more to sort by relevance
+
+                    searchResults = (profiles || []).sort((a, b) => {
+                        const aFull = (a.full_name || '').toLowerCase();
+                        const aUser = (a.username || '').toLowerCase();
+                        const bFull = (b.full_name || '').toLowerCase();
+                        const bUser = (b.username || '').toLowerCase();
+                        const q = query.toLowerCase();
+
+                        const aStarts = aFull.startsWith(q) || aUser.startsWith(q);
+                        const bStarts = bFull.startsWith(q) || bUser.startsWith(q);
+
+                        if (aStarts && !bStarts) return -1;
+                        if (!aStarts && bStarts) return 1;
+                        return 0;
+                    }).slice(0, 10);
                 }
 
                 const { data: posts } = await supabase

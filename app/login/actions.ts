@@ -35,6 +35,23 @@ export async function signup(prevState: any, formData: FormData) {
     const lastName = formData.get('lastName') as string
     const username = formData.get('username') as string
 
+    // Validate username uniqueness BEFORE attempting signup
+    const { data: existingUser, error: checkError } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username)
+        .maybeSingle()
+
+    if (checkError && checkError.code !== 'PGRST116') {
+        // PGRST116 is "no rows returned", which is what we want
+        console.error("Username check error:", checkError);
+        return { error: "Error al verificar el nombre de usuario. Por favor intenta de nuevo." }
+    }
+
+    if (existingUser) {
+        return { error: `El nombre de usuario "${username}" ya está en uso. Por favor elige otro.` }
+    }
+
     const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -79,7 +96,13 @@ export async function signup(prevState: any, formData: FormData) {
 
         if (profileError) {
             console.error("Manual Profile Creation Error:", profileError);
-            // Don't block flow, but log it. 
+
+            // Check if it's a unique constraint violation on username
+            if (profileError.code === '23505' && profileError.message.includes('username')) {
+                return { error: `El nombre de usuario "${username}" ya está en uso. Por favor elige otro.` }
+            }
+
+            // Don't block flow for other errors, but log it. 
             // If trigger worked, this might fail or be redundant, which is fine with upsert.
         }
     }

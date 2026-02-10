@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell } from 'lucide-react'
 import { createStory, createPRStory, toggleStoryLike, recordStoryView, deleteStory } from './actions'
 import { clsx } from 'clsx'
 import PRCard from '../community/PRCard'
@@ -41,13 +41,14 @@ interface UserStories {
 
 interface OverlayElement {
     id: string
-    type: 'text' | 'sticker'
+    type: 'text' | 'image' | 'sticker' | 'workout_sticker' | 'pr_sticker'
     content: string
     x: number
     y: number
     scale: number
     rotation: number
     color?: string
+    link?: string
 }
 
 export default function StoryBar({ currentUser }: { currentUser: any }) {
@@ -56,8 +57,11 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const [activeStoryIndex, setActiveStoryIndex] = useState(0)
     const [isUploading, setIsUploading] = useState(false)
     const [progress, setProgress] = useState(0)
+    const [isPaused, setIsPaused] = useState(false)
+    const [isPressed, setIsPressed] = useState(false)
     const [showViewers, setShowViewers] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    const storyVideoRef = useRef<HTMLVideoElement>(null)
     const prFileInputRef = useRef<HTMLInputElement>(null)
     const [showPRCreator, setShowPRCreator] = useState(false)
     const [prExercise, setPrExercise] = useState("")
@@ -77,9 +81,16 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const [textColor, setTextColor] = useState("#FFFFFF")
     const [isMusicPickerOpen, setIsMusicPickerOpen] = useState(false)
 
+    const [isVideoTrimming, setIsVideoTrimming] = useState(false)
+    const [trimmerVideoUrl, setTrimmerVideoUrl] = useState<string | null>(null)
+    const [trimStart, setTrimStart] = useState(0)
+    const [isTrimmingLoading, setIsTrimmingLoading] = useState(false)
+    const trimmerVideoRef = useRef<HTMLVideoElement>(null)
+
     // Interaction State for Dragging
     const [draggingId, setDraggingId] = useState<string | null>(null)
     const dragStartRef = useRef<{ x: number, y: number } | null>(null)
+    const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null)
 
     useEffect(() => {
         // Poll for stories every 30 seconds to catch new ones
@@ -113,6 +124,86 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         return () => window.removeEventListener('trigger-story-open', handleTrigger)
     }, [userStories])
 
+    // Listener for 'share-to-story' event from FeedPost
+    useEffect(() => {
+        const handleShareToStory = async (e: Event) => {
+            const customEvent = e as CustomEvent;
+            const { type, url } = customEvent.detail;
+
+            if (type === 'image' && url) {
+                setIsUploading(true);
+                try {
+                    // Fetch the image to use as the main story file (full screen background)
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    const file = new File([blob], "shared_story_image.jpg", { type: blob.type });
+
+                    setupPreview(file);
+
+                    // Add "View Post" sticker if postId is present
+                    if (customEvent.detail.postId) {
+                        const linkOverlay: OverlayElement = {
+                            id: Date.now().toString(),
+                            type: 'text',
+                            content: 'VER POST 🔗',
+                            x: 50,
+                            y: 85,
+                            scale: 1,
+                            rotation: 0,
+                            color: '#FFFFFF',
+                            link: `/dashboard/post/${customEvent.detail.postId}`
+                        };
+                        // Use setTimeout to ensure state update happens after setupPreview's state clear
+                        setTimeout(() => setOverlays([linkOverlay]), 100);
+                    }
+                } catch (err) {
+                    console.error("Error preparing shared story:", err);
+                    alert("Error al cargar la imagen para la historia.");
+                } finally {
+                    setIsUploading(false);
+                }
+            } else if (['workout', 'class_result', 'pr'].includes(type) && customEvent.detail.data) {
+                const postId = customEvent.detail.postId;
+                // Generate a background
+                const canvas = document.createElement('canvas');
+                canvas.width = 1080;
+                canvas.height = 1920;
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    const gradient = ctx.createLinearGradient(0, 0, 0, 1920);
+                    gradient.addColorStop(0, '#0f0f0f');
+                    gradient.addColorStop(1, '#000000');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, 1080, 1920);
+
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            const file = new File([blob], "story_background.png", { type: "image/png" });
+                            setupPreview(file);
+
+                            const data = customEvent.detail.data;
+                            const newOverlay: OverlayElement = {
+                                id: Date.now().toString(),
+                                type: type === 'pr' ? 'pr_sticker' : 'workout_sticker',
+                                content: JSON.stringify(data),
+                                x: 50,
+                                y: 45, // Adjusted to appear more centered/visible in viewport
+                                scale: 1,
+                                rotation: 0,
+                                link: postId ? `/dashboard/post/${postId}` : undefined
+                            };
+                            // Use setTimeout to ensure state update happens after setupPreview's state clear
+                            setTimeout(() => setOverlays([newOverlay]), 100);
+                        }
+                    }, 'image/png');
+                }
+            }
+        };
+
+        window.addEventListener('share-to-story', handleShareToStory);
+        return () => window.removeEventListener('share-to-story', handleShareToStory);
+    }, []);
+
     useEffect(() => {
         return () => {
             if (previewUrl) URL.revokeObjectURL(previewUrl)
@@ -140,8 +231,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         const file = e.target.files?.[0]
         if (!file) return
 
-        if (file.size > 20 * 1024 * 1024) { // Pushed to 20MB for videos
-            alert('El archivo es demasiado grande. El límite es 20MB para mejores videos.')
+        if (file.size > 200 * 1024 * 1024) { // Pushed to 200MB for high quality videos
+            alert('El archivo es demasiado grande. El límite es 200MB para videos de alta calidad.')
             return
         }
 
@@ -154,8 +245,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 const duration = video.duration;
 
                 if (duration > 30) {
-                    alert('LAS HISTORIAS TIENEN UN LÍMITE DE 30 SEGUNDOS. Tu video dura ' + Math.round(duration) + ' segundos.');
-                    if (fileInputRef.current) fileInputRef.current.value = "";
+                    setTrimmerVideoUrl(URL.createObjectURL(file));
+                    setIsVideoTrimming(true);
                     return;
                 }
 
@@ -268,6 +359,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         if (!previewFile) return
 
         setIsUploading(true)
+        console.log("Starting upload for:", previewFile.name, previewFile.size);
         try {
             const formData = new FormData()
             formData.append('media', previewFile)
@@ -282,8 +374,10 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
 
             const res = await createStory(formData)
             if (res.error) {
+                console.error("Upload error:", res.error);
                 alert(`Error: ${res.error}`)
             } else {
+                console.log("Upload success!");
                 setPreviewFile(null)
                 setPreviewUrl(null)
                 setSelectedTrack(null)
@@ -291,10 +385,54 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 await loadStories()
                 router.refresh()
             }
+        } catch (err) {
+            console.error("Post story critical error:", err);
+            alert("Error crítico al subir la historia. Revisa el tamaño del archivo.");
         } finally {
             setIsUploading(false)
         }
     }
+
+    const processTrimming = async () => {
+        if (!trimmerVideoRef.current || !trimmerVideoUrl) return;
+
+        setIsTrimmingLoading(true);
+        const video = trimmerVideoRef.current;
+        const stream = (video as any).captureStream ? (video as any).captureStream() : (video as any).mozCaptureStream();
+
+        const supportedTypes = ['video/mp4', 'video/webm', 'video/ogg'];
+        let mimeType = '';
+        for (const type of supportedTypes) {
+            if (MediaRecorder.isTypeSupported(type)) {
+                mimeType = type;
+                break;
+            }
+        }
+
+        const recorder = new MediaRecorder(stream, { mimeType });
+
+        const chunks: Blob[] = [];
+        recorder.ondataavailable = (e) => chunks.push(e.data);
+
+        recorder.onstop = () => {
+            const blob = new Blob(chunks, { type: mimeType });
+            const extension = mimeType.split('/')[1] || 'webm';
+            const trimmedFile = new File([blob], `trimmed_video.${extension}`, { type: mimeType });
+            setupPreview(trimmedFile);
+            setIsVideoTrimming(false);
+            setTrimmerVideoUrl(null);
+            setIsTrimmingLoading(false);
+        };
+
+        video.currentTime = trimStart;
+        video.play();
+        recorder.start();
+
+        setTimeout(() => {
+            recorder.stop();
+            video.pause();
+        }, 30000); // 30 seconds
+    };
 
     const closePreview = () => {
         setPreviewFile(null)
@@ -398,16 +536,48 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const isOwner = selectedUserIndex !== null && userStories[selectedUserIndex].user.id === currentUser?.id
 
     useEffect(() => {
-        if (selectedUserIndex !== null && currentStory?.music_url && !showViewers && !previewUrl) {
+        if (selectedUserIndex !== null && currentStory?.music_url && !showViewers && !previewUrl && !isPaused) {
             if (audioRef.current) {
                 audioRef.current.src = currentStory.music_url;
                 audioRef.current.currentTime = 0;
                 audioRef.current.play().catch(e => console.log("Audio play blocked by browser"));
             }
-        } else if (!previewUrl) {
+        } else if (!previewUrl || isPaused) {
             if (audioRef.current) audioRef.current.pause();
         }
-    }, [selectedUserIndex, activeStoryIndex, showViewers, currentStory?.music_url, previewUrl])
+    }, [selectedUserIndex, activeStoryIndex, showViewers, currentStory?.music_url, previewUrl, isPaused])
+
+    // Story Progression Logic
+    useEffect(() => {
+        let interval: any;
+        if (selectedUserIndex !== null && !showViewers && !isPaused && !previewUrl) {
+            const storyDuration = 10000; // 10 seconds for images
+            const step = 50; // update every 50ms
+
+            interval = setInterval(() => {
+                setProgress(prev => {
+                    if (prev >= 100) {
+                        nextStory();
+                        return 0;
+                    }
+                    return prev + (100 / (storyDuration / step));
+                });
+            }, step);
+        }
+        return () => clearInterval(interval);
+    }, [selectedUserIndex, activeStoryIndex, isPaused, showViewers, previewUrl]);
+
+    const handlePressStart = () => {
+        setIsPressed(true);
+        setIsPaused(true);
+        if (storyVideoRef.current) storyVideoRef.current.pause();
+    };
+
+    const handlePressEnd = () => {
+        setIsPressed(false);
+        setIsPaused(false);
+        if (storyVideoRef.current) storyVideoRef.current.play().catch(() => { });
+    };
 
 
 
@@ -416,10 +586,40 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         return storyOverlays.map(overlay => (
             <div
                 key={overlay.id}
-                className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-move z-20"
-                style={{ left: `${overlay.x}%`, top: `${overlay.y}%` }}
-                onMouseDown={(e) => previewUrl && handleDragStart(e, overlay.id)}
-                onTouchStart={(e) => previewUrl && handleDragStart(e, overlay.id)}
+                className={clsx(
+                    "absolute transform -translate-x-1/2 -translate-y-1/2 z-20 transition-transform origin-center",
+                    previewUrl ? "cursor-move" : (overlay.link && "cursor-pointer hover:scale-105 active:scale-95 transition-all")
+                )}
+                style={{
+                    left: `${overlay.x}%`,
+                    top: `${overlay.y}%`,
+                    transform: `translate(-50%, -50%) scale(${overlay.scale || 1}) rotate(${overlay.rotation || 0}deg)`,
+                    border: (previewUrl && selectedOverlayId === overlay.id) ? '2px solid #DC2626' : 'none',
+                    borderRadius: '16px'
+                }}
+                onMouseDown={(e) => {
+                    if (previewUrl) {
+                        e.stopPropagation();
+                        setSelectedOverlayId(overlay.id);
+                        handleDragStart(e, overlay.id);
+                    } else if (overlay.link) {
+                        e.stopPropagation();
+                        // Close viewer and navigate
+                        setSelectedUserIndex(null);
+                        router.push(overlay.link);
+                    }
+                }}
+                onTouchStart={(e) => {
+                    if (previewUrl) {
+                        e.stopPropagation();
+                        setSelectedOverlayId(overlay.id);
+                        handleDragStart(e, overlay.id);
+                    } else if (overlay.link) {
+                        e.stopPropagation();
+                        setSelectedUserIndex(null);
+                        router.push(overlay.link);
+                    }
+                }}
             >
                 {overlay.type === 'text' ? (
                     <div className="relative group">
@@ -433,6 +633,129 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             <button
                                 onClick={(e) => removeOverlay(overlay.id, e)}
                                 className="absolute -top-4 -right-4 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                                <X className="w-3 h-3" />
+                            </button>
+                        )}
+                    </div>
+                ) : overlay.type === 'workout_sticker' ? (
+                    (() => {
+                        try {
+                            const data = JSON.parse(overlay.content);
+                            const hasBlocks = data.metrics?.blocks?.length > 0;
+                            return (
+                                <div className="bg-[#121212] border border-white/10 p-5 rounded-[24px] shadow-2xl w-[300px] relative overflow-hidden group select-none">
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
+                                    <div className="flex items-center gap-4 mb-4 relative z-10">
+                                        <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
+                                            <Dumbbell className="w-5 h-5 text-brand-red" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] mb-0.5">Entrenamiento</p>
+                                            <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || 'Sesión'}</h4>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2 relative z-10">
+                                        {hasBlocks ? (
+                                            <div className="space-y-1.5">
+                                                {data.metrics.blocks.slice(0, 3).map((block: any, idx: number) => (
+                                                    <div key={idx} className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[10px] font-black text-white uppercase tracking-tight">{block.type || 'BLOQUE'}</span>
+                                                            {block.duration && <span className="text-[9px] text-gray-500 font-bold">{block.duration}'</span>}
+                                                        </div>
+                                                        <span className="text-brand-red font-black text-sm italic tracking-tighter">
+                                                            {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : '-')}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                                {data.metrics.blocks.length > 3 && (
+                                                    <div className="text-[9px] text-center text-brand-red/70 font-bold uppercase tracking-widest pt-1">
+                                                        + {data.metrics.blocks.length - 3} BLOQUES MÁS
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <>
+                                                {data.total_volume_kg > 0 && (
+                                                    <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Volumen</span>
+                                                        <span className="text-brand-red font-black text-sm">{data.total_volume_kg} KG</span>
+                                                    </div>
+                                                )}
+                                                {data.location_name && (
+                                                    <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Lugar</span>
+                                                        <span className="text-white font-bold text-xs truncate max-w-[150px] uppercase">{data.location_name}</span>
+                                                    </div>
+                                                )}
+                                            </>
+                                        )}
+                                        {!hasBlocks && !data.total_volume_kg && !data.location_name && (
+                                            <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                                                <p className="text-white/60 text-xs italic text-center">¡Entrenamiento completado!</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="mt-4 pt-3 border-t border-white/5 flex justify-center">
+                                        <div className="flex items-center gap-1.5 opacity-50">
+                                            <div className="w-1.5 h-1.5 bg-brand-red rounded-full animate-pulse" />
+                                            <span className="text-[8px] text-gray-400 font-black uppercase tracking-[0.3em]">RIVAL FIT APP</span>
+                                        </div>
+                                    </div>
+                                    {previewUrl && (
+                                        <button
+                                            onClick={(e) => removeOverlay(overlay.id, e)}
+                                            className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    )}
+                                </div>
+                            )
+                        } catch (e) { return null }
+                    })()
+                ) : overlay.type === 'pr_sticker' ? (
+
+                    (() => {
+                        try {
+                            const prData = JSON.parse(overlay.content);
+                            return (
+                                <div className="relative group">
+                                    <PRCard
+                                        userName={currentUser?.full_name || 'Usuario'}
+                                        avatarUrl={currentUser?.avatar_url || ''}
+                                        sport={prData.sport}
+                                        exerciseName={prData.exerciseName}
+                                        weight={prData.weight}
+                                        unit={prData.unit}
+                                        isStory={true}
+                                    />
+                                    {previewUrl && (
+                                        <button
+                                            onClick={(e) => removeOverlay(overlay.id, e)}
+                                            className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    )}
+                                </div>
+                            )
+                        } catch (e) { return null }
+                    })()
+                ) : overlay.type === 'image' ? (
+                    <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 group w-full">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            src={overlay.content}
+                            alt="Shared Content"
+                            className="w-full h-auto object-contain pointer-events-none"
+                            crossOrigin="anonymous"
+                        />
+                        {previewUrl && (
+                            <button
+                                onClick={(e) => removeOverlay(overlay.id, e)}
+                                className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
                                 <X className="w-3 h-3" />
                             </button>
@@ -514,6 +837,74 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                     </span>
                 </div>
             ))}
+
+            {/* Video Trimmer Modal */}
+            {isVideoTrimming && trimmerVideoUrl && (
+                <div className="fixed inset-0 z-[400] bg-black/98 flex items-center justify-center p-4 backdrop-blur-xl">
+                    <div className="bg-brand-gray border border-white/10 w-full max-w-md rounded-[40px] p-8 shadow-2xl relative">
+                        <button
+                            onClick={() => { setIsVideoTrimming(false); setTrimmerVideoUrl(null); }}
+                            className="absolute top-8 right-8 text-gray-400 hover:text-white bg-white/5 p-2 rounded-full"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+
+                        <div className="mb-8">
+                            <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">Recortar Video</h3>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Límite de 30 segundos alcanzado</p>
+                        </div>
+
+                        <div className="relative aspect-[9/16] bg-black rounded-3xl overflow-hidden border border-white/10 mb-8">
+                            <video
+                                ref={trimmerVideoRef}
+                                src={trimmerVideoUrl}
+                                className="w-full h-full object-cover"
+                                loop
+                                muted
+                                playsInline
+                            />
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="space-y-3">
+                                <div className="flex justify-between items-end">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Punto de inicio</label>
+                                    <span className="text-xl font-black text-brand-red italic">{Math.floor(trimStart)}s</span>
+                                </div>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max={Math.max(0, (trimmerVideoRef.current?.duration || 0) - 30)}
+                                    step="0.5"
+                                    value={trimStart}
+                                    onChange={(e) => {
+                                        const val = parseFloat(e.target.value);
+                                        setTrimStart(val);
+                                        if (trimmerVideoRef.current) trimmerVideoRef.current.currentTime = val;
+                                    }}
+                                    className="w-full accent-brand-red h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
+                                />
+                                <div className="flex justify-between text-[8px] font-bold text-gray-600 uppercase">
+                                    <span>Inicio</span>
+                                    <span>Fin - 30s</span>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={processTrimming}
+                                disabled={isTrimmingLoading}
+                                className="w-full bg-brand-red text-white py-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-glow transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
+                            >
+                                {isTrimmingLoading ? (
+                                    <><Loader2 className="w-6 h-6 animate-spin" /> Procesando...</>
+                                ) : (
+                                    <><Plus className="w-5 h-5" /> Confirmar Recorte</>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Editor Modal */}
             {previewUrl && (
@@ -618,6 +1009,41 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                 </div>
                             )}
 
+                            {/* Overlay Controls (Resize & Delete) */}
+                            {selectedOverlayId && (
+                                <div className="absolute top-28 left-0 right-0 flex justify-center z-50 pointer-events-auto">
+                                    <div className="bg-black/80 backdrop-blur-xl px-4 py-3 rounded-2xl border border-white/10 flex items-center gap-4 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                                        <div className="flex flex-col gap-1">
+                                            <span className="text-[9px] uppercase font-black text-gray-500 tracking-widest pl-1">Tamaño</span>
+                                            <input
+                                                type="range"
+                                                min="0.5"
+                                                max="2.0"
+                                                step="0.1"
+                                                value={overlays.find(o => o.id === selectedOverlayId)?.scale || 1}
+                                                onChange={(e) => {
+                                                    const newScale = parseFloat(e.target.value);
+                                                    setOverlays(prev => prev.map(o => o.id === selectedOverlayId ? { ...o, scale: newScale } : o));
+                                                }}
+                                                className="w-32 accent-brand-red cursor-pointer h-1.5 bg-white/10 rounded-full appearance-none"
+                                            />
+                                        </div>
+                                        <div className="w-px h-8 bg-white/10" />
+                                        <button
+                                            onClick={() => {
+                                                setOverlays(prev => prev.filter(o => o.id !== selectedOverlayId));
+                                                setSelectedOverlayId(null);
+                                            }}
+                                            className="p-2 bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-500 rounded-xl transition-colors group"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Emoji Picker Modal Overlay */}
+
                             {/* Emoji Picker Overlay */}
                             {showEmojiPicker && (
                                 <div className="absolute top-20 right-4 z-[350]">
@@ -701,57 +1127,75 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
             {selectedUserIndex !== null && currentStory && (
                 <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4">
                     <div className="relative w-full max-w-[400px] h-[90vh] bg-black rounded-[32px] overflow-hidden shadow-2xl border border-white/5 mx-auto">
-                        <div className="absolute top-6 inset-x-6 flex gap-1.5 z-50">
-                            {userStories[selectedUserIndex].stories.map((_, i) => (
-                                <div key={i} className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-white transition-all duration-100 ease-linear"
-                                        style={{ width: i < activeStoryIndex ? '100%' : i === activeStoryIndex ? `${progress}%` : '0%' }}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-
-                        <div className="absolute top-12 left-6 right-6 flex items-center justify-between z-50">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full border-2 border-brand-red overflow-hidden relative">
-                                    <Image
-                                        src={userStories[selectedUserIndex].user.avatar_url || `https://ui-avatars.com/api/?name=${userStories[selectedUserIndex].user.full_name}`}
-                                        alt="Avatar" fill className="object-cover"
-                                    />
-                                </div>
-                                <div className="drop-shadow-lg">
-                                    <p className="text-white font-black text-sm uppercase italic tracking-tighter">
-                                        {userStories[selectedUserIndex].user.full_name}
-                                    </p>
-                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                        {new Date(currentStory.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
-                                    {currentStory.music_url && (
-                                        <div className="flex items-center gap-1.5 mt-1 bg-black/40 px-2 py-0.5 rounded-full border border-white/10 w-fit">
-                                            <Music className="w-2.5 h-2.5 text-brand-red animate-bounce" />
-                                            <span className="text-[8px] font-black text-white uppercase tracking-[0.1em] marquee-container whitespace-nowrap overflow-hidden max-w-[80px]">
-                                                {currentStory.music_title} • {currentStory.music_artist}
-                                            </span>
+                        <AnimatePresence>
+                            {!isPressed && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute top-6 inset-x-6 flex gap-1.5 z-50"
+                                >
+                                    {userStories[selectedUserIndex].stories.map((_, i) => (
+                                        <div key={i} className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-white transition-all duration-100 ease-linear"
+                                                style={{ width: i < activeStoryIndex ? '100%' : i === activeStoryIndex ? `${progress}%` : '0%' }}
+                                            />
                                         </div>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {isOwner && (
-                                    <button
-                                        onClick={handleDeleteStory}
-                                        className="p-2 bg-black/40 hover:bg-red-500/60 text-white rounded-full backdrop-blur-md transition-all group/delete"
-                                        title="Eliminar historia"
-                                    >
-                                        <Trash2 className="w-5 h-5 group-hover/delete:scale-110 transition-transform" />
-                                    </button>
-                                )}
-                                <button onClick={() => setSelectedUserIndex(null)} className="p-2 bg-black/40 hover:text-brand-red text-white rounded-full backdrop-blur-md transition-colors border border-white/5 shadow-lg">
-                                    <X className="w-8 h-8" />
-                                </button>
-                            </div>
-                        </div>
+                                    ))}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
+                        <AnimatePresence>
+                            {!isPressed && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute top-12 left-6 right-6 flex items-center justify-between z-50"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full border-2 border-brand-red overflow-hidden relative">
+                                            <Image
+                                                src={userStories[selectedUserIndex].user.avatar_url || `https://ui-avatars.com/api/?name=${userStories[selectedUserIndex].user.full_name}`}
+                                                alt="Avatar" fill className="object-cover"
+                                            />
+                                        </div>
+                                        <div className="drop-shadow-lg">
+                                            <p className="text-white font-black text-sm uppercase italic tracking-tighter">
+                                                {userStories[selectedUserIndex].user.full_name}
+                                            </p>
+                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                                {new Date(currentStory.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </p>
+                                            {currentStory.music_url && (
+                                                <div className="flex items-center gap-1.5 mt-1 bg-black/40 px-2 py-0.5 rounded-full border border-white/10 w-fit">
+                                                    <Music className="w-2.5 h-2.5 text-brand-red animate-bounce" />
+                                                    <span className="text-[8px] font-black text-white uppercase tracking-[0.1em] marquee-container whitespace-nowrap overflow-hidden max-w-[80px]">
+                                                        {currentStory.music_title} • {currentStory.music_artist}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        {isOwner && (
+                                            <button
+                                                onClick={handleDeleteStory}
+                                                className="p-2 bg-black/40 hover:bg-red-500/60 text-white rounded-full backdrop-blur-md transition-all group/delete"
+                                                title="Eliminar historia"
+                                            >
+                                                <Trash2 className="w-5 h-5 group-hover/delete:scale-110 transition-transform" />
+                                            </button>
+                                        )}
+                                        <button onClick={() => setSelectedUserIndex(null)} className="p-2 bg-black/40 hover:text-brand-red text-white rounded-full backdrop-blur-md transition-colors border border-white/5 shadow-lg">
+                                            <X className="w-8 h-8" />
+                                        </button>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         <div className="absolute inset-0 z-40 flex">
                             <div className="w-1/3 h-full cursor-pointer" onClick={prevStory} />
@@ -783,6 +1227,12 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                 }
                             }}
                             className="w-full h-full relative cursor-grab active:cursor-grabbing touch-none"
+                            onMouseDown={handlePressStart}
+                            onMouseUp={handlePressEnd}
+                            onMouseLeave={handlePressEnd}
+                            onTouchStart={handlePressStart}
+                            onTouchEnd={handlePressEnd}
+
                         >
                             {currentStory.media_type === 'pr' ? (
                                 (() => {
@@ -804,7 +1254,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     }
                                 })()
                             ) : currentStory.media_type === 'video' ? (
-                                <video src={currentStory.media_url} autoPlay playsInline className="w-full h-full object-cover pointer-events-none" />
+                                <video ref={storyVideoRef} src={currentStory.media_url} autoPlay playsInline className="w-full h-full object-cover pointer-events-none" />
                             ) : (
                                 <Image src={currentStory.media_url} alt="Story content" fill className="object-cover pointer-events-none" />
                             )}
@@ -879,8 +1329,22 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             {currentStory.metadata?.overlays && currentStory.metadata.overlays.map((overlay: OverlayElement) => (
                                 <div
                                     key={overlay.id}
-                                    className="absolute transform -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none"
-                                    style={{ left: `${overlay.x}%`, top: `${overlay.y}%` }}
+                                    className={clsx(
+                                        "absolute transform -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-auto transition-transform",
+                                        overlay.link && "cursor-pointer active:scale-95 hover:scale-105"
+                                    )}
+                                    style={{
+                                        left: `${overlay.x}%`,
+                                        top: `${overlay.y}%`,
+                                        transform: `translate(-50%, -50%) scale(${overlay.scale || 1}) rotate(${overlay.rotation || 0}deg)`
+                                    }}
+                                    onClick={(e) => {
+                                        if (overlay.link) {
+                                            e.stopPropagation();
+                                            setSelectedUserIndex(null);
+                                            router.push(overlay.link);
+                                        }
+                                    }}
                                 >
                                     {overlay.type === 'text' ? (
                                         <p
@@ -889,6 +1353,110 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                         >
                                             {overlay.content}
                                         </p>
+                                    ) : overlay.type === 'workout_sticker' ? (
+                                        (() => {
+                                            try {
+                                                const data = JSON.parse(overlay.content);
+                                                const hasBlocks = data.metrics?.blocks?.length > 0;
+                                                return (
+                                                    <div className="bg-[#121212] border border-white/10 p-5 rounded-[24px] shadow-2xl w-[300px] relative overflow-hidden select-none">
+                                                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
+                                                        <div className="flex items-center gap-4 mb-4 relative z-10">
+                                                            <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
+                                                                <Dumbbell className="w-5 h-5 text-brand-red" />
+                                                            </div>
+                                                            <div className="flex-1 min-w-0">
+                                                                <p className="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] mb-0.5">Entrenamiento</p>
+                                                                <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || 'Sesión'}</h4>
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-2 relative z-10">
+                                                            {hasBlocks ? (
+                                                                <div className="space-y-1.5">
+                                                                    {data.metrics.blocks.slice(0, 3).map((block: any, idx: number) => (
+                                                                        <div key={idx} className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                                                                            <div className="flex flex-col">
+                                                                                <span className="text-[10px] font-black text-white uppercase tracking-tight">{block.type || 'BLOQUE'}</span>
+                                                                                {block.duration && <span className="text-[9px] text-gray-500 font-bold">{block.duration}'</span>}
+                                                                            </div>
+                                                                            <span className="text-brand-red font-black text-sm italic tracking-tighter">
+                                                                                {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : '-')}
+                                                                            </span>
+                                                                        </div>
+                                                                    ))}
+                                                                    {data.metrics.blocks.length > 3 && (
+                                                                        <div className="text-[9px] text-center text-brand-red/70 font-bold uppercase tracking-widest pt-1">
+                                                                            + {data.metrics.blocks.length - 3} BLOQUES MÁS
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    {data.total_volume_kg > 0 && (
+                                                                        <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                                                                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Volumen</span>
+                                                                            <span className="text-brand-red font-black text-sm">{data.total_volume_kg} KG</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {data.location_name && (
+                                                                        <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                                                                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Lugar</span>
+                                                                            <span className="text-white font-bold text-xs truncate max-w-[150px] uppercase">{data.location_name}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                            {!hasBlocks && !data.total_volume_kg && !data.location_name && (
+                                                                <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                                                                    <p className="text-white/60 text-xs italic text-center">¡Entrenamiento completado!</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="mt-4 pt-3 border-t border-white/5 flex justify-center">
+                                                            <div className="flex items-center gap-1.5 opacity-50">
+                                                                <div className="w-1.5 h-1.5 bg-brand-red rounded-full animate-pulse" />
+                                                                <span className="text-[8px] text-gray-400 font-black uppercase tracking-[0.3em]">RIVAL FIT APP</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )
+                                            } catch (e) { return null }
+                                        })()
+                                    ) : overlay.type === 'pr_sticker' ? (
+                                        (() => {
+                                            try {
+                                                const prData = JSON.parse(overlay.content);
+                                                return (
+                                                    <PRCard
+                                                        userName={userStories[selectedUserIndex].user.full_name}
+                                                        avatarUrl={userStories[selectedUserIndex].user.avatar_url || ''}
+                                                        sport={prData.sport}
+                                                        exerciseName={prData.exerciseName}
+                                                        weight={prData.weight}
+                                                        unit={prData.unit}
+                                                        isStory={true}
+                                                    />
+                                                )
+                                            } catch (e) { return null }
+                                        })()
+                                    ) : overlay.type === 'image' ? (
+                                        <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 group w-full">
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img
+                                                src={overlay.content}
+                                                alt="Shared Content"
+                                                className="w-full h-auto object-contain pointer-events-none"
+                                                crossOrigin="anonymous"
+                                            />
+                                            {previewUrl && (
+                                                <button
+                                                    onClick={(e) => removeOverlay(overlay.id, e)}
+                                                    className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            )}
+                                        </div>
                                     ) : (
                                         <Image src={overlay.content} width={64} height={64} alt="sticker" className="drop-shadow-lg" />
                                     )}
@@ -896,49 +1464,66 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             ))}
                         </motion.div>
 
-                        <div className="absolute bottom-10 left-0 right-0 px-6 flex items-center justify-between z-50 pointer-events-none">
-                            <div className="pointer-events-auto">
-                                {isOwner ? (
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); setShowViewers(true); }}
-                                        className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-xl px-4 py-2.5 rounded-2xl border border-white/10 transition-all group"
-                                    >
-                                        <div className="flex -space-x-2">
-                                            {(currentStory as any).viewer_details?.slice(0, 3).map((v: any, i: number) => (
-                                                <div key={i} className="w-5 h-5 rounded-full border border-black overflow-hidden relative">
-                                                    <Image src={v.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${v.profiles?.full_name}`} fill alt="v" className="object-cover" />
+                        <AnimatePresence>
+                            {!isPressed && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute bottom-10 left-0 right-0 px-6 flex items-center justify-between z-50 pointer-events-none"
+                                >
+                                    <div className="pointer-events-auto">
+                                        {isOwner ? (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setShowViewers(true); }}
+                                                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-xl px-4 py-2.5 rounded-2xl border border-white/10 transition-all group"
+                                            >
+                                                <div className="flex -space-x-2">
+                                                    {(currentStory as any).viewer_details?.slice(0, 3).map((v: any, i: number) => (
+                                                        <div key={i} className="w-5 h-5 rounded-full border border-black overflow-hidden relative">
+                                                            <Image src={v.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${v.profiles?.full_name}`} fill alt="v" className="object-cover" />
+                                                        </div>
+                                                    ))}
                                                 </div>
-                                            ))}
-                                        </div>
-                                        <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                                            {(currentStory as any).views_count} {(currentStory as any).views_count === 1 ? 'Vista' : 'Vistas'}
-                                        </span>
+                                                <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                                    {(currentStory as any).views_count} {(currentStory as any).views_count === 1 ? 'Vista' : 'Vistas'}
+                                                </span>
+                                            </button>
+                                        ) : (
+                                            <div className="flex-1" />
+                                        )}
+                                    </div>
+
+                                    <button
+                                        onClick={handleLike}
+                                        className={clsx(
+                                            "p-3 rounded-full backdrop-blur-xl border transition-all active:scale-90 pointer-events-auto",
+                                            (currentStory as any).has_liked
+                                                ? "bg-brand-red/20 border-brand-red text-brand-red"
+                                                : "bg-white/10 border-white/10 text-white hover:bg-white/20"
+                                        )}
+                                    >
+                                        <Heart className={clsx("w-6 h-6", (currentStory as any).has_liked && "fill-current animate-heart-pop")} />
+                                        {(currentStory as any).likes_count! > 0 && (
+                                            <span className="absolute -top-1 -right-1 bg-brand-red text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-black">
+                                                {(currentStory as any).likes_count}
+                                            </span>
+                                        )}
                                     </button>
-                                ) : (
-                                    <div className="flex-1" />
-                                )}
-                            </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
-                            <button
-                                onClick={handleLike}
-                                className={clsx(
-                                    "p-3 rounded-full backdrop-blur-xl border transition-all active:scale-90 pointer-events-auto",
-                                    (currentStory as any).has_liked
-                                        ? "bg-brand-red/20 border-brand-red text-brand-red"
-                                        : "bg-white/10 border-white/10 text-white hover:bg-white/20"
-                                )}
-                            >
-                                <Heart className={clsx("w-6 h-6", (currentStory as any).has_liked && "fill-current animate-heart-pop")} />
-                                {(currentStory as any).likes_count! > 0 && (
-                                    <span className="absolute -top-1 -right-1 bg-brand-red text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-black">
-                                        {(currentStory as any).likes_count}
-                                    </span>
-                                )}
-                            </button>
-
-                            {/* Viewers List Modal */}
+                        {/* Viewers List Modal */}
+                        <AnimatePresence>
                             {showViewers && (
-                                <div className="absolute inset-0 z-[60] bg-black/95 backdrop-blur-md animate-in slide-in-from-bottom-full duration-300 flex flex-col pointer-events-auto">
+                                <motion.div
+                                    initial={{ y: '100%' }}
+                                    animate={{ y: 0 }}
+                                    exit={{ y: '100%' }}
+                                    transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                                    className="absolute inset-0 z-[60] bg-black/95 backdrop-blur-md flex flex-col pointer-events-auto"
+                                >
                                     <div className="flex items-center justify-between p-6 border-b border-white/10 bg-black/50">
                                         <div className="flex items-center gap-2">
                                             <Eye className="w-5 h-5 text-brand-red" />
@@ -982,13 +1567,12 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                             </div>
                                         )}
                                     </div>
-                                </div>
+                                </motion.div>
                             )}
-                        </div>
+                        </AnimatePresence>
                     </div>
                 </div>
             )}
-
             {showPRCreator && (
                 <div className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
                     <div className="bg-brand-gray border border-white/10 w-full max-w-md rounded-[32px] p-8 shadow-2xl relative">
@@ -1092,6 +1676,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                     </div>
                 </div>
             )}
+
             <audio
                 ref={audioRef}
                 loop
@@ -1108,8 +1693,4 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
             />
         </div>
     )
-}
-
-function setUserInteraction(type: string) {
-    console.log("Interaction:", type)
 }
