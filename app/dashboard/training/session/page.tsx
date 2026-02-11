@@ -10,6 +10,7 @@ import { getAiRecommendation, type TrainingPlan } from "../ai-coach";
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
+import { useTheme } from "../../../ThemeContext";
 
 export default function SessionPage() {
     return (
@@ -22,6 +23,7 @@ export default function SessionPage() {
 type SportMode = 'gym' | 'running' | 'cross_training' | 'hybrid' | 'calisthenics' | 'ocr' | 'other' | null;
 
 function SessionContent() {
+    const { theme } = useTheme();
     const router = useRouter();
     const searchParams = useSearchParams();
     const wodId = searchParams.get('wodId');
@@ -1444,13 +1446,13 @@ function SportSelector({ onSelect, onPlanSelect }: { onSelect: (mode: SportMode)
                                 <Activity className="w-12 h-12 text-brand-red animate-pulse" />
                             </div>
                         </div>
-                        <h2 className="text-2xl font-heading font-black italic text-white uppercase animate-pulse">Analizando Perfil...</h2>
+                        <h2 className={clsx("text-2xl font-heading font-black italic uppercase animate-pulse", theme === 'dark' ? "text-white" : "text-black")}>Analizando Perfil...</h2>
                         <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Generando programación óptima</p>
                     </div>
                 ) : (
                     <div className="max-w-4xl w-full space-y-8 animate-in slide-in-from-bottom-10 duration-500">
                         <div className="text-center">
-                            <h2 className="text-3xl font-heading font-black italic text-white uppercase">Recomendaciones <span className="text-brand-red">RIVAL</span></h2>
+                            <h2 className={clsx("text-3xl font-heading font-black italic uppercase", theme === 'dark' ? "text-white" : "text-black")}>Recomendaciones <span className="text-brand-red">RIVAL</span></h2>
                             <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-2">{selectedSport}</p>
                         </div>
 
@@ -1458,18 +1460,20 @@ function SportSelector({ onSelect, onPlanSelect }: { onSelect: (mode: SportMode)
                             {recommendations.map((plan) => (
                                 <div key={plan.id} className={clsx(
                                     "relative p-8 rounded-[32px] border transition-all overflow-hidden group",
-                                    plan.is_premium ? "bg-gradient-to-br from-[#1a1a1a] to-black border-yellow-500/20 hover:border-yellow-500/50" : "bg-[#111] border-white/10 hover:border-white/30"
+                                    plan.is_premium
+                                        ? (theme === 'dark' ? "bg-gradient-to-br from-[#1a1a1a] to-black border-yellow-500/20 hover:border-yellow-500/50" : "bg-gradient-to-br from-white to-gray-50 border-yellow-500/30 shadow-xl")
+                                        : (theme === 'dark' ? "bg-[#111] border-white/10 hover:border-white/30" : "bg-white border-gray-200 hover:border-brand-red/30 shadow-lg")
                                 )}>
                                     {plan.is_premium && (
                                         <div className="absolute top-4 right-4 px-3 py-1 bg-yellow-500 text-black text-[10px] font-black uppercase rounded-full">Pro</div>
                                     )}
-                                    <h3 className="text-2xl font-heading font-black italic text-white uppercase mb-2">{plan.title}</h3>
+                                    <h3 className={clsx("text-2xl font-heading font-black italic uppercase mb-2", theme === 'dark' ? "text-white" : "text-black")}>{plan.title}</h3>
                                     <div className="flex gap-4 mb-6">
-                                        <span className="text-[10px] font-bold uppercase text-gray-500 bg-white/5 px-2 py-1 rounded">{plan.difficulty}</span>
-                                        <span className="text-[10px] font-bold uppercase text-gray-500 bg-white/5 px-2 py-1 rounded">{plan.duration_min} min</span>
+                                        <span className={clsx("text-[10px] font-bold uppercase px-2 py-1 rounded", theme === 'dark' ? "text-gray-500 bg-white/5" : "text-gray-600 bg-gray-100")}>{plan.difficulty}</span>
+                                        <span className={clsx("text-[10px] font-bold uppercase px-2 py-1 rounded", theme === 'dark' ? "text-gray-500 bg-white/5" : "text-gray-600 bg-gray-100")}>{plan.duration_min} min</span>
                                     </div>
-                                    <p className="text-gray-400 text-sm mb-8 leading-relaxed">{plan.description}</p>
-                                    <button onClick={() => startPlan(plan)} className="w-full py-4 rounded-xl bg-white text-black font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all">
+                                    <p className={clsx("text-sm mb-8 leading-relaxed", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>{plan.description}</p>
+                                    <button onClick={() => startPlan(plan)} className={clsx("w-full py-4 rounded-xl font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg", theme === 'dark' ? "bg-white text-black" : "bg-brand-red text-white")}>
                                         Comenzar
                                     </button>
                                 </div>
@@ -1491,10 +1495,10 @@ function SportSelector({ onSelect, onPlanSelect }: { onSelect: (mode: SportMode)
     return (
         <div className="flex flex-col p-6 min-h-full">
             <div className="flex items-center gap-4 mb-8">
-                <Link href="/dashboard/training" className="p-3 bg-white/5 rounded-full text-white hover:bg-white/10"><ArrowLeft className="w-6 h-6" /></Link>
+                <Link href="/dashboard/training" className={clsx("p-3 rounded-full transition-all", theme === 'dark' ? "bg-white/5 text-white hover:bg-white/10" : "bg-gray-100 text-black hover:bg-gray-200 shadow-sm")}><ArrowLeft className="w-6 h-6" /></Link>
                 <div>
                     <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Nueva Sesión</p>
-                    <h1 className="text-2xl md:text-3xl font-heading font-black italic text-white uppercase tracking-tighter">Elige tu <span className="text-brand-red">Combate</span></h1>
+                    <h1 className={clsx("text-2xl md:text-3xl font-heading font-black italic uppercase tracking-tighter", theme === 'dark' ? "text-white" : "text-black")}>Elige tu <span className="text-brand-red">Combate</span></h1>
                 </div>
             </div>
 
@@ -1561,21 +1565,35 @@ function SportSelector({ onSelect, onPlanSelect }: { onSelect: (mode: SportMode)
 }
 
 function SportCard({ title, icon, desc, onClick, color, image }: { title: string, icon: React.ReactNode, desc: string, onClick: () => void, color: string, image: string }) {
+    const { theme } = useTheme();
     return (
-        <button onClick={onClick} className={clsx("text-left group relative h-64 rounded-[32px] border border-white/10 bg-[#111] overflow-hidden transition-all", color)}>
+        <button onClick={onClick} className={clsx(
+            "text-left group relative h-64 rounded-[32px] border transition-all overflow-hidden",
+            theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-200 shadow-xl",
+            color
+        )}>
             <div className="absolute inset-0">
-                <Image src={image} alt={title} fill className="object-cover opacity-20 group-hover:opacity-30 group-hover:scale-105 transition-all duration-500" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-transparent" />
+                <Image src={image} alt={title} fill className={clsx(
+                    "object-cover transition-all duration-500",
+                    theme === 'dark' ? "opacity-20 group-hover:opacity-30 group-hover:scale-105" : "opacity-10 group-hover:opacity-20 group-hover:scale-105"
+                )} />
+                <div className={clsx(
+                    "absolute inset-0 bg-gradient-to-t",
+                    theme === 'dark' ? "from-black via-black/80 to-transparent" : "from-white/60 via-white/20 to-transparent"
+                )} />
             </div>
 
             <div className="relative z-10 flex flex-col justify-end h-full p-6 md:p-8">
-                <div className="bg-black/50 backdrop-blur-md p-2 rounded-2xl w-fit border border-white/5 mb-auto self-end opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0">
-                    <Plus className="w-6 h-6 text-white" />
+                <div className={clsx(
+                    "backdrop-blur-md p-2 rounded-2xl w-fit border mb-auto self-end opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0",
+                    theme === 'dark' ? "bg-black/50 border-white/5" : "bg-white/50 border-gray-200"
+                )}>
+                    <Plus className={clsx("w-6 h-6", theme === 'dark' ? "text-white" : "text-brand-red")} />
                 </div>
 
                 {icon}
-                <h3 className="text-3xl font-heading font-black italic text-white uppercase mb-2 tracking-tighter">{title}</h3>
-                <p className="text-gray-400 text-xs font-bold uppercase tracking-wide leading-relaxed max-w-[200px]">{desc}</p>
+                <h3 className={clsx("text-3xl font-heading font-black italic uppercase mb-2 tracking-tighter shadow-black/10 text-shadow-sm", theme === 'dark' ? "text-white" : "text-black")}>{title}</h3>
+                <p className={clsx("text-[10px] font-black uppercase tracking-widest leading-relaxed max-w-[200px]", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>{desc}</p>
             </div>
         </button>
     )
@@ -1584,6 +1602,7 @@ function SportCard({ title, icon, desc, onClick, color, image }: { title: string
 /* ================= SPECIFIC VIEWS ================= */
 
 function RunningView({ distance, setDistance, time, workoutTitle, setWorkoutTitle }: { distance: number, setDistance: React.Dispatch<React.SetStateAction<number>>, time: number, workoutTitle?: string, setWorkoutTitle?: (t: string) => void }) {
+    const { theme } = useTheme();
     const pace = distance > 0 ? (time / 60) / (distance / 1000) : 0;
     const paceMin = Math.floor(pace);
     const paceSec = Math.floor((pace - paceMin) * 60);
@@ -1620,43 +1639,57 @@ function RunningView({ distance, setDistance, time, workoutTitle, setWorkoutTitl
                     onClick={() => setGpsActive(!gpsActive)}
                     className={clsx(
                         "p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all",
-                        gpsActive ? "bg-blue-600 border-transparent text-white shadow-lg shadow-blue-900/50" : "bg-[#111] border-white/10 text-gray-400 hover:bg-white/5"
+                        gpsActive
+                            ? "bg-blue-600 border-transparent text-white shadow-lg shadow-blue-900/50"
+                            : (theme === 'dark' ? "bg-[#111] border-white/10 text-gray-400 hover:bg-white/5" : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 shadow-sm")
                     )}
                 >
-                    <div className={clsx("w-10 h-10 rounded-full flex items-center justify-center mb-1", gpsActive ? "bg-white/20" : "bg-white/5")}>
+                    <div className={clsx("w-10 h-10 rounded-full flex items-center justify-center mb-1", gpsActive ? "bg-white/20" : (theme === 'dark' ? "bg-white/5" : "bg-gray-200"))}>
                         {gpsActive ? <Loader2 className="w-5 h-5 animate-spin" /> : <MapPin className="w-5 h-5" />}
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-widest">{gpsActive ? 'GPS ACTIVO' : 'USAR GPS MÓVIL'}</span>
                 </button>
 
                 <button
-                    className="p-4 rounded-2xl border border-white/10 bg-[#111] flex flex-col items-center justify-center gap-2 text-gray-400 hover:bg-white/5 transition-all group relative overflow-hidden"
+                    className={clsx(
+                        "p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all group relative overflow-hidden",
+                        theme === 'dark' ? "border-white/10 bg-[#111] text-gray-400 hover:bg-white/5" : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 shadow-sm"
+                    )}
                     onClick={() => alert("Próximamente: Integraremos Strava, Garmin y Apple Health directamente.")}
                 >
                     <div className="flex -space-x-2 mb-1">
-                        <div className="w-8 h-8 rounded-full bg-orange-500 border-2 border-[#111] flex items-center justify-center text-[8px] font-black text-white">S</div>
-                        <div className="w-8 h-8 rounded-full bg-blue-500 border-2 border-[#111] flex items-center justify-center text-[8px] font-black text-white">G</div>
+                        <div className={clsx("w-8 h-8 rounded-full bg-orange-500 border-2 flex items-center justify-center text-[8px] font-black text-white", theme === 'dark' ? "border-[#111]" : "border-gray-50")}>S</div>
+                        <div className={clsx("w-8 h-8 rounded-full bg-blue-500 border-2 flex items-center justify-center text-[8px] font-black text-white", theme === 'dark' ? "border-[#111]" : "border-gray-50")}>G</div>
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest group-hover:text-white transition-colors">SYNC RELOJ</span>
+                    <span className={clsx("text-[10px] font-black uppercase tracking-widest transition-colors", theme === 'dark' ? "group-hover:text-white" : "group-hover:text-black")}>SYNC RELOJ</span>
                     <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                 </button>
             </div>
 
             {/* Metrics Display */}
             <div className="grid grid-cols-2 gap-4">
-                <div className="bg-blue-900/10 border border-blue-500/20 p-6 rounded-[32px] text-center relative overflow-hidden">
+                <div className={clsx(
+                    "border p-6 rounded-[32px] text-center relative overflow-hidden shadow-sm",
+                    theme === 'dark' ? "bg-blue-900/10 border-blue-500/20" : "bg-blue-50 border-blue-100"
+                )}>
                     <div className="absolute top-0 right-0 p-3 opacity-20"><Activity className="w-12 h-12 text-blue-500" /></div>
-                    <p className="text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2 relative z-10">Ritmo Medio</p>
-                    <div className="text-4xl font-mono font-black text-white relative z-10">{paceMin}:{paceSec < 10 ? '0' + paceSec : paceSec} <span className="text-xs text-gray-500">/km</span></div>
+                    <p className="text-blue-500 dark:text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2 relative z-10">Ritmo Medio</p>
+                    <div className={clsx("text-4xl font-mono font-black relative z-10", theme === 'dark' ? "text-white" : "text-blue-900")}>{paceMin}:{paceSec < 10 ? '0' + paceSec : paceSec} <span className="text-xs text-gray-500">/km</span></div>
                 </div>
-                <div className="bg-white/5 border border-white/10 p-6 rounded-[32px] text-center">
-                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Calorías (Est.)</p>
-                    <div className="text-4xl font-mono font-black text-white">{(distance * 0.06).toFixed(0)} <span className="text-xs text-gray-500">kcal</span></div>
+                <div className={clsx(
+                    "border p-6 rounded-[32px] text-center shadow-sm",
+                    theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100"
+                )}>
+                    <p className="text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Calorías (Est.)</p>
+                    <div className={clsx("text-4xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>{(distance * 0.06).toFixed(0)} <span className="text-xs text-gray-500">kcal</span></div>
                 </div>
             </div>
 
             {/* Distance Input/Display */}
-            <div className="bg-[#111] border border-white/10 p-8 rounded-[40px] text-center space-y-4">
+            <div className={clsx(
+                "border p-8 rounded-[40px] text-center space-y-4 shadow-xl ms-auto",
+                theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-100"
+            )}>
                 <p className="text-gray-500 text-xs font-black uppercase tracking-[0.3em]">Distancia Total</p>
                 <div className="flex items-center justify-center gap-2">
                     <input
@@ -1666,17 +1699,20 @@ function RunningView({ distance, setDistance, time, workoutTitle, setWorkoutTitl
                         placeholder="0"
                         readOnly={gpsActive}
                         className={clsx(
-                            "bg-transparent text-center text-7xl font-heading font-black italic text-white outline-none w-full placeholder-white/10 transition-colors",
-                            gpsActive && "text-blue-500"
+                            "bg-transparent text-center text-7xl font-heading font-black italic outline-none w-full transition-colors",
+                            gpsActive ? "text-blue-500" : (theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-200")
                         )}
                     />
-                    <span className="text-xl font-black text-gray-600 mt-8">METROS</span>
+                    <span className="text-xl font-black text-gray-400 mt-8">METROS</span>
                 </div>
 
                 {!gpsActive && (
                     <div className="flex justify-center flex-wrap gap-2 pt-4">
                         {[400, 800, 1000, 5000, 10000].map(d => (
-                            <button key={d} onClick={() => setDistance(d)} className="px-4 py-2 rounded-full bg-white/5 text-xs font-bold text-gray-400 hover:bg-white/10 hover:text-white transition-colors">
+                            <button key={d} onClick={() => setDistance(d)} className={clsx(
+                                "px-4 py-2 rounded-full text-xs font-bold transition-all shadow-sm",
+                                theme === 'dark' ? "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-black"
+                            )}>
                                 {d >= 1000 ? `${d / 1000}km` : `${d}m`}
                             </button>
                         ))}
@@ -1711,6 +1747,7 @@ function RunningView({ distance, setDistance, time, workoutTitle, setWorkoutTitl
 let isPausedGlobal = false;
 
 function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, isGuided, workoutTitle, setWorkoutTitle }: any) {
+    const { theme } = useTheme();
     const [showAddModal, setShowAddModal] = useState(false);
     const [activeBlockIndex, setActiveBlockIndex] = useState(0);
     const [catalog, setCatalog] = useState<any[]>([]);
@@ -2047,17 +2084,23 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                             </button>
 
                             {showPresets && (
-                                <div className="absolute top-full left-0 right-0 mt-2 z-50 bg-[#1a1a1a] border border-white/20 rounded-2xl shadow-2xl p-2 max-h-60 overflow-y-auto custom-scrollbar animate-in slide-in-from-top-2">
+                                <div className={clsx(
+                                    "absolute top-full left-0 right-0 mt-2 z-50 border rounded-2xl shadow-2xl p-2 max-h-60 overflow-y-auto custom-scrollbar animate-in slide-in-from-top-2",
+                                    theme === 'dark' ? "bg-[#1a1a1a] border-white/20" : "bg-white border-gray-200"
+                                )}>
                                     <div className="grid grid-cols-1 gap-1">
                                         {WOD_PRESETS.map((p) => (
                                             <button
                                                 key={p.name}
                                                 onClick={() => loadPreset(p)}
-                                                className="text-left p-3 rounded-xl hover:bg-white/10 transition-colors group"
+                                                className={clsx(
+                                                    "text-left p-3 rounded-xl transition-colors group",
+                                                    theme === 'dark' ? "hover:bg-white/10" : "hover:bg-gray-100"
+                                                )}
                                             >
                                                 <div className="flex justify-between items-center">
-                                                    <span className="text-white font-black italic uppercase">{p.name}</span>
-                                                    <span className="text-[9px] bg-white/10 px-1.5 py-0.5 rounded text-gray-400">{p.type}</span>
+                                                    <span className={clsx("font-black italic uppercase", theme === 'dark' ? "text-white" : "text-black")}>{p.name}</span>
+                                                    <span className={clsx("text-[9px] px-1.5 py-0.5 rounded", theme === 'dark' ? "bg-white/10 text-gray-400" : "bg-gray-100 text-gray-500")}>{p.type}</span>
                                                 </div>
                                                 <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wide">{p.desc}</p>
                                             </button>
@@ -2071,14 +2114,16 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                     {/* Type Selector and Inputs - Hidden if guided and already configured */}
                     {!isGuided && (
                         <>
-                            <div className="grid grid-cols-3 gap-2 bg-black/20 p-1.5 rounded-2xl">
+                            <div className={clsx("grid grid-cols-3 gap-2 p-1.5 rounded-2xl", theme === 'dark' ? "bg-black/20" : "bg-gray-100")}>
                                 {['fortime', 'amrap', 'emom'].map(t => (
                                     <button
                                         key={t}
                                         onClick={() => updateBlock(activeBlockIndex, 'type', t)}
                                         className={clsx(
                                             "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                            blocks[activeBlockIndex].type === t ? "bg-white/10 text-white shadow-lg" : "text-gray-500 hover:text-white"
+                                            blocks[activeBlockIndex].type === t
+                                                ? (theme === 'dark' ? "bg-white/10 text-white shadow-lg" : "bg-white text-black shadow-md")
+                                                : "text-gray-500 hover:text-black dark:hover:text-white"
                                         )}
                                     >
                                         {t === 'fortime' ? 'For Time' : t.toUpperCase()}
@@ -2087,7 +2132,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-white/5 p-4 rounded-2xl text-center">
+                                <div className={clsx("p-4 rounded-2xl text-center", theme === 'dark' ? "bg-white/5" : "bg-gray-50")}>
                                     <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2">
                                         {blocks[activeBlockIndex].type === 'fortime' ? 'Time Cap (min)' :
                                             blocks[activeBlockIndex].type === 'amrap' ? 'Tiempo (min)' : 'Duración (min)'}
@@ -2097,7 +2142,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                                         value={blocks[activeBlockIndex].duration || ''}
                                         onChange={(e) => updateBlock(activeBlockIndex, 'duration', parseFloat(e.target.value))}
                                         placeholder="0"
-                                        className="bg-transparent text-3xl font-mono font-black text-white text-center w-full outline-none"
+                                        className={clsx("bg-transparent text-3xl font-mono font-black text-center w-full outline-none", theme === 'dark' ? "text-white" : "text-black")}
                                     />
                                 </div>
 
@@ -2114,7 +2159,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                                                 const res = { ...blocks[activeBlockIndex].result, time: e.target.value };
                                                 updateBlock(activeBlockIndex, 'result', res);
                                             }}
-                                            className="bg-transparent text-3xl font-mono font-black text-white text-center w-full outline-none placeholder-white/20"
+                                            className={clsx("bg-transparent text-3xl font-mono font-black text-center w-full outline-none", theme === 'dark' ? "text-white placeholder-white/20" : "text-black placeholder-gray-300")}
                                         />
                                     ) : (
                                         <div className="flex justify-center items-center gap-2">
@@ -2122,8 +2167,8 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                                                 const r = (blocks[activeBlockIndex].result?.rounds || 0) > 0 ? (blocks[activeBlockIndex].result?.rounds || 0) - 1 : 0;
                                                 const res = { ...blocks[activeBlockIndex].result, rounds: r };
                                                 updateBlock(activeBlockIndex, 'result', res);
-                                            }} className="w-8 h-8 rounded-full bg-white/5 text-gray-400 font-bold">-</button>
-                                            <span className="text-3xl font-mono font-black text-white">
+                                            }} className={clsx("w-8 h-8 rounded-full font-bold transition-colors", theme === 'dark' ? "bg-white/5 text-gray-400 hover:bg-white/10" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>-</button>
+                                            <span className={clsx("text-3xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>
                                                 {blocks[activeBlockIndex].result?.rounds || 0}
                                             </span>
                                             <button onClick={() => {
@@ -2142,15 +2187,15 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                     )}
                 </div>
 
-                <div className="bg-white/5 border border-white/10 rounded-[32px] p-6">
-                    <h3 className="text-white font-black uppercase tracking-widest text-sm mb-4 flex items-center gap-2">
+                <div className={clsx("border rounded-[32px] p-6", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100")}>
+                    <h3 className={clsx("font-black uppercase tracking-widest text-sm mb-4 flex items-center gap-2", theme === 'dark' ? "text-white" : "text-black")}>
                         <CheckCircle className="w-4 h-4 text-orange-500" /> Notas del Bloque
                     </h3>
                     <textarea
                         value={blocks[activeBlockIndex].notes || ''}
                         onChange={(e) => updateBlock(activeBlockIndex, 'notes', e.target.value)}
                         placeholder="Escribe aquí notas específicas de este bloque..."
-                        className="w-full bg-transparent text-gray-300 font-mono text-sm min-h-[80px] outline-none placeholder-white/20 resize-none p-2 border border-transparent focus:border-white/10 rounded-xl transition-all"
+                        className={clsx("w-full bg-transparent font-mono text-sm min-h-[80px] outline-none resize-none p-2 border border-transparent rounded-xl transition-all", theme === 'dark' ? "text-gray-300 placeholder-white/20 focus:border-white/10" : "text-gray-700 placeholder-gray-400 focus:border-gray-200")}
                     />
                 </div>
 
@@ -2164,7 +2209,10 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                     </div>
 
                     {blocks[activeBlockIndex].exercises.map((ex: any, i: number) => (
-                        <div key={ex.id || i} className="bg-[#111] border border-white/5 rounded-3xl p-6 relative overflow-hidden group">
+                        <div key={ex.id || i} className={clsx(
+                            "border rounded-3xl p-6 relative overflow-hidden group shadow-md",
+                            theme === 'dark' ? "bg-[#111] border-white/5" : "bg-white border-gray-100"
+                        )}>
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-3">
                                     <button
@@ -2172,11 +2220,11 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                                             setReplacingExIndex(i);
                                             setShowAddModal(true);
                                         }}
-                                        className="group/title flex items-center gap-2 hover:bg-white/5 rounded-lg pr-3 transition-colors text-left"
+                                        className={clsx("group/title flex items-center gap-2 rounded-lg pr-3 transition-colors text-left", theme === 'dark' ? "hover:bg-white/5" : "hover:bg-gray-100")}
                                     >
                                         <h4 className={clsx(
                                             "font-heading font-black italic text-xl uppercase tracking-tighter transition-colors",
-                                            ex.name.startsWith('Ejercicio_') ? "text-orange-500 animate-pulse" : "text-white group-hover/title:text-orange-500"
+                                            ex.name.startsWith('Ejercicio_') ? "text-orange-500 animate-pulse" : (theme === 'dark' ? "text-white group-hover/title:text-orange-500" : "text-black group-hover/title:text-orange-600")
                                         )}>
                                             {ex.name.startsWith('Ejercicio_') ? "SELECCIONAR EJERCICIO" : ex.name}
                                         </h4>
@@ -2207,18 +2255,18 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                                         <span className="text-gray-600 font-mono text-xs w-4">{j + 1}</span>
 
                                         {/* Weight / Value Input */}
-                                        <div className="flex items-center gap-2 bg-white/5 rounded-lg p-1.5 flex-1 min-w-[120px]">
+                                        <div className={clsx("flex items-center gap-2 rounded-lg p-1.5 flex-1 min-w-[120px]", theme === 'dark' ? "bg-white/5" : "bg-gray-50")}>
                                             <input
                                                 type="number"
                                                 value={set.weight || ''}
                                                 onChange={(e) => updateSet(activeBlockIndex, i, j, 'weight', e.target.value)}
-                                                className="bg-transparent text-white font-mono text-sm w-full text-center outline-none"
+                                                className={clsx("bg-transparent font-mono text-sm w-full text-center outline-none", theme === 'dark' ? "text-white" : "text-black")}
                                                 placeholder="---"
                                             />
                                             <select
                                                 value={set.unit || 'kg'}
                                                 onChange={(e) => updateSet(activeBlockIndex, i, j, 'unit', e.target.value)}
-                                                className="bg-transparent text-[10px] text-gray-500 font-black uppercase outline-none border-none cursor-pointer hover:text-white"
+                                                className={clsx("bg-transparent text-[10px] font-black uppercase outline-none border-none cursor-pointer", theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-black")}
                                             >
                                                 <option value="kg">KG</option>
                                                 <option value="lb">LB</option>
@@ -2232,18 +2280,18 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                                         </div>
 
                                         {/* Reps / Measure Input */}
-                                        <div className="flex items-center gap-2 bg-white/5 rounded-lg p-1.5 flex-1 min-w-[120px]">
+                                        <div className={clsx("flex items-center gap-2 rounded-lg p-1.5 flex-1 min-w-[120px]", theme === 'dark' ? "bg-white/5" : "bg-gray-50")}>
                                             <input
                                                 type="number"
                                                 value={set.reps || ''}
                                                 onChange={(e) => updateSet(activeBlockIndex, i, j, 'reps', e.target.value)}
-                                                className="bg-transparent text-white font-mono text-sm w-full text-center outline-none"
+                                                className={clsx("bg-transparent font-mono text-sm w-full text-center outline-none", theme === 'dark' ? "text-white" : "text-black")}
                                                 placeholder="---"
                                             />
                                             <select
                                                 value={set.measure || 'reps'}
                                                 onChange={(e) => updateSet(activeBlockIndex, i, j, 'measure', e.target.value)}
-                                                className="bg-transparent text-[10px] text-gray-500 font-black uppercase outline-none border-none cursor-pointer hover:text-white"
+                                                className={clsx("bg-transparent text-[10px] font-black uppercase outline-none border-none cursor-pointer", theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-black")}
                                             >
                                                 <option value="reps">REPS</option>
                                                 <option value="sec">SEC</option>
@@ -2258,7 +2306,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                                         </button>
                                     </div>
                                 ))}
-                                <button onClick={() => addSet(activeBlockIndex, i)} className="w-full py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-gray-400 uppercase transition-colors flex items-center justify-center gap-2 mt-2">
+                                <button onClick={() => addSet(activeBlockIndex, i)} className={clsx("w-full py-2 rounded-xl text-xs font-bold uppercase transition-all flex items-center justify-center gap-2 mt-2", theme === 'dark' ? "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white" : "bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-black shadow-sm")}>
                                     <Plus className="w-3 h-3" /> Añadir Serie
                                 </button>
                             </div>
@@ -2328,6 +2376,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
 }
 
 function HybridView({ time, exercises, setExercises, workoutTitle, setWorkoutTitle }: { time: number, exercises: any[], setExercises: any, workoutTitle?: string, setWorkoutTitle?: (t: string) => void }) {
+    const { theme } = useTheme();
     const searchParams = useSearchParams();
     const [hybridMode, setHybridMode] = useState<'race' | 'pft' | 'any'>(searchParams.get('mode') === 'ai-coach' ? 'any' : 'race');
     const [initialized, setInitialized] = useState(false);
@@ -2410,14 +2459,16 @@ function HybridView({ time, exercises, setExercises, workoutTitle, setWorkoutTit
         <div className="space-y-6 animate-in slide-in-from-bottom-10 fade-in duration-500">
             {viewingVideo && <VideoModal url={viewingVideo} onClose={() => setViewingVideo(null)} />}
             {/* Mode Selector */}
-            <div className="grid grid-cols-3 gap-2 bg-[#111] p-1.5 rounded-2xl border border-white/10">
+            <div className={clsx("grid grid-cols-3 gap-2 p-1.5 rounded-2xl border", theme === 'dark' ? "bg-[#111] border-white/10" : "bg-gray-100 border-gray-200 shadow-sm")}>
                 {['race', 'pft', 'any'].map(m => (
                     <button
                         key={m}
                         onClick={() => { setHybridMode(m as any); setExercises([]); setInitialized(false); }}
                         className={clsx(
                             "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                            hybridMode === m ? "bg-yellow-500 text-black shadow-lg" : "text-gray-500 hover:text-white"
+                            hybridMode === m
+                                ? "bg-yellow-500 text-black shadow-lg"
+                                : "text-gray-500 hover:text-black dark:hover:text-white"
                         )}
                     >
                         {m === 'any' ? 'Libre / Intervalos' : m.toUpperCase()}
@@ -2433,8 +2484,8 @@ function HybridView({ time, exercises, setExercises, workoutTitle, setWorkoutTit
                     <GymView exercises={exercises} setExercises={setExercises} mode="hybrid" />
                 </div>
             ) : (
-                <div className="bg-[#111] border border-white/10 p-6 rounded-[32px]">
-                    <p className="text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em] mb-6 border-b border-white/5 pb-2">
+                <div className={clsx("border p-6 rounded-[32px] shadow-sm", theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-100")}>
+                    <p className="text-yellow-600 dark:text-yellow-500 text-[10px] font-black uppercase tracking-[0.2em] mb-6 border-b border-white/5 pb-2">
                         {hybridMode === 'race' ? 'Estaciones Hybrid (Race)' : 'Hybrid PFT'}
                     </p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -2449,8 +2500,8 @@ function HybridView({ time, exercises, setExercises, workoutTitle, setWorkoutTit
                                     className={clsx(
                                         "p-4 rounded-xl border flex items-center justify-between transition-all cursor-pointer group relative overflow-hidden",
                                         isCompleted
-                                            ? (isRun ? "bg-white/10 border-white/20" : "bg-yellow-500/20 border-yellow-500/40")
-                                            : (isRun ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-yellow-500/5 border-yellow-500/10 hover:bg-yellow-500/10")
+                                            ? (isRun ? (theme === 'dark' ? "bg-white/10 border-white/20" : "bg-gray-100 border-gray-300") : "bg-yellow-500/20 border-yellow-500/40")
+                                            : (isRun ? (theme === 'dark' ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-gray-50 border-gray-100 hover:bg-gray-100") : "bg-yellow-500/5 border-yellow-500/10 hover:bg-yellow-500/10 shadow-sm")
                                     )}
                                 >
                                     <div className="relative z-10 flex items-center gap-3">
@@ -2501,6 +2552,7 @@ function HybridView({ time, exercises, setExercises, workoutTitle, setWorkoutTit
 }
 
 function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorkoutTitle }: any) {
+    const { theme } = useTheme();
     const [showAddModal, setShowAddModal] = useState(false);
     const [catalog, setCatalog] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
@@ -2603,8 +2655,14 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
         <div className="space-y-8 animate-in slide-in-from-bottom-10 fade-in duration-500">
             {viewingVideo && <VideoModal url={viewingVideo} onClose={() => setViewingVideo(null)} />}
             {exercises.map((ex: any, i: number) => (
-                <div key={ex.id} className="bg-[#111] border border-white/5 rounded-[32px] overflow-hidden">
-                    <div className="p-6 border-b border-white/5 bg-white/[0.02] flex justify-between items-start">
+                <div key={ex.id} className={clsx(
+                    "border rounded-[32px] overflow-hidden shadow-sm transition-all",
+                    theme === 'dark' ? "bg-[#111] border-white/5" : "bg-white border-gray-100"
+                )}>
+                    <div className={clsx(
+                        "p-6 border-b flex justify-between items-start",
+                        theme === 'dark' ? "border-white/5 bg-white/[0.02]" : "border-gray-100 bg-gray-50/50"
+                    )}>
                         <div className="flex-1">
                             <div className="flex items-center gap-2">
                                 <input
@@ -2614,7 +2672,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                                         copy[i].name = e.target.value;
                                         setExercises(copy);
                                     }}
-                                    className="bg-transparent text-xl font-heading font-black italic text-white uppercase outline-none w-full placeholder-white/20"
+                                    className={clsx("bg-transparent text-xl font-heading font-black italic uppercase outline-none w-full", theme === 'dark' ? "text-white placeholder-white/20" : "text-black placeholder-gray-300")}
                                 />
                                 {ex.video_url && (
                                     <button
@@ -2642,14 +2700,19 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                                 "grid grid-cols-12 gap-2 p-3 rounded-2xl items-center transition-all duration-300",
                                 set.completed ? "bg-green-500/10 border border-green-500/30" : "bg-white/5 border border-white/5 hover:bg-white/[0.08]"
                             )}>
-                                <div className="col-span-1 text-center font-black text-white/50 text-[10px]">{j + 1}</div>
-                                <div className="col-span-4 flex items-center bg-black/40 rounded-xl px-2 border border-white/5 focus-within:border-brand-red/50 transition-all">
-                                    <input type="number" placeholder="0" className="w-full bg-transparent text-center text-white font-bold py-3 outline-none placeholder-white/10 text-sm"
+                                <div className="col-span-1 text-center font-black text-[10px] opacity-50">
+                                    {j + 1}
+                                </div>
+                                <div className={clsx(
+                                    "col-span-4 flex items-center rounded-xl px-2 border transition-all",
+                                    theme === 'dark' ? "bg-black/40 border-white/5 focus-within:border-brand-red/50" : "bg-gray-100 border-gray-200 focus-within:border-brand-red/30"
+                                )}>
+                                    <input type="number" placeholder="0" className={clsx("w-full bg-transparent text-center font-bold py-3 outline-none text-sm", theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-400")}
                                         value={set.weight === 0 ? '0' : (set.weight || '')} onChange={(e) => updateSet(i, j, 'weight', e.target.value === '' ? null : parseFloat(e.target.value))} />
                                     <select
                                         value={set.unit || 'kg'}
                                         onChange={(e) => updateSet(i, j, 'unit', e.target.value)}
-                                        className="bg-transparent text-[8px] text-gray-500 font-black uppercase outline-none border-none cursor-pointer hover:text-white"
+                                        className={clsx("bg-transparent text-[8px] font-black uppercase outline-none border-none cursor-pointer", theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-black")}
                                     >
                                         <option value="kg">KG</option>
                                         <option value="lb">LB</option>
@@ -2658,13 +2721,16 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                                         <option value="m">M</option>
                                     </select>
                                 </div>
-                                <div className="col-span-4 flex items-center bg-black/40 rounded-xl px-2 border border-white/5 focus-within:border-brand-red/50 transition-all">
-                                    <input type="number" placeholder="0" className="w-full bg-transparent text-center text-white font-bold py-3 outline-none placeholder-white/10 text-sm"
+                                <div className={clsx(
+                                    "col-span-4 flex items-center rounded-xl px-2 border transition-all",
+                                    theme === 'dark' ? "bg-black/40 border-white/5 focus-within:border-brand-red/50" : "bg-gray-100 border-gray-200 focus-within:border-brand-red/30"
+                                )}>
+                                    <input type="number" placeholder="0" className={clsx("w-full bg-transparent text-center font-bold py-3 outline-none text-sm", theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-400")}
                                         value={set.reps === 0 ? '0' : (set.reps || '')} onChange={(e) => updateSet(i, j, 'reps', e.target.value === '' ? null : parseFloat(e.target.value))} />
                                     <select
                                         value={set.measure || 'reps'}
                                         onChange={(e) => updateSet(i, j, 'measure', e.target.value)}
-                                        className="bg-transparent text-[8px] text-gray-500 font-black uppercase outline-none border-none cursor-pointer hover:text-white"
+                                        className={clsx("bg-transparent text-[8px] font-black uppercase outline-none border-none cursor-pointer", theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-black")}
                                     >
                                         <option value="reps">REPS</option>
                                         <option value="sec">SEC</option>
@@ -2684,9 +2750,9 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                             </div>
                         ))}
                     </div>
-                    <div className="p-2 bg-black/40 flex border-t border-white/5">
-                        <button onClick={() => removeSet(i)} className="flex-1 py-3 text-[10px] font-black text-gray-600 uppercase tracking-widest hover:text-red-500 transition-colors">- Serie</button>
-                        <div className="w-px bg-white/5 my-2"></div>
+                    <div className={clsx("p-2 flex border-t", theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-50/50 border-gray-100")}>
+                        <button onClick={() => removeSet(i)} className="flex-1 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest hover:text-red-500 transition-colors">- Serie</button>
+                        <div className={clsx("w-px my-2", theme === 'dark' ? "bg-white/5" : "bg-gray-200")}></div>
                         <button onClick={() => addSet(i)} className="flex-1 py-3 text-[10px] font-black text-brand-red uppercase tracking-widest hover:bg-brand-red/10 transition-colors">+ Serie</button>
                     </div>
                 </div>
@@ -2698,13 +2764,16 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
 
             {/* Add Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 bg-black/90 backdrop-blur-xl z-[100] flex flex-col p-4 animate-in fade-in zoom-in-95 duration-200">
+                <div className={clsx(
+                    "fixed inset-0 backdrop-blur-xl z-[100] flex flex-col p-4 animate-in fade-in zoom-in-95 duration-200",
+                    theme === 'dark' ? "bg-black/90" : "bg-white/95"
+                )}>
                     <div className="flex items-center justify-between mb-6 pt-4">
-                        <h2 className="text-2xl font-heading font-black italic text-white uppercase">Añadir Movimiento</h2>
-                        <button onClick={() => setShowAddModal(false)} className="p-3 bg-white/10 rounded-full text-white hover:bg-white/20"><X className="w-6 h-6" /></button>
+                        <h2 className={clsx("text-2xl font-heading font-black italic uppercase", theme === 'dark' ? "text-white" : "text-black")}>Añadir Movimiento</h2>
+                        <button onClick={() => setShowAddModal(false)} className={clsx("p-3 rounded-full transition-colors", theme === 'dark' ? "bg-white/10 text-white hover:bg-white/20" : "bg-gray-100 text-black hover:bg-gray-200 shadow-sm")}><X className="w-6 h-6" /></button>
                     </div>
-                    <div className="bg-white/5 p-4 rounded-2xl mb-4 border border-white/10">
-                        <input autoFocus type="text" placeholder="Buscar ejercicio, máquina o grupo muscular..." className="w-full bg-transparent text-white font-bold outline-none placeholder-gray-500 text-lg" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                    <div className={clsx("p-4 rounded-2xl mb-4 border transition-all shadow-sm focus-within:ring-2 ring-brand-red/20", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100")}>
+                        <input autoFocus type="text" placeholder="Buscar ejercicio, máquina o grupo muscular..." className={clsx("w-full bg-transparent font-bold outline-none text-lg", theme === 'dark' ? "text-white placeholder-gray-500" : "text-black placeholder-gray-400")} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                     </div>
                     <div className="flex-1 overflow-y-auto space-y-2 custom-scrollbar pb-10">
                         {searchQuery && filteredCatalog.length === 0 && (
@@ -2762,6 +2831,7 @@ function FinishModal({
     rpe,
     setRpe
 }: any) {
+    const { theme } = useTheme();
     const rpeLabels: Record<number, string> = {
         0: 'Sin definir',
         1: 'Recuperación',
@@ -2777,14 +2847,17 @@ function FinishModal({
     };
 
     return (
-        <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4">
-            <div className="bg-[#111] w-full max-w-md rounded-[40px] border border-white/10 overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300">
+        <div className={clsx("fixed inset-0 z-[200] backdrop-blur-xl flex items-center justify-center p-4", theme === 'dark' ? "bg-black/95" : "bg-white/90")}>
+            <div className={clsx(
+                "w-full max-w-md rounded-[40px] border overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300",
+                theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-100"
+            )}>
                 <div className="p-6 md:p-8 text-center space-y-6">
                     <div className="w-16 h-16 md:w-20 md:h-20 bg-brand-red/20 rounded-full flex items-center justify-center mx-auto mb-2 border border-brand-red/30">
                         <Trophy className="w-8 h-8 md:w-10 md:h-10 text-brand-red" />
                     </div>
                     <div>
-                        <h2 className="text-2xl md:text-3xl font-heading font-black italic text-white uppercase tracking-tighter">Victoria Lograda</h2>
+                        <h2 className={clsx("text-2xl md:text-3xl font-heading font-black italic uppercase tracking-tighter", theme === 'dark' ? "text-white" : "text-black")}>Victoria Lograda</h2>
                         <p className="text-brand-red text-xs font-black uppercase tracking-[0.2em] mt-2 mb-1">{workoutTitle}</p>
                         <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Misión Completada, Atleta.</p>
                     </div>
@@ -2805,14 +2878,17 @@ function FinishModal({
                             <button
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isUploading}
-                                className="w-full aspect-video rounded-3xl border-2 border-dashed border-white/10 bg-white/5 flex flex-col items-center justify-center gap-2 hover:border-brand-red/50 hover:bg-white/10 transition-all group"
+                                className={clsx(
+                                    "w-full aspect-video rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all group",
+                                    theme === 'dark' ? "border-white/10 bg-white/5 hover:border-brand-red/50 hover:bg-white/10" : "border-gray-200 bg-gray-50 hover:border-brand-red/30 hover:bg-gray-100"
+                                )}
                             >
                                 {isUploading ? (
                                     <Loader2 className="w-8 h-8 animate-spin text-brand-red" />
                                 ) : (
                                     <>
                                         <Camera className="w-8 h-8 text-gray-400 group-hover:text-brand-red transition-colors" />
-                                        <div className="text-[10px] font-black uppercase text-gray-500 tracking-widest group-hover:text-white">Añadir Foto del WOD</div>
+                                        <div className={clsx("text-[10px] font-black uppercase tracking-widest transition-colors", theme === 'dark' ? "text-gray-500 group-hover:text-white" : "text-gray-400 group-hover:text-black")}>Añadir Foto del WOD</div>
                                     </>
                                 )}
                             </button>
@@ -2856,7 +2932,9 @@ function FinishModal({
                         onClick={() => setShareToArena(!shareToArena)}
                         className={clsx(
                             "w-full p-4 rounded-2xl border flex items-center gap-4 transition-all",
-                            shareToArena ? "bg-brand-red border-transparent text-white shadow-lg shadow-brand-red/20" : "bg-white/5 border-white/10 text-gray-500"
+                            shareToArena
+                                ? "bg-brand-red border-transparent text-white shadow-lg shadow-brand-red/20"
+                                : (theme === 'dark' ? "bg-white/5 border-white/10 text-gray-500" : "bg-gray-50 border-gray-100 text-gray-400")
                         )}
                     >
                         <Activity className="w-5 h-5" />
@@ -2873,7 +2951,9 @@ function FinishModal({
                         onClick={() => setShareToStory(!shareToStory)}
                         className={clsx(
                             "w-full p-4 rounded-2xl border flex items-center gap-4 transition-all",
-                            shareToStory ? "bg-purple-600 border-transparent text-white shadow-lg shadow-purple-900/20" : "bg-white/5 border-white/10 text-gray-500"
+                            shareToStory
+                                ? "bg-purple-600 border-transparent text-white shadow-lg shadow-purple-900/20"
+                                : (theme === 'dark' ? "bg-white/5 border-white/10 text-gray-500" : "bg-gray-50 border-gray-100 text-gray-400")
                         )}
                     >
                         <Camera className="w-5 h-5" />
@@ -2887,18 +2967,24 @@ function FinishModal({
                     </button>
                 </div>
 
-                <div className="pt-2 grid grid-cols-2 gap-3">
+                <div className="pt-2 grid grid-cols-2 gap-3 pb-6">
                     <button
                         onClick={onCancel}
                         disabled={isSaving}
-                        className="bg-white/5 text-gray-400 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-white/10 transition-all font-heading"
+                        className={clsx(
+                            "py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all font-heading",
+                            theme === 'dark' ? "bg-white/5 text-gray-400 hover:bg-white/10" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                        )}
                     >
                         Volver
                     </button>
                     <button
                         onClick={onConfirm}
                         disabled={isSaving || isUploading}
-                        className="bg-white text-black py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all flex items-center justify-center gap-2 shadow-glow font-heading"
+                        className={clsx(
+                            "py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-glow font-heading",
+                            theme === 'dark' ? "bg-white text-black hover:bg-brand-red hover:text-white" : "bg-black text-white hover:bg-brand-red"
+                        )}
                     >
                         {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Publicar Ahora"}
                     </button>
@@ -2926,6 +3012,7 @@ function CoachAiView({
     rpe,
     setRpe
 }: any) {
+    const { theme } = useTheme();
     const displayTime = timerMode === 'down' && targetDuration
         ? Math.max(0, (targetDuration * 60) - elapsedSeconds)
         : elapsedSeconds;
@@ -2933,7 +3020,7 @@ function CoachAiView({
     const progress = targetDuration ? Math.min(100, (elapsedSeconds / (targetDuration * 60)) * 100) : 0;
 
     return (
-        <div className="min-h-screen bg-black flex flex-col pt-12 md:pt-20 pb-40 px-4 max-w-xl mx-auto space-y-8 md:space-y-12 relative">
+        <div className={clsx("min-h-screen flex flex-col pt-12 md:pt-20 pb-40 px-4 max-w-xl mx-auto space-y-8 md:space-y-12 relative", theme === 'dark' ? "bg-black" : "bg-white")}>
             {/* Header / Coach Intro */}
             <div className="text-center space-y-3 md:space-y-4 pt-4 md:pt-8">
                 <div className="flex items-center justify-center gap-3 mb-1">
@@ -2942,19 +3029,19 @@ function CoachAiView({
                         <span className="text-[10px] md:text-xs font-black uppercase tracking-[0.3em]">{timerMode === 'down' ? 'Protocolo Activo' : 'Sesión Libre'}</span>
                     </div>
                     {targetDuration && (
-                        <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                        <div className={clsx("flex items-center gap-1.5 px-3 py-1 rounded-full border", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200")}>
                             <Clock className="w-3 h-3 text-gray-400" />
                             <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">{targetDuration} MIN</span>
                         </div>
                     )}
                 </div>
-                <h2 className="text-3xl md:text-4xl font-heading font-black italic text-white uppercase leading-none tracking-tighter">
+                <h2 className={clsx("text-3xl md:text-4xl font-heading font-black italic uppercase leading-none tracking-tighter", theme === 'dark' ? "text-white" : "text-black")}>
                     {workoutTitle}
                 </h2>
 
                 {targetDuration && progress > 0 && (
                     <div className="max-w-[200px] mx-auto space-y-1.5 pt-2">
-                        <div className="h-1 bg-white/5 rounded-full overflow-hidden">
+                        <div className={clsx("h-1 rounded-full overflow-hidden", theme === 'dark' ? "bg-white/5" : "bg-gray-100")}>
                             <div
                                 className="h-full bg-brand-red transition-all duration-1000"
                                 style={{ width: `${progress}%` }}
@@ -2972,14 +3059,14 @@ function CoachAiView({
                         {/* Block Title Header */}
                         {!(blocks.length === 1 && block.title === workoutTitle) ? (
                             <div className="flex items-center gap-3 md:gap-4 px-2">
-                                <div className="h-px flex-1 bg-gradient-to-r from-transparent to-white/10" />
+                                <div className={clsx("h-px flex-1 bg-gradient-to-r from-transparent", theme === 'dark' ? "to-white/10" : "to-gray-200")} />
                                 <div className="flex flex-col items-center">
                                     <span className="text-[8px] md:text-[10px] text-brand-red font-black uppercase tracking-[0.4em] mb-1">Bloque {bIdx + 1}</span>
-                                    <h3 className="text-lg md:text-xl font-heading font-black italic text-white uppercase tracking-tighter">
+                                    <h3 className={clsx("text-lg md:text-xl font-heading font-black italic uppercase tracking-tighter", theme === 'dark' ? "text-white" : "text-black")}>
                                         {block.title}
                                     </h3>
                                 </div>
-                                <div className="h-px flex-1 bg-gradient-to-l from-transparent to-white/10" />
+                                <div className={clsx("h-px flex-1 bg-gradient-to-l from-transparent", theme === 'dark' ? "to-white/10" : "to-gray-200")} />
                             </div>
                         ) : (
                             <div className="flex items-center gap-3 md:gap-4 px-2 opacity-40">
@@ -2992,18 +3079,21 @@ function CoachAiView({
                         {/* Exercises in Block */}
                         <div className="space-y-3 md:space-y-4">
                             {block.exercises.map((ex: any, eIdx: number) => (
-                                <div key={ex.id || eIdx} className="bg-[#111] border border-white/5 rounded-[28px] md:rounded-[32px] p-5 md:p-6 space-y-4 shadow-2xl relative overflow-hidden group hover:border-brand-red/30 transition-all duration-500">
+                                <div key={ex.id || eIdx} className={clsx(
+                                    "border rounded-[28px] md:rounded-[32px] p-5 md:p-6 space-y-4 shadow-xl relative overflow-hidden group hover:border-brand-red/30 transition-all duration-500",
+                                    theme === 'dark' ? "bg-[#111] border-white/5" : "bg-white border-gray-100"
+                                )}>
                                     <div className="absolute top-0 right-0 p-6 opacity-0 md:group-hover:opacity-5 transition-opacity pointer-events-none">
                                         <Activity className="w-16 h-16 text-brand-red" />
                                     </div>
 
                                     <div className="flex items-center justify-between relative z-10">
                                         <div className="flex items-center gap-3 md:gap-4">
-                                            <div className="w-8 h-8 md:w-10 md:h-10 bg-white/5 rounded-xl flex items-center justify-center font-heading font-black italic text-xs md:text-sm text-brand-red border border-white/5">
+                                            <div className={clsx("w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center font-heading font-black italic text-xs md:text-sm text-brand-red border", theme === 'dark' ? "bg-white/5 border-white/5" : "bg-gray-50 border-gray-100")}>
                                                 {eIdx + 1}
                                             </div>
                                             <div>
-                                                <h4 className="text-base md:text-lg font-heading font-black italic text-white uppercase tracking-tight leading-none">{ex.name}</h4>
+                                                <h4 className={clsx("text-base md:text-lg font-heading font-black italic uppercase tracking-tight leading-none", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</h4>
                                                 <p className="text-brand-red text-[8px] md:text-[9px] font-black uppercase tracking-widest mt-1 opacity-70">{ex.target}</p>
                                             </div>
                                         </div>
@@ -3018,7 +3108,10 @@ function CoachAiView({
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-2 md:gap-3 relative z-10">
-                                        <div className="bg-black/40 border border-white/5 p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all">
+                                        <div className={clsx(
+                                            "border p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all",
+                                            theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-100 border-gray-200"
+                                        )}>
                                             <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">Peso</p>
                                             <div className="flex items-end gap-1">
                                                 <input
@@ -3030,12 +3123,15 @@ function CoachAiView({
                                                         newBlocks[bIdx].exercises[eIdx].sets[0].weight = parseFloat(e.target.value) || 0;
                                                         setBlocks(newBlocks);
                                                     }}
-                                                    className="bg-transparent text-lg md:text-xl font-mono font-black text-white w-full outline-none"
+                                                    className={clsx("bg-transparent text-lg md:text-xl font-mono font-black w-full outline-none", theme === 'dark' ? "text-white" : "text-black")}
                                                 />
                                                 <span className="text-[9px] md:text-[10px] font-black text-gray-600 mb-0.5">KG</span>
                                             </div>
                                         </div>
-                                        <div className="bg-black/40 border border-white/5 p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all">
+                                        <div className={clsx(
+                                            "border p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all",
+                                            theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-100 border-gray-200"
+                                        )}>
                                             <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">
                                                 {ex.target.toLowerCase().includes('reps') ? 'Reps' : 'Log'}
                                             </p>
@@ -3049,7 +3145,7 @@ function CoachAiView({
                                                         newBlocks[bIdx].exercises[eIdx].sets[0].reps = parseInt(e.target.value) || 0;
                                                         setBlocks(newBlocks);
                                                     }}
-                                                    className="bg-transparent text-lg md:text-xl font-mono font-black text-white w-full outline-none"
+                                                    className={clsx("bg-transparent text-lg md:text-xl font-mono font-black w-full outline-none", theme === 'dark' ? "text-white" : "text-black")}
                                                 />
                                                 <span className="text-[9px] md:text-[10px] font-black text-gray-600 mb-0.5 uppercase">VAL</span>
                                             </div>
@@ -3068,7 +3164,10 @@ function CoachAiView({
             </div>
 
             {/* Sticky Timer Bar */}
-            <div className="fixed bottom-0 inset-x-0 z-[250] bg-black/90 backdrop-blur-2xl border-t border-white/10 p-5 pb-8 md:p-8 animate-in slide-in-from-bottom duration-500">
+            <div className={clsx(
+                "fixed bottom-0 inset-x-0 z-[250] backdrop-blur-2xl border-t p-5 pb-8 md:p-8 animate-in slide-in-from-bottom duration-500",
+                theme === 'dark' ? "bg-black/90 border-white/10" : "bg-white/95 border-gray-200 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]"
+            )}>
                 <div className="max-w-xl mx-auto flex items-center justify-between gap-4 md:gap-6">
                     <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
@@ -3077,7 +3176,9 @@ function CoachAiView({
                         </div>
                         <div className={clsx(
                             "text-3xl md:text-4xl font-mono font-black transition-colors leading-none",
-                            isPaused ? "text-white/40" : (timerMode === 'down' ? "text-brand-red" : "text-white")
+                            isPaused
+                                ? "text-gray-400 opacity-40"
+                                : (timerMode === 'down' ? "text-brand-red" : (theme === 'dark' ? "text-white" : "text-black"))
                         )}>
                             {formatTime(displayTime)}
                         </div>
@@ -3088,7 +3189,9 @@ function CoachAiView({
                             onClick={toggleTimer}
                             className={clsx(
                                 "w-14 h-14 md:w-16 md:h-16 rounded-[20px] md:rounded-[24px] flex items-center justify-center transition-all active:scale-90",
-                                isPaused ? "bg-white text-black shadow-lg" : "bg-white/10 text-white"
+                                isPaused
+                                    ? (theme === 'dark' ? "bg-white text-black shadow-lg" : "bg-black text-white shadow-lg")
+                                    : (theme === 'dark' ? "bg-white/10 text-white" : "bg-gray-100 text-gray-600")
                             )}
                         >
                             {countdown !== null ? (
@@ -3135,8 +3238,8 @@ function VideoModal({ url, onClose }: { url: string, onClose: () => void }) {
     const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
 
     return (
-        <div className="fixed inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300">
-            <div className="bg-black w-full max-w-4xl aspect-video rounded-3xl overflow-hidden relative border border-white/20 shadow-2xl">
+        <div className={clsx("fixed inset-0 z-[200] backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-300", theme === 'dark' ? "bg-black/90" : "bg-white/80")}>
+            <div className={clsx("w-full max-w-4xl aspect-video rounded-3xl overflow-hidden relative border shadow-2xl", theme === 'dark' ? "bg-black border-white/20" : "bg-gray-100 border-gray-200")}>
                 <button
                     onClick={onClose}
                     className="absolute top-4 right-4 z-10 bg-black/50 hover:bg-red-600 p-2 rounded-full text-white transition-colors backdrop-blur-md"
@@ -3155,16 +3258,17 @@ function VideoModal({ url, onClose }: { url: string, onClose: () => void }) {
 }
 
 function FreeTrainingWizard({ onComplete }: { onComplete: (block: any) => void }) {
+    const { theme } = useTheme();
     const [step, setStep] = useState<'type' | 'config'>('type');
     const [type, setType] = useState<string>('fortime');
     const [duration, setDuration] = useState<number>(0);
 
     const types = [
-        { id: 'fortime', label: 'For Time', desc: 'Completa la tarea lo más rápido posible.', icon: <Timer className="w-8 h-8 text-white" /> },
-        { id: 'amrap', label: 'AMRAP', desc: 'As Many Rounds As Possible.', icon: <RefreshCw className="w-8 h-8 text-white" /> },
-        { id: 'emom', label: 'EMOM', desc: 'Every Minute On the Minute.', icon: <Clock className="w-8 h-8 text-white" /> },
-        { id: 'tabata', label: 'Tabata', desc: 'Intervalos de Alta Intensidad (20s/10s).', icon: <Zap className="w-8 h-8 text-white" /> },
-        { id: 'other', label: 'Otro / Mix', desc: 'Estructura personalizada o libre.', icon: <List className="w-8 h-8 text-white" /> },
+        { id: 'fortime', label: 'For Time', desc: 'Completa la tarea lo más rápido posible.', icon: <Timer className={clsx("w-8 h-8", theme === 'dark' ? "text-white" : "text-black")} /> },
+        { id: 'amrap', label: 'AMRAP', desc: 'As Many Rounds As Possible.', icon: <RefreshCw className={clsx("w-8 h-8", theme === 'dark' ? "text-white" : "text-black")} /> },
+        { id: 'emom', label: 'EMOM', desc: 'Every Minute On the Minute.', icon: <Clock className={clsx("w-8 h-8", theme === 'dark' ? "text-white" : "text-black")} /> },
+        { id: 'tabata', label: 'Tabata', desc: 'Intervalos de Alta Intensidad (20s/10s).', icon: <Zap className={clsx("w-8 h-8", theme === 'dark' ? "text-white" : "text-black")} /> },
+        { id: 'other', label: 'Otro / Mix', desc: 'Estructura personalizada o libre.', icon: <List className={clsx("w-8 h-8", theme === 'dark' ? "text-white" : "text-black")} /> },
     ];
 
     const handleTypeSelect = (t: string) => {
@@ -3187,8 +3291,8 @@ function FreeTrainingWizard({ onComplete }: { onComplete: (block: any) => void }
 
     if (step === 'type') {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in zoom-in-95 duration-500">
-                <h2 className="text-3xl font-heading font-black italic text-white uppercase mb-8 text-center">
+            <div className="flex flex-col items-center justify-center min-h-[60vh] animate-in zoom-in-95 duration-500 px-4">
+                <h2 className={clsx("text-3xl font-heading font-black italic uppercase mb-8 text-center", theme === 'dark' ? "text-white" : "text-black")}>
                     Tipo de <span className="text-brand-red">Entrenamiento</span>
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-4xl mx-auto">
@@ -3196,12 +3300,15 @@ function FreeTrainingWizard({ onComplete }: { onComplete: (block: any) => void }
                         <button
                             key={t.id}
                             onClick={() => handleTypeSelect(t.id)}
-                            className="bg-[#111] border border-white/10 hover:border-brand-red/50 hover:bg-white/5 p-6 rounded-[32px] text-left transition-all group relative overflow-hidden"
+                            className={clsx(
+                                "border p-6 rounded-[32px] text-left transition-all group relative overflow-hidden",
+                                theme === 'dark' ? "bg-[#111] border-white/10 hover:border-brand-red/50 hover:bg-white/5" : "bg-white border-gray-100 hover:border-brand-red/30 shadow-sm"
+                            )}
                         >
-                            <div className="mb-4 bg-white/5 w-16 h-16 rounded-2xl flex items-center justify-center group-hover:bg-brand-red/20 transition-colors">
+                            <div className={clsx("mb-4 w-16 h-16 rounded-2xl flex items-center justify-center group-hover:bg-brand-red/20 transition-colors", theme === 'dark' ? "bg-white/5" : "bg-gray-100")}>
                                 {t.icon}
                             </div>
-                            <h3 className="text-xl font-heading font-black italic text-white uppercase mb-1">{t.label}</h3>
+                            <h3 className={clsx("text-xl font-heading font-black italic uppercase mb-1", theme === 'dark' ? "text-white" : "text-black")}>{t.label}</h3>
                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wide leading-relaxed">{t.desc}</p>
                             <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <ChevronRight className="w-5 h-5 text-brand-red" />
@@ -3218,13 +3325,13 @@ function FreeTrainingWizard({ onComplete }: { onComplete: (block: any) => void }
             <div className="w-full flex justify-start mb-8">
                 <button
                     onClick={() => setStep('type')}
-                    className="text-gray-500 hover:text-white flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-colors"
+                    className={clsx("flex items-center gap-2 text-xs font-black uppercase tracking-widest transition-colors", theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-black")}
                 >
                     <ArrowLeft className="w-4 h-4" /> Volver
                 </button>
             </div>
 
-            <h2 className="text-3xl font-heading font-black italic text-white uppercase mb-2 text-center">
+            <h2 className={clsx("text-3xl font-heading font-black italic uppercase mb-2 text-center", theme === 'dark' ? "text-white" : "text-black")}>
                 Configuración <span className="text-brand-red">{type.toUpperCase()}</span>
             </h2>
             <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-12 text-center">
@@ -3233,20 +3340,20 @@ function FreeTrainingWizard({ onComplete }: { onComplete: (block: any) => void }
                         type === 'emom' ? 'Duración total del EMOM' : 'Duración estimada'}
             </p>
 
-            <div className="w-full bg-[#111] border border-white/10 rounded-[40px] p-8 text-center mb-8 relative group">
+            <div className={clsx("w-full border rounded-[40px] p-8 text-center mb-8 relative group", theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-100 shadow-xl")}>
                 <input
                     type="number"
                     autoFocus
                     value={duration || ''}
                     onChange={(e) => setDuration(parseFloat(e.target.value) || 0)}
                     placeholder="0"
-                    className="w-full bg-transparent text-6xl md:text-8xl font-mono font-black text-white text-center outline-none placeholder-white/10"
+                    className={clsx("w-full bg-transparent text-6xl md:text-8xl font-mono font-black text-center outline-none", theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-100")}
                 />
                 <span className="text-gray-500 font-black uppercase tracking-[0.2em] text-sm mt-4 block">Minutos</span>
 
                 <div className="absolute inset-x-0 bottom-full mb-4 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     {[5, 10, 15, 20, 30].map(m => (
-                        <button key={m} onClick={() => setDuration(m)} className="bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded-full text-xs font-bold">{m}´</button>
+                        <button key={m} onClick={() => setDuration(m)} className={clsx("px-3 py-1 rounded-full text-xs font-bold transition-colors", theme === 'dark' ? "bg-white/10 hover:bg-white/20 text-white" : "bg-gray-100 hover:bg-gray-200 text-black")}>{m}´</button>
                     ))}
                 </div>
             </div>
