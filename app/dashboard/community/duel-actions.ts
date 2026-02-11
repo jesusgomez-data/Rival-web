@@ -128,12 +128,22 @@ export async function getPublicProfile(username: string) {
     const supabase = await createClient();
     const { data, error } = await supabase
         .from('profiles')
-        .select('*')
+        .select(`
+            *,
+            followers_count:follows!following_id(count),
+            following_count:follows!follower_id(count)
+        `)
         .eq('username', username)
         .single();
 
     if (error) return null;
-    return data;
+
+    // Flatten count results
+    return {
+        ...data,
+        followers_count: data.followers_count?.[0]?.count || 0,
+        following_count: data.following_count?.[0]?.count || 0
+    };
 }
 
 export async function getCombatStats(userId: string) {

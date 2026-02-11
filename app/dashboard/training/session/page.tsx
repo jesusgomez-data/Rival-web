@@ -517,7 +517,7 @@ function SessionContent() {
     if (isLoadingData) return <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-red" /></div>;
 
     // IMMERSIVE MODE: Full fixed overlay to hide dashboard sidebar/header
-    const overlayClasses = "fixed inset-0 z-[100] bg-black text-white overflow-y-auto custom-scrollbar";
+    const overlayClasses = "fixed inset-0 z-[201] bg-black text-white overflow-y-auto custom-scrollbar";
 
     if (!sportMode) {
         return (
@@ -551,7 +551,7 @@ function SessionContent() {
 
                 {preStartPlan && (
                     <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300">
-                        <div className="w-full max-w-lg bg-[#111] border border-white/10 rounded-[40px] p-8 md:p-12 relative overflow-hidden">
+                        <div className="w-full max-w-lg bg-[#111] border border-white/10 rounded-[40px] p-6 md:p-12 relative overflow-y-auto max-h-[95vh] custom-scrollbar">
                             <div className="absolute top-0 right-0 p-12 opacity-5 -rotate-12 translate-x-8 -translate-y-8">
                                 <Zap className="w-64 h-64 text-brand-red" />
                             </div>
@@ -1105,6 +1105,41 @@ function SessionContent() {
                     </button>
                 </div>
             </div>
+
+            {/* Mobile Fixed Controls */}
+            <div className="sm:hidden fixed bottom-0 inset-x-0 z-[250] bg-[#0a0a0a]/90 backdrop-blur-2xl border-t border-white/10 p-5 pb-10 animate-in slide-in-from-bottom duration-500">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={toggleTimer}
+                        className={clsx(
+                            "flex-1 py-4 rounded-2xl transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest text-sm",
+                            isPaused ? "bg-white text-black shadow-white/10 shadow-lg" : "bg-white/10 text-white"
+                        )}
+                    >
+                        {countdown !== null ? (
+                            <span className="text-xl font-black text-brand-red animate-ping">{countdown}</span>
+                        ) : isPaused ? (
+                            <><Play className="w-5 h-5 fill-current" /> Reanudar</>
+                        ) : (
+                            <><Pause className="w-5 h-5 fill-current" /> Pausa</>
+                        )}
+                    </button>
+                    <button
+                        onClick={handleFinish}
+                        disabled={isSaving}
+                        className={clsx(
+                            "p-4 rounded-2xl shadow-glow transition-all flex items-center justify-center",
+                            sportMode === 'running' ? 'bg-blue-600' :
+                                sportMode === 'hybrid' ? 'bg-yellow-600' :
+                                    sportMode === 'cross_training' ? 'bg-orange-600' :
+                                        sportMode === 'ocr' ? 'bg-emerald-600' :
+                                            sportMode === 'other' ? 'bg-gray-600' : 'bg-brand-red'
+                        )}
+                    >
+                        {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-6 h-6 text-white" />}
+                    </button>
+                </div>
+            </div>
         </div >
     );
 }
@@ -1359,33 +1394,33 @@ function SportSelector({ onSelect, onPlanSelect }: { onSelect: (mode: SportMode)
                                 key={opt.id}
                                 onClick={() => { setSelectedFocus(opt.id); fetchRecommendations(opt.id); }}
                                 className={clsx(
-                                    "w-full p-6 rounded-3xl bg-[#111] border border-white/10 hover:bg-white/5 transition-all text-left flex items-center justify-between group",
+                                    "w-full p-6 rounded-3xl bg-card border border-border hover:bg-muted transition-all text-left flex items-center justify-between group",
                                     selectedSport === 'running' ? "hover:border-blue-500" :
                                         selectedSport === 'hybrid' ? "hover:border-yellow-500" :
                                             selectedSport === 'cross_training' ? "hover:border-orange-500" :
                                                 selectedSport === 'ocr' ? "hover:border-emerald-500" :
                                                     selectedSport === 'calisthenics' ? "hover:border-purple-500" :
-                                                        selectedSport === 'other' ? "hover:border-white/40" : "hover:border-brand-red"
+                                                        selectedSport === 'other' ? "hover:border-border" : "hover:border-brand-red"
                                 )}
                             >
                                 <div>
                                     <h3 className={clsx(
                                         "text-xl font-heading font-black italic uppercase transition-colors",
-                                        "text-white",
+                                        "text-foreground",
                                         selectedSport === 'running' ? "group-hover:text-blue-500" :
                                             selectedSport === 'hybrid' ? "group-hover:text-yellow-500" :
                                                 selectedSport === 'cross_training' ? "group-hover:text-orange-500" :
                                                     selectedSport === 'ocr' ? "group-hover:text-emerald-500" :
                                                         selectedSport === 'calisthenics' ? "group-hover:text-purple-500" :
-                                                            selectedSport === 'other' ? "group-hover:text-white" : "group-hover:text-brand-red"
+                                                            selectedSport === 'other' ? "group-hover:text-foreground" : "group-hover:text-brand-red"
                                     )}>
                                         {opt.title}
                                     </h3>
-                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1 opacity-60 group-hover:opacity-100 transition-opacity">
+                                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1 opacity-60 group-hover:opacity-100 transition-opacity">
                                         {opt.desc}
                                     </p>
                                 </div>
-                                <div className="text-gray-600 transition-all group-hover:scale-110">
+                                <div className="text-muted-foreground transition-all group-hover:scale-110">
                                     {opt.icon}
                                 </div>
                             </button>
@@ -3033,7 +3068,7 @@ function CoachAiView({
             </div>
 
             {/* Sticky Timer Bar */}
-            <div className="fixed bottom-0 inset-x-0 z-[150] bg-black/80 backdrop-blur-2xl border-t border-white/10 p-5 md:p-8 animate-in slide-in-from-bottom duration-500">
+            <div className="fixed bottom-0 inset-x-0 z-[250] bg-black/90 backdrop-blur-2xl border-t border-white/10 p-5 pb-8 md:p-8 animate-in slide-in-from-bottom duration-500">
                 <div className="max-w-xl mx-auto flex items-center justify-between gap-4 md:gap-6">
                     <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">

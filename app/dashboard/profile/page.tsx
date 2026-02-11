@@ -655,7 +655,7 @@ export default function ProfilePage() {
 
                 {/* Right side: Form y Workouts */}
                 <div className="lg:col-span-8 space-y-8">
-                    <div className={clsx("bg-brand-gray/30 border border-white/5 rounded-3xl p-8 backdrop-blur-xl", mobileTab !== 'settings' && "hidden lg:block")}>
+                    <div className={clsx("bg-brand-gray/30 border border-white/5 rounded-3xl p-4 md:p-8 backdrop-blur-xl", mobileTab !== 'settings' && "hidden lg:block")}>
                         <form onSubmit={handleSave} className="space-y-6">
                             <div className="grid md:grid-cols-2 gap-6">
                                 <FormInput
@@ -826,17 +826,17 @@ export default function ProfilePage() {
                                 <button
                                     type="submit"
                                     disabled={saving}
-                                    className="bg-white text-black px-10 py-4 rounded-xl font-bold flex items-center gap-2 hover:bg-brand-red hover:text-white transition-all transform hover:-translate-y-1 shadow-2xl disabled:opacity-50 disabled:transform-none"
+                                    className="bg-white text-black px-6 py-3 md:px-10 md:py-4 rounded-xl font-bold flex items-center gap-2 hover:bg-brand-red hover:text-white transition-all transform hover:-translate-y-1 shadow-2xl disabled:opacity-50 disabled:transform-none text-xs md:text-base w-full md:w-auto justify-center"
                                 >
-                                    {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                                    GUARDAR CONFIGURACIÓN
+                                    {saving ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" /> : <Save className="w-4 h-4 md:w-5 md:h-5" />}
+                                    <span className="uppercase tracking-wider">Guardar</span>
                                 </button>
                             </div>
                         </form>
                     </div>
 
                     {/* Lista de entrenamientos */}
-                    <div className={clsx("bg-brand-gray/30 border border-white/5 rounded-3xl p-8 backdrop-blur-xl", mobileTab !== 'workouts' && "hidden lg:block")}>
+                    <div className={clsx("bg-brand-gray/30 border border-white/5 rounded-3xl p-4 md:p-8 backdrop-blur-xl", mobileTab !== 'workouts' && "hidden lg:block")}>
                         <h3 className="text-lg font-bold text-white mb-4">Tus Entrenamientos</h3>
                         {workouts.length === 0 ? (
                             <p className="text-gray-400">No has registrado entrenamientos aún.</p>

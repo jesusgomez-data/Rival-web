@@ -182,6 +182,24 @@ export default function DashboardHome() {
         loadData();
     }, []);
 
+    // Scroll to post if hash is present
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.location.hash) {
+            const hash = window.location.hash.substring(1); // Remove #
+            setTimeout(() => {
+                const element = document.getElementById(hash);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Add highlight effect
+                    element.classList.add('ring-2', 'ring-brand-red', 'ring-offset-2', 'ring-offset-background');
+                    setTimeout(() => {
+                        element.classList.remove('ring-2', 'ring-brand-red', 'ring-offset-2', 'ring-offset-background');
+                    }, 3000);
+                }
+            }, 500); // Wait for posts to render
+        }
+    }, [data.feedPosts]);
+
     const formatTimeAgo = (date: string) => {
         try {
             const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
@@ -372,28 +390,29 @@ export default function DashboardHome() {
                         {data.feedPosts && data.feedPosts.length > 0 ? (
                             <div className="space-y-10">
                                 {data.feedPosts.map((post: any) => (
-                                    <FeedPost
-                                        key={post.id}
-                                        postId={post.id}
-                                        username={post.profiles?.username}
-                                        user={post.profiles?.full_name || "Unknown Athlete"}
-                                        action={post.media_type === 'class_result' ? (language === 'es' ? "ha completado una sesión de clase" : "completed a class session") : post.workout_id ? (language === 'es' ? "ha completado un entrenamiento" : "completed a workout") : (language === 'es' ? "ha publicado una actualización" : "posted an update")}
-                                        time={formatTimeAgo(post.created_at)}
-                                        avatar={post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.profiles?.full_name || 'User')}&background=random`}
-                                        image={post.media_url}
-                                        initialLikes={post.likes ? post.likes.length : (post.likes_count || 0)}
-                                        hasLikedInitial={post.likes?.some((l: any) => l.user_id === data.currentUser?.id)}
-                                        comments={post.comments_count || 0}
-                                        highlight={post.workouts?.title}
-                                        mediaType={post.media_type}
-                                        caption={post.caption}
-                                        currentUserId={data.currentUser?.id}
-                                        authorId={post.user_id}
-                                        workoutData={post.workouts}
-                                        music_url={post.music_url}
-                                        music_title={post.music_title}
-                                        music_artist={post.music_artist}
-                                    />
+                                    <div key={post.id} id={`post-${post.id}`} className="scroll-mt-24 transition-all duration-300 rounded-3xl">
+                                        <FeedPost
+                                            postId={post.id}
+                                            username={post.profiles?.username}
+                                            user={post.profiles?.full_name || "Unknown Athlete"}
+                                            action={post.media_type === 'class_result' ? (language === 'es' ? "ha completado una sesión de clase" : "completed a class session") : post.workout_id ? (language === 'es' ? "ha completado un entrenamiento" : "completed a workout") : (language === 'es' ? "ha publicado una actualización" : "posted an update")}
+                                            time={formatTimeAgo(post.created_at)}
+                                            avatar={post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.profiles?.full_name || 'User')}&background=random`}
+                                            image={post.media_url}
+                                            initialLikes={post.likes ? post.likes.length : (post.likes_count || 0)}
+                                            hasLikedInitial={post.likes?.some((l: any) => l.user_id === data.currentUser?.id)}
+                                            comments={post.comments_count || 0}
+                                            highlight={post.workouts?.title}
+                                            mediaType={post.media_type}
+                                            caption={post.caption}
+                                            currentUserId={data.currentUser?.id}
+                                            authorId={post.user_id}
+                                            workoutData={post.workouts}
+                                            music_url={post.music_url}
+                                            music_title={post.music_title}
+                                            music_artist={post.music_artist}
+                                        />
+                                    </div>
                                 ))}
                             </div>
                         ) : (

@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { clsx } from "clsx";
-import { Trophy, Swords, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity } from "lucide-react";
+import { Trophy, Swords, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import DuelButton from "../../community/DuelButton";
 import FollowButton from "../../community/FollowButton";
 import UserMediaGallery from "../../UserMediaGallery";
@@ -78,21 +79,21 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             </div>
                             <p className="text-brand-red font-black tracking-widest md:tracking-[0.3em] text-[10px] md:text-sm uppercase mt-0.5 truncate shadow-black drop-shadow-sm">@{profile.username}</p>
 
-                            {/* Mobile Stats Summary */}
-                            <div className="block md:hidden mt-2 space-y-2 w-max max-w-[180px] relative z-0">
-                                {/* Mini Vitals */}
-                                <div className="flex flex-wrap gap-1.5 text-[7px] font-bold text-gray-400">
-                                    <span className="bg-black/40 px-1.5 py-0.5 rounded border border-white/5 flex items-center gap-1">
-                                        <TrendingUp className="w-2 h-2 text-brand-red" /> {profile.level > 0 ? `Lvl ${profile.level}` : 'Recluta'}
-                                    </span>
-                                    <span className="bg-black/40 px-1.5 py-0.5 rounded border border-white/5 flex items-center gap-1">
-                                        <Dumbbell className="w-2 h-2 text-brand-red" /> {profile.main_sport || 'General'}
-                                    </span>
+                            {/* Followers / Following Counts */}
+                            <div className="flex gap-4 md:gap-8 mt-3 md:mt-4 bg-black/20 backdrop-blur-sm px-4 py-2 rounded-2xl border border-white/5 w-fit">
+                                <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
+                                    <span className="text-white font-black text-xs md:text-lg leading-none">{profile.followers_count || 0}</span>
+                                    <span className="text-gray-500 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidores</span>
+                                </div>
+                                <div className="w-px h-6 bg-white/10 hidden md:block"></div>
+                                <div className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
+                                    <span className="text-white font-black text-xs md:text-lg leading-none">{profile.following_count || 0}</span>
+                                    <span className="text-gray-500 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidos</span>
                                 </div>
                             </div>
 
                             {privacy === 'private' && (
-                                <div className="flex items-center gap-2 mt-2 px-3 py-1 bg-white/5 rounded-full w-fit border border-white/10">
+                                <div className="flex items-center gap-2 mt-4 px-3 py-1 bg-white/5 rounded-full w-fit border border-white/10">
                                     <Lock className="w-3 h-3 text-gray-400" />
                                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Cuenta Privada</span>
                                 </div>
@@ -100,14 +101,26 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 pb-2 pl-20 md:pl-0 md:pb-4 md:gap-3">
+                    <div className="flex items-center gap-2 pb-2 pl-2 md:pl-0 md:pb-4 md:gap-3">
                         {user?.id !== profile.id && (
-                            <>
-                                <DuelButton targetId={profile.id} isRival={isFollowing} />
-                                <div className="hidden md:block w-36">
+                            <div className="flex items-center gap-2">
+                                {isFollowing && (
+                                    <Link
+                                        href={`/dashboard/messages?userId=${profile.id}`}
+                                        className="p-2 md:p-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-brand-red hover:border-brand-red hover:text-white transition-all group flex items-center gap-2 shadow-xl backdrop-blur-md"
+                                        title="Enviar mensaje"
+                                    >
+                                        <MessageCircle className="w-4 h-4 md:w-5 md:h-5 text-brand-red group-hover:text-white transition-colors" />
+                                        <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest leading-none">Mensaje</span>
+                                    </Link>
+                                )}
+                                <div className="scale-90 md:scale-100 origin-left">
+                                    <DuelButton targetId={profile.id} isRival={isFollowing} />
+                                </div>
+                                <div className="hidden md:block w-32 scale-90 md:scale-100 origin-left">
                                     <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
                                 </div>
-                            </>
+                            </div>
                         )}
                     </div>
                 </div>

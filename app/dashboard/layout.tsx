@@ -47,8 +47,36 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const [showMobileSearch, setShowMobileSearch] = useState(false);
     const [unreadMessages, setUnreadMessages] = useState(0);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [showBottomNav, setShowBottomNav] = useState(true);
+    const [lastScrollY, setLastScrollY] = useState(0);
     const { userStories, openStory } = useStories();
     const supabase = createClient();
+
+    // Hide bottom nav on scroll down, show on scroll up
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+
+            // Only hide/show if scrolled more than 50px
+            if (currentScrollY > 50) {
+                if (currentScrollY > lastScrollY) {
+                    // Scrolling down
+                    setShowBottomNav(false);
+                } else {
+                    // Scrolling up
+                    setShowBottomNav(true);
+                }
+            } else {
+                // At top of page, always show
+                setShowBottomNav(true);
+            }
+
+            setLastScrollY(currentScrollY);
+        };
+
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, [lastScrollY]);
 
     useEffect(() => {
         let isMounted = true;
@@ -381,7 +409,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
             {/* Mobile Bottom Navigation */}
             {(!hideSidebarDefault || isMenuOpen) && (
-                <nav className="lg:hidden fixed bottom-4 left-4 right-4 bg-background/90 backdrop-blur-2xl border border-border py-3 px-6 z-[100] rounded-[2rem] shadow-2xl safe-area-inset-bottom">
+                <nav className={clsx(
+                    "lg:hidden fixed bottom-4 left-4 right-4 bg-background/90 backdrop-blur-2xl border border-border py-3 px-6 z-[100] rounded-[2rem] shadow-2xl safe-area-inset-bottom transition-transform duration-300",
+                    showBottomNav ? "translate-y-0" : "translate-y-32"
+                )}>
                     <div className="flex justify-between items-center h-12 relative">
                         {navItems.filter(i => [t.navDashboard.home, t.navDashboard.messages, t.navDashboard.onlineCoach, t.navDashboard.community].includes(i.name)).map((item, idx) => {
                             const Icon = item.icon;

@@ -7,9 +7,23 @@ import ChatWindow from './ChatWindow'
 import NewChatModal from './NewChatModal'
 import { getConversations, getMessages, sendMessage, getOrCreateConversation, getFriendsToChat, deleteMessage, editMessage, uploadChatImage, toggleMessageLike, deleteConversation } from './actions'
 import { Loader2 } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { clsx } from 'clsx'
+import { Suspense } from 'react'
 
 export default function MessagesPage() {
+    return (
+        <Suspense fallback={<div className="h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-brand-red w-10 h-10" /></div>}>
+            <MessagesContent />
+        </Suspense>
+    )
+}
+
+function MessagesContent() {
+    const searchParams = useSearchParams()
+    const router = useRouter()
+    const targetUserId = searchParams.get('userId')
+
     const [conversations, setConversations] = useState<any[]>([])
     const [activeConversationId, setActiveConversationId] = useState<string | null>(null)
     const [messages, setMessages] = useState<any[]>([])
@@ -66,6 +80,19 @@ export default function MessagesPage() {
                     await loadConversations()
                     const friendsData = await getFriendsToChat()
                     setFriends(friendsData)
+
+                    // Si hay un userId en la URL, cargar esa conversación automáticamente
+                    if (targetUserId) {
+                        const result = await getOrCreateConversation(targetUserId)
+                        if (result.conversationId) {
+                            setActiveConversationId(result.conversationId)
+                            // Buscar a la persona en amigos o cargar sus datos básicos
+                            const person = friendsData.find(f => f.id === targetUserId)
+                            setOtherPerson(person || { full_name: 'Direct Match' })
+                            setIsMobileListVisible(false)
+                            await loadMessages(result.conversationId)
+                        }
+                    }
                 }
             } catch (error) {
                 console.error('Error init:', error)
@@ -74,7 +101,7 @@ export default function MessagesPage() {
             }
         }
         init()
-    }, [loadConversations])
+    }, [loadConversations, targetUserId, loadMessages])
 
     // SISTEMA DE NOTIFICACIÓN Y ACTUALIZACIÓN EN TIEMPO REAL
     useEffect(() => {

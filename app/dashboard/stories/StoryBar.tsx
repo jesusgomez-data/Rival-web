@@ -81,6 +81,12 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const [textColor, setTextColor] = useState("#FFFFFF")
     const [isMusicPickerOpen, setIsMusicPickerOpen] = useState(false)
 
+    // Image adjustment controls (Instagram-style)
+    const [imageZoom, setImageZoom] = useState(1)
+    const [imagePositionX, setImagePositionX] = useState(50)
+    const [imagePositionY, setImagePositionY] = useState(50)
+    const [showImageAdjust, setShowImageAdjust] = useState(false)
+
     const [isVideoTrimming, setIsVideoTrimming] = useState(false)
     const [trimmerVideoUrl, setTrimmerVideoUrl] = useState<string | null>(null)
     const [trimStart, setTrimStart] = useState(0)
@@ -151,7 +157,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             scale: 1,
                             rotation: 0,
                             color: '#FFFFFF',
-                            link: `/dashboard/post/${customEvent.detail.postId}`
+                            link: `/dashboard`
                         };
                         // Use setTimeout to ensure state update happens after setupPreview's state clear
                         setTimeout(() => setOverlays([linkOverlay]), 100);
@@ -190,7 +196,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                 y: 45, // Adjusted to appear more centered/visible in viewport
                                 scale: 1,
                                 rotation: 0,
-                                link: postId ? `/dashboard/post/${postId}` : undefined
+                                link: postId ? `/dashboard` : undefined
                             };
                             // Use setTimeout to ensure state update happens after setupPreview's state clear
                             setTimeout(() => setOverlays([newOverlay]), 100);
@@ -223,8 +229,19 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         if (selectedUserIndex === null) return
         const story = userStories[selectedUserIndex].stories[activeStoryIndex]
 
+        // Optimistic update
+        const updatedUserStories = [...userStories]
+        const currentStory = updatedUserStories[selectedUserIndex].stories[activeStoryIndex]
+        const wasLiked = (currentStory as any).has_liked
+
+            ; (currentStory as any).has_liked = !wasLiked
+            ; (currentStory as any).likes_count = (currentStory as any).likes_count + (wasLiked ? -1 : 1)
+
+        setUserStories(updatedUserStories)
+
         await toggleStoryLike(story.id)
-        await loadStories()
+        // loadStories() will call API and sync with real data
+        loadStories()
     }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -269,6 +286,10 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         setPreviewUrl(url)
         setOverlays([]) // Reset overlays
         setSelectedTrack(null)
+        setImageZoom(1)
+        setImagePositionX(50)
+        setImagePositionY(50)
+        setShowImageAdjust(false)
         if (fileInputRef.current) fileInputRef.current.value = ""
     }
 
@@ -439,6 +460,10 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         setPreviewUrl(null)
         setSelectedTrack(null)
         setOverlays([])
+        setImageZoom(1)
+        setImagePositionX(50)
+        setImagePositionY(50)
+        setShowImageAdjust(false)
     }
 
     const handlePRStoryPost = async (e: React.FormEvent) => {
@@ -961,6 +986,13 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                         </div>
                                     )}
                                 </div>
+                                <button
+                                    onClick={() => setShowImageAdjust(!showImageAdjust)}
+                                    className={clsx("p-2 rounded-full transition-all border border-white/5", showImageAdjust ? "bg-brand-red text-white" : "bg-black/40 text-white hover:bg-white/10")}
+                                    title="Ajustar imagen"
+                                >
+                                    <Move className="w-5 h-5" />
+                                </button>
                                 <button onClick={() => setShowTextInput(true)} className="p-2 bg-black/40 rounded-full hover:bg-white/10 transition-colors border border-white/5">
                                     <Type className="w-5 h-5 text-white" />
                                 </button>
@@ -973,9 +1005,27 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                         {/* Canvas Area */}
                         <div className="relative flex-1 bg-gray-900 overflow-hidden flex items-center justify-center">
                             {previewFile?.type.startsWith('video/') ? (
-                                <video src={previewUrl} autoPlay loop playsInline className="w-full h-full object-cover" />
+                                <video
+                                    src={previewUrl}
+                                    autoPlay
+                                    loop
+                                    playsInline
+                                    className="w-full h-full object-cover"
+                                    style={{
+                                        transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
+                                        transformOrigin: 'center center'
+                                    }}
+                                />
                             ) : (
-                                <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                <img
+                                    src={previewUrl}
+                                    alt="Preview"
+                                    className="w-full h-full object-cover"
+                                    style={{
+                                        transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
+                                        transformOrigin: 'center center'
+                                    }}
+                                />
                             )}
 
                             {/* Overlays Rendering */}
@@ -1005,6 +1055,73 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     <div className="flex gap-4">
                                         <button onClick={() => setShowTextInput(false)} className="px-6 py-2 rounded-full border border-white/20 text-white font-bold uppercase tracking-widest text-xs hover:bg-white/10">Cancelar</button>
                                         <button onClick={addTextOverlay} className="px-6 py-2 rounded-full bg-white text-black font-black uppercase tracking-widest text-xs hover:scale-105 transition-transform">Listo</button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Image Adjustment Controls */}
+                            {showImageAdjust && (
+                                <div className="absolute bottom-24 left-0 right-0 flex justify-center z-[350] pointer-events-auto px-4">
+                                    <div className="bg-black/90 backdrop-blur-xl px-6 py-4 rounded-3xl border border-white/10 w-full max-w-sm shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200">
+                                        <div className="space-y-4">
+                                            <div className="flex flex-col gap-2">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Zoom</span>
+                                                    <span className="text-sm font-black text-white">{imageZoom.toFixed(1)}x</span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min="1"
+                                                    max="3"
+                                                    step="0.1"
+                                                    value={imageZoom}
+                                                    onChange={(e) => setImageZoom(parseFloat(e.target.value))}
+                                                    className="w-full accent-brand-red cursor-pointer h-2 bg-white/10 rounded-full appearance-none"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Posición Horizontal</span>
+                                                <input
+                                                    type="range"
+                                                    min="0"
+                                                    max="100"
+                                                    step="1"
+                                                    value={imagePositionX}
+                                                    onChange={(e) => setImagePositionX(parseFloat(e.target.value))}
+                                                    className="w-full accent-brand-red cursor-pointer h-2 bg-white/10 rounded-full appearance-none"
+                                                />
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Posición Vertical</span>
+                                                <input
+                                                    type="range"
+                                                    min="0"
+                                                    max="100"
+                                                    step="1"
+                                                    value={imagePositionY}
+                                                    onChange={(e) => setImagePositionY(parseFloat(e.target.value))}
+                                                    className="w-full accent-brand-red cursor-pointer h-2 bg-white/10 rounded-full appearance-none"
+                                                />
+                                            </div>
+                                            <div className="flex gap-3 pt-2">
+                                                <button
+                                                    onClick={() => {
+                                                        setImageZoom(1);
+                                                        setImagePositionX(50);
+                                                        setImagePositionY(50);
+                                                    }}
+                                                    className="flex-1 px-4 py-2 rounded-xl border border-white/20 text-white font-bold uppercase tracking-widest text-xs hover:bg-white/10 transition-colors"
+                                                >
+                                                    Resetear
+                                                </button>
+                                                <button
+                                                    onClick={() => setShowImageAdjust(false)}
+                                                    className="flex-1 px-4 py-2 rounded-xl bg-brand-red text-white font-black uppercase tracking-widest text-xs hover:scale-105 transition-transform"
+                                                >
+                                                    Listo
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -1197,10 +1314,12 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             )}
                         </AnimatePresence>
 
-                        <div className="absolute inset-0 z-40 flex">
+
+                        <div className="absolute inset-0 z-35 flex">
                             <div className="w-1/3 h-full cursor-pointer" onClick={prevStory} />
                             <div className="w-2/3 h-full cursor-pointer" onClick={nextStory} />
                         </div>
+
 
                         <motion.div
                             key={`${selectedUserIndex}-${activeStoryIndex}`}
@@ -1330,7 +1449,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                 <div
                                     key={overlay.id}
                                     className={clsx(
-                                        "absolute transform -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-auto transition-transform",
+                                        "absolute transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-auto transition-transform",
                                         overlay.link && "cursor-pointer active:scale-95 hover:scale-105"
                                     )}
                                     style={{

@@ -360,10 +360,13 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     );
 
     return (
-        <div className={clsx(
-            "border rounded-2xl overflow-hidden transition-colors mb-6",
-            theme === 'dark' ? "bg-brand-gray border-white/5" : "bg-white border-gray-200 shadow-sm"
-        )}>
+        <div
+            id={`post-${postId}`}
+            className={clsx(
+                "border rounded-2xl overflow-hidden transition-colors mb-6",
+                theme === 'dark' ? "bg-brand-gray border-white/5" : "bg-white border-gray-200 shadow-sm"
+            )}
+        >
             {/* Header */}
             <div className="p-4 flex items-center justify-between">
                 <div

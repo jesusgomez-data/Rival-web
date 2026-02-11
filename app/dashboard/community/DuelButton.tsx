@@ -37,16 +37,16 @@ export default function DuelButton({ targetId, isRival }: DuelButtonProps) {
             onClick={handleDuel}
             disabled={status === 'loading'}
             className={clsx(
-                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all",
+                "flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                 isRival
-                    ? "bg-brand-red text-white shadow-[0_4px_15px_rgba(220,38,38,0.3)] hover:scale-105 active:scale-95"
-                    : "bg-white/5 text-gray-400 border border-white/5 hover:bg-white/10"
+                    ? "bg-gradient-to-r from-brand-red to-red-600 text-white shadow-[0_8px_20px_rgba(220,38,38,0.4)] hover:scale-105 hover:shadow-[0_8px_25px_rgba(220,38,38,0.5)] active:scale-95"
+                    : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:text-white"
             )}
         >
             {status === 'loading' ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-                <Swords className="w-3.5 h-3.5" />
+                <Swords className="w-4 h-4" />
             )}
             {isRival ? "Desafiar" : "Duelo"}
         </button>

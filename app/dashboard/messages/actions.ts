@@ -195,22 +195,48 @@ export async function getOrCreateConversation(otherUserId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
 
-    const { data: existing } = await supabase.rpc('get_conversation_between_users', {
-        user_a: user.id,
-        user_b: otherUserId
-    })
+    try {
+        // Try to find existing conversation using RPC
+        const { data: existing, error: rpcError } = await supabase.rpc('get_conversation_between_users', {
+            user_a: user.id,
+            user_b: otherUserId
+        })
 
-    if (existing && existing.length > 0) {
-        return { conversationId: existing[0].id }
+        if (existing && existing.length > 0) {
+            return { conversationId: existing[0].id }
+        }
+
+        // Create new conversation
+        const { data: newConv, error: convError } = await supabase
+            .from('conversations')
+            .insert({})
+            .select()
+            .single()
+
+        if (convError || !newConv) {
+            console.error('Error creating conversation:', convError)
+            return { error: 'No se pudo crear la conversación. Por favor, intenta de nuevo.' }
+        }
+
+        // Add participants
+        const { error: participantsError } = await supabase
+            .from('conversation_participants')
+            .insert([
+                { conversation_id: newConv.id, user_id: user.id },
+                { conversation_id: newConv.id, user_id: otherUserId }
+            ])
+
+        if (participantsError) {
+            console.error('Error adding participants:', participantsError)
+            // Try to clean up the conversation if participants couldn't be added
+            await supabase.from('conversations').delete().eq('id', newConv.id)
+            return { error: 'No se pudieron añadir los participantes. Por favor, intenta de nuevo.' }
+        }
+
+        return { conversationId: newConv.id }
+    } catch (err) {
+        console.error('Critical error in getOrCreateConversation:', err)
+        return { error: 'Error al crear la conversación. Por favor, verifica los permisos de la base de datos.' }
     }
-
-    const { data: newConv } = await supabase.from('conversations').insert({}).select().single()
-    if (!newConv) return { error: 'Check RLS' }
-
-    await supabase.from('conversation_participants').insert([
-        { conversation_id: newConv.id, user_id: user.id },
-        { conversation_id: newConv.id, user_id: otherUserId }
-    ])
-
-    return { conversationId: newConv.id }
 }
+

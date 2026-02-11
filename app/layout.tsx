@@ -29,6 +29,12 @@ export const metadata: Metadata = {
     icon: "/logo.svg",
     apple: "/logo.svg",
   },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 1,
+    userScalable: false,
+  },
   openGraph: {
     title: "Rival Fit | Face Yourself. Conquer All.",
     description: "Únete a la elite del fitness. Registra, compite y evoluciona en la red social definitiva para atletas.",
