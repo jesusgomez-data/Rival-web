@@ -15,7 +15,7 @@ import StoryBar from "./stories/StoryBar";
 import { getMyDuels, acceptDuel } from "./community/duel-actions";
 import UserMediaGallery from "./UserMediaGallery";
 
-function SuggestedUser({ id, name, username, role, avatar, isFollowing }: { id: string, name: string, username: string, role: string, avatar?: string, isFollowing: boolean }) {
+function SuggestedUser({ id, name, username, role, avatar, isFollowing, isOfficial }: { id: string, name: string, username: string, role: string, avatar?: string, isFollowing: boolean, isOfficial?: boolean }) {
     const { t } = useLanguage();
     return (
         <div className="flex items-center gap-3 group">
@@ -24,13 +24,20 @@ function SuggestedUser({ id, name, username, role, avatar, isFollowing }: { id: 
                     {avatar ? (
                         <Image src={avatar} alt={name} fill className="object-cover" />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-500 uppercase">
+                        <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase">
                             {name.substring(0, 2)}
                         </div>
                     )}
                 </div>
                 <div className="flex-1">
-                    <p className="text-sm font-bold text-foreground group-hover/link:text-brand-red transition-colors">{name}</p>
+                    <p className="text-sm font-bold text-foreground group-hover/link:text-brand-red transition-colors flex items-center gap-1.5">
+                        {name}
+                        {isOfficial && (
+                            <span className="bg-brand-red p-0.5 rounded-full inline-flex">
+                                <Trophy className="w-2.5 h-2.5 text-white" />
+                            </span>
+                        )}
+                    </p>
                     <p className="text-xs text-gray-500">{role || t.dashboard.roleAthlete}</p>
                 </div>
             </Link>
@@ -143,28 +150,17 @@ export default function DashboardHome() {
                     supabase.from('class_results').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
                     supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', user.id),
                     supabase.from('follows').select('following_id').eq('follower_id', user.id),
-                    supabase.from('profiles').select('id, username, full_name, avatar_url, level').neq('id', user.id).order('xp_points', { ascending: false }).limit(4),
+                    supabase.from('profiles').select('id, username, full_name, avatar_url, level, is_official').neq('id', user.id).order('xp_points', { ascending: false }).limit(4),
                     supabase.from('missions').select('*, user_missions!inner(current_value, user_id)').eq('goal_type', 'sessions_count').eq('user_missions.user_id', user.id).single(),
                     getMyDuels()
                 ]);
 
                 const followedIds = new Set(myFollows?.map(f => f.following_id) || []);
 
-                // Post fetching depends on activeTab, but we can do a default fetch here or trigger it via useEffect on tab change.
-                // For initial load, we fetch 'following'
-                const followingIds = Array.from(followedIds);
-                const idsToFetch = [...followingIds, user.id];
-                const { data: posts } = await supabase
-                    .from('posts')
-                    .select('*, profiles:user_id(*), workouts:workout_id(*, metrics, workout_sets(*)), likes:likes(user_id)')
-                    .in('user_id', idsToFetch)
-                    .order('created_at', { ascending: false })
-                    .limit(10);
-
-                setData({
+                setData((prev: any) => ({
+                    ...prev,
                     profile: profileData,
                     workoutCount: (workouts || 0) + (classes || 0),
-                    feedPosts: posts || [],
                     trendingAthletes: trending?.map(athlete => ({ ...athlete, isFollowing: followedIds.has(athlete.id) })) || [],
                     rivalsCount: followingCount || 0,
                     currentUser: user,
@@ -172,7 +168,7 @@ export default function DashboardHome() {
                     missionGoal: missionData?.goal_value || 5,
                     duels: duelsData || [],
                     myGyms: memberships?.map((m: any) => m.organization) || []
-                });
+                }));
             } catch (e) {
                 console.error(e);
             } finally {
@@ -181,6 +177,48 @@ export default function DashboardHome() {
         }
         loadData();
     }, []);
+
+    // NEW: Fetch Feed based on activeTab
+    useEffect(() => {
+        async function fetchFeed() {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) return;
+
+                const { data: myFollows } = await supabase
+                    .from('follows')
+                    .select('following_id')
+                    .eq('follower_id', user.id);
+
+                const followedIds = new Set(myFollows?.map(f => f.following_id) || []);
+
+                // 1. Fetch official accounts IDs
+                const { data: officialProfiles } = await supabase
+                    .from('profiles')
+                    .select('id')
+                    .eq('is_official', true);
+
+                const officialIds = officialProfiles?.map(p => p.id) || [];
+
+                let query = supabase
+                    .from('posts')
+                    .select('*, profiles:user_id(*), workouts:workout_id(*, metrics, workout_sets(*)), likes:likes(user_id)')
+                    .order('created_at', { ascending: false })
+                    .limit(20);
+
+                if (activeTab === 'following') {
+                    const idsToFetch = Array.from(new Set([...Array.from(followedIds), user.id, ...officialIds]));
+                    query = query.in('user_id', idsToFetch);
+                }
+
+                const { data: posts } = await query;
+                setData((prev: any) => ({ ...prev, feedPosts: posts || [] }));
+            } catch (e) {
+                console.error("Error fetching feed:", e);
+            }
+        }
+        fetchFeed();
+    }, [activeTab]);
 
     // Scroll to post if hash is present
     useEffect(() => {
@@ -411,6 +449,7 @@ export default function DashboardHome() {
                                             music_url={post.music_url}
                                             music_title={post.music_title}
                                             music_artist={post.music_artist}
+                                            isOfficial={post.profiles?.is_official}
                                         />
                                     </div>
                                 ))}
@@ -480,6 +519,7 @@ export default function DashboardHome() {
                                         role={athlete.level}
                                         avatar={athlete.avatar_url}
                                         isFollowing={athlete.isFollowing}
+                                        isOfficial={athlete.is_official}
                                     />
                                 </div>
                             ))}

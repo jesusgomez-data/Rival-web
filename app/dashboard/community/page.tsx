@@ -89,7 +89,7 @@ export default function CommunityPage({
                     .from('posts')
                     .select(`
                         *,
-                        profiles:user_id (id, full_name, avatar_url, username),
+                        profiles:user_id (id, full_name, avatar_url, username, is_official),
                         workouts:workout_id (title, total_volume_kg, workout_sets(*), location_name, metrics),
                         likes:likes(user_id)
                     `)
@@ -169,7 +169,14 @@ export default function CommunityPage({
                                                     />
                                                 </div>
                                                 <div>
-                                                    <p className="text-sm text-white font-bold group-hover:text-brand-red transition-colors">{profile.full_name}</p>
+                                                    <p className="text-sm text-white font-bold group-hover:text-brand-red transition-colors flex items-center gap-1.5">
+                                                        {profile.full_name}
+                                                        {profile.is_official && (
+                                                            <span className="bg-brand-red p-0.5 rounded-full inline-flex">
+                                                                <Trophy className="w-2.5 h-2.5 text-white" />
+                                                            </span>
+                                                        )}
+                                                    </p>
                                                     <p className="text-xs text-gray-500">@{profile.username}</p>
                                                 </div>
                                             </Link>
@@ -213,6 +220,7 @@ export default function CommunityPage({
                                     music_url={post.music_url}
                                     music_title={post.music_title}
                                     music_artist={post.music_artist}
+                                    isOfficial={post.profiles?.is_official}
                                 />
                                 {(index + 1) % 3 === 0 && (
                                     <FeedAd tier={data.profile?.subscription_tier} />

@@ -100,6 +100,7 @@ interface FeedPostProps {
     currentUserId?: string;
     authorId?: string;
     centerName?: string;
+    isOfficial?: boolean;
     workoutData?: {
         title: string;
         total_volume_kg?: number;
@@ -126,7 +127,7 @@ interface Comment {
 }
 
 export default function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId, centerName,
-    workoutData, music_url, music_title, music_artist
+    workoutData, music_url, music_title, music_artist, isOfficial
 }: FeedPostProps) {
     const { theme } = useTheme();
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -388,9 +389,16 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 <Link href={`/dashboard/profile/${username || user.toLowerCase().replace(/\s+/g, '')}`} className="flex-1 group">
                     <div>
                         <p className={clsx(
-                            "text-base font-black group-hover:text-brand-red transition-colors leading-tight uppercase font-heading italic tracking-tight",
+                            "text-base font-black group-hover:text-brand-red transition-colors leading-tight uppercase font-heading italic tracking-tight flex items-center gap-1.5",
                             theme === 'dark' ? "text-white" : "text-gray-900"
-                        )}>{user}</p>
+                        )}>
+                            {user}
+                            {isOfficial && (
+                                <span className="bg-brand-red p-0.5 rounded-full inline-flex shadow-[0_0_10px_rgba(220,38,38,0.5)]">
+                                    <Trophy className="w-2.5 h-2.5 text-white" />
+                                </span>
+                            )}
+                        </p>
                         <p className="text-[10px] text-brand-red font-black uppercase tracking-[0.2em] mt-0.5">
                             {action.includes('PR') || highlight?.includes('PR') ? 'NUEVO PR • ' : ''}
                             {time.toUpperCase()}
@@ -660,7 +668,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             <div className="relative aspect-video bg-black cursor-pointer group shadow-2xl overflow-hidden rounded-xl" onClick={() => setIsLightboxOpen(true)}>
                                 {isVideo ? (
                                     <div className="relative w-full h-full">
-                                        <video src={image} className="w-full h-full object-cover" autoPlay loop playsInline />
+                                        <video src={image} className="w-full h-full object-cover" loop playsInline muted preload="metadata" />
                                         <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
                                             <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-glow">
                                                 <Play className="w-5 h-5 text-white fill-white ml-1" />
@@ -1064,7 +1072,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         </button>
                         <div className="relative w-full max-w-5xl max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                             {isVideo ? (
-                                <video src={image} controls autoPlay className="max-w-full max-h-[90vh] rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)]" />
+                                <video src={image} controls className="max-w-full max-h-[90vh] rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)]" />
                             ) : (
                                 <img src={image} alt="Full size" className="max-w-full max-h-[90vh] object-contain rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)]" />
                             )}
