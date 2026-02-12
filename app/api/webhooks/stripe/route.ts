@@ -4,6 +4,7 @@ import Stripe from "stripe";
 import { stripe } from "@/utils/stripe/config";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createNotification } from "@/app/dashboard/notifications-actions";
+import { sendWelcomeEmail } from "@/app/dashboard/gyms/email-actions";
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -91,15 +92,38 @@ export async function POST(req: Request) {
 
                     if (memberError) console.error("Error activating member:", memberError);
 
-                    // 2. Notify User
+                    // 2. Notify & Welcome User
                     if (userId) {
+                        // Fetch details for personalization
+                        const [{ data: userProfile }, { data: org }, { data: plan }] = await Promise.all([
+                            supabase.from('profiles').select('full_name, email').eq('id', userId).single(),
+                            supabase.from('organizations').select('name, logo_url').eq('id', centerId).single(),
+                            supabase.from('membership_plans').select('name').eq('id', planId).single()
+                        ]);
+
+                        const athleteName = userProfile?.full_name || 'Atleta';
+                        const gymName = org?.name || 'Tu Centro';
+                        const planName = plan?.name || 'Membresía';
+
+                        // Notification in-app
                         await createNotification({
                             userId: userId,
                             type: 'membership_activated',
-                            title: 'Membresía Activada',
-                            content: `¡Bienvenido! Tu membresía ha sido activada correctamente tras confirmar tu pago.`,
+                            title: '¡Membresía Activada!',
+                            content: `¡Bienvenido a ${gymName}! Tu plan ${planName} ya está activo. ¡A darle duro!`,
                             link: `/gym/${centerId}`
                         });
+
+                        // Welcome Email via Resend
+                        if (userProfile?.email) {
+                            sendWelcomeEmail(
+                                userProfile.email,
+                                athleteName,
+                                gymName,
+                                planName,
+                                org?.logo_url
+                            ).catch(err => console.error("Error sending welcome email:", err));
+                        }
                     }
 
                     console.log(`Membership payment completed for user ${userId}, center ${centerId}`);
