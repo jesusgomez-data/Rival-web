@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2 } from "lucide-react";
 import LikeButton from "./community/LikeButton";
 import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike } from "./community/actions";
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
@@ -389,13 +389,10 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 </div>
                 <Link href={`/dashboard/profile/${username || user.toLowerCase().replace(/\s+/g, '')}`} className="flex-1 group">
                     <div>
-                        <p className={clsx(
-                            "text-base font-black group-hover:text-brand-red transition-colors leading-tight uppercase font-heading italic tracking-tight flex items-center gap-1.5",
-                            theme === 'dark' ? "text-white" : "text-gray-900"
-                        )}>
+                        <p className="text-base font-black group-hover:opacity-80 transition-opacity leading-tight uppercase font-heading italic tracking-tight flex items-center gap-1.5 text-brand-red">
                             {user}
                             {isOfficial && (
-                                <span className="bg-brand-red p-0.5 rounded-full inline-flex shadow-[0_0_10px_rgba(220,38,38,0.5)]">
+                                <span className="bg-brand-red p-0.5 rounded-full inline-flex shadow-[0_0_10px_rgba(220,38,38,0.5)] border border-white/20">
                                     <Trophy className="w-2.5 h-2.5 text-white" />
                                 </span>
                             )}
@@ -479,14 +476,14 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         <p className={clsx(
                             "text-sm sm:text-base whitespace-pre-wrap font-accent font-medium tracking-tight leading-relaxed",
                             theme === 'dark' ? "text-gray-100" : "text-black",
-                            (isOfficial && workoutData && !isMember) && "blur-[2px] select-none pointer-events-none opacity-50"
+                            (isOfficial && workoutData && !isMember && username?.toLowerCase() !== 'rivalfit' && username?.toLowerCase() !== 'rival') && "blur-[2px] select-none pointer-events-none opacity-50"
                         )}>{displayCaption}</p>
                     )}
                 </div>
             )}
 
             {/* Media Content - RESTRICTED IF OFFICIAL AND NO MEMBER */}
-            {(isOfficial && workoutData && !isMember) ? (
+            {(isOfficial && workoutData && !isMember && username?.toLowerCase() !== 'rivalfit' && username?.toLowerCase() !== 'rival') ? (
                 <div className="px-4 pb-6">
                     <div className="bg-muted/10 border border-white/5 border-dashed rounded-[32px] p-8 flex flex-col items-center justify-center text-center gap-4 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
@@ -677,6 +674,33 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             </div>
                         );
                     })()}
+                </div>
+            ) : mediaType === 'membership_activation' ? (
+                <div className="px-4 pb-6">
+                    <div className={clsx(
+                        "rounded-[28px] p-6 md:p-8 flex flex-col items-center justify-center text-center gap-4 relative overflow-hidden border shadow-xl shadow-brand-red/10",
+                        theme === 'dark' ? "bg-black/40 border-brand-red/30" : "bg-white border-brand-red/20 shadow-lg"
+                    )}>
+                        {/* Animated background elements */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10 animate-pulse" />
+                        <div className="absolute bottom-0 left-0 w-32 h-32 bg-brand-red/5 blur-2xl -ml-10 -mb-10 animate-pulse" />
+
+                        <div className="w-20 h-20 rounded-full bg-brand-red/10 flex items-center justify-center mb-1 shadow-glow border border-brand-red/20 relative z-10 animate-in zoom-in duration-500">
+                            <CheckCircle2 className="w-10 h-10 text-brand-red" />
+                        </div>
+                        <div className="relative z-10 space-y-2">
+                            <h3 className="font-heading font-black italic uppercase text-xl md:text-2xl text-white tracking-tighter leading-none">¡MEMBRESÍA ACTIVADA!</h3>
+                            <p className="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-[0.2em] max-w-[300px] mx-auto leading-relaxed">
+                                {caption || `¡Ha comenzado una nueva etapa de entrenamiento!`}
+                            </p>
+                        </div>
+
+                        <div className="relative z-10 flex items-center gap-2 mt-2">
+                            <span className="h-px w-8 bg-brand-red/30" />
+                            <Trophy className="w-4 h-4 text-brand-red" />
+                            <span className="h-px w-8 bg-brand-red/30" />
+                        </div>
+                    </div>
                 </div>
             ) : (image || workoutData) ? (
                 <div className="flex flex-col gap-4">

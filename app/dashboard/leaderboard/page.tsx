@@ -17,7 +17,7 @@ export default async function LeaderboardPage() {
     // Fetch top 10 athletes by XP
     const { data: athletes } = await supabase
         .from('profiles')
-        .select('id, username, full_name, avatar_url, xp_points, level')
+        .select('id, username, full_name, avatar_url, xp_points, level, is_official')
         .order('xp_points', { ascending: false })
         .limit(10);
 
@@ -47,7 +47,7 @@ export default async function LeaderboardPage() {
     return (
         <div className="max-w-4xl mx-auto space-y-8 pb-12">
             {/* Header Section */}
-            <div className="relative p-8 rounded-3xl bg-gradient-to-r from-brand-red/20 via-brand-gray to-brand-gray border border-white/5 overflow-hidden">
+            <div className="relative p-8 rounded-3xl bg-gradient-to-r from-brand-red/20 via-zinc-900 to-zinc-900 border border-white/5 overflow-hidden">
                 <Trophy className="absolute -right-8 -top-8 w-48 h-48 text-brand-red opacity-10 rotate-12" />
                 <div className="relative z-10">
                     <h1 className="text-4xl font-heading font-bold text-white mb-2 uppercase italic tracking-tighter">Salón de la Fama</h1>
@@ -56,71 +56,73 @@ export default async function LeaderboardPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                <div className="bg-brand-gray/40 border border-white/5 p-6 rounded-[32px] flex items-center gap-4 group hover:bg-white/5 transition-colors">
+                <div className="bg-brand-gray/40 border border-border/10 p-6 rounded-[32px] flex items-center gap-4 group hover:bg-white/5 transition-colors">
                     <div className="w-12 h-12 bg-yellow-500/10 rounded-2xl flex items-center justify-center text-yellow-500">
                         <Trophy className="w-6 h-6" />
                     </div>
                     <div>
                         <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest leading-none mb-1">Trofeos Totales</p>
-                        <p className="text-xl font-heading font-black text-white italic">4 Disponibles</p>
+                        <p className="text-xl font-heading font-black text-foreground italic">4 Disponibles</p>
                     </div>
                 </div>
-                <div className="bg-brand-gray/40 border border-white/5 p-6 rounded-[32px] flex items-center gap-4 group hover:bg-white/5 transition-colors">
+                <div className="bg-brand-gray/40 border border-border/10 p-6 rounded-[32px] flex items-center gap-4 group hover:bg-white/5 transition-colors">
                     <div className="w-12 h-12 bg-brand-red/10 rounded-2xl flex items-center justify-center text-brand-red">
                         <Award className="w-6 h-6" />
                     </div>
                     <div>
                         <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest leading-none mb-1">Combate Arena</p>
-                        <p className="text-xl font-heading font-black text-white italic">Duelos Temporada 1</p>
+                        <p className="text-xl font-heading font-black text-foreground italic">Duelos Temporada 1</p>
                     </div>
                 </div>
-                <div className="bg-brand-gray/40 border border-white/5 p-6 rounded-[32px] flex items-center gap-4 group hover:bg-white/5 transition-colors">
+                <div className="bg-brand-gray/40 border border-border/10 p-6 rounded-[32px] flex items-center gap-4 group hover:bg-white/5 transition-colors">
                     <div className="w-12 h-12 bg-blue-500/10 rounded-2xl flex items-center justify-center text-blue-500">
                         <Shield className="w-6 h-6" />
                     </div>
                     <div>
                         <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest leading-none mb-1">Rango Global</p>
-                        <p className="text-xl font-heading font-black text-white italic">Soldado Activo</p>
+                        <p className="text-xl font-heading font-black text-foreground italic">Soldado Activo</p>
                     </div>
                 </div>
             </div>
 
             {/* Your Status (If not in top 1) */}
-            {myProfile && (
-                <div className="bg-brand-red p-[1px] rounded-3xl overflow-hidden shadow-[0_0_30px_rgba(220,38,38,0.2)]">
-                    <div className="bg-brand-gray/90 backdrop-blur-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
-                        <div className="flex items-center gap-6">
-                            <div className="relative">
-                                <div className="w-16 h-16 rounded-full bg-brand-red flex items-center justify-center text-white font-heading font-black text-2xl drop-shadow-glow">
-                                    #{myRank}
+            {
+                myProfile && (
+                    <div className="bg-brand-red p-[1px] rounded-3xl overflow-hidden shadow-[0_0_30px_rgba(220,38,38,0.2)]">
+                        <div className="bg-zinc-900/95 backdrop-blur-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+                            <div className="flex items-center gap-6">
+                                <div className="relative">
+                                    <div className="w-16 h-16 rounded-full bg-brand-red flex items-center justify-center text-white font-heading font-black text-2xl drop-shadow-glow">
+                                        #{myRank}
+                                    </div>
+                                    <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-brand-gray animate-pulse" />
                                 </div>
-                                <div className="absolute -bottom-1 -right-1 bg-green-500 w-4 h-4 rounded-full border-2 border-brand-gray animate-pulse" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-heading font-black text-white italic uppercase">{myProfile.full_name}</h3>
-                                <div className="flex items-center gap-2 mt-1">
-                                    <span className="text-[10px] font-black uppercase text-brand-red bg-brand-red/10 border border-brand-red/20 px-2 py-0.5 rounded tracking-widest">{myProfile.level || 'Recluta'}</span>
-                                    <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">Estado Activo</span>
+                                <div>
+                                    <h3 className="text-xl font-heading font-black text-brand-red italic uppercase">{myProfile.full_name}</h3>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className="text-[10px] font-black uppercase text-brand-red bg-brand-red/10 border border-brand-red/20 px-2 py-0.5 rounded tracking-widest">{myProfile.level || 'Recluta'}</span>
+                                        <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">Estado Activo</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <div className="flex items-center gap-12 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 border-white/5 pt-4 sm:pt-0">
-                            <div className="text-center sm:text-right">
-                                <p className="text-2xl font-heading font-black text-white tabular-nums">{myProfile.xp_points.toLocaleString()}</p>
-                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Tu XP Total</p>
-                            </div>
-                            <div className="text-center sm:text-right">
-                                <p className="text-2xl font-heading font-black text-brand-red italic">{myProfile.level || 'SOLDADO'}</p>
-                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Rango Global</p>
+                            <div className="flex items-center gap-12 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 border-white/5 pt-4 sm:pt-0">
+                                <div className="text-center sm:text-right">
+                                    <p className="text-2xl font-heading font-black text-white tabular-nums">{myProfile.xp_points.toLocaleString()}</p>
+                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Tu XP Total</p>
+                                </div>
+                                <div className="text-center sm:text-right">
+                                    <p className="text-2xl font-heading font-black text-brand-red italic">{myProfile.level || 'SOLDADO'}</p>
+                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Rango Global</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Main Ranking List */}
-            <div className="bg-brand-gray border border-white/5 rounded-3xl overflow-hidden shadow-2xl">
-                <div className="p-6 border-b border-white/5 bg-black/20 flex items-center justify-between">
+            <div className="bg-brand-gray border border-border/10 rounded-3xl overflow-hidden shadow-2xl">
+                <div className="p-6 border-b border-border/10 bg-black/20 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <Users className="w-5 h-5 text-brand-red" />
                         <h2 className="font-heading font-bold text-white uppercase italic tracking-wider">Clasificación Global</h2>
@@ -161,7 +163,7 @@ export default async function LeaderboardPage() {
                                         />
                                     </div>
                                     <div>
-                                        <p className="text-sm lg:text-base text-white font-bold">{athlete.full_name}</p>
+                                        <p className="text-sm lg:text-base text-brand-red font-bold">{athlete.full_name}</p>
                                         <p className="text-xs text-gray-500">@{athlete.username}</p>
                                     </div>
                                 </div>
@@ -178,14 +180,14 @@ export default async function LeaderboardPage() {
                                         <p className="text-xs text-gray-400">Trofeos</p>
                                     </div>
                                     <div className="text-right min-w-[80px]">
-                                        <p className="text-base lg:text-xl font-heading font-extrabold text-white">{athlete.xp_points.toLocaleString()}</p>
+                                        <p className="text-base lg:text-xl font-heading font-extrabold text-foreground">{athlete.xp_points.toLocaleString()}</p>
                                         <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Total XP</p>
                                     </div>
                                 </div>
 
                                 {/* Action */}
                                 <div className="ml-4">
-                                    {athlete.id !== user?.id && (
+                                    {athlete.id !== user?.id && !athlete.is_official && (
                                         <FollowButton targetId={athlete.id} isFollowingInitial={followedIds.has(athlete.id)} />
                                     )}
                                 </div>
@@ -212,6 +214,6 @@ export default async function LeaderboardPage() {
                     Comenzar la siguiente misión
                 </Link>
             </div>
-        </div>
+        </div >
     );
 }

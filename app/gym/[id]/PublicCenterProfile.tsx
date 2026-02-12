@@ -59,6 +59,22 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
     const [showMembershipModal, setShowMembershipModal] = useState(false);
     const [isProcessingMembership, setIsProcessingMembership] = useState(false);
 
+    // Payment Status Params
+    const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            const status = params.get('status');
+            if (status) {
+                setPaymentStatus(status);
+                // Clear status from URL after capturing it
+                const newUrl = window.location.pathname;
+                window.history.replaceState({}, '', newUrl);
+            }
+        }
+    }, []);
+
 
     useEffect(() => {
         setIsMounted(true);
@@ -516,6 +532,42 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                     </>
                 )}
                 <div className={`absolute inset-0 bg-gradient-to-t ${theme === 'dark' ? 'from-black/80' : 'from-gray-50/80'} via-transparent to-transparent`} />
+            </div>
+
+            {/* Payment Status Banners */}
+            <div className="max-w-5xl mx-auto px-4 md:px-8 relative z-50">
+                {paymentStatus === 'success_payment' && (
+                    <div className="bg-green-500 text-white p-4 rounded-2xl mb-6 shadow-xl animate-in fade-in slide-in-from-top-4 duration-500 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                                <CheckCircle2 className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p className="font-black italic uppercase text-sm">¡Pago Completado!</p>
+                                <p className="text-xs opacity-90 font-bold uppercase tracking-widest text-[10px]">Tu membresía se está procesando. Debería estar activa en unos segundos.</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setPaymentStatus(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
+                {paymentStatus === 'canceled_payment' && (
+                    <div className="bg-brand-red text-white p-4 rounded-2xl mb-6 shadow-xl animate-in fade-in slide-in-from-top-4 duration-500 flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                                <X className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p className="font-black italic uppercase text-sm">Pago Cancelado</p>
+                                <p className="text-xs opacity-90 font-bold uppercase tracking-widest text-[10px]">No se ha realizado ningún cargo. Inténtalo de nuevo cuando quieras.</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setPaymentStatus(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
             </div>
 
             <div className="max-w-5xl mx-auto px-4 md:px-8 relative -mt-24 md:-mt-32">

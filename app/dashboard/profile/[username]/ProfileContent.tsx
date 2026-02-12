@@ -70,16 +70,11 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     ) : (
                         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-30 grayscale mix-blend-overlay"></div>
                     )}
-                    {/* Mobile Follow Button - Top Right Overlay */}
-                    {user?.id !== profile.id && !profile.is_official && (
-                        <div className="absolute top-4 right-4 z-30 md:hidden">
-                            <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} />
-                        </div>
-                    )}
+
                     {/* Manifiesto Overlay - Mobile Only - Significantly Smaller & Top Right Corner */}
                     {!profile.is_official && (
-                        <div className="absolute top-4 right-4 z-10 md:hidden max-w-[100px]">
-                            <div className="bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-2 shadow-xl">
+                        <div className="absolute top-1 -right-1 z-[35] md:hidden max-w-[80px] scale-90">
+                            <div className="bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-1.5 shadow-xl">
                                 <h3 className="text-[6px] font-black text-brand-red uppercase tracking-widest mb-1 text-right">Manifiesto</h3>
                                 <p className="text-[8px] text-white font-medium italic leading-tight line-clamp-6 text-right shadow-black drop-shadow-sm keep-white">
                                     "{profile.bio || '...'}"
@@ -196,7 +191,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                 <div className="scale-90 md:scale-100 origin-left">
                                     <DuelButton targetId={profile.id} isRival={isFollowing} />
                                 </div>
-                                <div className="hidden md:block w-32 scale-90 md:scale-100 origin-left">
+                                <div className="w-24 md:w-32 scale-90 md:scale-100 origin-left">
                                     <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
                                 </div>
                             </div>
@@ -313,11 +308,13 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                                         initialLikes={post.likes ? post.likes.length : 0}
                                                         hasLikedInitial={!!hasLiked}
                                                         comments={commentsCount}
+                                                        caption={post.caption}
                                                         highlight={post.workouts ? `Entrenamiento Completado` : undefined}
                                                         workoutData={post.workouts}
                                                         music_url={post.music_url}
                                                         music_title={post.music_title}
                                                         music_artist={post.music_artist}
+                                                        isOfficial={profile.is_official}
                                                     />
                                                 );
                                             })}
@@ -413,6 +410,21 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                         </div>
                                         <span className="text-xs font-bold text-white">{profile.is_official ? 'RIVAL HQ' : (profile.gym_home || 'Agente de Campo')}</span>
                                     </div>
+                                    {!profile.is_official && (
+                                        <div className="flex items-center justify-between py-2 border-b border-white/5">
+                                            <div className="flex items-center gap-3 text-brand-red italic">
+                                                <Calendar className="w-4 h-4" />
+                                                <span className="text-[10px] font-black uppercase text-brand-red">Edad</span>
+                                            </div>
+                                            <span className="text-xs font-bold text-white">
+                                                {profile.birth_date_public ? (
+                                                    profile.birth_date ? `${Math.floor((new Date().getTime() - new Date(profile.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25))} años` : '---'
+                                                ) : (
+                                                    <span className="text-gray-600 flex items-center gap-1"><Lock className="w-3 h-3" /> Privado</span>
+                                                )}
+                                            </span>
+                                        </div>
+                                    )}
                                     <div className="flex items-center justify-between py-2">
                                         <div className="flex items-center gap-3 text-brand-red italic">
                                             <Calendar className="w-4 h-4" />

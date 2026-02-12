@@ -182,7 +182,9 @@ export default function CommunityPage({
                                             </Link>
                                             <div className="flex items-center gap-2">
                                                 <DuelButton targetId={profile.id} isRival={data.followedIds.has(profile.id)} />
-                                                <FollowButton targetId={profile.id} isFollowingInitial={data.followedIds.has(profile.id)} />
+                                                {!profile.is_official && (
+                                                    <FollowButton targetId={profile.id} isFollowingInitial={data.followedIds.has(profile.id)} />
+                                                )}
                                             </div>
                                         </div>
                                     ))}

@@ -30,7 +30,7 @@ function SuggestedUser({ id, name, username, role, avatar, isFollowing, isOffici
                     )}
                 </div>
                 <div className="flex-1">
-                    <p className="text-sm font-bold text-foreground group-hover/link:text-brand-red transition-colors flex items-center gap-1.5">
+                    <p className="text-sm font-bold text-brand-red transition-colors flex items-center gap-1.5">
                         {name}
                         {isOfficial && (
                             <span className="bg-brand-red p-0.5 rounded-full inline-flex">
@@ -48,14 +48,14 @@ function SuggestedUser({ id, name, username, role, avatar, isFollowing, isOffici
 
 function StatCard({ label, value, subtext, icon }: { label: string, value: string, subtext: string, icon: React.ReactNode }) {
     return (
-        <div className="bg-brand-gray/40 border border-white/5 p-3 md:p-6 rounded-[24px] backdrop-blur-md hover:border-brand-red/40 hover:bg-brand-gray/60 transition-all group cursor-pointer h-full flex flex-col justify-between overflow-hidden">
+        <div className="bg-brand-gray/40 border border-border/10 p-3 md:p-6 rounded-[24px] backdrop-blur-md hover:border-brand-red/40 hover:bg-brand-gray/60 transition-all group cursor-pointer h-full flex flex-col justify-between overflow-hidden">
             <div className="flex items-center justify-between mb-2 md:mb-4 gap-2">
-                <div className="text-gray-500 text-[8px] md:text-[10px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] truncate flex-1">{label}</div>
-                <div className="p-1.5 md:p-2 bg-white/5 rounded-lg group-hover:scale-110 group-hover:bg-brand-red/20 transition-all shrink-0">{icon}</div>
+                <div className="text-foreground/60 text-[8px] md:text-[10px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] truncate flex-1">{label}</div>
+                <div className="p-1.5 md:p-2 bg-foreground/5 rounded-lg group-hover:scale-110 group-hover:bg-brand-red/20 transition-all shrink-0">{icon}</div>
             </div>
             <div>
                 <div className={`text-xl md:text-3xl font-heading font-black text-foreground italic tracking-tighter truncate`}>{value}</div>
-                <div className="text-gray-600 text-[8px] md:text-[10px] font-bold uppercase tracking-widest mt-1 opacity-60 group-hover:opacity-100 transition-opacity truncate">{subtext}</div>
+                <div className="text-foreground/40 text-[8px] md:text-[10px] font-bold uppercase tracking-widest mt-1 group-hover:text-foreground/80 transition-opacity truncate">{subtext}</div>
             </div>
         </div>
     )
@@ -70,7 +70,7 @@ function CollapsibleCreatePost({ currentUser, language }: { currentUser: any, la
             {!isOpen ? (
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="w-full bg-brand-gray/30 border border-white/10 rounded-[32px] p-4 flex items-center justify-between group hover:border-brand-red/50 hover:bg-brand-gray/50 transition-all cursor-pointer"
+                    className="w-full bg-brand-gray/30 border border-border/10 rounded-[32px] p-4 flex items-center justify-between group hover:border-brand-red/50 hover:bg-brand-gray/50 transition-all cursor-pointer"
                 >
                     <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full border border-white/10 bg-black/40 overflow-hidden relative shrink-0">
@@ -277,10 +277,10 @@ export default function DashboardHome() {
                         <Flame className="w-3 h-3 fill-current" />
                         {t.dashboard.liveStatus}
                     </div>
-                    <h1 className="text-2xl md:text-5xl font-heading font-black text-white mb-2 md:mb-3 italic uppercase tracking-tight leading-none">
+                    <h1 className="text-2xl md:text-5xl font-heading font-black !text-white mb-2 md:mb-3 italic uppercase tracking-tight leading-none">
                         {t.dashboard.welcome} <span className="text-brand-red">{data.profile?.full_name?.split(' ')[0] || t.dashboard.warrior}</span>
                     </h1>
-                    <p className="text-gray-400 text-xs md:text-lg max-w-2xl font-medium">
+                    <p className="!text-gray-300 text-xs md:text-lg max-w-2xl font-medium">
                         {language === 'es' ? (
                             <>Has registrado <span className="text-white font-bold">{data.workoutCount} sesiones</span> y estás siguiendo a <span className="text-white font-bold">{data.rivalsCount} rivales</span>. {t.dashboard.statsTime}</>
                         ) : (
@@ -303,7 +303,7 @@ export default function DashboardHome() {
                             </h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {data.myGyms.map((gym: any) => (
-                                    <Link key={gym.id} href={`/gym/${gym.id}`} className="group relative overflow-hidden rounded-2xl bg-brand-gray/40 border border-white/5 hover:border-brand-red/50 transition-all p-4 flex items-center gap-4">
+                                    <Link key={gym.id} href={`/gym/${gym.id}`} className="group relative overflow-hidden rounded-2xl bg-brand-gray/40 border border-border/10 hover:border-brand-red/50 transition-all p-4 flex items-center gap-4">
                                         <div className="w-12 h-12 rounded-xl bg-gray-800 border border-white/10 overflow-hidden relative shrink-0">
                                             {gym.logo_url ? (
                                                 <Image src={gym.logo_url} alt={gym.name} fill className="object-cover" />

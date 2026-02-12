@@ -163,7 +163,8 @@ export async function getActiveStories() {
                     id,
                     username,
                     full_name,
-                    avatar_url
+                    avatar_url,
+                    is_official
                 ),
                 story_likes (user_id),
                 story_views (
@@ -214,7 +215,11 @@ export async function getActiveStories() {
             groupedStories[userId].stories.push(enhancedStory)
         })
 
-        return Object.values(groupedStories)
+        return Object.values(groupedStories).sort((a: any, b: any) => {
+            if (a.user.is_official && !b.user.is_official) return -1;
+            if (!a.user.is_official && b.user.is_official) return 1;
+            return 0;
+        })
     } catch (err) {
         console.error("Critical error in getActiveStories:", err)
         return []

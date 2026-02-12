@@ -178,9 +178,9 @@ export default function TrainingPage() {
                     <div className="max-w-xl">
                         <div className="flex items-center gap-2 mb-2">
                             <span className="bg-brand-red text-white text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded">Programa Actual</span>
-                            <span className="text-gray-300 text-xs font-bold uppercase tracking-widest">Semana 4 • Bloque de Hipertrofia</span>
+                            <span className="text-gray-300 text-xs font-bold uppercase tracking-widest !text-gray-300">Semana 4 • Bloque de Hipertrofia</span>
                         </div>
-                        <h1 className="text-4xl md:text-5xl font-heading font-black text-white glow-text">CENTRO DE ENTRENAMIENTO</h1>
+                        <h1 className="text-4xl md:text-5xl font-heading font-black !text-white glow-text">CENTRO DE ENTRENAMIENTO</h1>
                     </div>
                     <Link href="/dashboard/training/session" className="bg-white text-black px-8 py-4 rounded-xl font-bold flex items-center gap-2 hover:bg-brand-red hover:text-white transition-all transform hover:-translate-y-1 shadow-2xl">
                         <Play className="w-5 h-5 fill-current" /> INICIAR SESIÓN
@@ -193,9 +193,9 @@ export default function TrainingPage() {
                 {/* Left Column (Main Focus) */}
                 <div className="lg:col-span-8 space-y-8">
                     {/* Week Calendar */}
-                    <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
+                    <div className="bg-brand-gray/50 border border-border/10 rounded-3xl p-6 backdrop-blur-sm">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-heading font-bold text-white flex items-center gap-2">
+                            <h3 className="font-heading font-bold text-foreground flex items-center gap-2">
                                 <Calendar className="w-5 h-5 text-brand-red" /> Semana Actual
                             </h3>
                             <Link href="/dashboard/training/logs" className="text-xs font-bold text-gray-500 hover:text-white transition-colors flex items-center gap-1">
@@ -244,7 +244,7 @@ export default function TrainingPage() {
                                 <span className="bg-brand-red/20 text-brand-red px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-brand-red/20">
                                     <Zap className="w-3 h-3 fill-current" /> RECOMENDADO POR EL COACH
                                 </span>
-                                <h2 className="text-xl font-heading font-bold text-white uppercase tracking-wider">{activeRoutine.title}</h2>
+                                <h2 className="text-xl font-heading font-bold !text-white uppercase tracking-wider">{activeRoutine.title}</h2>
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 bg-black/40 p-6 rounded-2xl border border-white/5">
@@ -282,7 +282,7 @@ export default function TrainingPage() {
                                         <span className="bg-blue-500/20 text-blue-400 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-blue-500/20">
                                             <Trophy className="w-3 h-3" /> RESULTADO PUBLICADO
                                         </span>
-                                        <h2 className="text-xl font-heading font-bold text-white uppercase tracking-wider">
+                                        <h2 className="text-xl font-heading font-bold !text-white uppercase tracking-wider">
                                             WOD {(publishedResults[0].class?.organization?.name || 'CENTRO')}
                                         </h2>
                                     </div>
@@ -337,7 +337,7 @@ export default function TrainingPage() {
                     {/* Recent Sessions (History) */}
                     <div className="space-y-6">
                         <div className="flex items-center justify-between">
-                            <h3 className="font-heading font-bold text-white uppercase tracking-widest text-sm flex items-center gap-2">
+                            <h3 className="font-heading font-bold text-foreground uppercase tracking-widest text-sm flex items-center gap-2">
                                 <Clock className="w-4 h-4 text-brand-red" /> Actividad Reciente
                             </h3>
                             <Link href="/dashboard/training/logs" className="text-[10px] font-black text-brand-red hover:underline uppercase tracking-widest">
@@ -351,13 +351,13 @@ export default function TrainingPage() {
                                 const maxWeight = w.max_weight_kg || 0;
 
                                 return (
-                                    <div key={idx} className="bg-brand-gray/30 border border-white/5 p-5 rounded-2xl flex items-center justify-between group hover:border-white/10 transition-all">
+                                    <div key={idx} className="bg-brand-gray/30 border border-border/10 p-5 rounded-2xl flex items-center justify-between group hover:border-border/30 transition-all">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 bg-black/40 rounded-xl flex items-center justify-center text-brand-red border border-white/5">
                                                 {w.type === 'class_result' ? <Trophy className="w-6 h-6" /> : <Dumbbell className="w-6 h-6" />}
                                             </div>
                                             <div>
-                                                <h4 className="font-bold text-white text-sm uppercase tracking-tight">{w.title}</h4>
+                                                <h4 className="font-bold text-foreground text-sm uppercase tracking-tight">{w.title}</h4>
                                                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                                                     {new Date(w.display_date).toLocaleDateString()} • {w.type === 'class_result' ? 'Resultado en Centro' : `${Math.floor(w.duration_seconds / 60)} min`} • RPE {w.effort_rpe}
                                                 </p>
@@ -385,14 +385,14 @@ export default function TrainingPage() {
                 {/* Right Column (Progression & Missions) */}
                 <div className="lg:col-span-4 space-y-8">
                     {/* Mission Control */}
-                    <div className="bg-brand-gray border border-white/5 rounded-3xl p-6 relative overflow-hidden">
+                    <div className="bg-brand-gray/40 border border-border/10 rounded-3xl p-6 relative overflow-hidden backdrop-blur-md">
                         <Image
                             src="https://images.unsplash.com/photo-1461896836934-ffe607ba8211?q=80&w=2070&auto=format&fit=crop"
                             alt="Missions"
                             fill
                             className="object-cover opacity-10 absolute inset-0 pointer-events-none"
                         />
-                        <h3 className="font-heading font-bold text-white mb-6 flex items-center gap-2">
+                        <h3 className="font-heading font-bold text-foreground mb-6 flex items-center gap-2">
                             <Target className="w-5 h-5 text-brand-red" /> Control de Misiones
                         </h3>
                         <div className="space-y-6">
@@ -416,8 +416,8 @@ export default function TrainingPage() {
                     </div>
 
                     {/* Personal Best Widget */}
-                    <div className="bg-gradient-to-br from-yellow-600/20 to-brand-gray border border-white/5 rounded-3xl p-6">
-                        <h3 className="font-heading font-bold text-white mb-4 flex items-center gap-2">
+                    <div className="bg-gradient-to-br from-yellow-600/20 to-brand-gray border border-white/10 rounded-3xl p-6">
+                        <h3 className="font-heading font-bold !text-white mb-4 flex items-center gap-2">
                             <Award className="w-5 h-5 text-yellow-500" /> Trofeos Recientes
                         </h3>
                         <div className="space-y-4">
@@ -453,7 +453,7 @@ function StatItem({ icon, label, value }: { icon: React.ReactNode, label: string
             <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                 {icon} {label}
             </div>
-            <p className="text-white font-black text-lg font-heading">{value}</p>
+            <p className="!text-white font-black text-lg font-heading">{value}</p>
         </div>
     )
 }
@@ -484,7 +484,7 @@ function MissionCard({ title, progress, desc, reward, completed }: any) {
         <div className="space-y-2">
             <div className="flex justify-between items-end">
                 <div>
-                    <p className={`text-sm font-bold ${completed ? 'text-green-500' : 'text-white'}`}>{title}</p>
+                    <p className={`text-sm font-bold ${completed ? 'text-green-500' : 'text-foreground'}`}>{title}</p>
                     <p className="text-[10px] text-gray-500">{desc}</p>
                 </div>
                 <span className="text-[10px] font-bold text-brand-red bg-brand-red/10 px-2 py-0.5 rounded">{reward}</span>

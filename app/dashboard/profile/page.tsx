@@ -5,7 +5,7 @@ import { getUserProfile } from "../training/actions";
 import { getUpcomingTrial } from "../gyms/trial-booking-actions";
 
 import { createClient } from "@/utils/supabase/client";
-import { User, Camera, Save, Loader2, Mail, Hash, MapPin, Trophy, Dumbbell, Swords, Award, ExternalLink, TrendingUp, Building2, Smile, Edit2, Move, Check, X, Calendar, LayoutGrid, Settings, Trash2 } from "lucide-react";
+import { User, Camera, Save, Loader2, Mail, Hash, MapPin, Trophy, Dumbbell, Swords, Award, ExternalLink, TrendingUp, Building2, Smile, Edit2, Move, Check, X, Calendar, LayoutGrid, Settings, Trash2, Lock } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -32,6 +32,7 @@ export default function ProfilePage() {
         main_sport: "",
         gym_home: "",
         privacy_setting: "public",
+        birth_date_public: true,
     });
     const [combatStats, setCombatStats] = useState<any>({ wins: 0, losses: 0, draws: 0, total: 0 });
     const [workouts, setWorkouts] = useState<any[]>([]);
@@ -68,6 +69,7 @@ export default function ProfilePage() {
                     main_sport: data.main_sport || "General",
                     gym_home: data.gym_home || "",
                     privacy_setting: data.privacy_setting || "public",
+                    birth_date_public: data.birth_date_public !== false,
                 });
 
                 // Load Combat Stats
@@ -161,6 +163,7 @@ export default function ProfilePage() {
                     main_sport: formData.main_sport,
                     gym_home: formData.gym_home,
                     privacy_setting: formData.privacy_setting,
+                    birth_date_public: formData.birth_date_public,
 
                     featured_rms: featuredRms,
                     updated_at: new Date().toISOString(),
@@ -773,6 +776,57 @@ export default function ProfilePage() {
                                     placeholder="Gimnasio RIVAL HQ"
                                     icon={<MapPin className="w-4 h-4" />}
                                 />
+                            </div>
+
+                            <div className="space-y-4 pt-4 border-t border-white/5">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Privacidad y Seguridad</label>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex items-center justify-between group hover:border-brand-red/30 transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red">
+                                                <Lock className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-white">Perfil Privado</p>
+                                                <p className="text-[10px] text-gray-500 font-bold uppercase">Solo seguidores ven tu actividad</p>
+                                            </div>
+                                        </div>
+                                        <select
+                                            name="privacy_setting"
+                                            value={formData.privacy_setting}
+                                            onChange={handleChange}
+                                            className="bg-transparent text-xs font-black text-brand-red uppercase outline-none cursor-pointer"
+                                        >
+                                            <option value="public" className="bg-black">Público</option>
+                                            <option value="private" className="bg-black">Privado</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex items-center justify-between group hover:border-brand-red/30 transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-8 h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red">
+                                                <Calendar className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-white">Mostrar Edad</p>
+                                                <p className="text-[10px] text-gray-500 font-bold uppercase">Visible en rankings y perfil</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, birth_date_public: !prev.birth_date_public }))}
+                                            className={clsx(
+                                                "w-12 h-6 rounded-full transition-all relative",
+                                                formData.birth_date_public ? "bg-brand-red" : "bg-gray-800"
+                                            )}
+                                        >
+                                            <div className={clsx(
+                                                "absolute top-1 w-4 h-4 bg-white rounded-full transition-all",
+                                                formData.birth_date_public ? "right-1" : "left-1"
+                                            )} />
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="space-y-4 pt-4 border-t border-white/5">

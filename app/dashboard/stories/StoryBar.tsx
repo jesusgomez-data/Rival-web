@@ -848,7 +848,12 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             setActiveStoryIndex(0)
                             recordView(us.stories[0].id)
                         }}
-                        className="w-16 h-16 p-0.5 rounded-full ring-2 ring-brand-red shadow-glow transition-all hover:scale-105 active:scale-95 bg-black"
+                        className={clsx(
+                            "w-16 h-16 p-0.5 rounded-full ring-2 transition-all hover:scale-105 active:scale-95 bg-black relative",
+                            (us.user as any).is_official
+                                ? "ring-brand-red shadow-[0_0_20px_rgba(220,38,38,0.4)]"
+                                : "ring-brand-red/40"
+                        )}
                     >
                         <div className="w-full h-full rounded-full overflow-hidden relative">
                             <Image
@@ -856,8 +861,16 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                 alt={us.user.username} fill className="object-cover"
                             />
                         </div>
+                        {(us.user as any).is_official && (
+                            <div className="absolute -bottom-1 -right-1 bg-brand-red p-1 rounded-full border border-black shadow-lg">
+                                <Trophy className="w-2.5 h-2.5 text-white" />
+                            </div>
+                        )}
                     </button>
-                    <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest truncate max-w-[64px]">
+                    <span className={clsx(
+                        "text-[10px] font-black uppercase tracking-widest truncate max-w-[64px]",
+                        (us.user as any).is_official ? "text-brand-red" : "text-gray-300"
+                    )}>
                         {us.user.username}
                     </span>
                 </div>

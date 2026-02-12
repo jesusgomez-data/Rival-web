@@ -114,6 +114,13 @@ export async function POST(req: Request) {
                             link: `/gym/${centerId}`
                         });
 
+                        // Post to Activity Feed
+                        await supabase.from('posts').insert({
+                            user_id: userId,
+                            media_type: 'membership_activation',
+                            caption: `¡Me he unido a ${gymName} con el plan ${planName}! ⚔️`
+                        });
+
                         // Welcome Email via Resend
                         if (userProfile?.email) {
                             sendWelcomeEmail(

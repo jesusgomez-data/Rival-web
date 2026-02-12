@@ -54,9 +54,9 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
 
     const posts = rawPosts || [];
 
-    // Privacy Check
+    // Privacy Check - Official accounts are always visible
     const privacy = profile.privacy_setting || 'public';
-    const canViewContent = privacy === 'public' || (user && user.id === profile.id) || isFollowing;
+    const canViewContent = profile.is_official || privacy === 'public' || (user && user.id === profile.id) || isFollowing;
 
     return (
         <ProfileContent
