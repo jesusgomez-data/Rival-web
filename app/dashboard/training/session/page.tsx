@@ -12,6 +12,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import { useTheme } from "../../../ThemeContext";
 
+// Helper for real distance calculation (Haversine Formula)
+const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // Earth radius in meters
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Returns distance in meters
+};
+
 export default function SessionPage() {
     return (
         <Suspense fallback={<div className="flex items-center justify-center min-h-[50vh]"><Loader2 className="w-10 h-10 animate-spin text-brand-red" /></div>}>
@@ -61,6 +73,8 @@ function SessionContent() {
     const [isGuided, setIsGuided] = useState<boolean>(!!wodId || searchParams.get('mode') === 'recommendation' || searchParams.get('mode') === 'ai-coach');
     const [guidedCount, setGuidedCount] = useState<number>(0);
     const [userTier, setUserTier] = useState<string>('free');
+    const [gpsEnabled, setGpsEnabled] = useState(false);
+    const lastPosRef = useRef<{ lat: number, lon: number } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -98,6 +112,45 @@ function SessionContent() {
 
     // Running State
     const [runDistance, setRunDistance] = useState<number>(0); // Meters
+
+    // Real-time GPS Tracking Logic
+    useEffect(() => {
+        let watchId: number;
+        if (gpsEnabled && !isPaused && typeof window !== 'undefined' && 'geolocation' in navigator) {
+            watchId = navigator.geolocation.watchPosition(
+                (pos) => {
+                    const { latitude, longitude, accuracy } = pos.coords;
+                    // Skip poor accuracy updates (> 40m)
+                    if (accuracy > 40) return;
+
+                    if (lastPosRef.current) {
+                        const d = calculateDistance(
+                            lastPosRef.current.lat,
+                            lastPosRef.current.lon,
+                            latitude,
+                            longitude
+                        );
+                        // Filter noise (< 1m) and unrealistic speeds (> 25m/s = 90km/h)
+                        if (d > 1 && d < 25) {
+                            setRunDistance(prev => prev + d);
+                        }
+                    }
+                    lastPosRef.current = { lat: latitude, lon: longitude };
+                },
+                (err) => {
+                    console.error("GPS Tracker Error:", err);
+                    setGpsEnabled(false);
+                },
+                { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+            );
+        } else {
+            lastPosRef.current = null;
+        }
+
+        return () => {
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+        };
+    }, [gpsEnabled, isPaused]);
     const [runPace, setRunPace] = useState("0:00"); // Min/km
 
     // Cross Training/Hybrid State
@@ -984,6 +1037,9 @@ function SessionContent() {
                         time={elapsedSeconds}
                         workoutTitle={workoutTitle}
                         setWorkoutTitle={setWorkoutTitle}
+                        isPaused={isPaused}
+                        gpsActive={gpsEnabled}
+                        setGpsActive={setGpsEnabled}
                     />
                 )}
                 {(sportMode === 'cross_training' || sportMode === 'ocr') && (
@@ -1037,7 +1093,16 @@ function SessionContent() {
                                 <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">
                                     Tiempo Total
                                 </p>
-                                <p className="text-xl font-mono font-black text-white">{formatTime(elapsedSeconds)}</p>
+                                <input
+                                    type="text"
+                                    value={formatTime(elapsedSeconds)}
+                                    onChange={(e) => handleManualTimeChange(e.target.value)}
+                                    disabled={!isPaused}
+                                    className={clsx(
+                                        "bg-transparent text-xl font-mono font-black outline-none w-full transition-colors",
+                                        isPaused ? "text-brand-red focus:text-white cursor-edit" : "text-white"
+                                    )}
+                                />
                             </div>
                             <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
                                 <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">
@@ -1741,13 +1806,31 @@ function SportCard({ title, icon, desc, onClick, color, image }: { title: string
 
 /* ================= SPECIFIC VIEWS ================= */
 
-function RunningView({ distance, setDistance, time, workoutTitle, setWorkoutTitle }: { distance: number, setDistance: React.Dispatch<React.SetStateAction<number>>, time: number, workoutTitle?: string, setWorkoutTitle?: (t: string) => void }) {
+function RunningView({
+    distance,
+    setDistance,
+    time,
+    workoutTitle,
+    setWorkoutTitle,
+    isPaused,
+    gpsActive,
+    setGpsActive
+}: {
+    distance: number,
+    setDistance: React.Dispatch<React.SetStateAction<number>>,
+    time: number,
+    workoutTitle?: string,
+    setWorkoutTitle?: (t: string) => void,
+    isPaused: boolean,
+    gpsActive: boolean,
+    setGpsActive: (val: boolean) => void
+}) {
     const { theme } = useTheme();
     const pace = distance > 0 ? (time / 60) / (distance / 1000) : 0;
     const paceMin = Math.floor(pace);
     const paceSec = Math.floor((pace - paceMin) * 60);
 
-    const [gpsActive, setGpsActive] = useState(false);
+
 
     // Update title based on distance milestones
     useEffect(() => {
@@ -1759,17 +1842,7 @@ function RunningView({ distance, setDistance, time, workoutTitle, setWorkoutTitl
         }
     }, [distance]);
 
-    // Mock GPS Logic for demo
-    useEffect(() => {
-        let interval: NodeJS.Timeout;
-        if (gpsActive && !isPausedGlobal) { // Requires passing isPaused state or managing it here
-            interval = setInterval(() => {
-                // Simulate generic running pace (approx 5:00 min/km = ~3.3 m/s)
-                setDistance((d: number) => d + 3.5);
-            }, 1000);
-        }
-        return () => clearInterval(interval);
-    }, [gpsActive, setDistance]);
+    // GPS logic moved to parent SessionContent to persist tracking across views
 
     return (
         <div className="space-y-6 animate-in slide-in-from-bottom-10 fade-in duration-500">
