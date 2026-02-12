@@ -63,54 +63,8 @@ export async function bookTrialClass(classId: string, centerId: string) {
         .eq('id', user.id)
         .single();
 
-    // 5. If not a member, create a Trial Member record automatically using ADMIN privileges
-    if (!memberId) {
-        // Preference: Profile name > Auth user metadata > Username > Placeholder
-        const finalName = profile?.full_name || user.user_metadata?.full_name || profile?.username || 'Atleta Rival';
-        const finalEmail = profile?.email || user.email || `user_${user.id.substring(0, 8)}@rival.app`;
-
-        const { data: newMember, error: createMemberError } = await adminSupabase
-            .from('members')
-            .insert({
-                center_id: centerId,
-                user_id: user.id,
-                full_name: finalName,
-                email: finalEmail,
-                avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url || null,
-                plan: 'trial',
-                status: 'trial',
-                membership_start_date: new Date().toISOString(),
-                membership_end_date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day pass
-            })
-            .select('id')
-            .single();
-
-        if (createMemberError) {
-            console.error("Error creating trial member:", createMemberError);
-            return { error: "No se pudo crear el perfil de prueba. Inténtalo de nuevo." };
-        }
-        memberId = newMember.id;
-    }
-
-    // 6. Enroll in the class (This makes them appear in the attendance list) using ADMIN privileges
-    const { error: enrollError } = await adminSupabase
-        .from('class_enrollments')
-        .insert({
-            class_id: classId,
-            member_id: memberId,
-            attended: false,
-            enrollment_date: new Date().toISOString()
-        });
-
-    if (enrollError) {
-        console.error("Error enrolling in class:", enrollError);
-        // Check if double booking manually if needed, but UI should handle it.
-        return { error: "Error al inscribirse en la clase. Es posible que ya estés inscrito." };
-    }
-
-    // 7. Log the trial request as 'approved' for analytics/history
-    // Use admin client to bypass any user RLS on trial_requests if strict
-    await adminSupabase
+    // 5. Create a PENDING Trial Request (does NOT create member yet)
+    const { error: requestError } = await adminSupabase
         .from('trial_requests')
         .insert({
             user_id: user.id,
@@ -118,8 +72,13 @@ export async function bookTrialClass(classId: string, centerId: string) {
             center_id: classData.center_id,
             class_id: classId,
             scheduled_date: classData.scheduled_time,
-            status: 'approved'
+            status: 'pending' // Corrected: Start as pending
         });
+
+    if (requestError) {
+        console.error("Error creating trial request:", requestError);
+        return { error: "No se pudo procesar la solicitud de prueba." };
+    }
 
     // 8. Get gym details for notifications
     const { data: gym } = await adminSupabase
@@ -135,8 +94,8 @@ export async function bookTrialClass(classId: string, centerId: string) {
         notifications.push({
             user_id: gym.owner_id,
             type: 'trial_booked',
-            title: 'Nueva reserva de prueba confirmada',
-            content: `${profile?.full_name || 'Un usuario'} se ha inscrito a la clase de prueba: ${classData.name}`,
+            title: 'Nueva solicitud de clase de prueba',
+            content: `${profile?.full_name || 'Un usuario'} ha solicitado asistir a la clase: ${classData.name}`,
             link: `/dashboard/gyms/${centerId}/schedule/${classId}`,
             is_read: false
         });
@@ -146,8 +105,8 @@ export async function bookTrialClass(classId: string, centerId: string) {
         notifications.push({
             user_id: gym.head_coach_id,
             type: 'trial_booked',
-            title: 'Nueva reserva de prueba confirmada',
-            content: `${profile?.full_name || 'Un usuario'} se ha inscrito a la clase de prueba: ${classData.name}`,
+            title: 'Nueva solicitud de clase de prueba',
+            content: `${profile?.full_name || 'Un usuario'} ha solicitado asistir a la clase: ${classData.name}`,
             link: `/dashboard/gyms/${centerId}/schedule/${classId}`,
             is_read: false
         });
@@ -157,8 +116,8 @@ export async function bookTrialClass(classId: string, centerId: string) {
     notifications.push({
         user_id: user.id,
         type: 'trial_confirmation',
-        title: '¡Clase de Prueba Confirmada!',
-        content: `Tu clase en ${gym?.name} está agendada para el ${new Date(classData.scheduled_time).toLocaleDateString()} a las ${new Date(classData.scheduled_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`,
+        title: 'Solicitud de Clase de Prueba Enviada',
+        content: `Has solicitado una clase en ${gym?.name} para el ${new Date(classData.scheduled_time).toLocaleDateString()} a las ${new Date(classData.scheduled_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. El centro debe confirmar tu plaza.`,
         link: `/dashboard/profile`,
         is_read: false
     });
@@ -169,7 +128,7 @@ export async function bookTrialClass(classId: string, centerId: string) {
 
     revalidatePath(`/gym/${centerId}`);
     revalidatePath(`/dashboard/profile`); // Revalidate profile to show upcoming trial
-    return { success: true, message: "¡Clase reservada con éxito! Te hemos añadido a la lista." };
+    return { success: true, message: "¡Solicitud enviada con éxito! El centro confirmará tu plaza pronto." };
 }
 
 export async function getUpcomingTrial() {

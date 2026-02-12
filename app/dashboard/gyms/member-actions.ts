@@ -330,45 +330,58 @@ export async function requestMemberPayment(centerId: string, planId: string, use
 export async function approveTrialRequest(centerId: string, requestId: string, userId: string, fullName: string, avatarUrl: string) {
     const admin = createAdminClient();
 
-    const { error: memberError } = await admin
+    // 1. Get Request and Profile Info
+    const [{ data: request }, { data: profile }] = await Promise.all([
+        admin.from('trial_requests').select('class_id').eq('id', requestId).single(),
+        admin.from('profiles').select('email').eq('id', userId).single()
+    ]);
+
+    // 2. Create Member Record
+    const { data: newMember, error: memberError } = await admin
         .from('members')
         .insert({
             center_id: centerId,
             user_id: userId,
             full_name: fullName || 'Athlete',
             avatar_url: avatarUrl || null,
-            email: `user_${userId.substring(0, 8)}@rival.app`,
+            email: profile?.email || `user_${userId.substring(0, 8)}@rival.app`,
             plan: 'trial',
             status: 'trial',
             membership_start_date: new Date().toISOString(),
             membership_end_date: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000).toISOString(),
-        });
+        })
+        .select('id')
+        .maybeSingle();
 
-    if (memberError) {
-        if (memberError.code === '23505') {
-            await admin.from('trial_requests').update({ status: 'approved' }).eq('id', requestId);
-
-            // Notify
-            const { data: org } = await admin.from('organizations').select('name').eq('id', centerId).single();
-            const gymName = org?.name || 'El Centro';
-
-            await createNotification({
-                userId: userId,
-                type: 'trial_approved',
-                title: `¡Solicitud Aceptada en ${gymName}!`,
-                content: `Tu solicitud de prueba ha sido aprobada. Ahora eres miembro oficial. Accede al horario para reservar tus clases.`,
-                link: `/gym/${centerId}`
-            });
-
-            revalidatePath(`/dashboard/gyms/${centerId}/members`);
-            return { success: true };
-        }
+    if (memberError && memberError.code !== '23505') {
         return { error: memberError.message };
     }
 
+    // 3. Get Member ID (either new or existing)
+    let memberId = newMember?.id;
+    if (!memberId) {
+        const { data: existing } = await admin
+            .from('members')
+            .select('id')
+            .eq('center_id', centerId)
+            .eq('user_id', userId)
+            .maybeSingle();
+        memberId = existing?.id;
+    }
+
+    // 4. Enroll in Class if applicable
+    if (memberId && request?.class_id) {
+        await admin.from('class_enrollments').insert({
+            class_id: request.class_id,
+            member_id: memberId,
+            attended: false,
+            enrollment_date: new Date().toISOString()
+        });
+    }
+
+    // 5. Finalize Request and Notify
     await admin.from('trial_requests').update({ status: 'approved' }).eq('id', requestId);
 
-    // Notify the user
     const { data: org } = await admin.from('organizations').select('name').eq('id', centerId).single();
     const gymName = org?.name || 'El Centro';
 
@@ -376,12 +389,13 @@ export async function approveTrialRequest(centerId: string, requestId: string, u
         userId: userId,
         type: 'trial_approved',
         title: `¡Solicitud Aceptada en ${gymName}!`,
-        content: `Tu solicitud de prueba ha sido aprobada. Ahora eres miembro oficial. Accede al horario para reservar tus clases.`,
+        content: `Tu solicitud de prueba ha sido aprobada. Ahora puedes ver tu nombre en la lista de la clase y reservar sesiones.`,
         link: `/gym/${centerId}`
     });
 
     revalidatePath(`/dashboard/gyms/${centerId}/members`);
     revalidatePath('/dashboard/gyms');
+    revalidatePath(`/dashboard/gyms/${centerId}/schedule/[classId]`, 'page');
     return { success: true };
 }
 
