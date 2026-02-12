@@ -165,7 +165,11 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
 
     // Access Logic
     const isOwner = org.owner_id === currentUserId;
-    const isMember = (memberStatus?.status === 'active' || memberStatus?.status === 'trial') || isOwner;
+    const isMember = memberStatus?.status === 'active' || isOwner;
+    const isTrial = memberStatus?.status === 'trial';
+    const hasAccess = isMember || isTrial; // For viewing WODs/Feed
+
+    // ... (Handlers remain the same, ensure they use isMember or isTrial as needed)
 
     // --- HANDLERS ---
 
@@ -246,7 +250,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
         setBookingClassId(classId);
 
         // Use trial booking for non-members, regular enrollment for members
-        const res = isMember
+        const res = (isMember || isTrial)
             ? await enrollInClass(org.id, classId)
             : await bookTrialClass(classId, org.id);
 
@@ -262,7 +266,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
     }
 
     async function handleViewAttendees(classId: string) {
-        if (!isMember) return; // Only members can see who is training
+        if (!hasAccess) return; // Only members or trials can see who is training
         setIsLoadingAttendees(true);
         const list = await getClassAttendees(classId);
         setAttendeesList(list);
@@ -599,7 +603,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                         {following ? <><UserCheck className="w-4 h-4" /> Siguiendo</> : <><UserPlus className="w-4 h-4" /> Seguir</>}
                                     </button>
 
-                                    {!isMember && (
+                                    {!hasAccess && (
                                         <button
                                             onClick={() => setActiveTab('schedule')}
                                             className={`h-10 md:h-12 px-4 md:px-8 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg border ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}
@@ -610,6 +614,11 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                     {isMember && (
                                         <div className="h-10 md:h-12 px-4 md:px-8 rounded-xl bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2">
                                             <CheckCircle2 className="w-4 h-4" /> Miembro Activo
+                                        </div>
+                                    )}
+                                    {isTrial && (
+                                        <div className="h-10 md:h-12 px-4 md:px-8 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                                            <Calendar className="w-4 h-4" /> Atleta en Prueba
                                         </div>
                                     )}
                                 </div>
@@ -675,7 +684,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                 centerId={org.id}
                                 isAdmin={false}
                                 currentUserId={currentUserId}
-                                isMember={isMember}
+                                isMember={hasAccess}
                             />
                         ))}
                     </div>
@@ -695,7 +704,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                     "border rounded-2xl sm:rounded-[1.5rem] overflow-hidden group transition-all duration-500",
                                     bgCard,
                                     isOpen ? "ring-1 ring-brand-red/30 shadow-[0_0_30px_rgba(239,68,68,0.1)]" : "hover:border-white/20",
-                                    !isMember && 'blur-sm select-none pointer-events-none opacity-50'
+                                    !hasAccess && 'blur-sm select-none pointer-events-none opacity-50'
                                 )}>
                                     {/* WOD Header / Trigger */}
                                     <button
