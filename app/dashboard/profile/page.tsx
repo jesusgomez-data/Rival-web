@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { getUserProfile } from "../training/actions";
+import { getUserProfile, deleteProfile } from "../training/actions";
 import { getUpcomingTrial } from "../gyms/trial-booking-actions";
 
 import { createClient } from "@/utils/supabase/client";
-import { User, Camera, Save, Loader2, Mail, Hash, MapPin, Trophy, Dumbbell, Swords, Award, ExternalLink, TrendingUp, Building2, Smile, Edit2, Move, Check, X, Calendar, LayoutGrid, Settings, Trash2, Lock } from "lucide-react";
+import { User, Camera, Save, Loader2, Mail, Hash, MapPin, Trophy, Dumbbell, Swords, Award, ExternalLink, TrendingUp, Building2, Smile, Edit2, Move, Check, X, Calendar, LayoutGrid, Settings, Trash2, Lock, AlertTriangle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,6 +23,7 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [uploadingCover, setUploadingCover] = useState(false);
     const [formData, setFormData] = useState({
@@ -187,6 +188,30 @@ export default function ProfilePage() {
             alert("Error updating profile. Check console.");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleDeleteAccount = async () => {
+        const confirmed = confirm("¿ESTÁS COMPLETAMENTE SEGURO? Esta acción es irreversible. Se borrarán todos tus entrenamientos, récords, fotos y actividad en Rival Fit.");
+
+        if (!confirmed) return;
+
+        const secondConfirmation = confirm("Última advertencia: Perderás todo tu progreso y trofeos. ¿Confirmar baja definitiva?");
+        if (!secondConfirmation) return;
+
+        setIsDeleting(true);
+        try {
+            const res = await deleteProfile();
+            if (res.error) {
+                alert(res.error);
+            } else {
+                router.push("/login");
+            }
+        } catch (error) {
+            console.error("Error deleting account:", error);
+            alert("Error al procesar la solicitud");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -919,10 +944,32 @@ export default function ProfilePage() {
                                     className="bg-white text-black px-6 py-3 md:px-10 md:py-4 rounded-xl font-bold flex items-center gap-2 hover:bg-brand-red hover:text-white transition-all transform hover:-translate-y-1 shadow-2xl disabled:opacity-50 disabled:transform-none text-xs md:text-base w-full md:w-auto justify-center"
                                 >
                                     {saving ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin" /> : <Save className="w-4 h-4 md:w-5 md:h-5" />}
-                                    <span className="uppercase tracking-wider">Guardar</span>
+                                    <span className="uppercase tracking-wider">Guardar Cambios</span>
                                 </button>
                             </div>
                         </form>
+
+                        {/* Danger Zone */}
+                        <div className="mt-12 pt-8 border-t border-white/10">
+                            <div className="flex items-center gap-3 mb-4">
+                                <AlertTriangle className="w-5 h-5 text-red-500" />
+                                <h4 className="text-xs font-black text-red-500 uppercase tracking-[0.3em]">Zona de Peligro</h4>
+                            </div>
+                            <div className="bg-red-500/5 border border-red-500/10 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                                <div className="text-center md:text-left">
+                                    <p className="text-sm font-bold text-white mb-1">Dar de baja mi cuenta</p>
+                                    <p className="text-[10px] text-gray-500 font-bold uppercase">Esto eliminará permanentemente todos tus datos y actividad.</p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={handleDeleteAccount}
+                                    disabled={isDeleting}
+                                    className="px-6 py-3 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl border border-red-500/20 transition-all disabled:opacity-50"
+                                >
+                                    {isDeleting ? "Procesando..." : "Eliminar Cuenta de Rival"}
+                                </button>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Lista de entrenamientos */}
@@ -966,8 +1013,8 @@ export default function ProfilePage() {
                         )}
                     </div>
                 </div>
-            </div >
-        </div >
+            </div>
+        </div>
     );
 }
 

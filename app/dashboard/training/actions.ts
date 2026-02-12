@@ -1064,3 +1064,27 @@ export async function getPublishedResults(limit = 1) {
 
     return data
 }
+
+// 19. Delete Profile (Account Checkout)
+export async function deleteProfile() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'No autorizado' }
+
+    // Deleting the profile will cascade to other tables (workouts, posts, etc)
+    // as per our database cascade constraints.
+    const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', user.id)
+
+    if (error) {
+        console.error('Error al borrar el perfil:', error)
+        return { error: 'Error al eliminar los datos del perfil' }
+    }
+
+    // Sign out the user
+    await supabase.auth.signOut()
+
+    return { success: true }
+}
