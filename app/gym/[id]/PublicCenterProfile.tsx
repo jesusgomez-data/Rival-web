@@ -702,11 +702,27 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
 
                             return (
                                 <div key={wod.id} className={clsx(
-                                    "border rounded-2xl sm:rounded-[1.5rem] overflow-hidden group transition-all duration-500",
+                                    "border rounded-2xl sm:rounded-[1.5rem] overflow-hidden group relative transition-all duration-500",
                                     bgCard,
-                                    isOpen ? "ring-1 ring-brand-red/30 shadow-[0_0_30px_rgba(239,68,68,0.1)]" : "hover:border-white/20",
-                                    !hasAccess && 'blur-sm select-none pointer-events-none opacity-50'
+                                    !hasAccess ? 'bg-muted/10' : 'hover:border-white/20'
                                 )}>
+                                    {!hasAccess && (
+                                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md p-6 text-center">
+                                            <div className="w-16 h-16 rounded-full bg-brand-red/10 flex items-center justify-center mb-4 shadow-glow border border-brand-red/20">
+                                                <Dumbbell className="w-8 h-8 text-brand-red" />
+                                            </div>
+                                            <h3 className="font-heading font-black italic uppercase text-lg text-white mb-2 tracking-tight">WOD Exclusivo</h3>
+                                            <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest max-w-[200px] mb-6">
+                                                Solo los atletas inscritos en {org.name} pueden ver los detalles de los entrenamientos.
+                                            </p>
+                                            <button
+                                                onClick={() => setActiveTab('memberships')}
+                                                className="px-6 py-3 bg-brand-red text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg flex items-center gap-2"
+                                            >
+                                                Ver Planes <ArrowRight className="w-3 h-3" />
+                                            </button>
+                                        </div>
+                                    )}
                                     {/* WOD Header / Trigger */}
                                     <button
                                         onClick={() => toggleWod(wod.id)}

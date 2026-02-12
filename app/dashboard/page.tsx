@@ -120,7 +120,8 @@ export default function DashboardHome() {
         missionProgress: 0,
         missionGoal: 5,
         duels: [],
-        myGyms: []
+        myGyms: [],
+        activeCenterIds: new Set<string>()
     });
     const [activeTab, setActiveTab] = useState('following');
 
@@ -167,7 +168,8 @@ export default function DashboardHome() {
                     missionProgress: missionData?.user_missions?.[0]?.current_value || 0,
                     missionGoal: missionData?.goal_value || 5,
                     duels: duelsData || [],
-                    myGyms: memberships?.map((m: any) => m.organization) || []
+                    myGyms: memberships?.map((m: any) => m.organization) || [],
+                    activeCenterIds: new Set(memberships?.filter((m: any) => m.status === 'active').map((m: any) => m.center_id) || [])
                 }));
             } catch (e) {
                 console.error(e);
@@ -450,6 +452,7 @@ export default function DashboardHome() {
                                             music_title={post.music_title}
                                             music_artist={post.music_artist}
                                             isOfficial={post.profiles?.is_official}
+                                            isMember={data.activeCenterIds.has(post.user_id) || post.user_id === data.currentUser?.id}
                                         />
                                     </div>
                                 ))}

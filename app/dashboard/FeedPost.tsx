@@ -110,6 +110,7 @@ interface FeedPostProps {
     music_url?: string | null;
     music_title?: string | null;
     music_artist?: string | null;
+    isMember?: boolean;
 }
 
 interface Comment {
@@ -127,7 +128,7 @@ interface Comment {
 }
 
 export default function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId, centerName,
-    workoutData, music_url, music_title, music_artist, isOfficial
+    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false
 }: FeedPostProps) {
     const { theme } = useTheme();
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -477,14 +478,30 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                     ) : (
                         <p className={clsx(
                             "text-sm sm:text-base whitespace-pre-wrap font-accent font-medium tracking-tight leading-relaxed",
-                            theme === 'dark' ? "text-gray-100" : "text-black"
+                            theme === 'dark' ? "text-gray-100" : "text-black",
+                            (isOfficial && workoutData && !isMember) && "blur-[2px] select-none pointer-events-none opacity-50"
                         )}>{displayCaption}</p>
                     )}
                 </div>
             )}
 
-            {/* Media Content */}
-            {mediaType === 'pr' ? (
+            {/* Media Content - RESTRICTED IF OFFICIAL AND NO MEMBER */}
+            {(isOfficial && workoutData && !isMember) ? (
+                <div className="px-4 pb-6">
+                    <div className="bg-muted/10 border border-white/5 border-dashed rounded-[32px] p-8 flex flex-col items-center justify-center text-center gap-4 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
+                        <div className="w-16 h-16 rounded-full bg-brand-red/10 flex items-center justify-center mb-1 shadow-glow border border-brand-red/20 relative z-10">
+                            <Dumbbell className="w-8 h-8 text-brand-red" />
+                        </div>
+                        <div className="relative z-10">
+                            <h3 className="font-heading font-black italic uppercase text-lg text-white mb-2 leading-none">Entrenamiento Exclusivo</h3>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-[250px] mx-auto">
+                                Este entrenamiento es solo para atletas de este centro. ¡Inscríbete para verlo!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            ) : mediaType === 'pr' ? (
                 <div className="px-4 pb-6 mt-2">
                     {(() => {
                         let prData: any = {};
