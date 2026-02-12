@@ -167,7 +167,8 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
     const isOwner = org.owner_id === currentUserId;
     const isMember = memberStatus?.status === 'active' || isOwner;
     const isTrial = memberStatus?.status === 'trial';
-    const hasAccess = isMember || isTrial; // For viewing WODs/Feed
+    const hasAccess = isMember; // STRICT: Trial users cannot see WODs or Feed content
+    const canSubscribe = memberStatus?.status !== 'active';
 
     // ... (Handlers remain the same, ensure they use isMember or isTrial as needed)
 
@@ -266,7 +267,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
     }
 
     async function handleViewAttendees(classId: string) {
-        if (!hasAccess) return; // Only members or trials can see who is training
+        if (!isMember) return; // Only active members can see who is training
         setIsLoadingAttendees(true);
         const list = await getClassAttendees(classId);
         setAttendeesList(list);
@@ -280,8 +281,8 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
             return;
         }
 
-        // Check if already a member
-        if (isMember) {
+        // Check if already a member (Trial users CAN subscribe)
+        if (memberStatus?.status === 'active') {
             alert("Ya eres miembro de este centro.");
             return;
         }
@@ -603,7 +604,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                         {following ? <><UserCheck className="w-4 h-4" /> Siguiendo</> : <><UserPlus className="w-4 h-4" /> Seguir</>}
                                     </button>
 
-                                    {!hasAccess && (
+                                    {(!hasAccess && !isTrial) && (
                                         <button
                                             onClick={() => setActiveTab('schedule')}
                                             className={`h-10 md:h-12 px-4 md:px-8 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg border ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}
@@ -618,7 +619,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                     )}
                                     {isTrial && (
                                         <div className="h-10 md:h-12 px-4 md:px-8 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                                            <Calendar className="w-4 h-4" /> Atleta en Prueba
+                                            <Calendar className="w-4 h-4" /> Reserva Realizada
                                         </div>
                                     )}
                                 </div>
@@ -1042,15 +1043,15 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
 
                                         <button
                                             onClick={() => handleSubscribeMembership(plan)}
-                                            disabled={isMember || !currentUserId}
-                                            className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg ${isMember
+                                            disabled={!canSubscribe || !currentUserId}
+                                            className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-lg ${!canSubscribe
                                                 ? 'bg-gray-500/20 text-gray-500 cursor-not-allowed'
                                                 : !currentUserId
                                                     ? 'bg-gray-500/20 text-gray-500 cursor-not-allowed'
                                                     : 'bg-brand-red text-white hover:bg-red-600 hover:scale-105'
                                                 }`}
                                         >
-                                            {isMember ? 'Ya eres miembro' : !currentUserId ? 'Inicia sesión' : 'Suscribirme'}
+                                            {!canSubscribe ? 'Ya eres miembro' : !currentUserId ? 'Inicia sesión' : 'Suscribirme'}
                                         </button>
                                     </div>
                                 ))}
