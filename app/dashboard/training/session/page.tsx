@@ -63,7 +63,7 @@ function SessionContent() {
     const [shareToArena, setShareToArena] = useState(true);
     const [shareToStory, setShareToStory] = useState(false);
     const [showFinishModal, setShowFinishModal] = useState(false);
-    const [rpe, setRpe] = useState<number>(0);
+    const [rpe, setRpe] = useState<number>(5);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [targetDuration, setTargetDuration] = useState<number | null>(null);
@@ -616,7 +616,7 @@ function SessionContent() {
                 title: workoutTitle,
                 startTime: startTime.toISOString(),
                 duration: elapsedSeconds,
-                rpe: rpe,
+                rpe: Math.max(1, Math.min(10, rpe)),
                 sportType: sportMode === 'gym' ? 'Fitness' : (sportMode === 'running' ? 'Running' : (sportMode === 'hybrid' ? 'Hybrid' : (sportMode === 'calisthenics' ? 'Calistenia' : (sportMode === 'ocr' ? 'OCR' : (sportMode === 'other' ? 'Otros' : 'Cross Training'))))),
                 exercises: finalExercises,
                 metrics: {
@@ -1036,7 +1036,10 @@ function SessionContent() {
                         )}
                     </button>
                     <button
-                        onClick={handleFinish}
+                        onClick={() => {
+                            setIsPaused(true);
+                            setShowFinishModal(true);
+                        }}
                         disabled={isSaving}
                         className={clsx("text-white p-3 rounded-xl shadow-glow hover:scale-105 active:scale-95 transition-all",
                             sportMode === 'running' ? 'bg-blue-600' :
@@ -1097,7 +1100,10 @@ function SessionContent() {
                         setWorkoutTitle={setWorkoutTitle}
                         isPaused={isPaused}
                         toggleTimer={toggleTimer}
-                        handleFinish={handleFinish}
+                        handleFinish={() => {
+                            setIsPaused(true);
+                            setShowFinishModal(true);
+                        }}
                         gpsStatus={gpsStatus}
                         setGpsStatus={setGpsStatus}
                     />
