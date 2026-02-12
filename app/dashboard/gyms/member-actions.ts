@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "../notifications-actions";
+import { sendPaymentRequestEmail } from "./email-actions";
 
 // Helper
 const sanitizeDate = (date: string | null | undefined) => {
@@ -318,6 +319,18 @@ export async function requestMemberPayment(centerId: string, planId: string, use
             content: `Tu centro ha solicitado el pago de tu membresía (${plan.name}). Haz clic aquí para completar el proceso de forma segura.`,
             link: session.url!
         });
+
+        // 6. Send Email Notification via Resend
+        const targetEmail = extraData.email || profile.email;
+        if (targetEmail) {
+            sendPaymentRequestEmail(
+                targetEmail,
+                profile.full_name || extraData.fullName || 'Atleta',
+                gymName,
+                plan.name,
+                session.url!
+            ).catch(err => console.error("Failed to send payment email:", err));
+        }
 
         revalidatePath(`/dashboard/gyms/${centerId}/members`);
         return { success: true, checkoutUrl: session.url };
