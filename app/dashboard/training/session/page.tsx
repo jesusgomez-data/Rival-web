@@ -243,6 +243,7 @@ function SessionContent() {
             try {
                 const plan = JSON.parse(decodeURIComponent(searchParams.get('plan')!)) as TrainingPlan;
                 setWorkoutTitle(plan.title);
+                setSportMode(plan.sport as SportMode || 'cross_training');
 
                 // Fetch catalog to enrich with videos
                 getExercises(plan.sport || 'cross_training').then(catalog => {
@@ -940,7 +941,7 @@ function SessionContent() {
                         {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                     </button>
                 </div>
-            </header >
+            </header>
 
             <div className="pt-28 px-4 max-w-2xl mx-auto space-y-8">
                 <div className="sm:hidden text-center mb-6">
@@ -1015,224 +1016,232 @@ function SessionContent() {
                     />
                 )}
 
-                {/* Final Summary Display */}
-                <div className="bg-[#111] border border-white/10 rounded-[40px] p-8 space-y-6">
-                    <div className="flex flex-col gap-1">
-                        <h3 className="text-white font-heading font-black italic text-lg flex items-center gap-2">
-                            <Activity className={clsx("w-5 h-5", themeColor)} />
-                            RESUMEN DE SESIÓN
-                        </h3>
-                        {workoutTitle && workoutTitle !== "Sesión de entrenamiento" && (
-                            <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] ml-7">
-                                {workoutTitle}
-                            </p>
-                        )}
-                    </div>
-
-                    {/* General Time */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="bg-white/5 p-4 rounded-2xl">
-                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">
-                                Tiempo Total
-                            </p>
-                            <p className="text-xl font-mono font-black text-white">{formatTime(elapsedSeconds)}</p>
+                {/* Final Summary Display - Only show when we have content or session is in progress */}
+                {((sportMode === 'cross_training' || sportMode === 'ocr' ? blocks.length > 0 : exercises.length > 0) || elapsedSeconds > 0) && (
+                    <div className="bg-[#111] border border-white/10 rounded-[40px] p-8 space-y-6">
+                        <div className="flex flex-col gap-1">
+                            <h3 className="text-white font-heading font-black italic text-lg flex items-center gap-2">
+                                <Activity className={clsx("w-5 h-5", themeColor)} />
+                                RESUMEN DE SESIÓN
+                            </h3>
+                            {workoutTitle && workoutTitle !== "Sesión de entrenamiento" && (
+                                <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] ml-7">
+                                    {workoutTitle}
+                                </p>
+                            )}
                         </div>
-                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">
-                                Intensidad (RPE)
-                            </p>
-                            <select
-                                value={rpe}
-                                onChange={(e) => setRpe(parseInt(e.target.value))}
-                                className="bg-transparent text-xl font-mono font-black text-brand-red outline-none w-full"
-                            >
-                                <option value="0" className="bg-black text-gray-400">0 - N/A</option>
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(val => (
-                                    <option key={val} value={val} className="bg-black text-white">{val} - {val <= 3 ? 'Ligero' : val <= 6 ? 'Moderado' : val <= 8 ? 'Intenso' : 'Máximo'}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
 
-                    {/* Blocks Summary */}
-                    {(sportMode === 'cross_training' || sportMode === 'ocr') && blocks.length > 0 && (
-                        <div className="space-y-4">
-                            {blocks.map((block: any, i: number) => (
-                                <div key={i} className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                    <div className="flex justify-between items-center mb-2">
-                                        <h4 className="text-white font-bold uppercase text-xs tracking-wider">{block.title || `Bloque ${i + 1}`}</h4>
-                                        <span className={clsx("text-[9px] font-black uppercase px-2 py-1 rounded bg-white/10", themeColor)}>
-                                            {block.type}
-                                        </span>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-2 text-center">
-                                        {block.type === 'fortime' ? (
-                                            <div className="bg-black/20 p-2 rounded-lg">
-                                                <p className="text-[9px] text-gray-500 font-bold uppercase">Tiempo</p>
-                                                <p className="text-white font-mono font-bold">{block.result?.time || '--:--'}</p>
-                                            </div>
-                                        ) : (
-                                            <div className="bg-black/20 p-2 rounded-lg">
-                                                <p className="text-[9px] text-gray-500 font-bold uppercase">Result</p>
-                                                <p className="text-white font-mono font-bold">{block.result?.rounds || 0} rds</p>
-                                            </div>
-                                        )}
-                                        <div className="bg-black/20 p-2 rounded-lg">
-                                            <p className="text-[9px] text-gray-500 font-bold uppercase">Notas</p>
-                                            <p className="text-white font-mono text-xs truncate max-w-[100px] mx-auto">{block.notes || '-'}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {sportMode === 'running' && runDistance > 0 && (
+                        {/* General Time */}
                         <div className="grid grid-cols-2 gap-4">
                             <div className="bg-white/5 p-4 rounded-2xl">
-                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Distancia</p>
-                                <p className="text-xl font-mono font-black text-white">{(runDistance / 1000).toFixed(2)} km</p>
+                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">
+                                    Tiempo Total
+                                </p>
+                                <p className="text-xl font-mono font-black text-white">{formatTime(elapsedSeconds)}</p>
                             </div>
-                            <div className="bg-white/5 p-4 rounded-2xl">
-                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Ritmo Medio</p>
-                                <p className="text-xl font-mono font-black text-white">{(() => {
-                                    const minPerKm = (elapsedSeconds / 60) / (runDistance / 1000);
-                                    const pMin = Math.floor(minPerKm);
-                                    const pSec = Math.floor((minPerKm - pMin) * 60);
-                                    return `${pMin}:${pSec < 10 ? '0' + pSec : pSec}`;
-                                })()} /km</p>
+                            <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">
+                                    Intensidad (RPE)
+                                </p>
+                                <select
+                                    value={rpe}
+                                    onChange={(e) => setRpe(parseInt(e.target.value))}
+                                    className="bg-transparent text-xl font-mono font-black text-brand-red outline-none w-full"
+                                >
+                                    <option value="0" className="bg-black text-gray-400">0 - N/A</option>
+                                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(val => (
+                                        <option key={val} value={val} className="bg-black text-white">{val} - {val <= 3 ? 'Ligero' : val <= 6 ? 'Moderado' : val <= 8 ? 'Intenso' : 'Máximo'}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
-                    )}
-                </div>
 
-                {/* Common Finish Options */}
-                <div className="border-t border-white/5 pt-8 mt-12 bg-white/[0.02] p-6 rounded-[40px] border border-white/5">
-                    <h3 className="text-white font-heading font-black italic text-lg mb-6 flex items-center gap-2">
-                        <Trophy className={clsx("w-5 h-5", themeColor)} />
-                        COMPARTIR VICTORIA
-                    </h3>
-
-                    <div className="space-y-6">
-                        <button
-                            onClick={() => setShareToArena(!shareToArena)}
-                            className={clsx(
-                                "w-full p-2.5 rounded-2xl border flex items-center gap-3 transition-all group",
-                                shareToArena ? bgTheme + " shadow-lg" : "bg-black/40 border-white/5"
-                            )}
-                        >
-                            <div className={clsx("w-8 h-8 rounded-xl flex items-center justify-center transition-colors", shareToArena ? "bg-black/20 text-white" : "bg-white/5 text-gray-500")}>
-                                <Activity className="w-4 h-4" />
-                            </div>
-                            <div className="text-left flex-1">
-                                <p className={clsx("font-black text-[10px] uppercase italic", shareToArena ? "text-white" : "text-gray-500")}>Publicar en Arena</p>
-                            </div>
-                            <div className={clsx("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all", shareToArena ? "border-transparent bg-white text-black" : "border-white/10")}>
-                                {shareToArena && <CheckCircle className="w-3 h-3" />}
-                            </div>
-                        </button>
-
-                        <div>
-                            <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mb-3 ml-2">Evidencia Visual (Opcional)</p>
-                            <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
-                                <input
-                                    type="file"
-                                    ref={fileInputRef}
-                                    onChange={handleImageUpload}
-                                    className="hidden"
-                                    accept="image/*,video/*"
-                                />
-
-                                <button
-                                    onClick={() => fileInputRef.current?.click()}
-                                    disabled={isUploading}
-                                    className={clsx(
-                                        "w-24 h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 shrink-0 transition-all group",
-                                        isUploading ? "border-brand-red/50 bg-brand-red/5" : "border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30"
-                                    )}
-                                >
-                                    {isUploading ? (
-                                        <Loader2 className="w-8 h-8 animate-spin text-brand-red" />
-                                    ) : (
-                                        <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-brand-red group-hover:text-white transition-colors">
-                                            <Plus className="w-5 h-5" />
+                        {/* Blocks Summary */}
+                        {(sportMode === 'cross_training' || sportMode === 'ocr') && blocks.length > 0 && (
+                            <div className="space-y-4">
+                                {blocks.map((block: any, i: number) => (
+                                    <div key={i} className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                        <div className="flex justify-between items-center mb-2">
+                                            <h4 className="text-white font-bold uppercase text-xs tracking-wider">{block.title || `Bloque ${i + 1}`}</h4>
+                                            <span className={clsx("text-[9px] font-black uppercase px-2 py-1 rounded bg-white/10", themeColor)}>
+                                                {block.type}
+                                            </span>
                                         </div>
-                                    )}
-                                    <span className="text-[9px] font-black uppercase text-gray-500 group-hover:text-gray-300 transition-colors">{isUploading ? 'Subiendo...' : 'Subir Foto'}</span>
-                                </button>
-
-                                {imageUrl && (
-                                    <div className="w-24 h-24 rounded-2xl border border-white/20 relative overflow-hidden shrink-0 group animate-in zoom-in duration-300">
-                                        <Image src={imageUrl} alt="Preview" fill className="object-cover" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
-                                        <button
-                                            onClick={() => setImageUrl(null)}
-                                            className="absolute top-1 right-1 p-1.5 bg-black/60 backdrop-blur-md rounded-lg text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </button>
-                                        <div className="absolute bottom-2 left-2">
-                                            <p className="text-[8px] font-black uppercase text-white bg-brand-red px-1.5 py-0.5 rounded">Media</p>
+                                        <div className="grid grid-cols-2 gap-2 text-center">
+                                            {block.type === 'fortime' ? (
+                                                <div className="bg-black/20 p-2 rounded-lg">
+                                                    <p className="text-[9px] text-gray-500 font-bold uppercase">Tiempo</p>
+                                                    <p className="text-white font-mono font-bold">{block.result?.time || '--:--'}</p>
+                                                </div>
+                                            ) : (
+                                                <div className="bg-black/20 p-2 rounded-lg">
+                                                    <p className="text-[9px] text-gray-500 font-bold uppercase">Result</p>
+                                                    <p className="text-white font-mono font-bold">{block.result?.rounds || 0} rds</p>
+                                                </div>
+                                            )}
+                                            <div className="bg-black/20 p-2 rounded-lg">
+                                                <p className="text-[9px] text-gray-500 font-bold uppercase">Notas</p>
+                                                <p className="text-white font-mono text-xs truncate max-w-[100px] mx-auto">{block.notes || '-'}</p>
+                                            </div>
                                         </div>
                                     </div>
-                                )}
+                                ))}
+                            </div>
+                        )}
+
+                        {sportMode === 'running' && runDistance > 0 && (
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-white/5 p-4 rounded-2xl">
+                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Distancia</p>
+                                    <p className="text-xl font-mono font-black text-white">{(runDistance / 1000).toFixed(2)} km</p>
+                                </div>
+                                <div className="bg-white/5 p-4 rounded-2xl">
+                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Ritmo Medio</p>
+                                    <p className="text-xl font-mono font-black text-white">{(() => {
+                                        const minPerKm = (elapsedSeconds / 60) / (runDistance / 1000);
+                                        const pMin = Math.floor(minPerKm);
+                                        const pSec = Math.floor((minPerKm - pMin) * 60);
+                                        return `${pMin}:${pSec < 10 ? '0' + pSec : pSec}`;
+                                    })()} /km</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Common Finish Options - Only show when we have content */}
+                {((sportMode === 'cross_training' || sportMode === 'ocr' ? blocks.length > 0 : exercises.length > 0) || elapsedSeconds > 0) && (
+                    <>
+                        <div className="border-t border-white/5 pt-8 mt-12 bg-white/[0.02] p-6 rounded-[40px] border border-white/5">
+                            <h3 className="text-white font-heading font-black italic text-lg mb-6 flex items-center gap-2">
+                                <Trophy className={clsx("w-5 h-5", themeColor)} />
+                                COMPARTIR VICTORIA
+                            </h3>
+
+                            <div className="space-y-6">
+                                <button
+                                    onClick={() => setShareToArena(!shareToArena)}
+                                    className={clsx(
+                                        "w-full p-2.5 rounded-2xl border flex items-center gap-3 transition-all group",
+                                        shareToArena ? bgTheme + " shadow-lg" : "bg-black/40 border-white/5"
+                                    )}
+                                >
+                                    <div className={clsx("w-8 h-8 rounded-xl flex items-center justify-center transition-colors", shareToArena ? "bg-black/20 text-white" : "bg-white/5 text-gray-500")}>
+                                        <Activity className="w-4 h-4" />
+                                    </div>
+                                    <div className="text-left flex-1">
+                                        <p className={clsx("font-black text-[10px] uppercase italic", shareToArena ? "text-white" : "text-gray-500")}>Publicar en Arena</p>
+                                    </div>
+                                    <div className={clsx("w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all", shareToArena ? "border-transparent bg-white text-black" : "border-white/10")}>
+                                        {shareToArena && <CheckCircle className="w-3 h-3" />}
+                                    </div>
+                                </button>
+
+                                <div>
+                                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mb-3 ml-2">Evidencia Visual (Opcional)</p>
+                                    <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar">
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleImageUpload}
+                                            className="hidden"
+                                            accept="image/*,video/*"
+                                        />
+
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={isUploading}
+                                            className={clsx(
+                                                "w-24 h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 shrink-0 transition-all group",
+                                                isUploading ? "border-brand-red/50 bg-brand-red/5" : "border-white/10 bg-white/5 hover:bg-white/10 hover:border-white/30"
+                                            )}
+                                        >
+                                            {isUploading ? (
+                                                <Loader2 className="w-8 h-8 animate-spin text-brand-red" />
+                                            ) : (
+                                                <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-brand-red group-hover:text-white transition-colors">
+                                                    <Plus className="w-5 h-5" />
+                                                </div>
+                                            )}
+                                            <span className="text-[9px] font-black uppercase text-gray-500 group-hover:text-gray-300 transition-colors">{isUploading ? 'Subiendo...' : 'Subir Foto'}</span>
+                                        </button>
+
+                                        {imageUrl && (
+                                            <div className="w-24 h-24 rounded-2xl border border-white/20 relative overflow-hidden shrink-0 group animate-in zoom-in duration-300">
+                                                <Image src={imageUrl} alt="Preview" fill className="object-cover" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60" />
+                                                <button
+                                                    onClick={() => setImageUrl(null)}
+                                                    className="absolute top-1 right-1 p-1.5 bg-black/60 backdrop-blur-md rounded-lg text-white opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                                <div className="absolute bottom-2 left-2">
+                                                    <p className="text-[8px] font-black uppercase text-white bg-brand-red px-1.5 py-0.5 rounded">Media</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
+                        <div className="pb-12">
+                            <button
+                                onClick={handleFinish}
+                                className={clsx(
+                                    "w-full py-6 rounded-[32px] text-white font-heading font-black italic text-2xl uppercase tracking-tighter hover:scale-[1.02] active:scale-95 transition-all shadow-glow flex items-center justify-center gap-3",
+                                    sportMode === 'running' ? 'bg-blue-600' :
+                                        sportMode === 'hybrid' ? 'bg-yellow-600' :
+                                            sportMode === 'cross_training' ? 'bg-orange-600' :
+                                                sportMode === 'ocr' ? 'bg-emerald-600' :
+                                                    sportMode === 'other' ? 'bg-gray-600' : 'bg-brand-red'
+                                )}
+                            >
+                                <Save className="w-6 h-6" /> FINALIZAR SESIÓN
+                            </button>
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* Mobile Fixed Controls - Only show when session is active or setup is complete */}
+            {((sportMode === 'cross_training' || sportMode === 'ocr' ? blocks.length > 0 : true) || elapsedSeconds > 0) && (
+                <div className="sm:hidden fixed bottom-0 inset-x-0 z-[250] bg-[#0a0a0a]/90 backdrop-blur-2xl border-t border-white/10 p-5 pb-10 animate-in slide-in-from-bottom duration-500">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={toggleTimer}
+                            className={clsx(
+                                "flex-1 py-4 rounded-2xl transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest text-sm",
+                                isPaused ? "bg-white text-black shadow-white/10 shadow-lg" : "bg-white/10 text-white"
+                            )}
+                        >
+                            {countdown !== null ? (
+                                <span className="text-xl font-black text-brand-red animate-ping">{countdown}</span>
+                            ) : isPaused ? (
+                                <><Play className="w-5 h-5 fill-current" /> Reanudar</>
+                            ) : (
+                                <><Pause className="w-5 h-5 fill-current" /> Pausa</>
+                            )}
+                        </button>
+                        <button
+                            onClick={handleFinish}
+                            disabled={isSaving}
+                            className={clsx(
+                                "p-4 rounded-2xl shadow-glow transition-all flex items-center justify-center",
+                                sportMode === 'running' ? 'bg-blue-600' :
+                                    sportMode === 'hybrid' ? 'bg-yellow-600' :
+                                        sportMode === 'cross_training' ? 'bg-orange-600' :
+                                            sportMode === 'ocr' ? 'bg-emerald-600' :
+                                                sportMode === 'other' ? 'bg-gray-600' : 'bg-brand-red'
+                            )}
+                        >
+                            {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-6 h-6 text-white" />}
+                        </button>
                     </div>
                 </div>
-
-                <div className="pb-12">
-                    <button
-                        onClick={handleFinish}
-                        className={clsx(
-                            "w-full py-6 rounded-[32px] text-white font-heading font-black italic text-2xl uppercase tracking-tighter hover:scale-[1.02] active:scale-95 transition-all shadow-glow flex items-center justify-center gap-3",
-                            sportMode === 'running' ? 'bg-blue-600' :
-                                sportMode === 'hybrid' ? 'bg-yellow-600' :
-                                    sportMode === 'cross_training' ? 'bg-orange-600' :
-                                        sportMode === 'ocr' ? 'bg-emerald-600' :
-                                            sportMode === 'other' ? 'bg-gray-600' : 'bg-brand-red'
-                        )}
-                    >
-                        <Save className="w-6 h-6" /> FINALIZAR SESIÓN
-                    </button>
-                </div>
-            </div>
-
-            {/* Mobile Fixed Controls */}
-            <div className="sm:hidden fixed bottom-0 inset-x-0 z-[250] bg-[#0a0a0a]/90 backdrop-blur-2xl border-t border-white/10 p-5 pb-10 animate-in slide-in-from-bottom duration-500">
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={toggleTimer}
-                        className={clsx(
-                            "flex-1 py-4 rounded-2xl transition-all flex items-center justify-center gap-3 font-black uppercase tracking-widest text-sm",
-                            isPaused ? "bg-white text-black shadow-white/10 shadow-lg" : "bg-white/10 text-white"
-                        )}
-                    >
-                        {countdown !== null ? (
-                            <span className="text-xl font-black text-brand-red animate-ping">{countdown}</span>
-                        ) : isPaused ? (
-                            <><Play className="w-5 h-5 fill-current" /> Reanudar</>
-                        ) : (
-                            <><Pause className="w-5 h-5 fill-current" /> Pausa</>
-                        )}
-                    </button>
-                    <button
-                        onClick={handleFinish}
-                        disabled={isSaving}
-                        className={clsx(
-                            "p-4 rounded-2xl shadow-glow transition-all flex items-center justify-center",
-                            sportMode === 'running' ? 'bg-blue-600' :
-                                sportMode === 'hybrid' ? 'bg-yellow-600' :
-                                    sportMode === 'cross_training' ? 'bg-orange-600' :
-                                        sportMode === 'ocr' ? 'bg-emerald-600' :
-                                            sportMode === 'other' ? 'bg-gray-600' : 'bg-brand-red'
-                        )}
-                    >
-                        {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-6 h-6 text-white" />}
-                    </button>
-                </div>
-            </div>
-        </div >
+            )}
+        </div>
     );
 }
 
@@ -1995,13 +2004,14 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
 
     // Initial State Check (Moved here to avoid Hook Violation)
     if (blocks.length === 0) {
-        if (!isOCR) {
-            return <FreeTrainingWizard onComplete={(block: any) => {
-                setBlocks([block]);
-                setActiveBlockIndex(0);
+        return <FreeTrainingWizard onComplete={(block: any) => {
+            setBlocks([block]);
+            setActiveBlockIndex(0);
+            // Si el bloque es de tipo 'other', es probable que quieran añadir ejercicios inmediatamente
+            if (block.type === 'other') {
                 setTimeout(() => setShowAddModal(true), 300);
-            }} />;
-        }
+            }
+        }} />;
 
         // If OCR/CrossTraining and no blocks (e.g. loading or error), show loader
         return (
@@ -3400,7 +3410,7 @@ function FreeTrainingWizard({ onComplete }: { onComplete: (block: any) => void }
         { id: 'amrap', label: 'AMRAP', desc: 'As Many Rounds As Possible.', icon: <RefreshCw className={clsx("w-8 h-8", theme === 'dark' ? "text-white" : "text-black")} /> },
         { id: 'emom', label: 'EMOM', desc: 'Every Minute On the Minute.', icon: <Clock className={clsx("w-8 h-8", theme === 'dark' ? "text-white" : "text-black")} /> },
         { id: 'tabata', label: 'Tabata', desc: 'Intervalos de Alta Intensidad (20s/10s).', icon: <Zap className={clsx("w-8 h-8", theme === 'dark' ? "text-white" : "text-black")} /> },
-        { id: 'other', label: 'Otro / Mix', desc: 'Estructura personalizada o libre.', icon: <List className={clsx("w-8 h-8", theme === 'dark' ? "text-white" : "text-black")} /> },
+        { id: 'other', label: 'Libre / Mix', desc: 'Añadir ejercicios sin temporizador o personalizados.', icon: <Plus className={clsx("w-8 h-8", theme === 'dark' ? "text-white" : "text-black")} /> },
     ];
 
     const handleTypeSelect = (t: string) => {
