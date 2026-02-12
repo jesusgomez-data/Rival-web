@@ -47,14 +47,22 @@ export default function UserMediaGallery({ userId, limit }: { userId: string, li
                     {(limit ? mediaItems.slice(0, limit) : mediaItems).map((item, index) => (
                         <div
                             key={item.id}
-                            className="relative aspect-square bg-gray-900 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity border border-white/5"
+                            className="relative aspect-square bg-gray-900 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity border border-white/5 group"
                             onClick={() => setLightboxIndex(index)}
                         >
                             {item.media_type === 'video' ? (
                                 <div className="w-full h-full flex items-center justify-center">
-                                    <video src={item.media_url} className="w-full h-full object-cover" />
-                                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                                        <Play className="w-6 h-6 text-white fill-white" />
+                                    <video
+                                        src={item.media_url}
+                                        className="w-full h-full object-cover"
+                                        autoPlay
+                                        loop
+                                        playsInline
+                                        muted
+                                        preload="auto"
+                                    />
+                                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center group-hover:bg-transparent transition-colors">
+                                        <Play className="w-6 h-6 text-white fill-white opacity-50" />
                                     </div>
                                 </div>
                             ) : (

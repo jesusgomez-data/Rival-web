@@ -71,12 +71,12 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-30 grayscale mix-blend-overlay"></div>
                     )}
 
-                    {/* Manifiesto Overlay - Mobile Only - Significantly Smaller & Top Right Corner */}
+                    {/* Manifiesto Overlay - Mobile Only - Lower Right Corner as requested */}
                     {!profile.is_official && (
-                        <div className="absolute top-1 -right-1 z-[35] md:hidden max-w-[80px] scale-90">
-                            <div className="bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-1.5 shadow-xl">
-                                <h3 className="text-[6px] font-black text-brand-red uppercase tracking-widest mb-1 text-right">Manifiesto</h3>
-                                <p className="text-[8px] text-white font-medium italic leading-tight line-clamp-6 text-right shadow-black drop-shadow-sm keep-white">
+                        <div className="absolute top-[110px] right-2 z-[35] md:hidden max-w-[100px]">
+                            <div className="bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-2 shadow-xl">
+                                <h3 className="text-[7px] font-black text-brand-red uppercase tracking-widest mb-1 text-right">Manifiesto</h3>
+                                <p className="text-[9px] text-white font-medium italic leading-tight line-clamp-6 text-right shadow-black drop-shadow-sm keep-white">
                                     "{profile.bio || '...'}"
                                 </p>
                             </div>

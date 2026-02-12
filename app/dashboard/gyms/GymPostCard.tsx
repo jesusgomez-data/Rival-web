@@ -280,10 +280,15 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                                 <video
                                     src={post.image_urls[0]}
                                     className="w-full max-h-[600px] object-contain bg-black"
+                                    autoPlay
+                                    muted
+                                    loop
+                                    playsInline
+                                    preload="auto"
                                 />
-                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-transparent transition-colors">
                                     <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-glow">
-                                        <Play className="w-5 h-5 text-white fill-white ml-1" />
+                                        <Play className="w-5 h-5 text-white fill-white ml-1 opacity-50" />
                                     </div>
                                 </div>
                             </div>

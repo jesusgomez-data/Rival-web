@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rival Fit - Beta Launch Premium Promo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,900;1,900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --brand-red: #dc2626;
+            --brand-red-dark: #b91c1c;
+            --brand-black: #0a0a0a;
+            --brand-gray: #171717;
+        }
+
+        body {
+            margin: 0;
+            padding: 40px;
+            background-color: #050505;
+            font-family: 'Inter', sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .canvas-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        /* --- PROMO CARD (9:16 Aspect Ratio) --- */
+        #promo-card {
+            width: 500px;
+            height: 888px;
+            background: linear-gradient(135deg, #0a0a0a 0%, #050505 100%);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 80px 40px;
+            border-radius: 40px;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Tactical Corners */
+        #promo-card::before,
+        #promo-card::after {
+            content: '';
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--brand-red);
+            opacity: 0.2;
+        }
+
+        #promo-card::before {
+            top: 30px;
+            left: 30px;
+            border-right: 0;
+            border-bottom: 0;
+        }
+
+        #promo-card::after {
+            bottom: 30px;
+            right: 30px;
+            border-left: 0;
+            border-top: 0;
+        }
+
+        /* Background Effects */
+        .glow-top {
+            position: absolute;
+            top: -100px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.25) 0%, transparent 70%);
+            z-index: 1;
+            filter: blur(40px);
+        }
+
+        .honeycomb {
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cpath fill='%231a1a1a' fill-opacity='0.4' d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.9l11-6.35 11 6.35v12.7l-11 6.35-11-6.35V17.9z'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            opacity: 0.3;
+            z-index: 0;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Top Icon (The "R" part of our logo) */
+        .top-icon {
+            width: 160px;
+            height: 160px;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.6));
+            transform: scale(1.1);
+        }
+
+        /* RIVAL FIT Logo Text */
+        .logo-text {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 88px;
+            font-weight: 900;
+            font-style: italic;
+            text-transform: uppercase;
+            letter-spacing: -0.06em;
+            margin-bottom: 8px;
+            filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
+        }
+
+        .text-rival {
+            color: white;
+        }
+
+        .text-fit {
+            color: var(--brand-red);
+        }
+
+        .tagline {
+            font-size: 14px;
+            font-weight: 900;
+            letter-spacing: 0.6em;
+            color: white;
+            opacity: 0.5;
+            margin-bottom: 80px;
+            text-indent: 0.6em;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+
+        /* Beta Launch Info Box */
+        .info-box {
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.02) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 45px 30px;
+            border-radius: 40px;
+            text-align: center;
+            margin-bottom: auto;
+            width: 85%;
+            box-shadow: inset 0 0 20px rgba(255, 255, 255, 0.02);
+        }
+
+        .beta-launch {
+            font-size: 52px;
+            font-weight: 900;
+            font-style: italic;
+            text-transform: uppercase;
+            color: white;
+            line-height: 0.9;
+            margin-bottom: 15px;
+            letter-spacing: -0.02em;
+        }
+
+        .ya-disponible {
+            font-size: 16px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.4em;
+            color: var(--brand-red);
+        }
+
+        /* CTA Button */
+        .cta-button {
+            width: 100%;
+            background: linear-gradient(to right, var(--brand-red), #b91c1c);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 32px;
+            font-weight: 900;
+            font-style: italic;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            color: white;
+            box-shadow: 0 25px 50px rgba(220, 38, 38, 0.4);
+            margin-bottom: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .cta-button::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transform: skewX(-25deg);
+        }
+
+        .footer-url {
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.4em;
+            color: white;
+            opacity: 0.3;
+            text-transform: uppercase;
+        }
+
+        /* Controls */
+        .download-btn {
+            background: var(--brand-red);
+            color: white;
+            border: none;
+            padding: 18px 45px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 20px rgba(220, 38, 38, 0.2);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(220, 38, 38, 0.4);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="canvas-container">
+        <div id="promo-card">
+            <div class="honeycomb"></div>
+            <div class="glow-top"></div>
+
+            <div class="content">
+                <!-- Top Icon (The official "R" logo) -->
+                <svg class="top-icon" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(38.4, -40) scale(0.85)">
+                        <path
+                            d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z"
+                            fill="#DC2626" />
+                        <path d="M160 100L145 310H220L235 100H160Z" fill="#991B1B" />
+                    </g>
+                </svg>
+
+                <div class="logo-text">
+                    <span class="text-rival">RIVAL</span>
+                    <span class="text-fit">FIT</span>
+                </div>
+
+                <div class="tagline">LIBERA TU POTENCIAL</div>
+
+                <div class="info-box">
+                    <div class="beta-launch">BETA LAUNCH</div>
+                    <div class="ya-disponible">YA DISPONIBLE</div>
+                </div>
+
+                <div class="cta-button">
+                    ÚNETE AHORA
+                </div>
+
+                <div class="footer-url">RIVALFIT.APP</div>
+            </div>
+        </div>
+
+        <button class="download-btn" onclick="download()">Generar Imagen Premium PNG</button>
+    </div>
+
+    <script>
+        function download() {
+            const element = document.getElementById('promo-card');
+            html2canvas(element, {
+                scale: 3,
+                backgroundColor: '#0a0a0a',
+                logging: false,
+                useCORS: true
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'rival-fit-beta-premium.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rival Fit - Invitación Beta</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Teko:wght@300;400;500;600;700&family=Inter:wght@400;700;900&display=swap"
+        rel="stylesheet">
+    <style>
+        /* Custom Font Setup */
+        .font-heading {
+            font-family: 'Teko', sans-serif;
+        }
+
+        .font-body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Custom Colors */
+        .bg-brand-black {
+            background-color: #050505;
+        }
+
+        .text-brand-red {
+            color: #DC2626;
+        }
+
+        .bg-brand-red {
+            background-color: #DC2626;
+        }
+
+        .border-brand-red {
+            border-color: #DC2626;
+        }
+
+        /* Animations */
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(220, 38, 38, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 40px rgba(220, 38, 38, 0.7);
+            }
+        }
+
+        .animate-pulse-glow {
+            animation: pulse-glow 3s infinite;
+        }
+
+        @keyframes fade-in-up {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .animate-fade-in {
+            animation: fade-in-up 0.8s ease-out forwards;
+        }
+
+        /* Hexagon Background */
+        .hex-bg {
+            background-color: #050505;
+            background-image:
+                radial-gradient(circle at 50% 0%, #DC262615 0%, transparent 50%),
+                radial-gradient(circle at 50% 100%, #DC262615 0%, transparent 50%),
+                url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60 4.02 45V15z' fill='none' stroke='%23ffffff' stroke-opacity='0.03' stroke-width='1'/%3E%3C/svg%3E");
+            background-size: 100% 100%, 100% 100%, 30px 30px;
+        }
+    </style>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+</head>
+
+<body class="bg-black text-white min-h-screen flex flex-col items-center justify-center p-4 gap-8">
+
+    <!-- Card Container (Fixed User Requested Style) -->
+    <div id="capture-area"
+        class="relative w-full max-w-[400px] aspect-[1/1.6] bg-brand-black rounded-3xl overflow-hidden shadow-2xl border border-white/10 flex flex-col items-center justify-center text-center p-8 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]">
+
+        <!-- Glows -->
+        <div
+            class="absolute top-0 inset-x-0 h-32 bg-gradient-to-b from-brand-red/20 to-transparent pointer-events-none">
+        </div>
+        <div
+            class="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-brand-red/20 to-transparent pointer-events-none">
+        </div>
+
+        <!-- Content -->
+
+        <!-- R Logo (SVG Path Approximation) -->
+        <div class="mb-6 relative z-10 w-32 h-32 flex items-center justify-center">
+            <div class="absolute inset-0 bg-brand-red/20 blurred rounded-full blur-xl"></div>
+            <!-- Simulated R Logo with CSS/SVG -->
+            <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                    d="M25 15 H65 C80 15 90 25 85 50 C80 75 60 75 50 75 L35 75 L35 90 L20 90 L20 15 Z M35 30 L35 60 L50 60 C60 60 70 60 72 45 C74 30 65 30 55 30 L35 30 Z"
+                    fill="#DC2626" />
+                <path d="M50 60 L75 90 L55 90 L35 60 Z" fill="#DC2626" />
+            </svg>
+        </div>
+
+        <h1
+            class="font-heading text-8xl font-black text-white italic leading-none relative z-10 drop-shadow-lg tracking-tighter">
+            RIVAL <span class="text-brand-red">FIT</span>
+        </h1>
+
+        <p class="font-body text-gray-400 font-bold uppercase tracking-[0.4em] text-xs mt-2 relative z-10">
+            Libera tu potencial
+        </p>
+
+        <div class="mt-12 relative z-10">
+            <div
+                class="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-6 shadow-xl transform hover:scale-105 transition-transform duration-300">
+                <p class="font-heading text-4xl text-white font-black italic uppercase leading-none">BETA LAUNCH</p>
+                <p class="font-body text-[10px] text-brand-red font-bold uppercase tracking-widest mt-1">Ya disponible
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-auto relative z-10 pb-8 w-full">
+            <a href="https://rivalfit.app"
+                class="block w-full py-4 bg-brand-red text-white font-heading text-2xl font-black italic uppercase rounded-xl hover:bg-red-700 transition-colors shadow-[0_0_25px_rgba(220,38,38,0.5)] tracking-wider">
+                ÚNETE AHORA
+            </a>
+            <p class="text-gray-500 font-body text-[10px] uppercase font-bold tracking-[0.2em] mt-4">
+                rivalfit.app
+            </p>
+        </div>
+    </div>
+
+    <!-- Download Button -->
+    <button onclick="downloadImage()"
+        class="flex items-center gap-2 bg-white text-black font-body font-bold uppercase tracking-wider text-xs px-6 py-3 rounded-full hover:bg-gray-200 transition-all shadow-lg hover:shadow-xl active:scale-95">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        Descargar Imagen
+    </button>
+
+    <script>
+        function downloadImage() {
+            const captureElement = document.getElementById('capture-area');
+
+            // Show loading state
+            const btn = document.querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Generando...';
+
+            html2canvas(captureElement, {
+                scale: 2, // Higher resolution
+                backgroundColor: null,
+                useCORS: true, // Allow loading cross-origin images
+                logging: false,
+            }).then(canvas => {
+                // Restore button
+                btn.innerHTML = originalText;
+
+                // Trigger download
+                const link = document.createElement('a');
+                link.download = 'rival-fit-beta-invite.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                console.error("Error generating image:", err);
+                btn.innerHTML = 'Error :(';
+                setTimeout(() => btn.innerHTML = originalText, 2000);
+            });
+        }
+    </script>
+
+</body>
+
+</html>

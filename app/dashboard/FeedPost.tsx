@@ -709,12 +709,16 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             <div className="relative aspect-video bg-black cursor-pointer group shadow-2xl overflow-hidden rounded-xl" onClick={() => setIsLightboxOpen(true)}>
                                 {isVideo ? (
                                     <div className="relative w-full h-full">
-                                        <video src={image} className="w-full h-full object-cover" loop playsInline muted preload="metadata" />
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
-                                            <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-glow">
-                                                <Play className="w-5 h-5 text-white fill-white ml-1" />
-                                            </div>
-                                        </div>
+                                        <video
+                                            src={image}
+                                            className="w-full h-full object-cover"
+                                            autoPlay
+                                            loop
+                                            playsInline
+                                            muted
+                                            preload="auto"
+                                        />
+                                        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
                                     </div>
                                 ) : (
                                     <div className="relative w-full h-full">
@@ -1113,7 +1117,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         </button>
                         <div className="relative w-full max-w-5xl max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                             {isVideo ? (
-                                <video src={image} controls className="max-w-full max-h-[90vh] rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)]" />
+                                <video src={image} autoPlay controls className="max-w-full max-h-[90vh] rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)]" />
                             ) : (
                                 <img src={image} alt="Full size" className="max-w-full max-h-[90vh] object-contain rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)]" />
                             )}

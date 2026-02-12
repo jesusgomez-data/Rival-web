@@ -59,7 +59,8 @@ export async function signup(prevState: any, formData: FormData) {
         options: {
             // Explicitly set the redirect URL using the environment variable
             // This ensures production uses rivalfit.app and local uses localhost
-            emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+            // IMPORTANT: Make sure NEXT_PUBLIC_APP_URL is set in your Vercel/Server variables
+            emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/auth/callback`,
             data: {
                 full_name: `${firstName} ${lastName}`,
                 username: username,
@@ -117,7 +118,7 @@ export async function signup(prevState: any, formData: FormData) {
     } else {
         return {
             success: true,
-            message: "Account created successfully! Please check your email to confirm your registration before logging in."
+            message: "¡Cuenta creada con éxito! Por favor verifica tu correo electrónico para confirmar tu registro antes de iniciar sesión."
         }
     }
 }

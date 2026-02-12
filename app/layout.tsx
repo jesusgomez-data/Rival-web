@@ -29,6 +29,7 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://rivalfit.app"),
   title: "Rival Fit | El Futuro del Fitness 2026",
   description: "La primera red social creada para la mentalidad del 1%. Registra tus progresos, compite globalmente y accede a gimnasios de élite.",
   manifest: "/manifest.json",
