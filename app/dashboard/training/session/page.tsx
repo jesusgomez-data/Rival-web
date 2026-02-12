@@ -73,7 +73,7 @@ function SessionContent() {
     const [isGuided, setIsGuided] = useState<boolean>(!!wodId || searchParams.get('mode') === 'recommendation' || searchParams.get('mode') === 'ai-coach');
     const [guidedCount, setGuidedCount] = useState<number>(0);
     const [userTier, setUserTier] = useState<string>('free');
-    const [gpsEnabled, setGpsEnabled] = useState(false);
+    const [gpsStatus, setGpsStatus] = useState<'idle' | 'searching' | 'tracking'>('idle');
     const lastPosRef = useRef<{ lat: number, lon: number } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -116,12 +116,23 @@ function SessionContent() {
     // Real-time GPS Tracking Logic
     useEffect(() => {
         let watchId: number;
-        if (gpsEnabled && !isPaused && typeof window !== 'undefined' && 'geolocation' in navigator) {
+        if (gpsStatus !== 'idle' && !isPaused && typeof window !== 'undefined' && 'geolocation' in navigator) {
             watchId = navigator.geolocation.watchPosition(
                 (pos) => {
-                    const { latitude, longitude, accuracy } = pos.coords;
-                    // Skip poor accuracy updates (> 40m)
-                    if (accuracy > 40) return;
+                    const { latitude, longitude, accuracy, speed } = pos.coords;
+
+                    if (gpsStatus === 'searching') {
+                        setGpsStatus('tracking');
+                    }
+
+                    // Strict accuracy and noise filtering
+                    if (accuracy > 30) return;
+
+                    // If speed is reported and we are stationary, ignore
+                    if (speed !== null && speed < 0.3) {
+                        lastPosRef.current = { lat: latitude, lon: longitude };
+                        return;
+                    }
 
                     if (lastPosRef.current) {
                         const d = calculateDistance(
@@ -130,8 +141,8 @@ function SessionContent() {
                             latitude,
                             longitude
                         );
-                        // Filter noise (< 1m) and unrealistic speeds (> 25m/s = 90km/h)
-                        if (d > 1 && d < 25) {
+                        // Jitter Filter (< 3m) and Unreal Speed (> 20m/s = 72km/h)
+                        if (d > 3 && d < 20) {
                             setRunDistance(prev => prev + d);
                         }
                     }
@@ -139,18 +150,21 @@ function SessionContent() {
                 },
                 (err) => {
                     console.error("GPS Tracker Error:", err);
-                    setGpsEnabled(false);
+                    setGpsStatus('idle');
                 },
                 { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
             );
         } else {
             lastPosRef.current = null;
+            if (gpsStatus === 'tracking' && isPaused) {
+                // Keep status as tracking but logic is effectively paused by dependency
+            }
         }
 
         return () => {
             if (watchId) navigator.geolocation.clearWatch(watchId);
         };
-    }, [gpsEnabled, isPaused]);
+    }, [gpsStatus, isPaused]);
     const [runPace, setRunPace] = useState("0:00"); // Min/km
 
     // Cross Training/Hybrid State
@@ -1038,8 +1052,10 @@ function SessionContent() {
                         workoutTitle={workoutTitle}
                         setWorkoutTitle={setWorkoutTitle}
                         isPaused={isPaused}
-                        gpsActive={gpsEnabled}
-                        setGpsActive={setGpsEnabled}
+                        toggleTimer={toggleTimer}
+                        handleFinish={handleFinish}
+                        gpsStatus={gpsStatus}
+                        setGpsStatus={setGpsStatus}
                     />
                 )}
                 {(sportMode === 'cross_training' || sportMode === 'ocr') && (
@@ -1813,8 +1829,10 @@ function RunningView({
     workoutTitle,
     setWorkoutTitle,
     isPaused,
-    gpsActive,
-    setGpsActive
+    toggleTimer,
+    handleFinish,
+    gpsStatus,
+    setGpsStatus
 }: {
     distance: number,
     setDistance: React.Dispatch<React.SetStateAction<number>>,
@@ -1822,8 +1840,10 @@ function RunningView({
     workoutTitle?: string,
     setWorkoutTitle?: (t: string) => void,
     isPaused: boolean,
-    gpsActive: boolean,
-    setGpsActive: (val: boolean) => void
+    toggleTimer: () => void,
+    handleFinish: () => void,
+    gpsStatus: 'idle' | 'searching' | 'tracking',
+    setGpsStatus: (val: 'idle' | 'searching' | 'tracking') => void
 }) {
     const { theme } = useTheme();
     const pace = distance > 0 ? (time / 60) / (distance / 1000) : 0;
@@ -1849,18 +1869,22 @@ function RunningView({
             {/* GPS & Connectivity Section */}
             <div className="grid grid-cols-2 gap-3 mb-6">
                 <button
-                    onClick={() => setGpsActive(!gpsActive)}
+                    onClick={() => setGpsStatus(gpsStatus === 'idle' ? 'searching' : 'idle')}
                     className={clsx(
                         "p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all",
-                        gpsActive
-                            ? "bg-blue-600 border-transparent text-white shadow-lg shadow-blue-900/50"
+                        gpsStatus !== 'idle'
+                            ? (gpsStatus === 'tracking' ? "bg-green-600 border-transparent text-white shadow-lg shadow-green-900/50" : "bg-blue-600 border-transparent text-white shadow-lg shadow-blue-900/50")
                             : (theme === 'dark' ? "bg-[#111] border-white/10 text-gray-400 hover:bg-white/5" : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 shadow-sm")
                     )}
                 >
-                    <div className={clsx("w-10 h-10 rounded-full flex items-center justify-center mb-1", gpsActive ? "bg-white/20" : (theme === 'dark' ? "bg-white/5" : "bg-gray-200"))}>
-                        {gpsActive ? <Loader2 className="w-5 h-5 animate-spin" /> : <MapPin className="w-5 h-5" />}
+                    <div className={clsx("w-10 h-10 rounded-full flex items-center justify-center mb-1", gpsStatus !== 'idle' ? "bg-white/20" : (theme === 'dark' ? "bg-white/5" : "bg-gray-200"))}>
+                        {gpsStatus === 'searching' ? <Loader2 className="w-5 h-5 animate-spin" /> :
+                            gpsStatus === 'tracking' ? <Activity className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest">{gpsActive ? 'GPS ACTIVO' : 'USAR GPS MÓVIL'}</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest">
+                        {gpsStatus === 'searching' ? 'BUSCANDO...' :
+                            gpsStatus === 'tracking' ? 'GPS ACTIVO' : 'USAR GPS MÓVIL'}
+                    </span>
                 </button>
 
                 <button
@@ -1910,16 +1934,16 @@ function RunningView({
                         value={distance === 0 ? '' : Math.floor(distance)}
                         onChange={(e) => setDistance(parseFloat(e.target.value) || 0)}
                         placeholder="0"
-                        readOnly={gpsActive}
+                        readOnly={gpsStatus !== 'idle'}
                         className={clsx(
                             "bg-transparent text-center text-7xl font-heading font-black italic outline-none w-full transition-colors",
-                            gpsActive ? "text-blue-500" : (theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-200")
+                            gpsStatus !== 'idle' ? "text-blue-500" : (theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-200")
                         )}
                     />
                     <span className="text-xl font-black text-gray-400 mt-8">METROS</span>
                 </div>
 
-                {!gpsActive && (
+                {gpsStatus === 'idle' && (
                     <div className="flex justify-center flex-wrap gap-2 pt-4">
                         {[400, 800, 1000, 5000, 10000].map(d => (
                             <button key={d} onClick={() => setDistance(d)} className={clsx(
@@ -1932,25 +1956,34 @@ function RunningView({
                     </div>
                 )}
 
-                {gpsActive && (
+                {gpsStatus !== 'idle' && (
                     <p className="text-xs text-blue-400/60 font-mono animate-pulse">
                         Sátelites conectados. Calculando distancia en tiempo real...
                     </p>
                 )}
             </div>
 
-            <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center shrink-0">
-                    <MapPin className="w-5 h-5" />
-                </div>
-                <div>
-                    <p className="text-[10px] text-blue-200 uppercase font-bold tracking-wide leading-relaxed">
-                        <strong>Modo Manual vs Automático:</strong>
-                    </p>
-                    <p className="text-[10px] text-blue-200/60 leading-relaxed">
-                        Activa el GPS del móvil para rastreo automático o introduce la distancia manualmente si usas reloj externo.
-                    </p>
-                </div>
+            <div className="grid grid-cols-2 gap-3 pt-6">
+                <button
+                    onClick={toggleTimer}
+                    className={clsx(
+                        "py-5 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg",
+                        isPaused
+                            ? (theme === 'dark' ? "bg-white text-black" : "bg-black text-white")
+                            : (theme === 'dark' ? "bg-white/5 text-gray-400 border border-white/10" : "bg-gray-100 text-gray-500 border border-gray-200")
+                    )}
+                >
+                    {isPaused ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4 fill-current" />}
+                    {isPaused ? 'Reanudar' : 'Pausar'}
+                </button>
+
+                <button
+                    onClick={handleFinish}
+                    className="py-5 rounded-2xl bg-brand-red text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-glow"
+                >
+                    <CheckCircle className="w-4 h-4" />
+                    Finalizar
+                </button>
             </div>
         </div>
     )
