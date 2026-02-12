@@ -76,6 +76,10 @@ function SessionContent() {
     const [gpsStatus, setGpsStatus] = useState<'idle' | 'searching' | 'tracking'>('idle');
     const lastPosRef = useRef<{ lat: number, lon: number } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [manualTimeInput, setManualTimeInput] = useState<string>("");
+    const [isEditingTime, setIsEditingTime] = useState(false);
+    const [showControls, setShowControls] = useState(true);
+    const lastScrollY = useRef(0);
 
     useEffect(() => {
         const fetchLimits = async () => {
@@ -88,6 +92,35 @@ function SessionContent() {
         };
         fetchLimits();
     }, []);
+
+    // Scroll listener for mobile controls
+    useEffect(() => {
+        if (!mounted || !sportMode) return;
+
+        const container = document.getElementById('session-overlay-container');
+        if (!container) return;
+
+        const handleScroll = () => {
+            const currentScrollY = container.scrollTop;
+
+            // Show always at the top
+            if (currentScrollY < 10) {
+                setShowControls(true);
+                lastScrollY.current = currentScrollY;
+                return;
+            }
+
+            if (currentScrollY > lastScrollY.current && currentScrollY > 70) {
+                setShowControls(false); // Scrolling down
+            } else if (currentScrollY < lastScrollY.current - 5) {
+                setShowControls(true); // Scrolling up with a small threshold
+            }
+            lastScrollY.current = currentScrollY;
+        };
+
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [mounted, sportMode]);
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -431,12 +464,18 @@ function SessionContent() {
     };
 
     const handleManualTimeChange = (val: string) => {
+        setManualTimeInput(val);
+    };
+
+    const commitManualTime = () => {
+        const val = manualTimeInput;
         const parts = val.split(':').reverse();
         let total = 0;
         if (parts[0]) total += parseInt(parts[0]) || 0;
         if (parts[1]) total += (parseInt(parts[1]) || 0) * 60;
         if (parts[2]) total += (parseInt(parts[2]) || 0) * 3600;
         setElapsedSeconds(total);
+        setIsEditingTime(false);
     };
 
     // Data Initialization
@@ -613,7 +652,7 @@ function SessionContent() {
     if (isLoadingData) return <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-red" /></div>;
 
     // IMMERSIVE MODE: Full fixed overlay to hide dashboard sidebar/header
-    const overlayClasses = "fixed inset-0 z-[201] bg-black text-white overflow-y-auto custom-scrollbar";
+    const overlayClasses = "fixed inset-0 z-[201] bg-black text-white overflow-y-auto custom-scrollbar overscroll-none";
 
     const limits = { free: 2, premium: 4, elite: 6 };
     const currentLimit = limits[userTier as keyof typeof limits] || 2;
@@ -920,10 +959,9 @@ function SessionContent() {
     const progress = targetDuration ? Math.min(100, (elapsedSeconds / (targetDuration * 60)) * 100) : 0;
 
     return (
-        <div className={overlayClasses}>
-            {/* Dynamic Sports Header */}
+        <div id="session-overlay-container" className={overlayClasses}>
             <header className={clsx(
-                "sticky top-0 inset-x-0 z-50 backdrop-blur-xl border-b border-white/5 px-4 py-3 flex items-center justify-between transition-colors duration-500",
+                "sticky top-0 inset-x-0 z-[260] px-4 py-4 flex items-center justify-between backdrop-blur-2xl border-b border-white/10",
                 sportMode === 'running' ? "bg-blue-950/80" :
                     sportMode === 'hybrid' ? "bg-yellow-950/80" :
                         sportMode === 'cross_training' ? "bg-orange-950/80" :
@@ -963,8 +1001,11 @@ function SessionContent() {
                         <div className="flex items-center gap-2 justify-end mb-0.5">
                             <input
                                 type="text"
-                                value={formatTime(displayTime)}
+                                value={isEditingTime ? manualTimeInput : formatTime(displayTime)}
                                 onChange={(e) => handleManualTimeChange(e.target.value)}
+                                onFocus={() => { setManualTimeInput(formatTime(displayTime)); setIsEditingTime(true); }}
+                                onBlur={commitManualTime}
+                                onKeyDown={(e) => e.key === 'Enter' && commitManualTime()}
                                 disabled={!isPaused}
                                 className={clsx(
                                     "font-mono text-3xl font-black bg-transparent text-right outline-none w-32 transition-colors transition-transform",
@@ -1015,8 +1056,11 @@ function SessionContent() {
                     <div className="flex items-center justify-center gap-2">
                         <input
                             type="text"
-                            value={formatTime(displayTime)}
+                            value={isEditingTime ? manualTimeInput : formatTime(displayTime)}
                             onChange={(e) => handleManualTimeChange(e.target.value)}
+                            onFocus={() => { setManualTimeInput(formatTime(displayTime)); setIsEditingTime(true); }}
+                            onBlur={commitManualTime}
+                            onKeyDown={(e) => e.key === 'Enter' && commitManualTime()}
                             disabled={!isPaused}
                             className={clsx(
                                 "text-6xl font-mono font-black tracking-tighter bg-transparent text-center outline-none w-full",
@@ -1111,8 +1155,11 @@ function SessionContent() {
                                 </p>
                                 <input
                                     type="text"
-                                    value={formatTime(elapsedSeconds)}
+                                    value={isEditingTime ? manualTimeInput : formatTime(elapsedSeconds)}
                                     onChange={(e) => handleManualTimeChange(e.target.value)}
+                                    onFocus={() => { setManualTimeInput(formatTime(elapsedSeconds)); setIsEditingTime(true); }}
+                                    onBlur={commitManualTime}
+                                    onKeyDown={(e) => e.key === 'Enter' && commitManualTime()}
                                     disabled={!isPaused}
                                     className={clsx(
                                         "bg-transparent text-xl font-mono font-black outline-none w-full transition-colors",
@@ -1286,9 +1333,12 @@ function SessionContent() {
                 )}
             </div>
 
-            {/* Mobile Fixed Controls - Only show when session is active or setup is complete */}
+            {/* Mobile Fixed Controls - Dynamic hide on scroll */}
             {((sportMode === 'cross_training' || sportMode === 'ocr' ? blocks.length > 0 : true) || elapsedSeconds > 0) && (
-                <div className="sm:hidden fixed bottom-0 inset-x-0 z-[250] bg-[#0a0a0a]/90 backdrop-blur-2xl border-t border-white/10 p-5 pb-10 animate-in slide-in-from-bottom duration-500">
+                <div className={clsx(
+                    "sm:hidden fixed bottom-6 inset-x-4 z-[250] bg-[#0a0a0a]/90 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 transition-all duration-500 shadow-2xl",
+                    showControls ? "translate-y-0 opacity-100" : "translate-y-[150%] opacity-0"
+                )}>
                     <div className="flex items-center gap-4">
                         <button
                             onClick={toggleTimer}
