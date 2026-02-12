@@ -58,7 +58,7 @@ export async function sendRegistrationEmail(email: string, athleteName: string, 
     }
 }
 
-export async function sendPaymentRequestEmail(email: string, athleteName: string, gymName: string, planName: string, paymentLink: string) {
+export async function sendPaymentRequestEmail(email: string, athleteName: string, gymName: string, planName: string, paymentLink: string, gymLogoUrl?: string | null) {
     if (!resend) {
         console.warn("⚠️ Resend client not initialized. Check RESEND_API_KEY.");
         return { error: "Configuración de correo pendiente (RESEND_API_KEY)." };
@@ -70,24 +70,33 @@ export async function sendPaymentRequestEmail(email: string, athleteName: string
             to: [email],
             subject: `Solicitud de Pago - ${gymName}`,
             html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #111;">
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <img src="https://rivalfit.app/logo.png" alt="Rival Fit" style="width: 100px;" />
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #111; background-color: #f9f9f9; border: 1px solid #eee; border-radius: 12px;">
+                    <div style="text-align: center; margin-bottom: 30px; background-color: #000; padding: 30px; border-radius: 12px 12px 0 0;">
+                        ${gymLogoUrl ? `
+                            <img src="${gymLogoUrl}" alt="${gymName}" style="max-width: 150px; max-height: 80px; margin-bottom: 10px; border-radius: 8px;" />
+                        ` : `
+                            <img src="https://rivalfit.app/logo.png" alt="Rival Fit" style="width: 80px;" />
+                        `}
+                        <div style="color: #fff; font-size: 14px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; margin-top: 10px;">${gymName}</div>
                     </div>
-                    <h1 style="font-size: 24px; font-weight: bold; font-style: italic; color: #E11D48; margin-bottom: 20px;">¡HOLA ${athleteName.toUpperCase()}!</h1>
-                    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-                        Tu centro deportivo, <strong>${gymName}</strong>, ha solicitado el pago de tu membresía: <strong>${planName}</strong>.
-                    </p>
-                    <p style="font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
-                        Puedes completar el proceso de pago de forma segura haciendo clic en el siguiente enlace:
-                    </p>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="${paymentLink}" style="background-color: #E11D48; color: white; padding: 15px 30px; text-decoration: none; border-radius: 50px; font-weight: bold; font-style: italic; text-transform: uppercase;">Completar Pago</a>
+                    
+                    <div style="padding: 20px; background-color: #fff; border-radius: 0 0 12px 12px;">
+                        <h1 style="font-size: 24px; font-weight: bold; font-style: italic; color: #E11D48; margin-bottom: 20px; text-transform: uppercase;">¡HOLA ${athleteName.toUpperCase()}!</h1>
+                        <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                            Tu centro deportivo, <strong>${gymName}</strong>, ha solicitado el pago de tu membresía: <strong>${planName}</strong>.
+                        </p>
+                        <p style="font-size: 16px; line-height: 1.6; margin-bottom: 30px;">
+                            Puedes completar el proceso de pago de forma segura haciendo clic en el siguiente enlace:
+                        </p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${paymentLink}" style="background-color: #E11D48; color: white; padding: 15px 30px; text-decoration: none; border-radius: 50px; font-weight: bold; font-style: italic; text-transform: uppercase; display: inline-block;">Completar Pago</a>
+                        </div>
+                        <p style="font-size: 14px; color: #666; margin-top: 30px; text-align: center;">
+                            Si el botón no funciona, copia y pega este enlace: <br/>
+                            <a href="${paymentLink}" style="color: #E11D48; word-break: break-all;">${paymentLink}</a>
+                        </p>
                     </div>
-                    <p style="font-size: 14px; color: #666; margin-top: 30px; text-align: center;">
-                        Si el botón no funciona, copia y pega este enlace: <br/>
-                        <a href="${paymentLink}" style="color: #E11D48;">${paymentLink}</a>
-                    </p>
+                    
                     <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
                     <p style="font-size: 12px; color: #999; text-align: center;">
                         Rival Fit - Potenciado por IA. <br/>

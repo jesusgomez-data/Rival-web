@@ -309,8 +309,9 @@ export async function requestMemberPayment(centerId: string, planId: string, use
         if (memberError) return { error: memberError.message };
 
         // 5. Notify User
-        const { data: org } = await supabase.from('organizations').select('name').eq('id', centerId).single();
+        const { data: org } = await supabase.from('organizations').select('name, logo_url').eq('id', centerId).single();
         const gymName = org?.name || 'Tu Centro';
+        const gymLogo = org?.logo_url || null;
 
         await createNotification({
             userId,
@@ -328,7 +329,8 @@ export async function requestMemberPayment(centerId: string, planId: string, use
                 profile.full_name || extraData.fullName || 'Atleta',
                 gymName,
                 plan.name,
-                session.url!
+                session.url!,
+                gymLogo
             ).catch(err => console.error("Failed to send payment email:", err));
         }
 
