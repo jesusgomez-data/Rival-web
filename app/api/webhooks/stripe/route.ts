@@ -105,8 +105,8 @@ export async function POST(req: Request) {
                     console.log(`Membership payment completed for user ${userId}, center ${centerId}`);
                 } else if (organizationId) {
                     // CENTER UPGRADE
-                    const starterPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 'price_1SxdaPCpwHwK9MuevBVancPf'; // Placeholder
-                    const proPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 'price_1SxdavCpwHwK9Mueeesvlq6T'; // Placeholder
+                    const starterPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 'price_1SzerFCuIXDNtJ7A4vqazU9O';
+                    const proPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 'price_1SzernCuIXDNtJ7AWHGJMqLi';
 
                     let planName = 'free';
                     if (priceId === starterPrice) planName = 'starter';
@@ -122,8 +122,8 @@ export async function POST(req: Request) {
                 } else {
                     // ATHLETE UPGRADE
                     // Add fallbacks to match stripe-actions.ts
-                    const premiumPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || 'price_1SxdaPCpwHwK9MuevBVancPf';
-                    const elitePrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE || 'price_1SxdavCpwHwK9Mueeesvlq6T';
+                    const premiumPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || 'price_1SzepeCuIXDNtJ7AFKkDXv4H';
+                    const elitePrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE || 'price_1SzeqjCuIXDNtJ7ApOSdRJre';
 
                     let tier = 'free';
                     if (priceId === premiumPrice) tier = 'premium';

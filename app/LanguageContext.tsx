@@ -13,8 +13,10 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
     const [language, setLanguageState] = useState<Language>('es');
+    const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+        setMounted(true);
         const savedLang = localStorage.getItem('rival_language') as Language;
         if (savedLang && (savedLang === 'es' || savedLang === 'en')) {
             setLanguageState(savedLang);
@@ -26,7 +28,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('rival_language', lang);
     };
 
-    const t = translations[language];
+    // Use initial 'es' during hydration to match server, then switch if needed
+    const currentLang = mounted ? language : 'es';
+    const t = translations[currentLang];
 
     return (
         <LanguageContext.Provider value={{ language, setLanguage, t }}>

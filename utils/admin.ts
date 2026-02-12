@@ -1,7 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 
 export const ADMIN_EMAILS = [
-    'gomezsantiagojesus@icloud.com',
+    'rival.app.official@gmail.com',
     'jesusgomez.s@hotmail.com'
 ];
 

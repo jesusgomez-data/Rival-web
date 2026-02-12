@@ -19,6 +19,7 @@ import {
     Building2,
     Search as SearchIcon,
     X,
+    Menu,
     Sun,
     Moon,
     Shield,
@@ -35,6 +36,7 @@ import { useTheme } from "../ThemeContext";
 import { useLanguage } from "@/app/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import PendingReviewPrompt from "./PendingReviewPrompt";
+import SupportModal from "./gyms/SupportModal";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -156,7 +158,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     }, [pathname]);
 
     // Strict admin whitelist - ONLY these specific emails can access admin panel
-    const ADMIN_EMAILS = ['gomezsantiagojesus@icloud.com', 'jesusgomez.s@hotmail.com'];
+    const ADMIN_EMAILS = ['rival.app.official@gmail.com', 'jesusgomez.s@hotmail.com'];
     const isAdmin = userEmail && typeof userEmail === 'string' && ADMIN_EMAILS.includes(userEmail.toLowerCase().trim());
 
     const navItems = [
@@ -229,7 +231,11 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         })}
                     </nav>
 
-                    <div className="p-4 border-t border-border space-y-3 bg-card/50 backdrop-blur-sm">
+                    <div className="p-4 border-t border-border space-y-4 bg-card/50 backdrop-blur-sm">
+                        <div className="px-2">
+                            <SupportModal />
+                        </div>
+
                         <button
                             onClick={handleLogout}
                             className="w-full text-gray-500 hover:text-brand-red flex items-center gap-3 px-2 py-2 text-[9px] font-black uppercase tracking-[0.2em] transition-colors group/logout"
@@ -307,7 +313,15 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                             {showMobileSearch ? <X className="w-6 h-6" /> : <SearchIcon className="w-6 h-6" />}
                         </button>
 
-
+                        <button
+                            onClick={() => {
+                                setIsMenuOpen(!isMenuOpen);
+                                setShowMobileSearch(false);
+                            }}
+                            className="p-2.5 text-gray-400 hover:text-white transition-colors"
+                        >
+                            {isMenuOpen ? <X className="w-6 h-6 text-brand-red" /> : <Menu className="w-6 h-6" />}
+                        </button>
 
                         <Link href="/dashboard/profile" className="ml-2 relative shrink-0">
                             <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/10">
@@ -359,6 +373,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                                         </Link>
                                     )
                                 })}
+                                <div className="px-2 pt-2">
+                                    <SupportModal />
+                                </div>
                             </div>
 
                             {/* Menu Actions */}
@@ -382,7 +399,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 )}
 
                 {/* Main Content Area */}
-                <div className={clsx("mx-auto transition-all duration-300", hideSidebarDefault && !isMenuOpen ? "h-full p-0 max-w-none" : "p-5 pt-8 pb-32 lg:p-8 max-w-7xl")}>
+                <div className={clsx("mx-auto transition-all duration-300", hideSidebarDefault && !isMenuOpen ? "h-full p-0 max-w-none" : "px-4 pt-6 pb-32 lg:p-8 max-w-7xl")}>
                     {(!hideSidebarDefault || isMenuOpen) && (
                         <header className="hidden lg:flex items-center justify-between mb-8">
                             <div className="flex-1 max-w-xl">

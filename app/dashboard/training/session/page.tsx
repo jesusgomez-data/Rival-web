@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap, Share2, Camera, Award, AlertTriangle, ChevronRight, Youtube, Video } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap, Share2, Camera, Award, AlertTriangle, ChevronRight, Youtube, Video, Lock } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect, Suspense, useMemo, useRef } from "react";
-import { saveWorkout, getExercises, getExercisePreviousRecord, getWorkoutDetails, uploadWorkoutMedia } from "../actions";
+import { saveWorkout, getExercises, getExercisePreviousRecord, getWorkoutDetails, uploadWorkoutMedia, getUserProfile, getGuidedWorkoutsCount } from "../actions";
 import { getCenterPost } from "../../gyms/feed-actions";
 import { getAiRecommendation, type TrainingPlan } from "../ai-coach";
 
@@ -23,6 +23,14 @@ export default function SessionPage() {
 type SportMode = 'gym' | 'running' | 'cross_training' | 'hybrid' | 'calisthenics' | 'ocr' | 'other' | null;
 
 function SessionContent() {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // if (!mounted) return null; // Moved to avoid hook violation
+
     const { theme } = useTheme();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -50,7 +58,22 @@ function SessionContent() {
     const [viewingVideo, setViewingVideo] = useState<string | null>(null);
     const [timerMode, setTimerMode] = useState<'up' | 'down'>('up');
     const [preStartPlan, setPreStartPlan] = useState<TrainingPlan | null>(null);
+    const [isGuided, setIsGuided] = useState<boolean>(!!wodId || searchParams.get('mode') === 'recommendation' || searchParams.get('mode') === 'ai-coach');
+    const [guidedCount, setGuidedCount] = useState<number>(0);
+    const [userTier, setUserTier] = useState<string>('free');
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        const fetchLimits = async () => {
+            const [profile, count] = await Promise.all([
+                getUserProfile(),
+                getGuidedWorkoutsCount()
+            ]);
+            if (profile) setUserTier(profile.subscription_tier || 'free');
+            setGuidedCount(count);
+        };
+        fetchLimits();
+    }, []);
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -499,7 +522,8 @@ function SessionContent() {
                 locationName,
                 imageUrl,
                 shareToArena,
-                shareToStory
+                shareToStory,
+                isGuided: isGuided
             };
 
             const result = await saveWorkout(payload);
@@ -516,15 +540,66 @@ function SessionContent() {
         setIsSaving(false);
     };
 
+    if (!mounted) return null;
+
     if (isLoadingData) return <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-red" /></div>;
 
     // IMMERSIVE MODE: Full fixed overlay to hide dashboard sidebar/header
     const overlayClasses = "fixed inset-0 z-[201] bg-black text-white overflow-y-auto custom-scrollbar";
 
+    const limits = { free: 2, premium: 4, elite: 6 };
+    const currentLimit = limits[userTier as keyof typeof limits] || 2;
+    const isLimitAlreadyReached = isGuided && guidedCount >= currentLimit && !editId;
+
+    if (isLimitAlreadyReached) {
+        return (
+            <div className={overlayClasses + " flex items-center justify-center p-6"}>
+                <div className="max-w-md w-full bg-[#111] border border-white/10 rounded-[40px] p-12 text-center relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-12 opacity-5 -rotate-12 translate-x-8 -translate-y-8">
+                        <Zap className="w-64 h-64 text-brand-red" />
+                    </div>
+
+                    <div className="relative z-10">
+                        <div className="w-20 h-20 bg-brand-red/10 rounded-3xl flex items-center justify-center text-brand-red border border-brand-red/20 shadow-glow mx-auto mb-8">
+                            <Lock className="w-10 h-10" />
+                        </div>
+
+                        <h2 className="text-3xl font-heading font-black italic text-white uppercase mb-4 leading-tight">
+                            LÍMITE SEMANAL <span className="text-brand-red text-4xl block">ALCANZADO</span>
+                        </h2>
+
+                        <p className="text-white/60 text-sm font-medium mb-10 leading-relaxed">
+                            Has completado tus <span className="text-white font-bold">{currentLimit} rutinas guiadas</span> de esta semana (Plan {userTier.toUpperCase()}).
+                            <br /><br />
+                            Puedes seguir entrenando en <span className="text-white font-bold italic uppercase">MODO LIBRE</span> de forma ilimitada o subir de nivel para desbloquear más acceso.
+                        </p>
+
+                        <div className="space-y-4">
+                            <Link
+                                href="/dashboard/billing"
+                                className="block w-full py-5 rounded-2xl bg-white text-black text-xs font-black uppercase tracking-[0.2em] hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-white/5"
+                            >
+                                MEJORAR MI PLAN
+                            </Link>
+                            <button
+                                onClick={() => { setIsGuided(false); setSportMode(null); router.push('/dashboard/training/session'); }}
+                                className="block w-full py-5 rounded-2xl bg-white/5 text-white/60 text-xs font-black uppercase tracking-[0.2em] hover:bg-white/10 hover:text-white transition-all"
+                            >
+                                VOLVER AL SELECTOR
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     if (!sportMode) {
         return (
             <div className={overlayClasses}>
                 <SportSelector
+                    guidedCount={guidedCount}
+                    userTier={userTier}
                     onSelect={(mode) => {
                         let defaultTitle = "Sesión de Entrenamiento";
                         if (mode === 'gym') defaultTitle = "Entrenamiento de Fuerza & Musculación";
@@ -535,6 +610,7 @@ function SessionContent() {
                         else if (mode === 'ocr') defaultTitle = "Simulación OCR & Trail";
                         else if (mode === 'other') defaultTitle = "Entrenamiento Complementario";
 
+                        setIsGuided(false);
                         setPreStartPlan({
                             id: 'freestyle',
                             title: defaultTitle,
@@ -547,6 +623,7 @@ function SessionContent() {
                         });
                     }}
                     onPlanSelect={(plan) => {
+                        setIsGuided(true);
                         setPreStartPlan(plan);
                     }}
                 />
@@ -1268,8 +1345,8 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
     }
 };
 
-function SportSelector({ onSelect, onPlanSelect }: { onSelect: (mode: SportMode) => void, onPlanSelect: (plan: TrainingPlan) => void }) {
-
+function SportSelector({ onSelect, onPlanSelect, guidedCount, userTier }: { onSelect: (mode: SportMode) => void, onPlanSelect: (plan: TrainingPlan) => void, guidedCount: number, userTier: string }) {
+    const { theme } = useTheme();
     const [selectedSport, setSelectedSport] = useState<SportMode>(null);
     const [view, setView] = useState<'list' | 'options' | 'ai' | 'guided-question'>('list');
     const [recommendations, setRecommendations] = useState<TrainingPlan[]>([]);
@@ -1324,12 +1401,53 @@ function SportSelector({ onSelect, onPlanSelect }: { onSelect: (mode: SportMode)
                         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Edit2 className="w-32 h-32 text-white" /></div>
                         <h3 className="text-2xl font-black italic text-white uppercase mb-2">Modo Libre</h3>
                         <p className="text-gray-500 text-xs font-bold uppercase tracking-wide">Registra tu propia sesión manualmente.</p>
+                        <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
+                            <Zap className="w-3 h-3 text-green-500" />
+                            <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Ilimitado</span>
+                        </div>
                     </button>
-                    <button onClick={() => setView('guided-question')} className="group p-8 rounded-[32px] bg-brand-red border border-brand-red hover:bg-red-600 transition-all text-left relative overflow-hidden shadow-glow">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Activity className="w-32 h-32 text-black" /></div>
-                        <h3 className="text-2xl font-black italic text-white uppercase mb-2">Rutina Guiada</h3>
-                        <p className="text-black/60 text-xs font-bold uppercase tracking-wide">¿No sabes qué hacer? Elige tu objetivo y te damos el plan.</p>
-                    </button>
+
+                    {(() => {
+                        const limits = { free: 2, premium: 4, elite: 6 };
+                        const currentLimit = limits[userTier as keyof typeof limits] || 2;
+                        const isLimitReached = guidedCount >= currentLimit;
+
+                        return (
+                            <button
+                                onClick={() => !isLimitReached && setView('guided-question')}
+                                className={clsx(
+                                    "group p-8 rounded-[32px] border transition-all text-left relative overflow-hidden shadow-glow",
+                                    isLimitReached
+                                        ? "bg-gray-900 border-white/5 grayscale cursor-not-allowed opacity-50"
+                                        : "bg-brand-red border-brand-red hover:bg-red-600"
+                                )}
+                            >
+                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Activity className="w-32 h-32 text-black" /></div>
+                                <h3 className="text-2xl font-black italic text-white uppercase mb-2">Rutina Guiada</h3>
+                                <p className={clsx("text-xs font-bold uppercase tracking-wide", isLimitReached ? "text-gray-500" : "text-black/60")}>
+                                    {isLimitReached ? 'Límite semanal alcanzado' : '¿No sabes qué hacer? Elige tu objetivo.'}
+                                </p>
+
+                                <div className="mt-4 flex items-center justify-between">
+                                    <div className={clsx(
+                                        "inline-flex items-center gap-2 px-3 py-1 rounded-full border",
+                                        isLimitReached ? "bg-red-500/10 border-red-500/20" : "bg-black/20 border-black/10"
+                                    )}>
+                                        <div className={clsx("w-1.5 h-1.5 rounded-full", isLimitReached ? "bg-red-500" : "bg-white")} />
+                                        <span className={clsx("text-[8px] font-black uppercase tracking-widest", isLimitReached ? "text-red-500" : "text-white")}>
+                                            {guidedCount} / {currentLimit} Semanales
+                                        </span>
+                                    </div>
+
+                                    {isLimitReached && (
+                                        <Link href="/dashboard/billing" className="text-[8px] font-black uppercase text-brand-red underline hover:text-white transition-colors">
+                                            Mejorar Plan
+                                        </Link>
+                                    )}
+                                </div>
+                            </button>
+                        );
+                    })()}
                 </div>
                 <button onClick={() => setView('list')} className="mt-12 text-gray-500 hover:text-white transition-colors text-sm font-bold uppercase tracking-widest">Volver</button>
             </div>
@@ -3223,6 +3341,7 @@ function CoachAiView({
 }
 
 function VideoModal({ url, onClose }: { url: string, onClose: () => void }) {
+    const { theme } = useTheme();
     // Extract video ID from youtube url (e.g. v=VIDEO_ID)
     let videoId = '';
     try {

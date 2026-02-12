@@ -46,8 +46,14 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
     return (
         <div className="max-w-5xl mx-auto space-y-6 md:space-y-12 animate-fade-in pb-20">
             {/* Tactical Banner */}
-            <div className="relative group rounded-[40px] overflow-hidden border border-white/5 shadow-2xl dark-section">
-                <div className="h-48 md:h-64 bg-gradient-to-br from-brand-red via-black to-brand-gray relative">
+            <div className={clsx(
+                "relative group rounded-[40px] overflow-hidden border shadow-2xl dark-section transition-all duration-500",
+                profile.is_official ? "border-brand-red/30 shadow-[0_0_50px_rgba(220,38,38,0.15)]" : "border-white/5"
+            )}>
+                <div className={clsx(
+                    "h-48 md:h-64 relative",
+                    profile.is_official ? "bg-gradient-to-br from-brand-red via-black to-red-950" : "bg-gradient-to-br from-brand-red via-black to-brand-gray"
+                )}>
                     {profile.cover_url ? (
                         <>
                             <Image
@@ -65,20 +71,22 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-30 grayscale mix-blend-overlay"></div>
                     )}
                     {/* Mobile Follow Button - Top Right Overlay */}
-                    {user?.id !== profile.id && (
+                    {user?.id !== profile.id && !profile.is_official && (
                         <div className="absolute top-4 right-4 z-30 md:hidden">
                             <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} />
                         </div>
                     )}
                     {/* Manifiesto Overlay - Mobile Only - Significantly Smaller & Top Right Corner */}
-                    <div className="absolute top-4 right-4 z-10 md:hidden max-w-[100px]">
-                        <div className="bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-2 shadow-xl">
-                            <h3 className="text-[6px] font-black text-brand-red uppercase tracking-widest mb-1 text-right">Manifiesto</h3>
-                            <p className="text-[8px] text-white font-medium italic leading-tight line-clamp-6 text-right shadow-black drop-shadow-sm keep-white">
-                                "{profile.bio || '...'}"
-                            </p>
+                    {!profile.is_official && (
+                        <div className="absolute top-4 right-4 z-10 md:hidden max-w-[100px]">
+                            <div className="bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-2 shadow-xl">
+                                <h3 className="text-[6px] font-black text-brand-red uppercase tracking-widest mb-1 text-right">Manifiesto</h3>
+                                <p className="text-[8px] text-white font-medium italic leading-tight line-clamp-6 text-right shadow-black drop-shadow-sm keep-white">
+                                    "{profile.bio || '...'}"
+                                </p>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 p-2 md:p-10 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-8 z-20">
@@ -114,25 +122,27 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                     </p>
                                 </div>
 
-                                <div className="flex gap-4 md:gap-8 bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/5 w-fit shadow-lg">
-                                    <button
-                                        onClick={() => handleOpenModal('followers')}
-                                        className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 hover:opacity-80 transition-opacity text-left"
-                                        disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                                    >
-                                        <span className="text-white font-black text-xs md:text-lg leading-none">{profile.followers_count || 0}</span>
-                                        <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidores</span>
-                                    </button>
-                                    <div className="w-px h-6 bg-white/10 hidden md:block"></div>
-                                    <button
-                                        onClick={() => handleOpenModal('following')}
-                                        className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 hover:opacity-80 transition-opacity text-left"
-                                        disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                                    >
-                                        <span className="text-white font-black text-xs md:text-lg leading-none">{profile.following_count || 0}</span>
-                                        <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidos</span>
-                                    </button>
-                                </div>
+                                {!profile.is_official && (
+                                    <div className="flex gap-4 md:gap-8 bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/5 w-fit shadow-lg">
+                                        <button
+                                            onClick={() => handleOpenModal('followers')}
+                                            className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 hover:opacity-80 transition-opacity text-left"
+                                            disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
+                                        >
+                                            <span className="text-white font-black text-xs md:text-lg leading-none">{profile.followers_count || 0}</span>
+                                            <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidores</span>
+                                        </button>
+                                        <div className="w-px h-6 bg-white/10 hidden md:block"></div>
+                                        <button
+                                            onClick={() => handleOpenModal('following')}
+                                            className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 hover:opacity-80 transition-opacity text-left"
+                                            disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
+                                        >
+                                            <span className="text-white font-black text-xs md:text-lg leading-none">{profile.following_count || 0}</span>
+                                            <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidos</span>
+                                        </button>
+                                    </div>
+                                )}
 
                                 {/* Rank & Discipline - Mobile Badge */}
                                 {!profile.is_official ? (
@@ -171,7 +181,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     </div>
 
                     <div className="flex items-center gap-2 pb-2 pl-2 md:pl-0 md:pb-4 md:gap-3">
-                        {user?.id !== profile.id && (
+                        {user?.id !== profile.id && !profile.is_official && (
                             <div className="flex items-center gap-2">
                                 {isFollowing && (
                                     <Link

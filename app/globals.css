@@ -106,6 +106,12 @@
   opacity: 1 !important;
 }
 
+/* Permitir que textos con sombras específicas sigan siendo blancos incluso en light mode */
+[data-theme='light'] .text-white.drop-shadow-lg,
+[data-theme='light'] .text-white.drop-shadow-md {
+  color: #ffffff !important;
+}
+
 [data-theme='light'] .bg-card:not(.keep-bg),
 [data-theme='light'] .bg-white\/5:not(.keep-bg),
 [data-theme='light'] .bg-white\/10:not(.keep-bg),

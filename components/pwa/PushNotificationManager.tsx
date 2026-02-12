@@ -50,10 +50,14 @@ export default function PushNotificationManager() {
                     }
 
                     if (subscription) {
-                        // Send to server
-                        await savePushSubscription(JSON.parse(JSON.stringify(subscription)));
-                    }
+                        // Use toJSON() to get the serializable representation of the subscription
+                        const subscriptionData = typeof subscription.toJSON === 'function'
+                            ? subscription.toJSON()
+                            : JSON.parse(JSON.stringify(subscription));
 
+                        // Send to server
+                        await savePushSubscription(subscriptionData);
+                    }
                 } catch (error) {
                     console.error("Push registration failed:", error);
                 }

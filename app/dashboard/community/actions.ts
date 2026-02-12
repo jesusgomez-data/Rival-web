@@ -74,16 +74,16 @@ export async function createPRPost(formData: FormData) {
         const exercise = formData.get('exercise') as string
         const weight = formData.get('weight') as string
         const sport = formData.get('sport') as string
-        const media = formData.get('media') as File
 
         if (!exercise || !weight) {
             return { error: "Exercise and weight are required for a PR post" }
         }
 
-        let mediaUrl = null
+        const media = formData.get('media') as File
+        let mediaUrl = formData.get('media_url') as string || null
 
-        // If they uploaded a custom background image
-        if (media && media.size > 0) {
+        // If they uploaded a custom background image via server action (fallback)
+        if (!mediaUrl && media && media.size > 0) {
             const fileExt = media.name.split('.').pop()
             const fileName = `${user.id}/pr_${Date.now()}.${fileExt}`
 
@@ -140,17 +140,15 @@ export async function createUserPost(formData: FormData) {
 
         const content = formData.get('content') as string
         const media = formData.get('media') as File
+        let mediaUrl = formData.get('media_url') as string || null
+        let mediaType = formData.get('media_type') as string || null
 
-        if (!content && (!media || media.size === 0)) {
+        if (!content && (!media || media.size === 0) && !mediaUrl) {
             return { error: "Post cannot be empty" }
         }
 
-        let mediaUrl = null
-        let mediaType = null
-
-        if (media && media.size > 0) {
+        if (!mediaUrl && media && media.size > 0) {
             const fileExt = media.name.split('.').pop()
-            // Simplify path to match potential RLS restrictions (avoiding deeply nested folders if not explicitly allowed)
             const fileName = `${user.id}/${Date.now()}.${fileExt}`
 
             const { error: uploadError } = await supabase.storage
@@ -175,7 +173,7 @@ export async function createUserPost(formData: FormData) {
             .insert({
                 user_id: user.id,
                 caption: content,
-                media_url: mediaUrl, // Table column is media_url, schema says singular
+                media_url: mediaUrl,
                 media_type: mediaType,
                 music_url: formData.get('music_url') as string || null,
                 music_title: formData.get('music_title') as string || null,

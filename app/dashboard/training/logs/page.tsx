@@ -73,7 +73,7 @@ export default function WorkoutLogsPage() {
                             Math.max(max, set.weight_kg || 0), 0) || 0;
 
                         return (
-                            <div key={workout.id} className="bg-[#0A0A0A] border border-white/5 rounded-[32px] p-8 hover:border-brand-red/30 transition-all group relative overflow-hidden shadow-2xl">
+                            <div key={workout.id} className="bg-[#0A0A0A] dark-section border border-white/5 rounded-[32px] p-8 hover:border-brand-red/30 transition-all group relative overflow-hidden shadow-2xl">
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-4">

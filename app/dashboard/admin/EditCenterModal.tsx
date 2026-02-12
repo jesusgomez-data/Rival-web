@@ -33,10 +33,15 @@ export default function EditCenterModal({ open, onClose, center, onUpdate }: Edi
     async function handleDelete() {
         if (!confirm('¿ESTÁS SEGURO? Esta acción borrará el centro y todos sus datos. No se puede deshacer.')) return;
         setLoading(true);
-        await deleteOrganization(center.id);
-        setLoading(false);
-        onUpdate();
-        onClose();
+        try {
+            await deleteOrganization(center.id);
+            onUpdate();
+            onClose();
+        } catch (error: any) {
+            alert(error.message || "Error al borrar el centro");
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (

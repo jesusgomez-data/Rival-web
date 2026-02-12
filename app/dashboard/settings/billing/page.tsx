@@ -101,23 +101,28 @@ function BillingContent() {
                 // Downgrade to free logic
                 // Downgrade request -> Redirect to Portal
                 // Users must cancel via Stripe Portal to stop billing
-                const url = await createPortalSession();
-                if (url) window.location.href = url;
+                const result = await createPortalSession();
+                if (result.error) alert(result.error);
+                else if (result.url) window.location.href = result.url;
                 return;
             } else {
                 // PAID PLANS -> Stripe
-                // We'll use the price IDs from environment variables or HARDCODED FALLBACKS for testing
+                // We'll use the price IDs from environment variables
                 let priceId = plan.id === 'premium'
-                    ? 'price_1SxdaPCpwHwK9MuevBVancPf'.trim()
-                    : 'price_1SxdavCpwHwK9Mueeesvlq6T'.trim();
+                    ? (process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || 'price_1SzepeCuIXDNtJ7AFKkDXv4H').trim()
+                    : (process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE || 'price_1SzeqjCuIXDNtJ7ApOSdRJre').trim();
 
                 console.log("Using Price ID:", priceId);
 
-                const url = await createCheckoutSession(priceId);
-                if (url) window.location.href = url;
+                const result = await createCheckoutSession(priceId);
+                if (result.error) {
+                    alert(result.error);
+                } else if (result.url) {
+                    window.location.href = result.url;
+                }
             }
         } catch (error: any) {
-            alert("Error: " + error.message);
+            alert("Error de conexión: " + error.message);
         } finally {
             setUpdating(null);
         }
@@ -195,9 +200,10 @@ function BillingContent() {
                                     if (isCurrent) {
                                         setUpdating('portal');
                                         try {
-                                            const url = await createPortalSession();
-                                            if (url) window.location.href = url;
-                                        } catch (e: any) { alert(e.message); }
+                                            const result = await createPortalSession();
+                                            if (result.error) alert(result.error);
+                                            else if (result.url) window.location.href = result.url;
+                                        } catch (e: any) { alert("Error al conectar con Stripe."); }
                                         setUpdating(null);
                                     } else {
                                         handleUpgrade(plan);

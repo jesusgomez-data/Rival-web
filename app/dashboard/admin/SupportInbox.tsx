@@ -1,8 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { HelpCircle, Send, Loader2, X, Shield } from 'lucide-react';
-import { getTicketDetails, sendReply, resolveTicket } from './support-actions';
+import { HelpCircle, Send, Loader2, X, Shield, Trash2 } from 'lucide-react';
+import { getTicketDetails, sendReply, resolveTicket, deleteSupportTicket } from './support-actions';
 import { cn } from '@/lib/utils';
 
 // Reuse the modal pattern
@@ -21,7 +21,7 @@ function Modal({ open, onClose, children }: { open: boolean; onClose: () => void
     );
 }
 
-export default function SupportInbox({ tickets }: { tickets: any[] }) {
+export default function SupportInbox({ tickets, onUpdate }: { tickets: any[], onUpdate?: () => void }) {
     const [selectedTicket, setSelectedTicket] = useState<any>(null);
     const [messages, setMessages] = useState<any[]>([]);
     const [open, setOpen] = useState(false);
@@ -61,7 +61,19 @@ export default function SupportInbox({ tickets }: { tickets: any[] }) {
     async function handleResolve() {
         if (!confirm('¿Marcar como resuelto?')) return;
         await resolveTicket(selectedTicket.id);
+        if (onUpdate) onUpdate();
         setOpen(false);
+    }
+
+    async function handleDeleteTicket(e: React.MouseEvent, ticketId: string) {
+        e.stopPropagation();
+        if (!confirm('¿Eliminar este ticket permanentemente?')) return;
+        try {
+            await deleteSupportTicket(ticketId);
+            if (onUpdate) onUpdate();
+        } catch (error) {
+            alert('Error al eliminar ticket');
+        }
     }
 
     return (
@@ -84,7 +96,7 @@ export default function SupportInbox({ tickets }: { tickets: any[] }) {
                         <div
                             key={ticket.id}
                             onClick={() => handleOpenTicket(ticket)}
-                            className="p-4 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-white/10 transition-all group"
+                            className="p-4 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 cursor-pointer border border-transparent hover:border-gray-200 dark:hover:border-white/10 transition-all group relative"
                         >
                             <div className="flex justify-between items-start mb-1">
                                 <span className={cn(
@@ -106,6 +118,15 @@ export default function SupportInbox({ tickets }: { tickets: any[] }) {
                                 </span>
                                 {ticket.user?.full_name || 'Usuario desconocido'}
                             </div>
+                            {ticket.status === 'resolved' && (
+                                <button
+                                    onClick={(e) => handleDeleteTicket(e, ticket.id)}
+                                    className="absolute bottom-4 right-4 p-1.5 hover:bg-red-500/10 rounded-lg text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                    title="Eliminar ticket resuelto"
+                                >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                            )}
                         </div>
                     ))
                 )}

@@ -21,6 +21,13 @@ const lexend = Lexend({
   subsets: ["latin"],
 });
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
   title: "Rival Fit | El Futuro del Fitness 2026",
   description: "La primera red social creada para la mentalidad del 1%. Registra tus progresos, compite globalmente y accede a gimnasios de élite.",
@@ -28,12 +35,6 @@ export const metadata: Metadata = {
   icons: {
     icon: "/logo.svg",
     apple: "/logo.svg",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-    userScalable: false,
   },
   openGraph: {
     title: "Rival Fit | Face Yourself. Conquer All.",

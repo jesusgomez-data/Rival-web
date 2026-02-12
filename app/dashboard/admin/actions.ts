@@ -101,12 +101,46 @@ export async function updateUserPlan(userId: string, tier: string) {
 
 export async function deleteOrganization(orgId: string) {
     if (!(await isUserAdmin())) throw new Error("Unauthorized");
+
+    console.log(`[NUCLEAR ORG DELETE] Initiated for orgId: ${orgId}`);
+
+    const safeDelete = async (table: string, column: string, value: any) => {
+        try {
+            const { error } = await supabaseAdmin.from(table).delete().eq(column, value);
+            if (error) console.warn(`[NUCLEAR ORG DELETE] Warning for ${table}: ${error.message}`);
+        } catch (e) {
+            // Table might not exist
+        }
+    };
+
+    // 1. Cleanup all related tables (Top-down order)
+    const tablesToClean = [
+        ['center_roles', 'organization_id'],
+        ['members', 'center_id'],
+        ['classes', 'organization_id'],
+        ['membership_plans', 'organization_id'],
+        ['wods', 'organization_id'],
+        ['trial_requests', 'organization_id'],
+        ['support_tickets', 'organization_id'],
+        ['centers', 'organization_id'], // Sede table if exists
+    ];
+
+    for (const [table, col] of tablesToClean) {
+        await safeDelete(table, col, orgId);
+    }
+
+    // 2. The final delete of the organization itself
     const { error } = await supabaseAdmin
         .from('organizations')
         .delete()
         .eq('id', orgId);
 
-    if (error) throw new Error(error.message);
+    if (error) {
+        console.error(`[NUCLEAR ORG DELETE] Failed for ${orgId}:`, error.message);
+        throw new Error(`No se pudo borrar el centro por dependencias en la base de datos. Por favor, ejecuta 'fix_org_deletion.sql' en el dashboard de Supabase.`);
+    }
+
+    console.log(`[NUCLEAR ORG DELETE] Success for orgId: ${orgId}`);
     revalidatePath('/dashboard/admin');
 }
 

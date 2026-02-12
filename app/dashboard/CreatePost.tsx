@@ -4,7 +4,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Image as ImageIcon, Loader2, X, Smile } from "lucide-react";
 import { createUserPost, createPRPost } from "./community/actions";
-import { Trophy, Activity } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import { Trophy, Activity, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import MusicPicker from "./MusicPicker";
@@ -20,8 +21,11 @@ export default function CreatePost({ currentUser }: { currentUser: any }) {
     const [weight, setWeight] = useState("");
     const [sport, setSport] = useState("Cross Training");
     const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
+    const [duration, setDuration] = useState<number | null>(null);
+    const [uploadProgress, setUploadProgress] = useState(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
+    const supabaseClient = createClient();
 
     // Close emoji picker when clicking outside
     useEffect(() => {
@@ -44,6 +48,7 @@ export default function CreatePost({ currentUser }: { currentUser: any }) {
         if (postType === 'pr' && (!exercise || !weight)) return;
 
         setIsPosting(true);
+        setUploadProgress(10);
 
         const formData = new FormData();
 
@@ -53,19 +58,57 @@ export default function CreatePost({ currentUser }: { currentUser: any }) {
             formData.append("music_artist", selectedTrack.artist);
         }
 
+        let mediaUrl = null;
+        let mediaType = null;
+
+        // DIRECT CLIENT UPLOAD for larger files and reliability
+        if (file && file.size > 0) {
+            try {
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
+
+                setUploadProgress(30);
+                const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                    .from('posts')
+                    .upload(fileName, file);
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabaseClient.storage
+                    .from('posts')
+                    .getPublicUrl(fileName);
+
+                mediaUrl = publicUrl;
+                mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+                setUploadProgress(80);
+            } catch (error) {
+                console.error("Direct upload failed:", error);
+                alert("Error al subir el archivo. Intentando vía servidor...");
+                // Fallback will happen as mediaUrl remains null and file is in formData
+            }
+        }
+
         let res;
         try {
             if (postType === 'pr') {
                 formData.append("exercise", exercise);
                 formData.append("weight", weight);
                 formData.append("sport", sport);
-                if (file) formData.append("media", file);
+                if (mediaUrl) formData.append("media_url", mediaUrl);
+                else if (file) formData.append("media", file);
                 res = await createPRPost(formData);
             } else {
                 formData.append("content", content);
-                if (file) formData.append("media", file);
+                if (mediaUrl) {
+                    formData.append("media_url", mediaUrl);
+                    formData.append("media_type", mediaType!);
+                } else if (file) {
+                    formData.append("media", file);
+                }
                 res = await createUserPost(formData);
             }
+
+            setUploadProgress(100);
 
             if (res?.error) {
                 alert(`Error al publicar: ${res.error}`);
@@ -74,33 +117,48 @@ export default function CreatePost({ currentUser }: { currentUser: any }) {
                 setExercise("");
                 setWeight("");
                 setPreview(null);
+                setDuration(null);
                 setShowEmojiPicker(false);
                 setPostType('standard');
                 setSelectedTrack(null);
                 if (fileInputRef.current) fileInputRef.current.value = "";
-
-                // Optional: Show success toast/message here if we had a toast system
             }
         } catch (error: any) {
             console.error("Post error:", error);
             alert(`Ocurrió un error inesperado al publicar: ${error?.message || String(error)}`);
         } finally {
             setIsPosting(false);
+            setUploadProgress(0);
         }
     }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            if (file.size > 20 * 1024 * 1024) { // 20MB limit
-                alert("El archivo es demasiado grande (máximo 20MB).");
+            // Increase limit to 100MB
+            if (file.size > 100 * 1024 * 1024) {
+                alert("El archivo es demasiado grande (máximo 100MB).");
                 if (fileInputRef.current) fileInputRef.current.value = "";
                 setPreview(null);
                 return;
             }
-            setPreview(URL.createObjectURL(file));
+
+            const url = URL.createObjectURL(file);
+            setPreview(url);
+
+            if (file.type.startsWith('video/')) {
+                const docVideo = document.createElement('video');
+                docVideo.preload = 'metadata';
+                docVideo.onloadedmetadata = () => {
+                    setDuration(docVideo.duration);
+                };
+                docVideo.src = url;
+            } else {
+                setDuration(null);
+            }
         } else {
             setPreview(null);
+            setDuration(null);
         }
     };
 
@@ -186,17 +244,42 @@ export default function CreatePost({ currentUser }: { currentUser: any }) {
 
                         {preview && (
                             <div className="relative mb-4 rounded-xl overflow-hidden border border-white/10 bg-black/40 w-fit max-w-full">
-                                <img src={preview} alt="Preview" className="max-h-[300px] object-contain" />
+                                {fileInputRef.current?.files?.[0]?.type.startsWith('video/') ? (
+                                    <video src={preview} controls className="max-h-[300px] object-contain rounded-xl" />
+                                ) : (
+                                    <img src={preview} alt="Preview" className="max-h-[300px] object-contain" />
+                                )}
+
                                 <button
                                     type="button"
                                     onClick={() => {
                                         setPreview(null);
+                                        setDuration(null);
                                         if (fileInputRef.current) fileInputRef.current.value = "";
                                     }}
-                                    className="absolute top-2 right-2 bg-black/60 text-white p-1.5 rounded-full hover:bg-brand-red transition-colors"
+                                    className="absolute top-2 right-2 bg-black/60 text-white p-1.5 rounded-full hover:bg-brand-red transition-colors z-10"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
+
+                                {duration !== null && duration > 60 && (
+                                    <div className="absolute bottom-0 left-0 right-0 bg-brand-red/90 text-white px-3 py-2 text-[10px] font-bold flex items-center gap-2 backdrop-blur-sm animate-pulse">
+                                        <AlertCircle className="w-3 h-3" />
+                                        VIDEO LARGO ({Math.round(duration)}s) - SE RECOMIENDA CORTAR A 60s
+                                    </div>
+                                )}
+
+                                {isPosting && uploadProgress > 0 && (
+                                    <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2">
+                                        <div className="w-32 h-1.5 bg-white/20 rounded-full overflow-hidden">
+                                            <div
+                                                className="h-full bg-brand-red transition-all duration-300"
+                                                style={{ width: `${uploadProgress}%` }}
+                                            />
+                                        </div>
+                                        <span className="text-[10px] font-black text-white uppercase tracking-widest">{uploadProgress}%</span>
+                                    </div>
+                                )}
                             </div>
                         )}
 

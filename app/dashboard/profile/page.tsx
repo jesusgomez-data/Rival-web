@@ -5,7 +5,7 @@ import { getUserProfile } from "../training/actions";
 import { getUpcomingTrial } from "../gyms/trial-booking-actions";
 
 import { createClient } from "@/utils/supabase/client";
-import { User, Camera, Save, Loader2, Mail, Hash, MapPin, Trophy, Dumbbell, Swords, Award, ExternalLink, TrendingUp, Building2, Smile, Edit2, Move, Check, X, Calendar, LayoutGrid, Settings } from "lucide-react";
+import { User, Camera, Save, Loader2, Mail, Hash, MapPin, Trophy, Dumbbell, Swords, Award, ExternalLink, TrendingUp, Building2, Smile, Edit2, Move, Check, X, Calendar, LayoutGrid, Settings, Trash2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -257,6 +257,32 @@ export default function ProfilePage() {
         }
     };
 
+    const handleRemoveCover = async () => {
+        if (!confirm("¿Estás seguro de que quieres eliminar la foto de portada?")) return;
+
+        setSaving(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            const { error } = await supabase
+                .from('profiles')
+                .update({ cover_url: null, cover_position: 50 })
+                .eq('id', user.id);
+
+            if (error) throw error;
+
+            setProfile((prev: any) => ({ ...prev, cover_url: null }));
+            setCoverPosition(50);
+            router.refresh();
+        } catch (error) {
+            console.error("Error removing cover:", error);
+            alert("Error al eliminar la portada");
+        } finally {
+            setSaving(false);
+        }
+    };
+
     const startRepositioning = () => {
         setIsRepositioning(true);
         setStartPos(coverPosition);
@@ -401,6 +427,15 @@ export default function ProfilePage() {
                             >
                                 {uploadingCover ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
                             </button>
+                            {profile?.cover_url && (
+                                <button
+                                    onClick={handleRemoveCover}
+                                    className="bg-black/50 text-white p-2 rounded-xl opacity-0 group-hover/cover:opacity-100 transition-all hover:bg-brand-red backdrop-blur-sm"
+                                    title="Eliminar Portada"
+                                >
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px] z-20">
@@ -489,8 +524,8 @@ export default function ProfilePage() {
 
                         <div className="pb-2 flex flex-col sm:flex-row sm:items-end justify-between flex-1 gap-4">
                             <div>
-                                <h1 className="text-3xl font-heading font-black text-white italic uppercase tracking-tighter">{profile?.full_name || 'Anonymous Athlete'}</h1>
-                                <p className="text-brand-red font-black tracking-widest text-xs uppercase mt-1">@{profile?.username || 'user'}</p>
+                                <h1 className="text-3xl font-heading font-black text-white keep-white italic uppercase tracking-tighter drop-shadow-lg">{profile?.full_name || 'Anonymous Athlete'}</h1>
+                                <p className="text-brand-red font-black tracking-widest text-xs uppercase mt-1 drop-shadow-md keep-white">@{profile?.username || 'user'}</p>
                             </div>
                             <div className="flex gap-2 mb-2">
                                 <Link
@@ -588,7 +623,7 @@ export default function ProfilePage() {
                 </button>
             </div>
 
-            <div className="pt-2 lg:pt-8 grid lg:grid-cols-12 gap-8">
+            <div className="pt-2 lg:pt-8 flex flex-col lg:grid lg:grid-cols-12 gap-8">
                 {/* Left side: Stats & Info */}
                 <div className="lg:col-span-4 space-y-6">
                     <div className={clsx(mobileTab !== 'gallery' && "hidden lg:block")}>
@@ -654,8 +689,9 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Right side: Form y Workouts */}
-                <div className="lg:col-span-8 space-y-8">
-                    <div className={clsx("bg-brand-gray/30 border border-white/5 rounded-3xl p-4 md:p-8 backdrop-blur-xl", mobileTab !== 'settings' && "hidden lg:block")}>
+                <div className={clsx("lg:col-span-8 space-y-8", mobileTab !== 'settings' && mobileTab !== 'workouts' && "hidden lg:block")}>
+                    {/* Settings Form */}
+                    <div className={clsx("bg-brand-gray/30 border border-white/5 rounded-3xl p-3 md:p-8 backdrop-blur-xl", mobileTab !== 'settings' && "hidden lg:block")}>
                         <form onSubmit={handleSave} className="space-y-6">
                             <div className="grid md:grid-cols-2 gap-6">
                                 <FormInput
@@ -685,7 +721,7 @@ export default function ProfilePage() {
                                         onChange={handleChange}
                                         rows={4}
                                         placeholder="Cuéntale a la comunidad sobre tu camino fitness..."
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-brand-red transition-all resize-none placeholder:text-gray-700 pr-10"
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-3 text-white focus:outline-none focus:border-brand-red transition-all resize-none placeholder:text-gray-700"
                                     />
                                     <button
                                         type="button"
@@ -716,7 +752,7 @@ export default function ProfilePage() {
                                         name="main_sport"
                                         value={formData.main_sport}
                                         onChange={handleChange}
-                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-white focus:outline-none focus:border-brand-red transition-all appearance-none"
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl p-3 text-white focus:outline-none focus:border-brand-red transition-all appearance-none"
                                     >
                                         <option value="General">Fitness General</option>
                                         <option value="Cross Training">Cross Training</option>
@@ -769,7 +805,7 @@ export default function ProfilePage() {
                                     <select
                                         value={newRm.exercise}
                                         onChange={(e) => setNewRm({ ...newRm, exercise: e.target.value })}
-                                        className="flex-1 bg-black/40 border border-white/10 rounded-xl p-3 text-white text-xs font-bold outline-none focus:border-brand-red/50"
+                                        className="flex-1 bg-black/40 border border-white/10 rounded-xl p-3 text-white text-xs font-bold outline-none focus:border-brand-red/50 min-w-0"
                                     >
                                         <option value="Snatch">Snatch</option>
                                         <option value="Clean & Jerk">Clean & Jerk</option>
@@ -799,12 +835,12 @@ export default function ProfilePage() {
                                         placeholder="0"
                                         value={newRm.weight}
                                         onChange={(e) => setNewRm({ ...newRm, weight: e.target.value })}
-                                        className="w-20 bg-black/40 border border-white/10 rounded-xl p-3 text-white text-center text-xs font-bold outline-none focus:border-brand-red/50"
+                                        className="w-16 md:w-20 bg-black/40 border border-white/10 rounded-xl p-3 text-white text-center text-xs font-bold outline-none focus:border-brand-red/50"
                                     />
                                     <select
                                         value={newRm.unit}
                                         onChange={(e) => setNewRm({ ...newRm, unit: e.target.value })}
-                                        className="w-20 bg-black/40 border border-white/10 rounded-xl p-3 text-white text-xs font-bold outline-none focus:border-brand-red/50"
+                                        className="w-16 md:w-20 bg-black/40 border border-white/10 rounded-xl p-3 text-white text-xs font-bold outline-none focus:border-brand-red/50"
                                     >
                                         <option value="kg">kg</option>
                                         <option value="lb">lb</option>
@@ -814,7 +850,7 @@ export default function ProfilePage() {
                                     <button
                                         type="button"
                                         onClick={addRm}
-                                        className="p-3 bg-white/10 hover:bg-brand-red text-white rounded-xl transition-colors"
+                                        className="p-3 bg-white/10 hover:bg-brand-red text-white rounded-xl transition-colors shrink-0"
                                     >
                                         <Plus className="w-4 h-4" />
                                     </button>
@@ -836,7 +872,7 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Lista de entrenamientos */}
-                    <div className={clsx("bg-brand-gray/30 border border-white/5 rounded-3xl p-4 md:p-8 backdrop-blur-xl", mobileTab !== 'workouts' && "hidden lg:block")}>
+                    <div className={clsx("bg-brand-gray/30 border border-white/5 rounded-3xl p-3 md:p-8 backdrop-blur-xl", mobileTab !== 'workouts' && "hidden lg:block")}>
                         <h3 className="text-lg font-bold text-white mb-4">Tus Entrenamientos</h3>
                         {workouts.length === 0 ? (
                             <p className="text-gray-400">No has registrado entrenamientos aún.</p>
@@ -898,12 +934,12 @@ function FormInput({ label, icon, ...props }: any) {
         <div className="space-y-2">
             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">{label}</label>
             <div className="relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-600">
+                <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-600">
                     {icon}
                 </div>
                 <input
                     {...props}
-                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 pl-12 text-white focus:outline-none focus:border-brand-red transition-all placeholder:text-gray-700"
+                    className="w-full bg-black/40 border border-white/10 rounded-2xl p-3 pl-8 text-white focus:outline-none focus:border-brand-red transition-all placeholder:text-gray-700"
                 />
             </div>
         </div>

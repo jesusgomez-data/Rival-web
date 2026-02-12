@@ -142,6 +142,7 @@ export async function saveWorkout(workoutData: any) {
                 location_name: workoutData.locationName || null,
                 sport_type: workoutData.sportType || 'fitness',
                 metrics: workoutData.metrics || null,
+                is_guided: workoutData.isGuided || false,
             })
             .eq('id', workoutData.id)
             .eq('user_id', user.id)
@@ -168,6 +169,7 @@ export async function saveWorkout(workoutData: any) {
                 location_name: workoutData.locationName || null,
                 sport_type: workoutData.sportType || 'fitness',
                 metrics: workoutData.metrics || null,
+                is_guided: workoutData.isGuided || false,
             })
             .select()
             .single();
@@ -715,6 +717,34 @@ export async function getPerformanceStats() {
         daily: statsData,
         fatigue: Math.min(fatigueScore, 100)
     }
+}
+
+export async function getGuidedWorkoutsCount() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return 0
+
+    // Get Monday of current week
+    const now = new Date()
+    const startOfWeek = new Date(now)
+    const day = startOfWeek.getDay()
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1)
+    startOfWeek.setDate(diff)
+    startOfWeek.setHours(0, 0, 0, 0)
+
+    const { count, error } = await supabase
+        .from('workouts')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('is_guided', true)
+        .gte('created_at', startOfWeek.toISOString())
+
+    if (error) {
+        console.error('Error fetching guided workouts count:', error)
+        return 0
+    }
+
+    return count || 0
 }
 
 // 12. Get Scheduled Workouts

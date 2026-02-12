@@ -27,6 +27,7 @@ interface UserStories {
 
 interface StoryContextType {
     userStories: UserStories[]
+    setUserStories: React.Dispatch<React.SetStateAction<UserStories[]>>
     openStory: (userId: string) => void
     refreshStories: () => Promise<void>
 }
@@ -57,7 +58,7 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
     }
 
     return (
-        <StoryContext.Provider value={{ userStories, openStory, refreshStories }}>
+        <StoryContext.Provider value={{ userStories, setUserStories, openStory, refreshStories }}>
             {children}
         </StoryContext.Provider>
     )

@@ -14,9 +14,11 @@ export default function Home() {
   const { language, setLanguage, t } = useLanguage();
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [viewMode, setViewMode] = useState<'choice' | 'athlete' | 'business'>('choice');
+  const [mounted, setMounted] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const handleResize = () => {
       setIsDesktop(window.innerWidth > 1024);
     };
@@ -64,57 +66,58 @@ export default function Home() {
       </nav>
 
       {/* Mobile Choice Overlay */}
-      <div className={`lg:hidden fixed inset-0 z-[60] bg-black transition-all duration-1000 ${viewMode !== 'choice' ? 'translate-y-[-100%] pointer-events-none opacity-0' : 'opacity-100'}`}>
-        <div className="absolute inset-0">
-          <video autoPlay loop muted playsInline className="w-full h-full object-cover grayscale opacity-60">
-            <source src="https://assets.mixkit.co/videos/preview/mixkit-boxer-training-with-a-punching-bag-in-a-dark-gym-40537-large.mp4" type="video/mp4" />
-          </video>
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-        </div>
+      {mounted && viewMode === 'choice' && !isDesktop && (
+        <div className={`lg:hidden fixed inset-0 z-[60] bg-black transition-all duration-1000 ${viewMode !== 'choice' ? 'translate-y-[-100%] pointer-events-none opacity-0' : 'opacity-100'}`}>
+          <div className="absolute inset-0">
+            <video autoPlay loop muted playsInline className="w-full h-full object-cover grayscale opacity-60">
+              <source src="https://assets.mixkit.co/videos/preview/mixkit-boxer-training-with-a-punching-bag-in-a-dark-gym-40537-large.mp4" type="video/mp4" />
+            </video>
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+          </div>
 
-        <div className="relative h-full flex flex-col items-center justify-center px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-12"
-          >
-            <div className="flex items-center gap-3 justify-center mb-6">
-              <Image src="/logo.svg" alt="Logo" width={60} height={60} className="w-16 h-16 drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]" />
-              <span className="font-heading font-black text-5xl tracking-tighter italic text-white drop-shadow-[0_0_30px_rgba(239,68,68,0.5)]">RIVAL</span>
+          <div className="relative h-full flex flex-col items-center justify-center px-8 text-center">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-12"
+            >
+              <div className="flex items-center gap-3 justify-center mb-6">
+                <Image src="/logo.svg" alt="Logo" width={60} height={60} className="w-16 h-16 drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]" />
+                <span className="font-heading font-black text-5xl tracking-tighter italic text-white drop-shadow-[0_0_30px_rgba(239,68,68,0.5)]">RIVAL</span>
+              </div>
+              <h2 className="text-xl font-bold text-white/80 uppercase tracking-[0.2em] mb-2 px-4 italic">{t.choice.title}</h2>
+              <div className="h-0.5 w-12 bg-brand-red mx-auto mt-4" />
+            </motion.div>
+
+            <div className="w-full max-w-sm space-y-4">
+              <button
+                onClick={() => setViewMode('athlete')}
+                className="w-full py-6 rounded-2xl bg-brand-red text-white font-black text-xl uppercase tracking-widest shadow-[0_0_40px_rgba(239,68,68,0.4)] active:scale-95 transition-all flex items-center justify-center gap-3 group"
+              >
+                <Dumbbell className="w-6 h-6 group-hover:rotate-12 transition-transform" />
+                {t.choice.athlete}
+              </button>
+              <button
+                onClick={() => setViewMode('business')}
+                className="w-full py-6 rounded-2xl bg-white/5 border border-white/20 text-white font-black text-xl uppercase tracking-widest backdrop-blur-md active:scale-95 transition-all flex items-center justify-center gap-3 group"
+              >
+                <Building2 className="w-6 h-6 group-hover:scale-110 transition-transform" />
+                {t.choice.business}
+              </button>
             </div>
-            <h2 className="text-xl font-bold text-white/80 uppercase tracking-[0.2em] mb-2 px-4 italic">{t.choice.title}</h2>
-            <div className="h-0.5 w-12 bg-brand-red mx-auto mt-4" />
-          </motion.div>
 
-          <div className="w-full max-w-sm space-y-4">
-            <button
-              onClick={() => setViewMode('athlete')}
-              className="w-full py-6 rounded-2xl bg-brand-red text-white font-black text-xl uppercase tracking-widest shadow-[0_0_40px_rgba(239,68,68,0.4)] active:scale-95 transition-all flex items-center justify-center gap-3 group"
-            >
-              <Dumbbell className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-              {t.choice.athlete}
-            </button>
-            <button
-              onClick={() => setViewMode('business')}
-              className="w-full py-6 rounded-2xl bg-white/5 border border-white/20 text-white font-black text-xl uppercase tracking-widest backdrop-blur-md active:scale-95 transition-all flex items-center justify-center gap-3 group"
-            >
-              <Building2 className="w-6 h-6 group-hover:scale-110 transition-transform" />
-              {t.choice.business}
-            </button>
+            <div className="mt-8 animate-pulse">
+              <Link href="/login" className="text-white/60 text-sm font-medium hover:text-white transition-colors">
+                {t.choice.alreadyMember} <span className="text-brand-red font-bold underline underline-offset-4">{t.choice.login}</span>
+              </Link>
+            </div>
+
+            <p className="absolute bottom-12 text-white/40 text-xs font-bold uppercase tracking-widest">
+              {t.choice.footer}
+            </p>
           </div>
-
-          <div className="mt-8 animate-pulse">
-            <Link href="/login" className="text-white/60 text-sm font-medium hover:text-white transition-colors">
-              {t.choice.alreadyMember} <span className="text-brand-red font-bold underline underline-offset-4">{t.choice.login}</span>
-            </Link>
-          </div>
-
-          <p className="absolute bottom-12 text-white/40 text-xs font-bold uppercase tracking-widest">
-            {t.choice.footer}
-          </p>
         </div>
-      </div>
-
+      )}
       {/* Hero Section Athlete / Desktop */}
       <div className={(viewMode === 'athlete' || isDesktop) ? 'block' : 'lg:block hidden'}>
         <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden flex items-center min-h-[90vh]">
@@ -531,7 +534,7 @@ export default function Home() {
             <Link href="/legal/privacy" className="hover:text-brand-red transition-colors">Privacidad</Link>
           </div>
           <div className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Rival Inc. Todos los derechos reservados.
+            © 2026 Rival Inc. Todos los derechos reservados.
           </div>
           <div className="flex gap-4 items-center order-first md:order-last">
             <a href="https://instagram.com/rivalfit.app" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-white/5 hover:bg-brand-red text-white transition-all transform hover:scale-110">

@@ -52,7 +52,7 @@ interface OverlayElement {
 }
 
 export default function StoryBar({ currentUser }: { currentUser: any }) {
-    const { userStories, refreshStories } = useStories()
+    const { userStories, setUserStories, refreshStories } = useStories()
     const [selectedUserIndex, setSelectedUserIndex] = useState<number | null>(null)
     const [activeStoryIndex, setActiveStoryIndex] = useState(0)
     const [isUploading, setIsUploading] = useState(false)

@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { getAdminStats, getRecentOrganizations, getAllUsers, deleteUser } from './actions';
 import { getSupportTickets } from './support-actions';
-import { getModerationReports, takeModerationAction } from './report-actions';
+import { getModerationReports, takeModerationAction, deleteModerationReport } from './report-actions';
 import { getAds, toggleAd, deleteAd, updateAd } from './ad-actions';
 import CreateAdModal from './CreateAdModal';
 import EditAdModal from './EditAdModal';
@@ -94,7 +94,7 @@ export default function AdminDashboard() {
                 const supabase = createClient();
                 const { data: { user } } = await supabase.auth.getUser();
 
-                const adminEmails = ['gomezsantiagojesus@icloud.com', 'jesusgomez.s@hotmail.com'];
+                const adminEmails = ['rival.app.official@gmail.com', 'jesusgomez.s@hotmail.com'];
                 const userEmail = user?.email?.toLowerCase().trim();
 
                 if (!user || !userEmail || !adminEmails.includes(userEmail)) {
@@ -588,12 +588,28 @@ export default function AdminDashboard() {
                                                         {report.target} · {report.date}
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
-                                                        <button
-                                                            onClick={() => setReviewingReport(report)}
-                                                            className="bg-gray-100 dark:bg-white/5 hover:bg-brand-red px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all"
-                                                        >
-                                                            Revisar
-                                                        </button>
+                                                        <div className="flex justify-end gap-2">
+                                                            <button
+                                                                onClick={() => setReviewingReport(report)}
+                                                                className="bg-gray-100 dark:bg-white/5 hover:bg-brand-red px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all"
+                                                            >
+                                                                Revisar
+                                                            </button>
+                                                            {report.status === 'Resolved' && (
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        if (confirm('¿Eliminar este reporte resuelto?')) {
+                                                                            await deleteModerationReport(report.id);
+                                                                            refreshData();
+                                                                        }
+                                                                    }}
+                                                                    className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-500 transition-colors"
+                                                                    title="Eliminar reporte resuelto"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            )}
+                                                        </div>
                                                     </td>
                                                 </tr>
                                             ))
@@ -635,7 +651,7 @@ export default function AdminDashboard() {
 
                         {/* Support Inbox */}
                         <div className="h-[450px]">
-                            <SupportInbox tickets={tickets} />
+                            <SupportInbox tickets={tickets} onUpdate={refreshData} />
                         </div>
 
                         {/* Quick Actions Grid */}

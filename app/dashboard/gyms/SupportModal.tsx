@@ -4,19 +4,29 @@ import { useState } from 'react';
 import { HelpCircle, Send, Loader2, X } from 'lucide-react';
 import { createSupportTicket } from '@/app/dashboard/admin/support-actions';
 
+import { createPortal } from 'react-dom';
+
 function Modal({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
     if (!open) return null;
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-            <div className="relative bg-[#0a0a0a] border border-white/10 w-full max-w-md flex flex-col rounded-3xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
-                <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white z-10 p-2">
+
+    const content = (
+        <div className="fixed inset-0 z-[10000] flex items-start justify-center p-4 pt-12">
+            <div className="fixed inset-0 bg-black/95 backdrop-blur-xl" onClick={onClose} />
+            <div className="relative bg-[#0a0a0a] border border-white/10 w-full max-w-sm max-h-[85vh] flex flex-col rounded-[24px] overflow-hidden shadow-[0_0_100px_rgba(0,0,0,1)] animate-in slide-in-from-top-10 duration-500">
+                <button
+                    onClick={onClose}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-white z-[20] p-2 bg-white/5 hover:bg-white/10 rounded-full transition-all"
+                >
                     <X className="w-5 h-5" />
                 </button>
-                {children}
+                <div className="overflow-y-auto custom-scrollbar flex-1">
+                    {children}
+                </div>
             </div>
         </div>
     );
+
+    return createPortal(content, document.body);
 }
 
 export default function SupportModal() {
@@ -49,15 +59,15 @@ export default function SupportModal() {
 
     return (
         <>
-            <button onClick={() => setOpen(true)} className="flex items-center gap-2 text-xs text-gray-500 hover:text-white transition-colors group">
-                <HelpCircle className="w-4 h-4 group-hover:text-brand-red font-white" />
+            <button onClick={() => setOpen(true)} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors group">
+                <HelpCircle className="w-4 h-4 group-hover:text-brand-red transition-all" />
                 <span>Ayuda / Soporte</span>
             </button>
 
             <Modal open={open} onClose={() => setOpen(false)}>
-                <div className="p-6 border-b border-white/10 bg-gradient-to-r from-brand-red/10 to-transparent">
+                <div className="p-6 border-b border-white/10 bg-gradient-to-br from-brand-red/10 via-transparent to-transparent relative overflow-hidden">
                     <h2 className="text-xl font-heading font-black italic uppercase tracking-tighter text-white">Reportar Incidencia</h2>
-                    <p className="text-xs text-gray-400">Contacta directamente con el Comando Central de Rival.</p>
+                    <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Soporte Técnico</p>
                 </div>
 
                 {sent ? (

@@ -82,13 +82,6 @@ export default function UserMediaGallery({ userId, limit }: { userId: string, li
                     className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4"
                     onClick={() => setLightboxIndex(null)}
                 >
-                    <button
-                        onClick={() => setLightboxIndex(null)}
-                        className="absolute top-12 right-6 text-white hover:text-brand-red focus:outline-none transition-colors z-[110] bg-black/20 p-2 rounded-full"
-                    >
-                        <X className="w-8 h-8 md:w-10 md:h-10" />
-                    </button>
-
                     {/* Navigation Buttons */}
                     <button
                         className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white transition-colors z-[110]"
@@ -111,21 +104,28 @@ export default function UserMediaGallery({ userId, limit }: { userId: string, li
                     </button>
 
                     <div
-                        className="relative w-full max-w-5xl max-h-[80vh] flex items-center justify-center px-8 md:px-0"
+                        className="relative w-auto max-w-5xl max-h-[80vh] flex items-center justify-center px-0 shadow-2xl rounded-2xl overflow-hidden bg-black"
                         onClick={(e) => e.stopPropagation()}
                     >
+                        <button
+                            onClick={() => setLightboxIndex(null)}
+                            className="absolute top-4 right-4 text-white hover:text-brand-red focus:outline-none transition-colors z-[120] bg-black/40 backdrop-blur-md p-2 rounded-full border border-white/10"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+
                         {mediaItems[lightboxIndex].media_type === 'video' ? (
                             <video
                                 src={mediaItems[lightboxIndex].media_url}
                                 controls
                                 autoPlay
-                                className="max-w-full max-h-[80vh] rounded-lg shadow-2xl"
+                                className="max-w-full max-h-[80vh] object-contain"
                             />
                         ) : (
                             <img
                                 src={mediaItems[lightboxIndex].media_url}
                                 alt="Full size"
-                                className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-2xl"
+                                className="max-w-full max-h-[80vh] object-contain"
                             />
                         )}
                     </div>

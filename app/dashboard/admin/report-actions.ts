@@ -1,33 +1,43 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { isUserAdmin } from "@/utils/admin";
 
 export async function getModerationReports() {
     if (!(await isUserAdmin())) throw new Error("Unauthorized");
-    const supabase = await createClient();
+    const adminSupabase = createAdminClient();
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-
-    const { data, error } = await supabase
+    // Fetch reports
+    const { data: reports, error: reportsError } = await adminSupabase
         .from('moderation_reports')
-        .select(`
-            *,
-            reporter:profiles!reporter_id(username, full_name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-    if (error) {
-        console.error("Error fetching reports:", error);
+    if (reportsError) {
+        console.error("Error fetching moderation reports:", reportsError);
         return [];
     }
 
-    return data.map(report => ({
+    if (!reports || reports.length === 0) return [];
+
+    // Fetch reporter profiles
+    const reporterIds = Array.from(new Set(reports.map(r => r.reporter_id).filter(Boolean)));
+    const { data: profiles } = await adminSupabase
+        .from('profiles')
+        .select('id, username, full_name')
+        .in('id', reporterIds);
+
+    const profilesMap = (profiles || []).reduce((acc: any, p: any) => {
+        acc[p.id] = p;
+        return acc;
+    }, {});
+
+    return reports.map(report => ({
         id: report.id,
         type: report.target_type,
-        user: report.reporter?.username || 'Anónimo',
+        user: profilesMap[report.reporter_id]?.username || 'Anónimo',
         target: report.target_id,
         status: report.status === 'pending' ? 'Pending' : 'Resolved',
         date: new Date(report.created_at).toLocaleDateString(),
@@ -97,4 +107,19 @@ export async function takeModerationAction(reportId: string, action: 'ignore' | 
 export async function resolveReport(reportId: string) {
     if (!(await isUserAdmin())) throw new Error("Unauthorized");
     return takeModerationAction(reportId, 'ignore', '', '');
+}
+
+export async function deleteModerationReport(reportId: string) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
+    const supabase = await createClient();
+
+    const { error } = await supabase
+        .from('moderation_reports')
+        .delete()
+        .eq('id', reportId);
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath('/dashboard/admin');
+    return { success: true };
 }

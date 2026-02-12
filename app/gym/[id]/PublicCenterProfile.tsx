@@ -138,7 +138,17 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
             const end = new Date(date);
             end.setDate(end.getDate() + 6);
             const classesRange = await getClassesRange(org.id, start.toISOString(), end.toISOString());
-            setWeeklyClasses(classesRange);
+
+            // Group by date
+            const grouped: Record<string, any[]> = {};
+            // @ts-ignore
+            classesRange.forEach((cls: any) => {
+                const date = cls.scheduled_time.split('T')[0];
+                if (!grouped[date]) grouped[date] = [];
+                grouped[date].push(cls);
+            });
+
+            setWeeklyClasses(grouped);
         } else {
             const classes = await getClassesForDate(org.id, date);
             setScheduleClasses(classes);
