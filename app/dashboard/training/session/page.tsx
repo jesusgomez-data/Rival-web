@@ -630,8 +630,8 @@ function SessionContent() {
 
                 {preStartPlan && (
                     <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-300">
-                        <div className="w-full max-w-lg bg-[#111] border border-white/10 rounded-[40px] p-6 md:p-12 relative overflow-y-auto max-h-[95vh] custom-scrollbar">
-                            <div className="absolute top-0 right-0 p-12 opacity-5 -rotate-12 translate-x-8 -translate-y-8">
+                        <div className="w-full max-w-lg bg-[#111] border border-white/10 rounded-[40px] p-6 md:p-12 relative overflow-y-auto overflow-x-hidden max-h-[95vh] custom-scrollbar">
+                            <div className="absolute top-0 right-0 p-12 opacity-5 -rotate-12 translate-x-12 -translate-y-12 pointer-events-none">
                                 <Zap className="w-64 h-64 text-brand-red" />
                             </div>
 
@@ -646,7 +646,7 @@ function SessionContent() {
                                     </div>
                                 </div>
 
-                                <h2 className="text-3xl font-heading font-black italic text-white uppercase mb-4 leading-none tracking-tighter">
+                                <h2 className="text-2xl sm:text-3xl font-heading font-black italic text-white uppercase mb-4 leading-none tracking-tight">
                                     {preStartPlan.title}
                                 </h2>
 
@@ -661,34 +661,47 @@ function SessionContent() {
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="flex flex-col gap-4">
-                                            <div className="flex items-center gap-4 bg-white/5 border border-white/10 rounded-3xl p-2 focus-within:border-brand-red/50 transition-all">
-                                                <div className="flex-1 px-4">
-                                                    <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Ajuste Manual</p>
-                                                    <div className="flex items-center gap-2">
-                                                        <input
-                                                            type="number"
-                                                            value={preStartPlan.duration_min}
-                                                            onChange={(e) => setPreStartPlan({ ...preStartPlan, duration_min: parseInt(e.target.value) || 0 })}
-                                                            className="bg-transparent text-3xl font-mono font-black text-white w-full outline-none"
-                                                        />
-                                                        <span className="text-sm font-black text-gray-600 uppercase">Min</span>
+                                        <div className="bg-white/5 border border-white/10 rounded-[32px] p-4 sm:p-5 focus-within:border-brand-red/50 transition-all animate-in fade-in zoom-in-95 duration-500">
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-5">
+                                                {/* Sección Manual */}
+                                                <div className="flex-1 flex items-center gap-4">
+                                                    <div className="w-12 h-12 bg-brand-red/10 rounded-2xl flex items-center justify-center text-brand-red border border-brand-red/20 shadow-glow-sm shrink-0">
+                                                        <Timer className="w-6 h-6" />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Ajuste Manual</p>
+                                                        <div className="flex items-baseline gap-2">
+                                                            <input
+                                                                type="number"
+                                                                value={preStartPlan.duration_min}
+                                                                onChange={(e) => setPreStartPlan({ ...preStartPlan, duration_min: parseInt(e.target.value) || 0 })}
+                                                                className="bg-transparent text-4xl sm:text-5xl font-mono font-black text-white w-20 sm:w-24 outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                                            />
+                                                            <span className="text-[10px] sm:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">Minutos</span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <div className="h-12 w-px bg-white/10 mx-2" />
-                                                <div className="flex gap-2 p-1">
-                                                    {[30, 45, 60].map(m => (
-                                                        <button
-                                                            key={m}
-                                                            onClick={() => setPreStartPlan({ ...preStartPlan, duration_min: m })}
-                                                            className={clsx(
-                                                                "w-12 h-12 rounded-2xl text-[10px] font-black uppercase transition-all flex items-center justify-center",
-                                                                preStartPlan.duration_min === m ? "bg-white text-black shadow-lg" : "bg-white/5 text-gray-500 hover:text-white"
-                                                            )}
-                                                        >
-                                                            {m}
-                                                        </button>
-                                                    ))}
+
+                                                {/* Separador Dinámico */}
+                                                <div className="h-px w-full sm:h-12 sm:w-px bg-white/10" />
+
+                                                {/* Ajustes Rápidos */}
+                                                <div className="flex items-center justify-between sm:justify-start gap-2.5">
+                                                    <p className="sm:hidden text-[8px] font-black text-gray-600 uppercase tracking-widest">Sugeridos</p>
+                                                    <div className="flex gap-2">
+                                                        {[30, 45, 60].map(m => (
+                                                            <button
+                                                                key={m}
+                                                                onClick={() => setPreStartPlan({ ...preStartPlan, duration_min: m })}
+                                                                className={clsx(
+                                                                    "w-12 h-12 rounded-2xl text-[10px] font-black uppercase transition-all flex items-center justify-center shrink-0",
+                                                                    preStartPlan.duration_min === m ? "bg-white text-black shadow-xl scale-110" : "bg-white/5 text-gray-500 hover:text-white hover:bg-white/10"
+                                                                )}
+                                                            >
+                                                                {m}
+                                                            </button>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
