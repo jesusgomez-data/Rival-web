@@ -71,13 +71,13 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-30 grayscale mix-blend-overlay"></div>
                     )}
 
-                    {/* Manifiesto Overlay - Mobile Only - Lower Right Corner as requested */}
-                    {!profile.is_official && (
-                        <div className="absolute top-[110px] right-2 z-[35] md:hidden max-w-[100px]">
-                            <div className="bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-2 shadow-xl">
+                    {/* Manifiesto Overlay - Mobile Only - Positioned to avoid clash */}
+                    {!profile.is_official && profile.bio && (
+                        <div className="absolute top-[40px] right-0 z-[35] md:hidden max-w-[100px]">
+                            <div className="bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-2 shadow-2xl shadow-black/50">
                                 <h3 className="text-[7px] font-black text-brand-red uppercase tracking-widest mb-1 text-right">Manifiesto</h3>
-                                <p className="text-[9px] text-white font-medium italic leading-tight line-clamp-6 text-right shadow-black drop-shadow-sm keep-white">
-                                    "{profile.bio || '...'}"
+                                <p className="text-[9px] text-white font-medium italic leading-tight line-clamp-5 text-right shadow-black drop-shadow-sm keep-white">
+                                    "{profile.bio}"
                                 </p>
                             </div>
                         </div>
@@ -118,13 +118,13 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                 </div>
 
                                 {!profile.is_official && (
-                                    <div className="flex gap-4 md:gap-8 bg-black/40 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/5 w-fit shadow-lg">
+                                    <div className="flex gap-4 md:gap-8 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 w-fit shadow-2xl">
                                         <button
                                             onClick={() => handleOpenModal('followers')}
                                             className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 hover:opacity-80 transition-opacity text-left"
                                             disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
                                         >
-                                            <span className="text-white font-black text-xs md:text-lg leading-none">{profile.followers_count || 0}</span>
+                                            <span className="text-white font-black text-xs md:text-lg leading-none shadow-black drop-shadow-sm">{profile.followers_count || 0}</span>
                                             <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidores</span>
                                         </button>
                                         <div className="w-px h-6 bg-white/10 hidden md:block"></div>
@@ -133,7 +133,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                             className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 hover:opacity-80 transition-opacity text-left"
                                             disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
                                         >
-                                            <span className="text-white font-black text-xs md:text-lg leading-none">{profile.following_count || 0}</span>
+                                            <span className="text-white font-black text-xs md:text-lg leading-none shadow-black drop-shadow-sm">{profile.following_count || 0}</span>
                                             <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidos</span>
                                         </button>
                                     </div>
