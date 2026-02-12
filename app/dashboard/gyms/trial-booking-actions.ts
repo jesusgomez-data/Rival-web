@@ -59,20 +59,24 @@ export async function bookTrialClass(classId: string, centerId: string) {
     // 4. Get user profile
     const { data: profile } = await supabase
         .from('profiles')
-        .select('full_name, email, avatar_url')
+        .select('full_name, email, username, avatar_url')
         .eq('id', user.id)
         .single();
 
     // 5. If not a member, create a Trial Member record automatically using ADMIN privileges
     if (!memberId) {
+        // Preference: Profile name > Auth user metadata > Username > Placeholder
+        const finalName = profile?.full_name || user.user_metadata?.full_name || profile?.username || 'Atleta Rival';
+        const finalEmail = profile?.email || user.email || `user_${user.id.substring(0, 8)}@rival.app`;
+
         const { data: newMember, error: createMemberError } = await adminSupabase
             .from('members')
             .insert({
                 center_id: centerId,
                 user_id: user.id,
-                full_name: profile?.full_name || 'Atleta en Prueba',
-                email: profile?.email || `user_${user.id.substring(0, 8)}@rival.app`,
-                avatar_url: profile?.avatar_url || null,
+                full_name: finalName,
+                email: finalEmail,
+                avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url || null,
                 plan: 'trial',
                 status: 'trial',
                 membership_start_date: new Date().toISOString(),

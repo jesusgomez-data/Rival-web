@@ -104,12 +104,21 @@ export default async function ClassDetailPage({ params }: { params: { id: string
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <p className="font-bold text-white group-hover:text-brand-red transition-colors text-sm sm:text-base">{enrollment.member?.full_name || 'Unknown'}</p>
+                                            <p className="font-bold text-white group-hover:text-brand-red transition-colors text-sm sm:text-base">
+                                                {enrollment.member?.full_name || 'Unknown'}
+                                                {enrollment.member?.user?.username && (
+                                                    <span className="ml-2 text-[10px] text-gray-500 font-normal lowercase tracking-tighter">
+                                                        @{enrollment.member.user.username}
+                                                    </span>
+                                                )}
+                                            </p>
                                             {enrollment.member?.status === 'trial' && (
                                                 <span className="bg-blue-500/20 text-blue-400 border border-blue-500/30 text-[7px] font-black uppercase px-1.5 py-0.5 rounded shrink-0">Trial</span>
                                             )}
                                         </div>
-                                        <p className="text-[10px] sm:text-xs text-gray-500 truncate">{enrollment.member?.email || 'No email'}</p>
+                                        <p className="text-[10px] sm:text-xs text-gray-500 truncate font-mono">
+                                            {enrollment.member?.email || 'No email'}
+                                        </p>
                                     </div>
                                 </Link>
 

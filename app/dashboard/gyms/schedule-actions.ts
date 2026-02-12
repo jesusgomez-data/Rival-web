@@ -160,7 +160,10 @@ export async function getClassDetails(classId: string) {
                 plan,
                 status,
                 user_id,
-                birth_date
+                birth_date,
+                user:profiles!user_id (
+                    username
+                )
             )
         `)
         .eq('class_id', classId);
