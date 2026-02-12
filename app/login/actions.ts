@@ -34,6 +34,7 @@ export async function signup(prevState: any, formData: FormData) {
     const firstName = formData.get('firstName') as string
     const lastName = formData.get('lastName') as string
     const username = formData.get('username') as string
+    const birthDate = formData.get('birthDate') as string
 
     // Validate username uniqueness BEFORE attempting signup
     const { data: existingUser, error: checkError } = await supabase
@@ -62,6 +63,7 @@ export async function signup(prevState: any, formData: FormData) {
             data: {
                 full_name: `${firstName} ${lastName}`,
                 username: username,
+                birth_date: birthDate,
                 avatar_url: `https://ui-avatars.com/api/?name=${firstName}+${lastName}&background=random`
             }
         }
@@ -90,6 +92,8 @@ export async function signup(prevState: any, formData: FormData) {
                 id: data.user.id,
                 full_name: `${firstName} ${lastName}`,
                 username: username,
+                email: email, // Added email
+                birth_date: birthDate,
                 avatar_url: `https://ui-avatars.com/api/?name=${firstName}+${lastName}&background=random`,
                 updated_at: new Date().toISOString()
             }, { onConflict: 'id' })

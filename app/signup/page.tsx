@@ -148,6 +148,19 @@ export default function SignupPage() {
                             </div>
 
                             <div>
+                                <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">{t.signup.birthDate}</label>
+                                <div className="relative group">
+                                    <input
+                                        name="birthDate"
+                                        type="date"
+                                        required
+                                        max={new Date().toISOString().split('T')[0]}
+                                        className="w-full border border-border rounded-xl py-4 px-4 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all bg-card text-foreground placeholder:text-muted-foreground [color-scheme:dark]"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
                                 <label className="block text-xs font-bold text-muted-foreground uppercase tracking-widest mb-2">{t.signup.password}</label>
                                 <div className="relative group">
                                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground group-focus-within:text-brand-red transition-colors" />

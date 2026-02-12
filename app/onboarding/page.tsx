@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import {
@@ -53,6 +53,30 @@ export default function OnboardingPage() {
         phone: "",
     });
     const router = useRouter();
+
+    useEffect(() => {
+        const fetchProfile = async () => {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                // Also check if they already have onboarding completed (not in this component, but good for data)
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('birth_date, phone')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile) {
+                    setData(prev => ({
+                        ...prev,
+                        birthDate: profile.birth_date || prev.birthDate,
+                        phone: profile.phone || prev.phone,
+                    }));
+                }
+            }
+        };
+        fetchProfile();
+    }, []);
 
     const totalSteps = 4;
 

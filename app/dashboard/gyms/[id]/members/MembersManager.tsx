@@ -657,9 +657,19 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                         </span>
                                                     )}
                                                 </div>
-                                                <p className="text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-widest truncate">
-                                                    {m.user?.username ? `@${m.user.username}` : (m.email || m.user?.email || 'GUEST')}
-                                                </p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-widest truncate">
+                                                        {m.user?.username ? `@${m.user.username}` : (m.email || m.user?.email ? 'Miembro' : 'GUEST')}
+                                                    </p>
+                                                    {(m.email || m.user?.email) && (
+                                                        <>
+                                                            <span className="text-[7px] text-gray-700 font-bold">•</span>
+                                                            <p className="text-[9px] sm:text-[10px] text-gray-400 truncate lowercase font-medium">
+                                                                {m.email || m.user?.email}
+                                                            </p>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     </td>
@@ -732,17 +742,25 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                         {viewingMember.user?.full_name || viewingMember.full_name || username || 'Ficha de Atleta'}
                                     </h3>
                                     <div className="flex items-center gap-2 mt-1">
-                                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest truncate">
-                                            {viewingMember.user?.username ? `@${viewingMember.user.username}` : 'Miembro Externo'}
-                                        </p>
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest truncate">
+                                                {viewingMember.user?.username ? `@${viewingMember.user.username}` : 'Miembro Externo'}
+                                            </p>
+                                            <span className="text-gray-700 text-[8px]">•</span>
+                                            <p className="text-gray-400 text-[9px] font-medium lowercase">
+                                                {viewingMember.email || viewingMember.user?.email}
+                                            </p>
+                                        </div>
                                         {viewingMember.user?.username && (
-                                            <a
-                                                href={`/dashboard/profile/${viewingMember.user.username}`}
-                                                target="_blank"
-                                                className="text-[9px] text-brand-red hover:underline font-bold uppercase shrink-0"
-                                            >
-                                                Ver Perfil ↗
-                                            </a>
+                                            <div className="mt-1">
+                                                <a
+                                                    href={`/dashboard/profile/${viewingMember.user.username}`}
+                                                    target="_blank"
+                                                    className="text-[9px] text-brand-red hover:underline font-bold uppercase shrink-0"
+                                                >
+                                                    Ver Perfil ↗
+                                                </a>
+                                            </div>
                                         )}
                                     </div>
                                 </div>

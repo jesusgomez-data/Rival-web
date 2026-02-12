@@ -333,7 +333,7 @@ export async function approveTrialRequest(centerId: string, requestId: string, u
     // 1. Get Request and Profile Info
     const [{ data: request }, { data: profile }] = await Promise.all([
         admin.from('trial_requests').select('class_id').eq('id', requestId).single(),
-        admin.from('profiles').select('email').eq('id', userId).single()
+        admin.from('profiles').select('email, birth_date').eq('id', userId).single()
     ]);
 
     // 2. Create Member Record
@@ -345,6 +345,7 @@ export async function approveTrialRequest(centerId: string, requestId: string, u
             full_name: fullName || 'Athlete',
             avatar_url: avatarUrl || null,
             email: profile?.email || `user_${userId.substring(0, 8)}@rival.app`,
+            birth_date: profile?.birth_date || null,
             plan: 'trial',
             status: 'trial',
             membership_start_date: new Date().toISOString(),
@@ -476,13 +477,14 @@ export async function searchAthletes(query: string) {
 
 export async function linkMemberToUser(centerId: string, memberId: string, userId: string) {
     const supabase = await createClient();
-    const { data: profile } = await supabase.from('profiles').select('full_name, avatar_url, birth_date').eq('id', userId).single();
+    const { data: profile } = await supabase.from('profiles').select('full_name, avatar_url, birth_date, email').eq('id', userId).single();
     if (!profile) return { error: "No encontrado" };
 
     const { error } = await supabase.from('members').update({
         user_id: userId,
         full_name: profile.full_name,
         avatar_url: profile.avatar_url,
+        email: profile.email || null,
         birth_date: profile.birth_date || null,
         updated_at: new Date().toISOString()
     }).eq('id', memberId).eq('center_id', centerId);
