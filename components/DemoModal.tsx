@@ -170,9 +170,9 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                                 {view === 'athlete' && (
                                     <div className="absolute inset-0 z-0">
                                         <img
-                                            src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop"
+                                            src="https://images.unsplash.com/photo-1541534741688-611c501f116a?q=80&w=800&auto=format&fit=crop"
                                             alt="Training background"
-                                            className="w-full h-full object-cover opacity-30"
+                                            className="w-full h-full object-cover opacity-40"
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-black/40" />
                                     </div>
@@ -193,6 +193,11 @@ export default function DemoModal({ onClose }: DemoModalProps) {
                                         <>
                                             <div className="w-24 h-24 rounded-full border-4 border-red-500/20 p-1">
                                                 <div className="w-full h-full bg-gray-600 rounded-full overflow-hidden relative">
+                                                    <img
+                                                        src="https://images.unsplash.com/photo-1541534741688-611c501f116a?q=80&w=200&auto=format&fit=crop"
+                                                        alt="User"
+                                                        className="w-full h-full object-cover"
+                                                    />
                                                     <div className="absolute inset-0 bg-red-900/40 mix-blend-overlay"></div>
                                                 </div>
                                             </div>

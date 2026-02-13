@@ -189,7 +189,7 @@ export default function Home() {
               <div className="relative z-10 w-full max-w-[320px] sm:max-w-md mx-auto aspect-[9/16] bg-black rounded-[2.5rem] sm:rounded-[3rem] border-4 sm:border-8 shadow-2xl overflow-hidden ring-1 ring-white/10 border-gray-900">
                 {/* Background training image */}
                 <Image
-                  src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=800&auto=format&fit=crop"
+                  src="https://images.unsplash.com/photo-1532029837206-abbe0b76219f?q=80&w=800&auto=format&fit=crop"
                   alt="Background workout"
                   fill
                   className="object-cover opacity-50"
@@ -198,7 +198,7 @@ export default function Home() {
                   <div className="mb-4">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="w-12 h-12 rounded-full border-2 border-brand-red overflow-hidden relative">
-                        <Image src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=200&auto=format&fit=crop" alt="User" fill className="object-cover" />
+                        <Image src="https://images.unsplash.com/photo-1532029837206-abbe0b76219f?q=80&w=200&auto=format&fit=crop" alt="User" fill className="object-cover" />
                       </div>
                       <div>
                         <p className="font-bold text-white text-lg">Alex Sterling</p>
