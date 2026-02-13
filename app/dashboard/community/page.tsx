@@ -143,8 +143,8 @@ export default function CommunityPage({
     }
 
     return (
-        <div className="max-w-7xl mx-auto space-y-8 pb-20 px-4 sm:px-0">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="max-w-full lg:max-w-7xl mx-auto space-y-8 pb-20 px-0 lg:px-8">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 lg:px-0">
                 <div>
                     <h1 className="text-4xl font-heading font-bold text-white uppercase italic tracking-tighter leading-none mb-2">Comunidad <span className="text-brand-red">Rival</span></h1>
                     <p className="text-gray-400 text-sm font-medium tracking-wide">El campo de batalla donde se forja el carácter.</p>
@@ -162,7 +162,7 @@ export default function CommunityPage({
                     </div>
 
                     {/* Feed Tabs */}
-                    <div className="flex gap-6 border-b border-white/5 px-2">
+                    <div className="flex gap-6 border-b border-white/5 px-4 lg:px-2">
                         <button
                             onClick={() => setActiveTab('explore')}
                             className={clsx(
@@ -188,7 +188,7 @@ export default function CommunityPage({
                     </div>
 
                     {query && (
-                        <div className="space-y-4 pt-4 animate-in fade-in slide-in-from-top-2">
+                        <div className="space-y-4 pt-4 px-4 lg:px-0 animate-in fade-in slide-in-from-top-2">
                             <h2 className="text-xl font-heading font-bold text-white flex items-center gap-2 italic uppercase">
                                 <UserSearch className="w-5 h-5 text-brand-red" />
                                 {t.community.matchingAthletes} "{query}"

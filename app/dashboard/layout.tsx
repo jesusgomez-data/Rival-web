@@ -399,7 +399,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 )}
 
                 {/* Main Content Area */}
-                <div className={clsx("mx-auto transition-all duration-300", hideSidebarDefault && !isMenuOpen ? "h-full p-0 max-w-none" : "px-4 pt-6 pb-32 lg:p-8 max-w-7xl")}>
+                <div className={clsx("mx-auto transition-all duration-300", hideSidebarDefault && !isMenuOpen ? "h-full p-0 max-w-none" : "px-0 pt-6 pb-32 lg:p-8 max-w-7xl")}>
                     {(!hideSidebarDefault || isMenuOpen) && (
                         <header className="hidden lg:flex items-center justify-between mb-8">
                             <div className="flex-1 max-w-xl">
