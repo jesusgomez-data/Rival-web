@@ -189,9 +189,9 @@ export default function Home() {
               <div className="relative z-10 w-full max-w-[320px] sm:max-w-md mx-auto aspect-[9/16] bg-black rounded-[2.5rem] sm:rounded-[3rem] border-4 sm:border-8 shadow-2xl overflow-hidden ring-1 ring-white/10 border-gray-900">
                 {/* Background training image */}
                 <img
-                  src="https://images.unsplash.com/photo-1581009146145-b5ef03a7403f?q=80&w=800&auto=format&fit=crop"
+                  src="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1000&auto=format&fit=crop"
                   alt="Background workout"
-                  className="absolute inset-0 w-full h-full object-cover opacity-50"
+                  className="absolute inset-0 w-full h-full object-cover opacity-60 z-0"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/30 flex flex-col justify-end p-6">
                   <div className="mb-4">
