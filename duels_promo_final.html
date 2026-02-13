@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Publicidad Duelos - Rival Fit</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,900;1,900&family=Outfit:wght@400;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --brand-red: #dc2626;
+            --brand-red-dark: #991B1B;
+            --brand-black: #000000;
+            --brand-gray: #0a0a0a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111;
+            font-family: 'Inter', sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* --- AD CANVAS (1080x1080) --- */
+        #ad-canvas {
+            width: 1080px;
+            height: 1080px;
+            background-color: var(--brand-black);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Background Pattern (Hexagons) from Reference */
+        .honeycomb {
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='98' viewBox='0 0 56 98'%3E%3Cpath fill='%23111' fill-opacity='1' d='M27.99 18.5l26 15v30l-26 15L1 63.5v-30l26.99-15zM6 35.8l22-12.7 22 12.7v25.4l-22 12.7-22-12.7V35.8z'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            z-index: 1;
+        }
+
+        /* Central Red Glow */
+        .glow {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 900px;
+            height: 900px;
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.12) 0%, transparent 70%);
+            z-index: 2;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 60px 0;
+        }
+
+        /* Top Header Area */
+        .header {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .r-logo {
+            width: 200px;
+            height: 200px;
+            filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.5));
+        }
+
+        .fit-text {
+            font-size: 100px;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            margin-top: -10px;
+            text-transform: uppercase;
+        }
+
+        /* Center Explanation Area */
+        .explanation-title {
+            font-size: 48px;
+            font-weight: 900;
+            font-style: italic;
+            color: var(--brand-red);
+            text-transform: uppercase;
+            margin: 20px 0 40px;
+            letter-spacing: -0.02em;
+        }
+
+        .steps-container {
+            width: 80%;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .step-row {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%);
+            border-left: 4px solid var(--brand-red);
+            padding: 25px 40px;
+            border-radius: 0 20px 20px 0;
+        }
+
+        .step-number {
+            font-size: 60px;
+            font-weight: 900;
+            font-style: italic;
+            color: rgba(255, 255, 255, 0.1);
+            line-height: 1;
+        }
+
+        .step-info h3 {
+            margin: 0;
+            font-size: 32px;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-style: italic;
+        }
+
+        .step-info p {
+            margin: 5px 0 0;
+            font-size: 20px;
+            color: #888;
+            font-weight: 500;
+        }
+
+        /* Bottom Reference Icons */
+        .footer {
+            margin-top: auto;
+            width: 100%;
+            padding: 0 80px 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .footer-item {
+            display: flex;
+            flex-direction: column;
+            max-width: 400px;
+        }
+
+        .footer-item.right {
+            align-items: flex-end;
+            text-align: right;
+        }
+
+        .footer-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        .footer-icon {
+            font-size: 40px;
+        }
+
+        .footer-title {
+            font-size: 36px;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-style: italic;
+        }
+
+        .footer-desc {
+            font-size: 18px;
+            color: #666;
+            font-weight: 600;
+        }
+
+        .lightning {
+            color: #ff9d00;
+            text-shadow: 0 0 15px #ff9d00;
+        }
+
+        .building {
+            filter: grayscale(1) brightness(1.5);
+        }
+
+        /* Save Button Context */
+        .controls {
+            margin-top: 30px;
+        }
+
+        .btn {
+            background: var(--brand-red);
+            color: white;
+            border: none;
+            padding: 20px 50px;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(220, 38, 38, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="ad-canvas">
+        <div class="honeycomb"></div>
+        <div class="glow"></div>
+
+        <div class="content">
+            <!-- Header (Based on Image) -->
+            <div class="header">
+                <svg class="r-logo" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(38.4, -40) scale(0.85)">
+                        <path
+                            d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z"
+                            fill="#DC2626" />
+                        <path d="M160 100L145 310H220L235 100H160Z" fill="#991B1B" />
+                    </g>
+                </svg>
+                <div class="fit-text">FIT</div>
+            </div>
+
+            <div class="explanation-title">¿CÓMO FUNCIONAN LOS DUELOS?</div>
+
+            <!-- Steps -->
+            <div class="steps-container">
+                <div class="step-row">
+                    <div class="step-number">01</div>
+                    <div class="step-info">
+                        <h3>DESAFÍA</h3>
+                        <p>Busca un atleta en la comunidad y envíale un reto.</p>
+                    </div>
+                </div>
+
+                <div class="step-row">
+                    <div class="step-number">02</div>
+                    <div class="step-info">
+                        <h3>COMPITE (7 DÍAS)</h3>
+                        <p>Tus entrenamientos generan puntos automáticamente.</p>
+                    </div>
+                </div>
+
+                <div class="step-row">
+                    <div class="step-number">03</div>
+                    <div class="step-info">
+                        <h3>GANA LA GLORIA</h3>
+                        <p>El que más volumen y esfuerzo sume se lleva la victoria.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer (Exact style from Reference) -->
+            <div class="footer">
+                <div class="footer-item">
+                    <div class="footer-header">
+                        <span class="footer-icon lightning">⚡</span>
+                        <div class="footer-title">RED SOCIAL</div>
+                    </div>
+                    <p class="footer-desc">Conecta y compite en el feed global.</p>
+                </div>
+
+                <div class="footer-item right">
+                    <div class="footer-header">
+                        <div class="footer-title">GESTIÓN</div>
+                        <span class="footer-icon building">🏢</span>
+                    </div>
+                    <p class="footer-desc">Control total de tu rendimiento.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" onclick="saveAd()">GENERAR IMAGEN DE PUBLICIDAD</button>
+    </div>
+
+    <script>
+        function saveAd() {
+            const canvas = document.getElementById('ad-canvas');
+            html2canvas(canvas, {
+                scale: 2,
+                backgroundColor: '#000000',
+                logging: false,
+                useCORS: true
+            }).then(canvasImage => {
+                const link = document.createElement('a');
+                link.download = 'rival-publicidad-duelos.png';
+                link.href = canvasImage.toDataURL('image/png');
+                link.click();
+            });
+        }
+    </script>
+</body>
+
+</html>

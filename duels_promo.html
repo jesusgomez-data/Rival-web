@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rival Fit - Duelos Publicidad</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,900;1,900&family=Outfit:wght@400;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --brand-red: #dc2626;
+            --brand-red-dark: #b91c1c;
+            --brand-black: #050505;
+            --brand-gray: #0a0a0a;
+        }
+
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #000;
+            font-family: 'Inter', sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .canvas-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        #promo-card {
+            width: 1080px;
+            height: 1080px;
+            background-color: var(--brand-black);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.8);
+        }
+
+        /* --- BACKGROUND PATTERN (HEXAGONS) --- */
+        .honeycomb {
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='98' viewBox='0 0 56 98'%3E%3Cpath fill='%23111' fill-opacity='0.5' d='M27.99 18.5l26 15v30l-26 15L1 63.5v-30l26.99-15zM6 35.8l22-12.7 22 12.7v25.4l-22 12.7-22-12.7V35.8z'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            opacity: 0.4;
+            z-index: 1;
+        }
+
+        /* --- CENTRAL GLOW --- */
+        .glow-circle {
+            position: absolute;
+            width: 800px;
+            height: 800px;
+            border-radius: 50%;
+            border: 1px solid rgba(220, 38, 38, 0.15);
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.08) 0%, transparent 70%);
+            z-index: 2;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+        }
+
+        /* --- LOGO --- */
+        .logo-container {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .r-logo {
+            width: 320px;
+            height: 320px;
+            filter: drop-shadow(0 0 40px rgba(220, 38, 38, 0.4));
+        }
+
+        .fit-text {
+            font-size: 140px;
+            font-weight: 900;
+            letter-spacing: -0.05em;
+            margin-top: -20px;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .domain {
+            font-size: 84px;
+            font-weight: 900;
+            margin-top: 10px;
+            color: white;
+            letter-spacing: -0.03em;
+        }
+
+        .tagline {
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: 0.6em;
+            color: white;
+            opacity: 0.6;
+            margin-top: 30px;
+            text-transform: uppercase;
+            text-indent: 0.6em;
+        }
+
+        /* --- BOTTOM INFO --- */
+        .bottom-info {
+            position: absolute;
+            bottom: 80px;
+            left: 0;
+            right: 0;
+            padding: 0 80px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 20;
+        }
+
+        .info-col {
+            display: flex;
+            flex-direction: column;
+            max-width: 350px;
+        }
+
+        .info-col.right {
+            align-items: flex-end;
+            text-align: right;
+        }
+
+        .info-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .info-icon {
+            font-size: 44px;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.2));
+        }
+
+        .info-title {
+            font-size: 42px;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-style: italic;
+            letter-spacing: -0.01em;
+            color: white;
+        }
+
+        .info-desc {
+            font-size: 20px;
+            color: #777;
+            line-height: 1.5;
+            font-weight: 500;
+            margin-top: 5px;
+        }
+
+        .lightning {
+            color: #ff9d00;
+            text-shadow: 0 0 20px #ff9d00;
+        }
+
+        .building {
+            filter: grayscale(1) brightness(2);
+        }
+
+        /* Duelos Specific Overlay for Explanation */
+        .duels-explanation {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            z-index: 30;
+            opacity: 0;
+            /* Changed by JS for dynamic feel */
+            transition: opacity 0.5s;
+            padding: 60px;
+            text-align: center;
+        }
+
+        .duels-explanation.active {
+            opacity: 1;
+        }
+
+        .duel-title {
+            font-size: 120px;
+            font-weight: 900;
+            font-style: italic;
+            color: var(--brand-red);
+            text-transform: uppercase;
+            margin-bottom: 40px;
+            line-height: 0.9;
+        }
+
+        .duel-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+            max-width: 800px;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: left;
+        }
+
+        .step-num {
+            width: 60px;
+            height: 60px;
+            background: var(--brand-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 900;
+            flex-shrink: 0;
+        }
+
+        .step-text h4 {
+            margin: 0;
+            font-size: 28px;
+            text-transform: uppercase;
+            font-style: italic;
+        }
+
+        .step-text p {
+            margin: 5px 0 0;
+            font-size: 20px;
+            color: #aaa;
+        }
+
+        /* --- CONTROLS --- */
+        .controls {
+            display: flex;
+            gap: 20px;
+        }
+
+        .btn {
+            background: var(--brand-red);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 800;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            background: var(--brand-red-dark);
+        }
+
+        .btn-toggle {
+            background: #333;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="canvas-container">
+        <div id="promo-card">
+            <div class="honeycomb"></div>
+            <div class="glow-circle"></div>
+
+            <div class="content">
+                <div class="logo-container">
+                    <!-- Official R Logo -->
+                    <svg class="r-logo" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g transform="translate(38.4, -40) scale(0.85)">
+                            <path
+                                d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z"
+                                fill="#DC2626" />
+                            <path d="M160 100L145 310H220L235 100H160Z" fill="#991B1B" />
+                        </g>
+                    </svg>
+                    <div class="fit-text">FIT</div>
+                </div>
+
+                <div class="domain">rivalfit.app</div>
+                <div class="tagline">LIBERA TU POTENCIAL</div>
+            </div>
+
+            <div class="bottom-info">
+                <div class="info-col">
+                    <div class="info-header">
+                        <span class="info-icon lightning">⚡</span>
+                        <div class="info-title">RED SOCIAL</div>
+                    </div>
+                    <p class="info-desc">Conecta, comparte y compite en el feed global.</p>
+                </div>
+
+                <div class="info-col right">
+                    <div class="info-header">
+                        <div class="info-title">GESTIÓN</div>
+                        <span class="info-icon building">🏢</span>
+                    </div>
+                    <p class="info-desc">Control total de tu centro y rendimiento.</p>
+                </div>
+            </div>
+
+            <!-- Dynamic Explanation Overlay -->
+            <div id="duels-overlay" class="duels-explanation">
+                <div class="duel-title">¿QUÉ SON LOS<br>DUELOS?</div>
+                <div class="duel-steps">
+                    <div class="step-item">
+                        <div class="step-num">1</div>
+                        <div class="step-text">
+                            <h4>Desafía a un Rival</h4>
+                            <p>Elige a cualquier atleta de la comunidad y envíale un reto de 7 días.</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">2</div>
+                        <div class="step-text">
+                            <h4>Entrena al Máximo</h4>
+                            <p>Cada entrenamiento cuenta. Comparamos volumen, series y reps.</p>
+                        </div>
+                    </div>
+                    <div class="step-item">
+                        <div class="step-num">3</div>
+                        <div class="step-text">
+                            <h4>Gana la Gloria</h4>
+                            <p>El que más puntos sume en la semana se lleva la victoria oficial.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-toggle" onclick="toggleOverlay()">Ver Explicación / Base</button>
+            <button class="btn" onclick="download('base')">Descargar Base PNG</button>
+            <button class="btn" onclick="download('duelos')">Descargar Duelos PNG</button>
+        </div>
+    </div>
+
+    <script>
+        function toggleOverlay() {
+            document.getElementById('duels-overlay').classList.toggle('active');
+        }
+
+        function download(type) {
+            const overlay = document.getElementById('duels-overlay');
+            const hasActive = overlay.classList.contains('active');
+
+            if (type === 'duelos') overlay.classList.add('active');
+            else overlay.classList.remove('active');
+
+            const element = document.getElementById('promo-card');
+
+            // Wait for transition if needed
+            setTimeout(() => {
+                html2canvas(element, {
+                    scale: 2,
+                    backgroundColor: '#050505',
+                    logging: false,
+                    useCORS: true
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = `rival-fit-${type}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+
+                    // Restore state
+                    if (hasActive) overlay.classList.add('active');
+                    else overlay.classList.remove('active');
+                });
+            }, 100);
+        }
+    </script>
+
+</body>
+
+</html>

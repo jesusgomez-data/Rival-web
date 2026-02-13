@@ -903,8 +903,9 @@ function SessionContent() {
         const progress = targetDuration ? Math.min(100, (elapsedSeconds / (targetDuration * 60)) * 100) : 0;
 
         return (
-            <div className={overlayClasses}>
+            <div id="session-overlay-container" className={overlayClasses}>
                 <CoachAiView
+                    showControls={showControls}
                     workoutTitle={workoutTitle}
                     blocks={blocks}
                     setBlocks={setBlocks}
@@ -961,7 +962,8 @@ function SessionContent() {
     return (
         <div id="session-overlay-container" className={overlayClasses}>
             <header className={clsx(
-                "sticky top-0 inset-x-0 z-[260] px-4 py-4 flex items-center justify-between backdrop-blur-2xl border-b border-white/10",
+                "sticky top-0 inset-x-0 z-[260] px-4 py-4 flex items-center justify-between backdrop-blur-2xl border-b border-white/10 transition-transform duration-300",
+                !showControls && "-translate-y-full",
                 sportMode === 'running' ? "bg-blue-950/80" :
                     sportMode === 'hybrid' ? "bg-yellow-950/80" :
                         sportMode === 'cross_training' ? "bg-orange-950/80" :
@@ -3298,6 +3300,7 @@ function FinishModal({
 }
 
 function CoachAiView({
+    showControls,
     workoutTitle,
     blocks,
     setBlocks,
@@ -3313,7 +3316,7 @@ function CoachAiView({
     setViewingVideo,
     timerMode,
     rpe,
-    setRpe
+    setRpe,
 }: any) {
     const { theme } = useTheme();
     const displayTime = timerMode === 'down' && targetDuration
@@ -3468,7 +3471,8 @@ function CoachAiView({
 
             {/* Sticky Timer Bar */}
             <div className={clsx(
-                "fixed bottom-0 inset-x-0 z-[250] backdrop-blur-2xl border-t p-5 pb-8 md:p-8 animate-in slide-in-from-bottom duration-500",
+                "fixed bottom-0 inset-x-0 z-[250] backdrop-blur-2xl border-t p-5 pb-8 md:p-8 animate-in slide-in-from-bottom duration-500 transition-transform duration-300",
+                !showControls && "translate-y-full",
                 theme === 'dark' ? "bg-black/90 border-white/10" : "bg-white/95 border-gray-200 shadow-[0_-10px_30px_rgba(0,0,0,0.05)]"
             )}>
                 <div className="max-w-xl mx-auto flex items-center justify-between gap-4 md:gap-6">

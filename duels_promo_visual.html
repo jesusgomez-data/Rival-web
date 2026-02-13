@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rival Fit - Duelos Visuales</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,900;1,900&family=Outfit:wght@100;400;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --brand-red: #dc2626;
+            --brand-red-dark: #7f1d1d;
+            --brand-black: #000000;
+            --brand-gray: #0a0a0a;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111;
+            font-family: 'Outfit', sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* --- POST CANVAS (1080x1350 - Portrait Social Style) --- */
+        #ad-canvas {
+            width: 1080px;
+            height: 1350px;
+            background-color: var(--brand-black);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Background Pattern (Hexagons) from Reference */
+        .honeycomb {
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='98' viewBox='0 0 56 98'%3E%3Cpath fill='%230a0a0a' fill-opacity='1' d='M27.99 18.5l26 15v30l-26 15L1 63.5v-30l26.99-15zM6 35.8l22-12.7 22 12.7v25.4l-22 12.7-22-12.7V35.8z'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            z-index: 1;
+        }
+
+        /* Intense Red Glows */
+        .glow-main {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1000px;
+            height: 1000px;
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.15) 0%, transparent 70%);
+            z-index: 2;
+        }
+
+        .glow-bottom {
+            position: absolute;
+            bottom: -200px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 800px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(220, 38, 38, 0.1) 0%, transparent 70%);
+            z-index: 2;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 80px 0;
+        }
+
+        /* Header */
+        .header {
+            margin-bottom: 60px;
+            text-align: center;
+        }
+
+        .r-logo {
+            width: 180px;
+            height: 180px;
+            filter: drop-shadow(0 0 40px var(--brand-red));
+            margin-bottom: 10px;
+        }
+
+        .fit-text {
+            font-size: 80px;
+            font-weight: 900;
+            font-style: italic;
+            letter-spacing: -0.05em;
+            margin-top: -15px;
+            text-transform: uppercase;
+        }
+
+        /* Main Visual: Duel Combat Card */
+        .duel-visual {
+            width: 85%;
+            height: 480px;
+            background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.01) 100%);
+            border: 1px solid var(--glass-border);
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            padding: 40px;
+            position: relative;
+            margin-bottom: 80px;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+        }
+
+        .athlete {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            width: 300px;
+        }
+
+        .avatar-ring {
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            padding: 8px;
+            background: linear-gradient(180deg, var(--brand-red), transparent);
+            position: relative;
+        }
+
+        .avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #222;
+            overflow: hidden;
+            border: 4px solid var(--brand-black);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+        }
+
+        .athlete-name {
+            font-size: 32px;
+            font-weight: 900;
+            font-style: italic;
+            text-transform: uppercase;
+            letter-spacing: -0.01em;
+        }
+
+        .athlete-score {
+            font-size: 54px;
+            font-weight: 900;
+            color: var(--brand-red);
+            font-style: italic;
+            letter-spacing: -0.05em;
+        }
+
+        .vs-ring {
+            width: 120px;
+            height: 120px;
+            background: var(--brand-black);
+            border: 2px solid var(--brand-red);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: 900;
+            font-style: italic;
+            color: var(--brand-red);
+            box-shadow: 0 0 30px rgba(220, 38, 38, 0.4);
+            z-index: 5;
+        }
+
+        /* Dynamic Steps Bar */
+        .dynamic-steps {
+            width: 90%;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 60px;
+        }
+
+        .mini-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 35px;
+            padding: 40px 30px;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .mini-icon {
+            font-size: 56px;
+            margin-bottom: 25px;
+            display: block;
+        }
+
+        .mini-card h4 {
+            font-size: 28px;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-style: italic;
+            margin: 0 0 10px 0;
+            color: white;
+        }
+
+        .mini-card p {
+            font-size: 18px;
+            color: #777;
+            margin: 0;
+            line-height: 1.4;
+            font-weight: 500;
+        }
+
+        /* Large Action CTA */
+        .cta-container {
+            margin-top: auto;
+            width: 100%;
+            padding: 0 60px 80px;
+        }
+
+        .cta-box {
+            background: linear-gradient(90deg, var(--brand-red), var(--brand-red-dark));
+            padding: 40px;
+            border-radius: 40px;
+            text-align: center;
+            box-shadow: 0 30px 60px rgba(220, 38, 38, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .cta-box h2 {
+            font-size: 56px;
+            font-weight: 900;
+            font-style: italic;
+            text-transform: uppercase;
+            margin: 0;
+            letter-spacing: -0.02em;
+        }
+
+        .cta-box p {
+            font-size: 24px;
+            font-weight: 400;
+            margin: 10px 0 0 0;
+            opacity: 0.8;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+        }
+
+        .footer-logo {
+            margin-top: 40px;
+            font-size: 20px;
+            font-weight: 900;
+            opacity: 0.3;
+            letter-spacing: 1em;
+            text-transform: uppercase;
+            text-indent: 1em;
+        }
+
+        /* Controls */
+        .controls {
+            padding: 40px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .btn {
+            background: var(--brand-red);
+            color: white;
+            border: none;
+            padding: 25px 50px;
+            border-radius: 20px;
+            font-size: 20px;
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(220, 38, 38, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="ad-canvas">
+        <div class="honeycomb"></div>
+        <div class="glow-main"></div>
+        <div class="glow-bottom"></div>
+
+        <div class="content">
+            <!-- Brand Header -->
+            <div class="header">
+                <svg class="r-logo" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(38.4, -40) scale(0.85)">
+                        <path
+                            d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z"
+                            fill="#DC2626" />
+                        <path d="M160 100L145 310H220L235 100H160Z" fill="#991B1B" />
+                    </g>
+                </svg>
+                <div class="fit-text">FIT</div>
+            </div>
+
+            <!-- Main Duel Visual -->
+            <div class="duel-visual">
+                <div class="athlete">
+                    <div class="avatar-ring">
+                        <div class="avatar">👤</div>
+                    </div>
+                    <div class="athlete-name">TÚ</div>
+                    <div class="athlete-score">12.4K pts</div>
+                </div>
+
+                <div class="vs-ring">VS</div>
+
+                <div class="athlete">
+                    <div class="avatar-ring">
+                        <div class="avatar">🥷</div>
+                    </div>
+                    <div class="athlete-name">RIVAL</div>
+                    <div class="athlete-score">11.9K pts</div>
+                </div>
+            </div>
+
+            <!-- Step Icons -->
+            <div class="dynamic-steps">
+                <div class="mini-card">
+                    <span class="mini-icon">🎯</span>
+                    <h4>DESAFÍA</h4>
+                    <p>Elige tu oponente en la red.</p>
+                </div>
+                <div class="mini-card">
+                    <span class="mini-icon">⚡</span>
+                    <h4>ENTRENA</h4>
+                    <p>7 días a máxima intensidad.</p>
+                </div>
+                <div class="mini-card">
+                    <span class="mini-icon">🔥</span>
+                    <h4>GANA</h4>
+                    <p>Supera su volumen y volumen.</p>
+                </div>
+            </div>
+
+            <!-- Big Action CTA -->
+            <div class="cta-container">
+                <div class="cta-box">
+                    <h2>DEMUESTRA DE QUÉ ESTÁS HECHO</h2>
+                    <p>NUEVA FUNCIÓN DE DUELOS</p>
+                </div>
+                <div style="text-align: center;">
+                    <div class="footer-logo">RIVALFIT.APP</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" onclick="saveAd()">DESCARGAR ANUNCIO DINÁMICO</button>
+    </div>
+
+    <script>
+        function saveAd() {
+            const canvas = document.getElementById('ad-canvas');
+            html2canvas(canvas, {
+                scale: 2,
+                backgroundColor: '#000000',
+                logging: false,
+                useCORS: true
+            }).then(canvasImage => {
+                const link = document.createElement('a');
+                link.download = 'rival-fit-duelos-dinamico.png';
+                link.href = canvasImage.toDataURL('image/png');
+                link.click();
+            });
+        }
+    </script>
+</body>
+
+</html>
