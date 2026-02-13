@@ -30,7 +30,8 @@ export default function CommunityPage({
         followedIds: new Set(),
         searchResults: [],
         posts: [],
-        loading: true
+        loading: true,
+        isMember: false
     });
 
     const supabase = createClient();
@@ -59,6 +60,13 @@ export default function CommunityPage({
                     .select('*')
                     .eq('id', user.id)
                     .single();
+
+                const { data: membership } = await supabase
+                    .from('members')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .in('status', ['active', 'trial'])
+                    .limit(1);
 
                 const followedIds = new Set(myFollows?.map(f => f.following_id) || []);
                 let searchResults: any[] = [];
@@ -104,7 +112,8 @@ export default function CommunityPage({
                     followedIds,
                     searchResults,
                     posts: posts || [],
-                    loading: false
+                    loading: false,
+                    isMember: (membership && membership.length > 0)
                 });
             } catch (e) {
                 console.error(e);
@@ -265,37 +274,39 @@ export default function CommunityPage({
                 </div>
 
                 <div className="lg:col-span-4 space-y-8 sticky top-24">
-                    <div className="bg-brand-gray/20 border border-white/5 rounded-[40px] p-8 overflow-hidden relative group">
-                        <TrendingUp className="absolute -right-8 -top-8 w-32 h-32 text-brand-red opacity-5 group-hover:rotate-12 transition-transform duration-700" />
-                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.4em] mb-6 flex items-center gap-2">
-                            Eventos del Gimnasio
-                        </h3>
-                        <div className="space-y-6">
-                            <div className="flex gap-4 group/item cursor-pointer">
-                                <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center border border-white/5 shrink-0 group-hover/item:border-brand-red/50 transition-colors">
-                                    <Swords className="w-5 h-5 text-brand-red" />
+                    {data.isMember && (
+                        <div className="bg-brand-gray/20 border border-white/5 rounded-[40px] p-8 overflow-hidden relative group">
+                            <TrendingUp className="absolute -right-8 -top-8 w-32 h-32 text-brand-red opacity-5 group-hover:rotate-12 transition-transform duration-700" />
+                            <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.4em] mb-6 flex items-center gap-2">
+                                Eventos del Gimnasio
+                            </h3>
+                            <div className="space-y-6">
+                                <div className="flex gap-4 group/item cursor-pointer">
+                                    <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center border border-white/5 shrink-0 group-hover/item:border-brand-red/50 transition-colors">
+                                        <Swords className="w-5 h-5 text-brand-red" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-black text-brand-red uppercase tracking-widest leading-none mb-1">Activo</p>
+                                        <h4 className="text-white font-bold text-sm truncate uppercase italic tracking-tight">Open 2024 Qualifiers</h4>
+                                        <p className="text-[10px] text-gray-500 font-medium">124 Atletas participando</p>
+                                    </div>
                                 </div>
-                                <div className="min-w-0">
-                                    <p className="text-[10px] font-black text-brand-red uppercase tracking-widest leading-none mb-1">Activo</p>
-                                    <h4 className="text-white font-bold text-sm truncate uppercase italic tracking-tight">Open 2024 Qualifiers</h4>
-                                    <p className="text-[10px] text-gray-500 font-medium">124 Atletas participando</p>
+                                <div className="flex gap-4 group/item cursor-pointer">
+                                    <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center border border-white/5 shrink-0 group-hover/item:border-brand-red/50 transition-colors">
+                                        <Trophy className="w-5 h-5 text-yellow-500" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest leading-none mb-1">Próximamente</p>
+                                        <h4 className="text-white font-bold text-sm truncate uppercase italic tracking-tight">Cena de Comunidad</h4>
+                                        <p className="text-[10px] text-gray-500 font-medium">Viernes, 21:00h</p>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex gap-4 group/item cursor-pointer">
-                                <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center border border-white/5 shrink-0 group-hover/item:border-brand-red/50 transition-colors">
-                                    <Trophy className="w-5 h-5 text-yellow-500" />
-                                </div>
-                                <div className="min-w-0">
-                                    <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest leading-none mb-1">Próximamente</p>
-                                    <h4 className="text-white font-bold text-sm truncate uppercase italic tracking-tight">Cena de Comunidad</h4>
-                                    <p className="text-[10px] text-gray-500 font-medium">Viernes, 21:00h</p>
-                                </div>
-                            </div>
+                            <button className="w-full mt-8 py-3 bg-white/5 hover:bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 transition-all">
+                                Ver Calendario
+                            </button>
                         </div>
-                        <button className="w-full mt-8 py-3 bg-white/5 hover:bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 transition-all">
-                            Ver Calendario
-                        </button>
-                    </div>
+                    )}
                     <SidebarAd tier={data.profile?.subscription_tier} />
                 </div>
             </div>
