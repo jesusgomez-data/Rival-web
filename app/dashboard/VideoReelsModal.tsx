@@ -3,11 +3,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Heart, MessageCircle, Share2, Music, User, Trophy, Play, Pause } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getReelPosts, toggleLike } from './community/actions';
+import { getReelPosts, toggleLike, getComments, addComment } from './community/actions';
 import Image from 'next/image';
 import Link from 'next/link';
 import { clsx } from 'clsx';
 import { useLanguage } from '../LanguageContext';
+import { Send, Loader2 } from 'lucide-react';
 
 interface ReelPost {
     id: string;
@@ -35,7 +36,114 @@ interface VideoReelsModalProps {
     context: 'following' | 'global';
 }
 
-function Reel({ post, isActive }: { post: ReelPost, isActive: boolean }) {
+function CommentsDrawer({ postId, onClose }: { postId: string, onClose: () => void }) {
+    const [comments, setComments] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [newComment, setNewComment] = useState('');
+    const [submitting, setSubmitting] = useState(false);
+    const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        loadComments();
+    }, [postId]);
+
+    const loadComments = async () => {
+        setLoading(true);
+        const data = await getComments(postId);
+        setComments(data);
+        setLoading(false);
+        setTimeout(scrollToBottom, 100);
+    };
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    };
+
+    const handleSend = async () => {
+        if (!newComment.trim()) return;
+        setSubmitting(true);
+        const result = await addComment(postId, newComment);
+        if (result?.success) {
+            setNewComment('');
+            loadComments();
+        }
+        setSubmitting(false);
+    };
+
+    return (
+        <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+            className="absolute bottom-0 left-0 right-0 h-[60vh] bg-[#111] rounded-t-3xl border-t border-white/10 z-[300] flex flex-col shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+        >
+            <div className="flex items-center justify-between p-4 border-b border-white/10">
+                <h3 className="text-white font-bold text-sm">Comentarios</h3>
+                <button onClick={onClose} className="p-2 bg-white/5 rounded-full text-white/70 hover:text-white transition-colors">
+                    <X className="w-4 h-4" />
+                </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {loading ? (
+                    <div className="flex justify-center py-8">
+                        <Loader2 className="w-6 h-6 animate-spin text-brand-red" />
+                    </div>
+                ) : comments.length === 0 ? (
+                    <div className="text-center text-gray-500 text-xs py-8">
+                        Sé el primero en comentar.
+                    </div>
+                ) : (
+                    comments.map((comment) => (
+                        <div key={comment.id} className="flex gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gray-800 overflow-hidden flex-shrink-0 border border-white/10">
+                                {comment.user?.avatar_url ? (
+                                    <Image src={comment.user.avatar_url} alt={comment.user.username} width={32} height={32} className="object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[10px] text-white font-bold">
+                                        {comment.user?.username?.[0]?.toUpperCase()}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1">
+                                <div className="flex items-baseline gap-2">
+                                    <span className="text-white text-xs font-bold">{comment.user?.username}</span>
+                                    <span className="text-gray-500 text-[10px]">{new Date(comment.created_at).toLocaleDateString()}</span>
+                                </div>
+                                <p className="text-gray-300 text-xs mt-0.5 leading-relaxed">{comment.content}</p>
+                            </div>
+                        </div>
+                    ))
+                )}
+                <div ref={messagesEndRef} />
+            </div>
+
+            <div className="p-4 border-t border-white/10 bg-black/20 backdrop-blur-md">
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                        placeholder="Añade un comentario..."
+                        className="flex-1 bg-white/5 border border-white/10 rounded-full px-4 text-sm text-white focus:outline-none focus:border-brand-red/50 placeholder:text-gray-600"
+                    />
+                    <button
+                        onClick={handleSend}
+                        disabled={submitting || !newComment.trim()}
+                        className="p-2.5 bg-brand-red text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-600 transition-colors"
+                    >
+                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    </button>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
+function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: boolean, onOpenComments: () => void }) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isPlaying, setIsPlaying] = useState(true);
     const [liked, setLiked] = useState(post.hasLikedInitial);
@@ -148,7 +256,10 @@ function Reel({ post, isActive }: { post: ReelPost, isActive: boolean }) {
                 </div>
 
                 <div className="flex flex-col items-center gap-1">
-                    <button className="p-3 rounded-full bg-white/10 backdrop-blur-md text-white">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onOpenComments(); }}
+                        className="p-3 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-colors"
+                    >
                         <MessageCircle className="w-6 h-6" />
                     </button>
                     <span className="text-white text-xs font-bold shadow-sm">{post.comments_count || 0}</span>
@@ -207,6 +318,7 @@ export default function VideoReelsModal({ isOpen, onClose, initialPostId, contex
     const [loading, setLoading] = useState(false);
     const [activeIndex, setActiveIndex] = useState(0);
     const containerRef = useRef<HTMLDivElement>(null);
+    const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
@@ -281,6 +393,7 @@ export default function VideoReelsModal({ isOpen, onClose, initialPostId, contex
                                 key={post.id}
                                 post={post}
                                 isActive={activeIndex === index}
+                                onOpenComments={() => setCommentsPostId(post.id)}
                             />
                         ))
                     ) : loading ? (
@@ -294,6 +407,12 @@ export default function VideoReelsModal({ isOpen, onClose, initialPostId, contex
                     )}
                 </div>
             </motion.div>
+            {/* Comments Overlay */}
+            {commentsPostId && (
+                <div className="fixed inset-0 z-[250] bg-black/50 backdrop-blur-sm" onClick={() => setCommentsPostId(null)}>
+                    <CommentsDrawer postId={commentsPostId} onClose={() => setCommentsPostId(null)} />
+                </div>
+            )}
         </AnimatePresence>
     );
 }
