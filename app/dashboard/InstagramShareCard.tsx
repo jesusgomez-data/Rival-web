@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { toBlob } from 'html-to-image';
 import { Trophy, Flame, Dumbbell, Instagram, Download, Share2, MapPin, Zap, Wind, TrendingUp, Heart } from 'lucide-react';
 import Image from 'next/image';
@@ -24,6 +24,28 @@ interface InstagramShareCardProps {
 export default function InstagramShareCard({ user, avatar, username, content, onClose }: InstagramShareCardProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (avatar) {
+            // Pre-fetch image and convert to Base64 to avoid CORS issues in canvas
+            const loadAvatar = async () => {
+                try {
+                    const response = await fetch(avatar, { mode: 'cors' });
+                    const blob = await response.blob();
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setAvatarUrl(reader.result as string);
+                    };
+                    reader.readAsDataURL(blob);
+                } catch (e) {
+                    console.error("Error loading avatar for canvas:", e);
+                    setAvatarUrl(avatar); // Fallback to original URL
+                }
+            };
+            loadAvatar();
+        }
+    }, [avatar]);
 
     const handleShare = async () => {
         if (!cardRef.current) return;
@@ -96,8 +118,8 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                         <div className="flex flex-col items-center gap-4">
                             <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-brand-red via-orange-500 to-brand-red shadow-[0_0_20px_rgba(239,68,68,0.4)]">
                                 <div className="w-full h-full rounded-full border-4 border-black overflow-hidden relative">
-                                    {avatar ? (
-                                        <img src={avatar} alt={user} crossOrigin="anonymous" className="w-full h-full object-cover" />
+                                    {avatarUrl ? (
+                                        <img src={avatarUrl} alt={user} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center bg-gray-900 text-2xl font-black text-white">
                                             {username[0]?.toUpperCase()}
