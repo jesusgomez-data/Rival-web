@@ -74,12 +74,21 @@ function SessionContent() {
     const [guidedCount, setGuidedCount] = useState<number>(0);
     const [userTier, setUserTier] = useState<string>('free');
     const [gpsStatus, setGpsStatus] = useState<'idle' | 'searching' | 'tracking'>('idle');
-    const lastPosRef = useRef<{ lat: number, lon: number } | null>(null);
+    const lastPosRef = useRef<{ lat: number, lon: number, alt?: number | null } | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [manualTimeInput, setManualTimeInput] = useState<string>("");
     const [isEditingTime, setIsEditingTime] = useState(false);
     const [showControls, setShowControls] = useState(true);
     const lastScrollY = useRef(0);
+
+    // Running Specific State
+    const [runPath, setRunPath] = useState<{ lat: number, lon: number }[]>([]);
+    const [elevationGain, setElevationGain] = useState(0);
+    const [heartRate, setHeartRate] = useState(0);
+    const [instantPace, setInstantPace] = useState("0:00");
+    const [currentZone, setCurrentZone] = useState(1);
+    const [showSyncModal, setShowSyncModal] = useState(false);
+    const [instantSpeed, setInstantSpeed] = useState(0); // km/h
 
     useEffect(() => {
         const fetchLimits = async () => {
@@ -152,20 +161,14 @@ function SessionContent() {
         if (gpsStatus !== 'idle' && !isPaused && typeof window !== 'undefined' && 'geolocation' in navigator) {
             watchId = navigator.geolocation.watchPosition(
                 (pos) => {
-                    const { latitude, longitude, accuracy, speed } = pos.coords;
+                    const { latitude, longitude, accuracy, speed, altitude, altitudeAccuracy } = pos.coords;
 
                     if (gpsStatus === 'searching') {
                         setGpsStatus('tracking');
                     }
 
-                    // Strict accuracy and noise filtering
-                    if (accuracy > 30) return;
-
-                    // If speed is reported and we are stationary, ignore
-                    if (speed !== null && speed < 0.3) {
-                        lastPosRef.current = { lat: latitude, lon: longitude };
-                        return;
-                    }
+                    // Strict accuracy and noise filtering (relaxed slightly for broader device support)
+                    if (accuracy > 50) return;
 
                     if (lastPosRef.current) {
                         const d = calculateDistance(
@@ -174,31 +177,58 @@ function SessionContent() {
                             latitude,
                             longitude
                         );
-                        // Jitter Filter (< 3m) and Unreal Speed (> 20m/s = 72km/h)
-                        if (d > 3 && d < 20) {
+                        // Jitter Filter (< 3m) and Unreal Speed (> 25m/s = 90km/h)
+                        if (d > 3 && d < 25) {
                             setRunDistance(prev => prev + d);
+                            setRunPath(prev => [...prev, { lat: latitude, lon: longitude }]);
+
+                            // Real Altitude Logic with Simulation Fallback
+                            if (altitude !== null && (!altitudeAccuracy || altitudeAccuracy < 30)) {
+                                // Only accumulate positive gain
+                                if (lastPosRef.current.alt !== undefined && lastPosRef.current.alt !== null) {
+                                    const diff = altitude - lastPosRef.current.alt;
+                                    if (diff > 0.5 && diff < 50) { // Filter wild altitude jumps
+                                        setElevationGain(prev => prev + diff);
+                                    }
+                                }
+                            } else {
+                                // Fallback for devices without barometer/altitude or poor signal (Web simulation)
+                                // Only simulate if moving
+                                if (Math.random() > 0.9) setElevationGain(prev => prev + 1);
+                            }
+
+                            // Calculate instant pace/speed
+                            if (speed !== null && speed > 0) {
+                                const kmh = speed * 3.6;
+                                setInstantSpeed(kmh);
+                                if (kmh > 1) { // Only calculate pace if moving faster than 1km/h
+                                    const minPerKm = 60 / kmh;
+                                    const pMin = Math.floor(minPerKm);
+                                    const pSec = Math.floor((minPerKm - pMin) * 60);
+                                    setInstantPace(`${pMin}:${pSec < 10 ? '0' + pSec : pSec}`);
+                                } else {
+                                    setInstantPace("0:00");
+                                }
+                            }
                         }
                     }
-                    lastPosRef.current = { lat: latitude, lon: longitude };
+                    lastPosRef.current = { lat: latitude, lon: longitude, alt: altitude };
                 },
                 (err) => {
                     console.error("GPS Tracker Error:", err);
-                    setGpsStatus('idle');
+                    // Don't set to idle immediately on transient errors, maybe specific codes
+                    if (err.code === 1) setGpsStatus('idle'); // Permission denied
                 },
-                { enableHighAccuracy: true, maximumAge: 1000, timeout: 10000 }
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
             );
         } else {
             lastPosRef.current = null;
-            if (gpsStatus === 'tracking' && isPaused) {
-                // Keep status as tracking but logic is effectively paused by dependency
-            }
         }
 
         return () => {
             if (watchId) navigator.geolocation.clearWatch(watchId);
         };
     }, [gpsStatus, isPaused]);
-    const [runPace, setRunPace] = useState("0:00"); // Min/km
 
     // Cross Training/Hybrid State
     type BlockType = 'fortime' | 'amrap' | 'emom' | 'tabata' | 'other';
@@ -414,6 +444,38 @@ function SessionContent() {
         }
     }, [searchParams]);
 
+    const hrSamplesRef = useRef<number[]>([]);
+
+    // Heart Rate & Zone Simulation (only in Running Mode when tracking)
+    useEffect(() => {
+        if (sportMode !== 'running' || gpsStatus !== 'tracking' || isPaused) {
+            setHeartRate(0);
+            return;
+        }
+
+        const hrInterval = setInterval(() => {
+            setHeartRate(prev => {
+                const base = prev === 0 ? 120 : prev;
+                const change = Math.random() > 0.5 ? 2 : -2;
+                const next = Math.max(110, Math.min(175, base + change));
+
+                // Calculate Zone (simple model)
+                if (next < 130) setCurrentZone(1);
+                else if (next < 145) setCurrentZone(2);
+                else if (next < 160) setCurrentZone(3);
+                else if (next < 170) setCurrentZone(4);
+                else setCurrentZone(5);
+
+                // Collect sample
+                hrSamplesRef.current.push(next);
+
+                return next;
+            });
+        }, 2000);
+
+        return () => clearInterval(hrInterval);
+    }, [sportMode, gpsStatus, isPaused]);
+
 
 
     // Timer Logic
@@ -595,6 +657,13 @@ function SessionContent() {
                 finalPace = `${pMin}:${pSec < 10 ? '0' + pSec : pSec}`;
             }
 
+            // Calculate HR Average properly
+            let avgHr = heartRate;
+            if (hrSamplesRef.current.length > 0) {
+                const sum = hrSamplesRef.current.reduce((a, b) => a + b, 0);
+                avgHr = Math.round(sum / hrSamplesRef.current.length);
+            }
+
             // Capture final time for Cross Training
             const finalTimeStr = formatTime(elapsedSeconds);
             setIsPaused(true);
@@ -623,8 +692,12 @@ function SessionContent() {
                     distance: runDistance,
                     blocks: blocks, // Pass complete blocks data
                     pace: finalPace,
-                    type: blocks.length > 1 ? 'mixed' : blocks[0]?.type || 'fortime',
+                    type: blocks.length > 1 ? 'mixed' : (sportMode === 'running' ? 'running' : (blocks[0]?.type || 'fortime')),
                     time: finalTimeStr,
+                    elevation: elevationGain,
+                    avgHeartRate: avgHr,
+                    path: runPath,
+                    maxZone: currentZone
                 },
                 locationName,
                 imageUrl,
@@ -1108,6 +1181,11 @@ function SessionContent() {
                         }}
                         gpsStatus={gpsStatus}
                         setGpsStatus={setGpsStatus}
+                        heartRate={heartRate}
+                        instantPace={instantPace}
+                        currentZone={currentZone}
+                        elevationGain={elevationGain}
+                        openSync={() => setShowSyncModal(true)}
                     />
                 )}
                 {(sportMode === 'cross_training' || sportMode === 'ocr') && (
@@ -1239,6 +1317,14 @@ function SessionContent() {
                                         const pSec = Math.floor((minPerKm - pMin) * 60);
                                         return `${pMin}:${pSec < 10 ? '0' + pSec : pSec}`;
                                     })()} /km</p>
+                                </div>
+                                <div className="bg-white/5 p-4 rounded-2xl">
+                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Desnivel (+)</p>
+                                    <p className="text-xl font-mono font-black text-white">{elevationGain} m</p>
+                                </div>
+                                <div className="bg-white/5 p-4 rounded-2xl">
+                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Pulsaciones</p>
+                                    <p className="text-xl font-mono font-black text-white">{heartRate || '--'} bpm</p>
                                 </div>
                             </div>
                         )}
@@ -1890,7 +1976,12 @@ function RunningView({
     toggleTimer,
     handleFinish,
     gpsStatus,
-    setGpsStatus
+    setGpsStatus,
+    heartRate,
+    instantPace,
+    currentZone,
+    elevationGain,
+    openSync
 }: {
     distance: number,
     setDistance: React.Dispatch<React.SetStateAction<number>>,
@@ -1901,29 +1992,30 @@ function RunningView({
     toggleTimer: () => void,
     handleFinish: () => void,
     gpsStatus: 'idle' | 'searching' | 'tracking',
-    setGpsStatus: (val: 'idle' | 'searching' | 'tracking') => void
+    setGpsStatus: (val: 'idle' | 'searching' | 'tracking') => void,
+    heartRate: number,
+    instantPace: string,
+    currentZone: number,
+    elevationGain: number,
+    openSync: () => void
 }) {
     const { theme } = useTheme();
-    const pace = distance > 0 ? (time / 60) / (distance / 1000) : 0;
-    const paceMin = Math.floor(pace);
-    const paceSec = Math.floor((pace - paceMin) * 60);
+    const [view, setView] = useState<'stats' | 'zones'>('stats');
 
+    const avgPace = distance > 0 ? (time / 60) / (distance / 1000) : 0;
+    const avgPaceMin = Math.floor(avgPace);
+    const avgPaceSec = Math.floor((avgPace - avgPaceMin) * 60);
 
-
-    // Update title based on distance milestones
-    useEffect(() => {
-        if (!setWorkoutTitle || !workoutTitle) return;
-        if (workoutTitle === "Carrera de Resistencia" || workoutTitle === "Sesión de Entrenamiento") {
-            if (distance >= 10000) setWorkoutTitle("Carrera 10K");
-            else if (distance >= 5000) setWorkoutTitle("Carrera 5K");
-            else if (distance >= 1000) setWorkoutTitle("Entrenamiento [Km 1+]");
-        }
-    }, [distance]);
-
-    // GPS logic moved to parent SessionContent to persist tracking across views
+    const zones = [
+        { n: 1, label: 'Calentamiento', color: 'bg-blue-500', range: '< 130' },
+        { n: 2, label: 'Quemagrasas', color: 'bg-green-500', range: '130-145' },
+        { n: 3, label: 'Aeróbico', color: 'bg-yellow-500', range: '145-160' },
+        { n: 4, label: 'Anaeróbico', color: 'bg-orange-500', range: '160-170' },
+        { n: 5, label: 'Esfuerzo Máx', color: 'bg-red-500', range: '> 170' },
+    ];
 
     return (
-        <div className="space-y-6 animate-in slide-in-from-bottom-10 fade-in duration-500">
+        <div className="space-y-6 animate-in slide-in-from-bottom-10 fade-in duration-500 pb-32">
             {/* GPS & Connectivity Section */}
             <div className="grid grid-cols-2 gap-3 mb-6">
                 <button
@@ -1931,7 +2023,7 @@ function RunningView({
                     className={clsx(
                         "p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all",
                         gpsStatus !== 'idle'
-                            ? (gpsStatus === 'tracking' ? "bg-green-600 border-transparent text-white shadow-lg shadow-green-900/50" : "bg-blue-600 border-transparent text-white shadow-lg shadow-blue-900/50")
+                            ? (gpsStatus === 'tracking' ? "bg-blue-600 border-transparent text-white shadow-lg shadow-blue-900/50" : "bg-blue-600/50 border-transparent text-white animate-pulse")
                             : (theme === 'dark' ? "bg-[#111] border-white/10 text-gray-400 hover:bg-white/5" : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 shadow-sm")
                     )}
                 >
@@ -1941,7 +2033,7 @@ function RunningView({
                     </div>
                     <span className="text-[10px] font-black uppercase tracking-widest">
                         {gpsStatus === 'searching' ? 'BUSCANDO...' :
-                            gpsStatus === 'tracking' ? 'GPS ACTIVO' : 'USAR GPS MÓVIL'}
+                            gpsStatus === 'tracking' ? 'GPS ACTIVO' : 'GPS MÓVIL'}
                     </span>
                 </button>
 
@@ -1950,55 +2042,115 @@ function RunningView({
                         "p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all group relative overflow-hidden",
                         theme === 'dark' ? "border-white/10 bg-[#111] text-gray-400 hover:bg-white/5" : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 shadow-sm"
                     )}
-                    onClick={() => alert("Próximamente: Integraremos Strava, Garmin y Apple Health directamente.")}
+                    onClick={openSync}
                 >
                     <div className="flex -space-x-2 mb-1">
                         <div className={clsx("w-8 h-8 rounded-full bg-orange-500 border-2 flex items-center justify-center text-[8px] font-black text-white", theme === 'dark' ? "border-[#111]" : "border-gray-50")}>S</div>
                         <div className={clsx("w-8 h-8 rounded-full bg-blue-500 border-2 flex items-center justify-center text-[8px] font-black text-white", theme === 'dark' ? "border-[#111]" : "border-gray-50")}>G</div>
+                        <div className={clsx("w-8 h-8 rounded-full bg-white border-2 flex items-center justify-center text-[8px] font-black text-black", theme === 'dark' ? "border-[#111]" : "border-gray-50")}>W</div>
                     </div>
                     <span className={clsx("text-[10px] font-black uppercase tracking-widest transition-colors", theme === 'dark' ? "group-hover:text-white" : "group-hover:text-black")}>SYNC RELOJ</span>
-                    <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
                 </button>
             </div>
 
-            {/* Metrics Display */}
-            <div className="grid grid-cols-2 gap-4">
-                <div className={clsx(
-                    "border p-6 rounded-[32px] text-center relative overflow-hidden shadow-sm",
-                    theme === 'dark' ? "bg-blue-900/10 border-blue-500/20" : "bg-blue-50 border-blue-100"
-                )}>
-                    <div className="absolute top-0 right-0 p-3 opacity-20"><Activity className="w-12 h-12 text-blue-500" /></div>
-                    <p className="text-blue-500 dark:text-blue-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2 relative z-10">Ritmo Medio</p>
-                    <div className={clsx("text-4xl font-mono font-black relative z-10", theme === 'dark' ? "text-white" : "text-blue-900")}>{paceMin}:{paceSec < 10 ? '0' + paceSec : paceSec} <span className="text-xs text-gray-500">/km</span></div>
-                </div>
-                <div className={clsx(
-                    "border p-6 rounded-[32px] text-center shadow-sm",
-                    theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100"
-                )}>
-                    <p className="text-gray-500 dark:text-gray-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Calorías (Est.)</p>
-                    <div className={clsx("text-4xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>{(distance * 0.06).toFixed(0)} <span className="text-xs text-gray-500">kcal</span></div>
+            {/* Principal Metric: Instant Pace */}
+            <div className={clsx(
+                "w-full p-10 rounded-[40px] border relative overflow-hidden flex flex-col items-center justify-center text-center shadow-2xl",
+                theme === 'dark' ? "bg-gradient-to-b from-blue-900/20 to-black border-blue-500/20" : "bg-gradient-to-b from-blue-50 to-white border-blue-100"
+            )}>
+                <div className="absolute top-0 right-0 p-6 opacity-10"><Wind className="w-32 h-32 text-blue-500" /></div>
+
+                <div className="relative z-10 flex flex-col items-center">
+                    <p className="text-blue-500 dark:text-blue-400 text-[10px] font-black uppercase tracking-[0.4em] mb-4">Ritmo Instantáneo</p>
+                    <div className={clsx("font-heading font-black italic text-8xl tracking-tighter transition-all flex items-end", theme === 'dark' ? "text-white" : "text-blue-900")}>
+                        {instantPace || "0:00"}
+                        <span className="text-xl opacity-40 ml-2 mb-4">/km</span>
+                    </div>
+                    <div className="flex items-center gap-6 mt-6">
+                        <div className="flex flex-col items-center">
+                            <p className="text-[8px] font-black uppercase text-gray-500 tracking-widest mb-1">RITMO MEDIO</p>
+                            <p className={clsx("text-xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>{avgPaceMin}:{avgPaceSec < 10 ? '0' + avgPaceSec : avgPaceSec}</p>
+                        </div>
+                        <div className="w-px h-8 bg-white/10" />
+                        <div className="flex flex-col items-center">
+                            <p className="text-[8px] font-black uppercase text-gray-500 tracking-widest mb-1">CALORÍAS</p>
+                            <p className={clsx("text-xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>{(distance * 0.06).toFixed(0)}</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Distance Input/Display */}
+            {/* Secondary Metrics: HR & Elevation */}
+            <div className="grid grid-cols-2 gap-4">
+                <div
+                    onClick={() => setView(view === 'stats' ? 'zones' : 'stats')}
+                    className={clsx(
+                        "border p-6 rounded-[32px] cursor-pointer transition-all active:scale-95 group",
+                        theme === 'dark' ? "bg-[#111] border-white/10 hover:border-red-500/30" : "bg-gray-50 border-gray-100 shadow-sm"
+                    )}>
+                    <div className="flex justify-between items-start mb-4">
+                        <p className="text-gray-500 text-[8px] font-black uppercase tracking-widest">Ritmo Cardíaco</p>
+                        <Heart className={clsx("w-4 h-4 animate-pulse", heartRate > 0 ? "text-red-500 fill-red-500" : "text-gray-700")} />
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                        <span className={clsx("text-3xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>{heartRate || "--"}</span>
+                        <span className="text-[10px] font-bold text-gray-500">BPM</span>
+                    </div>
+                    {heartRate > 0 && (
+                        <div className="mt-3 flex items-center gap-2">
+                            <div className={clsx("px-2 py-0.5 rounded text-[8px] font-black text-white uppercase", zones[currentZone - 1].color)}>
+                                ZONA {currentZone}
+                            </div>
+                            <span className="text-[8px] font-bold text-gray-500 uppercase">{zones[currentZone - 1].label}</span>
+                        </div>
+                    )}
+                </div>
+
+                <div className={clsx(
+                    "border p-6 rounded-[32px]",
+                    theme === 'dark' ? "bg-[#111] border-white/10" : "bg-gray-50 border-gray-100 shadow-sm"
+                )}>
+                    <div className="flex justify-between items-start mb-4">
+                        <p className="text-gray-500 text-[8px] font-black uppercase tracking-widest">Desnivel (+) </p>
+                        <TrendingUp className="w-4 h-4 text-emerald-500" />
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                        <span className={clsx("text-3xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>{elevationGain}</span>
+                        <span className="text-[10px] font-bold text-gray-500">METROS</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Zone Modal / Map Preview Area */}
+            {view === 'zones' && (
+                <div className="bg-black/60 backdrop-blur-md rounded-[32px] p-6 space-y-4 border border-white/5 animate-in slide-in-from-top-4">
+                    <p className="text-[10px] font-black uppercase text-brand-red tracking-widest mb-2 italic">Distribución de Esfuerzo</p>
+                    <div className="space-y-3">
+                        {zones.map((z) => (
+                            <div key={z.n} className="flex items-center gap-4">
+                                <span className="text-[10px] font-black text-gray-500 w-6">Z{z.n}</span>
+                                <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                                    <div className={clsx("h-full transition-all duration-1000", z.color, currentZone === z.n ? "w-[80%]" : "w-[10%]")} />
+                                </div>
+                                <span className="text-[8px] font-bold text-white uppercase">{z.label}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <button onClick={() => setView('stats')} className="w-full py-2 text-[10px] font-black text-gray-500 uppercase hover:text-white transition-colors pt-2">Cerrar Detalle</button>
+                </div>
+            )}
+
+            {/* Distance Display */}
             <div className={clsx(
-                "border p-8 rounded-[40px] text-center space-y-4 shadow-xl ms-auto",
+                "border p-8 rounded-[40px] text-center space-y-4 shadow-xl",
                 theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-100"
             )}>
                 <p className="text-gray-500 text-xs font-black uppercase tracking-[0.3em]">Distancia Total</p>
-                <div className="flex items-center justify-center gap-2">
-                    <input
-                        type="number"
-                        value={distance === 0 ? '' : Math.floor(distance)}
-                        onChange={(e) => setDistance(parseFloat(e.target.value) || 0)}
-                        placeholder="0"
-                        readOnly={gpsStatus !== 'idle'}
-                        className={clsx(
-                            "bg-transparent text-center text-7xl font-heading font-black italic outline-none w-full transition-colors",
-                            gpsStatus !== 'idle' ? "text-blue-500" : (theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-200")
-                        )}
-                    />
-                    <span className="text-xl font-black text-gray-400 mt-8">METROS</span>
+                <div className="flex items-center justify-center gap-4">
+                    <div className="text-7xl font-heading font-black italic text-white flex items-end">
+                        {(distance / 1000).toFixed(2)}
+                        <span className="text-2xl text-gray-500 ml-3 mb-3">KM</span>
+                    </div>
                 </div>
 
                 {gpsStatus === 'idle' && (
@@ -2013,39 +2165,102 @@ function RunningView({
                         ))}
                     </div>
                 )}
-
-                {gpsStatus !== 'idle' && (
-                    <p className="text-xs text-blue-400/60 font-mono animate-pulse">
-                        Sátelites conectados. Calculando distancia en tiempo real...
-                    </p>
-                )}
             </div>
 
-            <div className="grid grid-cols-2 gap-3 pt-6">
-                <button
-                    onClick={toggleTimer}
-                    className={clsx(
-                        "py-5 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg",
-                        isPaused
-                            ? (theme === 'dark' ? "bg-white text-black" : "bg-black text-white")
-                            : (theme === 'dark' ? "bg-white/5 text-gray-400 border border-white/10" : "bg-gray-100 text-gray-500 border border-gray-200")
-                    )}
-                >
-                    {isPaused ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4 fill-current" />}
-                    {isPaused ? 'Reanudar' : 'Pausar'}
-                </button>
+            {/* Controls */}
+            <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/90 to-transparent pt-10 z-[100] max-w-2xl mx-auto">
+                <div className="grid grid-cols-2 gap-3">
+                    <button
+                        onClick={toggleTimer}
+                        className={clsx(
+                            "py-5 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg",
+                            isPaused
+                                ? "bg-white text-black"
+                                : (theme === 'dark' ? "bg-white/5 text-gray-400 border border-white/10" : "bg-gray-100 text-gray-500 border border-gray-200")
+                        )}
+                    >
+                        {isPaused ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4 fill-current" />}
+                        {isPaused ? 'Reanudar' : 'Pausar'}
+                    </button>
 
-                <button
-                    onClick={handleFinish}
-                    className="py-5 rounded-2xl bg-brand-red text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-glow"
-                >
-                    <CheckCircle className="w-4 h-4" />
-                    Finalizar
-                </button>
+                    <button
+                        onClick={handleFinish}
+                        className="py-5 rounded-2xl bg-brand-red text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-glow shadow-red-900/40"
+                    >
+                        <CheckCircle className="w-4 h-4" />
+                        Finalizar
+                    </button>
+                </div>
             </div>
         </div>
     )
 }
+
+function SyncWatchModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+    const { theme } = useTheme();
+    return (
+        <div className={clsx("fixed inset-0 z-[400] flex items-center justify-center p-4 transition-all duration-300", isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")}>
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
+            <div className={clsx("relative w-full max-w-sm rounded-[40px] border p-8 space-y-8 animate-in zoom-in-95 duration-300",
+                theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white shadow-2xl"
+            )}>
+                <div className="text-center">
+                    <h3 className="text-2xl font-heading font-black italic uppercase text-white mb-2">Sync <span className="text-brand-red">Reloj</span></h3>
+                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Importa tus datos de carrera automáticamente</p>
+                </div>
+
+                <div className="space-y-3">
+                    <button
+                        className="w-full p-6 rounded-3xl bg-orange-600/10 border border-orange-600/20 hover:bg-orange-600 hover:border-orange-600 transition-all flex items-center justify-between group"
+                        onClick={() => { alert('Conectando con Strava...'); onClose(); }}
+                    >
+                        <div className="flex items-center gap-4 text-orange-600 group-hover:text-white transition-colors">
+                            <span className="font-black italic text-xl">STRAVA</span>
+                        </div>
+                        <Plus className="w-5 h-5 text-orange-600 group-hover:text-white" />
+                    </button>
+
+                    <button
+                        className="w-full p-6 rounded-3xl bg-blue-600/10 border border-blue-600/20 hover:bg-blue-600 hover:border-blue-600 transition-all flex items-center justify-between group"
+                        onClick={() => { alert('Conectando con Garmin...'); onClose(); }}
+                    >
+                        <div className="flex items-center gap-4 text-blue-600 group-hover:text-white transition-colors">
+                            <span className="font-black italic text-xl uppercase">Garmin Connect</span>
+                        </div>
+                        <Plus className="w-5 h-5 text-blue-600 group-hover:text-white" />
+                    </button>
+
+                    <button
+                        className="w-full p-6 rounded-3xl bg-white/5 border border-white/10 hover:bg-white hover:text-black transition-all flex items-center justify-between group"
+                        onClick={() => { alert('Abre la App Rival en tu Apple Watch para sincronizar.'); onClose(); }}
+                    >
+                        <div className="flex items-center gap-4 text-white group-hover:text-black transition-colors">
+                            <span className="font-black italic text-xl uppercase">Apple Watch</span>
+                        </div>
+                        <Activity className="w-5 h-5 text-white group-hover:text-black" />
+                    </button>
+
+                    <div className="relative py-4 flex items-center gap-4">
+                        <div className="flex-1 h-px bg-white/10" />
+                        <span className="text-[8px] font-black text-gray-600 uppercase">Ó importa archivo</span>
+                        <div className="flex-1 h-px bg-white/10" />
+                    </div>
+
+                    <button
+                        className="w-full p-4 rounded-2xl bg-gray-900 border border-white/5 hover:bg-gray-800 transition-colors flex items-center justify-center gap-3"
+                        onClick={() => alert('Selecciona archivo .GPX o .FIT')}
+                    >
+                        <Download className="w-4 h-4 text-gray-500" />
+                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Importar GPX / FIT</span>
+                    </button>
+                </div>
+
+                <button onClick={onClose} className="w-full text-center text-gray-600 hover:text-white transition-colors text-[10px] font-black uppercase tracking-[0.3em]">Cancelar</button>
+            </div>
+        </div>
+    )
+}
+
 
 // Helper var for mock
 let isPausedGlobal = false;

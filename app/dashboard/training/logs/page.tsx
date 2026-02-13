@@ -68,9 +68,49 @@ export default function WorkoutLogsPage() {
             ) : (
                 <div className="grid gap-6">
                     {workouts.map((workout) => {
-                        // Calculate Max Weight instead of Volume
-                        const maxWeight = workout.workout_sets?.reduce((max: number, set: any) =>
-                            Math.max(max, set.weight_kg || 0), 0) || 0;
+                        const isRunning = workout.sport_type === 'Running' || workout.metrics?.type === 'running';
+
+                        // Calculate Stats based on type
+                        let mainStatLabel = 'Peso Máx';
+                        let mainStatValue = '0';
+                        let mainStatUnit = 'KG';
+                        let subStatLabel = 'Intensidad';
+                        let subStatValue = `RPE ${workout.effort_rpe}`;
+                        let thirdStatLabel = 'Ejercicios';
+                        let thirdStatValue = '0';
+
+                        if (isRunning) {
+                            mainStatLabel = 'Distancia';
+                            // Try to get distance from metrics or calculate from somewhere if needed (usually in metrics)
+                            const distMeters = workout.metrics?.distance || 0;
+                            mainStatValue = (distMeters / 1000).toFixed(2);
+                            mainStatUnit = 'KM';
+
+                            subStatLabel = 'Ritmo';
+                            subStatValue = workout.metrics?.pace ? `${workout.metrics.pace}/km` : 'N/A';
+
+                            thirdStatLabel = 'Tiempo';
+                            // Format duration if not in metrics
+                            const s = workout.duration_seconds;
+                            const m = Math.floor(s / 60);
+                            const sec = s % 60;
+                            thirdStatValue = workout.metrics?.time || `${m}:${sec < 10 ? '0' + sec : sec}`;
+                        } else {
+                            // Strength Logic
+                            const maxWeight = workout.workout_sets?.reduce((max: number, set: any) =>
+                                Math.max(max, set.weight_kg || 0), 0) || 0;
+                            mainStatValue = maxWeight.toString();
+
+                            thirdStatValue = new Set(workout.workout_sets?.map((s: any) => s.exercise_name)).size.toString();
+                        }
+
+                        // Determine pills
+                        let pills: string[] = [];
+                        if (workout.workout_sets && workout.workout_sets.length > 0) {
+                            pills = Array.from(new Set(workout.workout_sets.map((s: any) => s.exercise_name)));
+                        } else if (isRunning) {
+                            pills = ['Carrera Libre', 'Running'];
+                        }
 
                         return (
                             <div key={workout.id} className="bg-[#0A0A0A] dark-section border border-white/5 rounded-[32px] p-8 hover:border-brand-red/30 transition-all group relative overflow-hidden shadow-2xl">
@@ -78,7 +118,7 @@ export default function WorkoutLogsPage() {
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-4">
                                             <div className="w-14 h-14 bg-brand-red/10 rounded-2xl flex items-center justify-center text-brand-red border border-brand-red/20 shadow-[0_0_20px_rgba(220,38,38,0.1)]">
-                                                <Dumbbell className="w-6 h-6 transition-transform group-hover:rotate-12" />
+                                                {isRunning ? <Clock className="w-6 h-6 transition-transform group-hover:rotate-12" /> : <Dumbbell className="w-6 h-6 transition-transform group-hover:rotate-12" />}
                                             </div>
                                             <div>
                                                 <h3 className="text-white font-heading font-black text-xl uppercase italic tracking-tight group-hover:text-brand-red transition-colors">{workout.title}</h3>
@@ -93,17 +133,17 @@ export default function WorkoutLogsPage() {
                                     <div className="flex items-center justify-between md:justify-end gap-8 md:gap-12 border-t border-white/5 md:border-none pt-6 md:pt-0">
                                         <div className="text-center">
                                             <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1.5 flex items-center justify-center gap-1">
-                                                <Trophy className="w-3 h-3 text-yellow-500/50" /> Peso Máx
+                                                <Trophy className="w-3 h-3 text-yellow-500/50" /> {mainStatLabel}
                                             </p>
-                                            <p className="text-white font-heading font-black text-2xl italic">{maxWeight} <span className="text-xs">KG</span></p>
+                                            <p className="text-white font-heading font-black text-2xl italic">{mainStatValue} <span className="text-xs">{mainStatUnit}</span></p>
                                         </div>
                                         <div className="text-center">
-                                            <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1.5">Intensidad</p>
-                                            <p className="text-brand-red font-heading font-black text-2xl italic">RPE {workout.effort_rpe}</p>
+                                            <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1.5">{subStatLabel}</p>
+                                            <p className="text-brand-red font-heading font-black text-2xl italic">{subStatValue}</p>
                                         </div>
                                         <div className="text-center hidden sm:block">
-                                            <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1.5">Ejercicios</p>
-                                            <p className="text-white font-heading font-black text-2xl italic">{new Set(workout.workout_sets?.map((s: any) => s.exercise_name)).size}</p>
+                                            <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest mb-1.5">{thirdStatLabel}</p>
+                                            <p className="text-white font-heading font-black text-2xl italic">{thirdStatValue}</p>
                                         </div>
 
                                         {/* Actions */}
@@ -129,7 +169,7 @@ export default function WorkoutLogsPage() {
 
                                 {/* Exercises Preview Pills */}
                                 <div className="mt-8 pt-8 border-t border-white/5 flex flex-wrap gap-3">
-                                    {Array.from(new Set(workout.workout_sets?.map((s: any) => s.exercise_name))).map((exName: any, idx) => (
+                                    {pills.map((exName: any, idx) => (
                                         <div key={idx} className="bg-white/5 hover:bg-white/10 rounded-2xl px-5 py-2.5 text-[10px] font-black text-gray-400 border border-white/5 transition-colors uppercase tracking-widest italic flex items-center gap-2">
                                             <div className="w-1.5 h-1.5 rounded-full bg-brand-red shadow-[0_0_5px_rgba(220,38,38,0.5)]"></div>
                                             {exName}

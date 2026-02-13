@@ -260,22 +260,20 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
 
     const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation()
-        if (selectedUserIndex === null) return
-        const story = userStories[selectedUserIndex].stories[activeStoryIndex]
+        if (!currentUserStories || !currentStory) return
 
         // Optimistic update
         const updatedUserStories = [...userStories]
-        const currentStory = updatedUserStories[selectedUserIndex].stories[activeStoryIndex]
-        const wasLiked = (currentStory as any).has_liked
+        const targetStory = updatedUserStories[selectedUserIndex as number].stories[activeStoryIndex]
+        const wasLiked = (targetStory as any).has_liked
 
-            ; (currentStory as any).has_liked = !wasLiked
-            ; (currentStory as any).likes_count = (currentStory as any).likes_count + (wasLiked ? -1 : 1)
+            ; (targetStory as any).has_liked = !wasLiked
+            ; (targetStory as any).likes_count = (targetStory as any).likes_count + (wasLiked ? -1 : 1)
 
         setUserStories(updatedUserStories)
 
-        await toggleStoryLike(story.id)
-        // loadStories() will call API and sync with real data
-        loadStories()
+        await toggleStoryLike(currentStory.id)
+        refreshStories()
     }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -437,7 +435,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 setPreviewUrl(null)
                 setSelectedTrack(null)
                 setOverlays([])
-                await loadStories()
+                await refreshStories()
                 router.refresh()
             }
         } catch (err) {
@@ -453,6 +451,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
 
         setIsTrimmingLoading(true);
         const video = trimmerVideoRef.current;
+
         const stream = (video as any).captureStream ? (video as any).captureStream() : (video as any).mozCaptureStream();
 
         const supportedTypes = ['video/mp4', 'video/webm', 'video/ogg'];
@@ -465,7 +464,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         }
 
         const recorder = new MediaRecorder(stream, { mimeType });
-
         const chunks: Blob[] = [];
         recorder.ondataavailable = (e) => chunks.push(e.data);
 
@@ -479,14 +477,37 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
             setIsTrimmingLoading(false);
         };
 
+        // Prepare video for recording
         video.currentTime = trimStart;
-        video.play();
-        recorder.start();
 
-        setTimeout(() => {
-            recorder.stop();
-            video.pause();
-        }, 30000); // 30 seconds
+        const startRecording = () => {
+            video.play();
+            recorder.start();
+
+            // Record for exactly 30s or until video ends
+            const duration = Math.min(30, (video.duration - trimStart));
+
+            setTimeout(() => {
+                if (recorder.state === 'recording') {
+                    recorder.stop();
+                    video.pause();
+                }
+            }, duration * 1000);
+
+            video.onended = () => {
+                if (recorder.state === 'recording') {
+                    recorder.stop();
+                }
+            };
+
+            video.onseeked = null; // Clean up
+        };
+
+        if (video.readyState >= 3) { // Have future data
+            startRecording();
+        } else {
+            video.onseeked = startRecording;
+        }
     };
 
     const closePreview = () => {
@@ -527,7 +548,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 setShowPRCreator(false)
                 setSelectedTrack(null)
                 if (prFileInputRef.current) prFileInputRef.current.value = ""
-                await loadStories()
+                await refreshStories()
                 router.refresh()
             }
         } finally {
@@ -537,19 +558,19 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
 
     const handleDeleteStory = async (e: React.MouseEvent) => {
         e.stopPropagation()
-        if (selectedUserIndex === null) return
-        const story = userStories[selectedUserIndex].stories[activeStoryIndex]
+        if (!currentUserStories || !currentStory) return
+
         if (!confirm('¿Estás seguro de que quieres eliminar esta historia?')) return
-        const res = await deleteStory(story.id)
+        const res = await deleteStory(currentStory.id)
         if (res.error) {
             alert(res.error)
         } else {
-            if (userStories[selectedUserIndex].stories.length === 1) {
+            if (currentUserStories.stories.length === 1) {
                 setSelectedUserIndex(null)
             } else {
                 nextStory()
             }
-            await loadStories()
+            await refreshStories()
         }
     }
 
@@ -559,17 +580,19 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         setExpandedWorkoutId(null)
         setShowFullSummary(false)
         setIsPaused(false)
-        if (activeStoryIndex < userStories[selectedUserIndex].stories.length - 1) {
+        if (activeStoryIndex < (currentUserStories?.stories?.length || 0) - 1) {
             const nextIdx = activeStoryIndex + 1
             setActiveStoryIndex(nextIdx)
-            recordView(userStories[selectedUserIndex].stories[nextIdx].id)
-            if (audioRef.current) audioRef.current.pause()
+            if (currentUserStories?.stories?.[nextIdx]?.id) {
+                recordView(currentUserStories.stories[nextIdx].id)
+            }
         } else if (selectedUserIndex < userStories.length - 1) {
             const nextUserIdx = selectedUserIndex + 1
             setSelectedUserIndex(nextUserIdx)
             setActiveStoryIndex(0)
-            recordView(userStories[nextUserIdx].stories[0].id)
-            if (audioRef.current) audioRef.current.pause()
+            if (userStories[nextUserIdx]?.stories?.[0]?.id) {
+                recordView(userStories[nextUserIdx].stories[0].id)
+            }
         } else {
             setSelectedUserIndex(null)
             if (audioRef.current) audioRef.current.pause()
@@ -585,20 +608,26 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         if (activeStoryIndex > 0) {
             const prevIdx = activeStoryIndex - 1
             setActiveStoryIndex(prevIdx)
-            recordView(userStories[selectedUserIndex].stories[prevIdx].id)
+            if (currentUserStories?.stories?.[prevIdx]?.id) {
+                recordView(currentUserStories.stories[prevIdx].id)
+            }
         } else if (selectedUserIndex > 0) {
             const prevUserIndex = selectedUserIndex - 1
             setSelectedUserIndex(prevUserIndex)
-            const lastStoryIdx = userStories[prevUserIndex].stories.length - 1
-            setActiveStoryIndex(lastStoryIdx)
-            recordView(userStories[prevUserIndex].stories[lastStoryIdx].id)
+            const targetUserStories = userStories[prevUserIndex]
+            if (targetUserStories?.stories?.length > 0) {
+                const lastStoryIdx = targetUserStories.stories.length - 1
+                setActiveStoryIndex(lastStoryIdx)
+                recordView(targetUserStories.stories[lastStoryIdx].id)
+            }
         } else {
             setSelectedUserIndex(null)
         }
     }
 
-    const currentStory = selectedUserIndex !== null ? userStories[selectedUserIndex].stories[activeStoryIndex] : null
-    const isOwner = selectedUserIndex !== null && userStories[selectedUserIndex].user.id === currentUser?.id
+    const currentUserStories = selectedUserIndex !== null ? userStories[selectedUserIndex] : null
+    const currentStory = currentUserStories?.stories?.[activeStoryIndex] || null
+    const isOwner = currentUserStories?.user?.id === currentUser?.id
 
     useEffect(() => {
         if (selectedUserIndex !== null && currentStory?.music_url && !showViewers && !previewUrl && !isPaused) {
@@ -1289,7 +1318,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     exit={{ opacity: 0 }}
                                     className="absolute top-6 inset-x-6 flex gap-1.5 z-50"
                                 >
-                                    {userStories[selectedUserIndex].stories.map((_, i) => (
+                                    {currentUserStories?.stories?.map((_, i) => (
                                         <div key={i} className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
                                             <div
                                                 className="h-full bg-white transition-all duration-100 ease-linear"
@@ -1312,18 +1341,18 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full border-2 border-brand-red overflow-hidden relative">
                                             <Image
-                                                src={userStories[selectedUserIndex].user.avatar_url || `https://ui-avatars.com/api/?name=${userStories[selectedUserIndex].user.full_name}`}
+                                                src={currentUserStories?.user?.avatar_url || `https://ui-avatars.com/api/?name=${currentUserStories?.user?.full_name || 'User'}`}
                                                 alt="Avatar" fill className="object-cover"
                                             />
                                         </div>
                                         <div className="drop-shadow-lg">
                                             <p className="text-white font-black text-sm uppercase italic tracking-tighter">
-                                                {userStories[selectedUserIndex].user.full_name}
+                                                {currentUserStories?.user?.full_name}
                                             </p>
                                             <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                                {new Date(currentStory.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                {currentStory ? new Date(currentStory.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                             </p>
-                                            {currentStory.music_url && (
+                                            {currentStory?.music_url && (
                                                 <div className="flex items-center gap-1.5 mt-1 bg-black/40 px-2 py-0.5 rounded-full border border-white/10 w-fit">
                                                     <Music className="w-2.5 h-2.5 text-brand-red animate-bounce" />
                                                     <span className="text-[8px] font-black text-white uppercase tracking-[0.1em] marquee-container whitespace-nowrap overflow-hidden max-w-[80px]">
@@ -1664,8 +1693,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                 const prData = JSON.parse(overlay.content);
                                                 return (
                                                     <PRCard
-                                                        userName={userStories[selectedUserIndex].user.full_name}
-                                                        avatarUrl={userStories[selectedUserIndex].user.avatar_url || ''}
+                                                        userName={currentUserStories?.user?.full_name || ''}
+                                                        avatarUrl={currentUserStories?.user?.avatar_url || ''}
                                                         sport={prData.sport}
                                                         exerciseName={prData.exerciseName}
                                                         weight={prData.weight}
@@ -1815,7 +1844,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                         <button onClick={() => setShowPRCreator(false)} className="absolute top-6 right-6 text-gray-400 hover:text-white">
                             <X className="w-6 h-6" />
                         </button>
-
                         <div className="flex items-center gap-3 mb-8">
                             <div className="p-3 bg-brand-red/10 rounded-2xl">
                                 <Trophy className="w-6 h-6 text-brand-red" />

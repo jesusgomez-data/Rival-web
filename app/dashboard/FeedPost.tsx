@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2 } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram } from "lucide-react";
 import LikeButton from "./community/LikeButton";
 import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike } from "./community/actions";
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
@@ -11,8 +11,12 @@ import { clsx } from "clsx";
 import { useTheme } from "../ThemeContext";
 import { useStories } from "./stories/StoryContext";
 import PRCard from "./community/PRCard";
+import VideoReelsModal from "./VideoReelsModal";
+import dynamic from 'next/dynamic';
 
-function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5" }: { image?: string, workoutData?: any, mediaType?: string, postId?: string, className?: string, iconClassName?: string }) {
+const InstagramShareCard = dynamic(() => import("./InstagramShareCard"), { ssr: false });
+
+function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5", onInstagramShare }: { image?: string, workoutData?: any, mediaType?: string, postId?: string, className?: string, iconClassName?: string, onInstagramShare?: () => void }) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -77,6 +81,12 @@ function ShareButton({ image, workoutData, mediaType, postId, className, iconCla
                     <button onClick={handleShareToStory} className="w-full text-left px-4 py-3 text-xs font-bold text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-2 border-t border-white/5">
                         <Plus className="w-3 h-3" /> Compartir en Historia
                     </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onInstagramShare?.(); setIsOpen(false); }}
+                        className="w-full text-left px-4 py-3 text-xs font-bold text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-2 border-t border-white/5"
+                    >
+                        <Instagram className="w-3 h-3" /> Instagram Story
+                    </button>
                 </div>
             )}
         </div>
@@ -111,6 +121,7 @@ interface FeedPostProps {
     music_title?: string | null;
     music_artist?: string | null;
     isMember?: boolean;
+    context?: 'following' | 'global';
 }
 
 interface Comment {
@@ -128,10 +139,11 @@ interface Comment {
 }
 
 export default function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId, centerName,
-    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false
+    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global'
 }: FeedPostProps) {
     const { theme } = useTheme();
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+    const [showInstagramCard, setShowInstagramCard] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [commentList, setCommentList] = useState<Comment[]>([]);
     const [commentTree, setCommentTree] = useState<Comment[]>([]);
@@ -1041,6 +1053,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             postId={postId}
                             className="p-3 md:p-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl md:rounded-2xl border border-white/5 transition-all"
                             iconClassName="w-5 h-5"
+                            onInstagramShare={() => setShowInstagramCard(true)}
                         />
                     </>
                 ) : (
@@ -1061,6 +1074,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 postId={postId}
                                 className="text-gray-400 hover:text-white"
                                 iconClassName="w-6 h-6"
+                                onInstagramShare={() => setShowInstagramCard(true)}
                             />
                         </div>
                     </div>
@@ -1105,24 +1119,63 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 )
             }
 
-            {/* Lightbox */}
+            {/* Lightbox / Video Reels */}
             {
                 isLightboxOpen && (
-                    <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsLightboxOpen(false)}>
-                        <button
-                            onClick={() => setIsLightboxOpen(false)}
-                            className="absolute top-6 right-6 text-white hover:text-brand-red focus:outline-none transition-colors z-[110] bg-black/20 p-2 rounded-full"
-                        >
-                            <X className="w-8 h-8 md:w-10 md:h-10" />
-                        </button>
-                        <div className="relative w-full max-w-5xl max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                            {isVideo ? (
-                                <video src={image} autoPlay controls className="max-w-full max-h-[90vh] rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)]" />
-                            ) : (
+                    isVideo ? (
+                        <VideoReelsModal
+                            isOpen={isLightboxOpen}
+                            onClose={() => setIsLightboxOpen(false)}
+                            initialPostId={postId}
+                            context={context}
+                        />
+                    ) : (
+                        <div className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm" onClick={() => setIsLightboxOpen(false)}>
+                            <button
+                                onClick={() => setIsLightboxOpen(false)}
+                                className="absolute top-6 right-6 text-white hover:text-brand-red focus:outline-none transition-colors z-[110] bg-black/20 p-2 rounded-full"
+                            >
+                                <X className="w-8 h-8 md:w-10 md:h-10" />
+                            </button>
+                            <div className="relative w-full max-w-5xl max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                                 <img src={image} alt="Full size" className="max-w-full max-h-[90vh] object-contain rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)]" />
-                            )}
+                            </div>
                         </div>
-                    </div>
+                    )
+                )
+            }
+            {
+                showInstagramCard && (
+                    <InstagramShareCard
+                        user={user}
+                        username={username || user}
+                        avatar={avatar}
+                        content={{
+                            type: (workoutData as any)?.metrics?.type === 'running' ? 'running' : (mediaType as any || 'workout'),
+                            title: workoutData?.title || 'Mi Entrenamiento',
+                            highlight: highlight || caption,
+                            stats: (workoutData as any)?.metrics?.type === 'running'
+                                ? [
+                                    { label: 'DISTANCIA', value: `${(((workoutData as any).metrics.distance || 0) / 1000).toFixed(2)} KM`, icon: 'distance' },
+                                    { label: 'RITMO', value: (workoutData as any).metrics.pace || '0:00', icon: 'pace' },
+                                    { label: 'TIEMPO', value: (workoutData as any).metrics.time || '00:00', icon: 'time' },
+                                    { label: 'DESNIVEL', value: `${(workoutData as any).metrics.elevation || 0}m`, icon: 'elevation' },
+                                    { label: 'PULSO MED.', value: `${(workoutData as any).metrics.avgHeartRate || 0}`, icon: 'heart' }
+                                ]
+                                : (workoutData as any)?.metrics?.blocks?.map((b: any) => ({
+                                    label: b.type?.toUpperCase(),
+                                    value: b.result?.time || `${b.result?.rounds || b.result?.reps || '-'} ${b.result?.rounds ? 'RDS' : (b.result?.reps ? 'REPS' : '')}`
+                                })).slice(0, 4) || (mediaType === 'pr' ? (() => {
+                                    try {
+                                        const d = JSON.parse(image);
+                                        return [{ label: d.exerciseName?.toUpperCase(), value: `${d.weight}${d.unit}` }];
+                                    } catch (e) { return [] }
+                                })() : []),
+                            image: image,
+                            mapData: (workoutData as any)?.metrics?.path ? 'GPS_PATH_ACTIVE' : undefined
+                        }}
+                        onClose={() => setShowInstagramCard(false)}
+                    />
                 )
             }
         </div >
