@@ -178,51 +178,49 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                                     </div>
                                     <MapPin className="w-4 h-4 text-brand-red absolute top-1/2 left-1/2 -ms-2 -mt-2 animate-pulse" />
                                     <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.3em]">RECORRIDO GPS</span>
-                                    {/* If we had path data, we would render a SVG polyline here */}
                                 </div>
                             )}
                         </div>
                     </div>
-                </div>
 
-                {/* Footer */}
-                <div className="relative z-10 flex flex-col items-center gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white/5 border border-white/10 rounded-xl">
-                            <Trophy className="w-5 h-5 text-brand-red" />
+                    {/* Footer */}
+                    <div className="relative z-10 flex flex-col items-center gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white/5 border border-white/10 rounded-xl">
+                                <Trophy className="w-5 h-5 text-brand-red" />
+                            </div>
+                            <div className="text-left leading-none">
+                                <p className="text-white font-black text-[10px] uppercase tracking-widest">DESCÁRGATE LA APP</p>
+                                <p className="text-gray-500 font-bold text-[8px] uppercase tracking-widest">RIVALFIT.APP</p>
+                            </div>
                         </div>
-                        <div className="text-left leading-none">
-                            <p className="text-white font-black text-[10px] uppercase tracking-widest">DESCÁRGATE LA APP</p>
-                            <p className="text-gray-500 font-bold text-[8px] uppercase tracking-widest">RIVALFIT.APP</p>
-                        </div>
+                        <p className="text-gray-600 text-[8px] font-bold uppercase tracking-[0.4em]">JOIN THE ARENA • JOIN THE ARENA</p>
                     </div>
-                    <p className="text-gray-600 text-[8px] font-bold uppercase tracking-[0.4em]">JOIN THE ARENA • JOIN THE ARENA</p>
                 </div>
-            </div>
 
-            {/* UI Buttons */}
-            <div className="flex flex-col gap-3 w-full">
-                <button
-                    onClick={handleShare}
-                    disabled={isGenerating}
-                    className="w-full py-5 bg-brand-red text-white rounded-[24px] font-black italic uppercase tracking-[0.2em] shadow-glow flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50"
-                >
-                    {isGenerating ? (
-                        <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                    ) : (
-                        <><Instagram className="w-5 h-5" /> Compartir en Instagram</>
-                    )}
-                </button>
+                {/* UI Buttons */}
+                <div className="flex flex-col gap-3 w-full">
+                    <button
+                        onClick={handleShare}
+                        disabled={isGenerating}
+                        className="w-full py-5 bg-brand-red text-white rounded-[24px] font-black italic uppercase tracking-[0.2em] shadow-glow flex items-center justify-center gap-3 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                        {isGenerating ? (
+                            <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                        ) : (
+                            <><Instagram className="w-5 h-5" /> Compartir en Instagram</>
+                        )}
+                    </button>
 
-                <button
-                    onClick={onClose}
-                    disabled={isGenerating}
-                    className="w-full py-4 bg-white/5 text-gray-400 rounded-2xl font-bold uppercase tracking-widest text-xs hover:text-white transition-colors"
-                >
-                    Cancelar
-                </button>
+                    <button
+                        onClick={onClose}
+                        disabled={isGenerating}
+                        className="w-full py-4 bg-white/5 text-gray-400 rounded-2xl font-bold uppercase tracking-widest text-xs hover:text-white transition-colors"
+                    >
+                        Cancelar
+                    </button>
+                </div>
             </div>
         </div>
-        </div >
     );
 }
