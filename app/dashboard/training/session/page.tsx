@@ -7,7 +7,7 @@ import { useState, useEffect, Suspense, useMemo, useRef } from "react";
 import { saveWorkout, getExercises, getExercisePreviousRecord, getWorkoutDetails, uploadWorkoutMedia, getUserProfile, getGuidedWorkoutsCount } from "../actions";
 import { getCenterPost } from "../../gyms/feed-actions";
 import { getAiRecommendation } from "../ai-coach";
-import type { TrainingPlan, WorkoutBlock, WorkoutExercise, WorkoutSet } from "../types";
+import type { TrainingPlan, WorkoutBlock, WorkoutExercise, WorkoutSet, SportType } from "../types";
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
@@ -305,9 +305,9 @@ function SessionContent() {
                     setExercises(allMapped);
 
                     // Create blocks based on grouping
-                    const warmUpEx = allMapped.filter((e: any) => e.group === 'warmup');
-                    const workoutEx = allMapped.filter((e: any) => e.group === 'workout');
-                    const coolDownEx = allMapped.filter((e: any) => e.group === 'cooldown');
+                    const warmUpEx = allMapped.filter((e: WorkoutExercise) => e.group === 'warmup');
+                    const workoutEx = allMapped.filter((e: WorkoutExercise) => e.group === 'workout');
+                    const coolDownEx = allMapped.filter((e: WorkoutExercise) => e.group === 'cooldown');
 
                     const newBlocks = [];
 
@@ -383,12 +383,12 @@ function SessionContent() {
                     if (plan.duration_min) setTargetDuration(plan.duration_min);
 
                     if (plan.sport === 'gym' && plan.exercises) {
-                        const mapped = plan.exercises.map((ex: any) => {
+                        const mapped = plan.exercises.map((ex: WorkoutExercise) => {
                             const found = catalogMap.get(ex.name.toLowerCase());
                             return {
                                 ...ex,
                                 video_url: ex.video_url || found?.video_url,
-                                sets: ex.sets.map((s: any, i: number) => ({
+                                sets: ex.sets.map((s: WorkoutSet, i: number) => ({
                                     ...s,
                                     order: i + 1,
                                     weight: s.weight || 0,
@@ -403,13 +403,13 @@ function SessionContent() {
                         setBlocks([{ id: 'main', title: plan.title, exercises: mapped, type: 'other' }]);
                     } else if (plan.exercises) {
                         // For other modes that might have exercises (Cross Training blocks)
-                        const mapped = plan.exercises.map((ex: any, idx: number) => {
+                        const mapped = plan.exercises.map((ex: WorkoutExercise, idx: number) => {
                             const found = catalogMap.get(ex.name.toLowerCase());
                             return {
                                 ...ex,
                                 video_url: ex.video_url || found?.video_url,
                                 id: ex.id || `plan-${idx}`,
-                                sets: ex.sets?.map((s: any, i: number) => ({
+                                sets: ex.sets?.map((s: WorkoutSet, i: number) => ({
                                     ...s,
                                     order: i + 1,
                                     weight: s.weight || 0,
@@ -673,7 +673,7 @@ function SessionContent() {
             let finalExercises = exercises;
             if (sportMode === 'cross_training' || sportMode === 'ocr') {
                 finalExercises = blocks.flatMap((b, bIdx) =>
-                    b.exercises.map((ex: any) => ({
+                    b.exercises.map((ex: WorkoutExercise) => ({
                         ...ex,
                         // Add block context to note if possible or name
                         name: `${ex.name} (${b.type.toUpperCase()})`
@@ -796,7 +796,7 @@ function SessionContent() {
                             id: 'freestyle',
                             title: defaultTitle,
                             description: 'Entrenamiento libre sin rutina predefinida. Tú marcas el ritmo y los ejercicios.',
-                            sport: mode as any,
+                            sport: mode as SportType,
                             difficulty: 'intermediate',
                             duration_min: 60,
                             exercises: [],
@@ -2277,7 +2277,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
     const { theme } = useTheme();
     const [showAddModal, setShowAddModal] = useState(false);
     const [activeBlockIndex, setActiveBlockIndex] = useState(0);
-    const [catalog, setCatalog] = useState<any[]>([]);
+    const [catalog, setCatalog] = useState<WorkoutExercise[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [showPresets, setShowPresets] = useState(false);
     const [replacingExIndex, setReplacingExIndex] = useState<number | null>(null);
@@ -2341,9 +2341,9 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
         }
     ];
 
-    const loadPreset = (preset: any) => {
+    const loadPreset = (preset: { name: string; type: string; desc: string; exercises: any[] }) => {
         const newExercises = preset.exercises.map((ex: any) => {
-            const sets = ex.reps.map((r: number, i: number) => ({
+            const sets = (Array.isArray(ex.reps) ? ex.reps : [ex.reps]).map((r: number, i: number) => ({
                 order: i + 1,
                 weight: ex.weight || 0,
                 reps: r || 0,
@@ -2423,7 +2423,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
 
     const removeBlock = (index: number) => {
         if (blocks.length <= 1) return;
-        const newBlocks = blocks.filter((_: any, i: number) => i !== index);
+        const newBlocks = blocks.filter((_: WorkoutBlock, i: number) => i !== index);
         setBlocks(newBlocks);
         setActiveBlockIndex(Math.max(0, index - 1));
     };
@@ -2889,7 +2889,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                                         <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                setViewingVideo(ex.video_url);
+                                                setViewingVideo(ex.video_url || null);
                                             }}
                                             className="p-2 bg-white/5 rounded-full hover:bg-red-600 hover:text-white text-gray-500 transition-colors z-20"
                                         >
@@ -3097,7 +3097,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
 }) {
     const { theme } = useTheme();
     const [showAddModal, setShowAddModal] = useState(false);
-    const [catalog, setCatalog] = useState<any[]>([]);
+    const [catalog, setCatalog] = useState<WorkoutExercise[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [viewingVideo, setViewingVideo] = useState<string | null>(null);
 
@@ -3105,7 +3105,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
     useEffect(() => {
         if (!setWorkoutTitle || !workoutTitle) return;
         if (workoutTitle === "Entrenamiento de Fuerza & Musculación" || workoutTitle === "Sesión de Entrenamiento") {
-            const muscleGroups = exercises.map((ex: any) => ex.muscle_group).filter(Boolean);
+            const muscleGroups = exercises.map((ex: WorkoutExercise) => ex.muscle_group).filter(Boolean);
             if (muscleGroups.length > 0) {
                 const unique = Array.from(new Set(muscleGroups));
                 if (unique.length === 1) setWorkoutTitle(`Entrenamiento de ${unique[0]}`);
@@ -3197,7 +3197,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
     return (
         <div className="space-y-8 animate-in slide-in-from-bottom-10 fade-in duration-500">
             {viewingVideo && <VideoModal url={viewingVideo} onClose={() => setViewingVideo(null)} />}
-            {exercises.map((ex: any, i: number) => (
+            {exercises.map((ex: WorkoutExercise, i: number) => (
                 <div key={ex.id} className={clsx(
                     "border rounded-[32px] overflow-hidden shadow-sm transition-all",
                     theme === 'dark' ? "bg-[#111] border-white/5" : "bg-white border-gray-100"
@@ -3219,7 +3219,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                                 />
                                 {ex.video_url && (
                                     <button
-                                        onClick={() => setViewingVideo(ex.video_url)}
+                                        onClick={() => setViewingVideo(ex.video_url || null)}
                                         className="group flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-red-600 rounded-full text-gray-400 hover:text-white transition-all shrink-0 border border-white/10 hover:border-red-600 shadow-sm"
                                     >
                                         <Youtube className="w-4 h-4 fill-current" />
