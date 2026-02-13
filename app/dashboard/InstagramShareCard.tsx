@@ -97,7 +97,7 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                             <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-brand-red via-orange-500 to-brand-red shadow-[0_0_20px_rgba(239,68,68,0.4)]">
                                 <div className="w-full h-full rounded-full border-4 border-black overflow-hidden relative">
                                     {avatar ? (
-                                        <img src={avatar} alt={user} className="w-full h-full object-cover" />
+                                        <img src={avatar} alt={user} crossOrigin="anonymous" className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center bg-gray-900 text-2xl font-black text-white">
                                             {username[0]?.toUpperCase()}
