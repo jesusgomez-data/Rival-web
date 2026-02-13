@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap, Share2, Camera, Award, AlertTriangle, ChevronRight, Youtube, Video, Lock } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap, Share2, Camera, Award, AlertTriangle, ChevronRight, Youtube, Video, Lock, Wind, Heart, TrendingUp, Download } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect, Suspense, useMemo, useRef } from "react";
 import { saveWorkout, getExercises, getExercisePreviousRecord, getWorkoutDetails, uploadWorkoutMedia, getUserProfile, getGuidedWorkoutsCount } from "../actions";
 import { getCenterPost } from "../../gyms/feed-actions";
-import { getAiRecommendation, type TrainingPlan } from "../ai-coach";
+import { getAiRecommendation } from "../ai-coach";
+import type { TrainingPlan, WorkoutBlock, WorkoutExercise, WorkoutSet } from "../types";
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
@@ -150,7 +151,7 @@ function SessionContent() {
         setIsUploading(false);
     };
 
-    const [exercises, setExercises] = useState<any[]>([]);
+    const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
 
     // Running State
     const [runDistance, setRunDistance] = useState<number>(0); // Meters
@@ -232,7 +233,7 @@ function SessionContent() {
 
     // Cross Training/Hybrid State
     type BlockType = 'fortime' | 'amrap' | 'emom' | 'tabata' | 'other';
-    const [blocks, setBlocks] = useState<any[]>([]);
+    const [blocks, setBlocks] = useState<WorkoutBlock[]>([]);
 
     // Legacy state for backward compatibility or simple views (Removing unused ones)
     const [roundsCompleted, setRoundsCompleted] = useState(0); // Used for Summary only now
@@ -399,7 +400,7 @@ function SessionContent() {
                             };
                         });
                         setExercises(mapped);
-                        setBlocks([{ id: 'main', title: plan.title, exercises: mapped }]);
+                        setBlocks([{ id: 'main', title: plan.title, exercises: mapped, type: 'other' }]);
                     } else if (plan.exercises) {
                         // For other modes that might have exercises (Cross Training blocks)
                         const mapped = plan.exercises.map((ex: any, idx: number) => {
@@ -990,16 +991,14 @@ function SessionContent() {
                         setShowFinishModal(true);
                     }}
                     isSaving={isSaving}
-                    shareToArena={shareToArena}
-                    setShareToArena={setShareToArena}
-                    shareToStory={shareToStory}
-                    setShareToStory={setShareToStory}
                     sportMode={sportMode}
                     formatTime={formatTime}
                     countdown={countdown}
                     targetDuration={targetDuration}
                     setViewingVideo={setViewingVideo}
                     timerMode={timerMode}
+                    rpe={rpe}
+                    setRpe={setRpe}
                 />
                 {viewingVideo && <VideoModal url={viewingVideo} onClose={() => setViewingVideo(null)} />}
 
@@ -2265,7 +2264,16 @@ function SyncWatchModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => v
 // Helper var for mock
 let isPausedGlobal = false;
 
-function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, isGuided, workoutTitle, setWorkoutTitle }: any) {
+function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, isGuided, workoutTitle, setWorkoutTitle }: {
+    blocks: WorkoutBlock[];
+    setBlocks: (b: WorkoutBlock[]) => void;
+    distance?: number;
+    setDistance?: (d: number) => void;
+    isOCR?: boolean;
+    isGuided?: boolean;
+    workoutTitle?: string;
+    setWorkoutTitle?: (t: string) => void;
+}) {
     const { theme } = useTheme();
     const [showAddModal, setShowAddModal] = useState(false);
     const [activeBlockIndex, setActiveBlockIndex] = useState(0);
@@ -2361,7 +2369,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
             exercises: newExercises,
             result: { time: '', rounds: 0 }
         };
-        if (blocks.length <= 1 && (workoutTitle === "Sesión de entrenamiento" || !workoutTitle)) {
+        if (blocks.length <= 1 && (workoutTitle === "Sesión de entrenamiento" || !workoutTitle) && setWorkoutTitle) {
             setWorkoutTitle(preset.name);
         }
 
@@ -2428,15 +2436,16 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
         const block = newBlocks[index];
         if (block.type === 'emom' && (field === 'duration' || field === 'type')) {
             const numExercises = block.exercises.length;
-            if (numExercises > 0 && block.duration > 0) {
-                block.result = { ...block.result, rounds: Math.floor(block.duration / numExercises) };
+            const dur = block.duration || 0;
+            if (numExercises > 0 && dur > 0) {
+                block.result = { ...block.result, rounds: Math.floor(dur / numExercises) };
             }
         }
 
         // Update block title if generic
         if (field === 'type' && (block.title.startsWith('Bloque ') || block.title === 'For Time' || block.title === 'AMRAP' || block.title === 'EMOM' || block.title === 'TABATA')) {
-            const typeLabel = value === 'fortime' ? 'For Time' : value.toUpperCase();
-            block.title = block.duration > 0 ? `${typeLabel} (${block.duration} min)` : typeLabel;
+            const typeLabel = value === 'fortime' ? 'For Time' : (value as string).toUpperCase();
+            block.title = (block.duration || 0) > 0 ? `${typeLabel} (${block.duration} min)` : typeLabel;
         } else if (field === 'duration' && (block.title.includes(' min)') || block.title === 'For Time' || block.title === 'AMRAP' || block.title === 'EMOM' || block.title === 'TABATA')) {
             // Update duration in title if it was automatically set
             const typeLabel = block.type === 'fortime' ? 'For Time' : block.type.toUpperCase();
@@ -2496,9 +2505,10 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
 
         // Auto-calc EMOM rounds on Add Exercise
         const block = newBlocks[activeBlockIndex];
-        if (block.type === 'emom' && block.duration > 0) {
+        const dur = block.duration || 0;
+        if (block.type === 'emom' && dur > 0) {
             const numExercises = block.exercises.length;
-            block.result = { ...block.result, rounds: Math.floor(block.duration / numExercises) };
+            block.result = { ...block.result, rounds: Math.floor(dur / numExercises) };
         }
 
         setBlocks(newBlocks);
@@ -2507,7 +2517,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
 
     const updateSet = (blockIndex: number, exIndex: number, setIndex: number, field: string, val: any) => {
         const newBlocks = [...blocks];
-        newBlocks[blockIndex].exercises[exIndex].sets[setIndex][field] = val;
+        (newBlocks[blockIndex].exercises[exIndex].sets[setIndex] as any)[field] = val;
         setBlocks(newBlocks);
     };
 
@@ -2535,10 +2545,11 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
 
             // Auto-calc EMOM rounds on Remove Exercise
             const block = newBlocks[blockIndex];
-            if (block.type === 'emom' && block.duration > 0) {
+            const dur = block.duration || 0;
+            if (block.type === 'emom' && dur > 0) {
                 const numExercises = block.exercises.length;
                 // Avoid division by zero, though unlikely to be displayed if 0 exercises
-                block.result = { ...block.result, rounds: numExercises > 0 ? Math.floor(block.duration / numExercises) : 0 };
+                block.result = { ...block.result, rounds: numExercises > 0 ? Math.floor(dur / numExercises) : 0 };
             }
         }
         setBlocks(newBlocks);
@@ -2550,7 +2561,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
 
             {/* Main Tabs for Blocks */}
             <div className="flex overflow-x-auto gap-2 pb-2 custom-scrollbar">
-                {blocks.map((block: any, i: number) => (
+                {blocks.map((block: WorkoutBlock, i: number) => (
                     <button
                         key={i}
                         onClick={() => setActiveBlockIndex(i)}
@@ -2895,7 +2906,13 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
     )
 }
 
-function HybridView({ time, exercises, setExercises, workoutTitle, setWorkoutTitle }: { time: number, exercises: any[], setExercises: any, workoutTitle?: string, setWorkoutTitle?: (t: string) => void }) {
+function HybridView({ time, exercises, setExercises, workoutTitle, setWorkoutTitle }: {
+    time: number;
+    exercises: WorkoutExercise[];
+    setExercises: (ex: WorkoutExercise[]) => void;
+    workoutTitle?: string;
+    setWorkoutTitle?: (t: string) => void;
+}) {
     const { theme } = useTheme();
     const searchParams = useSearchParams();
     const [hybridMode, setHybridMode] = useState<'race' | 'pft' | 'any'>(searchParams.get('mode') === 'ai-coach' ? 'any' : 'race');
@@ -3071,7 +3088,13 @@ function HybridView({ time, exercises, setExercises, workoutTitle, setWorkoutTit
     )
 }
 
-function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorkoutTitle }: any) {
+function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorkoutTitle }: {
+    exercises: WorkoutExercise[];
+    setExercises: (ex: WorkoutExercise[]) => void;
+    mode?: string;
+    workoutTitle?: string;
+    setWorkoutTitle?: (t: string) => void;
+}) {
     const { theme } = useTheme();
     const [showAddModal, setShowAddModal] = useState(false);
     const [catalog, setCatalog] = useState<any[]>([]);
@@ -3350,7 +3373,23 @@ function FinishModal({
     workoutTitle,
     rpe,
     setRpe
-}: any) {
+}: {
+    onConfirm: () => void;
+    onCancel: () => void;
+    shareToArena: boolean;
+    setShareToArena: (v: boolean) => void;
+    shareToStory: boolean;
+    setShareToStory: (v: boolean) => void;
+    isSaving: boolean;
+    imageUrl: string | null;
+    setImageUrl: (url: string | null) => void;
+    isUploading: boolean;
+    onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    fileInputRef: React.RefObject<HTMLInputElement | null>;
+    workoutTitle: string;
+    rpe: number;
+    setRpe: (r: number) => void;
+}) {
     const { theme } = useTheme();
     const rpeLabels: Record<number, string> = {
         0: 'Sin definir',
@@ -3532,7 +3571,25 @@ function CoachAiView({
     timerMode,
     rpe,
     setRpe,
-}: any) {
+}: {
+    showControls: boolean;
+    workoutTitle: string;
+    blocks: WorkoutBlock[];
+    setBlocks: (b: WorkoutBlock[]) => void;
+    elapsedSeconds: number;
+    isPaused: boolean;
+    toggleTimer: () => void;
+    handleFinish: () => void;
+    isSaving: boolean;
+    formatTime: (s: number) => string;
+    countdown: number | null;
+    sportMode: string | null;
+    targetDuration: number | null;
+    setViewingVideo: (url: string | null) => void;
+    timerMode: 'up' | 'down';
+    rpe: number;
+    setRpe: (r: number) => void;
+}) {
     const { theme } = useTheme();
     const displayTime = timerMode === 'down' && targetDuration
         ? Math.max(0, (targetDuration * 60) - elapsedSeconds)
@@ -3780,7 +3837,7 @@ function VideoModal({ url, onClose }: { url: string, onClose: () => void }) {
     )
 }
 
-function FreeTrainingWizard({ onComplete }: { onComplete: (block: any) => void }) {
+function FreeTrainingWizard({ onComplete }: { onComplete: (block: WorkoutBlock) => void }) {
     const { theme } = useTheme();
     const [step, setStep] = useState<'type' | 'config'>('type');
     const [type, setType] = useState<string>('fortime');

@@ -23,7 +23,6 @@ export default function FeedAd({ tier }: { tier: string }) {
                 .from('advertisements')
                 .select('*')
                 .eq('is_active', true)
-                .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
                 .order('created_at', { ascending: false })
                 .limit(10); // Get a few to pick randomly
 

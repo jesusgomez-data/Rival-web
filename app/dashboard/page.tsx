@@ -458,6 +458,7 @@ export default function DashboardHome() {
                                             music_artist={post.music_artist}
                                             isOfficial={post.profiles?.is_official}
                                             isMember={data.activeCenterIds.has(post.user_id) || post.user_id === data.currentUser?.id}
+                                            context={activeTab as 'following' | 'global'}
                                         />
                                     </div>
                                 ))}

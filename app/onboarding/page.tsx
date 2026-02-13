@@ -44,7 +44,7 @@ const goals = [
 ];
 
 export default function OnboardingPage() {
-    const [step, setStep] = useState(1);
+    const [step, setStep] = useState(0);
     const [data, setData] = useState({
         sport: "",
         level: "",
@@ -135,23 +135,59 @@ export default function OnboardingPage() {
             </div>
 
             <div className="max-w-4xl w-full z-10">
-                {/* Progress Bar */}
-                <div className="flex justify-between items-center mb-12">
-                    <div className="flex gap-2">
-                        {[1, 2, 3, 4].map((s) => (
-                            <div
-                                key={s}
-                                className={`h-1.5 rounded-full transition-all duration-500 ${s <= step ? "w-12 bg-brand-red shadow-[0_0_10px_rgba(239,68,68,0.5)]" : "w-6 bg-border"
-                                    }`}
-                            />
-                        ))}
+                {/* Progress Bar - Only show from step 1 */}
+                {step > 0 && (
+                    <div className="flex justify-between items-center mb-12">
+                        <div className="flex gap-2">
+                            {[1, 2, 3, 4].map((s) => (
+                                <div
+                                    key={s}
+                                    className={`h-1.5 rounded-full transition-all duration-500 ${s <= step ? "w-12 bg-brand-red shadow-[0_0_10px_rgba(239,68,68,0.5)]" : "w-6 bg-border"
+                                        }`}
+                                />
+                            ))}
+                        </div>
+                        <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
+                            Paso {step} de {totalSteps}
+                        </span>
                     </div>
-                    <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">
-                        Paso {step} de {totalSteps}
-                    </span>
-                </div>
+                )}
 
                 <AnimatePresence mode="wait">
+                    {step === 0 && (
+                        <motion.div
+                            key="step0"
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 1.05 }}
+                            className="text-center space-y-8"
+                        >
+                            <div className="relative inline-block">
+                                <div className="absolute inset-0 bg-brand-red blur-3xl opacity-20 rounded-full" />
+                                <Trophy className="w-24 h-24 text-brand-red mx-auto relative z-10 animate-bounce" />
+                            </div>
+
+                            <div className="space-y-4">
+                                <h1 className="text-5xl sm:text-7xl font-heading font-black tracking-tighter italic leading-none">
+                                    ¡REGISTRADO <br />
+                                    <span className="text-brand-red">CON ÉXITO!</span>
+                                </h1>
+                                <p className="text-xl text-muted-foreground max-w-lg mx-auto">
+                                    Bienvenido a Rival Fit. Estás a punto de entrar en la arena del 1%. Vamos a configurar tu camino hacia la grandeza.
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={nextStep}
+                                className="group relative py-6 px-12 rounded-2xl bg-foreground text-background font-black text-2xl flex items-center justify-center gap-4 mx-auto transition-all hover:scale-[1.05] active:scale-[0.95] overflow-hidden"
+                            >
+                                <div className="absolute inset-0 bg-brand-red translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                                <span className="relative z-10 group-hover:text-white transition-colors">EMPEZAR AHORA</span>
+                                <ChevronRight className="w-8 h-8 relative z-10 group-hover:text-white transition-colors" />
+                            </button>
+                        </motion.div>
+                    )}
+
                     {step === 1 && (
                         <motion.div
                             key="step1"

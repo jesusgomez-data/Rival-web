@@ -39,26 +39,31 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null)
     const [activeStoryIndex, setActiveStoryIndex] = useState(0)
 
-    const refreshStories = async () => {
+    const refreshStories = React.useCallback(async () => {
         const stories = await getActiveStories()
         setUserStories(stories as UserStories[])
-    }
+    }, [])
 
     useEffect(() => {
         refreshStories()
-    }, [])
+    }, [refreshStories])
 
-    const openStory = (userId: string) => {
+    const openStory = React.useCallback((userId: string) => {
         const index = userStories.findIndex(us => us.user.id === userId)
         if (index !== -1) {
-            // Simplified for now, the viewer will be in StoryBar or a separate StoryViewer
-            // But we need a way to communicate to the viewer
             window.dispatchEvent(new CustomEvent('open-story', { detail: { userId } }))
         }
-    }
+    }, [userStories])
+
+    const value = React.useMemo(() => ({
+        userStories,
+        setUserStories,
+        openStory,
+        refreshStories
+    }), [userStories, openStory, refreshStories])
 
     return (
-        <StoryContext.Provider value={{ userStories, setUserStories, openStory, refreshStories }}>
+        <StoryContext.Provider value={value}>
             {children}
         </StoryContext.Provider>
     )

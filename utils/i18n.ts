@@ -53,8 +53,8 @@ export const translations = {
             terms: 'Al unirte, aceptas nuestros Términos de Servicio. Sé respetuoso, entrena duro.',
             alreadyHaveAccount: '¿Ya tienes cuenta?',
             login: 'Inicia Sesión',
-            successTitle: '¡Casi listo!',
-            successMessage: 'Hemos enviado un enlace de confirmación a tu correo. Por favor revísalo para activar tu cuenta.',
+            successTitle: '¡Registrado con éxito!',
+            successMessage: 'Bienvenido a la arena. Hemos enviado un enlace de confirmación a tu correo. Por favor revísalo para activar tu cuenta y empezar a dominar.',
             goToLogin: 'Ir a Iniciar Sesión'
         },
         choice: {
@@ -199,8 +199,8 @@ export const translations = {
             terms: 'By joining, you agree to our Terms of Service. Be respectful, train hard.',
             alreadyHaveAccount: 'Already have an account?',
             login: 'Log In',
-            successTitle: 'Almost there!',
-            successMessage: 'We have sent a confirmation link to your email. Please check it to activate your account.',
+            successTitle: 'Sign up successful!',
+            successMessage: 'Welcome to the arena. We have sent a confirmation link to your email. Please check it to activate your account and start dominating.',
             goToLogin: 'Go to Login'
         },
         choice: {

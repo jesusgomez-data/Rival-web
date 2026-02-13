@@ -375,3 +375,47 @@ export async function getUserMedia(userId: string) {
     if (error) return []
     return data
 }
+
+export async function getReelPosts(context: 'following' | 'global') {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
+    let query = supabase
+        .from('posts')
+        .select('*, profiles:user_id(*), workouts:workout_id(*, metrics, workout_sets(*)), likes:likes(user_id)')
+        .eq('media_type', 'video')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+    if (context === 'following') {
+        const { data: myFollows } = await supabase
+            .from('follows')
+            .select('following_id')
+            .eq('follower_id', user.id);
+
+        const followedIds = myFollows?.map(f => f.following_id) || [];
+
+        // 1. Fetch official accounts IDs
+        const { data: officialProfiles } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('is_official', true);
+        const officialIds = officialProfiles?.map(p => p.id) || [];
+
+        const idsToFetch = Array.from(new Set([...followedIds, user.id, ...officialIds]));
+        query = query.in('user_id', idsToFetch);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+        console.error("Error fetching reel posts:", error);
+        return [];
+    }
+
+    return data.map((post: any) => ({
+        ...post,
+        initialLikes: post.likes ? post.likes.length : (post.likes_count || 0),
+        hasLikedInitial: user ? post.likes?.some((l: any) => l.user_id === user.id) : false
+    }));
+}

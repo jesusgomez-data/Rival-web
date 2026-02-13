@@ -2,16 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 
-export type TrainingPlan = {
-    id: string;
-    title: string;
-    description: string;
-    sport: 'gym' | 'running' | 'cross_training' | 'hybrid' | 'calisthenics' | 'ocr' | 'other';
-    difficulty: 'beginner' | 'intermediate' | 'elite';
-    duration_min: number;
-    exercises: any[]; // Structure matches the one used in GymView/RunningView
-    is_premium: boolean;
-}
+import { TrainingPlan, WorkoutExercise } from './types';
 
 export async function getAiRecommendation(sport: string, userTier: 'free' | 'premium' = 'free'): Promise<TrainingPlan[]> {
     const recommendations: TrainingPlan[] = [];

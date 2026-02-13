@@ -216,8 +216,8 @@ export async function getActiveStories() {
         })
 
         return Object.values(groupedStories).sort((a: any, b: any) => {
-            if (a.user.is_official && !b.user.is_official) return -1;
-            if (!a.user.is_official && b.user.is_official) return 1;
+            if (a.user?.is_official && !b.user?.is_official) return -1;
+            if (!a.user?.is_official && b.user?.is_official) return 1;
             return 0;
         })
     } catch (err) {
@@ -267,8 +267,11 @@ export async function recordStoryView(storyId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // Insert view (will fail silently if already exists due to unique constraint)
-    await supabase.from('story_views').insert({ story_id: storyId, user_id: user.id })
+    // Use upsert to avoid duplicate key error logs in Postgres when a user views the same story multiple times
+    await supabase.from('story_views').upsert(
+        { story_id: storyId, user_id: user.id },
+        { onConflict: 'story_id,user_id' }
+    )
 }
 
 export async function deleteStory(storyId: string) {
