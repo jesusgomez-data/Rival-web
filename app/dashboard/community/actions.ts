@@ -240,6 +240,36 @@ export async function addComment(postId: string, content: string, parentId?: str
         }
     }
 
+    // Notify Mentioned Users
+    const mentionRegex = /(?:^|\s)@([\w.-]+)/g;
+    let match;
+    const usernames = new Set<string>();
+    while ((match = mentionRegex.exec(content)) !== null) {
+        usernames.add(match[1].toLowerCase()); // Usernames are typically case-insensitive in search
+    }
+
+    if (usernames.size > 0) {
+        const { data: mentionedUsers } = await adminSupabase
+            .from('profiles')
+            .select('id, full_name')
+            .in('username', Array.from(usernames));
+
+        if (mentionedUsers) {
+            for (const mentionedUser of mentionedUsers) {
+                // Don't notify yourself or people already notified as post author/parent author
+                if (mentionedUser.id !== user.id && mentionedUser.id !== post?.user_id) {
+                    await createNotification({
+                        userId: mentionedUser.id,
+                        type: 'mention',
+                        title: 'Has sido mencionado',
+                        content: `${profile?.full_name || 'Alguien'} te mencionó en un comentario.`,
+                        link: '/dashboard/community'
+                    });
+                }
+            }
+        }
+    }
+
     revalidatePath('/dashboard')
     revalidatePath('/dashboard/community')
     return { success: true, user_id: user.id }

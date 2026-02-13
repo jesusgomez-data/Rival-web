@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { clsx } from "clsx";
-import { Trophy, Swords, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle } from "lucide-react";
+import { Trophy, Swords, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, MessageSquare, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import DuelButton from "../../community/DuelButton";
@@ -10,6 +10,7 @@ import FollowButton from "../../community/FollowButton";
 import UserMediaGallery from "../../UserMediaGallery";
 import TrophyCabinet from "./TrophyCabinet";
 import FeedPost from "../../FeedPost";
+import ActivityHeatmap from "@/components/ActivityHeatmap";
 
 import { getFollows } from "../../community/follows-actions";
 
@@ -21,9 +22,12 @@ interface ProfileContentProps {
     posts: any[];
     canViewContent: boolean;
     privacy: string;
+    workouts: any[];
+    badges: any[];
+    gear: any[];
 }
 
-export default function ProfileContent({ profile, combatStats, user, isFollowing, posts, canViewContent, privacy }: ProfileContentProps) {
+export default function ProfileContent({ profile, combatStats, user, isFollowing, posts, canViewContent, privacy, workouts, badges, gear }: ProfileContentProps) {
     const [mobileTab, setMobileTab] = useState<'activity' | 'gallery' | 'stats'>('activity');
     const [modalOpen, setModalOpen] = useState<'followers' | 'following' | null>(null);
     const [modalData, setModalData] = useState<any[]>([]);
@@ -270,6 +274,40 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                     </p>
                                 </div>
 
+                                {/* Badges Section */}
+                                {!profile.is_official && badges.length > 0 && (
+                                    <div className="mb-10 animate-fade-in">
+                                        <div className="flex items-center justify-between mb-6 ml-4">
+                                            <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.4em] flex items-center gap-2">
+                                                <Award className="w-4 h-4 text-brand-red" /> Medallas y Logros
+                                            </h3>
+                                            <span className="text-[10px] font-black text-brand-red bg-brand-red/10 px-3 py-1 rounded-full border border-brand-red/20 shadow-glow uppercase tracking-widest leading-none">
+                                                {badges.length} Desbloqueados
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-2">
+                                            {badges.map((ub: any) => (
+                                                <div key={ub.id} className="bg-brand-gray/30 border border-white/5 p-4 rounded-3xl backdrop-blur-xl relative overflow-hidden group hover:border-brand-red/30 transition-all duration-500 hover:scale-105">
+                                                    <div className="absolute top-0 right-0 w-16 h-16 bg-brand-red/5 blur-2xl -mr-8 -mt-8 group-hover:bg-brand-red/10 transition-colors" />
+                                                    <div className="w-12 h-12 bg-black/40 rounded-2xl flex items-center justify-center mb-3 border border-white/5 group-hover:border-brand-red/50 group-hover:shadow-glow transition-all">
+                                                        {ub.badges.icon_name === 'Sunrise' && <Sunrise className="w-6 h-6 text-brand-red" />}
+                                                        {ub.badges.icon_name === 'Flame' && <Flame className="w-6 h-6 text-orange-500" />}
+                                                        {ub.badges.icon_name === 'Award' && <Award className="w-6 h-6 text-yellow-500" />}
+                                                        {ub.badges.icon_name === 'MessageSquare' && <MessageSquare className="w-6 h-6 text-blue-500" />}
+                                                        {ub.badges.icon_name === 'Trophy' && <Trophy className="w-6 h-6 text-brand-red" />}
+                                                    </div>
+                                                    <h4 className="text-[10px] font-black text-white uppercase tracking-wider mb-1 leading-tight">{ub.badges.name}</h4>
+                                                    <p className="text-[8px] text-gray-400 font-bold uppercase tracking-tight line-clamp-2 leading-tight">{ub.badges.description}</p>
+                                                    <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+                                                        <span className="text-[7px] text-brand-red font-black tracking-widest">+{ub.badges.xp_reward} XP</span>
+                                                        <span className="text-[7px] text-gray-500 font-bold uppercase tracking-widest">{new Date(ub.awarded_at).toLocaleDateString()}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* Trophy Cabinet */}
                                 {!profile.is_official && (
                                     <div className="mb-10">
@@ -381,6 +419,11 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                 </div>
                             )}
 
+                            {/* Activity Heatmap */}
+                            {!profile.is_official && (
+                                <ActivityHeatmap workouts={workouts} />
+                            )}
+
                             {/* Vitals Card */}
                             <div className="bg-brand-gray/30 border border-white/10 rounded-[40px] p-8 backdrop-blur-md">
                                 <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-6">
@@ -434,6 +477,48 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Gear Card */}
+                            {gear.length > 0 && (
+                                <div className="bg-black/60 border border-white/5 rounded-[40px] p-8 relative overflow-hidden group animate-fade-in">
+                                    <div className="absolute top-0 right-0 p-8 opacity-5">
+                                        <Dumbbell className="w-16 h-16 text-brand-red" />
+                                    </div>
+                                    <div className="relative z-10">
+                                        <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+                                            <Dumbbell className="w-4 h-4 text-brand-red" /> Equipamiento Activo
+                                        </h3>
+                                        <div className="space-y-4">
+                                            {gear.map((item: any) => (
+                                                <div key={item.id} className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors group/item">
+                                                    <div className="w-12 h-12 bg-black/40 rounded-xl overflow-hidden relative shrink-0 border border-white/10">
+                                                        {item.image_url ? (
+                                                            <Image src={item.image_url} alt={item.name} fill className="object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full flex items-center justify-center text-brand-red grayscale opacity-50 group-hover/item:grayscale-0 group-hover/item:opacity-100 transition-all">
+                                                                <Activity className="w-6 h-6" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-[8px] text-brand-red font-black uppercase tracking-widest leading-none mb-1">{item.category}</p>
+                                                        <h4 className="text-sm font-black text-white italic truncate leading-none mb-1">{item.brand} {item.model}</h4>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="h-1 flex-1 bg-white/5 rounded-full overflow-hidden">
+                                                                <div className="h-full bg-brand-red/50 w-3/4 rounded-full" />
+                                                            </div>
+                                                            <span className="text-[8px] font-black text-gray-500 uppercase shrink-0">Vitalidad 75%</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button className="w-full mt-6 py-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 text-[10px] font-black text-white uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group">
+                                            Ver todo el equipo <ChevronRight className="w-4 h-4 text-brand-red group-hover:translate-x-1 transition-transform" />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Featured RMs Card */}
                             {profile.featured_rms && profile.featured_rms.length > 0 && (

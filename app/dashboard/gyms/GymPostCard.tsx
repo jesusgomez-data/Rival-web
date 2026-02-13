@@ -5,6 +5,8 @@ import clsx from "clsx";
 import { MessageCircle, Heart, Share2, MoreHorizontal, Send, Trash2, X, Building2, Dumbbell, Zap, Flame, TrendingUp, ChevronDown, Plus, Play, Clock, ArrowRight } from "lucide-react";
 import { toggleCenterPostLike, addCenterPostComment, getCenterPostComments, deletePost, deleteCenterPostComment } from "./feed-actions";
 import Link from "next/link";
+import MentionText from "@/components/MentionText";
+import MentionInput from "@/components/MentionInput";
 
 export default function GymPostCard({ post, centerId, isAdmin = false, currentUserId, isMember = false }: any) {
     const [likes, setLikes] = useState(post.likes_count || 0);
@@ -263,12 +265,10 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                         </div>
                     )
                 ) : post.content && (
-                    <p className={clsx(
-                        "text-sm sm:text-base whitespace-pre-wrap mb-4 leading-relaxed font-accent font-medium tracking-tight",
-                        "text-foreground"
-                    )}>
-                        {post.content}
-                    </p>
+                    <MentionText
+                        text={post.content}
+                        className="text-sm sm:text-base whitespace-pre-wrap mb-4 leading-relaxed font-accent font-medium tracking-tight text-foreground block"
+                    />
                 )}
                 {post.image_urls && post.image_urls.length > 0 && (
                     <div
@@ -372,7 +372,7 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                                                 {isMounted ? new Date(comment.created_at).toLocaleDateString() : '...'}
                                             </span>
                                         </div>
-                                        <p className="text-foreground/90 text-sm font-accent font-medium">{comment.content}</p>
+                                        <MentionText text={comment.content} className="text-foreground/90 text-sm font-accent font-medium block" />
                                     </div>
                                     {(isAdmin || currentUserId === comment.user_id) && (
                                         <button
@@ -407,17 +407,18 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                                 )}
                             </div>
                             <div className="flex-1 relative">
-                                <textarea
+                                <MentionInput
+                                    as="textarea"
                                     value={newComment}
-                                    onChange={(e) => setNewComment(e.target.value)}
-                                    placeholder="Write a comment..."
-                                    className="w-full bg-background border border-border rounded-2xl px-4 py-2 text-sm text-foreground focus:outline-none focus:border-brand-red/50 min-h-[40px] resize-none overflow-hidden"
-                                    onKeyDown={(e) => {
+                                    onChange={setNewComment}
+                                    onKeyDown={(e: React.KeyboardEvent) => {
                                         if (e.key === 'Enter' && !e.shiftKey) {
                                             e.preventDefault();
                                             handleAddComment(e);
                                         }
                                     }}
+                                    placeholder="Write a comment..."
+                                    className="w-full bg-background border border-border rounded-2xl px-4 py-2 text-sm text-foreground focus:outline-none focus:border-brand-red/50 min-h-[40px] resize-none overflow-hidden"
                                 />
                                 <button
                                     type="submit"

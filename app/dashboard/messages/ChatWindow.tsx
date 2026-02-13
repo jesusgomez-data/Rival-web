@@ -8,6 +8,9 @@ import { Info, Send, Loader2, MessageSquarePlus, ImagePlus, ChevronLeft, Zap, Tr
 import { clsx } from 'clsx'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLanguage } from '@/app/LanguageContext'
+import Link from 'next/link'
+import MentionText from '@/components/MentionText'
+import MentionInput from '@/components/MentionInput'
 
 interface ChatWindowProps {
     messages: any[]
@@ -291,7 +294,11 @@ export default function ChatWindow({ messages, otherPerson, currentUserId, onSen
                                                                 </div>
                                                                 {msg.text && (
                                                                     <div className="p-4 pt-3 pb-2">
-                                                                        <span className="text-sm font-medium leading-relaxed block">{msg.text}</span>
+                                                                        <MentionText
+                                                                            text={msg.text}
+                                                                            className="text-sm font-medium leading-relaxed block"
+                                                                            mentionClassName="text-white/90 underline"
+                                                                        />
                                                                     </div>
                                                                 )}
                                                                 <div className={clsx(
@@ -305,7 +312,11 @@ export default function ChatWindow({ messages, otherPerson, currentUserId, onSen
                                                         )}
                                                         {!msg.image_url && (
                                                             <>
-                                                                <span className="text-[13px] md:text-sm font-medium leading-[1.6] block">{msg.text}</span>
+                                                                <MentionText
+                                                                    text={msg.text}
+                                                                    className="text-[13px] md:text-sm font-medium leading-[1.6] block"
+                                                                    mentionClassName={clsx("underline", isMine ? "text-white" : "text-brand-red")}
+                                                                />
                                                                 <div className={clsx(
                                                                     "text-[8px] md:text-[9px] mt-1.5 flex items-center gap-2 opacity-60 font-black tracking-widest uppercase italic",
                                                                     isMine ? "justify-end" : "justify-start"
@@ -380,12 +391,12 @@ export default function ChatWindow({ messages, otherPerson, currentUserId, onSen
                         >
                             {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
                         </button>
-                        <input
+                        <MentionInput
                             value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
+                            onChange={setInputValue}
                             onKeyDown={handleKeyPress}
                             placeholder={t.chat.placeholder}
-                            className="flex-1 bg-transparent border-none py-4 px-2 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                            className="flex-1 bg-transparent border-none py-4 px-2 text-base md:text-sm text-foreground placeholder:text-muted-foreground focus:outline-none w-full"
                         />
                         <div className="flex items-center gap-1">
                             <button className="hidden sm:block p-2 text-gray-500 hover:text-white transition-colors">

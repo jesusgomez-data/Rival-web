@@ -8,14 +8,16 @@ import clsx from "clsx";
 interface DuelButtonProps {
     targetId: string;
     isRival?: boolean;
+    type?: string;
+    postId?: string;
 }
 
-export default function DuelButton({ targetId, isRival }: DuelButtonProps) {
+export default function DuelButton({ targetId, isRival, type = 'classic', postId }: DuelButtonProps) {
     const [status, setStatus] = useState<'idle' | 'loading' | 'sent'>('idle');
 
     const handleDuel = async () => {
         setStatus('loading');
-        const res = await createDuel(targetId);
+        const res = await createDuel(targetId, type, postId);
         if (res.success) {
             setStatus('sent');
         } else {

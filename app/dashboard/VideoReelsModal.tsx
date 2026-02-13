@@ -9,6 +9,8 @@ import Link from 'next/link';
 import { clsx } from 'clsx';
 import { useLanguage } from '../LanguageContext';
 import { Send, Loader2 } from 'lucide-react';
+import MentionText from '@/components/MentionText';
+import MentionInput from '@/components/MentionInput';
 
 interface ReelPost {
     id: string;
@@ -112,7 +114,7 @@ function CommentsDrawer({ postId, onClose }: { postId: string, onClose: () => vo
                                     <span className="text-white text-xs font-bold">{comment.user?.username}</span>
                                     <span className="text-gray-500 text-[10px]">{new Date(comment.created_at).toLocaleDateString()}</span>
                                 </div>
-                                <p className="text-gray-300 text-xs mt-0.5 leading-relaxed">{comment.content}</p>
+                                <MentionText text={comment.content} className="text-gray-300 text-xs mt-0.5 leading-relaxed block" />
                             </div>
                         </div>
                     ))
@@ -122,13 +124,17 @@ function CommentsDrawer({ postId, onClose }: { postId: string, onClose: () => vo
 
             <div className="p-4 border-t border-white/10 bg-black/20 backdrop-blur-md">
                 <div className="flex gap-2">
-                    <input
-                        type="text"
+                    <MentionInput
                         value={newComment}
-                        onChange={(e) => setNewComment(e.target.value)}
-                        onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                        onChange={setNewComment}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSend();
+                            }
+                        }}
                         placeholder="Añade un comentario..."
-                        className="flex-1 bg-white/5 border border-white/10 rounded-full px-4 text-sm text-white focus:outline-none focus:border-brand-red/50 placeholder:text-gray-600"
+                        className="flex-1 bg-white/5 border border-white/10 rounded-full px-4 text-sm text-white focus:outline-none focus:border-brand-red/50 placeholder:text-gray-600 h-10 w-full"
                     />
                     <button
                         onClick={handleSend}

@@ -4,6 +4,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Image as ImageIcon, Loader2, X, Smile } from "lucide-react";
 import { createUserPost, createPRPost } from "./community/actions";
+import MentionInput from "@/components/MentionInput";
 import { createClient } from "@/utils/supabase/client";
 import { Trophy, Activity, AlertCircle } from "lucide-react";
 import Image from "next/image";
@@ -199,12 +200,12 @@ export default function CreatePost({ currentUser }: { currentUser: any }) {
                 <div className="flex-1 relative min-w-0">
                     <form onSubmit={handlePost}>
                         {postType === 'standard' ? (
-                            <textarea
+                            <MentionInput
+                                as="textarea"
                                 value={content}
-                                onChange={(e) => setContent(e.target.value)}
+                                onChange={setContent}
                                 placeholder="What are you training today?"
                                 className="w-full bg-transparent text-white placeholder:text-gray-500 text-sm md:text-lg resize-none focus:outline-none mb-4 min-h-[80px] md:min-h-[60px]"
-                                rows={3}
                             />
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4 mb-4">

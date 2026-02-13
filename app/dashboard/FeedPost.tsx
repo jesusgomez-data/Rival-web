@@ -3,8 +3,9 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords } from "lucide-react";
 import LikeButton from "./community/LikeButton";
+import DuelButton from "./community/DuelButton";
 import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike } from "./community/actions";
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import { clsx } from "clsx";
@@ -13,10 +14,13 @@ import { useStories } from "./stories/StoryContext";
 import PRCard from "./community/PRCard";
 import VideoReelsModal from "./VideoReelsModal";
 import dynamic from 'next/dynamic';
+import ShareableCard from "@/components/ShareableCard";
+import MentionText from "@/components/MentionText";
+import MentionInput from "@/components/MentionInput";
 
 const InstagramShareCard = dynamic(() => import("./InstagramShareCard"), { ssr: false });
 
-function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5", onInstagramShare }: { image?: string, workoutData?: any, mediaType?: string, postId?: string, className?: string, iconClassName?: string, onInstagramShare?: () => void }) {
+function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5", onInstagramShare, onOpenShareCard }: { image?: string, workoutData?: any, mediaType?: string, postId?: string, className?: string, iconClassName?: string, onInstagramShare?: () => void, onOpenShareCard?: () => void }) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -74,23 +78,28 @@ function ShareButton({ image, workoutData, mediaType, postId, className, iconCla
                 <Share2 className={iconClassName} />
             </button>
             {isOpen && (
-                <div className="absolute right-0 bottom-full mb-2 w-48 bg-black border border-white/10 rounded-xl shadow-2xl z-[50] overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
-                    <button onClick={handleShareLink} className="w-full text-left px-4 py-3 text-xs font-bold text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-2">
-                        <Share2 className="w-3 h-3" /> Compartir enlace
+                <div className="absolute right-0 bottom-full mb-2 w-56 bg-black border border-white/10 rounded-2xl shadow-2xl z-[50] overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
+                    <button onClick={handleShareLink} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3">
+                        <Share2 className="w-4 h-4" /> Compartir enlace
                     </button>
-                    <button onClick={handleShareToStory} className="w-full text-left px-4 py-3 text-xs font-bold text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-2 border-t border-white/5">
-                        <Plus className="w-3 h-3" /> Compartir en Historia
+                    <button onClick={handleShareToStory} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5">
+                        <Plus className="w-4 h-4" /> Enviar a Mis Historias
                     </button>
                     <button
                         onClick={(e) => { e.stopPropagation(); onInstagramShare?.(); setIsOpen(false); }}
-                        className="w-full text-left px-4 py-3 text-xs font-bold text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-2 border-t border-white/5"
+                        className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5"
                     >
-                        <Instagram className="w-3 h-3" /> Instagram Story
+                        <Instagram className="w-4 h-4" /> Instagram Story
                     </button>
+                    {onOpenShareCard && (
+                        <button onClick={() => { onOpenShareCard(); setIsOpen(false); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red bg-brand-red/5 hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5">
+                            <Trophy className="w-4 h-4" /> Tarjeta Elite
+                        </button>
+                    )}
                 </div>
             )}
         </div>
-    )
+    );
 }
 
 interface FeedPostProps {
@@ -144,6 +153,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const { theme } = useTheme();
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     const [showInstagramCard, setShowInstagramCard] = useState(false);
+    const [showShareCard, setShowShareCard] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [commentList, setCommentList] = useState<Comment[]>([]);
     const [commentTree, setCommentTree] = useState<Comment[]>([]);
@@ -339,7 +349,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             <div className="flex-1">
                 <div className="bg-white/5 rounded-2xl rounded-tl-none p-3 text-sm group relative">
                     <span className="font-bold text-gray-200 mr-2">{comment.user?.username || "Usuario"}</span>
-                    <span className="text-gray-300 whitespace-pre-wrap">{comment.content}</span>
+                    <span className="text-gray-300 mr-2">
+                        <MentionText text={comment.content} className="whitespace-pre-wrap" />
+                    </span>
                     <div className="absolute right-2 bottom-1 flex items-center gap-3">
                         <button
                             onClick={() => handleCommentLike(comment.id)}
@@ -355,6 +367,11 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                     <button
                         onClick={() => {
                             setReplyingTo(comment);
+                            // Pre-fill mention if not already there
+                            const mention = `@${comment.user.username} `;
+                            if (!newComment.includes(mention)) {
+                                setNewComment(prev => mention + prev);
+                            }
                             setTimeout(() => commentInputRef.current?.focus(), 100);
                         }}
                         className="text-gray-500 hover:text-brand-red"
@@ -485,11 +502,15 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             </div>
                         </div>
                     ) : (
-                        <p className={clsx(
-                            "text-sm sm:text-base whitespace-pre-wrap font-accent font-medium tracking-tight leading-relaxed",
-                            theme === 'dark' ? "text-gray-100" : "text-black",
-                            (isOfficial && workoutData && !isMember && username?.toLowerCase() !== 'rivalfit' && username?.toLowerCase() !== 'rival') && "blur-[2px] select-none pointer-events-none opacity-50"
-                        )}>{displayCaption}</p>
+                        <MentionText
+                            text={displayCaption}
+                            className={clsx(
+                                "text-sm sm:text-base whitespace-pre-wrap font-accent font-medium tracking-tight leading-relaxed",
+                                theme === 'dark' ? "text-gray-100" : "text-black",
+                                (isOfficial && workoutData && !isMember && username?.toLowerCase() !== 'rivalfit' && username?.toLowerCase() !== 'rival') && "blur-[2px] select-none pointer-events-none opacity-50"
+                            )}
+                            mentionClassName="font-black"
+                        />
                     )}
                 </div>
             )}
@@ -1054,6 +1075,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             className="p-3 md:p-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl md:rounded-2xl border border-white/5 transition-all"
                             iconClassName="w-5 h-5"
                             onInstagramShare={() => setShowInstagramCard(true)}
+                            onOpenShareCard={() => setShowShareCard(true)}
                         />
                     </>
                 ) : (
@@ -1066,6 +1088,13 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             <MessageCircle className="w-6 h-6" />
                             <span className="font-bold text-sm">{commentsCount}</span>
                         </button>
+
+                        {/* Quick Duel Button */}
+                        {authorId && postId && authorId !== currentUserId && !isOfficial && (
+                            <div className="scale-75 origin-left h-auto -my-2">
+                                <DuelButton targetId={authorId as string} postId={postId} type="quick" isRival={true} />
+                            </div>
+                        )}
                         <div className="ml-auto">
                             <ShareButton
                                 image={image}
@@ -1075,6 +1104,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 className="text-gray-400 hover:text-white"
                                 iconClassName="w-6 h-6"
                                 onInstagramShare={() => setShowInstagramCard(true)}
+                                onOpenShareCard={() => setShowShareCard(true)}
                             />
                         </div>
                     </div>
@@ -1102,11 +1132,15 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 </div>
                             )}
                             <div className="flex gap-2 items-center">
-                                <input
-                                    ref={commentInputRef}
-                                    type="text"
+                                <MentionInput
                                     value={newComment}
-                                    onChange={(e) => setNewComment(e.target.value)}
+                                    onChange={setNewComment}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleAddComment(e, replyingTo?.id);
+                                        }
+                                    }}
                                     placeholder="Escribe un comentario..."
                                     className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-brand-red/50"
                                 />
@@ -1176,6 +1210,42 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         }}
                         onClose={() => setShowInstagramCard(false)}
                     />
+                )
+            }
+            {
+                showShareCard && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
+                        <div className="relative w-full max-w-lg animate-in zoom-in-95 duration-500">
+                            <button
+                                onClick={() => setShowShareCard(false)}
+                                className="fixed top-6 right-6 z-[110] bg-black/50 backdrop-blur-md p-3 rounded-full text-white hover:text-brand-red transition-all active:scale-95 flex items-center gap-2 border border-white/10"
+                            >
+                                <X className="w-5 h-5" />
+                                <span className="text-[10px] font-black uppercase tracking-widest mr-1 hidden sm:inline">Cerrar</span>
+                            </button>
+                            <ShareableCard
+                                user={{
+                                    name: user,
+                                    username: username || user,
+                                    avatar: avatar,
+                                    level: 12, // For now static or add to props if available
+                                    rank: "ELITE"
+                                }}
+                                data={{
+                                    type: mediaType === 'pr' ? 'pr' : mediaType === 'class_result' ? 'medal' : 'workout',
+                                    title: highlight || workoutData?.title || 'ESFUERZO RIVAL',
+                                    date: time,
+                                    stats: mediaType === 'pr' ? (() => {
+                                        try { const d = JSON.parse(image); return [{ label: "PESO", value: `${d.weight}${d.unit}` }, { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }]; } catch (e) { return [] }
+                                    })() : (workoutData as any)?.metrics?.blocks?.map((b: any) => ({
+                                        label: b.type?.toUpperCase(),
+                                        value: b.result?.time || `${b.result?.rounds || 0} RDS`
+                                    })).slice(0, 3) || [{ label: "ESTADO", value: "COMPLETADO" }],
+                                    image: !isVideo ? image : undefined
+                                }}
+                            />
+                        </div>
+                    </div>
                 )
             }
         </div >

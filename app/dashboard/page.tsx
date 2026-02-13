@@ -1,7 +1,7 @@
 'use client'
 
 import Image from "next/image";
-import { Flame, MoreHorizontal, MessageCircle, Heart, Share2, TrendingUp, Trophy, Dumbbell, ArrowRight, ArrowLeft, Swords, ChevronDown, Plus } from "lucide-react";
+import { Flame, MoreHorizontal, MessageCircle, Heart, Share2, TrendingUp, Trophy, Dumbbell, ArrowRight, ArrowLeft, Swords, ChevronDown, Plus, Star, Users } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import clsx from "clsx";
@@ -277,15 +277,15 @@ export default function DashboardHome() {
                     priority
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
-                <div className="relative z-10 px-6 md:px-12 py-6">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-[10px] md:text-xs font-black mb-3 md:mb-4 w-fit">
+                <div className="relative z-10 px-6 sm:px-12 py-8 sm:py-12">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-[10px] sm:text-xs font-black mb-4 w-fit">
                         <Flame className="w-3 h-3 fill-current" />
                         {t.dashboard.liveStatus}
                     </div>
-                    <h1 className="text-2xl md:text-5xl font-heading font-black !text-white mb-2 md:mb-3 italic uppercase tracking-tight leading-none">
+                    <h1 className="text-3xl sm:text-5xl font-heading font-black !text-white mb-2 md:mb-3 italic uppercase tracking-tight leading-none">
                         {t.dashboard.welcome} <span className="text-brand-red">{data.profile?.full_name?.split(' ')[0] || t.dashboard.warrior}</span>
                     </h1>
-                    <p className="!text-gray-300 text-xs md:text-lg max-w-2xl font-medium">
+                    <p className="!text-gray-300 text-sm sm:text-lg max-w-2xl font-medium">
                         {language === 'es' ? (
                             <>Has registrado <span className="text-white font-bold">{data.workoutCount} sesiones</span> y estás siguiendo a <span className="text-white font-bold">{data.rivalsCount} rivales</span>. {t.dashboard.statsTime}</>
                         ) : (

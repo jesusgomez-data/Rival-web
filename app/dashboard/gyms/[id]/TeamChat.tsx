@@ -6,6 +6,9 @@ import { getTeamMessages, sendTeamMessage, checkStaffRole } from "../team-action
 import { createClient } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import clsx from "clsx";
+import Link from "next/link";
+import MentionText from "@/components/MentionText";
+import MentionInput from "@/components/MentionInput";
 
 interface TeamMessage {
     id: string;
@@ -200,7 +203,7 @@ export default function TeamChat({ centerId, className }: { centerId: string, cl
                                                     ? "bg-brand-red/5 border-brand-red/30 text-white font-medium"
                                                     : "bg-muted/40 border-border/50 text-foreground/90"
                                             )}>
-                                                {msg.content}
+                                                <MentionText text={msg.content} />
                                             </div>
                                         </div>
                                     </motion.div>
@@ -240,10 +243,15 @@ export default function TeamChat({ centerId, className }: { centerId: string, cl
                     </div>
                 )}
                 <form onSubmit={handleSend} className="relative group">
-                    <input
-                        type="text"
+                    <MentionInput
                         value={input}
-                        onChange={(e) => setInput(e.target.value)}
+                        onChange={setInput}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSend(e);
+                            }
+                        }}
                         placeholder="Escribe una nota para el equipo..."
                         className="w-full bg-card border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red/20 focus:border-brand-red/50 transition-all pr-12 placeholder:italic"
                     />

@@ -10,6 +10,7 @@ import { notFound } from "next/navigation";
 import UserMediaGallery from "../../UserMediaGallery";
 import TrophyCabinet from "./TrophyCabinet";
 import ProfileContent from "./ProfileContent";
+import { checkAndAwardBadges, seedDemoGear } from "../badge-actions";
 
 export const dynamic = 'force-dynamic';
 
@@ -25,6 +26,12 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
     const combatStats = await getCombatStats(profile.id);
     const { data: { user } } = await supabase.auth.getUser();
 
+    // Auto-check badges and seed gear if viewing own profile
+    if (user && user.id === profile.id) {
+        await checkAndAwardBadges(user.id);
+        await seedDemoGear(user.id);
+    }
+
     // Fetch if current user follows this profile
     let isFollowing = false;
     if (user) {
@@ -39,6 +46,29 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
     }
 
     // Pseudo-Trophies logic moved to TrophyCabinet component
+
+    // Fetch all workouts for heatmap
+    const { data: workouts } = await supabase
+        .from('workouts')
+        .select('*')
+        .eq('user_id', profile.id)
+        .order('start_time', { ascending: false });
+
+    // Fetch badges
+    const { data: userBadges } = await supabase
+        .from('user_badges')
+        .select(`
+            *,
+            badges(*)
+        `)
+        .eq('user_id', profile.id);
+
+    // Fetch gear
+    const { data: userGear } = await supabase
+        .from('user_gear')
+        .select('*')
+        .eq('user_id', profile.id)
+        .eq('is_active', true);
 
     // Fetch posts
     const { data: rawPosts } = await supabase
@@ -67,6 +97,9 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
             posts={posts}
             privacy={privacy}
             canViewContent={canViewContent}
+            workouts={workouts || []}
+            badges={userBadges || []}
+            gear={userGear || []}
         />
     );
 }

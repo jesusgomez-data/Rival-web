@@ -3,7 +3,7 @@
 import { createClient } from "@/utils/supabase/client";
 import Image from "next/image";
 import Link from "next/link";
-import { Heart, MessageCircle, Share2, MoreHorizontal, Trophy, Dumbbell, UserSearch } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal, Trophy, Dumbbell, UserSearch, Flame, Compass, Users, TrendingUp, Swords, Star } from "lucide-react";
 import LikeButton from "./LikeButton";
 import FollowButton from "./FollowButton";
 import DuelButton from "./DuelButton";
@@ -14,6 +14,7 @@ import StoryBar from "../stories/StoryBar";
 import { useLanguage } from "@/app/LanguageContext";
 import SidebarAd from "./SidebarAd";
 import FeedAd from "./FeedAd";
+import clsx from "clsx";
 
 export default function CommunityPage({
     searchParams
@@ -22,6 +23,7 @@ export default function CommunityPage({
 }) {
     const { language, t } = useLanguage();
     const [query, setQuery] = useState("");
+    const [activeTab, setActiveTab] = useState<'following' | 'explore'>('explore');
     const [data, setData] = useState<any>({
         user: null,
         profile: null,
@@ -67,25 +69,20 @@ export default function CommunityPage({
                         .select('*')
                         .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
                         .neq('id', user.id)
-                        .limit(50); // Fetch more to sort by relevance
+                        .limit(50);
 
                     searchResults = (profiles || []).sort((a, b) => {
-                        const aFull = (a.full_name || '').toLowerCase();
-                        const aUser = (a.username || '').toLowerCase();
-                        const bFull = (b.full_name || '').toLowerCase();
-                        const bUser = (b.username || '').toLowerCase();
                         const q = query.toLowerCase();
-
-                        const aStarts = aFull.startsWith(q) || aUser.startsWith(q);
-                        const bStarts = bFull.startsWith(q) || bUser.startsWith(q);
-
+                        const aStarts = (a.full_name || '').toLowerCase().startsWith(q) || (a.username || '').toLowerCase().startsWith(q);
+                        const bStarts = (b.full_name || '').toLowerCase().startsWith(q) || (b.username || '').toLowerCase().startsWith(q);
                         if (aStarts && !bStarts) return -1;
                         if (!aStarts && bStarts) return 1;
                         return 0;
                     }).slice(0, 10);
                 }
 
-                const { data: posts } = await supabase
+                // Fetch Posts based on tab or query
+                let postsQuery = supabase
                     .from('posts')
                     .select(`
                         *,
@@ -93,8 +90,13 @@ export default function CommunityPage({
                         workouts:workout_id (title, total_volume_kg, workout_sets(*), location_name, metrics),
                         likes:likes(user_id)
                     `)
-                    .order('created_at', { ascending: false })
-                    .limit(query ? 100 : 20);
+                    .order('created_at', { ascending: false });
+
+                if (activeTab === 'following' && followedIds.size > 0 && !query) {
+                    postsQuery = postsQuery.in('user_id', Array.from(followedIds));
+                }
+
+                const { data: posts } = await postsQuery.limit(query ? 100 : 20);
 
                 setData({
                     user,
@@ -109,7 +111,7 @@ export default function CommunityPage({
             }
         }
         loadContent();
-    }, [query]);
+    }, [query, activeTab]);
 
     const formatTimeAgo = (date: string) => {
         try {
@@ -132,11 +134,11 @@ export default function CommunityPage({
     }
 
     return (
-        <div className="max-w-7xl mx-auto space-y-8">
+        <div className="max-w-7xl mx-auto space-y-8 pb-20 px-4 sm:px-0">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-heading font-bold text-white uppercase italic tracking-tighter">{t.community.title}</h1>
-                    <p className="text-gray-400 text-sm">{t.community.subtitle}</p>
+                    <h1 className="text-4xl font-heading font-bold text-white uppercase italic tracking-tighter leading-none mb-2">Comunidad <span className="text-brand-red">Rival</span></h1>
+                    <p className="text-gray-400 text-sm font-medium tracking-wide">El campo de batalla donde se forja el carácter.</p>
                 </div>
                 <Suspense fallback={<div className="h-10 w-full max-w-md bg-brand-gray animate-pulse rounded-2xl" />}>
                     <SearchAthletes />
@@ -145,12 +147,39 @@ export default function CommunityPage({
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 <div className="lg:col-span-8 space-y-8">
-                    <div className="mb-8">
+                    {/* Story Bar */}
+                    <div className="mb-4">
                         <StoryBar currentUser={data.user} />
                     </div>
 
+                    {/* Feed Tabs */}
+                    <div className="flex gap-6 border-b border-white/5 px-2">
+                        <button
+                            onClick={() => setActiveTab('explore')}
+                            className={clsx(
+                                "flex items-center gap-2 pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all relative",
+                                activeTab === 'explore' ? "text-white" : "text-gray-500 hover:text-white"
+                            )}
+                        >
+                            <Compass className={clsx("w-4 h-4", activeTab === 'explore' ? "text-brand-red" : "")} />
+                            Descubrir
+                            {activeTab === 'explore' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red shadow-glow-sm" />}
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('following')}
+                            className={clsx(
+                                "flex items-center gap-2 pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all relative",
+                                activeTab === 'following' ? "text-white" : "text-gray-500 hover:text-white"
+                            )}
+                        >
+                            <Users className={clsx("w-4 h-4", activeTab === 'following' ? "text-brand-red" : "")} />
+                            Siguiendo
+                            {activeTab === 'following' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red shadow-glow-sm" />}
+                        </button>
+                    </div>
+
                     {query && (
-                        <div className="space-y-4">
+                        <div className="space-y-4 pt-4 animate-in fade-in slide-in-from-top-2">
                             <h2 className="text-xl font-heading font-bold text-white flex items-center gap-2 italic uppercase">
                                 <UserSearch className="w-5 h-5 text-brand-red" />
                                 {t.community.matchingAthletes} "{query}"
@@ -158,88 +187,119 @@ export default function CommunityPage({
                             {data.searchResults.length > 0 ? (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     {data.searchResults.map((profile: any) => (
-                                        <div key={profile.id} className="bg-brand-gray border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:border-white/10 transition-colors">
-                                            <Link href={`/dashboard/profile/${profile.username}`} className="flex items-center gap-3 group">
-                                                <div className="w-10 h-10 rounded-full bg-gray-800 overflow-hidden relative">
+                                        <div key={profile.id} className="bg-brand-gray/50 border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:border-white/10 transition-colors group">
+                                            <Link href={`/dashboard/profile/${profile.username}`} className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-gray-800 overflow-hidden relative border border-white/5 group-hover:border-brand-red/50 transition-colors">
                                                     <Image
                                                         src={profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || 'User')}&background=random`}
                                                         alt={profile.full_name}
                                                         fill
-                                                        className="object-cover group-hover:scale-110 transition-transform"
+                                                        className="object-cover group-hover:scale-110 transition-transform duration-500"
                                                     />
                                                 </div>
                                                 <div>
                                                     <p className="text-sm text-white font-bold group-hover:text-brand-red transition-colors flex items-center gap-1.5">
                                                         {profile.full_name}
                                                         {profile.is_official && (
-                                                            <span className="bg-brand-red p-0.5 rounded-full inline-flex">
+                                                            <div className="bg-brand-red p-0.5 rounded-full inline-flex">
                                                                 <Trophy className="w-2.5 h-2.5 text-white" />
-                                                            </span>
+                                                            </div>
                                                         )}
                                                     </p>
-                                                    <p className="text-xs text-gray-500">@{profile.username}</p>
+                                                    <p className="text-xs text-gray-500 font-bold uppercase tracking-widest text-[8px]">@{profile.username}</p>
                                                 </div>
                                             </Link>
                                             <div className="flex items-center gap-2">
                                                 <DuelButton targetId={profile.id} isRival={data.followedIds.has(profile.id)} />
-                                                {!profile.is_official && (
-                                                    <FollowButton targetId={profile.id} isFollowingInitial={data.followedIds.has(profile.id)} />
-                                                )}
                                             </div>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="bg-brand-gray/50 border border-dashed border-white/5 rounded-2xl p-8 text-center">
-                                    <p className="text-gray-500">{t.community.noAthletesFound}</p>
+                                <div className="bg-brand-gray/20 border border-dashed border-white/5 rounded-2xl p-8 text-center">
+                                    <p className="text-gray-500 italic text-sm">{t.community.noAthletesFound}</p>
                                 </div>
                             )}
                             <div className="h-px bg-white/5 my-8" />
-                            <h2 className="text-xl font-heading font-bold text-white uppercase italic tracking-wider">{t.community.recentActivity}</h2>
                         </div>
                     )}
 
                     {data.posts && data.posts.length > 0 ? (
-                        data.posts.map((post: any, index: number) => (
-                            <Fragment key={post.id}>
-                                <FeedPost
-                                    postId={post.id}
-                                    username={post.profiles?.username}
-                                    user={post.profiles?.full_name || "Atleta Desconocido"}
-                                    action={post.workout_id ? t.community.completedWorkout : t.community.postedUpdate}
-                                    time={formatTimeAgo(post.created_at)}
-                                    avatar={post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.profiles?.full_name || 'User')}&background=random`}
-                                    image={post.media_url}
-                                    initialLikes={post.likes ? post.likes.length : (post.likes_count || 0)}
-                                    hasLikedInitial={post.likes?.some((l: any) => l.user_id === data.user?.id)}
-                                    comments={post.comments_count || 0}
-                                    highlight={post.workouts?.title}
-                                    mediaType={post.media_type}
-                                    caption={post.caption}
-                                    currentUserId={data.user?.id}
-                                    authorId={post.user_id}
-                                    workoutData={post.workouts}
-                                    music_url={post.music_url}
-                                    music_title={post.music_title}
-                                    music_artist={post.music_artist}
-                                    isOfficial={post.profiles?.is_official}
-                                />
-                                {(index + 1) % 3 === 0 && (
-                                    <FeedAd tier={data.profile?.subscription_tier} />
-                                )}
-                            </Fragment>
-                        ))
+                        <div className="space-y-8 animate-in fade-in duration-700">
+                            {data.posts.map((post: any, index: number) => (
+                                <Fragment key={post.id}>
+                                    <FeedPost
+                                        postId={post.id}
+                                        username={post.profiles?.username}
+                                        user={post.profiles?.full_name || "Atleta Desconocido"}
+                                        action={post.workout_id ? t.community.completedWorkout : t.community.postedUpdate}
+                                        time={formatTimeAgo(post.created_at)}
+                                        avatar={post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.profiles?.full_name || 'User')}&background=random`}
+                                        image={post.media_url}
+                                        initialLikes={post.likes ? post.likes.length : (post.likes_count || 0)}
+                                        hasLikedInitial={post.likes?.some((l: any) => l.user_id === data.user?.id)}
+                                        comments={post.comments_count || 0}
+                                        highlight={post.workouts?.title}
+                                        mediaType={post.media_type}
+                                        caption={post.caption}
+                                        currentUserId={data.user?.id}
+                                        authorId={post.user_id}
+                                        workoutData={post.workouts}
+                                        music_url={post.music_url}
+                                        music_title={post.music_title}
+                                        music_artist={post.music_artist}
+                                        isOfficial={post.profiles?.is_official}
+                                    />
+                                    {(index + 1) % 4 === 0 && (
+                                        <FeedAd tier={data.profile?.subscription_tier} />
+                                    )}
+                                </Fragment>
+                            ))}
+                        </div>
                     ) : (
-                        <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-3xl bg-brand-gray/10">
-                            <p className="text-gray-500 italic uppercase font-black text-[10px] tracking-[0.2em]">{t.community.noActivity}</p>
+                        <div className="text-center py-32 border border-dashed border-white/5 rounded-[40px] bg-brand-gray/5">
+                            <Flame className="w-12 h-12 text-gray-800 mx-auto mb-4 opacity-20" />
+                            <p className="text-gray-500 italic uppercase font-black text-[10px] tracking-[0.3em]">{activeTab === 'following' ? 'Sigue a otros atletas para ver su actividad' : 'No hay actividad reciente'}</p>
                         </div>
                     )}
                 </div>
 
-                <div className="lg:col-span-4 space-y-6 sticky top-24">
+                <div className="lg:col-span-4 space-y-8 sticky top-24">
+                    <div className="bg-brand-gray/20 border border-white/5 rounded-[40px] p-8 overflow-hidden relative group">
+                        <TrendingUp className="absolute -right-8 -top-8 w-32 h-32 text-brand-red opacity-5 group-hover:rotate-12 transition-transform duration-700" />
+                        <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.4em] mb-6 flex items-center gap-2">
+                            Eventos del Gimnasio
+                        </h3>
+                        <div className="space-y-6">
+                            <div className="flex gap-4 group/item cursor-pointer">
+                                <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center border border-white/5 shrink-0 group-hover/item:border-brand-red/50 transition-colors">
+                                    <Swords className="w-5 h-5 text-brand-red" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[10px] font-black text-brand-red uppercase tracking-widest leading-none mb-1">Activo</p>
+                                    <h4 className="text-white font-bold text-sm truncate uppercase italic tracking-tight">Open 2024 Qualifiers</h4>
+                                    <p className="text-[10px] text-gray-500 font-medium">124 Atletas participando</p>
+                                </div>
+                            </div>
+                            <div className="flex gap-4 group/item cursor-pointer">
+                                <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center border border-white/5 shrink-0 group-hover/item:border-brand-red/50 transition-colors">
+                                    <Trophy className="w-5 h-5 text-yellow-500" />
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest leading-none mb-1">Próximamente</p>
+                                    <h4 className="text-white font-bold text-sm truncate uppercase italic tracking-tight">Cena de Comunidad</h4>
+                                    <p className="text-[10px] text-gray-500 font-medium">Viernes, 21:00h</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button className="w-full mt-8 py-3 bg-white/5 hover:bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 transition-all">
+                            Ver Calendario
+                        </button>
+                    </div>
                     <SidebarAd tier={data.profile?.subscription_tier} />
                 </div>
             </div>
         </div>
     );
 }
+

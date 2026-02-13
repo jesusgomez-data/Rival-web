@@ -4,12 +4,13 @@ import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "../notifications-actions";
 
-export async function createDuel(opponentId: string) {
+export async function createDuel(opponentId: string, type: string = 'classic', relatedPostId?: string) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: "Not authenticated" };
 
     // Check Plan Restrictions
+    // ... logic omitted for brevity in replace_file_content if I want, but I should probably keep it ...
     const { data: profile } = await supabase
         .from('profiles')
         .select('subscription_tier')
@@ -38,7 +39,9 @@ export async function createDuel(opponentId: string) {
             opponent_id: opponentId,
             status: 'pending',
             start_date: startDate,
-            end_date: endDate
+            end_date: endDate,
+            type: type,
+            related_post_id: relatedPostId
         })
         .select()
         .single();
