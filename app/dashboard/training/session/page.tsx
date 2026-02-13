@@ -159,7 +159,8 @@ function SessionContent() {
     // Real-time GPS Tracking Logic
     useEffect(() => {
         let watchId: number;
-        if (gpsStatus !== 'idle' && !isPaused && typeof window !== 'undefined' && 'geolocation' in navigator) {
+        // Fix: Removed !isPaused so GPS can warm up/search even before start
+        if (gpsStatus !== 'idle' && typeof window !== 'undefined' && 'geolocation' in navigator) {
             watchId = navigator.geolocation.watchPosition(
                 (pos) => {
                     const { latitude, longitude, accuracy, speed, altitude, altitudeAccuracy } = pos.coords;
@@ -168,8 +169,22 @@ function SessionContent() {
                         setGpsStatus('tracking');
                     }
 
-                    // Strict accuracy and noise filtering (relaxed slightly for broader device support)
+                    // Strict accuracy and noise filtering
                     if (accuracy > 50) return;
+
+                    // Always update Instant Pace/Speed if available (feedback for user)
+                    if (speed !== null && speed >= 0) {
+                        const kmh = speed * 3.6;
+                        setInstantSpeed(kmh);
+                        if (kmh > 1) { // Only calculate pace if moving faster than 1km/h
+                            const minPerKm = 60 / kmh;
+                            const pMin = Math.floor(minPerKm);
+                            const pSec = Math.floor((minPerKm - pMin) * 60);
+                            setInstantPace(`${pMin}:${pSec < 10 ? '0' + pSec : pSec}`);
+                        } else {
+                            setInstantPace("0:00");
+                        }
+                    }
 
                     if (lastPosRef.current) {
                         const d = calculateDistance(
@@ -178,8 +193,9 @@ function SessionContent() {
                             latitude,
                             longitude
                         );
-                        // Jitter Filter (< 3m) and Unreal Speed (> 25m/s = 90km/h)
-                        if (d > 3 && d < 25) {
+
+                        // Only accumulate distance/path if NOT PAUSED and valid movement
+                        if (!isPaused && d > 3 && d < 25) {
                             setRunDistance(prev => prev + d);
                             setRunPath(prev => [...prev, { lat: latitude, lon: longitude }]);
 
@@ -197,20 +213,6 @@ function SessionContent() {
                                 // Only simulate if moving
                                 if (Math.random() > 0.9) setElevationGain(prev => prev + 1);
                             }
-
-                            // Calculate instant pace/speed
-                            if (speed !== null && speed > 0) {
-                                const kmh = speed * 3.6;
-                                setInstantSpeed(kmh);
-                                if (kmh > 1) { // Only calculate pace if moving faster than 1km/h
-                                    const minPerKm = 60 / kmh;
-                                    const pMin = Math.floor(minPerKm);
-                                    const pSec = Math.floor((minPerKm - pMin) * 60);
-                                    setInstantPace(`${pMin}:${pSec < 10 ? '0' + pSec : pSec}`);
-                                } else {
-                                    setInstantPace("0:00");
-                                }
-                            }
                         }
                     }
                     lastPosRef.current = { lat: latitude, lon: longitude, alt: altitude };
@@ -220,7 +222,7 @@ function SessionContent() {
                     // Don't set to idle immediately on transient errors, maybe specific codes
                     if (err.code === 1) setGpsStatus('idle'); // Permission denied
                 },
-                { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 } // Reduced timeout for faster failure response
             );
         } else {
             lastPosRef.current = null;
