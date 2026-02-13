@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guía Virtual Coach - Rival Fit</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html-to-image/1.11.11/html-to-image.min.js"></script>
     <style>
         :root {
             --brand-red: #E11D48;
@@ -22,10 +23,32 @@
         body {
             background-color: #222;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             font-family: 'Inter', sans-serif;
+            padding: 40px;
+        }
+
+        .download-btn {
+            background: var(--brand-red);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-style: italic;
+            cursor: pointer;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 20px rgba(225, 29, 72, 0.3);
+            transition: transform 0.2s;
+            z-index: 100;
+        }
+
+        .download-btn:active {
+            transform: scale(0.95);
         }
 
         .instagram-post {
@@ -192,7 +215,9 @@
 
 <body>
 
-    <div class="instagram-post">
+    <button class="download-btn" id="downloadBtn">Descargar Imagen (PNG)</button>
+
+    <div class="instagram-post" id="instagramPost">
         <div class="hex-bg"></div>
 
         <div class="header">
@@ -238,6 +263,35 @@
         </div>
     </div>
 
+    <script>
+        const btn = document.getElementById('downloadBtn');
+        const post = document.getElementById('instagramPost');
+
+        btn.addEventListener('click', () => {
+            btn.innerHTML = 'GENERANDO...';
+            btn.style.opacity = '0.5';
+
+            htmlToImage.toPng(post, {
+                width: 1080,
+                height: 1080,
+                pixelRatio: 2
+            })
+                .then(function (dataUrl) {
+                    const link = document.createElement('a');
+                    link.download = 'rival-fit-coach-guide.png';
+                    link.href = dataUrl;
+                    link.click();
+                    btn.innerHTML = 'DESCARGAR IMAGEN (PNG)';
+                    btn.style.opacity = '1';
+                })
+                .catch(function (error) {
+                    console.error('oops, something went wrong!', error);
+                    alert('Error al generar la imagen. Intenta con una captura de pantalla.');
+                    btn.innerHTML = 'DESCARGAR IMAGEN (PNG)';
+                    btn.style.opacity = '1';
+                });
+        });
+    </script>
 </body>
 
 </html>
