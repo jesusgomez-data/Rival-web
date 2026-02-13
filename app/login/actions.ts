@@ -115,10 +115,29 @@ export async function signup(prevState: any, formData: FormData) {
     if (data.session) {
         revalidatePath('/', 'layout')
         redirect('/onboarding')
+    } else if (data.user) {
+        // "Confirm Anytime" Flow:
+        // If Supabase has "Confirm Email" ON, it returns no session. 
+        // We attempt to Login immediately. If "Allow Unconfirmed Signups" is ON, this will work.
+        const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        })
+
+        if (loginData.session) {
+            revalidatePath('/', 'layout')
+            redirect('/onboarding')
+        }
+
+        // If auto-login failed (e.g. "Allow Unconfirmed Signups" is OFF or other error), show message.
+        return {
+            success: true,
+            message: "¡Cuenta creada con éxito! Hemos enviado un correo de confirmación. Por favor verifícalo."
+        }
     } else {
         return {
             success: true,
-            message: "¡Cuenta creada con éxito! Por favor verifica tu correo electrónico para confirmar tu registro antes de iniciar sesión."
+            message: "¡Cuenta creada con éxito! Por favor verifica tu correo electrónico."
         }
     }
 }
