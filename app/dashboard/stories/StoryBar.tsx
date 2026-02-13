@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown } from 'lucide-react'
 import { createStory, createPRStory, toggleStoryLike, recordStoryView, deleteStory } from './actions'
 import { clsx } from 'clsx'
 import PRCard from '../community/PRCard'
@@ -97,6 +97,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const [draggingId, setDraggingId] = useState<string | null>(null)
     const dragStartRef = useRef<{ x: number, y: number } | null>(null)
     const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null)
+    const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null)
+    const [showFullSummary, setShowFullSummary] = useState(false)
 
     useEffect(() => {
         // Poll for stories every 30 seconds to catch new ones
@@ -176,11 +178,40 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 canvas.height = 1920;
                 const ctx = canvas.getContext('2d');
                 if (ctx) {
-                    const gradient = ctx.createLinearGradient(0, 0, 0, 1920);
-                    gradient.addColorStop(0, '#0f0f0f');
+                    // Modern dynamic background
+                    const gradient = ctx.createRadialGradient(540, 960, 0, 540, 960, 1200);
+                    gradient.addColorStop(0, '#1a1a1a');
+                    gradient.addColorStop(0.5, '#0a0a0a');
                     gradient.addColorStop(1, '#000000');
                     ctx.fillStyle = gradient;
                     ctx.fillRect(0, 0, 1080, 1920);
+
+                    // Add subtle glow at technical areas
+                    const glow = ctx.createRadialGradient(1080, 0, 0, 1080, 0, 800);
+                    glow.addColorStop(0, 'rgba(220, 38, 38, 0.05)');
+                    glow.addColorStop(1, 'transparent');
+                    ctx.fillStyle = glow;
+                    ctx.fillRect(0, 0, 1080, 1920);
+
+                    // Add honeycomb pattern (subtle)
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+                    ctx.lineWidth = 1;
+                    const size = 60;
+                    for (let y = 0; y < 1920 + size; y += size * 1.5) {
+                        for (let x = 0; x < 1080 + size; x += size * Math.sqrt(3)) {
+                            const xOffset = (Math.floor(y / (size * 1.5)) % 2) * (size * Math.sqrt(3) / 2);
+                            ctx.beginPath();
+                            for (let i = 0; i < 6; i++) {
+                                const angle = (i * 60 * Math.PI) / 180;
+                                const px = x + xOffset + size * Math.cos(angle);
+                                const py = y + size * Math.sin(angle);
+                                if (i === 0) ctx.moveTo(px, py);
+                                else ctx.lineTo(px, py);
+                            }
+                            ctx.closePath();
+                            ctx.stroke();
+                        }
+                    }
 
                     canvas.toBlob((blob) => {
                         if (blob) {
@@ -193,13 +224,16 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                 type: type === 'pr' ? 'pr_sticker' : 'workout_sticker',
                                 content: JSON.stringify(data),
                                 x: 50,
-                                y: 45, // Adjusted to appear more centered/visible in viewport
+                                y: 50, // Perfectly centered
                                 scale: 1,
                                 rotation: 0,
                                 link: postId ? `/dashboard` : undefined
                             };
                             // Use setTimeout to ensure state update happens after setupPreview's state clear
-                            setTimeout(() => setOverlays([newOverlay]), 100);
+                            setTimeout(() => {
+                                setOverlays([newOverlay]);
+                                setSelectedOverlayId(newOverlay.id);
+                            }, 100);
                         }
                     }, 'image/png');
                 }
@@ -522,6 +556,9 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const nextStory = () => {
         if (selectedUserIndex === null) return
         setShowViewers(false)
+        setExpandedWorkoutId(null)
+        setShowFullSummary(false)
+        setIsPaused(false)
         if (activeStoryIndex < userStories[selectedUserIndex].stories.length - 1) {
             const nextIdx = activeStoryIndex + 1
             setActiveStoryIndex(nextIdx)
@@ -542,6 +579,9 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const prevStory = () => {
         if (selectedUserIndex === null) return
         setShowViewers(false)
+        setExpandedWorkoutId(null)
+        setShowFullSummary(false)
+        setIsPaused(false)
         if (activeStoryIndex > 0) {
             const prevIdx = activeStoryIndex - 1
             setActiveStoryIndex(prevIdx)
@@ -567,7 +607,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 audioRef.current.currentTime = 0;
                 audioRef.current.play().catch(e => console.log("Audio play blocked by browser"));
             }
-        } else if (!previewUrl || isPaused) {
+        } else {
             if (audioRef.current) audioRef.current.pause();
         }
     }, [selectedUserIndex, activeStoryIndex, showViewers, currentStory?.music_url, previewUrl, isPaused])
@@ -591,6 +631,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         }
         return () => clearInterval(interval);
     }, [selectedUserIndex, activeStoryIndex, isPaused, showViewers, previewUrl]);
+
 
     const handlePressStart = () => {
         setIsPressed(true);
@@ -669,15 +710,15 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             const data = JSON.parse(overlay.content);
                             const hasBlocks = data.metrics?.blocks?.length > 0;
                             return (
-                                <div className="bg-[#121212] border border-white/10 p-5 rounded-[24px] shadow-2xl w-[300px] relative overflow-hidden group select-none">
+                                <div className="bg-black/60 backdrop-blur-3xl border border-white/10 p-5 rounded-[24px] shadow-2xl w-[300px] max-w-[calc(100vw-40px)] relative overflow-hidden group select-none transition-all">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
                                     <div className="flex items-center gap-4 mb-4 relative z-10">
                                         <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
                                             <Dumbbell className="w-5 h-5 text-brand-red" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] mb-0.5">Entrenamiento</p>
-                                            <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || 'Sesión'}</h4>
+                                            <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em] mb-0.5">Entrenamiento</p>
+                                            <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || data.name || 'Sesión'}</h4>
                                         </div>
                                     </div>
                                     <div className="space-y-2 relative z-10">
@@ -686,46 +727,30 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                 {data.metrics.blocks.slice(0, 3).map((block: any, idx: number) => (
                                                     <div key={idx} className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
                                                         <div className="flex flex-col">
-                                                            <span className="text-[10px] font-black text-white uppercase tracking-tight">{block.type || 'BLOQUE'}</span>
-                                                            {block.duration && <span className="text-[9px] text-gray-500 font-bold">{block.duration}'</span>}
+                                                            <span className="text-[10px] font-black text-white uppercase tracking-tight">{block.title || block.type || 'BLOQUE'}</span>
+                                                            <span className="text-[8px] text-brand-red/70 font-bold uppercase tracking-widest">{block.type}</span>
                                                         </div>
                                                         <span className="text-brand-red font-black text-sm italic tracking-tighter">
-                                                            {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : '-')}
+                                                            {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : '-'))}
                                                         </span>
                                                     </div>
                                                 ))}
                                                 {data.metrics.blocks.length > 3 && (
-                                                    <div className="text-[9px] text-center text-brand-red/70 font-bold uppercase tracking-widest pt-1">
-                                                        + {data.metrics.blocks.length - 3} BLOQUES MÁS
+                                                    <div className="text-[9px] text-center text-brand-red/70 font-black uppercase tracking-[0.2em] pt-2">
+                                                        +{data.metrics.blocks.length - 3} bloques más
                                                     </div>
                                                 )}
                                             </div>
                                         ) : (
-                                            <>
-                                                {data.total_volume_kg > 0 && (
-                                                    <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
-                                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Volumen</span>
-                                                        <span className="text-brand-red font-black text-sm">{data.total_volume_kg} KG</span>
-                                                    </div>
-                                                )}
-                                                {data.location_name && (
-                                                    <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
-                                                        <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Lugar</span>
-                                                        <span className="text-white font-bold text-xs truncate max-w-[150px] uppercase">{data.location_name}</span>
-                                                    </div>
-                                                )}
-                                            </>
-                                        )}
-                                        {!hasBlocks && !data.total_volume_kg && !data.location_name && (
-                                            <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-                                                <p className="text-white/60 text-xs italic text-center">¡Entrenamiento completado!</p>
+                                            <div className="bg-white/5 p-3 rounded-xl border border-white/5 text-center">
+                                                <p className="text-white/60 text-[10px] italic uppercase font-black">¡Sesión Completada!</p>
                                             </div>
                                         )}
                                     </div>
                                     <div className="mt-4 pt-3 border-t border-white/5 flex justify-center">
                                         <div className="flex items-center gap-1.5 opacity-50">
                                             <div className="w-1.5 h-1.5 bg-brand-red rounded-full animate-pulse" />
-                                            <span className="text-[8px] text-gray-400 font-black uppercase tracking-[0.3em]">RIVAL FIT APP</span>
+                                            <span className="text-[8px] text-gray-400 font-black uppercase tracking-[0.3em]">RIVAL FIT ATLETA</span>
                                         </div>
                                     </div>
                                     {previewUrl && (
@@ -741,7 +766,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                         } catch (e) { return null }
                     })()
                 ) : overlay.type === 'pr_sticker' ? (
-
                     (() => {
                         try {
                             const prData = JSON.parse(overlay.content);
@@ -799,7 +823,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                         )}
                     </div>
                 )}
-            </div>
+            </div >
         ))
     }
 
@@ -1393,67 +1417,110 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
 
                             {/* Workout Summary Overlay */}
                             {currentStory.metadata?.type === 'workout' && currentStory.metadata.summary && (
-                                <div className="absolute inset-0 z-30 flex flex-col justify-end p-8 pointer-events-none">
-                                    <div className="bg-black/60 backdrop-blur-md rounded-[32px] p-6 border border-white/10 space-y-4 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2.5 bg-brand-red rounded-xl shadow-lg shadow-brand-red/20">
-                                                <Zap className="w-5 h-5 text-white animate-pulse" />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <h4 className="text-white font-black uppercase italic tracking-tighter text-xl leading-tight truncate">
-                                                    {currentStory.metadata.summary.title}
-                                                </h4>
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-[9px] text-brand-red font-black uppercase tracking-[0.2em]">
-                                                        {currentStory.metadata.summary.sportType} PROTOCOL
-                                                    </span>
+                                <div className="absolute inset-x-0 bottom-0 z-30 flex flex-col justify-end p-8 pointer-events-none">
+                                    <motion.div
+                                        layout
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowFullSummary(!showFullSummary);
+                                            setIsPaused(!showFullSummary);
+                                        }}
+                                        className={clsx(
+                                            "bg-black/60 backdrop-blur-3xl rounded-[32px] p-6 border border-white/10 space-y-4 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300 pointer-events-auto transition-all",
+                                            showFullSummary ? "max-h-[500px] overflow-y-auto no-scrollbar mb-10" : "mb-0"
+                                        )}
+                                    >
+                                        <div className="flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2.5 bg-brand-red rounded-xl shadow-lg shadow-brand-red/20">
+                                                    <Zap className="w-5 h-5 text-white animate-pulse" />
                                                 </div>
+                                                <div className="min-w-0">
+                                                    <h4 className="text-white font-black uppercase italic tracking-tighter text-xl leading-tight truncate">
+                                                        {currentStory.metadata.summary.title}
+                                                    </h4>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[9px] text-brand-red font-black uppercase tracking-[0.2em]">
+                                                            {currentStory.metadata.summary.sportType} PROTOCOL
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="shrink-0">
+                                                {showFullSummary ? <ChevronDown className="w-5 h-5 text-brand-red" /> : <ChevronUp className="w-5 h-5 text-gray-500" />}
                                             </div>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <Clock className="w-3.5 h-3.5 text-brand-red" />
-                                                    <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Duración</p>
-                                                </div>
-                                                <p className="text-sm font-black text-white italic">
-                                                    {Math.floor(currentStory.metadata.summary.duration / 60)}:{(currentStory.metadata.summary.duration % 60).toString().padStart(2, '0')} <span className="text-[10px] opacity-60">MIN</span>
-                                                </p>
-                                            </div>
-
-                                            {currentStory.metadata.summary.metrics?.distance > 0 ? (
+                                        {!showFullSummary && (
+                                            <div className="grid grid-cols-2 gap-4">
                                                 <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <Activity className="w-3.5 h-3.5 text-brand-red" />
-                                                        <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Distancia</p>
+                                                        <Clock className="w-3.5 h-3.5 text-brand-red" />
+                                                        <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Duración</p>
                                                     </div>
                                                     <p className="text-sm font-black text-white italic">
-                                                        {(currentStory.metadata.summary.metrics.distance / 1000).toFixed(2)} <span className="text-[10px] opacity-60">KM</span>
+                                                        {Math.floor(currentStory.metadata.summary.duration / 60)}:{(currentStory.metadata.summary.duration % 60).toString().padStart(2, '0')} <span className="text-[10px] opacity-60">MIN</span>
                                                     </p>
                                                 </div>
-                                            ) : (
-                                                <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <Trophy className="w-3.5 h-3.5 text-brand-red" />
-                                                        <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Estado</p>
-                                                    </div>
-                                                    <p className="text-sm font-black text-white italic">
-                                                        COMPLETADO
-                                                    </p>
-                                                </div>
-                                            )}
-                                        </div>
 
-                                        {currentStory.metadata.caption && (
-                                            <div className="bg-brand-red/10 rounded-2xl p-4 border border-brand-red/20 relative overflow-hidden">
-                                                <div className="absolute top-0 left-0 w-1 h-full bg-brand-red" />
-                                                <p className="text-xs text-white/90 font-medium leading-relaxed italic">
-                                                    "{currentStory.metadata.caption}"
-                                                </p>
+                                                {currentStory.metadata.summary.metrics?.distance > 0 ? (
+                                                    <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <Activity className="w-3.5 h-3.5 text-brand-red" />
+                                                            <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Distancia</p>
+                                                        </div>
+                                                        <p className="text-sm font-black text-white italic">
+                                                            {(currentStory.metadata.summary.metrics.distance / 1000).toFixed(2)} <span className="text-[10px] opacity-60">KM</span>
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <Trophy className="w-3.5 h-3.5 text-brand-red" />
+                                                            <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Status</p>
+                                                        </div>
+                                                        <p className="text-sm font-black text-white italic">COMPLETADO</p>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
-                                    </div>
+
+                                        {showFullSummary && currentStory.metadata.summary.metrics?.blocks && (
+                                            <div className="space-y-3 pt-2">
+                                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] mb-2 italic">Bloques de Entrenamiento</p>
+                                                {currentStory.metadata.summary.metrics.blocks.map((block: any, idx: number) => (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, x: -20 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        transition={{ delay: idx * 0.1 }}
+                                                        key={idx}
+                                                        className="bg-white/5 rounded-[22px] p-4 border border-white/5"
+                                                    >
+                                                        <div className="flex justify-between items-center mb-2">
+                                                            <span className="text-xs font-black text-white uppercase italic tracking-tighter">{block.title || block.type || `BLOQUE ${idx + 1}`}</span>
+                                                            <span className="text-brand-red font-black text-sm italic">{block.result?.time || (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : ''))}</span>
+                                                        </div>
+                                                        {block.exercises && (
+                                                            <div className="space-y-1">
+                                                                {block.exercises.map((ex: any, eIdx: number) => (
+                                                                    <div key={eIdx} className="flex justify-between text-[10px]">
+                                                                        <span className="text-gray-400 font-bold uppercase">{ex.name}</span>
+                                                                        <span className="text-white font-black">{ex.value}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </motion.div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {!showFullSummary && currentStory.metadata.caption && (
+                                            <p className="text-[11px] text-white font-medium italic opacity-80 border-l-2 border-brand-red pl-3 pt-1">
+                                                "{currentStory.metadata.caption}"
+                                            </p>
+                                        )}
+                                    </motion.div>
                                 </div>
                             )}
 
@@ -1490,44 +1557,81 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                             try {
                                                 const data = JSON.parse(overlay.content);
                                                 const hasBlocks = data.metrics?.blocks?.length > 0;
+                                                const isExpanded = expandedWorkoutId === overlay.id;
+
                                                 return (
-                                                    <div className="bg-[#121212] border border-white/10 p-5 rounded-[24px] shadow-2xl w-[300px] relative overflow-hidden select-none">
+                                                    <motion.div
+                                                        layout
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setExpandedWorkoutId(isExpanded ? null : overlay.id);
+                                                            setIsPaused(!isExpanded);
+                                                        }}
+                                                        className={clsx(
+                                                            "bg-black/60 backdrop-blur-3xl border border-white/10 p-5 rounded-[24px] shadow-2xl relative overflow-hidden select-none transition-all duration-300",
+                                                            isExpanded ? "w-[340px] max-h-[500px] overflow-y-auto no-scrollbar" : "w-[300px]"
+                                                        )}
+                                                    >
                                                         <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
                                                         <div className="flex items-center gap-4 mb-4 relative z-10">
                                                             <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
                                                                 <Dumbbell className="w-5 h-5 text-brand-red" />
                                                             </div>
                                                             <div className="flex-1 min-w-0">
-                                                                <p className="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] mb-0.5">Entrenamiento</p>
-                                                                <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || 'Sesión'}</h4>
+                                                                <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em] mb-0.5">Entrenamiento</p>
+                                                                <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || data.name || 'Sesión'}</h4>
+                                                            </div>
+                                                            <div className="shrink-0 flex items-center justify-center">
+                                                                {isExpanded ? <ChevronUp className="w-4 h-4 text-brand-red" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                                                             </div>
                                                         </div>
                                                         <div className="space-y-2 relative z-10">
                                                             {hasBlocks ? (
                                                                 <div className="space-y-1.5">
-                                                                    {data.metrics.blocks.slice(0, 3).map((block: any, idx: number) => (
-                                                                        <div key={idx} className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
-                                                                            <div className="flex flex-col">
-                                                                                <span className="text-[10px] font-black text-white uppercase tracking-tight">{block.type || 'BLOQUE'}</span>
-                                                                                {block.duration && <span className="text-[9px] text-gray-500 font-bold">{block.duration}'</span>}
+                                                                    {(isExpanded ? data.metrics.blocks : data.metrics.blocks.slice(0, 3)).map((block: any, idx: number) => (
+                                                                        <motion.div
+                                                                            initial={{ opacity: 0, y: 10 }}
+                                                                            animate={{ opacity: 1, y: 0 }}
+                                                                            transition={{ delay: idx * 0.05 }}
+                                                                            key={idx}
+                                                                            className="flex flex-col bg-white/5 p-3 rounded-xl border border-white/5 hover:border-white/10 transition-colors gap-2"
+                                                                        >
+                                                                            <div className="flex justify-between items-center">
+                                                                                <div className="flex flex-col">
+                                                                                    <span className="text-[10px] font-black text-white uppercase tracking-tight">{block.title || block.type || 'BLOQUE'}</span>
+                                                                                    {isExpanded && block.type && (
+                                                                                        <span className="text-[8px] text-brand-red/70 font-bold uppercase tracking-widest">{block.type}</span>
+                                                                                    )}
+                                                                                </div>
+                                                                                <span className="text-brand-red font-black text-sm italic tracking-tighter">
+                                                                                    {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : '-'))}
+                                                                                </span>
                                                                             </div>
-                                                                            <span className="text-brand-red font-black text-sm italic tracking-tighter">
-                                                                                {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : '-')}
-                                                                            </span>
-                                                                        </div>
+
+                                                                            {isExpanded && block.exercises && block.exercises.length > 0 && (
+                                                                                <div className="grid grid-cols-1 gap-1.5 mt-1 border-t border-white/5 pt-2">
+                                                                                    {block.exercises.map((ex: any, eIdx: number) => (
+                                                                                        <div key={eIdx} className="flex justify-between items-center bg-black/20 px-2 py-1.5 rounded-lg">
+                                                                                            <span className="text-[9px] text-gray-300 font-bold uppercase truncate max-w-[150px]">{ex.name}</span>
+                                                                                            <span className="text-[9px] text-white font-black italic">{ex.value || ex.weight_kg} {ex.reps ? `x ${ex.reps}` : ''}</span>
+                                                                                        </div>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
+                                                                        </motion.div>
                                                                     ))}
-                                                                    {data.metrics.blocks.length > 3 && (
-                                                                        <div className="text-[9px] text-center text-brand-red/70 font-bold uppercase tracking-widest pt-1">
-                                                                            + {data.metrics.blocks.length - 3} BLOQUES MÁS
+                                                                    {!isExpanded && data.metrics.blocks.length > 3 && (
+                                                                        <div className="text-[9px] text-center text-brand-red/70 font-black uppercase tracking-[0.2em] pt-2 animate-pulse">
+                                                                            Tocar para ver +{data.metrics.blocks.length - 3} bloques
                                                                         </div>
                                                                     )}
                                                                 </div>
                                                             ) : (
                                                                 <>
-                                                                    {data.total_volume_kg > 0 && (
+                                                                    {(data.total_volume_kg > 0 || data.max_weight) && (
                                                                         <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
-                                                                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Volumen</span>
-                                                                            <span className="text-brand-red font-black text-sm">{data.total_volume_kg} KG</span>
+                                                                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Carga Máxima</span>
+                                                                            <span className="text-brand-red font-black text-sm">{data.total_volume_kg || data.max_weight} KG</span>
                                                                         </div>
                                                                     )}
                                                                     {data.location_name && (
@@ -1547,10 +1651,10 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                         <div className="mt-4 pt-3 border-t border-white/5 flex justify-center">
                                                             <div className="flex items-center gap-1.5 opacity-50">
                                                                 <div className="w-1.5 h-1.5 bg-brand-red rounded-full animate-pulse" />
-                                                                <span className="text-[8px] text-gray-400 font-black uppercase tracking-[0.3em]">RIVAL FIT APP</span>
+                                                                <span className="text-[8px] text-gray-400 font-black uppercase tracking-[0.3em]">RIVAL FIT ATLETA</span>
                                                             </div>
                                                         </div>
-                                                    </div>
+                                                    </motion.div>
                                                 )
                                             } catch (e) { return null }
                                         })()

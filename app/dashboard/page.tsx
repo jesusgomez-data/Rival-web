@@ -151,7 +151,12 @@ export default function DashboardHome() {
                     supabase.from('class_results').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
                     supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', user.id),
                     supabase.from('follows').select('following_id').eq('follower_id', user.id),
-                    supabase.from('profiles').select('id, username, full_name, avatar_url, level, is_official').neq('id', user.id).order('xp_points', { ascending: false }).limit(4),
+                    supabase.from('profiles')
+                        .select('id, username, full_name, avatar_url, level, is_official')
+                        .neq('id', user.id)
+                        .eq('is_official', false) // Exclude official accounts from follow recommendations
+                        .order('xp_points', { ascending: false })
+                        .limit(4),
                     supabase.from('missions').select('*, user_missions!inner(current_value, user_id)').eq('goal_type', 'sessions_count').eq('user_missions.user_id', user.id).single(),
                     getMyDuels()
                 ]);

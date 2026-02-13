@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { X, Image as ImageIcon, Link as LinkIcon, Save, Upload, Loader2, Sparkles } from 'lucide-react';
 import { createAd, uploadAdMedia } from './ad-actions';
+import { cn } from '@/lib/utils';
 
 interface CreateAdModalProps {
     open: boolean;
@@ -18,7 +19,8 @@ export default function CreateAdModal({ open, onClose, onUpdate }: CreateAdModal
         title: '',
         description: '',
         image_url: '',
-        link_url: ''
+        link_url: '',
+        duration_days: 7 // Valor por defecto
     });
 
     if (!open) return null;
@@ -47,8 +49,9 @@ export default function CreateAdModal({ open, onClose, onUpdate }: CreateAdModal
         try {
             await createAd(formData);
             onUpdate();
+            onUpdate();
             onClose();
-            setFormData({ title: '', description: '', image_url: '', link_url: '' });
+            setFormData({ title: '', description: '', image_url: '', link_url: '', duration_days: 7 });
         } catch (error) {
             console.error(error);
             alert('Error al crear anuncio');
@@ -156,6 +159,27 @@ export default function CreateAdModal({ open, onClose, onUpdate }: CreateAdModal
                             onChange={(e) => setFormData({ ...formData, link_url: e.target.value })}
                             className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/5 rounded-xl px-4 py-3 text-sm text-black dark:text-white focus:border-brand-red outline-none transition-all placeholder:text-gray-400"
                         />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Duración de la Publicidad (Días)</label>
+                        <div className="grid grid-cols-4 gap-2">
+                            {[3, 7, 15, 30].map((days) => (
+                                <button
+                                    key={days}
+                                    type="button"
+                                    onClick={() => setFormData({ ...formData, duration_days: days })}
+                                    className={cn(
+                                        "py-2 rounded-xl text-[10px] font-black uppercase transition-all border",
+                                        formData.duration_days === days
+                                            ? "bg-brand-red text-white border-brand-red shadow-lg shadow-brand-red/20"
+                                            : "bg-gray-50 dark:bg-white/5 text-gray-500 border-gray-200 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/10"
+                                    )}
+                                >
+                                    {days} Días
+                                </button>
+                            ))}
+                        </div>
                     </div>
 
                     <p className="text-[10px] text-gray-500 italic">

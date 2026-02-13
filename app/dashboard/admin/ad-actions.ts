@@ -20,12 +20,22 @@ export async function getAds() {
     return data;
 }
 
-export async function createAd(formData: { title: string, description: string, image_url: string, link_url: string }) {
+export async function createAd(formData: { title: string, description: string, image_url: string, link_url: string, duration_days?: number }) {
     if (!(await isUserAdmin())) throw new Error("Unauthorized");
     const supabase = await createClient();
+
+    // Si se especificó duración, calculamos la fecha de expiración
+    let expires_at = null;
+    if (formData.duration_days) {
+        const date = new Date();
+        date.setDate(date.getDate() + formData.duration_days);
+        expires_at = date.toISOString();
+    }
+
+    const { duration_days, ...rest } = formData;
     const { error } = await supabase
         .from('advertisements')
-        .insert(formData);
+        .insert({ ...rest, expires_at });
 
     if (error) throw new Error(error.message);
     revalidatePath('/dashboard/admin');
