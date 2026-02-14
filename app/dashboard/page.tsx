@@ -1,7 +1,7 @@
 'use client'
 
 import Image from "next/image";
-import { Flame, MoreHorizontal, MessageCircle, Heart, Share2, TrendingUp, Trophy, Dumbbell, ArrowRight, ArrowLeft, Swords, ChevronDown, Plus, Star, Users } from "lucide-react";
+import { Flame, MoreHorizontal, MessageCircle, Heart, Share2, TrendingUp, Trophy, Dumbbell, ArrowRight, ArrowLeft, Swords, ChevronDown, Plus, Star, Users, X } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import clsx from "clsx";
@@ -66,39 +66,47 @@ function CollapsibleCreatePost({ currentUser, language }: { currentUser: any, la
     const [isOpen, setIsOpen] = useState(false);
 
     return (
-        <div className="mb-8">
+        <div className="mb-10">
             {!isOpen ? (
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="w-full bg-brand-gray/30 border border-border/10 rounded-[32px] p-4 flex items-center justify-between group hover:border-brand-red/50 hover:bg-brand-gray/50 transition-all cursor-pointer"
+                    className="w-full bg-brand-gray/30 border border-border/10 rounded-[28px] p-2.5 md:p-3.5 flex items-center justify-between group hover:border-brand-red/50 hover:bg-brand-gray/50 transition-all cursor-pointer shadow-xl backdrop-blur-sm"
                 >
                     <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full border border-white/10 bg-black/40 overflow-hidden relative shrink-0">
+                        <div className="w-10 h-10 rounded-full border border-white/10 bg-black/40 overflow-hidden relative shadow-inner">
                             {currentUser?.user_metadata?.avatar_url ? (
                                 <Image src={currentUser.user_metadata.avatar_url} alt="User" fill className="object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[10px] bg-gray-800 font-bold text-gray-400">ME</div>
+                                <div className="w-full h-full flex items-center justify-center text-[10px] bg-gray-800 font-black text-gray-500 italic">ME</div>
                             )}
                         </div>
-                        <span className="text-gray-500 text-sm font-medium group-hover:text-gray-300 transition-colors">
-                            {language === 'es' ? 'Crear nueva publicación...' : 'Create new post...'}
+                        <span className="text-gray-400 text-xs md:text-sm font-bold uppercase tracking-widest group-hover:text-gray-200 transition-colors">
+                            {language === 'es' ? '¿Qué tenemos para hoy?' : 'Share your workout...'}
                         </span>
                     </div>
-                    <div className="w-8 h-8 rounded-full bg-brand-red/10 border border-brand-red/30 flex items-center justify-center text-brand-red group-hover:bg-brand-red group-hover:text-white transition-all">
-                        <Plus className="w-4 h-4" />
+                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-2xl bg-brand-red/10 border border-brand-red/20 shadow-glow-sm flex items-center justify-center text-brand-red group-hover:bg-brand-red group-hover:text-white transition-all transform group-hover:rotate-90">
+                        <Plus className="w-4 h-4 md:w-5 md:h-5" />
                     </div>
                 </button>
             ) : (
-                <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="flex justify-end mb-2">
+                <div className="animate-in fade-in slide-in-from-top-4 duration-500 bg-brand-gray/20 border border-white/5 rounded-[32px] p-6 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-xl relative overflow-hidden">
+                    {/* Decorative element */}
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
+
+                    <div className="flex justify-between items-center mb-8 relative z-10 border-b border-white/5 pb-5">
+                        <div className="flex items-center gap-2">
+                            <Plus className="w-3.5 h-3.5 text-brand-red" />
+                            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground italic">Nueva Publicación</h2>
+                        </div>
                         <button
                             onClick={() => setIsOpen(false)}
-                            className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors flex items-center gap-1"
+                            className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all flex items-center gap-2 group bg-white/5 px-3 py-1.5 rounded-full border border-white/5 hover:border-white/20 shadow-sm"
                         >
-                            {language === 'es' ? 'Cancelar' : 'Cancel'} <ChevronDown className="w-3 h-3 rotate-180" />
+                            {language === 'es' ? 'Cancelar' : 'Cancel'} <X className="w-3.5 h-3.5 group-hover:rotate-90 transition-transform" />
                         </button>
                     </div>
-                    <CreatePost currentUser={currentUser} />
+
+                    <CreatePost currentUser={currentUser} onSuccess={() => setIsOpen(false)} />
                 </div>
             )}
         </div>

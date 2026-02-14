@@ -125,6 +125,8 @@ interface FeedPostProps {
         total_volume_kg?: number;
         workout_sets?: any[];
         location_name?: string;
+        sport_type?: string;
+        metrics?: any;
     };
     music_url?: string | null;
     music_title?: string | null;
@@ -795,7 +797,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                         "text-xs md:text-sm font-heading font-black italic uppercase tracking-tighter group-hover:text-brand-red transition-colors leading-none truncate pr-2",
                                                         theme === 'dark' ? "text-white" : "text-gray-900"
                                                     )}>
-                                                        RESUMEN DE SESIÓN
+                                                        {(!w.sport_type || w.sport_type === 'Entrenamiento Libre') ? 'HYBRID' : w.sport_type}
                                                     </h4>
                                                     <p className="text-[7px] md:text-[8px] text-brand-red/70 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 truncate">
                                                         <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red"></span>
@@ -829,7 +831,11 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                 <div className="relative z-10 space-y-3">
                                                     {blocks.map((block: any, idx: number) => {
                                                         const isInnerExpanded = expandedInnerBlocks.includes(idx + 1000); // Unique ID offset
-                                                        const resultStr = block.type === 'fortime' ? block.result?.time : (block.type === 'emom' ? `${block.duration}' - ${block.result?.rounds || 0} Rds` : `${block.result?.rounds} Rds`);
+                                                        const resultStr =
+                                                            block.type === 'fortime' ? (block.result?.time || '--:--') :
+                                                                block.type === 'rft' ? (`${block.rounds || 0} Rds` + (block.result?.time ? ` - ${block.result.time}` : '')) :
+                                                                    block.type === 'emom' ? `${block.duration || 0}' - ${block.result?.rounds || 0} Rds` :
+                                                                        `${block.result?.rounds || 0} Rds`;
 
                                                         return (
                                                             <div key={idx} className={clsx(
@@ -843,7 +849,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                                             "text-sm md:text-base font-heading font-black italic uppercase tracking-tighter leading-none truncate pr-2",
                                                                             theme === 'dark' ? "text-white" : "text-gray-900"
                                                                         )}>
-                                                                            {block.title || `BLOQUE ${idx + 1}`} <span className="text-[9px] text-gray-500 ml-1 not-italic font-bold tracking-widest">({block.type.toUpperCase()})</span>
+                                                                            {(block.title === 'Entrenamiento Libre' || block.title === 'Hybrid' || !block.title) ? (w.sport_type || 'Bloque') : block.title} <span className="text-[9px] text-gray-500 ml-1 not-italic font-bold tracking-widest">({block.type.toUpperCase()})</span>
                                                                         </h3>
                                                                     </div>
                                                                     <div className="flex items-center gap-3">
@@ -945,7 +951,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                     "text-xs md:text-sm font-heading font-black italic uppercase tracking-tighter group-hover:text-brand-red transition-colors leading-none truncate pr-2",
                                                     theme === 'dark' ? "text-white" : "text-gray-900"
                                                 )}>
-                                                    {summary}
+                                                    {(!w.sport_type || w.sport_type === 'Entrenamiento Libre') ? (summary || 'ENTRENAMIENTO') : w.sport_type}
                                                 </h4>
                                                 <p className="text-[7px] md:text-[8px] text-brand-red/70 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 truncate">
                                                     <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red"></span>
@@ -1187,7 +1193,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         avatar={avatar}
                         content={{
                             type: (workoutData as any)?.metrics?.type === 'running' ? 'running' : (mediaType as any || 'workout'),
-                            title: workoutData?.title || 'Mi Entrenamiento',
+                            title: (workoutData?.title === 'Entrenamiento Híbrido Libre' || workoutData?.title === 'Simulación de Carrera Híbrida' || !workoutData?.title) ? (mediaType === 'running' ? 'RUNNING' : 'HYBRID') : workoutData.title,
                             highlight: highlight || caption,
                             stats: (workoutData as any)?.metrics?.type === 'running'
                                 ? [

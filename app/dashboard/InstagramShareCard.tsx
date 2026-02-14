@@ -2,7 +2,7 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import { toBlob } from 'html-to-image';
-import { Trophy, Flame, Dumbbell, Instagram, Download, Share2, MapPin, Zap, Wind, TrendingUp, Heart } from 'lucide-react';
+import { Trophy, Flame, Dumbbell, Instagram, Download, Share2, MapPin, Zap, Wind, TrendingUp, Heart, X } from 'lucide-react';
 import Image from 'next/image';
 import { clsx } from 'clsx';
 
@@ -88,7 +88,13 @@ export default function InstagramShareCard({ user, avatar, username, content, on
     };
 
     return (
-        <div className="fixed inset-0 z-[300] bg-black/90 flex flex-col items-center justify-center p-4 backdrop-blur-md">
+        <div className="fixed inset-0 z-[300] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-xl animate-in fade-in duration-300">
+            <button
+                onClick={onClose}
+                className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors p-2 bg-white/5 rounded-full hover:bg-white/10"
+            >
+                <X className="w-6 h-6" />
+            </button>
             <div className="flex flex-col items-center gap-6 w-full max-w-sm">
 
                 {/* The Card (Hidden from normal view but rendered for html-to-image) */}

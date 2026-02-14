@@ -12,33 +12,39 @@ export async function createStory(formData: FormData) {
 
         if (!user) return { error: 'No estás autorizado' }
 
-        // Try both 'media' and 'file' just in case
-        const media = (formData.get('media') || formData.get('file')) as File
-        if (!media || media.size === 0) return { error: 'No se ha proporcionado ningún archivo' }
+        let mediaUrl = formData.get('media_url') as string || null
+        let mediaType = formData.get('media_type') as string || null
 
-        // Sanitize file name
-        const fileExt = media.name.split('.').pop() || 'jpg'
-        const fileName = `${user.id}/story_${Date.now()}.${fileExt}`
+        if (!mediaUrl) {
+            // Try both 'media' and 'file' just in case
+            const media = (formData.get('media') || formData.get('file')) as File
+            if (!media || media.size === 0) return { error: 'No se ha proporcionado ningún archivo' }
 
-        console.log(`Uploading story for user ${user.id}: ${fileName} (${media.size} bytes)`)
+            // Sanitize file name
+            const fileExt = media.name.split('.').pop() || 'jpg'
+            const fileName = `${user.id}/story_${Date.now()}.${fileExt}`
 
-        const { error: uploadError } = await supabase.storage
-            .from('posts')
-            .upload(fileName, media, {
-                cacheControl: '3600',
-                upsert: false
-            })
+            console.log(`Uploading story for user ${user.id}: ${fileName} (${media.size} bytes)`)
 
-        if (uploadError) {
-            console.error("Story storage upload error:", uploadError)
-            return { error: `Error de almacenamiento: ${uploadError.message}` }
+            const { error: uploadError } = await supabase.storage
+                .from('posts')
+                .upload(fileName, media, {
+                    cacheControl: '3600',
+                    upsert: false
+                })
+
+            if (uploadError) {
+                console.error("Story storage upload error:", uploadError)
+                return { error: `Error de almacenamiento: ${uploadError.message}` }
+            }
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('posts')
+                .getPublicUrl(fileName)
+
+            mediaUrl = publicUrl
+            mediaType = media.type.startsWith('video/') ? 'video' : 'image'
         }
-
-        const { data: { publicUrl } } = supabase.storage
-            .from('posts')
-            .getPublicUrl(fileName)
-
-        const mediaType = media.type.startsWith('video/') ? 'video' : 'image'
 
         const metadataStr = formData.get('metadata') as string
         let metadata = {}
@@ -52,8 +58,8 @@ export async function createStory(formData: FormData) {
             .from('stories')
             .insert({
                 user_id: user.id,
-                media_url: publicUrl,
-                media_type: mediaType,
+                media_url: mediaUrl,
+                media_type: mediaType || 'image',
                 duration_seconds: 30,
                 expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
                 music_url: formData.get('music_url') as string || null,
@@ -91,8 +97,8 @@ export async function createPRStory(formData: FormData) {
             return { error: "Exercise and weight are required" }
         }
 
-        let mediaUrl = null
-        if (media && media.size > 0) {
+        let mediaUrl = formData.get('media_url') as string || null
+        if (!mediaUrl && media && media.size > 0) {
             const fileExt = media.name.split('.').pop()
             const fileName = `${user.id}/story_pr_${Date.now()}.${fileExt}`
 

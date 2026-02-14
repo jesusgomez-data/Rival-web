@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import MusicPicker from '../MusicPicker'
 import { MusicTrack } from '../music-data'
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
+import { createClient } from '@/utils/supabase/client'
 
 interface Story {
     id: string
@@ -91,6 +92,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const [trimmerVideoUrl, setTrimmerVideoUrl] = useState<string | null>(null)
     const [trimStart, setTrimStart] = useState(0)
     const [isTrimmingLoading, setIsTrimmingLoading] = useState(false)
+    const [videoDuration, setVideoDuration] = useState(0)
     const trimmerVideoRef = useRef<HTMLVideoElement>(null)
 
     // Interaction State for Dragging
@@ -292,8 +294,10 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
             video.onloadedmetadata = function () {
                 window.URL.revokeObjectURL(video.src);
                 const duration = video.duration;
+                setVideoDuration(duration);
 
                 if (duration > 30) {
+                    setTrimStart(0);
                     setTrimmerVideoUrl(URL.createObjectURL(file));
                     setIsVideoTrimming(true);
                     return;
@@ -415,7 +419,50 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         console.log("Starting upload for:", previewFile.name, previewFile.size);
         try {
             const formData = new FormData()
-            formData.append('media', previewFile)
+            let mediaUrl = null;
+            let mediaType = previewFile.type.startsWith('video/') ? 'video' : 'image';
+
+            // DIRECT CLIENT UPLOAD for "pesados" (heavy) files
+            try {
+                const supabase = createClient();
+                const { data: { user } } = await supabase.auth.getUser();
+                if (!user) throw new Error("No user found");
+
+                const fileExt = previewFile.name.split('.').pop() || 'jpg';
+                const fileName = `${user.id}/story_${Date.now()}.${fileExt}`;
+
+                console.log("Directly uploading story to storage...");
+                const { data: uploadData, error: uploadError } = await supabase.storage
+                    .from('posts')
+                    .upload(fileName, previewFile, {
+                        cacheControl: '3600',
+                        upsert: false
+                    });
+
+                if (uploadError) throw uploadError;
+
+                const { data: { publicUrl } } = supabase.storage
+                    .from('posts')
+                    .getPublicUrl(fileName);
+
+                mediaUrl = publicUrl;
+                console.log("Direct upload successful:", mediaUrl);
+            } catch (storageError) {
+                console.error("Direct storage upload failed, falling back to server action if small:", storageError);
+                if (previewFile.size > 4.5 * 1024 * 1024) {
+                    alert("El archivo es demasiado grande para el modo de respaldo. Por favor, asegúrate de tener buena conexión.");
+                    setIsUploading(false);
+                    return;
+                }
+                // If it's small enough, let the server action handle it by NOT setting mediaUrl
+                formData.append('media', previewFile);
+            }
+
+            if (mediaUrl) {
+                formData.append('media_url', mediaUrl);
+                formData.append('media_type', mediaType);
+            }
+
             if (selectedTrack) {
                 formData.append('music_url', selectedTrack.url)
                 formData.append('music_title', selectedTrack.title)
@@ -440,7 +487,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
             }
         } catch (err) {
             console.error("Post story critical error:", err);
-            alert("Error crítico al subir la historia. Revisa el tamaño del archivo.");
+            alert("Error crítico al subir la historia.");
         } finally {
             setIsUploading(false)
         }
@@ -452,61 +499,112 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         setIsTrimmingLoading(true);
         const video = trimmerVideoRef.current;
 
-        const stream = (video as any).captureStream ? (video as any).captureStream() : (video as any).mozCaptureStream();
+        try {
+            // Check for captureStream support (it's missing in some mobile browsers like iOS Safari)
+            const captureStream = (video as any).captureStream || (video as any).mozCaptureStream;
 
-        const supportedTypes = ['video/mp4', 'video/webm', 'video/ogg'];
-        let mimeType = '';
-        for (const type of supportedTypes) {
-            if (MediaRecorder.isTypeSupported(type)) {
-                mimeType = type;
-                break;
+            if (!captureStream) {
+                alert("Tu navegador no soporta el recorte de video directo. Por favor, intenta subir un video de menos de 30 segundos o recórtalo en tu galería antes de subirlo.");
+                setIsTrimmingLoading(false);
+                setIsVideoTrimming(false);
+                setTrimmerVideoUrl(null);
+                return;
             }
-        }
 
-        const recorder = new MediaRecorder(stream, { mimeType });
-        const chunks: Blob[] = [];
-        recorder.ondataavailable = (e) => chunks.push(e.data);
+            const stream = captureStream.call(video);
 
-        recorder.onstop = () => {
-            const blob = new Blob(chunks, { type: mimeType });
-            const extension = mimeType.split('/')[1] || 'webm';
-            const trimmedFile = new File([blob], `trimmed_video.${extension}`, { type: mimeType });
-            setupPreview(trimmedFile);
-            setIsVideoTrimming(false);
-            setTrimmerVideoUrl(null);
-            setIsTrimmingLoading(false);
-        };
-
-        // Prepare video for recording
-        video.currentTime = trimStart;
-
-        const startRecording = () => {
-            video.play();
-            recorder.start();
-
-            // Record for exactly 30s or until video ends
-            const duration = Math.min(30, (video.duration - trimStart));
-
-            setTimeout(() => {
-                if (recorder.state === 'recording') {
-                    recorder.stop();
-                    video.pause();
+            const supportedTypes = ['video/mp4', 'video/webm', 'video/x-matroska', 'video/ogg'];
+            let mimeType = '';
+            for (const type of supportedTypes) {
+                if (MediaRecorder.isTypeSupported(type)) {
+                    mimeType = type;
+                    break;
                 }
-            }, duration * 1000);
+            }
 
-            video.onended = () => {
-                if (recorder.state === 'recording') {
-                    recorder.stop();
-                }
+            if (!mimeType) {
+                alert("Formato de video no compatible para recorte en este navegador.");
+                setIsTrimmingLoading(false);
+                return;
+            }
+
+            const recorder = new MediaRecorder(stream, { mimeType });
+            const chunks: Blob[] = [];
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunks.push(e.data);
             };
 
-            video.onseeked = null; // Clean up
-        };
+            // Safety timeout to prevent getting stuck
+            let safetyTimeout: any;
 
-        if (video.readyState >= 3) { // Have future data
-            startRecording();
-        } else {
-            video.onseeked = startRecording;
+            recorder.onstop = () => {
+                if (safetyTimeout) clearTimeout(safetyTimeout);
+
+                if (chunks.length === 0) {
+                    alert("Error: No se capturaron datos del video. Intenta de nuevo.");
+                    setIsTrimmingLoading(false);
+                    return;
+                }
+
+                const blob = new Blob(chunks, { type: mimeType });
+                const extension = mimeType.split('/')[1]?.split(';')[0] || 'webm';
+                const trimmedFile = new File([blob], `trimmed_video.${extension}`, { type: mimeType });
+
+                setupPreview(trimmedFile);
+                setIsVideoTrimming(false);
+                setTrimmerVideoUrl(null);
+                setIsTrimmingLoading(false);
+                console.log("Trimming completed successfully, size:", trimmedFile.size);
+            };
+
+            recorder.onerror = (err) => {
+                console.error("MediaRecorder Error:", err);
+                alert("Error durante el procesamiento del video.");
+                setIsTrimmingLoading(false);
+            };
+
+            // Prepare video for recording
+            video.currentTime = trimStart;
+
+            const startRecording = () => {
+                console.log("Starting recording loop from:", trimStart);
+                video.muted = true; // Ensure it can play
+                video.play().then(() => {
+                    recorder.start();
+
+                    const recordingDuration = Math.min(30, (video.duration - trimStart));
+
+                    // Main stop logic
+                    safetyTimeout = setTimeout(() => {
+                        if (recorder.state === 'recording') {
+                            recorder.stop();
+                            video.pause();
+                        }
+                    }, (recordingDuration + 1) * 1000); // Wait 1s extra to be safe
+
+                    video.onended = () => {
+                        if (recorder.state === 'recording') {
+                            recorder.stop();
+                        }
+                    };
+                }).catch(err => {
+                    console.error("Video play failed:", err);
+                    alert("No se pudo iniciar el video para procesarlo. Asegúrate de que tu navegador permite la reproducción.");
+                    setIsTrimmingLoading(false);
+                });
+
+                video.onseeked = null; // Clean up
+            };
+
+            if (video.readyState >= 3) {
+                startRecording();
+            } else {
+                video.onseeked = startRecording;
+            }
+        } catch (err) {
+            console.error("Critical error in processTrimming:", err);
+            alert("Error crítico al procesar el video.");
+            setIsTrimmingLoading(false);
         }
     };
 
@@ -682,7 +780,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
             <div
                 key={overlay.id}
                 className={clsx(
-                    "absolute transform -translate-x-1/2 -translate-y-1/2 z-20 transition-transform origin-center",
+                    "absolute z-20 origin-center touch-none select-none",
                     previewUrl ? "cursor-move" : (overlay.link && "cursor-pointer hover:scale-105 active:scale-95 transition-all")
                 )}
                 style={{
@@ -743,7 +841,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
                                     <div className="flex items-center gap-4 mb-4 relative z-10">
                                         <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
-                                            <Dumbbell className="w-5 h-5 text-brand-red" />
+                                            <Trophy className="w-5 h-5 text-brand-red" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em] mb-0.5">Entrenamiento</p>
@@ -965,7 +1063,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                 <input
                                     type="range"
                                     min="0"
-                                    max={Math.max(0, (trimmerVideoRef.current?.duration || 0) - 30)}
+                                    max={Math.max(0, videoDuration - 30)}
                                     step="0.5"
                                     value={trimStart}
                                     onChange={(e) => {
@@ -1021,34 +1119,43 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                         <Music className="w-5 h-5" />
                                     </button>
                                     {isMusicPickerOpen && (
-                                        <div className="absolute top-12 right-0 mt-2 z-[300] w-[300px]">
-                                            <MusicPicker
-                                                onSelect={(track) => {
-                                                    console.log("Track selected in StoryBar:", track?.title);
-                                                    setSelectedTrack(track);
-                                                    setIsMusicPickerOpen(false);
-                                                    if (track && audioRef.current) {
-                                                        console.log("Setting StoryBar audio src to:", track.url);
-                                                        audioRef.current.src = track.url;
-                                                        audioRef.current.volume = 1.0;
-                                                        audioRef.current.muted = false;
-                                                        audioRef.current.load();
-                                                        const playPromise = audioRef.current.play();
-                                                        if (playPromise !== undefined) {
-                                                            playPromise.then(() => {
-                                                                console.log("StoryBar audio playing successfully");
-                                                            }).catch(error => {
-                                                                console.error("StoryBar playback error:", error);
-                                                            });
-                                                        }
-                                                    } else if (!track && audioRef.current) {
-                                                        console.log("No track selected, pausing StoryBar audio");
-                                                        audioRef.current.pause();
-                                                    }
-                                                }}
-                                                selectedTrackId={selectedTrack?.id || null}
-                                                variant="embedded"
+                                        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+                                            {/* Backdrop */}
+                                            <div
+                                                className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                                                onClick={() => setIsMusicPickerOpen(false)}
                                             />
+
+                                            {/* Centered Picker Container */}
+                                            <div className="relative z-10 w-full max-w-md animate-in zoom-in-95 duration-200">
+                                                <MusicPicker
+                                                    onSelect={(track) => {
+                                                        console.log("Track selected in StoryBar:", track?.title);
+                                                        setSelectedTrack(track);
+                                                        setIsMusicPickerOpen(false);
+                                                        if (track && audioRef.current) {
+                                                            console.log("Setting StoryBar audio src to:", track.url);
+                                                            audioRef.current.src = track.url;
+                                                            audioRef.current.volume = 1.0;
+                                                            audioRef.current.muted = false;
+                                                            audioRef.current.load();
+                                                            const playPromise = audioRef.current.play();
+                                                            if (playPromise !== undefined) {
+                                                                playPromise.then(() => {
+                                                                    console.log("StoryBar audio playing successfully");
+                                                                }).catch(error => {
+                                                                    console.error("StoryBar playback error:", error);
+                                                                });
+                                                            }
+                                                        } else if (!track && audioRef.current) {
+                                                            console.log("No track selected, pausing StoryBar audio");
+                                                            audioRef.current.pause();
+                                                        }
+                                                    }}
+                                                    selectedTrackId={selectedTrack?.id || null}
+                                                    variant="embedded"
+                                                />
+                                            </div>
                                         </div>
                                     )}
                                 </div>
@@ -1069,7 +1176,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                         </div>
 
                         {/* Canvas Area */}
-                        <div className="relative flex-1 bg-gray-900 overflow-hidden flex items-center justify-center">
+                        <div className="relative flex-1 w-full h-full bg-gray-900 overflow-hidden flex items-center justify-center">
                             {previewFile?.type.startsWith('video/') ? (
                                 <video
                                     src={previewUrl}
@@ -1095,7 +1202,9 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             )}
 
                             {/* Overlays Rendering */}
-                            {renderOverlays(overlays)}
+                            <div className="absolute inset-0 z-20 pointer-events-none">
+                                {renderOverlays(overlays)}
+                            </div>
 
                             {/* Text Input Modal Overlay */}
                             {showTextInput && (
@@ -1309,7 +1418,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
             {/* Story Viewer (Updated to show overlays) */}
             {selectedUserIndex !== null && currentStory && (
                 <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4">
-                    <div className="relative w-full max-w-[400px] h-[90vh] bg-black rounded-[32px] overflow-hidden shadow-2xl border border-white/5 mx-auto">
+                    <div className="relative w-full max-w-[400px] h-[90vh] bg-black rounded-[32px] overflow-hidden shadow-2xl border border-white/5 mx-auto flex flex-col">
                         <AnimatePresence>
                             {!isPressed && (
                                 <motion.div
@@ -1411,7 +1520,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     }
                                 }
                             }}
-                            className="w-full h-full relative cursor-grab active:cursor-grabbing touch-none"
+                            className="w-full h-full relative cursor-grab active:cursor-grabbing touch-none flex-1"
                             onMouseDown={handlePressStart}
                             onMouseUp={handlePressEnd}
                             onMouseLeave={handlePressEnd}
@@ -1554,179 +1663,180 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             )}
 
                             {/* Render Viewer Overlays */}
-                            {currentStory.metadata?.overlays && currentStory.metadata.overlays.map((overlay: OverlayElement) => (
-                                <div
-                                    key={overlay.id}
-                                    className={clsx(
-                                        "absolute transform -translate-x-1/2 -translate-y-1/2 z-50 pointer-events-auto transition-transform",
-                                        overlay.link && "cursor-pointer active:scale-95 hover:scale-105"
-                                    )}
-                                    style={{
-                                        left: `${overlay.x}%`,
-                                        top: `${overlay.y}%`,
-                                        transform: `translate(-50%, -50%) scale(${overlay.scale || 1}) rotate(${overlay.rotation || 0}deg)`
-                                    }}
-                                    onClick={(e) => {
-                                        if (overlay.link) {
-                                            e.stopPropagation();
-                                            setSelectedUserIndex(null);
-                                            router.push(overlay.link);
-                                        }
-                                    }}
-                                >
-                                    {overlay.type === 'text' ? (
-                                        <p
-                                            className="font-black text-2xl uppercase tracking-wider drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-center break-words max-w-[300px]"
-                                            style={{ color: overlay.color || 'white' }}
-                                        >
-                                            {overlay.content}
-                                        </p>
-                                    ) : overlay.type === 'workout_sticker' ? (
-                                        (() => {
-                                            try {
-                                                const data = JSON.parse(overlay.content);
-                                                const hasBlocks = data.metrics?.blocks?.length > 0;
-                                                const isExpanded = expandedWorkoutId === overlay.id;
+                            <div className="absolute inset-0 z-50 pointer-events-none">
+                                {currentStory.metadata?.overlays && currentStory.metadata.overlays.map((overlay: OverlayElement) => (
+                                    <div
+                                        key={overlay.id}
+                                        className={clsx(
+                                            "absolute z-50 pointer-events-auto origin-center touch-none select-none",
+                                            overlay.link && "cursor-pointer active:scale-95 hover:scale-105"
+                                        )}
+                                        style={{
+                                            left: `${overlay.x}%`,
+                                            top: `${overlay.y}%`,
+                                            transform: `translate(-50%, -50%) scale(${overlay.scale || 1}) rotate(${overlay.rotation || 0}deg)`
+                                        }}
+                                        onClick={(e) => {
+                                            if (overlay.link) {
+                                                e.stopPropagation();
+                                                setSelectedUserIndex(null);
+                                                router.push(overlay.link);
+                                            }
+                                        }}
+                                    >
+                                        {overlay.type === 'text' ? (
+                                            <p
+                                                className="font-black text-2xl uppercase tracking-wider drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-center break-words max-w-[300px]"
+                                                style={{ color: overlay.color || 'white' }}
+                                            >
+                                                {overlay.content}
+                                            </p>
+                                        ) : overlay.type === 'workout_sticker' ? (
+                                            (() => {
+                                                try {
+                                                    const data = JSON.parse(overlay.content);
+                                                    const hasBlocks = data.metrics?.blocks?.length > 0;
+                                                    const isExpanded = expandedWorkoutId === overlay.id;
 
-                                                return (
-                                                    <motion.div
-                                                        layout
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            setExpandedWorkoutId(isExpanded ? null : overlay.id);
-                                                            setIsPaused(!isExpanded);
-                                                        }}
-                                                        className={clsx(
-                                                            "bg-black/60 backdrop-blur-3xl border border-white/10 p-5 rounded-[24px] shadow-2xl relative overflow-hidden select-none transition-all duration-300",
-                                                            isExpanded ? "w-[340px] max-h-[500px] overflow-y-auto no-scrollbar" : "w-[300px]"
-                                                        )}
-                                                    >
-                                                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
-                                                        <div className="flex items-center gap-4 mb-4 relative z-10">
-                                                            <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
-                                                                <Dumbbell className="w-5 h-5 text-brand-red" />
+                                                    return (
+                                                        <div
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setExpandedWorkoutId(isExpanded ? null : overlay.id);
+                                                                setIsPaused(!isExpanded);
+                                                            }}
+                                                            className={clsx(
+                                                                "bg-black/60 backdrop-blur-3xl border border-white/10 p-5 rounded-[24px] shadow-2xl relative overflow-hidden select-none",
+                                                                isExpanded ? "w-[340px] max-h-[500px] overflow-y-auto no-scrollbar" : "w-[300px]"
+                                                            )}
+                                                        >
+                                                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
+                                                            <div className="flex items-center gap-4 mb-4 relative z-10">
+                                                                <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
+                                                                    <Trophy className="w-5 h-5 text-brand-red" />
+                                                                </div>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em] mb-0.5">Entrenamiento</p>
+                                                                    <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || data.name || 'Sesión'}</h4>
+                                                                </div>
+                                                                <div className="shrink-0 flex items-center justify-center">
+                                                                    {isExpanded ? <ChevronUp className="w-4 h-4 text-brand-red" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                                                                </div>
                                                             </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em] mb-0.5">Entrenamiento</p>
-                                                                <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || data.name || 'Sesión'}</h4>
-                                                            </div>
-                                                            <div className="shrink-0 flex items-center justify-center">
-                                                                {isExpanded ? <ChevronUp className="w-4 h-4 text-brand-red" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-                                                            </div>
-                                                        </div>
-                                                        <div className="space-y-2 relative z-10">
-                                                            {hasBlocks ? (
-                                                                <div className="space-y-1.5">
-                                                                    {(isExpanded ? data.metrics.blocks : data.metrics.blocks.slice(0, 3)).map((block: any, idx: number) => (
-                                                                        <motion.div
-                                                                            initial={{ opacity: 0, y: 10 }}
-                                                                            animate={{ opacity: 1, y: 0 }}
-                                                                            transition={{ delay: idx * 0.05 }}
-                                                                            key={idx}
-                                                                            className="flex flex-col bg-white/5 p-3 rounded-xl border border-white/5 hover:border-white/10 transition-colors gap-2"
-                                                                        >
-                                                                            <div className="flex justify-between items-center">
-                                                                                <div className="flex flex-col">
-                                                                                    <span className="text-[10px] font-black text-white uppercase tracking-tight">{block.title || block.type || 'BLOQUE'}</span>
-                                                                                    {isExpanded && block.type && (
-                                                                                        <span className="text-[8px] text-brand-red/70 font-bold uppercase tracking-widest">{block.type}</span>
-                                                                                    )}
+                                                            <div className="space-y-2 relative z-10">
+                                                                {hasBlocks ? (
+                                                                    <div className="space-y-1.5">
+                                                                        {(isExpanded ? data.metrics.blocks : data.metrics.blocks.slice(0, 3)).map((block: any, idx: number) => (
+                                                                            <motion.div
+                                                                                initial={{ opacity: 0, y: 10 }}
+                                                                                animate={{ opacity: 1, y: 0 }}
+                                                                                transition={{ delay: idx * 0.05 }}
+                                                                                key={idx}
+                                                                                className="flex flex-col bg-white/5 p-3 rounded-xl border border-white/5 hover:border-white/10 transition-colors gap-2"
+                                                                            >
+                                                                                <div className="flex justify-between items-center">
+                                                                                    <div className="flex flex-col">
+                                                                                        <span className="text-[10px] font-black text-white uppercase tracking-tight">{block.title || block.type || 'BLOQUE'}</span>
+                                                                                        {isExpanded && block.type && (
+                                                                                            <span className="text-[8px] text-brand-red/70 font-bold uppercase tracking-widest">{block.type}</span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                    <span className="text-brand-red font-black text-sm italic tracking-tighter">
+                                                                                        {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : '-'))}
+                                                                                    </span>
                                                                                 </div>
-                                                                                <span className="text-brand-red font-black text-sm italic tracking-tighter">
-                                                                                    {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : '-'))}
-                                                                                </span>
+
+                                                                                {isExpanded && block.exercises && block.exercises.length > 0 && (
+                                                                                    <div className="grid grid-cols-1 gap-1.5 mt-1 border-t border-white/5 pt-2">
+                                                                                        {block.exercises.map((ex: any, eIdx: number) => (
+                                                                                            <div key={eIdx} className="flex justify-between items-center bg-black/20 px-2 py-1.5 rounded-lg">
+                                                                                                <span className="text-[9px] text-gray-300 font-bold uppercase truncate max-w-[150px]">{ex.name}</span>
+                                                                                                <span className="text-[9px] text-white font-black italic">{ex.value || ex.weight_kg} {ex.reps ? `x ${ex.reps}` : ''}</span>
+                                                                                            </div>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                )}
+                                                                            </motion.div>
+                                                                        ))}
+                                                                        {!isExpanded && data.metrics.blocks.length > 3 && (
+                                                                            <div className="text-[9px] text-center text-brand-red/70 font-black uppercase tracking-[0.2em] pt-2 animate-pulse">
+                                                                                Tocar para ver +{data.metrics.blocks.length - 3} bloques
                                                                             </div>
-
-                                                                            {isExpanded && block.exercises && block.exercises.length > 0 && (
-                                                                                <div className="grid grid-cols-1 gap-1.5 mt-1 border-t border-white/5 pt-2">
-                                                                                    {block.exercises.map((ex: any, eIdx: number) => (
-                                                                                        <div key={eIdx} className="flex justify-between items-center bg-black/20 px-2 py-1.5 rounded-lg">
-                                                                                            <span className="text-[9px] text-gray-300 font-bold uppercase truncate max-w-[150px]">{ex.name}</span>
-                                                                                            <span className="text-[9px] text-white font-black italic">{ex.value || ex.weight_kg} {ex.reps ? `x ${ex.reps}` : ''}</span>
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            )}
-                                                                        </motion.div>
-                                                                    ))}
-                                                                    {!isExpanded && data.metrics.blocks.length > 3 && (
-                                                                        <div className="text-[9px] text-center text-brand-red/70 font-black uppercase tracking-[0.2em] pt-2 animate-pulse">
-                                                                            Tocar para ver +{data.metrics.blocks.length - 3} bloques
-                                                                        </div>
-                                                                    )}
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        {(data.total_volume_kg > 0 || data.max_weight) && (
+                                                                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                                                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Carga Máxima</span>
+                                                                                <span className="text-brand-red font-black text-sm">{data.total_volume_kg || data.max_weight} KG</span>
+                                                                            </div>
+                                                                        )}
+                                                                        {data.location_name && (
+                                                                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                                                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Lugar</span>
+                                                                                <span className="text-white font-bold text-xs truncate max-w-[150px] uppercase">{data.location_name}</span>
+                                                                            </div>
+                                                                        )}
+                                                                    </>
+                                                                )}
+                                                                {!hasBlocks && !data.total_volume_kg && !data.location_name && (
+                                                                    <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                                                                        <p className="text-white/60 text-xs italic text-center">¡Entrenamiento completado!</p>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            <div className="mt-4 pt-3 border-t border-white/5 flex justify-center">
+                                                                <div className="flex items-center gap-1.5 opacity-50">
+                                                                    <div className="w-1.5 h-1.5 bg-brand-red rounded-full animate-pulse" />
+                                                                    <span className="text-[8px] text-gray-400 font-black uppercase tracking-[0.3em]">RIVAL FIT ATLETA</span>
                                                                 </div>
-                                                            ) : (
-                                                                <>
-                                                                    {(data.total_volume_kg > 0 || data.max_weight) && (
-                                                                        <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
-                                                                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Carga Máxima</span>
-                                                                            <span className="text-brand-red font-black text-sm">{data.total_volume_kg || data.max_weight} KG</span>
-                                                                        </div>
-                                                                    )}
-                                                                    {data.location_name && (
-                                                                        <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
-                                                                            <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Lugar</span>
-                                                                            <span className="text-white font-bold text-xs truncate max-w-[150px] uppercase">{data.location_name}</span>
-                                                                        </div>
-                                                                    )}
-                                                                </>
-                                                            )}
-                                                            {!hasBlocks && !data.total_volume_kg && !data.location_name && (
-                                                                <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-                                                                    <p className="text-white/60 text-xs italic text-center">¡Entrenamiento completado!</p>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                        <div className="mt-4 pt-3 border-t border-white/5 flex justify-center">
-                                                            <div className="flex items-center gap-1.5 opacity-50">
-                                                                <div className="w-1.5 h-1.5 bg-brand-red rounded-full animate-pulse" />
-                                                                <span className="text-[8px] text-gray-400 font-black uppercase tracking-[0.3em]">RIVAL FIT ATLETA</span>
                                                             </div>
                                                         </div>
-                                                    </motion.div>
-                                                )
-                                            } catch (e) { return null }
-                                        })()
-                                    ) : overlay.type === 'pr_sticker' ? (
-                                        (() => {
-                                            try {
-                                                const prData = JSON.parse(overlay.content);
-                                                return (
-                                                    <PRCard
-                                                        userName={currentUserStories?.user?.full_name || ''}
-                                                        avatarUrl={currentUserStories?.user?.avatar_url || ''}
-                                                        sport={prData.sport}
-                                                        exerciseName={prData.exerciseName}
-                                                        weight={prData.weight}
-                                                        unit={prData.unit}
-                                                        isStory={true}
-                                                    />
-                                                )
-                                            } catch (e) { return null }
-                                        })()
-                                    ) : overlay.type === 'image' ? (
-                                        <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 group w-full">
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img
-                                                src={overlay.content}
-                                                alt="Shared Content"
-                                                className="w-full h-auto object-contain pointer-events-none"
-                                                crossOrigin="anonymous"
-                                            />
-                                            {previewUrl && (
-                                                <button
-                                                    onClick={(e) => removeOverlay(overlay.id, e)}
-                                                    className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                >
-                                                    <X className="w-3 h-3" />
-                                                </button>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <Image src={overlay.content} width={64} height={64} alt="sticker" className="drop-shadow-lg" />
-                                    )}
-                                </div>
-                            ))}
+                                                    )
+                                                } catch (e) { return null }
+                                            })()
+                                        ) : overlay.type === 'pr_sticker' ? (
+                                            (() => {
+                                                try {
+                                                    const prData = JSON.parse(overlay.content);
+                                                    return (
+                                                        <PRCard
+                                                            userName={currentUserStories?.user?.full_name || ''}
+                                                            avatarUrl={currentUserStories?.user?.avatar_url || ''}
+                                                            sport={prData.sport}
+                                                            exerciseName={prData.exerciseName}
+                                                            weight={prData.weight}
+                                                            unit={prData.unit}
+                                                            isStory={true}
+                                                        />
+                                                    )
+                                                } catch (e) { return null }
+                                            })()
+                                        ) : overlay.type === 'image' ? (
+                                            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 group w-full">
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img
+                                                    src={overlay.content}
+                                                    alt="Shared Content"
+                                                    className="w-full h-auto object-contain pointer-events-none"
+                                                    crossOrigin="anonymous"
+                                                />
+                                                {previewUrl && (
+                                                    <button
+                                                        onClick={(e) => removeOverlay(overlay.id, e)}
+                                                        className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <Image src={overlay.content} width={64} height={64} alt="sticker" className="drop-shadow-lg" />
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
                         </motion.div>
 
                         <AnimatePresence>

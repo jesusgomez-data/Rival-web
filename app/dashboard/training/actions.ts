@@ -308,7 +308,7 @@ export async function saveWorkout(workoutData: any) {
                 .insert({
                     user_id: user.id,
                     workout_id: workout.id,
-                    caption: caption,
+                    caption: workoutData.caption || caption,
                     media_url: workoutData.imageUrl || null,
                 });
         }
@@ -326,7 +326,7 @@ export async function saveWorkout(workoutData: any) {
                     metadata: {
                         type: 'workout',
                         workout_id: workout.id,
-                        caption: caption,
+                        caption: workoutData.caption || caption,
                         summary: {
                             title: workoutData.title,
                             sportType: workoutData.sportType,

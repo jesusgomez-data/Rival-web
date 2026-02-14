@@ -337,7 +337,7 @@ export default function Home() {
             <div className="grid md:grid-cols-3 gap-6">
               <FeatureCard icon={<Activity className="w-6 h-6 text-brand-red" />} title="Registro Inteligente" desc="Registra tus entrenamientos en segundos. Nuestro sistema aprende tus curvas de fuerza y ajusta tu próxima sesión automáticamente." />
               <FeatureCard icon={<Users className="w-6 h-6 text-brand-red" />} title="Comunidad de Tribu" desc="Conecta con atletas que comparten tu pasión. Filtra el feed por deporte, nivel o ubicación." />
-              <FeatureCard icon={<Dumbbell className="w-6 h-6 text-brand-red" />} title="Coach Online" desc="Obtén un programa personalizado que evoluciona contigo. Desde hipertrofia hasta preparación para Hybird." />
+              <FeatureCard icon={<Dumbbell className="w-6 h-6 text-brand-red" />} title="Coach Online" desc="Obtén un programa personalizado que evoluciona contigo. Desde hipertrofia hasta preparación para Hybrid." />
               <FeatureCard icon={<Trophy className="w-6 h-6 text-brand-red" />} title="Rankings en Vivo" desc="Compite en desafíos en tiempo real. Mira tu posición en tu ciudad, país o globalmente." />
               <FeatureCard icon={<BarChart3 className="w-6 h-6 text-brand-red" />} title="Analíticas Pro" desc="Visualiza tu progreso con gráficos profesionales. Volumen, intensidad y gestión de fatiga." />
               <FeatureCard icon={<Zap className="w-6 h-6 text-brand-red" />} title="Duelos en Tiempo Real" desc="Reta a tus rivales a duelos de 7 días. Compara volumen, fuerza y constancia cara a cara." />

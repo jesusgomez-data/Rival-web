@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Music, Play, Pause, Check, Search, X } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Music, Play, Pause, Check, Search, X, Volume2, Disc } from "lucide-react";
 import { RIVAL_MUSIC_LIBRARY, MusicTrack } from "./music-data";
 import { clsx } from "clsx";
 
@@ -11,11 +11,29 @@ interface MusicPickerProps {
     variant?: 'button' | 'embedded';
 }
 
-export default function MusicPicker({ onSelect, selectedTrackId, variant = 'button', placement = 'top' }: MusicPickerProps & { placement?: 'top' | 'bottom' }) {
+export default function MusicPicker({ onSelect, selectedTrackId, variant = 'button' }: MusicPickerProps) {
     const [isOpen, setIsOpen] = useState(variant === 'embedded');
     const [searchQuery, setSearchQuery] = useState("");
     const [previewingId, setPreviewingId] = useState<string | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    // Close on escape
+    useEffect(() => {
+        const handleEsc = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setIsOpen(false);
+        };
+        window.addEventListener('keydown', handleEsc);
+        return () => window.removeEventListener('keydown', handleEsc);
+    }, []);
+
+    // Prevent scroll when modal is open
+    useEffect(() => {
+        if (isOpen && variant === 'button') {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+    }, [isOpen, variant]);
 
     const filteredTracks = RIVAL_MUSIC_LIBRARY.filter(track =>
         track.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -31,7 +49,6 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
             audioRef.current.pause();
             setPreviewingId(null);
         } else {
-            // Stop any existing playback
             audioRef.current.pause();
             audioRef.current.src = track.url;
             audioRef.current.currentTime = 0;
@@ -41,7 +58,7 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
             audioRef.current.play().then(() => {
                 setPreviewingId(track.id);
             }).catch(error => {
-                console.error("Playback failed for:", track.title, error);
+                console.error("Playback failed:", error);
             });
         }
     };
@@ -61,168 +78,166 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
 
     const selectedTrack = RIVAL_MUSIC_LIBRARY.find(t => t.id === selectedTrackId);
 
-    if (variant === 'embedded') {
-        return (
-            <div className="w-full bg-brand-gray border border-white/10 rounded-[24px] shadow-2xl p-4 animate-in fade-in duration-200">
-                <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-xs font-black text-white uppercase tracking-widest italic flex items-center gap-2">
-                        <Music className="w-3 h-3 text-brand-red" />
+    const PickerContent = (isModal: boolean) => (
+        <div className={clsx(
+            "bg-brand-gray border border-white/10 flex flex-col overflow-hidden transition-all duration-300",
+            isModal ? "w-full max-w-lg h-[80vh] sm:h-[600px] rounded-[32px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)]" : "w-full rounded-[24px] p-4"
+        )}>
+            {/* Header */}
+            <div className={clsx("flex items-center justify-between p-6 pb-2", !isModal && "p-0 mb-4")}>
+                <div>
+                    <h4 className="text-xl font-black text-white italic uppercase tracking-tighter flex items-center gap-3">
+                        <div className="p-2 bg-brand-red/10 rounded-xl">
+                            <Music className="w-5 h-5 text-brand-red" />
+                        </div>
                         Biblioteca Rival
                     </h4>
+                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1 ml-11">Selecciona el ritmo de tu post</p>
                 </div>
+                {isModal && (
+                    <button
+                        onClick={() => setIsOpen(false)}
+                        className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-full transition-all"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                )}
+            </div>
 
-                <div className="relative mb-4">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            {/* Search */}
+            <div className={clsx("px-6 py-4", !isModal && "p-0 mb-4")}>
+                <div className="relative group">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-brand-red transition-colors" />
                     <input
                         type="text"
-                        placeholder="Buscar Phonk, Rock, EDM..."
+                        placeholder="Busca Phonk, Reggaeton, Rock..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-black/40 border border-white/5 rounded-xl py-2 pl-9 pr-4 text-xs text-white focus:outline-none focus:border-brand-red/50 transition-colors"
+                        className="w-full bg-black/40 border border-white/5 rounded-2xl py-3.5 pl-11 pr-4 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-brand-red/30 focus:bg-black/60 transition-all shadow-inner"
                     />
                 </div>
+            </div>
 
-                <div className="space-y-1 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+            {/* Tracks List */}
+            <div className={clsx("flex-1 overflow-y-auto px-4 pb-6 custom-scrollbar", !isModal && "max-h-[450px] p-0 mb-4")}>
+                <div className="grid gap-2">
                     {filteredTracks.map(track => (
                         <div
                             key={track.id}
                             onClick={() => handleSelect(track)}
                             className={clsx(
-                                "flex items-center gap-3 p-2 rounded-xl border transition-all cursor-pointer group",
+                                "flex items-center gap-4 p-3 rounded-2xl border transition-all cursor-pointer group relative overflow-hidden",
                                 selectedTrackId === track.id
-                                    ? "bg-brand-red/10 border-brand-red/20"
-                                    : "bg-white/5 border-transparent hover:bg-white/10"
+                                    ? "bg-brand-red/10 border-brand-red/30 shadow-glow-sm"
+                                    : "bg-white/5 border-transparent hover:bg-white/10 hover:border-white/5"
                             )}
                         >
                             <button
                                 onClick={(e) => handlePreview(e, track)}
-                                className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center text-brand-red hover:scale-110 transition-transform"
+                                className={clsx(
+                                    "w-12 h-12 rounded-xl flex items-center justify-center transition-all relative z-10",
+                                    previewingId === track.id ? "bg-brand-red text-white scale-95" : "bg-black/40 text-brand-red hover:scale-110"
+                                )}
                             >
                                 {previewingId === track.id ? (
-                                    <Pause className="w-4 h-4 fill-current" />
+                                    <Pause className="w-5 h-5 fill-current" />
                                 ) : (
-                                    <Play className="w-4 h-4 fill-current ml-0.5" />
+                                    <Play className="w-5 h-5 fill-current ml-0.5" />
                                 )}
                             </button>
 
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[11px] font-bold text-white truncate leading-none mb-1">{track.title}</p>
-                                <p className="text-[9px] text-gray-500 uppercase font-black tracking-tighter truncate">{track.artist} • {track.genre}</p>
+                            <div className="flex-1 min-w-0 relative z-10">
+                                <p className="text-sm font-black text-white truncate mb-0.5 italic">{track.title}</p>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest truncate">{track.artist}</span>
+                                    <span className="w-1 h-1 rounded-full bg-white/10" />
+                                    <span className="text-[9px] text-brand-red/70 uppercase font-black tracking-tighter">{track.genre}</span>
+                                </div>
                             </div>
 
                             {selectedTrackId === track.id && (
-                                <Check className="w-4 h-4 text-brand-red shrink-0" />
+                                <div className="bg-brand-red p-1.5 rounded-full relative z-10">
+                                    <Check className="w-3.5 h-3.5 text-white stroke-[3.5]" />
+                                </div>
+                            )}
+
+                            {/* Animated background lines for playing track */}
+                            {previewingId === track.id && (
+                                <div className="absolute inset-x-0 bottom-0 h-1 bg-brand-red/20 overflow-hidden">
+                                    <div className="h-full bg-brand-red animate-progress-fast shadow-[0_0_10px_#dc2626]" style={{ width: '100%' }} />
+                                </div>
                             )}
                         </div>
                     ))}
-                </div>
 
-                <p className="text-[8px] text-gray-600 mt-4 text-center uppercase font-bold tracking-widest">
-                    Música de código abierto • Rival Arena
-                </p>
-                <audio
-                    ref={audioRef}
-                    onEnded={() => setPreviewingId(null)}
-                    onError={(e) => console.error("Audio Load Error in MusicPicker:", e)}
-                    style={{ width: '1px', height: '1px', opacity: 0.01, position: 'absolute', pointerEvents: 'none' }}
-                />
+                    {filteredTracks.length === 0 && (
+                        <div className="py-12 text-center">
+                            <Disc className="w-12 h-12 text-gray-700 mx-auto mb-4 animate-spin-slow" />
+                            <p className="text-xs font-black text-gray-500 uppercase tracking-widest">No se encontraron ritmos</p>
+                        </div>
+                    )}
+                </div>
             </div>
-        )
+
+            {/* Footer */}
+            <div className="p-6 pt-4 border-t border-white/5 bg-black/20 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Volume2 className="w-3 h-3 text-gray-500" />
+                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-[0.2em]">Sonido Optimizado</span>
+                </div>
+                <p className="text-[8px] text-gray-600 uppercase font-black tracking-[0.2em]">
+                    Rival Fit • Music Library
+                </p>
+            </div>
+
+            <audio
+                ref={audioRef}
+                onEnded={() => setPreviewingId(null)}
+                style={{ display: 'none' }}
+            />
+        </div>
+    );
+
+    if (variant === 'embedded') {
+        return PickerContent(false);
     }
 
     return (
         <div className="relative">
             <button
                 type="button"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => setIsOpen(true)}
                 className={clsx(
-                    "p-2 rounded-xl transition-all flex items-center gap-2 border",
+                    "p-3 rounded-2xl transition-all flex items-center gap-2 border group",
                     selectedTrack
-                        ? "bg-brand-red/10 border-brand-red/30 text-brand-red shadow-[0_0_15px_rgba(220,38,38,0.2)]"
+                        ? "bg-brand-red/10 border-brand-red/30 text-brand-red shadow-glow-sm"
                         : "text-gray-400 hover:text-white hover:bg-white/5 border-transparent"
                 )}
                 title="Añadir Música"
             >
                 <Music className={clsx("w-5 h-5", selectedTrack && "animate-pulse")} />
                 {selectedTrack && (
-                    <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline truncate max-w-[80px]">
+                    <span className="text-[10px] font-black uppercase tracking-widest truncate max-w-[100px] italic">
                         {selectedTrack.title}
                     </span>
                 )}
             </button>
 
+            {/* Centered Modal Overlay */}
             {isOpen && (
-                <div className={clsx(
-                    "absolute left-0 w-72 md:w-80 bg-brand-gray border border-white/10 rounded-[24px] shadow-2xl p-4 z-[200] animate-in duration-200",
-                    placement === 'top' ? "bottom-12 slide-in-from-bottom-2" : "top-12 slide-in-from-top-2"
-                )}>
-                    <div className="flex items-center justify-between mb-4">
-                        <h4 className="text-xs font-black text-white uppercase tracking-widest italic flex items-center gap-2">
-                            <Music className="w-3 h-3 text-brand-red" />
-                            Biblioteca Rival
-                        </h4>
-                        <button onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-white">
-                            <X className="w-4 h-4" />
-                        </button>
+                <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 animate-in fade-in duration-300">
+                    {/* Backdrop */}
+                    <div
+                        className="absolute inset-0 bg-black/90 backdrop-blur-xl"
+                        onClick={() => setIsOpen(false)}
+                    />
+
+                    {/* Modal Content */}
+                    <div className="relative z-10 w-full flex justify-center animate-in zoom-in-95 duration-300 slide-in-from-bottom-5">
+                        {PickerContent(true)}
                     </div>
-
-                    <div className="relative mb-4">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                        <input
-                            type="text"
-                            placeholder="Buscar Phonk, Rock, EDM..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-black/40 border border-white/5 rounded-xl py-2 pl-9 pr-4 text-xs text-white focus:outline-none focus:border-brand-red/50 transition-colors"
-                        />
-                    </div>
-
-                    <div className="space-y-1 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-                        {filteredTracks.map(track => (
-                            <div
-                                key={track.id}
-                                onClick={() => handleSelect(track)}
-                                className={clsx(
-                                    "flex items-center gap-3 p-2 rounded-xl border transition-all cursor-pointer group",
-                                    selectedTrackId === track.id
-                                        ? "bg-brand-red/10 border-brand-red/20"
-                                        : "bg-white/5 border-transparent hover:bg-white/10"
-                                )}
-                            >
-                                <button
-                                    onClick={(e) => handlePreview(e, track)}
-                                    className="w-8 h-8 rounded-lg bg-black/40 flex items-center justify-center text-brand-red hover:scale-110 transition-transform"
-                                >
-                                    {previewingId === track.id ? (
-                                        <Pause className="w-4 h-4 fill-current" />
-                                    ) : (
-                                        <Play className="w-4 h-4 fill-current ml-0.5" />
-                                    )}
-                                </button>
-
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-[11px] font-bold text-white truncate leading-none mb-1">{track.title}</p>
-                                    <p className="text-[9px] text-gray-500 uppercase font-black tracking-tighter truncate">{track.artist} • {track.genre}</p>
-                                </div>
-
-                                {selectedTrackId === track.id && (
-                                    <Check className="w-4 h-4 text-brand-red shrink-0" />
-                                )}
-                            </div>
-                        ))}
-                    </div>
-
-                    <p className="text-[8px] text-gray-600 mt-4 text-center uppercase font-bold tracking-widest">
-                        Música de código abierto • Rival Arena
-                    </p>
                 </div>
             )}
-            <audio
-                ref={audioRef}
-                onEnded={() => setPreviewingId(null)}
-                onError={(e) => console.error("Audio Load Error in MusicPicker (Button):", e)}
-                style={{ width: '1px', height: '1px', opacity: 0.01, position: 'absolute', pointerEvents: 'none' }}
-            />
         </div>
     );
 }

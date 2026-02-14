@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap, Share2, Camera, Award, AlertTriangle, ChevronRight, Youtube, Video, Lock, Wind, Heart, TrendingUp, Download } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, Minus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap, Share2, Camera, Award, AlertTriangle, ChevronRight, Youtube, Video, Lock, Wind, Heart, TrendingUp, Download } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect, Suspense, useMemo, useRef } from "react";
 import { saveWorkout, getExercises, getExercisePreviousRecord, getWorkoutDetails, uploadWorkoutMedia, getUserProfile, getGuidedWorkoutsCount } from "../actions";
@@ -64,6 +64,7 @@ function SessionContent() {
     const [shareToArena, setShareToArena] = useState(true);
     const [shareToStory, setShareToStory] = useState(false);
     const [showFinishModal, setShowFinishModal] = useState(false);
+    const [arenaDescription, setArenaDescription] = useState("");
     const [rpe, setRpe] = useState<number>(5);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -706,6 +707,7 @@ function SessionContent() {
                 imageUrl,
                 shareToArena,
                 shareToStory,
+                caption: arenaDescription,
                 isGuided: isGuided
             };
 
@@ -869,15 +871,15 @@ function SessionContent() {
                                                 <div className="h-px w-full sm:h-12 sm:w-px bg-white/10" />
 
                                                 {/* Ajustes Rápidos */}
-                                                <div className="flex items-center justify-between sm:justify-start gap-2.5">
+                                                <div className="flex flex-col sm:flex-row items-center gap-3">
                                                     <p className="sm:hidden text-[8px] font-black text-gray-600 uppercase tracking-widest">Sugeridos</p>
-                                                    <div className="flex gap-2">
+                                                    <div className="flex gap-2 shrink-0">
                                                         {[30, 45, 60].map(m => (
                                                             <button
                                                                 key={m}
                                                                 onClick={() => setPreStartPlan({ ...preStartPlan, duration_min: m })}
                                                                 className={clsx(
-                                                                    "w-12 h-12 rounded-2xl text-[10px] font-black uppercase transition-all flex items-center justify-center shrink-0",
+                                                                    "w-10 h-10 sm:w-12 sm:h-12 rounded-2xl text-[10px] font-black uppercase transition-all flex items-center justify-center shrink-0",
                                                                     preStartPlan.duration_min === m ? "bg-white text-black shadow-xl scale-110" : "bg-white/5 text-gray-500 hover:text-white hover:bg-white/10"
                                                                 )}
                                                             >
@@ -1214,6 +1216,8 @@ function SessionContent() {
                         time={elapsedSeconds}
                         exercises={exercises}
                         setExercises={setExercises}
+                        blocks={blocks}
+                        setBlocks={setBlocks}
                         workoutTitle={workoutTitle}
                         setWorkoutTitle={setWorkoutTitle}
                     />
@@ -1272,31 +1276,61 @@ function SessionContent() {
                         </div>
 
                         {/* Blocks Summary */}
-                        {(sportMode === 'cross_training' || sportMode === 'ocr') && blocks.length > 0 && (
+                        {(sportMode === 'cross_training' || sportMode === 'ocr' || (sportMode === 'hybrid' && blocks.length > 0)) && blocks.length > 0 && (
                             <div className="space-y-4">
                                 {blocks.map((block: any, i: number) => (
                                     <div key={i} className="bg-white/5 p-4 rounded-2xl border border-white/5">
                                         <div className="flex justify-between items-center mb-2">
                                             <h4 className="text-white font-bold uppercase text-xs tracking-wider">{block.title || `Bloque ${i + 1}`}</h4>
                                             <span className={clsx("text-[9px] font-black uppercase px-2 py-1 rounded bg-white/10", themeColor)}>
-                                                {block.type}
+                                                {block.type === 'rft' ? `${block.rounds} RDS FT` : block.type}
                                             </span>
                                         </div>
                                         <div className="grid grid-cols-2 gap-2 text-center">
-                                            {block.type === 'fortime' ? (
-                                                <div className="bg-black/20 p-2 rounded-lg">
-                                                    <p className="text-[9px] text-gray-500 font-bold uppercase">Tiempo</p>
-                                                    <p className="text-white font-mono font-bold">{block.result?.time || '--:--'}</p>
+                                            {(block.type === 'fortime' || block.type === 'rft') ? (
+                                                <div className="bg-black/20 p-2 rounded-lg flex flex-col items-center">
+                                                    <p className="text-[9px] text-gray-500 font-bold uppercase mb-1">Tiempo</p>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="--:--"
+                                                        value={block.result?.time || ''}
+                                                        onChange={(e) => {
+                                                            const newBlocks = [...blocks];
+                                                            newBlocks[i] = { ...newBlocks[i], result: { ...newBlocks[i].result, time: e.target.value } };
+                                                            setBlocks(newBlocks);
+                                                        }}
+                                                        className="bg-transparent text-white font-mono font-bold text-center outline-none w-full focus:text-brand-red transition-colors"
+                                                    />
                                                 </div>
                                             ) : (
-                                                <div className="bg-black/20 p-2 rounded-lg">
-                                                    <p className="text-[9px] text-gray-500 font-bold uppercase">Result</p>
-                                                    <p className="text-white font-mono font-bold">{block.result?.rounds || 0} rds</p>
+                                                <div className="bg-black/20 p-2 rounded-lg flex flex-col items-center">
+                                                    <p className="text-[9px] text-gray-500 font-bold uppercase mb-1">Rondas</p>
+                                                    <input
+                                                        type="number"
+                                                        placeholder="0"
+                                                        value={block.result?.rounds || ''}
+                                                        onChange={(e) => {
+                                                            const newBlocks = [...blocks];
+                                                            newBlocks[i] = { ...newBlocks[i], result: { ...newBlocks[i].result, rounds: parseInt(e.target.value) || 0 } };
+                                                            setBlocks(newBlocks);
+                                                        }}
+                                                        className="bg-transparent text-white font-mono font-bold text-center outline-none w-full focus:text-brand-red transition-colors"
+                                                    />
                                                 </div>
                                             )}
-                                            <div className="bg-black/20 p-2 rounded-lg">
-                                                <p className="text-[9px] text-gray-500 font-bold uppercase">Notas</p>
-                                                <p className="text-white font-mono text-xs truncate max-w-[100px] mx-auto">{block.notes || '-'}</p>
+                                            <div className="bg-black/20 p-2 rounded-lg flex flex-col items-center">
+                                                <p className="text-[9px] text-gray-500 font-bold uppercase mb-1">Notas</p>
+                                                <input
+                                                    type="text"
+                                                    placeholder="Ej: 60kg / RPE 8"
+                                                    value={block.notes || ''}
+                                                    onChange={(e) => {
+                                                        const newBlocks = [...blocks];
+                                                        newBlocks[i] = { ...newBlocks[i], notes: e.target.value };
+                                                        setBlocks(newBlocks);
+                                                    }}
+                                                    className="bg-transparent text-white font-mono text-xs text-center outline-none w-full focus:text-brand-red transition-colors"
+                                                />
                                             </div>
                                         </div>
                                     </div>
@@ -1359,6 +1393,18 @@ function SessionContent() {
                                         {shareToArena && <CheckCircle className="w-3 h-3" />}
                                     </div>
                                 </button>
+
+                                {shareToArena && (
+                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mb-3 ml-2">Descripción de la publicación</p>
+                                        <textarea
+                                            placeholder="¿Cómo te has sentido hoy? (Opcional)"
+                                            value={arenaDescription}
+                                            onChange={(e) => setArenaDescription(e.target.value)}
+                                            className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-white text-sm outline-none focus:border-white/20 transition-all resize-none min-h-[100px] placeholder:text-gray-600"
+                                        />
+                                    </div>
+                                )}
 
                                 <div>
                                     <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] mb-3 ml-2">Evidencia Visual (Opcional)</p>
@@ -2063,9 +2109,9 @@ function RunningView({
 
                 <div className="relative z-10 flex flex-col items-center">
                     <p className="text-blue-500 dark:text-blue-400 text-[10px] font-black uppercase tracking-[0.4em] mb-4">Ritmo Instantáneo</p>
-                    <div className={clsx("font-heading font-black italic text-8xl tracking-tighter transition-all flex items-end", theme === 'dark' ? "text-white" : "text-blue-900")}>
+                    <div className={clsx("font-heading font-black italic text-6xl xs:text-7xl sm:text-8xl tracking-tighter transition-all flex items-end", theme === 'dark' ? "text-white" : "text-blue-900")}>
                         {instantPace || "0:00"}
-                        <span className="text-xl opacity-40 ml-2 mb-4">/km</span>
+                        <span className="text-xl opacity-40 ml-2 mb-2 sm:mb-4">/km</span>
                     </div>
                     <div className="flex items-center gap-6 mt-6">
                         <div className="flex flex-col items-center">
@@ -2148,9 +2194,9 @@ function RunningView({
             )}>
                 <p className="text-gray-500 text-xs font-black uppercase tracking-[0.3em]">Distancia Total</p>
                 <div className="flex items-center justify-center gap-4">
-                    <div className="text-7xl font-heading font-black italic text-white flex items-end">
+                    <div className="text-5xl sm:text-7xl font-heading font-black italic text-white flex items-end">
                         {(distance / 1000).toFixed(2)}
-                        <span className="text-2xl text-gray-500 ml-3 mb-3">KM</span>
+                        <span className="text-xl sm:text-2xl text-gray-500 ml-3 mb-2 sm:mb-3">KM</span>
                     </div>
                 </div>
 
@@ -2908,10 +2954,12 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
     )
 }
 
-function HybridView({ time, exercises, setExercises, workoutTitle, setWorkoutTitle }: {
+function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutTitle, setWorkoutTitle }: {
     time: number;
     exercises: WorkoutExercise[];
     setExercises: (ex: WorkoutExercise[]) => void;
+    blocks: WorkoutBlock[];
+    setBlocks: (b: WorkoutBlock[]) => void;
     workoutTitle?: string;
     setWorkoutTitle?: (t: string) => void;
 }) {
@@ -2920,6 +2968,28 @@ function HybridView({ time, exercises, setExercises, workoutTitle, setWorkoutTit
     const [hybridMode, setHybridMode] = useState<'race' | 'pft' | 'any'>(searchParams.get('mode') === 'ai-coach' ? 'any' : 'race');
     const [initialized, setInitialized] = useState(false);
     const [viewingVideo, setViewingVideo] = useState<string | null>(null);
+
+    // Sync exercises to first block for 'any' mode to preserve format/type
+    useEffect(() => {
+        if (hybridMode === 'any') {
+            const newBlocks = [...blocks];
+            if (newBlocks.length === 0) {
+                newBlocks.push({
+                    id: Math.random().toString(36).substr(2, 9),
+                    type: 'fortime',
+                    title: 'Hybrid',
+                    exercises: exercises,
+                    result: { time: '', rounds: 0 }
+                });
+                setBlocks(newBlocks);
+            } else {
+                if (JSON.stringify(newBlocks[0].exercises) !== JSON.stringify(exercises)) {
+                    newBlocks[0] = { ...newBlocks[0], exercises: exercises };
+                    setBlocks(newBlocks);
+                }
+            }
+        }
+    }, [exercises, hybridMode]);
 
     // Sync session title with hybrid mode
     useEffect(() => {
@@ -3002,7 +3072,7 @@ function HybridView({ time, exercises, setExercises, workoutTitle, setWorkoutTit
                 {['race', 'pft', 'any'].map(m => (
                     <button
                         key={m}
-                        onClick={() => { setHybridMode(m as any); setExercises([]); setInitialized(false); }}
+                        onClick={() => { setHybridMode(m as any); setExercises([]); setBlocks([]); setInitialized(false); }}
                         className={clsx(
                             "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                             hybridMode === m
@@ -3016,11 +3086,93 @@ function HybridView({ time, exercises, setExercises, workoutTitle, setWorkoutTit
             </div>
 
             {hybridMode === 'any' ? (
-                <div className="mt-4">
-                    <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-4 px-2">
-                        Arma tu propio entrenamiento Híbrido seleccionando los ejercicios.
-                    </p>
-                    <GymView exercises={exercises} setExercises={setExercises} mode="hybrid" />
+                <div className="mt-4 space-y-6">
+                    {/* Format Selector */}
+                    <div className="px-2">
+                        <p className="text-gray-500 text-[8px] font-black uppercase tracking-widest mb-3">Formato de Bloque</p>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {['fortime', 'rft', 'amrap', 'emom'].map((f) => {
+                                const currentType = blocks[0]?.type || 'fortime';
+                                const isActive = currentType === f;
+                                return (
+                                    <button
+                                        key={f}
+                                        onClick={() => {
+                                            const newBlocks = [...blocks];
+                                            if (newBlocks.length === 0) {
+                                                newBlocks.push({
+                                                    id: Math.random().toString(36).substr(2, 9),
+                                                    type: f as any,
+                                                    title: 'Hybrid Bloc',
+                                                    exercises: [],
+                                                    rounds: f === 'rft' ? 3 : 1,
+                                                    result: { time: '', rounds: 0 }
+                                                });
+                                            } else {
+                                                newBlocks[0] = { ...newBlocks[0], type: f as any };
+                                                if (f === 'rft' && !newBlocks[0].rounds) newBlocks[0].rounds = 3;
+                                            }
+                                            setBlocks(newBlocks);
+                                        }}
+                                        className={clsx(
+                                            "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border",
+                                            isActive
+                                                ? "bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-950/20"
+                                                : "bg-[#111] border-white/5 text-gray-500 hover:text-white"
+                                        )}
+                                    >
+                                        {f === 'fortime' ? 'For Time' : f === 'rft' ? 'Rds for Time' : f.toUpperCase()}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Rounds Selector for RFT */}
+                    {blocks[0]?.type === 'rft' && (
+                        <div className="px-2 animate-in slide-in-from-top-2 duration-300">
+                            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+                                <div>
+                                    <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Rondas a completar</p>
+                                    <p className="text-white font-black italic uppercase text-lg">Rounds for Time</p>
+                                </div>
+                                <div className="flex items-center gap-4 bg-black/40 p-2 rounded-xl border border-white/5">
+                                    <button
+                                        onClick={() => {
+                                            const newBlocks = [...blocks];
+                                            const val = Math.max(1, (newBlocks[0].rounds || 1) - 1);
+                                            newBlocks[0] = { ...newBlocks[0], rounds: val };
+                                            setBlocks(newBlocks);
+                                        }}
+                                        className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition-all"
+                                    >
+                                        <Minus className="w-4 h-4" />
+                                    </button>
+                                    <span className="text-2xl font-mono font-black text-orange-500 min-w-[2ch] text-center">{blocks[0].rounds || 1}</span>
+                                    <button
+                                        onClick={() => {
+                                            const newBlocks = [...blocks];
+                                            const val = (newBlocks[0].rounds || 1) + 1;
+                                            newBlocks[0] = { ...newBlocks[0], rounds: val };
+                                            setBlocks(newBlocks);
+                                        }}
+                                        className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition-all"
+                                    >
+                                        <Plus className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="h-px bg-white/5 mx-2" />
+
+                    <div>
+                        <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-4 px-2">
+                            Arma tu propio entrenamiento Híbrido seleccionando los ejercicios.
+                        </p>
+                        <GymView exercises={exercises} setExercises={setExercises} mode="hybrid" />
+                    </div>
                 </div>
             ) : (
                 <div className={clsx("border p-6 rounded-[32px] shadow-sm", theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-100")}>

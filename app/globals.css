@@ -189,6 +189,10 @@ body {
   box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
 }
 
+.shadow-glow-sm {
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.3);
+}
+
 .animate-spin-slow {
   animation: spin 3s linear infinite;
 }
@@ -211,6 +215,24 @@ body {
   100% {
     transform: translateX(-100%);
   }
+}
+
+@keyframes progress-fast {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  50% {
+    transform: translateX(0%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-progress-fast {
+  animation: progress-fast 1s ease-in-out infinite;
 }
 
 .animate-marquee {
