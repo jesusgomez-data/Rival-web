@@ -73,13 +73,18 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
         // DIRECT CLIENT UPLOAD for larger files and reliability
         if (file && file.size > 0) {
             try {
-                const fileExt = file.name.split('.').pop();
+                const fileExt = file.name.split('.').pop() || (file.type.startsWith('video/') ? 'mp4' : 'jpg');
                 const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
 
+                console.log(`Starting direct upload: ${fileName} (${file.type}, ${file.size} bytes)`);
                 setUploadProgress(30);
+
                 const { data: uploadData, error: uploadError } = await supabaseClient.storage
                     .from('posts')
-                    .upload(fileName, file);
+                    .upload(fileName, file, {
+                        cacheControl: '3600',
+                        upsert: true
+                    });
 
                 if (uploadError) throw uploadError;
 
@@ -90,21 +95,20 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                 mediaUrl = publicUrl;
                 mediaType = file.type.startsWith('video/') ? 'video' : 'image';
                 setUploadProgress(80);
+                console.log("Direct upload successful:", mediaUrl);
             } catch (error) {
-                console.error("Direct upload failed:", error);
+                console.error("Direct upload failed, falling back to server action:", error);
 
                 // If direct upload fails, we check size. Server actions have ~4.5MB limit on Vercel
-                // Match the limit with next.config.ts (200MB), though Vercel might still block > 4.5MB on Serverless.
-                // But we should try if direct upload fails.
-                if (file.size > 200 * 1024 * 1024) {
-                    alert("Error al subir el archivo directamente y es demasiado grande (>200MB) para el modo de respaldo. Por favor, asegúrate de tener buena conexión o intenta con un archivo más pequeño.");
-                    setIsPosting(false);
-                    setUploadProgress(0);
-                    return;
+                if (file.size > 4.5 * 1024 * 1024) {
+                    console.warn("File is > 4.5MB and direct upload failed. Server fallback might fail on Vercel.");
                 }
 
-                alert("Error al subir el archivo directamente. Intentando vía servidor (modo de respaldo)...");
-                // Fallback will happen as mediaUrl remains null and file remains in formData
+                // We don't alert the user anymore, just try to fallback silently
+                // or if it's REALLY large (>100MB) we give a heads up
+                if (file.size > 100 * 1024 * 1024) {
+                    alert("El archivo es muy grande. Si la subida falla, intenta con una conexión más estable.");
+                }
             }
         }
 
