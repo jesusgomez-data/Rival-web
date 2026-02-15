@@ -118,14 +118,15 @@ export default function MarketingStudio() {
                             {/* Grid overlay for a tech look */}
                             <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
 
-                            {/* Logo */}
-                            <div className="relative z-10 flex items-center gap-4 mb-12">
-                                <div className="w-16 h-16 bg-brand-red rounded-2xl flex items-center justify-center shadow-lg transform -rotate-6">
-                                    <span className="text-white text-4xl font-black">R</span>
-                                </div>
-                                <div className="flex flex-col">
-                                    <span className="text-2xl font-black tracking-tighter leading-none text-white italic">RIVAL</span>
-                                    <span className="text-sm font-black text-brand-red tracking-[0.3em] leading-none mt-1">FIT</span>
+                            {/* Official Logo */}
+                            <div className="relative z-10 mb-12 flex flex-col items-center">
+                                <img
+                                    src="/logo_transparent.svg"
+                                    alt="Rival Fit Official Logo"
+                                    className="w-32 h-32 object-contain filter drop-shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                                />
+                                <div className="mt-2 text-center">
+                                    <span className="text-xl font-black tracking-[0.2em] text-white italic uppercase">RIVAL</span>
                                 </div>
                             </div>
 
