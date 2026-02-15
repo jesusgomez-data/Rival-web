@@ -41,7 +41,7 @@ export default async function LeaderboardPage() {
     }
 
     return (
-        <div className="max-w-6xl mx-auto space-y-8 sm:space-y-12 pb-20 px-5 sm:px-0">
+        <div className="max-w-6xl mx-auto space-y-8 sm:space-y-12 pb-20 pl-0 pr-3 sm:px-0">
             {/* Header Section */}
             <div className="relative p-8 sm:p-12 rounded-[40px] sm:rounded-[50px] bg-black border border-white/5 overflow-hidden shadow-2xl group/header">
                 <Trophy className="absolute -right-16 -top-16 w-60 h-60 sm:w-80 sm:h-80 text-brand-red opacity-5 rotate-12 group-hover/header:rotate-[15deg] group-hover/header:scale-110 transition-all duration-1000" />
@@ -140,7 +140,7 @@ export default async function LeaderboardPage() {
                                 key={challenge.id}
                                 challenge={challenge}
                                 userId={user?.id}
-                                isParticipatingInitial={challenge.participants?.includes(user?.id)}
+                                isParticipatingInitial={challenge.participants?.some((p: any) => p.user_id === user?.id)}
                             />
                         )) : (
                             <p className="text-gray-500 text-xs px-4">No hay retos activos en este momento.</p>

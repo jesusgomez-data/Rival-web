@@ -1,10 +1,10 @@
 "use client";
 
-import { getMissions, getRecentPRs, getUserProfile, getScheduledWorkouts, getWorkoutHistory, getPublishedResults } from "./actions";
+import { getMissions, getRecentPRs, getUserProfile, getScheduledWorkouts, getWorkoutHistory, getPublishedResults, deleteScheduledWorkout } from "./actions";
 import { type TrainingPlan } from "./types";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy } from "lucide-react";
+import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy, X } from "lucide-react";
 import Image from "next/image";
 
 export default function TrainingPage() {
@@ -231,6 +231,119 @@ export default function TrainingPage() {
                             ))}
                         </div>
                     </div>
+
+                    {/* Scheduled Workouts Section */}
+                    {scheduled.length > 0 && (
+                        <div className="bg-gradient-to-br from-blue-900/20 to-brand-gray border border-blue-500/20 rounded-3xl p-6 relative overflow-hidden">
+                            <div className="absolute -right-20 -top-20 w-60 h-60 bg-blue-500/5 rounded-full blur-[80px]"></div>
+
+                            <div className="relative z-10">
+                                <div className="flex items-center justify-between mb-6">
+                                    <h3 className="font-heading font-bold text-foreground flex items-center gap-2">
+                                        <Calendar className="w-5 h-5 text-blue-400" /> Entrenamientos Programados
+                                    </h3>
+                                    <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded font-bold uppercase tracking-widest">
+                                        {scheduled.length} Pendiente{scheduled.length !== 1 ? 's' : ''}
+                                    </span>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {scheduled.map((workout: any, idx: number) => {
+                                        const workoutDate = new Date(workout.scheduled_date);
+                                        const isToday = workoutDate.toDateString() === new Date().toDateString();
+                                        const isPast = workoutDate < new Date() && !isToday;
+
+                                        return (
+                                            <div
+                                                key={idx}
+                                                className={`bg-black/40 border rounded-2xl p-5 transition-all hover:border-blue-500/30 ${isToday ? 'border-brand-red/30 shadow-[0_0_15px_rgba(220,38,38,0.1)]' :
+                                                    isPast ? 'border-yellow-500/20' :
+                                                        'border-white/5'
+                                                    }`}
+                                            >
+                                                <div className="flex items-start justify-between mb-4">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <h4 className="font-bold text-white text-base">{workout.title}</h4>
+                                                            {isToday && (
+                                                                <span className="text-[8px] bg-brand-red text-white px-2 py-0.5 rounded font-black uppercase tracking-wider">
+                                                                    HOY
+                                                                </span>
+                                                            )}
+                                                            {isPast && (
+                                                                <span className="text-[8px] bg-yellow-500/20 text-yellow-500 px-2 py-0.5 rounded font-black uppercase tracking-wider">
+                                                                    PENDIENTE
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <p className="text-xs text-gray-500 font-bold uppercase tracking-widest">
+                                                            📅 {workoutDate.toLocaleDateString('es-ES', {
+                                                                weekday: 'long',
+                                                                year: 'numeric',
+                                                                month: 'long',
+                                                                day: 'numeric'
+                                                            })}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Exercise Preview */}
+                                                <div className="space-y-2 mb-4 bg-white/5 rounded-xl p-4 border border-white/5">
+                                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-2">
+                                                        Vista Previa del WOD:
+                                                    </p>
+                                                    {workout.exercises && workout.exercises.slice(0, 4).map((ex: any, exIdx: number) => (
+                                                        <div key={exIdx} className="flex items-center gap-2 text-xs text-gray-400">
+                                                            <div className="w-1 h-1 rounded-full bg-blue-400"></div>
+                                                            <span className="font-bold text-gray-300">{ex.name}</span>
+                                                            {ex.sets && ex.reps && (
+                                                                <span className="text-gray-500">• {ex.sets} x {ex.reps}</span>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                    {workout.exercises && workout.exercises.length > 4 && (
+                                                        <p className="text-[10px] text-gray-600 italic">
+                                                            +{workout.exercises.length - 4} ejercicios más...
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                {/* Action Buttons */}
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <Link
+                                                        href={`/dashboard/training/session?mode=scheduled&workout=${encodeURIComponent(JSON.stringify({
+                                                            title: workout.title,
+                                                            exercises: workout.exercises
+                                                        }))}`}
+                                                        className="flex items-center justify-center gap-2 bg-brand-red text-white py-2.5 rounded-lg text-xs font-black uppercase transition-all hover:bg-red-600 hover:shadow-[0_0_15px_rgba(220,38,38,0.3)]"
+                                                    >
+                                                        <Play className="w-3 h-3 fill-current" /> Iniciar Ahora
+                                                    </Link>
+                                                    <button
+                                                        onClick={async () => {
+                                                            if (confirm('¿Eliminar este entrenamiento programado?')) {
+                                                                const result = await deleteScheduledWorkout(workout.id);
+                                                                if (result.success) {
+                                                                    // Refresh the scheduled workouts list
+                                                                    const updatedScheduled = await getScheduledWorkouts();
+                                                                    setScheduled(updatedScheduled);
+                                                                } else {
+                                                                    alert('Error al eliminar el entrenamiento. Inténtalo de nuevo.');
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="flex items-center justify-center gap-2 bg-white/5 border border-white/10 text-gray-400 py-2.5 rounded-lg text-xs font-black uppercase transition-all hover:bg-white/10 hover:text-white"
+                                                    >
+                                                        <X className="w-3 h-3" /> Cancelar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Today's Recommended Routine */}
                     <Link

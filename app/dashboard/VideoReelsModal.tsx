@@ -271,7 +271,22 @@ function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: bo
                     <span className="text-white text-xs font-bold shadow-sm">{post.comments_count || 0}</span>
                 </div>
 
-                <button className="p-3 rounded-full bg-white/10 backdrop-blur-md text-white">
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (navigator.share) {
+                            navigator.share({
+                                title: `Watch this workout by @${post.profiles?.username} on Rival Fit`,
+                                text: post.caption || '',
+                                url: window.location.href,
+                            }).catch(console.error);
+                        } else {
+                            navigator.clipboard.writeText(window.location.href);
+                            alert("Link copied to clipboard!");
+                        }
+                    }}
+                    className="p-3 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-colors"
+                >
                     <Share2 className="w-6 h-6" />
                 </button>
             </div>

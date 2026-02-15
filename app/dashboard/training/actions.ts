@@ -191,6 +191,7 @@ export async function saveWorkout(workoutData: any) {
     let totalVolume = 0
     let sessionMaxWeight = 0
     let hasAtLeastOnePR = false
+    const prAchievements: any[] = []
 
     // Fetch existing PRs for these exercises
     const exerciseNames = [...new Set(workoutData.exercises.map((ex: any) => ex.name))]
@@ -219,6 +220,7 @@ export async function saveWorkout(workoutData: any) {
         if (!exercise.name) continue; // Skip if no name
 
         const currentExerciseMax = prMap[exercise.name] || 0
+        let maxWeightInSessionForExercise = 0
         let isExercisePR = false
 
         for (const set of exercise.sets) {
@@ -228,7 +230,8 @@ export async function saveWorkout(workoutData: any) {
             const setOrder: number = parseInt(set.order) || (setsToInsert.length + 1)
 
             totalVolume += weight * reps
-            if (weight > sessionMaxWeight) sessionMaxWeight = weight;
+            if (weight > sessionMaxWeight) sessionMaxWeight = weight
+            if (weight > maxWeightInSessionForExercise) maxWeightInSessionForExercise = weight
 
             const isSetPR = weight > currentExerciseMax
             if (isSetPR) {
@@ -243,6 +246,15 @@ export async function saveWorkout(workoutData: any) {
                 weight_kg: weight,
                 reps: reps,
                 is_pr: isSetPR
+            })
+        }
+
+        if (isExercisePR && currentExerciseMax > 0) {
+            prAchievements.push({
+                name: exercise.name,
+                previousMax: currentExerciseMax,
+                newMax: maxWeightInSessionForExercise,
+                improvement: maxWeightInSessionForExercise - currentExerciseMax
             })
         }
     }
@@ -293,6 +305,7 @@ export async function saveWorkout(workoutData: any) {
                     workout_id: workout.id,
                     caption: finalCaption,
                     media_url: workoutData.imageUrl || null,
+                    media_type: workoutData.mediaType || 'image',
                 });
         }
 
@@ -303,7 +316,7 @@ export async function saveWorkout(workoutData: any) {
                 .insert({
                     user_id: user.id,
                     media_url: workoutData.imageUrl,
-                    media_type: 'image',
+                    media_type: workoutData.mediaType || 'image',
                     duration_seconds: 15,
                     expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
                     metadata: {
@@ -328,7 +341,7 @@ export async function saveWorkout(workoutData: any) {
     revalidatePath('/dashboard')
     revalidatePath('/dashboard/community')
     revalidatePath('/dashboard/training')
-    return { success: true }
+    return { success: true, prAchievements }
 }
 
 export async function uploadWorkoutMedia(formData: FormData) {
@@ -656,6 +669,26 @@ export async function scheduleWorkout(data: { title: string, date: string, exerc
     if (error) {
         console.error('Error scheduling workout:', error)
         return { error: 'Failed to schedule workout' }
+    }
+
+    revalidatePath('/dashboard/training')
+    return { success: true }
+}
+
+export async function deleteScheduledWorkout(workoutId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
+
+    const { error } = await supabase
+        .from('scheduled_workouts')
+        .delete()
+        .eq('id', workoutId)
+        .eq('user_id', user.id) // Security: only delete own workouts
+
+    if (error) {
+        console.error('Error deleting scheduled workout:', error)
+        return { error: 'Failed to delete workout' }
     }
 
     revalidatePath('/dashboard/training')

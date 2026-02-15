@@ -2,7 +2,11 @@ const https = require("https");
 const fs = require("fs");
 
 async function test() {
-    const API_KEY = "AIzaSyAA3BozjosnhGxvY2zbUkUI409CpuB_IvE".trim();
+    const API_KEY = (process.env.GOOGLE_GENAI_API_KEY || "").trim();
+    if (!API_KEY) {
+        console.log("No API Key found. Set GOOGLE_GENAI_API_KEY env var.");
+        return;
+    }
     const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${API_KEY}`;
 
     https.get(url, (res) => {

@@ -13,6 +13,7 @@ export async function searchGlobal(query: string) {
         .from('profiles')
         .select('id, username, full_name, avatar_url')
         .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
+        .neq('username', 'rivalfit') // Exclude official account
         .limit(20);
 
     // 2. Search Gyms

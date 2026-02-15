@@ -57,7 +57,7 @@ export default function FollowButton({ targetId, isFollowingInitial, variant = '
             onClick={handleToggle}
             disabled={isPending}
             className={clsx(
-                "text-xs font-bold px-3 py-1.5 rounded-full transition-all flex items-center gap-1",
+                "text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-full transition-all flex items-center gap-1 whitespace-nowrap",
                 isFollowing
                     ? "bg-white/5 text-gray-500 border border-white/10"
                     : "bg-brand-red/10 text-brand-red border border-brand-red/20 hover:bg-brand-red hover:text-white"

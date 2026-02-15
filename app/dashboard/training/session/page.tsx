@@ -12,6 +12,7 @@ import type { TrainingPlan, WorkoutBlock, WorkoutExercise, WorkoutSet, SportType
 import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import { useTheme } from "../../../ThemeContext";
+import PRCelebrationModal from "./PRCelebrationModal";
 
 // Helper for real distance calculation (Haversine Formula)
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -68,6 +69,7 @@ function SessionContent() {
     const [rpe, setRpe] = useState<number>(5);
     const [imageUrl, setImageUrl] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
     const [targetDuration, setTargetDuration] = useState<number | null>(null);
     const [viewingVideo, setViewingVideo] = useState<string | null>(null);
     const [timerMode, setTimerMode] = useState<'up' | 'down'>('up');
@@ -77,11 +79,25 @@ function SessionContent() {
     const [userTier, setUserTier] = useState<string>('free');
     const [gpsStatus, setGpsStatus] = useState<'idle' | 'searching' | 'tracking'>('idle');
     const lastPosRef = useRef<{ lat: number, lon: number, alt?: number | null } | null>(null);
+    const lastPaceCalcTimeRef = useRef<number>(Date.now());
+    const lastPaceCalcDistRef = useRef<number>(0);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [manualTimeInput, setManualTimeInput] = useState<string>("");
     const [isEditingTime, setIsEditingTime] = useState(false);
     const [showControls, setShowControls] = useState(true);
     const lastScrollY = useRef(0);
+    const [prAchievements, setPrAchievements] = useState<any[]>([]);
+    const [userName, setUserName] = useState<string>("Atleta");
+
+    // Video Trimming State
+    const [isVideoTrimming, setIsVideoTrimming] = useState(false);
+    const [trimmerVideoUrl, setTrimmerVideoUrl] = useState<string | null>(null);
+    const [trimStart, setTrimStart] = useState(0);
+    const [isTrimmingLoading, setIsTrimmingLoading] = useState(false);
+    const [videoDuration, setVideoDuration] = useState(0);
+    const [pendingFile, setPendingFile] = useState<File | null>(null);
+    const [trimProgress, setTrimProgress] = useState(0);
+    const trimmerVideoRef = useRef<HTMLVideoElement>(null);
 
     // Running Specific State
     const [runPath, setRunPath] = useState<{ lat: number, lon: number }[]>([]);
@@ -98,7 +114,10 @@ function SessionContent() {
                 getUserProfile(),
                 getGuidedWorkoutsCount()
             ]);
-            if (profile) setUserTier(profile.subscription_tier || 'free');
+            if (profile) {
+                setUserTier(profile.subscription_tier || 'free');
+                setUserName(profile.full_name || profile.username || "Atleta");
+            }
             setGuidedCount(count);
         };
         fetchLimits();
@@ -133,10 +152,7 @@ function SessionContent() {
         return () => container.removeEventListener('scroll', handleScroll);
     }, [mounted, sportMode]);
 
-    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
+    const startUpload = async (file: File) => {
         setIsUploading(true);
         const formData = new FormData();
         formData.append('file', file);
@@ -146,10 +162,161 @@ function SessionContent() {
         if (result.success && result.url) {
             // @ts-ignore
             setImageUrl(result.url);
+            setMediaType(file.type.startsWith('video/') ? 'video' : 'image');
         } else {
-            alert("Error al subir imagen");
+            alert("Error al subir archivo");
         }
         setIsUploading(false);
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Video Duration Check & Trimming Trigger
+        if (file.type.startsWith('video/')) {
+            const docVideo = document.createElement('video');
+            docVideo.preload = 'metadata';
+            docVideo.onloadedmetadata = () => {
+                const dur = docVideo.duration;
+                setVideoDuration(dur);
+                window.URL.revokeObjectURL(docVideo.src);
+
+                if (dur > 60) {
+                    setTrimStart(0);
+                    setPendingFile(file);
+                    setTrimmerVideoUrl(URL.createObjectURL(file));
+                    setIsVideoTrimming(true);
+                    return;
+                }
+                // If < 60s, proceed to upload
+                startUpload(file);
+            };
+            docVideo.onerror = () => {
+                alert("Error al procesar el video.");
+            };
+            docVideo.src = URL.createObjectURL(file);
+            return;
+        }
+
+        startUpload(file);
+    };
+
+    const processTrimming = async () => {
+        if (!trimmerVideoRef.current || !trimmerVideoUrl) return;
+
+        setIsTrimmingLoading(true);
+        setTrimProgress(0);
+        const video = trimmerVideoRef.current;
+
+        try {
+            const captureStream = (video as any).captureStream || (video as any).mozCaptureStream;
+
+            if (!captureStream) {
+                alert("Tu navegador no soporta el recorte de video directo. Por favor, intenta subir un video de menos de 1 minuto.");
+                setIsTrimmingLoading(false);
+                setIsVideoTrimming(false);
+                setTrimmerVideoUrl(null);
+                return;
+            }
+
+            const stream = captureStream.call(video);
+            const supportedTypes = ['video/mp4', 'video/webm', 'video/x-matroska', 'video/ogg'];
+            let mimeType = '';
+            for (const type of supportedTypes) {
+                if (MediaRecorder.isTypeSupported(type)) {
+                    mimeType = type;
+                    break;
+                }
+            }
+
+            if (!mimeType) {
+                alert("Formato de video no compatible para recorte en este navegador.");
+                setIsTrimmingLoading(false);
+                return;
+            }
+
+            const recorder = new MediaRecorder(stream, { mimeType });
+            const chunks: Blob[] = [];
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunks.push(e.data);
+            };
+
+            let safetyTimeout: any;
+            let progressInterval: any;
+
+            recorder.onstop = () => {
+                if (safetyTimeout) clearTimeout(safetyTimeout);
+                if (progressInterval) clearInterval(progressInterval);
+
+                if (chunks.length === 0) {
+                    alert("Error: No se capturaron datos del video. Por favor, intenta de nuevo y asegúrate de que el video se reproduce correctamente.");
+                    setIsTrimmingLoading(false);
+                    return;
+                }
+
+                const blob = new Blob(chunks, { type: mimeType });
+                const extension = mimeType.split('/')[1]?.split(';')[0] || 'webm';
+                const fileName = pendingFile ? pendingFile.name.replace(/\.[^/.]+$/, "") : "trimmed_video";
+                const trimmedFile = new File([blob], `${fileName}_trimmed.${extension}`, { type: mimeType });
+
+                startUpload(trimmedFile);
+
+                setIsVideoTrimming(false);
+                setTrimmerVideoUrl(null);
+                setIsTrimmingLoading(false);
+                setTrimProgress(0);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+            };
+
+            const recordingDuration = Math.min(60, (video.duration - trimStart));
+
+            const startRecording = () => {
+                video.onseeked = null;
+                video.play().then(() => {
+                    recorder.start();
+
+                    const startTime = Date.now();
+                    progressInterval = setInterval(() => {
+                        const elapsed = (Date.now() - startTime) / 1000;
+                        const percent = Math.min(99, (elapsed / recordingDuration) * 100);
+                        setTrimProgress(percent);
+                    }, 500);
+
+                    safetyTimeout = setTimeout(() => {
+                        if (recorder.state === 'recording') {
+                            recorder.stop();
+                            video.pause();
+                        }
+                    }, (recordingDuration + 1) * 1000);
+
+                    video.onended = () => {
+                        if (recorder.state === 'recording') {
+                            recorder.stop();
+                        }
+                    };
+                }).catch(err => {
+                    console.error("Play failed during trimming:", err);
+                    alert("No se pudo iniciar la captura del video. Intenta presionar 'Play' manualmente si es necesario.");
+                    setIsTrimmingLoading(false);
+                });
+            };
+
+            // Prepare for seek
+            video.muted = true;
+            video.currentTime = trimStart;
+
+            // Check if seek is needed
+            if (Math.abs(video.currentTime - trimStart) < 0.1) {
+                startRecording();
+            } else {
+                video.onseeked = startRecording;
+            }
+
+        } catch (err) {
+            console.error("Trimming error:", err);
+            setIsTrimmingLoading(false);
+        }
     };
 
     const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
@@ -160,30 +327,56 @@ function SessionContent() {
     // Real-time GPS Tracking Logic
     useEffect(() => {
         let watchId: number;
-        // Fix: Removed !isPaused so GPS can warm up/search even before start
         if (gpsStatus !== 'idle' && typeof window !== 'undefined' && 'geolocation' in navigator) {
             watchId = navigator.geolocation.watchPosition(
                 (pos) => {
                     const { latitude, longitude, accuracy, speed, altitude, altitudeAccuracy } = pos.coords;
 
-                    if (gpsStatus === 'searching') {
+                    // Transition from searching to tracking only if accuracy is acceptable (< 30m)
+                    if (gpsStatus === 'searching' && accuracy < 30) {
                         setGpsStatus('tracking');
+                        // In a real app we might play a sound here
                     }
 
-                    // Strict accuracy and noise filtering
-                    if (accuracy > 50) return;
+                    // Strict accuracy and noise filtering - skip points with > 40m error
+                    if (accuracy > 40) return;
 
-                    // Always update Instant Pace/Speed if available (feedback for user)
+                    // Update Instant Pace/Speed
                     if (speed !== null && speed >= 0) {
                         const kmh = speed * 3.6;
                         setInstantSpeed(kmh);
-                        if (kmh > 1) { // Only calculate pace if moving faster than 1km/h
+                        if (kmh > 1.2) { // Only calculate pace if moving significantly
                             const minPerKm = 60 / kmh;
                             const pMin = Math.floor(minPerKm);
                             const pSec = Math.floor((minPerKm - pMin) * 60);
                             setInstantPace(`${pMin}:${pSec < 10 ? '0' + pSec : pSec}`);
                         } else {
                             setInstantPace("0:00");
+                        }
+                    } else {
+                        // Fallback: Calculate pace based on distance covered in the last few seconds
+                        const now = Date.now();
+                        const timeDiff = (now - lastPaceCalcTimeRef.current) / 1000; // seconds
+                        if (timeDiff >= 3) {
+                            const distDiff = runDistance - lastPaceCalcDistRef.current;
+                            if (distDiff > 2) {
+                                const mPerSec = distDiff / timeDiff;
+                                const kmh = mPerSec * 3.6;
+                                setInstantSpeed(kmh);
+                                if (kmh > 1.2) {
+                                    const minPerKm = 60 / kmh;
+                                    const pMin = Math.floor(minPerKm);
+                                    const pSec = Math.floor((minPerKm - pMin) * 60);
+                                    setInstantPace(`${pMin}:${pSec < 10 ? '0' + pSec : pSec}`);
+                                } else {
+                                    setInstantPace("0:00");
+                                }
+                            } else if (distDiff < 0.5) {
+                                setInstantPace("0:00");
+                                setInstantSpeed(0);
+                            }
+                            lastPaceCalcTimeRef.current = now;
+                            lastPaceCalcDistRef.current = runDistance;
                         }
                     }
 
@@ -196,23 +389,22 @@ function SessionContent() {
                         );
 
                         // Only accumulate distance/path if NOT PAUSED and valid movement
-                        if (!isPaused && d > 3 && d < 25) {
+                        // Filter out jitter (d < 2m) and high-speed anomalies (d > 30m roughly 100km/h)
+                        if (!isPaused && gpsStatus === 'tracking' && d > 2 && d < 30) {
                             setRunDistance(prev => prev + d);
                             setRunPath(prev => [...prev, { lat: latitude, lon: longitude }]);
 
-                            // Real Altitude Logic with Simulation Fallback
-                            if (altitude !== null && (!altitudeAccuracy || altitudeAccuracy < 30)) {
-                                // Only accumulate positive gain
+                            // Altitude Logic with filter
+                            if (altitude !== null && (!altitudeAccuracy || altitudeAccuracy < 25)) {
                                 if (lastPosRef.current.alt !== undefined && lastPosRef.current.alt !== null) {
                                     const diff = altitude - lastPosRef.current.alt;
-                                    if (diff > 0.5 && diff < 50) { // Filter wild altitude jumps
+                                    if (diff > 0.4 && diff < 15) {
                                         setElevationGain(prev => prev + diff);
                                     }
                                 }
-                            } else {
-                                // Fallback for devices without barometer/altitude or poor signal (Web simulation)
-                                // Only simulate if moving
-                                if (Math.random() > 0.9) setElevationGain(prev => prev + 1);
+                            } else if (speed && speed > 1) {
+                                // Subtle random gain simulation for devices without altitude data
+                                if (Math.random() > 0.96) setElevationGain(prev => prev + 1);
                             }
                         }
                     }
@@ -220,10 +412,9 @@ function SessionContent() {
                 },
                 (err) => {
                     console.error("GPS Tracker Error:", err);
-                    // Don't set to idle immediately on transient errors, maybe specific codes
-                    if (err.code === 1) setGpsStatus('idle'); // Permission denied
+                    if (err.code === 1) setGpsStatus('idle');
                 },
-                { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 } // Reduced timeout for faster failure response
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
             );
         } else {
             lastPosRef.current = null;
@@ -232,7 +423,7 @@ function SessionContent() {
         return () => {
             if (watchId) navigator.geolocation.clearWatch(watchId);
         };
-    }, [gpsStatus, isPaused]);
+    }, [gpsStatus, isPaused, runDistance]);
 
     // Cross Training/Hybrid State
     type BlockType = 'fortime' | 'amrap' | 'emom' | 'tabata' | 'other';
@@ -649,6 +840,11 @@ function SessionContent() {
         return [h, m, s].map(v => v < 10 ? "0" + v : v).filter((v, i) => v !== "00" || i > 0).join(":");
     };
 
+    const closeCelebration = () => {
+        setPrAchievements([]);
+        router.push('/dashboard/training/logs');
+    };
+
     const handleFinish = async () => {
         setIsSaving(true);
         try {
@@ -705,6 +901,7 @@ function SessionContent() {
                 },
                 locationName,
                 imageUrl,
+                mediaType,
                 shareToArena,
                 shareToStory,
                 caption: arenaDescription,
@@ -714,13 +911,20 @@ function SessionContent() {
             const result = await saveWorkout(payload);
             // @ts-ignore
             if (result?.success) {
-                router.push('/dashboard/training/logs');
+                // @ts-ignore
+                if (result.prAchievements && result.prAchievements.length > 0) {
+                    // @ts-ignore
+                    setPrAchievements(result.prAchievements);
+                } else {
+                    router.push('/dashboard/training/logs');
+                }
             } else {
                 // @ts-ignore
                 alert("Error al guardar: " + (result?.error || "Unknown"));
             }
         } catch (e) {
             console.error(e);
+            alert("Error inesperado al guardar: " + (e instanceof Error ? e.message : String(e)));
         }
         setIsSaving(false);
     };
@@ -1003,6 +1207,9 @@ function SessionContent() {
                     timerMode={timerMode}
                     rpe={rpe}
                     setRpe={setRpe}
+                    prAchievements={prAchievements}
+                    closeCelebration={closeCelebration}
+                    userName={userName}
                 />
                 {viewingVideo && <VideoModal url={viewingVideo} onClose={() => setViewingVideo(null)} />}
 
@@ -1458,8 +1665,9 @@ function SessionContent() {
                         <div className="pb-12">
                             <button
                                 onClick={handleFinish}
+                                disabled={isSaving}
                                 className={clsx(
-                                    "w-full py-6 rounded-[32px] text-white font-heading font-black italic text-2xl uppercase tracking-tighter hover:scale-[1.02] active:scale-95 transition-all shadow-glow flex items-center justify-center gap-3",
+                                    "w-full py-6 rounded-[32px] text-white font-heading font-black italic text-2xl uppercase tracking-tighter hover:scale-[1.02] active:scale-95 transition-all shadow-glow flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed",
                                     sportMode === 'running' ? 'bg-blue-600' :
                                         sportMode === 'hybrid' ? 'bg-yellow-600' :
                                             sportMode === 'cross_training' ? 'bg-orange-600' :
@@ -1467,7 +1675,7 @@ function SessionContent() {
                                                     sportMode === 'other' ? 'bg-gray-600' : 'bg-brand-red'
                                 )}
                             >
-                                <Save className="w-6 h-6" /> FINALIZAR SESIÓN
+                                {isSaving ? <Loader2 className="w-8 h-8 animate-spin" /> : <><Save className="w-6 h-6" /> FINALIZAR SESIÓN</>}
                             </button>
                         </div>
                     </>
@@ -1513,7 +1721,82 @@ function SessionContent() {
                     </div>
                 </div>
             )}
-        </div>
+            {/* Video Trimmer Modal */}
+            {
+                isVideoTrimming && trimmerVideoUrl && (
+                    <div className="fixed inset-0 z-[500] bg-black/98 flex items-center justify-center p-4 backdrop-blur-xl overflow-y-auto">
+                        <div className="bg-[#111] border border-white/10 w-full max-w-md rounded-[40px] p-6 md:p-10 shadow-2xl relative my-auto">
+                            <button
+                                onClick={() => { setIsVideoTrimming(false); setTrimmerVideoUrl(null); }}
+                                className="absolute top-6 right-6 text-gray-400 hover:text-white bg-white/5 p-2 rounded-full transition-colors"
+                            >
+                                <X className="w-5 h-5 md:w-6 md:h-6" />
+                            </button>
+
+                            <div className="mb-6 md:mb-8 text-center px-4">
+                                <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tighter">Recortar Video</h3>
+                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Tu video dura {Math.round(videoDuration)}s - Recorta a máximo 60s</p>
+                            </div>
+
+                            <div className="relative aspect-square bg-black rounded-3xl overflow-hidden border border-white/10 mb-6 md:mb-8 shadow-inner">
+                                <video
+                                    ref={trimmerVideoRef}
+                                    src={trimmerVideoUrl}
+                                    className="w-full h-full object-contain"
+                                    loop
+                                    muted
+                                    playsInline
+                                />
+                            </div>
+
+                            <div className="space-y-6">
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-end px-1">
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Punto de inicio</label>
+                                        <span className="text-xl font-black text-brand-red italic tracking-tighter">{Math.floor(trimStart)}s</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max={Math.max(0, videoDuration - 60)}
+                                        step="0.5"
+                                        value={trimStart}
+                                        onChange={(e) => {
+                                            const val = parseFloat(e.target.value);
+                                            setTrimStart(val);
+                                            if (trimmerVideoRef.current) trimmerVideoRef.current.currentTime = val;
+                                        }}
+                                        className="w-full accent-brand-red h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
+                                    />
+                                    <div className="flex justify-between text-[8px] font-bold text-gray-600 uppercase tracking-widest px-1">
+                                        <span>Inicio</span>
+                                        <span>Fin - 60s</span>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={processTrimming}
+                                    disabled={isTrimmingLoading}
+                                    className="w-full bg-brand-red text-white py-4 md:py-5 rounded-2xl font-black uppercase tracking-widest text-xs md:text-sm shadow-glow transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 relative overflow-hidden"
+                                >
+                                    {isTrimmingLoading ? (
+                                        <>
+                                            <div className="absolute inset-0 bg-white/10" style={{ width: `${trimProgress}%`, transition: 'width 0.3s ease' }} />
+                                            <div className="flex items-center gap-3 relative z-10">
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                                Procesando {Math.round(trimProgress)}%
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <><Activity className="w-4 h-4 md:w-5 md:h-5" /> Confirmar Recorte</>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        </div >
     );
 }
 
@@ -2049,198 +2332,186 @@ function RunningView({
     const { theme } = useTheme();
     const [view, setView] = useState<'stats' | 'zones'>('stats');
 
-    const avgPace = distance > 0 ? (time / 60) / (distance / 1000) : 0;
+    // Smooth average pace calculation
+    const avgPace = distance > 10 ? (time / 60) / (distance / 1000) : 0;
     const avgPaceMin = Math.floor(avgPace);
-    const avgPaceSec = Math.floor((avgPace - avgPaceMin) * 60);
+    const avgPaceSec = Math.round((avgPace - avgPaceMin) * 60);
 
     const zones = [
-        { n: 1, label: 'Calentamiento', color: 'bg-blue-500', range: '< 130' },
-        { n: 2, label: 'Quemagrasas', color: 'bg-green-500', range: '130-145' },
-        { n: 3, label: 'Aeróbico', color: 'bg-yellow-500', range: '145-160' },
-        { n: 4, label: 'Anaeróbico', color: 'bg-orange-500', range: '160-170' },
-        { n: 5, label: 'Esfuerzo Máx', color: 'bg-red-500', range: '> 170' },
+        { n: 1, label: 'Warm up', color: 'bg-blue-500', range: '< 130' },
+        { n: 2, label: 'Fat Burn', color: 'bg-green-500', range: '130-145' },
+        { n: 3, label: 'Aerobic', color: 'bg-yellow-500', range: '145-160' },
+        { n: 4, label: 'Threshold', color: 'bg-orange-500', range: '160-170' },
+        { n: 5, label: 'Max Effort', color: 'bg-red-500', range: '> 170' },
     ];
 
     return (
-        <div className="space-y-6 animate-in slide-in-from-bottom-10 fade-in duration-500 pb-32">
-            {/* GPS & Connectivity Section */}
-            <div className="grid grid-cols-2 gap-3 mb-6">
+        <div className="space-y-6 animate-in slide-in-from-bottom-10 fade-in duration-700 pb-32 max-w-2xl mx-auto">
+            {/* Action Bar (GPS & Sync) */}
+            <div className="grid grid-cols-2 gap-3">
                 <button
                     onClick={() => setGpsStatus(gpsStatus === 'idle' ? 'searching' : 'idle')}
                     className={clsx(
-                        "p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all",
+                        "group relative overflow-hidden p-5 rounded-[28px] border transition-all duration-300",
                         gpsStatus !== 'idle'
-                            ? (gpsStatus === 'tracking' ? "bg-blue-600 border-transparent text-white shadow-lg shadow-blue-900/50" : "bg-blue-600/50 border-transparent text-white animate-pulse")
-                            : (theme === 'dark' ? "bg-[#111] border-white/10 text-gray-400 hover:bg-white/5" : "bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 shadow-sm")
+                            ? (gpsStatus === 'tracking' ? "bg-blue-600 border-transparent text-white shadow-xl shadow-blue-600/20" : "bg-blue-600/10 border-blue-500/30 text-blue-500 animate-pulse")
+                            : "bg-white/5 border-white/10 text-gray-400 hover:border-white/20"
                     )}
                 >
-                    <div className={clsx("w-10 h-10 rounded-full flex items-center justify-center mb-1", gpsStatus !== 'idle' ? "bg-white/20" : (theme === 'dark' ? "bg-white/5" : "bg-gray-200"))}>
+                    <div className="flex flex-col items-center gap-1.5 relative z-10">
                         {gpsStatus === 'searching' ? <Loader2 className="w-5 h-5 animate-spin" /> :
-                            gpsStatus === 'tracking' ? <Activity className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
+                            gpsStatus === 'tracking' ? <Activity className="w-5 h-5" /> : <MapPin className="w-5 h-5 opacity-50" />}
+                        <span className="text-[9px] font-black uppercase tracking-[0.2em]">
+                            {gpsStatus === 'searching' ? 'Enlazando GPS...' :
+                                gpsStatus === 'tracking' ? 'GPS Conectado' : 'Conectar GPS'}
+                        </span>
                     </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest">
-                        {gpsStatus === 'searching' ? 'BUSCANDO...' :
-                            gpsStatus === 'tracking' ? 'GPS ACTIVO' : 'GPS MÓVIL'}
-                    </span>
                 </button>
 
                 <button
-                    className={clsx(
-                        "p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all group relative overflow-hidden",
-                        theme === 'dark' ? "border-white/10 bg-[#111] text-gray-400 hover:bg-white/5" : "border-gray-200 bg-gray-50 text-gray-600 hover:bg-gray-100 shadow-sm"
-                    )}
                     onClick={openSync}
+                    className="p-5 rounded-[28px] border border-white/10 bg-white/5 text-gray-400 hover:border-white/20 transition-all flex flex-col items-center gap-1.5"
                 >
-                    <div className="flex -space-x-2 mb-1">
-                        <div className={clsx("w-8 h-8 rounded-full bg-orange-500 border-2 flex items-center justify-center text-[8px] font-black text-white", theme === 'dark' ? "border-[#111]" : "border-gray-50")}>S</div>
-                        <div className={clsx("w-8 h-8 rounded-full bg-blue-500 border-2 flex items-center justify-center text-[8px] font-black text-white", theme === 'dark' ? "border-[#111]" : "border-gray-50")}>G</div>
-                        <div className={clsx("w-8 h-8 rounded-full bg-white border-2 flex items-center justify-center text-[8px] font-black text-black", theme === 'dark' ? "border-[#111]" : "border-gray-50")}>W</div>
+                    <div className="flex -space-x-1.5 mb-0.5">
+                        <div className="w-6 h-6 rounded-full border border-black bg-orange-500 flex items-center justify-center text-[7px] font-black text-white">S</div>
+                        <div className="w-6 h-6 rounded-full border border-black bg-blue-500 flex items-center justify-center text-[7px] font-black text-white">G</div>
                     </div>
-                    <span className={clsx("text-[10px] font-black uppercase tracking-widest transition-colors", theme === 'dark' ? "group-hover:text-white" : "group-hover:text-black")}>SYNC RELOJ</span>
+                    <span className="text-[9px] font-black uppercase tracking-[0.2em]">Sincronizar Reloj</span>
                 </button>
             </div>
 
-            {/* Principal Metric: Instant Pace */}
+            {/* Principal Value: Instant Pace */}
             <div className={clsx(
-                "w-full p-10 rounded-[40px] border relative overflow-hidden flex flex-col items-center justify-center text-center shadow-2xl",
-                theme === 'dark' ? "bg-gradient-to-b from-blue-900/20 to-black border-blue-500/20" : "bg-gradient-to-b from-blue-50 to-white border-blue-100"
+                "relative group overflow-hidden rounded-[40px] border p-12 transition-all duration-500",
+                theme === 'dark' ? "bg-black border-white/5" : "bg-white border-gray-100 shadow-xl"
             )}>
-                <div className="absolute top-0 right-0 p-6 opacity-10"><Wind className="w-32 h-32 text-blue-500" /></div>
+                {/* Background Decoration */}
+                <div className="absolute -top-10 -right-10 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
+                    <Wind className="w-64 h-64 text-blue-500" />
+                </div>
 
-                <div className="relative z-10 flex flex-col items-center">
-                    <p className="text-blue-500 dark:text-blue-400 text-[10px] font-black uppercase tracking-[0.4em] mb-4">Ritmo Instantáneo</p>
-                    <div className={clsx("font-heading font-black italic text-6xl xs:text-7xl sm:text-8xl tracking-tighter transition-all flex items-end", theme === 'dark' ? "text-white" : "text-blue-900")}>
-                        {instantPace || "0:00"}
-                        <span className="text-xl opacity-40 ml-2 mb-2 sm:mb-4">/km</span>
+                <div className="relative z-10 text-center space-y-2">
+                    <p className="text-blue-500 text-[10px] font-black uppercase tracking-[0.4em] mb-4 flex items-center justify-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        Ritmo Actual
+                    </p>
+                    <div className="flex items-end justify-center gap-1">
+                        <span className={clsx(
+                            "text-7xl xs:text-8xl md:text-9xl font-heading font-black italic tracking-tighter leading-none",
+                            theme === 'dark' ? "text-white" : "text-blue-900"
+                        )}>
+                            {instantPace || "0:00"}
+                        </span>
+                        <span className="text-xl md:text-2xl text-gray-500 font-black italic mb-2 md:mb-4 uppercase">/km</span>
                     </div>
-                    <div className="flex items-center gap-6 mt-6">
-                        <div className="flex flex-col items-center">
-                            <p className="text-[8px] font-black uppercase text-gray-500 tracking-widest mb-1">RITMO MEDIO</p>
-                            <p className={clsx("text-xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>{avgPaceMin}:{avgPaceSec < 10 ? '0' + avgPaceSec : avgPaceSec}</p>
+
+                    <div className="h-px bg-white/5 w-24 mx-auto my-6" />
+
+                    <div className="grid grid-cols-2 gap-8 max-w-sm mx-auto">
+                        <div className="text-center group/metric">
+                            <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 group-hover/metric:text-blue-400 transition-colors">Distancia</p>
+                            <p className="text-3xl font-mono font-black italic text-white flex items-end justify-center">
+                                {(distance / 1000).toFixed(2)}
+                                <span className="text-[10px] ml-1 mb-1 opacity-40">km</span>
+                            </p>
                         </div>
-                        <div className="w-px h-8 bg-white/10" />
-                        <div className="flex flex-col items-center">
-                            <p className="text-[8px] font-black uppercase text-gray-500 tracking-widest mb-1">CALORÍAS</p>
-                            <p className={clsx("text-xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>{(distance * 0.06).toFixed(0)}</p>
+                        <div className="text-center group/metric">
+                            <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-2 group-hover/metric:text-blue-400 transition-colors">Media</p>
+                            <p className="text-3xl font-mono font-black italic text-white flex items-end justify-center">
+                                {avgPaceMin}:{avgPaceSec < 10 ? '0' + avgPaceSec : avgPaceSec}
+                                <span className="text-[10px] ml-1 mb-1 opacity-40">/km</span>
+                            </p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Secondary Metrics: HR & Elevation */}
+            {/* Health & Terrain Grid */}
             <div className="grid grid-cols-2 gap-4">
                 <div
                     onClick={() => setView(view === 'stats' ? 'zones' : 'stats')}
                     className={clsx(
-                        "border p-6 rounded-[32px] cursor-pointer transition-all active:scale-95 group",
-                        theme === 'dark' ? "bg-[#111] border-white/10 hover:border-red-500/30" : "bg-gray-50 border-gray-100 shadow-sm"
-                    )}>
-                    <div className="flex justify-between items-start mb-4">
+                        "relative overflow-hidden p-6 rounded-[32px] border transition-all active:scale-[0.98] group",
+                        theme === 'dark' ? "bg-black border-white/5 hover:border-red-500/20" : "bg-white border-gray-100 shadow-lg"
+                    )}
+                >
+                    <div className="flex justify-between items-start mb-6">
                         <p className="text-gray-500 text-[8px] font-black uppercase tracking-widest">Ritmo Cardíaco</p>
-                        <Heart className={clsx("w-4 h-4 animate-pulse", heartRate > 0 ? "text-red-500 fill-red-500" : "text-gray-700")} />
+                        <Heart className={clsx("w-4 h-4 transition-all duration-300", heartRate > 0 ? "text-red-500 fill-red-500 animate-pulse scale-110" : "text-gray-700")} />
                     </div>
-                    <div className="flex items-baseline gap-2">
-                        <span className={clsx("text-3xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>{heartRate || "--"}</span>
-                        <span className="text-[10px] font-bold text-gray-500">BPM</span>
+                    <div className="flex items-baseline gap-1.5">
+                        <span className="text-3xl md:text-4xl font-mono font-black text-white">{heartRate || "--"}</span>
+                        <span className="text-[10px] font-black text-gray-500 uppercase">bpm</span>
                     </div>
                     {heartRate > 0 && (
-                        <div className="mt-3 flex items-center gap-2">
-                            <div className={clsx("px-2 py-0.5 rounded text-[8px] font-black text-white uppercase", zones[currentZone - 1].color)}>
-                                ZONA {currentZone}
-                            </div>
-                            <span className="text-[8px] font-bold text-gray-500 uppercase">{zones[currentZone - 1].label}</span>
+                        <div className="mt-4 inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/5 border border-white/5">
+                            <div className={clsx("w-1.5 h-1.5 rounded-full", zones[currentZone - 1].color)} />
+                            <span className="text-[8px] font-black text-white uppercase tracking-wider">Zona {currentZone}</span>
                         </div>
                     )}
                 </div>
 
                 <div className={clsx(
-                    "border p-6 rounded-[32px]",
-                    theme === 'dark' ? "bg-[#111] border-white/10" : "bg-gray-50 border-gray-100 shadow-sm"
+                    "relative overflow-hidden p-6 rounded-[32px] border transition-all",
+                    theme === 'dark' ? "bg-black border-white/5 hover:border-emerald-500/20" : "bg-white border-gray-100 shadow-lg"
                 )}>
-                    <div className="flex justify-between items-start mb-4">
-                        <p className="text-gray-500 text-[8px] font-black uppercase tracking-widest">Desnivel (+) </p>
+                    <div className="flex justify-between items-start mb-6">
+                        <p className="text-gray-500 text-[8px] font-black uppercase tracking-widest">Elevación</p>
                         <TrendingUp className="w-4 h-4 text-emerald-500" />
                     </div>
-                    <div className="flex items-baseline gap-2">
-                        <span className={clsx("text-3xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>{elevationGain}</span>
-                        <span className="text-[10px] font-bold text-gray-500">METROS</span>
+                    <div className="flex items-baseline gap-1.5">
+                        <span className="text-3xl md:text-4xl font-mono font-black text-white">{elevationGain.toFixed(1)}</span>
+                        <span className="text-[10px] font-black text-gray-500 uppercase">metros</span>
                     </div>
                 </div>
             </div>
 
-            {/* Zone Modal / Map Preview Area */}
+            {/* Distribution View */}
             {view === 'zones' && (
-                <div className="bg-black/60 backdrop-blur-md rounded-[32px] p-6 space-y-4 border border-white/5 animate-in slide-in-from-top-4">
-                    <p className="text-[10px] font-black uppercase text-brand-red tracking-widest mb-2 italic">Distribución de Esfuerzo</p>
-                    <div className="space-y-3">
+                <div className="p-8 rounded-[32px] bg-[#111] border border-white/10 space-y-6 animate-in slide-in-from-top-4">
+                    <div className="flex items-center justify-between">
+                        <h4 className="text-[10px] font-black text-brand-red uppercase tracking-[0.3em] italic">Zonas de Intensidad</h4>
+                        <button onClick={() => setView('stats')} className="p-2 -mr-2 text-gray-500 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
+                    </div>
+                    <div className="space-y-4">
                         {zones.map((z) => (
-                            <div key={z.n} className="flex items-center gap-4">
-                                <span className="text-[10px] font-black text-gray-500 w-6">Z{z.n}</span>
-                                <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
-                                    <div className={clsx("h-full transition-all duration-1000", z.color, currentZone === z.n ? "w-[80%]" : "w-[10%]")} />
+                            <div key={z.n} className="space-y-1.5">
+                                <div className="flex justify-between items-end px-1">
+                                    <span className="text-[8px] font-black text-gray-500 uppercase">Z{z.n} - {z.label}</span>
+                                    <span className="text-[8px] font-mono text-gray-600">{z.range} bpm</span>
                                 </div>
-                                <span className="text-[8px] font-bold text-white uppercase">{z.label}</span>
+                                <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                    <div
+                                        style={{ width: currentZone === z.n ? '100%' : '15%' }}
+                                        className={clsx("h-full transition-all duration-1000", z.color, currentZone === z.n && "shadow-[0_0_10px_rgba(255,255,255,0.2)]")}
+                                    />
+                                </div>
                             </div>
                         ))}
                     </div>
-                    <button onClick={() => setView('stats')} className="w-full py-2 text-[10px] font-black text-gray-500 uppercase hover:text-white transition-colors pt-2">Cerrar Detalle</button>
                 </div>
             )}
 
-            {/* Distance Display */}
-            <div className={clsx(
-                "border p-8 rounded-[40px] text-center space-y-4 shadow-xl",
-                theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-100"
-            )}>
-                <p className="text-gray-500 text-xs font-black uppercase tracking-[0.3em]">Distancia Total</p>
-                <div className="flex items-center justify-center gap-4">
-                    <div className="text-5xl sm:text-7xl font-heading font-black italic text-white flex items-end">
-                        {(distance / 1000).toFixed(2)}
-                        <span className="text-xl sm:text-2xl text-gray-500 ml-3 mb-2 sm:mb-3">KM</span>
+            {/* Manual Controls (Only if idle) */}
+            {gpsStatus === 'idle' && (
+                <div className="p-8 rounded-[40px] border border-white/5 bg-white/[0.02] text-center space-y-6">
+                    <div>
+                        <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.4em] mb-1">Entrada Manual</p>
+                        <p className="text-xs text-white/40">Si no usas GPS, ajusta la distancia aquí</p>
                     </div>
-                </div>
-
-                {gpsStatus === 'idle' && (
-                    <div className="flex justify-center flex-wrap gap-2 pt-4">
-                        {[400, 800, 1000, 5000, 10000].map(d => (
-                            <button key={d} onClick={() => setDistance(d)} className={clsx(
-                                "px-4 py-2 rounded-full text-xs font-bold transition-all shadow-sm",
-                                theme === 'dark' ? "bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-black"
-                            )}>
-                                {d >= 1000 ? `${d / 1000}km` : `${d}m`}
+                    <div className="flex justify-center flex-wrap gap-2">
+                        {[400, 800, 1000, 5000].map(d => (
+                            <button key={d} onClick={() => setDistance(prev => prev + d)} className="px-5 py-2.5 rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black text-gray-400 hover:bg-white/10 hover:text-white transition-all">
+                                + {d >= 1000 ? `${d / 1000}km` : `${d}m`}
                             </button>
                         ))}
                     </div>
-                )}
-            </div>
-
-            {/* Controls */}
-            <div className="fixed bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black via-black/90 to-transparent pt-10 z-[100] max-w-2xl mx-auto">
-                <div className="grid grid-cols-2 gap-3">
-                    <button
-                        onClick={toggleTimer}
-                        className={clsx(
-                            "py-5 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg",
-                            isPaused
-                                ? "bg-white text-black"
-                                : (theme === 'dark' ? "bg-white/5 text-gray-400 border border-white/10" : "bg-gray-100 text-gray-500 border border-gray-200")
-                        )}
-                    >
-                        {isPaused ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4 fill-current" />}
-                        {isPaused ? 'Reanudar' : 'Pausar'}
-                    </button>
-
-                    <button
-                        onClick={handleFinish}
-                        className="py-5 rounded-2xl bg-brand-red text-white font-black text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all active:scale-95 shadow-glow shadow-red-900/40"
-                    >
-                        <CheckCircle className="w-4 h-4" />
-                        Finalizar
-                    </button>
                 </div>
-            </div>
+            )}
+
+            {/* Fixed Bottom Controls moved to parent for consistency, but here we can add a mini-map or track preview */}
         </div>
-    )
+    );
 }
 
 function SyncWatchModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
@@ -3024,10 +3295,10 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
     // Sync session title with hybrid mode
     useEffect(() => {
         if (!setWorkoutTitle || !workoutTitle) return;
-        if (workoutTitle === "Desafío Híbrido Individual" || workoutTitle === "Simulación de Carrera Híbrida" || workoutTitle === "Hybrid PFT Challenge" || workoutTitle === "Entrenamiento Híbrido Libre") {
+        if (workoutTitle === "Desafío Híbrido Individual" || workoutTitle === "Simulación de Carrera Híbrida" || workoutTitle === "Hybrid PFT Challenge" || workoutTitle === "Entrenamiento Híbrido Libre" || workoutTitle === "Entrenamiento Híbrido") {
             if (hybridMode === 'race') setWorkoutTitle("Simulación de Carrera Híbrida");
             else if (hybridMode === 'pft') setWorkoutTitle("Hybrid PFT Challenge");
-            else if (hybridMode === 'any') setWorkoutTitle("Entrenamiento Híbrido Libre");
+            else if (hybridMode === 'any') setWorkoutTitle("Entrenamiento Híbrido");
         }
     }, [hybridMode]);
 
@@ -3110,7 +3381,7 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
                                 : "text-gray-500 hover:text-black dark:hover:text-white"
                         )}
                     >
-                        {m === 'any' ? 'Libre / Intervalos' : m.toUpperCase()}
+                        {m === 'any' ? 'HÍBRIDO / INTERVALOS' : m.toUpperCase()}
                     </button>
                 ))}
             </div>
@@ -3737,7 +4008,7 @@ function FinishModal({
                             type="file"
                             ref={fileInputRef}
                             className="hidden"
-                            accept="image/*"
+                            accept="image/*,video/*"
                             onChange={onImageUpload}
                         />
                     </div>
@@ -3852,6 +4123,9 @@ function CoachAiView({
     timerMode,
     rpe,
     setRpe,
+    prAchievements,
+    closeCelebration,
+    userName,
 }: {
     showControls: boolean;
     workoutTitle: string;
@@ -3870,6 +4144,9 @@ function CoachAiView({
     timerMode: 'up' | 'down';
     rpe: number;
     setRpe: (r: number) => void;
+    prAchievements: any[];
+    closeCelebration: () => void;
+    userName: string;
 }) {
     const { theme } = useTheme();
     const displayTime = timerMode === 'down' && targetDuration
@@ -4078,6 +4355,14 @@ function CoachAiView({
                     </div>
                 </div>
             </div>
+
+            {prAchievements.length > 0 && (
+                <PRCelebrationModal
+                    achievements={prAchievements}
+                    onClose={closeCelebration}
+                    userName={userName}
+                />
+            )}
         </div>
     );
 }

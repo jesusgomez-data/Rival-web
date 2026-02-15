@@ -9,6 +9,7 @@ export async function getRankings(category: 'xp' | 'combat' | 'social') {
         const { data } = await supabase
             .from('profiles')
             .select('id, username, full_name, avatar_url, xp_points, level, is_official')
+            .neq('username', 'rivalfit') // Exclude official account from rankings
             .order('xp_points', { ascending: false })
             .limit(20);
         return data || [];
@@ -25,6 +26,7 @@ export async function getRankings(category: 'xp' | 'combat' | 'social') {
                 id, username, full_name, avatar_url, level,
                 duels_won:duels!winner_id(count)
             `)
+            .neq('username', 'rivalfit') // Exclude official account from rankings
             .order('duels_won', { ascending: false }) // Note: This might not work directly on a count alias in PostgREST
             .limit(20);
 
@@ -45,6 +47,7 @@ export async function getRankings(category: 'xp' | 'combat' | 'social') {
                 id, username, full_name, avatar_url, level,
                 followers:follows!following_id(count)
             `)
+            .neq('username', 'rivalfit') // Exclude official account from rankings
             .limit(100); // Fetch a bunch to sort
 
         const sorted = (data || []).sort((a: any, b: any) => {
@@ -89,4 +92,39 @@ export async function joinChallenge(challengeId: string) {
 
     if (error) return { error: error.message };
     return { success: true };
+}
+
+export async function updateChallengeProgress(challengeId: string, progress: number) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "No auth" };
+
+    // 1. Get challenge target value
+    console.log('Server Action: Updating progress for challengeId:', challengeId);
+
+    const { data: challenge, error: challengeFetchError } = await supabase
+        .from('community_challenges')
+        .select('goal_value')
+        .eq('id', challengeId)
+        .single();
+
+    if (challengeFetchError || !challenge) {
+        console.error('Error fetching challenge target:', challengeFetchError);
+        return { error: challengeFetchError?.message || "Challenge not found lookup failed" };
+    }
+
+    const isCompleted = progress >= (challenge.goal_value || 999999);
+
+    // 2. Update progress and completion status
+    const { error } = await supabase
+        .from('challenge_participants')
+        .update({
+            current_progress: progress,
+            is_completed: isCompleted
+        })
+        .eq('challenge_id', challengeId)
+        .eq('user_id', user.id);
+
+    if (error) return { error: error.message };
+    return { success: true, completed: isCompleted };
 }
