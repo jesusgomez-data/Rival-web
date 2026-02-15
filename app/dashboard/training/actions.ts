@@ -281,25 +281,8 @@ export async function saveWorkout(workoutData: any) {
     const shouldPostToStory = workoutData.shareToStory;
 
     if (shouldPostToArena || shouldPostToStory) {
-        let caption = `¡Sesión completada! 🏁`;
-
-        if (workoutData.sportType === 'Running' && workoutData.metrics) {
-            caption = `🏃‍♂️ Carrera completada: ${(workoutData.metrics.distance / 1000).toFixed(2)}km en ${Math.floor(workoutData.duration / 60)}min. Ritmo: ${workoutData.metrics.pace}/km.`;
-        } else if ((workoutData.sportType === 'Cross Training' || workoutData.sportType === 'OCR') && workoutData.metrics) {
-            const { type, blocks, time } = workoutData.metrics;
-
-            if (blocks && blocks.length > 0) {
-                const timeStr = (time && time !== '00:00' && time !== '0:00') ? `en ${time}` : '';
-                caption = `🏋️‍♀️ Sesión ${workoutData.sportType} Completada ${timeStr}!`;
-            } else {
-                const formatStr = type === 'fortime' ? 'FOR TIME' : (type || 'WOD').toUpperCase();
-                caption = `🏋️‍♀️ ${formatStr} Finalizado en ${time} 🔥`;
-            }
-        } else if (workoutData.metrics && sessionMaxWeight > 0) {
-            caption += ` Levanté un máximo de ${sessionMaxWeight}kg.`;
-        } else {
-            caption += ` ¡Gran esfuerzo en el ${workoutData.sportType}!`;
-        }
+        // Use user's caption if provided, otherwise null (will show just the workout details)
+        const finalCaption = workoutData.caption || null;
 
         // 6a. Post to Arena (Feed)
         if (shouldPostToArena) {
@@ -308,7 +291,7 @@ export async function saveWorkout(workoutData: any) {
                 .insert({
                     user_id: user.id,
                     workout_id: workout.id,
-                    caption: workoutData.caption || caption,
+                    caption: finalCaption,
                     media_url: workoutData.imageUrl || null,
                 });
         }
@@ -326,12 +309,13 @@ export async function saveWorkout(workoutData: any) {
                     metadata: {
                         type: 'workout',
                         workout_id: workout.id,
-                        caption: workoutData.caption || caption,
+                        caption: finalCaption,
                         summary: {
                             title: workoutData.title,
                             sportType: workoutData.sportType,
                             duration: workoutData.duration,
-                            metrics: workoutData.metrics
+                            metrics: workoutData.metrics,
+                            exercises: workoutData.exercises
                         }
                     }
                 });

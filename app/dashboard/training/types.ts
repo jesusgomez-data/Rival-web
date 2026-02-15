@@ -19,6 +19,7 @@ export interface WorkoutExercise {
     category?: string;
     group?: string;
     originalName?: string;
+    note?: string;
 }
 
 export interface WorkoutBlock {
@@ -31,6 +32,7 @@ export interface WorkoutBlock {
         time?: string;
         rounds?: number;
     };
+    rounds?: number;
     notes?: string;
 }
 

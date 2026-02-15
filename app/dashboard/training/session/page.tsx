@@ -674,7 +674,7 @@ function SessionContent() {
 
             // Prepare exercises list (Flatten blocks if needed)
             let finalExercises = exercises;
-            if (sportMode === 'cross_training' || sportMode === 'ocr') {
+            if (sportMode === 'cross_training' || sportMode === 'ocr' || (sportMode === 'hybrid' && blocks.length > 0)) {
                 finalExercises = blocks.flatMap((b, bIdx) =>
                     b.exercises.map((ex: WorkoutExercise) => ({
                         ...ex,
@@ -730,7 +730,7 @@ function SessionContent() {
     if (isLoadingData) return <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-brand-red" /></div>;
 
     // IMMERSIVE MODE: Full fixed overlay to hide dashboard sidebar/header
-    const overlayClasses = "fixed inset-0 z-[201] bg-black text-white overflow-y-auto custom-scrollbar overscroll-none";
+    const overlayClasses = "fixed inset-0 z-[201] bg-black text-white overflow-y-auto custom-scrollbar";
 
     const limits = { free: 2, premium: 4, elite: 6 };
     const currentLimit = limits[userTier as keyof typeof limits] || 2;
@@ -1367,7 +1367,7 @@ function SessionContent() {
                 )}
 
                 {/* Common Finish Options - Only show when we have content */}
-                {((sportMode === 'cross_training' || sportMode === 'ocr' ? blocks.length > 0 : exercises.length > 0) || elapsedSeconds > 0) && (
+                {((sportMode === 'cross_training' || sportMode === 'ocr' || sportMode === 'hybrid' ? blocks.length > 0 : exercises.length > 0) || elapsedSeconds > 0) && (
                     <>
                         <div className="border-t border-white/5 pt-8 mt-12 bg-white/[0.02] p-6 rounded-[40px] border border-white/5">
                             <h3 className="text-white font-heading font-black italic text-lg mb-6 flex items-center gap-2">
@@ -1475,7 +1475,7 @@ function SessionContent() {
             </div>
 
             {/* Mobile Fixed Controls - Dynamic hide on scroll */}
-            {((sportMode === 'cross_training' || sportMode === 'ocr' ? blocks.length > 0 : true) || elapsedSeconds > 0) && (
+            {((sportMode === 'cross_training' || sportMode === 'ocr' || sportMode === 'hybrid' ? blocks.length > 0 : true) || elapsedSeconds > 0) && (
                 <div className={clsx(
                     "sm:hidden fixed bottom-6 inset-x-4 z-[250] bg-[#0a0a0a]/90 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 transition-all duration-500 shadow-2xl",
                     showControls ? "translate-y-0 opacity-100" : "translate-y-[150%] opacity-0"
@@ -2834,13 +2834,13 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                                         <span className="text-gray-600 font-mono text-xs w-4">{j + 1}</span>
 
                                         {/* Weight / Value Input */}
-                                        <div className={clsx("flex items-center gap-2 rounded-lg p-1.5 flex-1 min-w-[120px]", theme === 'dark' ? "bg-white/5" : "bg-gray-50")}>
+                                        <div className={clsx("flex items-center gap-2 rounded-xl p-1.5 flex-1 min-w-[130px]", theme === 'dark' ? "bg-white/5 border border-white/5" : "bg-gray-50 border border-gray-100 shadow-sm")}>
                                             <input
                                                 type="number"
                                                 value={set.weight || ''}
                                                 onChange={(e) => updateSet(activeBlockIndex, i, j, 'weight', e.target.value)}
-                                                className={clsx("bg-transparent font-mono text-sm w-full text-center outline-none", theme === 'dark' ? "text-white" : "text-black")}
-                                                placeholder="---"
+                                                className={clsx("bg-transparent font-black text-xl w-full text-center outline-none py-3", theme === 'dark' ? "text-white" : "text-black")}
+                                                placeholder="0"
                                             />
                                             <select
                                                 value={set.unit || 'kg'}
@@ -2859,13 +2859,13 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                                         </div>
 
                                         {/* Reps / Measure Input */}
-                                        <div className={clsx("flex items-center gap-2 rounded-lg p-1.5 flex-1 min-w-[120px]", theme === 'dark' ? "bg-white/5" : "bg-gray-50")}>
+                                        <div className={clsx("flex items-center gap-2 rounded-xl p-1.5 flex-1 min-w-[130px]", theme === 'dark' ? "bg-white/5 border border-white/5" : "bg-gray-50 border border-gray-100 shadow-sm")}>
                                             <input
                                                 type="number"
                                                 value={set.reps || ''}
                                                 onChange={(e) => updateSet(activeBlockIndex, i, j, 'reps', e.target.value)}
-                                                className={clsx("bg-transparent font-mono text-sm w-full text-center outline-none", theme === 'dark' ? "text-white" : "text-black")}
-                                                placeholder="---"
+                                                className={clsx("bg-transparent font-black text-xl w-full text-center outline-none py-3", theme === 'dark' ? "text-white" : "text-black")}
+                                                placeholder="0"
                                             />
                                             <select
                                                 value={set.measure || 'reps'}
@@ -2968,28 +2968,58 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
     const [hybridMode, setHybridMode] = useState<'race' | 'pft' | 'any'>(searchParams.get('mode') === 'ai-coach' ? 'any' : 'race');
     const [initialized, setInitialized] = useState(false);
     const [viewingVideo, setViewingVideo] = useState<string | null>(null);
+    const [activeBlockIndex, setActiveBlockIndex] = useState(0);
 
-    // Sync exercises to first block for 'any' mode to preserve format/type
+    // Initialize first block for 'any' mode if empty
     useEffect(() => {
-        if (hybridMode === 'any') {
-            const newBlocks = [...blocks];
-            if (newBlocks.length === 0) {
-                newBlocks.push({
-                    id: Math.random().toString(36).substr(2, 9),
-                    type: 'fortime',
-                    title: 'Hybrid',
-                    exercises: exercises,
-                    result: { time: '', rounds: 0 }
-                });
-                setBlocks(newBlocks);
-            } else {
-                if (JSON.stringify(newBlocks[0].exercises) !== JSON.stringify(exercises)) {
-                    newBlocks[0] = { ...newBlocks[0], exercises: exercises };
-                    setBlocks(newBlocks);
-                }
-            }
+        if (hybridMode === 'any' && blocks.length === 0) {
+            setBlocks([{
+                id: Math.random().toString(36).substr(2, 9),
+                type: 'fortime',
+                title: 'Bloque 1',
+                exercises: [],
+                result: { time: '', rounds: 0 }
+            }]);
         }
-    }, [exercises, hybridMode]);
+    }, [hybridMode, blocks.length]);
+
+    const addBlock = () => {
+        const newBlock = {
+            id: Math.random().toString(36).substr(2, 9),
+            type: 'fortime',
+            title: `Bloque ${blocks.length + 1}`,
+            exercises: [],
+            result: { time: '', rounds: 0 }
+        };
+        setBlocks([...blocks, newBlock]);
+        setActiveBlockIndex(blocks.length);
+    };
+
+    const removeBlock = (index: number) => {
+        if (blocks.length <= 1) return;
+        const newBlocks = blocks.filter((_, i) => i !== index);
+        setBlocks(newBlocks);
+        setActiveBlockIndex(Math.max(0, index - 1));
+    };
+
+    const updateBlock = (index: number, field: string, value: any) => {
+        const newBlocks = [...blocks];
+        newBlocks[index] = { ...newBlocks[index], [field]: value };
+
+        // Auto-generate title if it's currently generic
+        const block = newBlocks[index];
+        const isGeneric = !block.title || block.title.startsWith('Bloque ') ||
+            ['FOR TIME', 'RFT', 'AMRAP', 'EMOM'].includes(block.title.toUpperCase()) ||
+            block.title.includes(' MIN');
+
+        if (isGeneric && (field === 'type' || field === 'duration')) {
+            const typeLabel = block.type === 'fortime' ? 'For Time' : (block.type === 'rft' ? 'RFT' : block.type.toUpperCase());
+            const duration = block.duration || 0;
+            newBlocks[index].title = duration > 0 ? `${typeLabel} ${duration} MIN` : typeLabel;
+        }
+
+        setBlocks(newBlocks);
+    };
 
     // Sync session title with hybrid mode
     useEffect(() => {
@@ -3086,93 +3116,186 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
             </div>
 
             {hybridMode === 'any' ? (
-                <div className="mt-4 space-y-6">
-                    {/* Format Selector */}
-                    <div className="px-2">
-                        <p className="text-gray-500 text-[8px] font-black uppercase tracking-widest mb-3">Formato de Bloque</p>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            {['fortime', 'rft', 'amrap', 'emom'].map((f) => {
-                                const currentType = blocks[0]?.type || 'fortime';
-                                const isActive = currentType === f;
-                                return (
-                                    <button
-                                        key={f}
-                                        onClick={() => {
-                                            const newBlocks = [...blocks];
-                                            if (newBlocks.length === 0) {
-                                                newBlocks.push({
-                                                    id: Math.random().toString(36).substr(2, 9),
-                                                    type: f as any,
-                                                    title: 'Hybrid Bloc',
-                                                    exercises: [],
-                                                    rounds: f === 'rft' ? 3 : 1,
-                                                    result: { time: '', rounds: 0 }
-                                                });
-                                            } else {
-                                                newBlocks[0] = { ...newBlocks[0], type: f as any };
-                                                if (f === 'rft' && !newBlocks[0].rounds) newBlocks[0].rounds = 3;
-                                            }
-                                            setBlocks(newBlocks);
-                                        }}
-                                        className={clsx(
-                                            "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border",
-                                            isActive
-                                                ? "bg-orange-500 border-orange-500 text-white shadow-lg shadow-orange-950/20"
-                                                : "bg-[#111] border-white/5 text-gray-500 hover:text-white"
-                                        )}
-                                    >
-                                        {f === 'fortime' ? 'For Time' : f === 'rft' ? 'Rds for Time' : f.toUpperCase()}
-                                    </button>
-                                );
-                            })}
-                        </div>
+                <div className="mt-4 space-y-6 animate-in fade-in duration-500">
+                    {/* Blocks Tabs */}
+                    <div className="flex overflow-x-auto gap-2 pb-2 px-1 custom-scrollbar">
+                        {blocks.map((block, i) => (
+                            <button
+                                key={block.id || i}
+                                onClick={() => setActiveBlockIndex(i)}
+                                className={clsx(
+                                    "px-5 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all flex items-center gap-2 border",
+                                    activeBlockIndex === i
+                                        ? "bg-yellow-500 border-yellow-500 text-black shadow-lg scale-105"
+                                        : "bg-[#111] text-gray-500 border-white/5 hover:border-white/10"
+                                )}
+                            >
+                                <span>{block.title || `Bloque ${i + 1}`}</span>
+                                {block.type === 'fortime' && <Timer className="w-3 h-3" />}
+                                {block.type === 'amrap' && <RefreshCw className="w-3 h-3" />}
+                                {block.type === 'emom' && <Clock className="w-3 h-3" />}
+                            </button>
+                        ))}
+                        <button
+                            onClick={addBlock}
+                            className="px-4 py-3 rounded-2xl bg-white/5 border border-dashed border-white/20 text-gray-500 hover:text-white hover:bg-white/10 transition-all text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
+                        >
+                            <Plus className="w-3 h-3" /> Añadir
+                        </button>
                     </div>
 
-                    {/* Rounds Selector for RFT */}
-                    {blocks[0]?.type === 'rft' && (
-                        <div className="px-2 animate-in slide-in-from-top-2 duration-300">
-                            <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between">
-                                <div>
-                                    <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Rondas a completar</p>
-                                    <p className="text-white font-black italic uppercase text-lg">Rounds for Time</p>
+                    {blocks[activeBlockIndex] && (
+                        <div className="space-y-6">
+                            {/* Format & Settings for Active Block */}
+                            <div className={clsx("p-6 rounded-[32px] border space-y-6", theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-100 shadow-sm")}>
+                                <div className="flex justify-between items-center border-b border-white/5 pb-4">
+                                    <input
+                                        value={blocks[activeBlockIndex].title}
+                                        onChange={(e) => updateBlock(activeBlockIndex, 'title', e.target.value)}
+                                        className="bg-transparent text-xl font-heading font-black italic text-white uppercase outline-none placeholder-gray-600 w-full"
+                                        placeholder={`BLOQUE ${activeBlockIndex + 1}`}
+                                    />
+                                    {blocks.length > 1 && (
+                                        <button onClick={() => removeBlock(activeBlockIndex)} className="text-gray-600 hover:text-red-500 transition-colors p-2">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    )}
                                 </div>
-                                <div className="flex items-center gap-4 bg-black/40 p-2 rounded-xl border border-white/5">
-                                    <button
-                                        onClick={() => {
+
+                                <div className="px-1">
+                                    <p className="text-gray-500 text-[8px] font-black uppercase tracking-widest mb-3">Formato del Bloque</p>
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                        {['fortime', 'rft', 'amrap', 'emom'].map((f) => {
+                                            const isActive = blocks[activeBlockIndex].type === f;
+                                            return (
+                                                <button
+                                                    key={f}
+                                                    onClick={() => {
+                                                        const newBlocks = [...blocks];
+                                                        newBlocks[activeBlockIndex] = {
+                                                            ...newBlocks[activeBlockIndex],
+                                                            type: f as any,
+                                                            rounds: f === 'rft' ? 3 : 1
+                                                        };
+                                                        setBlocks(newBlocks);
+                                                    }}
+                                                    className={clsx(
+                                                        "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border",
+                                                        isActive
+                                                            ? "bg-yellow-500 border-yellow-500 text-black shadow-lg"
+                                                            : "bg-black/40 border-white/5 text-gray-500 hover:text-white"
+                                                    )}
+                                                >
+                                                    {f === 'fortime' ? 'For Time' : f === 'rft' ? 'Rds for Time' : f.toUpperCase()}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Rounds Selector for RFT */}
+                                {blocks[activeBlockIndex].type === 'rft' && (
+                                    <div className="animate-in slide-in-from-top-2 duration-300">
+                                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+                                            <div>
+                                                <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-1">Rondas a completar</p>
+                                                <p className="text-white font-black italic uppercase text-lg">Rounds for Time</p>
+                                            </div>
+                                            <div className="flex items-center gap-4 bg-black/40 p-2 rounded-xl border border-white/5">
+                                                <button
+                                                    onClick={() => {
+                                                        const val = Math.max(1, (blocks[activeBlockIndex].rounds || 1) - 1);
+                                                        updateBlock(activeBlockIndex, 'rounds', val);
+                                                    }}
+                                                    className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition-all"
+                                                >
+                                                    <Minus className="w-4 h-4" />
+                                                </button>
+                                                <span className="text-2xl font-mono font-black text-yellow-500 min-w-[2ch] text-center">{blocks[activeBlockIndex].rounds || 1}</span>
+                                                <button
+                                                    onClick={() => {
+                                                        const val = (blocks[activeBlockIndex].rounds || 1) + 1;
+                                                        updateBlock(activeBlockIndex, 'rounds', val);
+                                                    }}
+                                                    className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition-all"
+                                                >
+                                                    <Plus className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className={clsx("p-4 rounded-2xl text-center", theme === 'dark' ? "bg-white/5" : "bg-gray-50")}>
+                                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2">
+                                            {blocks[activeBlockIndex].type === 'fortime' ? 'Time Cap (min)' :
+                                                blocks[activeBlockIndex].type === 'amrap' ? 'Tiempo (min)' : 'Duración (min)'}
+                                        </p>
+                                        <input
+                                            type="number"
+                                            value={blocks[activeBlockIndex].duration || ''}
+                                            onChange={(e) => updateBlock(activeBlockIndex, 'duration', parseFloat(e.target.value))}
+                                            placeholder="0"
+                                            className={clsx("bg-transparent text-3xl font-mono font-black text-center w-full outline-none", theme === 'dark' ? "text-white" : "text-black")}
+                                        />
+                                    </div>
+
+                                    <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-2xl text-center">
+                                        <p className="text-[10px] text-yellow-500 font-black uppercase tracking-widest mb-2">
+                                            Resultado
+                                        </p>
+                                        {blocks[activeBlockIndex].type === 'fortime' || blocks[activeBlockIndex].type === 'rft' ? (
+                                            <input
+                                                type="text"
+                                                placeholder="00:00"
+                                                value={blocks[activeBlockIndex].result?.time || ''}
+                                                onChange={(e) => {
+                                                    const res = { ...blocks[activeBlockIndex].result, time: e.target.value };
+                                                    updateBlock(activeBlockIndex, 'result', res);
+                                                }}
+                                                className={clsx("bg-transparent text-3xl font-mono font-black text-center w-full outline-none", theme === 'dark' ? "text-white placeholder-white/20" : "text-black placeholder-gray-300")}
+                                            />
+                                        ) : (
+                                            <div className="flex justify-center items-center gap-2">
+                                                <button onClick={() => {
+                                                    const r = (blocks[activeBlockIndex].result?.rounds || 0) > 0 ? (blocks[activeBlockIndex].result?.rounds || 0) - 1 : 0;
+                                                    const res = { ...blocks[activeBlockIndex].result, rounds: r };
+                                                    updateBlock(activeBlockIndex, 'result', res);
+                                                }} className={clsx("w-8 h-8 rounded-full font-bold transition-colors", theme === 'dark' ? "bg-white/5 text-gray-400 hover:bg-white/10" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>-</button>
+                                                <span className={clsx("text-3xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>
+                                                    {blocks[activeBlockIndex].result?.rounds || 0}
+                                                </span>
+                                                <button onClick={() => {
+                                                    const r = (blocks[activeBlockIndex].result?.rounds || 0) + 1;
+                                                    const res = { ...blocks[activeBlockIndex].result, rounds: r };
+                                                    updateBlock(activeBlockIndex, 'result', res);
+                                                }} className="w-8 h-8 rounded-full bg-yellow-500 text-black font-bold shadow-lg shadow-yellow-500/20">+</button>
+                                            </div>
+                                        )}
+                                        <p className="text-[9px] text-yellow-500/60 font-bold uppercase mt-1">
+                                            {blocks[activeBlockIndex].type === 'fortime' || blocks[activeBlockIndex].type === 'rft' ? 'Tiempo Final' : 'Rondas'}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="h-px bg-white/5" />
+
+                                <div className="pt-2">
+                                    <p className="text-gray-500 text-[9px] font-black uppercase tracking-[0.2em] mb-4">Ejercicios del Bloque</p>
+                                    <GymView
+                                        exercises={blocks[activeBlockIndex].exercises}
+                                        setExercises={(newEx) => {
                                             const newBlocks = [...blocks];
-                                            const val = Math.max(1, (newBlocks[0].rounds || 1) - 1);
-                                            newBlocks[0] = { ...newBlocks[0], rounds: val };
+                                            newBlocks[activeBlockIndex].exercises = newEx;
                                             setBlocks(newBlocks);
                                         }}
-                                        className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition-all"
-                                    >
-                                        <Minus className="w-4 h-4" />
-                                    </button>
-                                    <span className="text-2xl font-mono font-black text-orange-500 min-w-[2ch] text-center">{blocks[0].rounds || 1}</span>
-                                    <button
-                                        onClick={() => {
-                                            const newBlocks = [...blocks];
-                                            const val = (newBlocks[0].rounds || 1) + 1;
-                                            newBlocks[0] = { ...newBlocks[0], rounds: val };
-                                            setBlocks(newBlocks);
-                                        }}
-                                        className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-white hover:bg-white/10 active:scale-90 transition-all"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                    </button>
+                                        mode="hybrid"
+                                    />
                                 </div>
                             </div>
                         </div>
                     )}
-
-                    <div className="h-px bg-white/5 mx-2" />
-
-                    <div>
-                        <p className="text-gray-500 text-[10px] uppercase tracking-wider mb-4 px-2">
-                            Arma tu propio entrenamiento Híbrido seleccionando los ejercicios.
-                        </p>
-                        <GymView exercises={exercises} setExercises={setExercises} mode="hybrid" />
-                    </div>
                 </div>
             ) : (
                 <div className={clsx("border p-6 rounded-[32px] shadow-sm", theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-100")}>
@@ -3206,7 +3329,7 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
                                             <p className={clsx("font-bold text-[10px] uppercase tracking-wide", isRun ? "text-gray-300" : "text-yellow-500")}>
                                                 {ex.name}
                                             </p>
-                                            <p className="text-[9px] text-gray-500 font-mono mt-0.5">{ex.target}</p>
+                                            {ex.target && ex.target !== "-" && <p className="text-[9px] text-gray-500 font-mono mt-0.5">{ex.target}</p>}
                                         </div>
                                         {ex.video_url && (
                                             <button
@@ -3302,7 +3425,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
         const newEx = {
             id: Math.random().toString(36).substr(2, 9),
             name: template.name,
-            target: "3 series x 8-12 reps",
+            target: mode === 'gym' ? "3 series x 8-12 reps" : "-",
             prev: prev,
             sets: [{ order: 1, weight: 0, reps: 0, completed: false, unit: defaultUnit, measure: defaultMeasure }],
             video_url: template.video_url
@@ -3382,7 +3505,9 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                                 )}
                             </div>
                             <div className="flex items-center gap-4 mt-1">
-                                <p className="text-[10px] text-brand-red font-black uppercase tracking-[0.2em]">{ex.target || 'Custom'}</p>
+                                {ex.target && ex.target !== "-" && (
+                                    <p className="text-[10px] text-brand-red font-black uppercase tracking-[0.2em]">{ex.target}</p>
+                                )}
                                 {ex.prev && <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded">PR: {ex.prev}</p>}
                             </div>
                         </div>
@@ -3394,17 +3519,19 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                     <div className="p-4 space-y-2">
                         {ex.sets.map((set: any, j: number) => (
                             <div key={j} className={clsx(
-                                "grid grid-cols-12 gap-2 p-3 rounded-2xl items-center transition-all duration-300",
+                                "grid grid-cols-12 gap-2 p-3 rounded-[24px] items-center transition-all duration-300 relative",
                                 set.completed ? "bg-green-500/10 border border-green-500/30" : "bg-white/5 border border-white/5 hover:bg-white/[0.08]"
                             )}>
-                                <div className="col-span-1 text-center font-black text-[10px] opacity-50">
-                                    {j + 1}
+                                {/* Float Index */}
+                                <div className="absolute top-2 left-3 font-black text-[8px] opacity-30 pointer-events-none">
+                                    #{j + 1}
                                 </div>
+
                                 <div className={clsx(
-                                    "col-span-4 flex items-center rounded-xl px-2 border transition-all",
+                                    "col-span-4 flex items-center rounded-2xl px-2 border transition-all",
                                     theme === 'dark' ? "bg-black/40 border-white/5 focus-within:border-brand-red/50" : "bg-gray-100 border-gray-200 focus-within:border-brand-red/30"
                                 )}>
-                                    <input type="number" placeholder="0" className={clsx("w-full bg-transparent text-center font-bold py-3 outline-none text-sm", theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-400")}
+                                    <input type="number" placeholder="0" className={clsx("w-full bg-transparent text-center font-black py-4 outline-none text-xl", theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-400")}
                                         value={set.weight === 0 ? '0' : (set.weight || '')} onChange={(e) => updateSet(i, j, 'weight', e.target.value === '' ? null : parseFloat(e.target.value))} />
                                     <select
                                         value={set.unit || 'kg'}
@@ -3419,10 +3546,10 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                                     </select>
                                 </div>
                                 <div className={clsx(
-                                    "col-span-4 flex items-center rounded-xl px-2 border transition-all",
+                                    "col-span-4 flex items-center rounded-2xl px-2 border transition-all",
                                     theme === 'dark' ? "bg-black/40 border-white/5 focus-within:border-brand-red/50" : "bg-gray-100 border-gray-200 focus-within:border-brand-red/30"
                                 )}>
-                                    <input type="number" placeholder="0" className={clsx("w-full bg-transparent text-center font-bold py-3 outline-none text-sm", theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-400")}
+                                    <input type="number" placeholder="0" className={clsx("w-full bg-transparent text-center font-black py-4 outline-none text-xl", theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-400")}
                                         value={set.reps === 0 ? '0' : (set.reps || '')} onChange={(e) => updateSet(i, j, 'reps', e.target.value === '' ? null : parseFloat(e.target.value))} />
                                     <select
                                         value={set.measure || 'reps'}
@@ -3436,12 +3563,12 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                                         <option value="m">M</option>
                                     </select>
                                 </div>
-                                <div className="col-span-3 flex justify-center">
+                                <div className="col-span-4 flex justify-center">
                                     <button onClick={() => toggleSet(i, j)} className={clsx(
-                                        "w-10 h-10 rounded-xl flex items-center justify-center transition-all transform active:scale-90",
+                                        "w-11 h-11 rounded-2xl flex items-center justify-center transition-all transform active:scale-90",
                                         set.completed ? "bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)]" : "bg-white/10 text-gray-500 hover:bg-white/20 hover:text-white"
                                     )}>
-                                        <CheckCircle className={clsx("w-5 h-5", set.completed ? "fill-current" : "stroke-current")} />
+                                        <CheckCircle className={clsx("w-6 h-6", set.completed ? "fill-current" : "stroke-current")} />
                                     </button>
                                 </div>
                             </div>
@@ -3495,7 +3622,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            setViewingVideo(item.video_url);
+                                            setViewingVideo(item.video_url || null);
                                         }}
                                         className="p-2 bg-white/5 rounded-full hover:bg-red-600 hover:text-white text-gray-500 transition-colors z-20"
                                     >

@@ -851,20 +851,36 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     <div className="space-y-2 relative z-10">
                                         {hasBlocks ? (
                                             <div className="space-y-1.5">
-                                                {data.metrics.blocks.slice(0, 3).map((block: any, idx: number) => (
-                                                    <div key={idx} className="flex justify-between items-center bg-white/5 p-2.5 rounded-xl border border-white/5 hover:border-white/10 transition-colors">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-[10px] font-black text-white uppercase tracking-tight">{block.title || block.type || 'BLOQUE'}</span>
-                                                            <span className="text-[8px] text-brand-red/70 font-bold uppercase tracking-widest">{block.type}</span>
+                                                {data.metrics.blocks.slice(0, 4).map((block: any, idx: number) => (
+                                                    <div key={idx} className="flex justify-between items-center bg-white/5 p-2 rounded-xl border border-white/5">
+                                                        <div className="flex flex-col min-w-0">
+                                                            <span className="text-[9px] font-black text-white uppercase tracking-tight truncate">{block.title || block.type || 'BLOQUE'}</span>
+                                                            <span className="text-[7px] text-brand-red/70 font-bold uppercase tracking-widest leading-none">{block.type}</span>
                                                         </div>
-                                                        <span className="text-brand-red font-black text-sm italic tracking-tighter">
-                                                            {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : '-'))}
+                                                        <span className="text-brand-red font-black text-xs italic tracking-tighter shrink-0 ml-2">
+                                                            {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : (block.result?.weight ? `${block.result.weight}${block.result?.unit || ''}` : '-')))}
                                                         </span>
                                                     </div>
                                                 ))}
-                                                {data.metrics.blocks.length > 3 && (
-                                                    <div className="text-[9px] text-center text-brand-red/70 font-black uppercase tracking-[0.2em] pt-2">
-                                                        +{data.metrics.blocks.length - 3} bloques más
+                                                {data.metrics.blocks.length > 4 && (
+                                                    <div className="text-[8px] text-center text-brand-red/70 font-black uppercase tracking-[0.2em] pt-1">
+                                                        +{data.metrics.blocks.length - 4} bloques más
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : data.exercises && data.exercises.length > 0 ? (
+                                            <div className="space-y-1.5">
+                                                {data.exercises.slice(0, 4).map((ex: any, idx: number) => (
+                                                    <div key={idx} className="flex justify-between items-center bg-white/5 p-2 rounded-xl border border-white/5">
+                                                        <span className="text-[9px] font-black text-white uppercase tracking-tight truncate flex-1 pr-2">{ex.name}</span>
+                                                        <span className="text-brand-red font-black text-xs italic tracking-tighter shrink-0">
+                                                            {ex.sets?.length || 0} SERIES
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                                {data.exercises.length > 4 && (
+                                                    <div className="text-[8px] text-center text-brand-red/70 font-black uppercase tracking-[0.2em] pt-1">
+                                                        +{data.exercises.length - 4} ejercicios más
                                                     </div>
                                                 )}
                                             </div>
@@ -1623,33 +1639,91 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                             </div>
                                         )}
 
-                                        {showFullSummary && currentStory.metadata.summary.metrics?.blocks && (
-                                            <div className="space-y-3 pt-2">
-                                                <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] mb-2 italic">Bloques de Entrenamiento</p>
-                                                {currentStory.metadata.summary.metrics.blocks.map((block: any, idx: number) => (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, x: -20 }}
-                                                        animate={{ opacity: 1, x: 0 }}
-                                                        transition={{ delay: idx * 0.1 }}
-                                                        key={idx}
-                                                        className="bg-white/5 rounded-[22px] p-4 border border-white/5"
-                                                    >
-                                                        <div className="flex justify-between items-center mb-2">
-                                                            <span className="text-xs font-black text-white uppercase italic tracking-tighter">{block.title || block.type || `BLOQUE ${idx + 1}`}</span>
-                                                            <span className="text-brand-red font-black text-sm italic">{block.result?.time || (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : ''))}</span>
-                                                        </div>
-                                                        {block.exercises && (
-                                                            <div className="space-y-1">
-                                                                {block.exercises.map((ex: any, eIdx: number) => (
-                                                                    <div key={eIdx} className="flex justify-between text-[10px]">
-                                                                        <span className="text-gray-400 font-bold uppercase">{ex.name}</span>
-                                                                        <span className="text-white font-black">{ex.value}</span>
+                                        {showFullSummary && (
+                                            <div className="space-y-4 pt-2">
+                                                {currentStory.metadata.summary.metrics?.blocks && (
+                                                    <>
+                                                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mb-2 italic">Bloques de Entrenamiento</p>
+                                                        {currentStory.metadata.summary.metrics.blocks.map((block: any, idx: number) => (
+                                                            <motion.div
+                                                                initial={{ opacity: 0, x: -20 }}
+                                                                animate={{ opacity: 1, x: 0 }}
+                                                                transition={{ delay: idx * 0.1 }}
+                                                                key={idx}
+                                                                className="bg-white/5 rounded-[22px] p-4 border border-white/5"
+                                                            >
+                                                                <div className="flex justify-between items-center mb-3">
+                                                                    <span className="text-sm font-black text-white uppercase italic tracking-tighter">{block.title || block.type || `BLOQUE ${idx + 1}`}</span>
+                                                                    <span className="text-brand-red font-black text-base italic leading-none">{block.result?.time || (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : ''))}</span>
+                                                                </div>
+                                                                {block.exercises && (
+                                                                    <div className="space-y-1.5">
+                                                                        {block.exercises.map((ex: any, eIdx: number) => (
+                                                                            <div key={eIdx} className="flex justify-between items-center text-[10px] bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/5">
+                                                                                <span className="text-gray-300 font-black uppercase tracking-tight truncate pr-2">{ex.name}</span>
+                                                                                <span className="text-brand-red font-black italic whitespace-nowrap">
+                                                                                    {(() => {
+                                                                                        const s = ex.sets?.[0];
+                                                                                        const target = ex.target || ex.goal || '';
+
+                                                                                        // Try to get logged results first
+                                                                                        if (ex.value) return ex.value;
+
+                                                                                        if (s) {
+                                                                                            const weight = s.weight > 0 ? `${s.weight}KG` : '';
+                                                                                            const reps = s.reps > 0 ? `${s.reps}${s.measure && s.measure !== 'reps' ? s.measure : ''}` : '';
+                                                                                            if (weight && reps) return `${weight} x ${reps}`;
+                                                                                            if (weight || reps) return weight || reps;
+                                                                                        }
+
+                                                                                        // Fallback to top-level properties
+                                                                                        const tWeight = ex.weight > 0 ? `${ex.weight}KG` : '';
+                                                                                        const tReps = ex.reps > 0 ? `${ex.reps}${ex.measure && ex.measure !== 'reps' ? ex.measure : ''}` : '';
+                                                                                        if (tWeight || tReps) {
+                                                                                            if (tWeight && tReps) return `${tWeight} x ${tReps}`;
+                                                                                            return tWeight || tReps;
+                                                                                        }
+
+                                                                                        // Final fallback to instructions (target)
+                                                                                        return target !== '-' ? target : '';
+                                                                                    })()}</span>
+                                                                            </div>
+                                                                        ))}
                                                                     </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </motion.div>
-                                                ))}
+                                                                )}
+                                                            </motion.div>
+                                                        ))}
+                                                    </>
+                                                )}
+
+                                                {!currentStory.metadata.summary.metrics?.blocks && currentStory.metadata.summary.exercises && (
+                                                    <>
+                                                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mb-2 italic">Ejercicios Realizados</p>
+                                                        <div className="space-y-2">
+                                                            {currentStory.metadata.summary.exercises.map((ex: any, idx: number) => (
+                                                                <motion.div
+                                                                    initial={{ opacity: 0, x: -20 }}
+                                                                    animate={{ opacity: 1, x: 0 }}
+                                                                    transition={{ delay: idx * 0.05 }}
+                                                                    key={idx}
+                                                                    className="bg-white/5 rounded-2xl p-3 border border-white/5 flex justify-between items-center"
+                                                                >
+                                                                    <div className="flex flex-col min-w-0">
+                                                                        <span className="text-xs font-black text-white uppercase italic tracking-tighter truncate">{ex.name}</span>
+                                                                        <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">{ex.sets?.length || 0} Series</span>
+                                                                    </div>
+                                                                    <div className="text-right flex flex-col items-end gap-1">
+                                                                        {ex.sets?.map((s: any, sIdx: number) => (
+                                                                            <span key={sIdx} className="text-[10px] text-brand-red font-black italic leading-none">
+                                                                                {s.weight > 0 ? `${s.weight}KG x ` : ''}{s.reps}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
+                                                                </motion.div>
+                                                            ))}
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         )}
 

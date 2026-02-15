@@ -170,6 +170,11 @@ export default function CenterOwnerLogin() {
                   required
                 />
               </div>
+              <div className="flex justify-end mt-2">
+                <Link href="/forgot-password" className="text-xs text-brand-red hover:underline transition-colors focus:outline-none">
+                  ¿Olvidaste tu contraseña?
+                </Link>
+              </div>
             </div>
 
             <button

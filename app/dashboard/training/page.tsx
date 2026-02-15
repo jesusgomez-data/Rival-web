@@ -1,7 +1,7 @@
 "use client";
 
 import { getMissions, getRecentPRs, getUserProfile, getScheduledWorkouts, getWorkoutHistory, getPublishedResults } from "./actions";
-import { type TrainingPlan } from "./ai-coach";
+import { type TrainingPlan } from "./types";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy } from "lucide-react";
@@ -55,10 +55,10 @@ export default function TrainingPage() {
                 description: "Enfoque en fuerza básica y técnica de ejecución.",
                 sport: 'gym', difficulty: 'beginner', duration_min: 45, is_premium: false,
                 exercises: [
-                    { id: 'b1', name: "Sentadillas Goblet", target: "3 series x 12 reps" },
-                    { id: 'b2', name: "Flexiones (Push-ups)", target: "3 series x Max reps" },
-                    { id: 'b3', name: "Remo con Mancuerna", target: "3 series x 12 reps" },
-                    { id: 'b4', name: "Plancha", target: "3 series x 45 seg" }
+                    { id: 'b1', name: "Sentadillas Goblet", target: "3 series x 12 reps", sets: [] },
+                    { id: 'b2', name: "Flexiones (Push-ups)", target: "3 series x Max reps", sets: [] },
+                    { id: 'b3', name: "Remo con Mancuerna", target: "3 series x 12 reps", sets: [] },
+                    { id: 'b4', name: "Plancha", target: "3 series x 45 seg", sets: [] }
                 ]
             },
             {
@@ -67,9 +67,9 @@ export default function TrainingPage() {
                 description: "Iniciación al entrenamiento híbrido: Carrera suave y calistenia.",
                 sport: 'hybrid', difficulty: 'beginner', duration_min: 40, is_premium: false,
                 exercises: [
-                    { id: 'bh1', name: "Run 2km", target: "Z2 Pace" },
-                    { id: 'bh2', name: "Air Squats", target: "3 series x 20 reps" },
-                    { id: 'bh3', name: "Push Ups", target: "3 series x 10 reps" }
+                    { id: 'bh1', name: "Run 2km", target: "Z2 Pace", sets: [] },
+                    { id: 'bh2', name: "Air Squats", target: "3 series x 20 reps", sets: [] },
+                    { id: 'bh3', name: "Push Ups", target: "3 series x 10 reps", sets: [] }
                 ]
             }
         ],
@@ -80,10 +80,10 @@ export default function TrainingPage() {
                 description: "Día de empuje enfocado en pecho, hombros y tríceps.",
                 sport: 'gym', difficulty: 'intermediate', duration_min: 75, is_premium: false,
                 exercises: [
-                    { id: 'i1', name: "Press de Banca", target: "4 series x 8 reps" },
-                    { id: 'i2', name: "Press Militar Barra", target: "3 series x 10 reps" },
-                    { id: 'i3', name: "Aperturas Inclinadas", target: "3 series x 12 reps" },
-                    { id: 'i4', name: "Elevaciones Laterales", target: "4 series x 15 reps" }
+                    { id: 'i1', name: "Press de Banca", target: "4 series x 8 reps", sets: [] },
+                    { id: 'i2', name: "Press Militar Barra", target: "3 series x 10 reps", sets: [] },
+                    { id: 'i3', name: "Aperturas Inclinadas", target: "3 series x 12 reps", sets: [] },
+                    { id: 'i4', name: "Elevaciones Laterales", target: "4 series x 15 reps", sets: [] }
                 ]
             },
             {
@@ -92,10 +92,10 @@ export default function TrainingPage() {
                 description: "Reto metabólico combinando remo y ejercicios de peso corporal.",
                 sport: 'hybrid', difficulty: 'intermediate', duration_min: 35, is_premium: false,
                 exercises: [
-                    { id: 'ih1', name: "Row 500m", target: "Max Effort" },
-                    { id: 'ih2', name: "Burpees", target: "50 reps" },
-                    { id: 'ih3', name: "Kettlebell Swings", target: "50 reps" },
-                    { id: 'ih4', name: "Row 500m", target: "Finish strong" }
+                    { id: 'ih1', name: "Row 500m", target: "Max Effort", sets: [] },
+                    { id: 'ih2', name: "Burpees", target: "50 reps", sets: [] },
+                    { id: 'ih3', name: "Kettlebell Swings", target: "50 reps", sets: [] },
+                    { id: 'ih4', name: "Row 500m", target: "Finish strong", sets: [] }
                 ]
             }
         ],
@@ -106,10 +106,10 @@ export default function TrainingPage() {
                 description: "Alta intensidad para picos de fuerza máxima.",
                 sport: 'gym', difficulty: 'elite', duration_min: 90, is_premium: true,
                 exercises: [
-                    { id: 'e1', name: "Sentadilla Trasera", target: "5 series x 3 reps", note: "Singles Pesados" },
-                    { id: 'e2', name: "Peso Muerto con Pausa", target: "3 series x 5 reps" },
-                    { id: 'e3', name: "Dominadas Lastradas", target: "4 series x 6 reps" },
-                    { id: 'e4', name: "Paseo del Granjero", target: "3 series x 40m" }
+                    { id: 'e1', name: "Sentadilla Trasera", target: "5 series x 3 reps", note: "Singles Pesados", sets: [] },
+                    { id: 'e2', name: "Peso Muerto con Pausa", target: "3 series x 5 reps", sets: [] },
+                    { id: 'e3', name: "Dominadas Lastradas", target: "4 series x 6 reps", sets: [] },
+                    { id: 'e4', name: "Paseo del Granjero", target: "3 series x 40m", sets: [] }
                 ]
             },
             {
@@ -118,10 +118,10 @@ export default function TrainingPage() {
                 description: "Entrenamiento de volumen Hyrox para atletas avanzados.",
                 sport: 'hybrid', difficulty: 'elite', duration_min: 80, is_premium: true,
                 exercises: [
-                    { id: 'eh1', name: "Run 1km", target: "4:00 pace" },
-                    { id: 'eh2', name: "Sled Push 50m", target: "Heavy" },
-                    { id: 'eh3', name: "Run 1km", target: "4:15 pace" },
-                    { id: 'eh4', name: "Burpee Broad Jumps", target: "80 meters" }
+                    { id: 'eh1', name: "Run 1km", target: "4:00 pace", sets: [] },
+                    { id: 'eh2', name: "Sled Push 50m", target: "Heavy", sets: [] },
+                    { id: 'eh3', name: "Run 1km", target: "4:15 pace", sets: [] },
+                    { id: 'eh4', name: "Burpee Broad Jumps", target: "80 meters", sets: [] }
                 ]
             }
         ]
