@@ -27,6 +27,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
     const [trimmerVideoUrl, setTrimmerVideoUrl] = useState<string | null>(null);
     const [trimStart, setTrimStart] = useState(0);
     const [isTrimmingLoading, setIsTrimmingLoading] = useState(false);
+    const [trimError, setTrimError] = useState<string | null>(null);
     const [videoDuration, setVideoDuration] = useState(0);
     const [pendingFile, setPendingFile] = useState<File | null>(null);
     const trimmerVideoRef = useRef<HTMLVideoElement>(null);
@@ -128,16 +129,20 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
     const [trimProgress, setTrimProgress] = useState(0);
 
     const processTrimming = async () => {
+        window.alert("DEBUG: Botón Confirmar Recorte pulsado");
+
         if (!trimmerVideoRef.current || !trimmerVideoUrl) {
-            alert("Error: No se encontró el video.");
+            window.alert("Error: No se encontró el video ref o url");
             return;
         }
 
         const video = trimmerVideoRef.current;
         setIsTrimmingLoading(true);
         setTrimProgress(5);
+        setTrimError(null);
 
         try {
+            window.alert("PASO 1: Iniciando captura...");
             // 1. Asegurar que el video esté listo y posicionado
             if (video.readyState < 2) {
                 await new Promise(r => {
@@ -162,7 +167,9 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
             canvas.width = video.videoWidth || 640;
             canvas.height = video.videoHeight || 640;
 
-            const stream = canvas.captureStream ? canvas.captureStream(30) : (canvas as any).mozCaptureStream ? (canvas as any).mozCaptureStream(30) : null;
+            const stream = canvas.captureStream ? canvas.captureStream(30) : (canvas as any).mozCaptureStream ? (canvas as any).mozCaptureStream(30) : (canvas as any).webkitCaptureStream ? (canvas as any).webkitCaptureStream(30) : null;
+
+            window.alert("PASO 2: Stream detectado: " + (stream ? "SÍ" : "NO"));
 
             if (!stream) {
                 throw new Error("Tu navegador no permite la captura de video necesaria para el recorte.");
@@ -192,7 +199,9 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
             };
 
             // 4. INICIO DE GRABACIÓN
+            window.alert("PASO 3: Iniciando recorder...");
             recorder.start();
+            window.alert("PASO 4: Recorder iniciado, dando play al video...");
             await video.play();
             drawFrame(); // Iniciar loop de dibujo
 
@@ -213,6 +222,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
             };
 
             recorder.onstop = async () => {
+                window.alert("PASO FINAL: Grabación terminada, procesando blob...");
                 const blob = new Blob(chunks, { type: mimeType });
                 if (blob.size < 5000) { // Un video real debe pesar más
                     alert("No se pudo procesar el video correctamente. Por favor intenta un recorte más largo.");
@@ -493,6 +503,24 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                                 playsInline
                                 autoPlay
                             />
+                            {/* Error display inside modal */}
+                            {trimError && (
+                                <div className="absolute inset-x-4 top-4 z-50 bg-red-500/90 backdrop-blur-md p-4 rounded-2xl border border-white/20 animate-in fade-in slide-in-from-top-4">
+                                    <p className="text-white text-[10px] font-black uppercase tracking-widest mb-1 text-center">¡Atención iPhone!</p>
+                                    <p className="text-white text-[11px] font-bold text-center leading-tight">
+                                        {trimError.includes("capture")
+                                            ? "Tu iPhone tiene bloqueada la captura web. Por favor, recorta el video en tu GALERÍA y súbelo de nuevo."
+                                            : trimError}
+                                    </p>
+                                    <button
+                                        onClick={() => setTrimError(null)}
+                                        className="mt-3 w-full py-2 bg-white/20 hover:bg-white/30 rounded-xl text-[9px] font-black uppercase text-white transition-all"
+                                    >
+                                        Entendido
+                                    </button>
+                                </div>
+                            )}
+
                             {/* Visual feedback when loading or seeking */}
                             {isTrimmingLoading && (
                                 <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center gap-4 z-10">
