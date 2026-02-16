@@ -196,7 +196,7 @@ export default function VideoEditor({ videoSrc, videoFile, onSave, onCancel }: V
     };
 
     return (
-        <div className="fixed inset-0 z-[600] bg-black flex flex-col items-center justify-center overflow-hidden">
+        <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center overflow-hidden">
             <div className="w-full h-full bg-brand-gray/95 flex flex-col relative overflow-hidden">
 
                 {/* Header */}
@@ -244,6 +244,13 @@ export default function VideoEditor({ videoSrc, videoFile, onSave, onCancel }: V
                             classes={{
                                 containerClassName: "bg-black",
                                 mediaClassName: "rounded-lg"
+                            }}
+                            // @ts-ignore - videoProps might not be in types but is supported
+                            videoProps={{
+                                muted: false,
+                                playsInline: true,
+                                "webkit-playsinline": "true",
+                                autoPlay: false
                             }}
                         />
 
@@ -368,6 +375,9 @@ export default function VideoEditor({ videoSrc, videoFile, onSave, onCancel }: V
                     ref={videoRef}
                     src={videoSrc}
                     className="hidden"
+                    playsInline
+                    webkit-playsinline="true"
+                    muted={false} // Only mute if explicitly needed, usually audio is wanted
                     onTimeUpdate={() => {
                         if (videoRef.current && videoRef.current.currentTime >= trimRange.end) {
                             if (isPlaying) {
