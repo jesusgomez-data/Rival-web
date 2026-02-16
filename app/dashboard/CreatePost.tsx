@@ -83,7 +83,8 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                     .from('posts')
                     .upload(fileName, file, {
                         cacheControl: '3600',
-                        upsert: true
+                        upsert: true,
+                        contentType: file.type
                     });
 
                 if (uploadError) throw uploadError;
@@ -118,14 +119,20 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                 formData.append("exercise", exercise);
                 formData.append("weight", weight);
                 formData.append("sport", sport);
-                if (mediaUrl) formData.append("media_url", mediaUrl);
-                else if (file) formData.append("media", file);
+
+                if (mediaUrl) {
+                    formData.append("media_url", mediaUrl);
+                    // Don't append file if we have a URL to keep payload small
+                } else if (file) {
+                    formData.append("media", file);
+                }
                 res = await createPRPost(formData);
             } else {
                 formData.append("content", content);
                 if (mediaUrl) {
                     formData.append("media_url", mediaUrl);
                     formData.append("media_type", mediaType!);
+                    // Don't append file if we have a URL
                 } else if (file) {
                     formData.append("media", file);
                 }
@@ -135,7 +142,8 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
             setUploadProgress(100);
 
             if (res?.error) {
-                alert(`Error al publicar: ${res.error}`);
+                console.error("Server action error:", res.error);
+                alert(`Error al publicar (Servidor): ${res.error}`);
             } else {
                 setContent("");
                 setExercise("");

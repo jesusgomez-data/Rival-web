@@ -108,7 +108,7 @@ export async function createPRPost(formData: FormData) {
             backgroundImage: mediaUrl
         })
 
-        const { error } = await supabase
+        const { error: insertError } = await supabase
             .from('posts')
             .insert({
                 user_id: user.id,
@@ -120,14 +120,17 @@ export async function createPRPost(formData: FormData) {
                 music_artist: formData.get('music_artist') as string || null
             })
 
-        if (error) return { error: error.message }
+        if (insertError) {
+            console.error("Database insert error (PR):", insertError)
+            return { error: `Database error: ${insertError.message}` }
+        }
 
         revalidatePath('/dashboard/community')
         revalidatePath('/dashboard')
         return { success: true }
     } catch (e: any) {
-        console.error("Error creating PR post:", e)
-        return { error: e.message || "Error al crear post de PR" }
+        console.error("Critical error in createPRPost:", e)
+        return { error: `Server exception: ${e.message || "Unknown error"}` }
     }
 }
 
@@ -168,7 +171,7 @@ export async function createUserPost(formData: FormData) {
             mediaType = media.type.startsWith('video/') ? 'video' : 'image'
         }
 
-        const { error } = await supabase
+        const { error: insertError } = await supabase
             .from('posts')
             .insert({
                 user_id: user.id,
@@ -180,14 +183,17 @@ export async function createUserPost(formData: FormData) {
                 music_artist: formData.get('music_artist') as string || null
             })
 
-        if (error) return { error: error.message }
+        if (insertError) {
+            console.error("Database insert error:", insertError)
+            return { error: `Database error: ${insertError.message}` }
+        }
 
         revalidatePath('/dashboard/community')
         revalidatePath('/dashboard')
         return { success: true }
     } catch (e: any) {
-        console.error("Error creating user post:", e)
-        return { error: e.message || "Error al crear publicación" }
+        console.error("Critical error in createUserPost:", e)
+        return { error: `Server exception: ${e.message || "Unknown error"}` }
     }
 }
 
