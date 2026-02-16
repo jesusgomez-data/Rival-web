@@ -129,90 +129,83 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
 
     const processTrimming = async () => {
         if (!trimmerVideoRef.current || !trimmerVideoUrl) {
-            alert("Error: No se encontró el video. Recarga la página.");
+            alert("Error: No se encontró el video.");
             return;
         }
 
         const video = trimmerVideoRef.current;
-
-        // --- DIAGNÓSTICO INICIAL ---
-        console.log("INICIO RECORTE:", {
-            duration: video.duration,
-            readyState: video.readyState,
-            currentTime: video.currentTime,
-            trimStart
-        });
-
         setIsTrimmingLoading(true);
         setTrimProgress(5);
 
         try {
-            // 1. Asegurar que el video esté listo
+            // 1. Asegurar que el video esté listo y posicionado
             if (video.readyState < 2) {
-                await new Promise((resolve) => {
-                    const check = () => {
-                        if (video.readyState >= 2) resolve(true);
-                        else setTimeout(check, 100)
-                    };
+                await new Promise(r => {
+                    const check = () => video.readyState >= 2 ? r(true) : setTimeout(check, 100);
                     check();
-                    setTimeout(resolve, 5000); // Timeout
                 });
             }
 
-            // 2. Posicionar el video
             video.pause();
             video.currentTime = trimStart;
             video.muted = true;
 
-            // Esperar al seek
             await new Promise(r => {
-                const onSeeked = () => {
-                    video.removeEventListener('seeked', onSeeked);
-                    r(true);
-                };
-                video.addEventListener('seeked', onSeeked);
-                setTimeout(onSeeked, 2000);
+                video.onseeked = () => r(true);
+                setTimeout(r, 2000);
             });
 
-            // 3. CAPTURA - Usamos MediaRecorder pero con inicio forzado
-            const stream = (video as any).captureStream ? (video as any).captureStream() : (video as any).mozCaptureStream ? (video as any).mozCaptureStream() : null;
+            // 2. DETECCIÓN DE SOPORTE E IMPLEMENTACIÓN CANVAS (Bridge para iOS)
+            // iOS Chrome/Safari NO soporta video.captureStream(), así que usamos un Canvas como puente.
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 640;
+
+            const stream = canvas.captureStream ? canvas.captureStream(30) : (canvas as any).mozCaptureStream ? (canvas as any).mozCaptureStream(30) : null;
 
             if (!stream) {
-                throw new Error("Navegador no compatible con captura.");
+                throw new Error("Tu navegador no permite la captura de video necesaria para el recorte.");
             }
 
+            // 3. CONFIGURACIÓN GRABADORA (Codec compatible iOS)
             const mimeType = MediaRecorder.isTypeSupported('video/mp4;codecs=avc1') ? 'video/mp4' : 'video/webm';
             const recorder = new MediaRecorder(stream, {
                 mimeType,
-                videoBitsPerSecond: 2000000
+                videoBitsPerSecond: 1500000 // Reducimos un poco para asegurar fluidez en móvil
             });
 
             const chunks: Blob[] = [];
-            recorder.ondataavailable = (e) => chunks.push(e.data);
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunks.push(e.data);
+            };
 
             const recordingDuration = Math.min(60, video.duration - trimStart);
+            let animationFrameId: number;
 
-            // --- EL TRUCO PARA QUE NO SE CONGELE ---
-            // Iniciamos la grabación Y LUEGO el play
+            // Función para dibujar los frames al canvas
+            const drawFrame = () => {
+                if (ctx && !video.paused && !video.ended) {
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    animationFrameId = requestAnimationFrame(drawFrame);
+                }
+            };
+
+            // 4. INICIO DE GRABACIÓN
             recorder.start();
-            console.log("Grabadora iniciada");
-
             await video.play();
-            console.log("Video reproduciendo para captura");
+            drawFrame(); // Iniciar loop de dibujo
 
             const startTime = Date.now();
             const updateInterval = setInterval(() => {
                 const elapsed = (Date.now() - startTime) / 1000;
                 setTrimProgress(Math.min(99, (elapsed / recordingDuration) * 100));
-
-                // Parada forzada si nos pasamos del tiempo
-                if (elapsed >= recordingDuration + 0.5) {
-                    stopCapture();
-                }
+                if (elapsed >= recordingDuration) stopTrimming();
             }, 500);
 
-            const stopCapture = () => {
+            const stopTrimming = () => {
                 clearInterval(updateInterval);
+                cancelAnimationFrame(animationFrameId);
                 if (recorder.state === 'recording') {
                     recorder.stop();
                     video.pause();
@@ -221,34 +214,31 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
 
             recorder.onstop = async () => {
                 const blob = new Blob(chunks, { type: mimeType });
-                if (blob.size < 1000) {
-                    alert("Error: El video resultante es demasiado pequeño. Intenta de nuevo.");
+                if (blob.size < 5000) { // Un video real debe pesar más
+                    alert("No se pudo procesar el video correctamente. Por favor intenta un recorte más largo.");
                     setIsTrimmingLoading(false);
                     return;
                 }
 
-                const file = new File([blob], "video_recortado.mp4", { type: mimeType });
+                const file = new File([blob], "trimmed.mp4", { type: mimeType });
                 const url = URL.createObjectURL(file);
-
                 setPreview(url);
                 setPendingFile(file);
                 setDuration(recordingDuration);
 
-                // Limpiar
+                // Cerrar modal
                 setIsVideoTrimming(false);
                 setTrimmerVideoUrl(null);
                 setIsTrimmingLoading(false);
                 setTrimProgress(0);
-
-                console.log("RECORTE COMPLETADO EXITO:", blob.size);
             };
 
-            // Programar fin
-            setTimeout(stopCapture, recordingDuration * 1000 + 500);
+            // Seguridad por si falla el evento 'ended'
+            setTimeout(stopTrimming, (recordingDuration + 1) * 1000);
 
         } catch (err: any) {
-            console.error("ERROR CRITICO RECORTE:", err);
-            alert("Error al procesar: " + (err.message || "Error desconocido"));
+            console.error("Trimmer failure:", err);
+            alert("Error: " + err.message);
             setIsTrimmingLoading(false);
         }
     };
