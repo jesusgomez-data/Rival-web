@@ -196,8 +196,8 @@ export default function VideoEditor({ videoSrc, videoFile, onSave, onCancel }: V
     };
 
     return (
-        <div className="fixed inset-0 z-[600] bg-black flex flex-col items-center justify-center p-0 md:p-4 overflow-hidden safe-area-inset">
-            <div className="w-full h-full max-w-4xl bg-brand-gray/95 md:rounded-[40px] border-x border-y border-white/10 flex flex-col relative overflow-hidden backdrop-blur-2xl">
+        <div className="fixed inset-0 z-[600] bg-black flex flex-col items-center justify-center overflow-hidden">
+            <div className="w-full h-full bg-brand-gray/95 flex flex-col relative overflow-hidden">
 
                 {/* Header */}
                 <div className="p-4 md:p-6 flex items-center justify-between border-b border-white/5 bg-black/20">
@@ -220,15 +220,15 @@ export default function VideoEditor({ videoSrc, videoFile, onSave, onCancel }: V
 
                     {/* Visual Cropper */}
                     <div className="flex-[1.5] relative bg-black flex items-center justify-center group">
-                        <div className="absolute inset-x-0 top-4 z-10 flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button onClick={() => { setAspect(9 / 16); setAspectName('9:16') }} className={`p-2 rounded-lg backdrop-blur-md ${aspectName === '9:16' ? 'bg-brand-red text-white' : 'bg-black/40 text-gray-400'}`} title="9:16 (Story)">
-                                <RectangleVertical className="w-4 h-4" />
+                        <div className="absolute inset-x-0 top-4 z-10 flex justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                            <button onClick={() => { setAspect(9 / 16); setAspectName('9:16') }} className={`p-2 md:p-3 rounded-lg backdrop-blur-md ${aspectName === '9:16' ? 'bg-brand-red text-white' : 'bg-black/60 text-gray-400'}`} title="9:16 (Story)">
+                                <RectangleVertical className="w-4 h-4 md:w-5 md:h-5" />
                             </button>
-                            <button onClick={() => { setAspect(1); setAspectName('1:1') }} className={`p-2 rounded-lg backdrop-blur-md ${aspectName === '1:1' ? 'bg-brand-red text-white' : 'bg-black/40 text-gray-400'}`} title="1:1 (Square)">
-                                <Square className="w-4 h-4" />
+                            <button onClick={() => { setAspect(1); setAspectName('1:1') }} className={`p-2 md:p-3 rounded-lg backdrop-blur-md ${aspectName === '1:1' ? 'bg-brand-red text-white' : 'bg-black/60 text-gray-400'}`} title="1:1 (Square)">
+                                <Square className="w-4 h-4 md:w-5 md:h-5" />
                             </button>
-                            <button onClick={() => { setAspect(4 / 5); setAspectName('4:5') }} className={`p-2 rounded-lg backdrop-blur-md ${aspectName === '4:5' ? 'bg-brand-red text-white' : 'bg-black/40 text-gray-400'}`} title="4:5 (Portrait)">
-                                <RectangleVertical className="w-4 h-4 scale-x-125" />
+                            <button onClick={() => { setAspect(4 / 5); setAspectName('4:5') }} className={`p-2 md:p-3 rounded-lg backdrop-blur-md ${aspectName === '4:5' ? 'bg-brand-red text-white' : 'bg-black/60 text-gray-400'}`} title="4:5 (Portrait)">
+                                <RectangleVertical className="w-4 h-4 md:w-5 md:h-5 scale-x-125" />
                             </button>
                         </div>
 
@@ -276,7 +276,7 @@ export default function VideoEditor({ videoSrc, videoFile, onSave, onCancel }: V
                     </div>
 
                     {/* Controls Panel */}
-                    <div className="flex-1 p-4 md:p-8 flex flex-col justify-between bg-black/20 border-l border-white/5 min-w-[320px]">
+                    <div className="flex-1 p-3 md:p-8 flex flex-col justify-between bg-black/20 border-t md:border-t-0 md:border-l border-white/5">
 
                         {/* Trim Controls */}
                         <div className="space-y-6">

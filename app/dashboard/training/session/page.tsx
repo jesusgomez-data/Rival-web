@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import { useTheme } from "../../../ThemeContext";
 import PRCelebrationModal from "./PRCelebrationModal";
+import VideoEditor from "../../VideoEditor";
 
 // Helper for real distance calculation (Haversine Formula)
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -89,7 +90,10 @@ function SessionContent() {
     const [prAchievements, setPrAchievements] = useState<any[]>([]);
     const [userName, setUserName] = useState<string>("Atleta");
 
-
+    // Video Editor State
+    const [isVideoTrimming, setIsVideoTrimming] = useState(false);
+    const [trimmerVideoUrl, setTrimmerVideoUrl] = useState<string | null>(null);
+    const [videoToEdit, setVideoToEdit] = useState<File | null>(null);
 
     // Running Specific State
     const [runPath, setRunPath] = useState<{ lat: number, lon: number }[]>([]);
@@ -166,27 +170,10 @@ function SessionContent() {
         if (!file) return;
 
         if (file.type.startsWith('video/')) {
-            // Check video duration
-            const video = document.createElement('video');
-            video.preload = 'metadata';
-            video.onloadedmetadata = () => {
-                window.URL.revokeObjectURL(video.src);
-                const duration = video.duration;
-
-                if (duration > 60) {
-                    alert(`El video dura ${Math.round(duration)} segundos. Por favor, sube un video de máximo 60 segundos.`);
-                    if (fileInputRef.current) fileInputRef.current.value = "";
-                    return;
-                }
-
-                // Video is OK, upload directly
-                startUpload(file);
-            };
-            video.onerror = () => {
-                alert("Error al procesar el video.");
-                if (fileInputRef.current) fileInputRef.current.value = "";
-            };
-            video.src = URL.createObjectURL(file);
+            // Open VideoEditor for all videos
+            setVideoToEdit(file);
+            setTrimmerVideoUrl(URL.createObjectURL(file));
+            setIsVideoTrimming(true);
             return;
         }
 
@@ -1595,6 +1582,26 @@ function SessionContent() {
                         </button>
                     </div>
                 </div>
+            )}
+
+            {/* Video Editor Component */}
+            {isVideoTrimming && trimmerVideoUrl && videoToEdit && (
+                <VideoEditor
+                    videoSrc={trimmerVideoUrl}
+                    videoFile={videoToEdit}
+                    onCancel={() => {
+                        setIsVideoTrimming(false);
+                        setTrimmerVideoUrl(null);
+                        setVideoToEdit(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    onSave={(file, duration) => {
+                        startUpload(file);
+                        setIsVideoTrimming(false);
+                        setTrimmerVideoUrl(null);
+                        setVideoToEdit(null);
+                    }}
+                />
             )}
 
         </div >
