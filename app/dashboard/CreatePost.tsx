@@ -128,38 +128,62 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
     const [trimProgress, setTrimProgress] = useState(0);
 
     const processTrimming = async () => {
-        if (!trimmerVideoRef.current || !trimmerVideoUrl) return;
+        if (!trimmerVideoRef.current || !trimmerVideoUrl) {
+            console.error("Trimmer: Missing ref or URL");
+            return;
+        }
 
         setIsTrimmingLoading(true);
-        setTrimProgress(0);
+        setTrimProgress(5); // Start progress immediately
         const video = trimmerVideoRef.current;
 
         try {
-            const captureStream = (video as any).captureStream || (video as any).mozCaptureStream;
+            console.log("Trimmer: Starting process for", trimmerVideoUrl);
 
-            if (!captureStream) {
-                alert("Tu navegador no soporta el recorte de video directo. Por favor, intenta subir un video de menos de 1 minuto.");
-                setIsTrimmingLoading(false);
-                setIsVideoTrimming(false);
-                setTrimmerVideoUrl(null);
-                return;
+            // Re-check captureStream on every call
+            const captureFn = (video as any).captureStream || (video as any).mozCaptureStream;
+
+            if (!captureFn) {
+                throw new Error("Su navegador no soporta el recorte de video en tiempo real.");
             }
 
-            const stream = captureStream.call(video);
-            const supportedTypes = ['video/mp4', 'video/webm', 'video/x-matroska', 'video/ogg'];
+            // Ensure video is ready
+            if (video.readyState < 2) {
+                console.log("Trimmer: Waiting for video to be ready...");
+                await new Promise((resolve) => {
+                    video.oncanplay = resolve;
+                    // Timeout if it takes too long
+                    setTimeout(resolve, 3000);
+                });
+            }
+
+            const stream = captureFn.call(video);
+
+            // Better MIME detection for mobile (iOS especially)
+            const possibleTypes = [
+                'video/mp4;codecs=avc1',
+                'video/mp4',
+                'video/webm;codecs=vp9',
+                'video/webm;codecs=vp8',
+                'video/webm'
+            ];
+
             let mimeType = '';
-            for (const type of supportedTypes) {
+            for (const type of possibleTypes) {
                 if (MediaRecorder.isTypeSupported(type)) {
                     mimeType = type;
+                    console.log("Trimmer: Selected MIME type:", mimeType);
                     break;
                 }
             }
 
-            // Limit bitrate to ~2.5Mbps to ensure a 60s video stays around 20MB (well under the 50MB plan limit)
-            const recorderOptions: any = { mimeType };
-            if (MediaRecorder.isTypeSupported(mimeType)) {
-                recorderOptions.videoBitsPerSecond = 2500000;
+            if (!mimeType) {
+                throw new Error("No se encontró un formato de grabación compatible.");
             }
+
+            const recorderOptions: any = { mimeType };
+            // Bitrate management for plan compatibility
+            recorderOptions.videoBitsPerSecond = 2000000; // 2Mbps is plenty for 720p/1080p mobile video
 
             const recorder = new MediaRecorder(stream, recorderOptions);
             const chunks: Blob[] = [];
@@ -171,19 +195,22 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
             let progressInterval: any;
 
             recorder.onstop = () => {
+                console.log("Trimmer: Recording stopped, chunks:", chunks.length);
                 if (safetyTimeout) clearTimeout(safetyTimeout);
                 if (progressInterval) clearInterval(progressInterval);
 
                 if (chunks.length === 0) {
-                    alert("Error: No se capturaron datos del video. Por favor, intenta de nuevo y asegúrate de que el video se reproduce correctamente.");
+                    alert("Error: No se capturaron datos. Por favor, intenta de nuevo.");
                     setIsTrimmingLoading(false);
                     return;
                 }
 
                 const blob = new Blob(chunks, { type: mimeType });
-                const extension = mimeType.split('/')[1]?.split(';')[0] || 'webm';
+                const extension = mimeType.includes('mp4') ? 'mp4' : 'webm';
                 const fileName = pendingFile ? pendingFile.name.replace(/\.[^/.]+$/, "") : "trimmed_video";
                 const trimmedFile = new File([blob], `${fileName}_trimmed.${extension}`, { type: mimeType });
+
+                console.log("Trimmer: Result file size:", (trimmedFile.size / 1024 / 1024).toFixed(2), "MB");
 
                 const url = URL.createObjectURL(trimmedFile);
                 setPreview(url);
@@ -197,31 +224,34 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
             };
 
             recorder.onerror = (err) => {
-                console.error("MediaRecorder Error:", err);
-                alert("Ocurrió un error al procesar el video.");
-                setIsTrimmingLoading(false);
+                console.error("Trimmer: MediaRecorder Error:", err);
+                throw new Error("Error en la grabadora de video.");
             };
 
             const recordingDuration = Math.min(60, (video.duration - trimStart));
 
             const startRecording = () => {
-                video.onseeked = null; // Prevent multi-triggering
+                console.log("Trimmer: Starting recording for", recordingDuration, "seconds");
+                video.onseeked = null; // Clean listener
+
                 video.play().then(() => {
                     recorder.start();
+                    setTrimProgress(10);
 
-                    const startTime = Date.now();
+                    const startTimestamp = Date.now();
                     progressInterval = setInterval(() => {
-                        const elapsed = (Date.now() - startTime) / 1000;
+                        const elapsed = (Date.now() - startTimestamp) / 1000;
                         const percent = Math.min(99, (elapsed / recordingDuration) * 100);
                         setTrimProgress(percent);
                     }, 500);
 
                     safetyTimeout = setTimeout(() => {
                         if (recorder.state === 'recording') {
+                            console.log("Trimmer: Safety timeout reached, stopping...");
                             recorder.stop();
                             video.pause();
                         }
-                    }, (recordingDuration + 1) * 1000);
+                    }, (recordingDuration + 1.5) * 1000); // 1.5s extra for safety
 
                     video.onended = () => {
                         if (recorder.state === 'recording') {
@@ -229,25 +259,36 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                         }
                     };
                 }).catch(err => {
-                    console.error("Play failed during trimming:", err);
-                    alert("No se pudo iniciar la captura del video. Intenta presionar 'Play' manualmente si es necesario.");
+                    console.error("Trimmer: Play failed:", err);
+                    alert("Error: No se pudo reproducir el video para capturarlo.");
                     setIsTrimmingLoading(false);
                 });
             };
 
-            // Prepare for seek
+            // Force seek and wait
             video.muted = true;
             video.currentTime = trimStart;
 
-            // Check if seek is needed or already there
-            if (Math.abs(video.currentTime - trimStart) < 0.1) {
+            // Robust seek listener with timeout
+            let seekHandled = false;
+            const handleSeek = () => {
+                if (seekHandled) return;
+                seekHandled = true;
                 startRecording();
-            } else {
-                video.onseeked = startRecording;
-            }
+            };
 
-        } catch (err) {
-            console.error("Trimming error:", err);
+            video.onseeked = handleSeek;
+            // Force start if seeked doesn't fire in 2 seconds
+            setTimeout(() => {
+                if (!seekHandled) {
+                    console.warn("Trimmer: Seek timed out, forcing start...");
+                    handleSeek();
+                }
+            }, 2000);
+
+        } catch (err: any) {
+            console.error("Trimmer error:", err);
+            alert(`Error al recortar: ${err.message || 'Error desconocido'}`);
             setIsTrimmingLoading(false);
         }
     };
@@ -500,6 +541,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                                 loop
                                 muted
                                 playsInline
+                                autoPlay
                             />
                         </div>
 
