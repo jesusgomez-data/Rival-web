@@ -150,12 +150,14 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
             }
 
             // Ensure video duration is valid
-            if (!video.duration || isNaN(video.duration)) {
-                console.error("Trimmer: Invalid duration", video.duration);
-                // Try to wait a bit more
-                await new Promise(r => setTimeout(r, 1000));
-                if (!video.duration || isNaN(video.duration)) {
-                    throw new Error("El video no ha cargado su duración. Intenta reproducirlo un segundo antes de recortar.");
+            if (!video.duration || isNaN(video.duration) || video.duration === Infinity) {
+                console.warn("Trimmer: Duration is Infinity or invalid, attempting to play to fix it...");
+                video.play();
+                await new Promise(r => setTimeout(r, 1500));
+                video.pause();
+
+                if (!video.duration || isNaN(video.duration) || video.duration === Infinity) {
+                    throw new Error("El sistema no puede determinar la duración del video. Intenta reproducirlo un momento.");
                 }
             }
 
