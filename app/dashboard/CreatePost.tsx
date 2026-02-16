@@ -11,10 +11,10 @@ import Image from "next/image";
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import MusicPicker from "./MusicPicker";
 import { MusicTrack } from "./music-data";
+import { useUploads } from "./UploadContext";
 
 export default function CreatePost({ currentUser, onSuccess }: { currentUser: any, onSuccess?: () => void }) {
     const [content, setContent] = useState("");
-    const [isPosting, setIsPosting] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [postType, setPostType] = useState<'standard' | 'pr'>('standard');
@@ -23,7 +23,6 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
     const [sport, setSport] = useState("Cross Training");
     const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
     const [duration, setDuration] = useState<number | null>(null);
-    const [uploadProgress, setUploadProgress] = useState(0);
     const [isVideoTrimming, setIsVideoTrimming] = useState(false);
     const [trimmerVideoUrl, setTrimmerVideoUrl] = useState<string | null>(null);
     const [trimStart, setTrimStart] = useState(0);
@@ -34,6 +33,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
     const fileInputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
     const supabaseClient = createClient();
+    const { startUpload } = useUploads();
 
     // Close emoji picker when clicking outside
     useEffect(() => {
@@ -50,127 +50,40 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
 
     async function handlePost(e: React.FormEvent) {
         e.preventDefault();
-        // Use pendingFile (trimmed or original) if available, otherwise check input
         let file = pendingFile || fileInputRef.current?.files?.[0];
 
         if (postType === 'standard' && !content.trim() && !file) return;
         if (postType === 'pr' && (!exercise || !weight)) return;
 
-        setIsPosting(true);
-        setUploadProgress(10);
+        // Mandar a segundo plano
+        startUpload({
+            content,
+            file,
+            postType,
+            exercise,
+            weight,
+            sport,
+            selectedTrack,
+            currentUser,
+            preview
+        });
 
-        const formData = new FormData();
+        // Limpiar y cerrar inmediatamente
+        setContent("");
+        setExercise("");
+        setWeight("");
+        setPreview(null);
+        setDuration(null);
+        setPendingFile(null);
+        setShowEmojiPicker(false);
+        setPostType('standard');
+        setSelectedTrack(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
 
-        if (selectedTrack) {
-            formData.append("music_url", selectedTrack.url);
-            formData.append("music_title", selectedTrack.title);
-            formData.append("music_artist", selectedTrack.artist);
-        }
-
-        let mediaUrl = null;
-        let mediaType = null;
-
-        // DIRECT CLIENT UPLOAD for larger files and reliability
-        if (file && file.size > 0) {
-            try {
-                const fileExt = file.name.split('.').pop() || (file.type.startsWith('video/') ? 'mp4' : 'jpg');
-                const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
-
-                console.log(`Starting direct upload: ${fileName} (${file.type}, ${file.size} bytes)`);
-                setUploadProgress(30);
-
-                const { data: uploadData, error: uploadError } = await supabaseClient.storage
-                    .from('posts')
-                    .upload(fileName, file, {
-                        cacheControl: '3600',
-                        upsert: true,
-                        contentType: file.type
-                    });
-
-                if (uploadError) throw uploadError;
-
-                const { data: { publicUrl } } = supabaseClient.storage
-                    .from('posts')
-                    .getPublicUrl(fileName);
-
-                mediaUrl = publicUrl;
-                mediaType = file.type.startsWith('video/') ? 'video' : 'image';
-                setUploadProgress(80);
-                console.log("Direct upload successful:", mediaUrl);
-            } catch (error: any) {
-                console.error("Direct upload failed:", error);
-
-                // If direct upload fails for a video/large file, we MUST STOP HERE.
-                // Fallback to server action will fail for files > 4.5MB on Vercel.
-                if (file.size > 4 * 1024 * 1024) {
-                    setIsPosting(false);
-                    setUploadProgress(0);
-                    const errorMsg = error?.message || "Error desconocido";
-
-                    if (errorMsg.includes("exceeded") || errorMsg.includes("size")) {
-                        alert(`El video es demasiado pesado para el Plan Gratuito de Supabase (límite 50MB).\n\nTu archivo pesa ${(file.size / (1024 * 1024)).toFixed(1)}MB.\n\nSOLUCIÓN: Usa el botón "RECORTAR" que aparece debajo del video para procesarlo. El recortador de la app reducirá el peso automáticamente para que quepa.`);
-                    } else {
-                        alert(`Error de conexión directa a la base de datos: ${errorMsg}. \n\nNo se puede usar el modo de respaldo para archivos grandes (>4MB). Por favor, intenta de nuevo o revisa tu conexión.`);
-                    }
-                    return; // Stop the whole handlePost function
-                }
-
-                console.warn("Direct upload failed, but file is small enough to try server fallback.");
-            }
-        }
-
-        let res;
-        try {
-            if (postType === 'pr') {
-                formData.append("exercise", exercise);
-                formData.append("weight", weight);
-                formData.append("sport", sport);
-
-                if (mediaUrl) {
-                    formData.append("media_url", mediaUrl);
-                    // Don't append file if we have a URL to keep payload small
-                } else if (file) {
-                    formData.append("media", file);
-                }
-                res = await createPRPost(formData);
-            } else {
-                formData.append("content", content);
-                if (mediaUrl) {
-                    formData.append("media_url", mediaUrl);
-                    formData.append("media_type", mediaType!);
-                    // Don't append file if we have a URL
-                } else if (file) {
-                    formData.append("media", file);
-                }
-                res = await createUserPost(formData);
-            }
-
-            setUploadProgress(100);
-
-            if (res?.error) {
-                console.error("Server action error:", res.error);
-                alert(`Error al publicar (Servidor): ${res.error}`);
-            } else {
-                setContent("");
-                setExercise("");
-                setWeight("");
-                setPreview(null);
-                setDuration(null);
-                setPendingFile(null);
-                setShowEmojiPicker(false);
-                setPostType('standard');
-                setSelectedTrack(null);
-                if (fileInputRef.current) fileInputRef.current.value = "";
-                onSuccess?.();
-            }
-        } catch (error: any) {
-            console.error("Post error:", error);
-            alert(`Ocurrió un error inesperado al publicar: ${error?.message || String(error)}`);
-        } finally {
-            setIsPosting(false);
-            setUploadProgress(0);
-        }
+        // Cerrar modal
+        onSuccess?.();
     }
+
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -185,8 +98,8 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                     setDuration(dur);
                     window.URL.revokeObjectURL(docVideo.src);
 
-                    if (dur > 60) {
-                        // Auto-open trimmer for videos longer than 1 minute
+                    if (dur > 60 || file.size > 48 * 1024 * 1024) {
+                        // Auto-open trimmer for videos longer than 1 minute OR > 48MB (to use compression)
                         setTrimStart(0);
                         setPendingFile(file);
                         setTrimmerVideoUrl(URL.createObjectURL(file));
@@ -431,17 +344,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                         {preview && (
                             <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/60 shadow-inner group transition-all w-full">
                                 <div className="flex items-center justify-center bg-black/20 min-h-[120px] max-h-[300px]">
-                                    {isPosting && (
-                                        <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center gap-3">
-                                            <div className="w-32 h-1 bg-white/10 rounded-full overflow-hidden">
-                                                <div
-                                                    className="h-full bg-brand-red transition-all duration-300"
-                                                    style={{ width: `${uploadProgress}%` }}
-                                                />
-                                            </div>
-                                            <span className="text-xl font-black text-white italic">{uploadProgress}%</span>
-                                        </div>
-                                    )}
+                                    {/* Subida en segundo plano activa manejada por UploadContext */}
                                     {fileInputRef.current?.files?.[0]?.type.startsWith('video/') || (pendingFile?.type.startsWith('video/')) ? (
                                         <video src={preview} controls className="max-h-[300px] w-full object-contain" />
                                     ) : (
@@ -450,23 +353,21 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                                 </div>
 
                                 {/* Remove Button */}
-                                {!isPosting && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setPreview(null);
-                                            setDuration(null);
-                                            setPendingFile(null);
-                                            if (fileInputRef.current) fileInputRef.current.value = "";
-                                        }}
-                                        className="absolute top-3 right-3 bg-black/60 text-white p-2 rounded-full hover:bg-brand-red transition-all z-10 backdrop-blur-md border border-white/10"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                )}
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setPreview(null);
+                                        setDuration(null);
+                                        setPendingFile(null);
+                                        if (fileInputRef.current) fileInputRef.current.value = "";
+                                    }}
+                                    className="absolute top-3 right-3 bg-black/60 text-white p-2 rounded-full hover:bg-brand-red transition-all z-10 backdrop-blur-md border border-white/10"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
 
                                 {/* Trimming Indicator / Button */}
-                                {duration !== null && duration > 60 && !isPosting && (
+                                {duration !== null && duration > 60 && (
                                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-brand-red/95 to-brand-red/80 text-white px-4 py-3 flex items-center justify-between backdrop-blur-md">
                                         <div className="flex items-center gap-2">
                                             <AlertCircle className="w-4 h-4" />
@@ -490,7 +391,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                                 )}
 
                                 {/* Manual Trim Button */}
-                                {duration !== null && duration <= 60 && !isPosting && (fileInputRef.current?.files?.[0]?.type.startsWith('video/') || pendingFile?.type.startsWith('video/')) && (
+                                {duration !== null && duration <= 60 && (fileInputRef.current?.files?.[0]?.type.startsWith('video/') || pendingFile?.type.startsWith('video/')) && (
                                     <button
                                         type="button"
                                         onClick={() => {
@@ -565,20 +466,11 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                             {/* Submit Button */}
                             <button
                                 type="submit"
-                                disabled={isPosting || (postType === 'standard' && !content.trim() && !preview) || (postType === 'pr' && (!exercise || !weight))}
+                                disabled={(postType === 'standard' && !content.trim() && !preview) || (postType === 'pr' && (!exercise || !weight))}
                                 className="bg-brand-red text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-glow-sm hover:shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed flex items-center gap-3 ml-auto"
                             >
-                                {isPosting ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        <span>Publicando</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Send className="w-4 h-4" />
-                                        <span>{postType === 'pr' ? 'Publicar PR' : 'Publicar'}</span>
-                                    </>
-                                )}
+                                <Send className="w-4 h-4" />
+                                <span>{postType === 'pr' ? 'Publicar PR' : 'Publicar'}</span>
                             </button>
                         </div>
                     </form>

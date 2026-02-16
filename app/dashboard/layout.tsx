@@ -479,12 +479,16 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     );
 }
 
+import { UploadProvider } from "./UploadContext";
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
-        <StoryProvider>
-            <DashboardContent>
-                {children}
-            </DashboardContent>
-        </StoryProvider>
+        <UploadProvider>
+            <StoryProvider>
+                <DashboardContent>
+                    {children}
+                </DashboardContent>
+            </StoryProvider>
+        </UploadProvider>
     );
 }
