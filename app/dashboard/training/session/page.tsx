@@ -169,7 +169,7 @@ function SessionContent() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (file.type.startsWith('video/')) {
+        if (false && file.type.startsWith('video/')) {
             // Check duration before opening editor
             const video = document.createElement('video');
             video.preload = 'metadata';
