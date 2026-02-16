@@ -94,7 +94,16 @@ export default function VideoEditor({ videoSrc, videoFile, onSave, onCancel }: V
 
             video.currentTime = trimRange.start;
             await new Promise(r => {
-                const onSeeked = () => { video.removeEventListener('seeked', onSeeked); r(true); };
+                const onSeeked = () => {
+                    video.removeEventListener('seeked', onSeeked);
+                    clearTimeout(timeout);
+                    r(true);
+                };
+                const timeout = setTimeout(() => {
+                    video.removeEventListener('seeked', onSeeked);
+                    // Force resolve if stuck
+                    r(true);
+                }, 3000); // 3s max wait
                 video.addEventListener('seeked', onSeeked);
             });
 
@@ -200,19 +209,35 @@ export default function VideoEditor({ videoSrc, videoFile, onSave, onCancel }: V
             <div className="w-full h-full bg-brand-gray/95 flex flex-col relative overflow-hidden">
 
                 {/* Header */}
-                <div className="p-4 md:p-6 flex items-center justify-between border-b border-white/5 bg-black/20">
+                <div className="p-4 md:p-6 flex items-center justify-between border-b border-white/5 bg-black/20 z-[200] relative">
                     <button onClick={onCancel} className="p-2 text-gray-400 hover:text-white transition-colors">
                         <X className="w-6 h-6" />
                     </button>
-                    <h2 className="text-white font-black italic uppercase tracking-widest text-sm md:text-base">Editar Video</h2>
-                    <button
-                        onClick={processVideo}
-                        disabled={isProcessing}
-                        className="flex items-center gap-2 bg-brand-red text-white px-4 md:px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-glow-sm hover:scale-105 transition-all disabled:opacity-50"
-                    >
-                        {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                        <span className="hidden sm:inline">Listo</span>
-                    </button>
+                    <h2 className="text-white font-black italic uppercase tracking-widest text-sm md:text-base hidden sm:block">Editar Video</h2>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={() => {
+                                if (duration > 65) {
+                                    alert(`El video dura ${Math.round(duration)}s. El límite es 60s. Usa la herramienta de recorte.`);
+                                    return;
+                                }
+                                onSave(videoFile, duration);
+                            }}
+                            disabled={isProcessing}
+                            className="bg-transparent border border-white/20 text-white px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider hover:bg-white/10 transition-all mr-2"
+                        >
+                            Original
+                        </button>
+                        <button
+                            onClick={processVideo}
+                            disabled={isProcessing}
+                            className="flex items-center gap-2 bg-brand-red text-white px-4 md:px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest shadow-glow-sm hover:scale-105 transition-all disabled:opacity-50"
+                        >
+                            {isProcessing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                            <span className="inline">Listo</span>
+                        </button>
+                    </div>
                 </div>
 
                 {/* Editor Area */}
