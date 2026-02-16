@@ -106,7 +106,12 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                     setIsPosting(false);
                     setUploadProgress(0);
                     const errorMsg = error?.message || "Error desconocido";
-                    alert(`Error de conexión directa a la base de datos: ${errorMsg}. \n\nNo se puede usar el modo de respaldo para archivos grandes (>4MB). Por favor, intenta de nuevo o revisa tu conexión.`);
+
+                    if (errorMsg.includes("exceeded") || errorMsg.includes("size")) {
+                        alert(`El video es demasiado pesado para el Plan Gratuito de Supabase (límite 50MB).\n\nTu archivo pesa ${(file.size / (1024 * 1024)).toFixed(1)}MB.\n\nSOLUCIÓN: Usa el botón "RECORTAR" que aparece debajo del video para procesarlo. El recortador de la app reducirá el peso automáticamente para que quepa.`);
+                    } else {
+                        alert(`Error de conexión directa a la base de datos: ${errorMsg}. \n\nNo se puede usar el modo de respaldo para archivos grandes (>4MB). Por favor, intenta de nuevo o revisa tu conexión.`);
+                    }
                     return; // Stop the whole handlePost function
                 }
 
@@ -237,13 +242,13 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                 }
             }
 
-            if (!mimeType) {
-                alert("Formato de video no compatible para recorte en este navegador.");
-                setIsTrimmingLoading(false);
-                return;
+            // Limit bitrate to ~2.5Mbps to ensure a 60s video stays around 20MB (well under the 50MB plan limit)
+            const recorderOptions: any = { mimeType };
+            if (MediaRecorder.isTypeSupported(mimeType)) {
+                recorderOptions.videoBitsPerSecond = 2500000;
             }
 
-            const recorder = new MediaRecorder(stream, { mimeType });
+            const recorder = new MediaRecorder(stream, recorderOptions);
             const chunks: Blob[] = [];
             recorder.ondataavailable = (e) => {
                 if (e.data.size > 0) chunks.push(e.data);
