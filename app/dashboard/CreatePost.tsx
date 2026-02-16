@@ -129,10 +129,8 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
     const [trimProgress, setTrimProgress] = useState(0);
 
     const processTrimming = async () => {
-        window.alert("DEBUG: Botón Confirmar Recorte pulsado");
-
         if (!trimmerVideoRef.current || !trimmerVideoUrl) {
-            window.alert("Error: No se encontró el video ref o url");
+            console.error("Trimmer: Missing ref or URL");
             return;
         }
 
@@ -142,7 +140,6 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
         setTrimError(null);
 
         try {
-            window.alert("PASO 1: Iniciando captura...");
             // 1. Asegurar que el video esté listo y posicionado
             if (video.readyState < 2) {
                 await new Promise(r => {
@@ -161,7 +158,6 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
             });
 
             // 2. DETECCIÓN DE SOPORTE E IMPLEMENTACIÓN CANVAS (Bridge para iOS)
-            // iOS Chrome/Safari NO soporta video.captureStream(), así que usamos un Canvas como puente.
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = video.videoWidth || 640;
@@ -169,17 +165,15 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
 
             const stream = canvas.captureStream ? canvas.captureStream(30) : (canvas as any).mozCaptureStream ? (canvas as any).mozCaptureStream(30) : (canvas as any).webkitCaptureStream ? (canvas as any).webkitCaptureStream(30) : null;
 
-            window.alert("PASO 2: Stream detectado: " + (stream ? "SÍ" : "NO"));
-
             if (!stream) {
-                throw new Error("Tu navegador no permite la captura de video necesaria para el recorte.");
+                throw new Error("Su navegador no permite la captura de video necesaria para el recorte.");
             }
 
             // 3. CONFIGURACIÓN GRABADORA (Codec compatible iOS)
             const mimeType = MediaRecorder.isTypeSupported('video/mp4;codecs=avc1') ? 'video/mp4' : 'video/webm';
             const recorder = new MediaRecorder(stream, {
                 mimeType,
-                videoBitsPerSecond: 1500000 // Reducimos un poco para asegurar fluidez en móvil
+                videoBitsPerSecond: 1500000
             });
 
             const chunks: Blob[] = [];
@@ -190,7 +184,6 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
             const recordingDuration = Math.min(60, video.duration - trimStart);
             let animationFrameId: number;
 
-            // Función para dibujar los frames al canvas
             const drawFrame = () => {
                 if (ctx && !video.paused && !video.ended) {
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -199,11 +192,9 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
             };
 
             // 4. INICIO DE GRABACIÓN
-            window.alert("PASO 3: Iniciando recorder...");
             recorder.start();
-            window.alert("PASO 4: Recorder iniciado, dando play al video...");
             await video.play();
-            drawFrame(); // Iniciar loop de dibujo
+            drawFrame();
 
             const startTime = Date.now();
             const updateInterval = setInterval(() => {
@@ -222,10 +213,9 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
             };
 
             recorder.onstop = async () => {
-                window.alert("PASO FINAL: Grabación terminada, procesando blob...");
                 const blob = new Blob(chunks, { type: mimeType });
-                if (blob.size < 5000) { // Un video real debe pesar más
-                    alert("No se pudo procesar el video correctamente. Por favor intenta un recorte más largo.");
+                if (blob.size < 5000) {
+                    setTrimError("El recorte falló. Intenta seleccionar un segmento más largo.");
                     setIsTrimmingLoading(false);
                     return;
                 }
@@ -236,19 +226,17 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                 setPendingFile(file);
                 setDuration(recordingDuration);
 
-                // Cerrar modal
                 setIsVideoTrimming(false);
                 setTrimmerVideoUrl(null);
                 setIsTrimmingLoading(false);
                 setTrimProgress(0);
             };
 
-            // Seguridad por si falla el evento 'ended'
             setTimeout(stopTrimming, (recordingDuration + 1) * 1000);
 
         } catch (err: any) {
             console.error("Trimmer failure:", err);
-            alert("Error: " + err.message);
+            setTrimError(err.message || "Error al procesar el video");
             setIsTrimmingLoading(false);
         }
     };
