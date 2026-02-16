@@ -269,15 +269,23 @@ export async function toggleStoryLike(storyId: string) {
 }
 
 export async function recordStoryView(storyId: string) {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
 
-    // Use upsert to avoid duplicate key error logs in Postgres when a user views the same story multiple times
-    await supabase.from('story_views').upsert(
-        { story_id: storyId, user_id: user.id },
-        { onConflict: 'story_id,user_id' }
-    )
+        // Use upsert to avoid duplicate key error logs in Postgres when a user views the same story multiple times
+        const { error } = await supabase.from('story_views').upsert(
+            { story_id: storyId, user_id: user.id },
+            { onConflict: 'story_id,user_id' }
+        )
+
+        if (error) {
+            console.error("Error recording story view:", error)
+        }
+    } catch (err) {
+        console.error("Critical error in recordStoryView:", err)
+    }
 }
 
 export async function deleteStory(storyId: string) {
