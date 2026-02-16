@@ -3,11 +3,10 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Trash2, Edit2, Save, Heart, Dumbbell, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram } from "lucide-react";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
 import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike } from "./community/actions";
-import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import { clsx } from "clsx";
 import { useTheme } from "../ThemeContext";
 import { useStories } from "./stories/StoryContext";
@@ -20,7 +19,35 @@ import MentionInput from "@/components/MentionInput";
 
 const InstagramShareCard = dynamic(() => import("./InstagramShareCard"), { ssr: false });
 
-function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5", onInstagramShare, onOpenShareCard }: { image?: string, workoutData?: any, mediaType?: string, postId?: string, className?: string, iconClassName?: string, onInstagramShare?: () => void, onOpenShareCard?: () => void }) {
+interface WorkoutSet {
+    exercise_name?: string;
+    weight_kg?: number;
+    reps?: number;
+    unit?: string;
+    measure?: string;
+}
+
+interface WorkoutMetrics {
+    type?: string;
+    distance?: number;
+    pace?: string;
+    time?: string;
+    elevation?: number;
+    avgHeartRate?: number;
+    path?: any;
+    blocks?: any[];
+}
+
+interface WorkoutDetails {
+    title: string;
+    total_volume_kg?: number;
+    location_name?: string;
+    metrics?: WorkoutMetrics;
+    sport_type?: string;
+    workout_sets?: WorkoutSet[];
+}
+
+function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5", onInstagramShare, onOpenShareCard }: { image?: string, workoutData?: WorkoutDetails, mediaType?: string, postId?: string, className?: string, iconClassName?: string, onInstagramShare?: () => void, onOpenShareCard?: () => void }) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -120,14 +147,7 @@ interface FeedPostProps {
     authorId?: string;
     centerName?: string;
     isOfficial?: boolean;
-    workoutData?: {
-        title: string;
-        total_volume_kg?: number;
-        workout_sets?: any[];
-        location_name?: string;
-        sport_type?: string;
-        metrics?: any;
-    };
+    workoutData?: WorkoutDetails;
     music_url?: string | null;
     music_title?: string | null;
     music_artist?: string | null;
@@ -149,7 +169,7 @@ interface Comment {
     replies?: Comment[];
 }
 
-export default function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId, centerName,
+export default function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId,
     workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global'
 }: FeedPostProps) {
     const { theme } = useTheme();
@@ -163,7 +183,6 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const [commentsCount, setCommentsCount] = useState(initialCommentsCount);
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [isPostingComment, setIsPostingComment] = useState(false);
-    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
 
     const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
@@ -537,7 +556,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             ) : mediaType === 'pr' ? (
                 <div className="px-4 pb-6 mt-2">
                     {(() => {
-                        let prData: any = {};
+                        let prData: { sport?: string, exerciseName?: string, weight?: string, unit?: string, backgroundImage?: string } = {};
                         try {
                             if (typeof image === 'string' && image.startsWith('{')) {
                                 prData = JSON.parse(image);
@@ -560,7 +579,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             ) : mediaType === 'class_result' ? (
                 <div className="px-4 pb-6">
                     {(() => {
-                        let blocks: any[] = [];
+                        let blocks: Array<{ type: string, centerName?: string, result?: any, rounds?: number, duration?: number, title?: string, notes?: string, exercises?: any[] }> = [];
                         let centerName = "Centro Deportivo";
                         try {
                             const parsed = JSON.parse(image);
@@ -829,7 +848,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                 </div>
 
                                                 <div className="relative z-10 space-y-3">
-                                                    {blocks.map((block: any, idx: number) => {
+                                                    {blocks.map((block: { type: string, title?: string, result?: { time?: string, rounds?: number }, duration?: number, notes?: string, exercises?: any[] }, idx: number) => {
                                                         const isInnerExpanded = expandedInnerBlocks.includes(idx + 1000); // Unique ID offset
                                                         const resultStr =
                                                             block.type === 'fortime' ? (block.result?.time || '--:--') :
@@ -869,9 +888,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
                                                                 {isInnerExpanded && (
                                                                     <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-3 mt-2 border-t border-white/5">
-                                                                        {block.notes && <p className="text-xs text-gray-400 italic mb-2">"{block.notes}"</p>}
+                                                                        {block.notes && <p className="text-xs text-gray-400 italic mb-2">&quot;{block.notes}&quot;</p>}
                                                                         <div className="space-y-2">
-                                                                            {block.exercises?.map((ex: any, eIdx: number) => (
+                                                                            {block.exercises?.map((ex: { name: string, sets?: any[] }, eIdx: number) => (
                                                                                 <div key={eIdx} className="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2 border border-white/5">
                                                                                     <span className={clsx("text-xs font-bold uppercase", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</span>
                                                                                     <span className="text-xs text-brand-red font-mono font-bold">
@@ -907,8 +926,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         const centerName = w.location_name || 'Gimnasio';
 
                         // Group by exercise name
-                        const grouped: { [key: string]: any } = {};
-                        sets.forEach((s: any) => {
+                        const grouped: { [key: string]: { name: string, maxWeight: number, totalReps: number, allSets: WorkoutSet[] } } = {};
+                        sets.forEach((s: WorkoutSet) => {
                             const name = s.exercise_name || 'Ejercicio';
                             if (!grouped[name]) {
                                 grouped[name] = {
@@ -919,10 +938,10 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 };
                             }
                             grouped[name].allSets.push(s);
-                            if ((s.weight_kg || 0) > (grouped[name].maxWeight || 0)) {
-                                grouped[name].maxWeight = s.weight_kg;
+                            if ((s.weight_kg ?? 0) > (grouped[name].maxWeight ?? 0)) {
+                                grouped[name].maxWeight = s.weight_kg ?? 0;
                             }
-                            grouped[name].totalReps += (s.reps || 0);
+                            grouped[name].totalReps += (s.reps ?? 0);
                         });
 
                         const exercises = Object.values(grouped);
@@ -983,7 +1002,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                             </div>
 
                                             <div className="relative z-10 space-y-4 md:space-y-6">
-                                                {exercises.map((ex: any, idx) => {
+                                                {exercises.map((ex, idx) => {
                                                     const isInnerExpanded = expandedInnerBlocks.includes(idx + 100); // Offset for personal workouts
 
                                                     return (
@@ -1027,7 +1046,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                                         </div>
 
                                                                         <div className="space-y-2 mt-4">
-                                                                            {ex.allSets.map((set: any, sIdx: number) => (
+                                                                            {ex.allSets.map((set: WorkoutSet, sIdx: number) => (
                                                                                 <div key={sIdx} className="flex justify-between items-center bg-white/5 rounded-xl px-4 py-2.5 border border-white/5 group/set hover:border-brand-red/30 transition-colors">
                                                                                     <div className="flex items-center gap-2">
                                                                                         <span className="text-[9px] font-black text-brand-red uppercase tracking-widest bg-brand-red/10 px-2 py-0.5 rounded border border-brand-red/10 group-hover/set:bg-brand-red group-hover/set:text-white transition-colors">SET {sIdx + 1}</span>
@@ -1192,23 +1211,23 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         username={username || user}
                         avatar={avatar}
                         content={{
-                            type: (workoutData as any)?.metrics?.type === 'running' ? 'running' : (mediaType as any || 'workout'),
+                            type: workoutData?.metrics?.type === 'running' ? 'running' : (mediaType as any || 'workout'),
                             title: (workoutData?.title === 'Entrenamiento Híbrido Libre' || workoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (workoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (workoutData?.title || (mediaType === 'running' ? 'RUNNING' : 'ENTRENAMIENTO'))),
                             highlight: highlight || caption,
-                            stats: (workoutData as any)?.metrics?.type === 'running'
+                            stats: workoutData?.metrics?.type === 'running'
                                 ? [
-                                    { label: 'DISTANCIA', value: `${(((workoutData as any).metrics.distance || 0) / 1000).toFixed(2)} KM`, icon: 'distance' },
-                                    { label: 'RITMO', value: (workoutData as any).metrics.pace || '0:00', icon: 'pace' },
-                                    { label: 'TIEMPO', value: (workoutData as any).metrics.time || '00:00', icon: 'time' },
-                                    { label: 'DESNIVEL', value: `${(workoutData as any).metrics.elevation || 0}m`, icon: 'elevation' },
-                                    { label: 'PULSO MED.', value: `${(workoutData as any).metrics.avgHeartRate || 0}`, icon: 'heart' }
+                                    { label: 'DISTANCIA', value: `${(workoutData.metrics.distance || 0) / 1000} KM`, icon: 'distance' },
+                                    { label: 'RITMO', value: workoutData.metrics.pace || '0:00', icon: 'pace' },
+                                    { label: 'TIEMPO', value: workoutData.metrics.time || '00:00', icon: 'time' },
+                                    { label: 'DESNIVEL', value: `${workoutData.metrics.elevation || 0}m`, icon: 'elevation' },
+                                    { label: 'PULSO MED.', value: `${workoutData.metrics.avgHeartRate || 0}`, icon: 'heart' }
                                 ]
-                                : (workoutData as any)?.metrics?.blocks?.map((b: any) => ({
+                                : workoutData?.metrics?.blocks?.map((b: any) => ({
                                     label: b.type?.toUpperCase(),
                                     value: b.result?.time || `${b.result?.rounds || b.result?.reps || '-'} ${b.result?.rounds ? 'RDS' : (b.result?.reps ? 'REPS' : '')}`
                                 })).slice(0, 4) || (mediaType === 'pr' ? (() => {
                                     try {
-                                        const d = JSON.parse(image);
+                                        const d = JSON.parse(image || '{}');
                                         return [{ label: d.exerciseName?.toUpperCase(), value: `${d.weight}${d.unit}` }];
                                     } catch (e) { return [] }
                                 })() : []),
@@ -1243,8 +1262,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     title: (workoutData?.sport_type && workoutData.sport_type !== 'fitness') ? workoutData.sport_type.toUpperCase() : (highlight || workoutData?.title || 'ENTRENAMIENTO'),
                                     date: time,
                                     stats: mediaType === 'pr' ? (() => {
-                                        try { const d = JSON.parse(image); return [{ label: "PESO", value: `${d.weight}${d.unit}` }, { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }]; } catch (e) { return [] }
-                                    })() : (workoutData as any)?.metrics?.blocks?.map((b: any) => ({
+                                        try { const d = JSON.parse(image || '{}'); return [{ label: "PESO", value: `${d.weight}${d.unit}` }, { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }]; } catch (e) { return [] }
+                                    })() : workoutData?.metrics?.blocks?.map((b) => ({
                                         label: b.type?.toUpperCase(),
                                         value: b.result?.time || `${b.result?.rounds || 0} RDS`
                                     })).slice(0, 3) || [{ label: "DISCIPLINA", value: (workoutData?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "COMPLETADO" }],

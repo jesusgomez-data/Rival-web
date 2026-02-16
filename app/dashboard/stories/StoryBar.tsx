@@ -1,5 +1,3 @@
-'use client'
-
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown } from 'lucide-react'
@@ -14,6 +12,7 @@ import MusicPicker from '../MusicPicker'
 import { MusicTrack } from '../music-data'
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
 import { createClient } from '@/utils/supabase/client'
+import VideoEditor from '../VideoEditor'
 
 interface Story {
     id: string
@@ -90,10 +89,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
 
     const [isVideoTrimming, setIsVideoTrimming] = useState(false)
     const [trimmerVideoUrl, setTrimmerVideoUrl] = useState<string | null>(null)
-    const [trimStart, setTrimStart] = useState(0)
-    const [isTrimmingLoading, setIsTrimmingLoading] = useState(false)
+    const [videoToEdit, setVideoToEdit] = useState<File | null>(null)
     const [videoDuration, setVideoDuration] = useState(0)
-    const trimmerVideoRef = useRef<HTMLVideoElement>(null)
 
     // Interaction State for Dragging
     const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -282,32 +279,10 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         const file = e.target.files?.[0]
         if (!file) return
 
-        // No file size limit - all videos accepted, will be trimmed if needed
         if (file.type.startsWith('video/')) {
-            const video = document.createElement('video');
-            video.preload = 'metadata';
-
-            video.onloadedmetadata = function () {
-                window.URL.revokeObjectURL(video.src);
-                const duration = video.duration;
-                setVideoDuration(duration);
-
-                if (duration > 30) {
-                    // Auto-open trimmer for videos longer than 30s
-                    setTrimStart(0);
-                    setTrimmerVideoUrl(URL.createObjectURL(file));
-                    setIsVideoTrimming(true);
-                    return;
-                }
-
-                setupPreview(file);
-            };
-
-            video.onerror = function () {
-                alert('Error al procesar el video. Asegúrate de que sea un formato compatible.');
-            };
-
-            video.src = URL.createObjectURL(file);
+            setVideoToEdit(file);
+            setTrimmerVideoUrl(URL.createObjectURL(file));
+            setIsVideoTrimming(true);
         } else {
             setupPreview(file);
         }
@@ -490,120 +465,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         }
     }
 
-    const processTrimming = async () => {
-        if (!trimmerVideoRef.current || !trimmerVideoUrl) return;
-
-        setIsTrimmingLoading(true);
-        const video = trimmerVideoRef.current;
-
-        try {
-            // Check for captureStream support (it's missing in some mobile browsers like iOS Safari)
-            const captureStream = (video as any).captureStream || (video as any).mozCaptureStream;
-
-            if (!captureStream) {
-                alert("Tu navegador no soporta el recorte de video directo. Por favor, intenta subir un video de menos de 30 segundos o recórtalo en tu galería antes de subirlo.");
-                setIsTrimmingLoading(false);
-                setIsVideoTrimming(false);
-                setTrimmerVideoUrl(null);
-                return;
-            }
-
-            const stream = captureStream.call(video);
-
-            const supportedTypes = ['video/mp4', 'video/webm', 'video/x-matroska', 'video/ogg'];
-            let mimeType = '';
-            for (const type of supportedTypes) {
-                if (MediaRecorder.isTypeSupported(type)) {
-                    mimeType = type;
-                    break;
-                }
-            }
-
-            if (!mimeType) {
-                alert("Formato de video no compatible para recorte en este navegador.");
-                setIsTrimmingLoading(false);
-                return;
-            }
-
-            const recorder = new MediaRecorder(stream, { mimeType });
-            const chunks: Blob[] = [];
-            recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) chunks.push(e.data);
-            };
-
-            // Safety timeout to prevent getting stuck
-            let safetyTimeout: any;
-
-            recorder.onstop = () => {
-                if (safetyTimeout) clearTimeout(safetyTimeout);
-
-                if (chunks.length === 0) {
-                    alert("Error: No se capturaron datos del video. Intenta de nuevo.");
-                    setIsTrimmingLoading(false);
-                    return;
-                }
-
-                const blob = new Blob(chunks, { type: mimeType });
-                const extension = mimeType.split('/')[1]?.split(';')[0] || 'webm';
-                const trimmedFile = new File([blob], `trimmed_video.${extension}`, { type: mimeType });
-
-                setupPreview(trimmedFile);
-                setIsVideoTrimming(false);
-                setTrimmerVideoUrl(null);
-                setIsTrimmingLoading(false);
-                console.log("Trimming completed successfully, size:", trimmedFile.size);
-            };
-
-            recorder.onerror = (err) => {
-                console.error("MediaRecorder Error:", err);
-                alert("Error durante el procesamiento del video.");
-                setIsTrimmingLoading(false);
-            };
-
-            // Prepare video for recording
-            video.currentTime = trimStart;
-
-            const startRecording = () => {
-                console.log("Starting recording loop from:", trimStart);
-                video.muted = true; // Ensure it can play
-                video.play().then(() => {
-                    recorder.start();
-
-                    const recordingDuration = Math.min(30, (video.duration - trimStart));
-
-                    // Main stop logic
-                    safetyTimeout = setTimeout(() => {
-                        if (recorder.state === 'recording') {
-                            recorder.stop();
-                            video.pause();
-                        }
-                    }, (recordingDuration + 1) * 1000); // Wait 1s extra to be safe
-
-                    video.onended = () => {
-                        if (recorder.state === 'recording') {
-                            recorder.stop();
-                        }
-                    };
-                }).catch(err => {
-                    console.error("Video play failed:", err);
-                    alert("No se pudo iniciar el video para procesarlo. Asegúrate de que tu navegador permite la reproducción.");
-                    setIsTrimmingLoading(false);
-                });
-
-                video.onseeked = null; // Clean up
-            };
-
-            if (video.readyState >= 3) {
-                startRecording();
-            } else {
-                video.onseeked = startRecording;
-            }
-        } catch (err) {
-            console.error("Critical error in processTrimming:", err);
-            alert("Error crítico al procesar el video.");
-            setIsTrimmingLoading(false);
-        }
-    };
 
     const closePreview = () => {
         setPreviewFile(null)
@@ -1040,72 +901,23 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 </div>
             ))}
 
-            {/* Video Trimmer Modal */}
-            {isVideoTrimming && trimmerVideoUrl && (
-                <div className="fixed inset-0 z-[400] bg-black/98 flex items-center justify-center p-4 backdrop-blur-xl">
-                    <div className="bg-brand-gray border border-white/10 w-full max-w-md rounded-[40px] p-8 shadow-2xl relative">
-                        <button
-                            onClick={() => { setIsVideoTrimming(false); setTrimmerVideoUrl(null); }}
-                            className="absolute top-8 right-8 text-gray-400 hover:text-white bg-white/5 p-2 rounded-full"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
-
-                        <div className="mb-8">
-                            <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">Recortar Video</h3>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Tu video dura {Math.round(videoDuration)}s - Recorta a máximo 30s</p>
-                        </div>
-
-                        <div className="relative aspect-[9/16] bg-black rounded-3xl overflow-hidden border border-white/10 mb-8">
-                            <video
-                                ref={trimmerVideoRef}
-                                src={trimmerVideoUrl}
-                                className="w-full h-full object-cover"
-                                loop
-                                muted
-                                playsInline
-                            />
-                        </div>
-
-                        <div className="space-y-6">
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-end">
-                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Punto de inicio</label>
-                                    <span className="text-xl font-black text-brand-red italic">{Math.floor(trimStart)}s</span>
-                                </div>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max={Math.max(0, videoDuration - 30)}
-                                    step="0.5"
-                                    value={trimStart}
-                                    onChange={(e) => {
-                                        const val = parseFloat(e.target.value);
-                                        setTrimStart(val);
-                                        if (trimmerVideoRef.current) trimmerVideoRef.current.currentTime = val;
-                                    }}
-                                    className="w-full accent-brand-red h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
-                                />
-                                <div className="flex justify-between text-[8px] font-bold text-gray-600 uppercase">
-                                    <span>Inicio</span>
-                                    <span>Fin - 30s</span>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={processTrimming}
-                                disabled={isTrimmingLoading}
-                                className="w-full bg-brand-red text-white py-5 rounded-2xl font-black uppercase tracking-widest text-sm shadow-glow transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3"
-                            >
-                                {isTrimmingLoading ? (
-                                    <><Loader2 className="w-6 h-6 animate-spin" /> Procesando...</>
-                                ) : (
-                                    <><Plus className="w-5 h-5" /> Confirmar Recorte</>
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            {isVideoTrimming && trimmerVideoUrl && videoToEdit && (
+                <VideoEditor
+                    videoSrc={trimmerVideoUrl}
+                    videoFile={videoToEdit}
+                    onCancel={() => {
+                        setIsVideoTrimming(false);
+                        setTrimmerVideoUrl(null);
+                        setVideoToEdit(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    onSave={(file, dur) => {
+                        setupPreview(file);
+                        setIsVideoTrimming(false);
+                        setTrimmerVideoUrl(null);
+                        setVideoToEdit(null);
+                    }}
+                />
             )}
 
             {/* Editor Modal */}

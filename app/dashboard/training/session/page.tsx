@@ -13,6 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import { useTheme } from "../../../ThemeContext";
 import PRCelebrationModal from "./PRCelebrationModal";
+import VideoEditor from "../../VideoEditor";
 
 // Helper for real distance calculation (Haversine Formula)
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
@@ -92,12 +93,7 @@ function SessionContent() {
     // Video Trimming State
     const [isVideoTrimming, setIsVideoTrimming] = useState(false);
     const [trimmerVideoUrl, setTrimmerVideoUrl] = useState<string | null>(null);
-    const [trimStart, setTrimStart] = useState(0);
-    const [isTrimmingLoading, setIsTrimmingLoading] = useState(false);
-    const [videoDuration, setVideoDuration] = useState(0);
     const [pendingFile, setPendingFile] = useState<File | null>(null);
-    const [trimProgress, setTrimProgress] = useState(0);
-    const trimmerVideoRef = useRef<HTMLVideoElement>(null);
 
     // Running Specific State
     const [runPath, setRunPath] = useState<{ lat: number, lon: number }[]>([]);
@@ -173,151 +169,16 @@ function SessionContent() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Video Duration Check & Trimming Trigger
         if (file.type.startsWith('video/')) {
-            const docVideo = document.createElement('video');
-            docVideo.preload = 'metadata';
-            docVideo.onloadedmetadata = () => {
-                const dur = docVideo.duration;
-                setVideoDuration(dur);
-                window.URL.revokeObjectURL(docVideo.src);
-
-                if (dur > 60) {
-                    setTrimStart(0);
-                    setPendingFile(file);
-                    setTrimmerVideoUrl(URL.createObjectURL(file));
-                    setIsVideoTrimming(true);
-                    return;
-                }
-                // If < 60s, proceed to upload
-                startUpload(file);
-            };
-            docVideo.onerror = () => {
-                alert("Error al procesar el video.");
-            };
-            docVideo.src = URL.createObjectURL(file);
+            setPendingFile(file);
+            setTrimmerVideoUrl(URL.createObjectURL(file));
+            setIsVideoTrimming(true);
             return;
         }
 
         startUpload(file);
     };
 
-    const processTrimming = async () => {
-        if (!trimmerVideoRef.current || !trimmerVideoUrl) return;
-
-        setIsTrimmingLoading(true);
-        setTrimProgress(0);
-        const video = trimmerVideoRef.current;
-
-        try {
-            const captureStream = (video as any).captureStream || (video as any).mozCaptureStream;
-
-            if (!captureStream) {
-                alert("Tu navegador no soporta el recorte de video directo. Por favor, intenta subir un video de menos de 1 minuto.");
-                setIsTrimmingLoading(false);
-                setIsVideoTrimming(false);
-                setTrimmerVideoUrl(null);
-                return;
-            }
-
-            const stream = captureStream.call(video);
-            const supportedTypes = ['video/mp4', 'video/webm', 'video/x-matroska', 'video/ogg'];
-            let mimeType = '';
-            for (const type of supportedTypes) {
-                if (MediaRecorder.isTypeSupported(type)) {
-                    mimeType = type;
-                    break;
-                }
-            }
-
-            if (!mimeType) {
-                alert("Formato de video no compatible para recorte en este navegador.");
-                setIsTrimmingLoading(false);
-                return;
-            }
-
-            const recorder = new MediaRecorder(stream, { mimeType });
-            const chunks: Blob[] = [];
-            recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) chunks.push(e.data);
-            };
-
-            let safetyTimeout: any;
-            let progressInterval: any;
-
-            recorder.onstop = () => {
-                if (safetyTimeout) clearTimeout(safetyTimeout);
-                if (progressInterval) clearInterval(progressInterval);
-
-                if (chunks.length === 0) {
-                    alert("Error: No se capturaron datos del video. Por favor, intenta de nuevo y asegúrate de que el video se reproduce correctamente.");
-                    setIsTrimmingLoading(false);
-                    return;
-                }
-
-                const blob = new Blob(chunks, { type: mimeType });
-                const extension = mimeType.split('/')[1]?.split(';')[0] || 'webm';
-                const fileName = pendingFile ? pendingFile.name.replace(/\.[^/.]+$/, "") : "trimmed_video";
-                const trimmedFile = new File([blob], `${fileName}_trimmed.${extension}`, { type: mimeType });
-
-                startUpload(trimmedFile);
-
-                setIsVideoTrimming(false);
-                setTrimmerVideoUrl(null);
-                setIsTrimmingLoading(false);
-                setTrimProgress(0);
-                if (fileInputRef.current) fileInputRef.current.value = "";
-            };
-
-            const recordingDuration = Math.min(60, (video.duration - trimStart));
-
-            const startRecording = () => {
-                video.onseeked = null;
-                video.play().then(() => {
-                    recorder.start();
-
-                    const startTime = Date.now();
-                    progressInterval = setInterval(() => {
-                        const elapsed = (Date.now() - startTime) / 1000;
-                        const percent = Math.min(99, (elapsed / recordingDuration) * 100);
-                        setTrimProgress(percent);
-                    }, 500);
-
-                    safetyTimeout = setTimeout(() => {
-                        if (recorder.state === 'recording') {
-                            recorder.stop();
-                            video.pause();
-                        }
-                    }, (recordingDuration + 1) * 1000);
-
-                    video.onended = () => {
-                        if (recorder.state === 'recording') {
-                            recorder.stop();
-                        }
-                    };
-                }).catch(err => {
-                    console.error("Play failed during trimming:", err);
-                    alert("No se pudo iniciar la captura del video. Intenta presionar 'Play' manualmente si es necesario.");
-                    setIsTrimmingLoading(false);
-                });
-            };
-
-            // Prepare for seek
-            video.muted = true;
-            video.currentTime = trimStart;
-
-            // Check if seek is needed
-            if (Math.abs(video.currentTime - trimStart) < 0.1) {
-                startRecording();
-            } else {
-                video.onseeked = startRecording;
-            }
-
-        } catch (err) {
-            console.error("Trimming error:", err);
-            setIsTrimmingLoading(false);
-        }
-    };
 
     const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
 
@@ -1721,81 +1582,25 @@ function SessionContent() {
                     </div>
                 </div>
             )}
-            {/* Video Trimmer Modal */}
-            {
-                isVideoTrimming && trimmerVideoUrl && (
-                    <div className="fixed inset-0 z-[500] bg-black/98 flex items-center justify-center p-4 backdrop-blur-xl overflow-y-auto">
-                        <div className="bg-[#111] border border-white/10 w-full max-w-md rounded-[40px] p-6 md:p-10 shadow-2xl relative my-auto">
-                            <button
-                                onClick={() => { setIsVideoTrimming(false); setTrimmerVideoUrl(null); }}
-                                className="absolute top-6 right-6 text-gray-400 hover:text-white bg-white/5 p-2 rounded-full transition-colors"
-                            >
-                                <X className="w-5 h-5 md:w-6 md:h-6" />
-                            </button>
-
-                            <div className="mb-6 md:mb-8 text-center px-4">
-                                <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tighter">Recortar Video</h3>
-                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Tu video dura {Math.round(videoDuration)}s - Recorta a máximo 60s</p>
-                            </div>
-
-                            <div className="relative aspect-square bg-black rounded-3xl overflow-hidden border border-white/10 mb-6 md:mb-8 shadow-inner">
-                                <video
-                                    ref={trimmerVideoRef}
-                                    src={trimmerVideoUrl}
-                                    className="w-full h-full object-contain"
-                                    loop
-                                    muted
-                                    playsInline
-                                />
-                            </div>
-
-                            <div className="space-y-6">
-                                <div className="space-y-4">
-                                    <div className="flex justify-between items-end px-1">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Punto de inicio</label>
-                                        <span className="text-xl font-black text-brand-red italic tracking-tighter">{Math.floor(trimStart)}s</span>
-                                    </div>
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max={Math.max(0, videoDuration - 60)}
-                                        step="0.5"
-                                        value={trimStart}
-                                        onChange={(e) => {
-                                            const val = parseFloat(e.target.value);
-                                            setTrimStart(val);
-                                            if (trimmerVideoRef.current) trimmerVideoRef.current.currentTime = val;
-                                        }}
-                                        className="w-full accent-brand-red h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
-                                    />
-                                    <div className="flex justify-between text-[8px] font-bold text-gray-600 uppercase tracking-widest px-1">
-                                        <span>Inicio</span>
-                                        <span>Fin - 60s</span>
-                                    </div>
-                                </div>
-
-                                <button
-                                    onClick={processTrimming}
-                                    disabled={isTrimmingLoading}
-                                    className="w-full bg-brand-red text-white py-4 md:py-5 rounded-2xl font-black uppercase tracking-widest text-xs md:text-sm shadow-glow transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 relative overflow-hidden"
-                                >
-                                    {isTrimmingLoading ? (
-                                        <>
-                                            <div className="absolute inset-0 bg-white/10" style={{ width: `${trimProgress}%`, transition: 'width 0.3s ease' }} />
-                                            <div className="flex items-center gap-3 relative z-10">
-                                                <Loader2 className="w-5 h-5 animate-spin" />
-                                                Procesando {Math.round(trimProgress)}%
-                                            </div>
-                                        </>
-                                    ) : (
-                                        <><Activity className="w-4 h-4 md:w-5 md:h-5" /> Confirmar Recorte</>
-                                    )}
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )
-            }
+            {/* Video Editor Component */}
+            {isVideoTrimming && trimmerVideoUrl && pendingFile && (
+                <VideoEditor
+                    videoSrc={trimmerVideoUrl}
+                    videoFile={pendingFile}
+                    onCancel={() => {
+                        setIsVideoTrimming(false);
+                        setTrimmerVideoUrl(null);
+                        setPendingFile(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    onSave={(file) => {
+                        startUpload(file);
+                        setIsVideoTrimming(false);
+                        setTrimmerVideoUrl(null);
+                        setPendingFile(null);
+                    }}
+                />
+            )}
         </div >
     );
 }

@@ -1,19 +1,28 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Image as ImageIcon, Loader2, X, Smile, Trophy, Activity, AlertCircle } from "lucide-react";
+import { Send, Image as ImageIcon, X, Smile, Trophy, Activity } from "lucide-react";
 import MentionInput from "@/components/MentionInput";
 import Image from "next/image";
 import MusicPicker from "./MusicPicker";
 import { MusicTrack } from "./music-data";
 import { useUploads } from "./UploadContext";
 import dynamic from 'next/dynamic';
+import VideoEditor from "./VideoEditor";
 
 // Import correctly for SSR safety
+import { Theme } from 'emoji-picker-react';
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
-export default function CreatePost({ currentUser, onSuccess }: { currentUser: any, onSuccess?: () => void }) {
+interface UserProfile {
+    username?: string;
+    avatar_url?: string;
+    full_name?: string;
+}
+
+export default function CreatePost({ currentUser, onSuccess }: { currentUser: UserProfile | null, onSuccess?: () => void }) {
     const [mounted, setMounted] = useState(false);
+
     const [content, setContent] = useState("");
     const [preview, setPreview] = useState<string | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -25,14 +34,9 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
     const [duration, setDuration] = useState<number | null>(null);
     const [isVideoTrimming, setIsVideoTrimming] = useState(false);
     const [trimmerVideoUrl, setTrimmerVideoUrl] = useState<string | null>(null);
-    const [trimStart, setTrimStart] = useState(0);
-    const [isTrimmingLoading, setIsTrimmingLoading] = useState(false);
-    const [trimError, setTrimError] = useState<string | null>(null);
-    const [videoDuration, setVideoDuration] = useState(0);
+    const [videoToEdit, setVideoToEdit] = useState<File | null>(null);
     const [pendingFile, setPendingFile] = useState<File | null>(null);
-    const [trimProgress, setTrimProgress] = useState(0);
 
-    const trimmerVideoRef = useRef<HTMLVideoElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
     const { startUpload } = useUploads();
@@ -51,99 +55,12 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
 
     if (!mounted) return null;
 
-    const processTrimming = async () => {
-        if (!trimmerVideoRef.current || !trimmerVideoUrl) return;
-
-        const video = trimmerVideoRef.current;
-        setIsTrimmingLoading(true);
-        setTrimProgress(1);
-        setTrimError(null);
-
-        try {
-            video.pause();
-            video.currentTime = trimStart;
-            video.muted = true;
-
-            await new Promise(r => {
-                const onSeeked = () => { video.removeEventListener('seeked', onSeeked); r(true); };
-                video.addEventListener('seeked', onSeeked);
-                setTimeout(onSeeked, 1500);
-            });
-
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 640;
-
-            const streamFn = (canvas as any).captureStream || (canvas as any).webkitCaptureStream || (canvas as any).mozCaptureStream;
-            if (!streamFn) throw new Error("Captura no soportada.");
-
-            const stream = streamFn.call(canvas, 30);
-            const recorder = new MediaRecorder(stream, {
-                mimeType: MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm',
-                videoBitsPerSecond: 1000000
-            });
-
-            const chunks: Blob[] = [];
-            recorder.ondataavailable = (e) => chunks.push(e.data);
-
-            const recDuration = Math.min(60, video.duration - trimStart);
-            let frameReq: number;
-
-            const draw = () => {
-                if (ctx && video.readyState >= 2) {
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    frameReq = requestAnimationFrame(draw);
-                }
-            };
-
-            recorder.onstop = () => {
-                const blob = new Blob(chunks, { type: recorder.mimeType });
-                if (blob.size < 2000) {
-                    setTrimError("Error de captura");
-                } else {
-                    const file = new File([blob], "trimmed.mp4", { type: recorder.mimeType });
-                    setPreview(URL.createObjectURL(file));
-                    setPendingFile(file);
-                    setDuration(recDuration);
-                    setIsVideoTrimming(false);
-                    setTrimmerVideoUrl(null);
-                }
-                setIsTrimmingLoading(false);
-                setTrimProgress(0);
-            };
-
-            recorder.start();
-            try {
-                await video.play();
-                draw();
-                const startT = Date.now();
-                const interval = setInterval(() => {
-                    const elap = (Date.now() - startT) / 1000;
-                    setTrimProgress(Math.min(99, (elap / recDuration) * 100));
-                    if (elap >= recDuration) {
-                        clearInterval(interval);
-                        cancelAnimationFrame(frameReq);
-                        if (recorder.state === 'recording') recorder.stop();
-                        video.pause();
-                    }
-                }, 500);
-            } catch (e) {
-                throw new Error("Toca el video para iniciar (iPhone)");
-            }
-        } catch (err: any) {
-            setTrimError(err.message);
-            setIsTrimmingLoading(false);
-        }
-    };
-
     async function handlePost(e: React.FormEvent) {
         e.preventDefault();
         let file = pendingFile || fileInputRef.current?.files?.[0];
         if (postType === 'standard' && !content.trim() && !file) return;
         if (postType === 'pr' && (!exercise || !weight)) return;
 
-        // Corrected to match UploadContext structure
         startUpload({
             postType,
             content,
@@ -167,25 +84,13 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
         const file = e.target.files?.[0];
         if (file) {
             if (file.type.startsWith('video/')) {
-                const docVideo = document.createElement('video');
-                docVideo.preload = 'metadata';
-                docVideo.onloadedmetadata = () => {
-                    const dur = docVideo.duration;
-                    setVideoDuration(dur);
-                    setDuration(dur);
-                    if (dur > 60 || file.size > 48 * 1024 * 1024) {
-                        setTrimStart(0);
-                        setPendingFile(file);
-                        setTrimmerVideoUrl(URL.createObjectURL(file));
-                        setIsVideoTrimming(true);
-                    } else {
-                        setPreview(URL.createObjectURL(file));
-                    }
-                };
-                docVideo.src = URL.createObjectURL(file);
+                setVideoToEdit(file);
+                setTrimmerVideoUrl(URL.createObjectURL(file));
+                setIsVideoTrimming(true);
             } else {
                 setPreview(URL.createObjectURL(file));
                 setDuration(null);
+                setPendingFile(file);
             }
         }
     };
@@ -214,7 +119,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                                     {showEmojiPicker && (
                                         <div className="absolute bottom-full right-0 mb-4 z-[100] scale-75 md:scale-100 origin-bottom-right">
                                             <EmojiPicker
-                                                theme={"dark" as any}
+                                                theme={Theme.DARK}
                                                 onEmojiClick={(ed) => setContent(p => p + ed.emoji)}
                                             />
                                         </div>
@@ -246,46 +151,25 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                 </div>
             </div>
 
-            {isVideoTrimming && trimmerVideoUrl && (
-                <div className="fixed inset-0 z-[500] bg-black/98 flex items-center justify-center p-4 backdrop-blur-xl">
-                    <div className="bg-brand-gray border border-white/10 w-full max-w-md rounded-[40px] p-6 shadow-2xl relative">
-                        <button onClick={() => { setIsVideoTrimming(false); setTrimmerVideoUrl(null); }} className="absolute top-6 right-6 text-gray-400 hover:text-white bg-white/5 p-2 rounded-full"><X className="w-5 h-5" /></button>
-                        <div className="mb-6 text-center">
-                            <h3 className="text-xl font-black text-white italic uppercase">Recortar Video</h3>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">Tu video dura {Math.round(videoDuration)}s - Recorta a máximo 60s</p>
-                        </div>
-                        <div className="relative aspect-square bg-black rounded-3xl overflow-hidden border border-white/10 mb-6">
-                            <video ref={trimmerVideoRef} src={trimmerVideoUrl} className="w-full h-full object-contain" loop muted playsInline autoPlay />
-                            {trimError && (
-                                <div className="absolute inset-x-4 top-4 z-50 bg-red-500/90 backdrop-blur-md p-4 rounded-2xl border border-white/20">
-                                    <p className="text-white text-[10px] font-black uppercase text-center mb-1">¡Atención!</p>
-                                    <p className="text-white text-[11px] font-bold text-center leading-tight">{trimError}</p>
-                                    <button onClick={() => setTrimError(null)} className="mt-3 w-full py-2 bg-white/20 rounded-xl text-[9px] font-black text-white uppercase">Entendido</button>
-                                </div>
-                            )}
-                            {isTrimmingLoading && (
-                                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center gap-4 z-10">
-                                    <div className="w-16 h-16 border-4 border-brand-red/20 border-t-brand-red rounded-full animate-spin" />
-                                    <span className="text-white font-black italic text-xl">{Math.round(trimProgress)}%</span>
-                                </div>
-                            )}
-                        </div>
-                        <div className="space-y-6">
-                            <div className="space-y-4">
-                                <div className="flex justify-between items-end px-1">
-                                    <label className="text-[10px] font-black text-gray-500 uppercase">Punto de inicio</label>
-                                    <span className="text-xl font-black text-brand-red italic tracking-tighter">{Math.floor(trimStart)}s</span>
-                                </div>
-                                <input type="range" min="0" max={Math.max(0, videoDuration - 60)} step="0.5" value={trimStart} onChange={(e) => { const val = parseFloat(e.target.value); setTrimStart(val); if (trimmerVideoRef.current) trimmerVideoRef.current.currentTime = val; }} className="w-full accent-brand-red h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer" />
-                            </div>
-                            <button onClick={processTrimming} disabled={isTrimmingLoading} className="w-full bg-brand-red text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-glow transition-all hover:scale-[1.02] flex items-center justify-center gap-3 relative overflow-hidden">
-                                {isTrimmingLoading ? (
-                                    <><div className="absolute inset-0 bg-white/10" style={{ width: `${trimProgress}%` }} /><Loader2 className="w-5 h-5 animate-spin relative z-10" />Procesando {Math.round(trimProgress)}%</>
-                                ) : <><Activity className="w-4 h-4" /> Confirmar Recorte</>}
-                            </button>
-                        </div>
-                    </div>
-                </div>
+            {isVideoTrimming && trimmerVideoUrl && videoToEdit && (
+                <VideoEditor
+                    videoSrc={trimmerVideoUrl}
+                    videoFile={videoToEdit}
+                    onCancel={() => {
+                        setIsVideoTrimming(false);
+                        setTrimmerVideoUrl(null);
+                        setVideoToEdit(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                    onSave={(file, dur) => {
+                        setPendingFile(file);
+                        setPreview(URL.createObjectURL(file));
+                        setDuration(dur);
+                        setIsVideoTrimming(false);
+                        setTrimmerVideoUrl(null);
+                        setVideoToEdit(null);
+                    }}
+                />
             )}
         </div>
     );

@@ -15,9 +15,13 @@ interface MentionInputProps {
     as?: 'input' | 'textarea';
 }
 
-/**
- * An input component that provides @mention suggestions based on followed users.
- */
+interface UserProfile {
+    id: string;
+    username: string;
+    full_name?: string;
+    avatar_url?: string;
+}
+
 export default function MentionInput({
     value,
     onChange,
@@ -28,8 +32,9 @@ export default function MentionInput({
     autoFocus = false,
     as = 'input'
 }: MentionInputProps) {
-    const [suggestions, setSuggestions] = useState<any[]>([]);
-    const [filteredSuggestions, setFilteredSuggestions] = useState<any[]>([]);
+    const [suggestions, setSuggestions] = useState<UserProfile[]>([]);
+    const [filteredSuggestions, setFilteredSuggestions] = useState<UserProfile[]>([]);
+
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [cursorPosition, setCursorPosition] = useState(0);
     const [mentionStart, setMentionStart] = useState(-1);
@@ -102,7 +107,7 @@ export default function MentionInput({
     return (
         <div className={clsx("relative flex-1", containerClassName)}>
             <InputComponent
-                ref={inputRef as any}
+                ref={inputRef as React.RefObject<HTMLInputElement & HTMLTextAreaElement>}
                 value={value}
                 onChange={handleChange}
                 onKeyDown={(e) => {
@@ -137,7 +142,7 @@ export default function MentionInput({
                             >
                                 <div className="w-8 h-8 rounded-full bg-white/10 overflow-hidden border border-white/10 group-hover:border-white/30 shrink-0">
                                     {user.avatar_url ? (
-                                        <img src={user.avatar_url} className="w-full h-full object-cover" />
+                                        <img src={user.avatar_url} alt={user.username || 'user'} className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center bg-brand-red/10 text-brand-red text-[10px] font-bold">
                                             {user.username?.[0]?.toUpperCase()}
