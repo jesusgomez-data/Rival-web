@@ -168,7 +168,12 @@ export async function createUserPost(formData: FormData) {
                 .getPublicUrl(fileName)
 
             mediaUrl = publicUrl
-            mediaType = media.type.startsWith('video/') ? 'video' : 'image'
+
+            // Robust media type detection
+            const videoExtensions = ['mp4', 'mov', 'webm', 'ogg', 'm4v'];
+            const fileExtLower = fileExt ? fileExt.toLowerCase() : '';
+            const isVideo = media.type.startsWith('video/') || videoExtensions.includes(fileExtLower);
+            mediaType = isVideo ? 'video' : 'image'
         }
 
         const { error: insertError } = await supabase

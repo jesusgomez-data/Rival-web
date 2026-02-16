@@ -220,7 +220,11 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const menuRef = useRef<HTMLDivElement>(null);
     const commentInputRef = useRef<HTMLInputElement>(null);
 
-    const isVideo = image && (/\.(mp4|webm|ogg|mov)$/i.test(image) || (mediaType && mediaType === 'video'));
+    const fileExt = image?.split('.').pop()?.toLowerCase() || '';
+    const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'm4v'];
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic'];
+    const isActuallyVideo = (videoExtensions.includes(fileExt) || mediaType === 'video') && !imageExtensions.includes(fileExt);
+    const isVideo = image && isActuallyVideo;
     const isOwner = currentUserId && authorId && currentUserId === authorId;
 
     useEffect(() => {

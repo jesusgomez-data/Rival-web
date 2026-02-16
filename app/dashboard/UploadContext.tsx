@@ -109,7 +109,12 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                     .getPublicUrl(fileName);
 
                 mediaUrl = publicUrl;
-                mediaType = mimeType.startsWith('video/') ? 'video' : 'image';
+
+                // Enhanced media type detection
+                const videoExtensions = ['mp4', 'mov', 'webm', 'ogg', 'm4v'];
+                const isVideo = mimeType.startsWith('video/') || videoExtensions.includes(fileExt.toLowerCase());
+                mediaType = isVideo ? 'video' : 'image';
+
                 setUploads(prev => prev.map(u => u.id === id ? { ...u, progress: 60, status: 'processing' } : u));
             }
 

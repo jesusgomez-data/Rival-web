@@ -44,37 +44,44 @@ export default function UserMediaGallery({ userId, limit }: { userId: string, li
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
-                    {(limit ? mediaItems.slice(0, limit) : mediaItems).map((item, index) => (
-                        <div
-                            key={item.id}
-                            className="relative aspect-square bg-gray-900 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity border border-white/5 group"
-                            onClick={() => setLightboxIndex(index)}
-                        >
-                            {item.media_type === 'video' ? (
-                                <div className="w-full h-full flex items-center justify-center">
-                                    <video
-                                        src={item.media_url}
-                                        className="w-full h-full object-cover"
-                                        autoPlay
-                                        loop
-                                        playsInline
-                                        muted
-                                        preload="auto"
-                                    />
-                                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center group-hover:bg-transparent transition-colors">
-                                        <Play className="w-6 h-6 text-white fill-white opacity-50" />
+                    {(limit ? mediaItems.slice(0, limit) : mediaItems).map((item, index) => {
+                        const fileExt = item.media_url?.split('.').pop()?.toLowerCase() || '';
+                        const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'm4v'];
+                        const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic'];
+                        const isVideo = (videoExtensions.includes(fileExt) || item.media_type === 'video') && !imageExtensions.includes(fileExt);
+
+                        return (
+                            <div
+                                key={item.id}
+                                className="relative aspect-square bg-gray-900 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity border border-white/5 group"
+                                onClick={() => setLightboxIndex(index)}
+                            >
+                                {isVideo ? (
+                                    <div className="w-full h-full flex items-center justify-center">
+                                        <video
+                                            src={item.media_url}
+                                            className="w-full h-full object-cover"
+                                            autoPlay
+                                            loop
+                                            playsInline
+                                            muted
+                                            preload="auto"
+                                        />
+                                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center group-hover:bg-transparent transition-colors">
+                                            <Play className="w-6 h-6 text-white fill-white opacity-50" />
+                                        </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <Image
-                                    src={item.media_url}
-                                    alt="User media"
-                                    fill
-                                    className="object-cover"
-                                />
-                            )}
-                        </div>
-                    ))}
+                                ) : (
+                                    <Image
+                                        src={item.media_url}
+                                        alt="User media"
+                                        fill
+                                        className="object-cover"
+                                    />
+                                )}
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {limit && mediaItems.length > limit && (
@@ -122,20 +129,28 @@ export default function UserMediaGallery({ userId, limit }: { userId: string, li
                             <X className="w-6 h-6" />
                         </button>
 
-                        {mediaItems[lightboxIndex].media_type === 'video' ? (
-                            <video
-                                src={mediaItems[lightboxIndex].media_url}
-                                controls
-                                autoPlay
-                                className="max-w-full max-h-[80vh] object-contain"
-                            />
-                        ) : (
-                            <img
-                                src={mediaItems[lightboxIndex].media_url}
-                                alt="Full size"
-                                className="max-w-full max-h-[80vh] object-contain"
-                            />
-                        )}
+                        {(() => {
+                            const currentItem = mediaItems[lightboxIndex];
+                            const fileExt = currentItem.media_url?.split('.').pop()?.toLowerCase() || '';
+                            const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'm4v'];
+                            const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic'];
+                            const isVideo = (videoExtensions.includes(fileExt) || currentItem.media_type === 'video') && !imageExtensions.includes(fileExt);
+
+                            return isVideo ? (
+                                <video
+                                    src={currentItem.media_url}
+                                    controls
+                                    autoPlay
+                                    className="max-w-full max-h-[80vh] object-contain"
+                                />
+                            ) : (
+                                <img
+                                    src={currentItem.media_url}
+                                    alt="Full size"
+                                    className="max-w-full max-h-[80vh] object-contain"
+                                />
+                            );
+                        })()}
                     </div>
                 </div>
             )}

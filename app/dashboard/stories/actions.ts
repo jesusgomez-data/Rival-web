@@ -21,7 +21,7 @@ export async function createStory(formData: FormData) {
             if (!media || media.size === 0) return { error: 'No se ha proporcionado ningún archivo' }
 
             // Sanitize file name
-            const fileExt = media.name.split('.').pop() || 'jpg'
+            const fileExt = media.name.split('.').pop()?.toLowerCase() || 'jpg'
             const fileName = `${user.id}/story_${Date.now()}.${fileExt}`
 
             console.log(`Uploading story for user ${user.id}: ${fileName} (${media.size} bytes)`)
@@ -43,7 +43,16 @@ export async function createStory(formData: FormData) {
                 .getPublicUrl(fileName)
 
             mediaUrl = publicUrl
-            mediaType = media.type.startsWith('video/') ? 'video' : 'image'
+
+            // Refined media type detection
+            const videoExtensions = ['mp4', 'mov', 'webm', 'ogg', 'm4v'];
+            const isVideoByExt = videoExtensions.includes(fileExt);
+
+            if (isVideoByExt || media.type.startsWith('video/')) {
+                mediaType = 'video';
+            } else {
+                mediaType = 'image';
+            }
         }
 
         const metadataStr = formData.get('metadata') as string

@@ -278,7 +278,31 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
-        setupPreview(file)
+
+        console.log("File selected:", file.name, "MIME:", file.type);
+
+        // Check if it's REALLY a video by extension if MIME is missing/weird
+        const ext = file.name.split('.').pop()?.toLowerCase();
+        const videoExts = ['mp4', 'mov', 'webm', 'ogg', 'm4v'];
+        const isVideo = file.type.startsWith('video/') || (ext && videoExts.includes(ext));
+
+        if (isVideo) {
+            // Check duration if it's a video
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.onloadedmetadata = () => {
+                window.URL.revokeObjectURL(video.src);
+                if (video.duration > 65) {
+                    alert('Los videos deben durar menos de 60 segundos.');
+                    if (fileInputRef.current) fileInputRef.current.value = '';
+                } else {
+                    setupPreview(file);
+                }
+            };
+            video.src = URL.createObjectURL(file);
+        } else {
+            setupPreview(file);
+        }
     }
 
     const setupPreview = (file: File) => {
@@ -425,8 +449,15 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
 
             if (mediaUrl) {
                 formData.append('media_url', mediaUrl);
-                formData.append('media_type', mediaType);
             }
+
+            // Refined media type detection for stories
+            const fileExt = previewFile.name.split('.').pop()?.toLowerCase() || '';
+            const videoExtensions = ['mp4', 'mov', 'webm', 'ogg', 'm4v'];
+            const isVideo = previewFile.type.startsWith('video/') || videoExtensions.includes(fileExt);
+            const finalMediaType = isVideo ? 'video' : 'image';
+
+            formData.append('media_type', finalMediaType);
 
             if (selectedTrack) {
                 formData.append('music_url', selectedTrack.url)
@@ -995,29 +1026,35 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
 
                         {/* Canvas Area */}
                         <div className="relative flex-1 w-full h-full bg-gray-900 overflow-hidden flex items-center justify-center">
-                            {previewFile?.type.startsWith('video/') ? (
-                                <video
-                                    src={previewUrl}
-                                    autoPlay
-                                    loop
-                                    playsInline
-                                    className="w-full h-full object-cover"
-                                    style={{
-                                        transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
-                                        transformOrigin: 'center center'
-                                    }}
-                                />
-                            ) : (
-                                <img
-                                    src={previewUrl}
-                                    alt="Preview"
-                                    className="w-full h-full object-cover"
-                                    style={{
-                                        transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
-                                        transformOrigin: 'center center'
-                                    }}
-                                />
-                            )}
+                            {(() => {
+                                const ext = previewFile?.name.split('.').pop()?.toLowerCase() || '';
+                                const videoExts = ['mp4', 'mov', 'webm', 'ogg', 'm4v'];
+                                const isVideo = previewFile?.type.startsWith('video/') || videoExts.includes(ext);
+
+                                return isVideo ? (
+                                    <video
+                                        src={previewUrl}
+                                        autoPlay
+                                        loop
+                                        playsInline
+                                        className="w-full h-full object-cover"
+                                        style={{
+                                            transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
+                                            transformOrigin: 'center center'
+                                        }}
+                                    />
+                                ) : (
+                                    <img
+                                        src={previewUrl}
+                                        alt="Preview"
+                                        className="w-full h-full object-cover"
+                                        style={{
+                                            transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
+                                            transformOrigin: 'center center'
+                                        }}
+                                    />
+                                );
+                            })()}
 
                             {/* Overlays Rendering */}
                             <div className="absolute inset-0 z-20 pointer-events-none">
@@ -1231,701 +1268,711 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                         </div>
                     </div>
                 </div>
-            )}
+            )
+            }
 
             {/* Story Viewer (Updated to show overlays) */}
-            {selectedUserIndex !== null && currentStory && (
-                <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4">
-                    <div className="relative w-full max-w-[400px] h-[90vh] bg-black rounded-[32px] overflow-hidden shadow-2xl border border-white/5 mx-auto flex flex-col">
-                        <AnimatePresence>
-                            {!isPressed && (
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="absolute top-6 inset-x-6 flex gap-1.5 z-50"
-                                >
-                                    {currentUserStories?.stories?.map((_, i) => (
-                                        <div key={i} className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-white transition-all duration-100 ease-linear"
-                                                style={{ width: i < activeStoryIndex ? '100%' : i === activeStoryIndex ? `${progress}%` : '0%' }}
-                                            />
-                                        </div>
-                                    ))}
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        <AnimatePresence>
-                            {!isPressed && (
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="absolute top-12 left-6 right-6 flex items-center justify-between z-50"
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full border-2 border-brand-red overflow-hidden relative">
-                                            <Image
-                                                src={currentUserStories?.user?.avatar_url || `https://ui-avatars.com/api/?name=${currentUserStories?.user?.full_name || 'User'}`}
-                                                alt="Avatar" fill className="object-cover"
-                                            />
-                                        </div>
-                                        <div className="drop-shadow-lg">
-                                            <p className="text-white font-black text-sm uppercase italic tracking-tighter">
-                                                {currentUserStories?.user?.full_name}
-                                            </p>
-                                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                                {currentStory ? new Date(currentStory.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                                            </p>
-                                            {currentStory?.music_url && (
-                                                <div className="flex items-center gap-1.5 mt-1 bg-black/40 px-2 py-0.5 rounded-full border border-white/10 w-fit">
-                                                    <Music className="w-2.5 h-2.5 text-brand-red animate-bounce" />
-                                                    <span className="text-[8px] font-black text-white uppercase tracking-[0.1em] marquee-container whitespace-nowrap overflow-hidden max-w-[80px]">
-                                                        {currentStory.music_title} • {currentStory.music_artist}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        {isOwner && (
-                                            <button
-                                                onClick={handleDeleteStory}
-                                                className="p-2 bg-black/40 hover:bg-red-500/60 text-white rounded-full backdrop-blur-md transition-all group/delete"
-                                                title="Eliminar historia"
-                                            >
-                                                <Trash2 className="w-5 h-5 group-hover/delete:scale-110 transition-transform" />
-                                            </button>
-                                        )}
-                                        <button onClick={() => setSelectedUserIndex(null)} className="p-2 bg-black/40 hover:text-brand-red text-white rounded-full backdrop-blur-md transition-colors border border-white/5 shadow-lg">
-                                            <X className="w-8 h-8" />
-                                        </button>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-
-                        <div className="absolute inset-0 z-35 flex">
-                            <div className="w-1/3 h-full cursor-pointer" onClick={prevStory} />
-                            <div className="w-2/3 h-full cursor-pointer" onClick={nextStory} />
-                        </div>
-
-
-                        <motion.div
-                            key={`${selectedUserIndex}-${activeStoryIndex}`}
-                            drag="x"
-                            dragConstraints={{ left: 0, right: 0 }}
-                            onDragEnd={(_: any, info: any) => {
-                                if (info.offset.x < -100) {
-                                    // Swipe left -> Next User
-                                    if (selectedUserIndex < userStories.length - 1) {
-                                        setSelectedUserIndex(selectedUserIndex + 1)
-                                        setActiveStoryIndex(0)
-                                        recordView(userStories[selectedUserIndex + 1].stories[0].id)
-                                    } else {
-                                        setSelectedUserIndex(null)
-                                    }
-                                } else if (info.offset.x > 100) {
-                                    // Swipe right -> Previous User
-                                    if (selectedUserIndex > 0) {
-                                        setSelectedUserIndex(selectedUserIndex - 1)
-                                        const lastStoryIdx = userStories[selectedUserIndex - 1].stories.length - 1
-                                        setActiveStoryIndex(lastStoryIdx)
-                                        recordView(userStories[selectedUserIndex - 1].stories[lastStoryIdx].id)
-                                    }
-                                }
-                            }}
-                            className="w-full h-full relative cursor-grab active:cursor-grabbing touch-none flex-1"
-                            onMouseDown={handlePressStart}
-                            onMouseUp={handlePressEnd}
-                            onMouseLeave={handlePressEnd}
-                            onTouchStart={handlePressStart}
-                            onTouchEnd={handlePressEnd}
-
-                        >
-                            {currentStory.media_type === 'pr' ? (
-                                (() => {
-                                    try {
-                                        const pr = JSON.parse(currentStory.media_url)
-                                        return (
-                                            <PRCard
-                                                userName={userStories[selectedUserIndex].user.full_name}
-                                                avatarUrl={userStories[selectedUserIndex].user.avatar_url || ''}
-                                                sport={pr.sport}
-                                                exerciseName={pr.exerciseName}
-                                                weight={pr.weight}
-                                                backgroundImage={pr.backgroundImage}
-                                                isStory={true}
-                                            />
-                                        )
-                                    } catch (e) {
-                                        return <div className="flex items-center justify-center h-full text-white">Error cargando PR</div>
-                                    }
-                                })()
-                            ) : currentStory.media_type === 'video' ? (
-                                <video ref={storyVideoRef} src={currentStory.media_url} autoPlay playsInline className="w-full h-full object-cover pointer-events-none" />
-                            ) : (
-                                <Image src={currentStory.media_url} alt="Story content" fill className="object-cover pointer-events-none" />
-                            )}
-
-                            {/* Workout Summary Overlay */}
-                            {currentStory.metadata?.type === 'workout' && currentStory.metadata.summary && (
-                                <div className="absolute inset-x-0 bottom-0 z-30 flex flex-col justify-end p-8 pointer-events-none">
+            {
+                selectedUserIndex !== null && currentStory && (
+                    <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4">
+                        <div className="relative w-full max-w-[400px] h-[90vh] bg-black rounded-[32px] overflow-hidden shadow-2xl border border-white/5 mx-auto flex flex-col">
+                            <AnimatePresence>
+                                {!isPressed && (
                                     <motion.div
-                                        layout
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setShowFullSummary(!showFullSummary);
-                                            setIsPaused(!showFullSummary);
-                                        }}
-                                        className={clsx(
-                                            "bg-black/60 backdrop-blur-3xl rounded-[32px] p-6 border border-white/10 space-y-4 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300 pointer-events-auto transition-all",
-                                            showFullSummary ? "max-h-[500px] overflow-y-auto no-scrollbar mb-10" : "mb-0"
-                                        )}
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="absolute top-6 inset-x-6 flex gap-1.5 z-50"
                                     >
-                                        <div className="flex items-center justify-between">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2.5 bg-brand-red rounded-xl shadow-lg shadow-brand-red/20">
-                                                    <Zap className="w-5 h-5 text-white animate-pulse" />
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <h4 className="text-white font-black uppercase italic tracking-tighter text-xl leading-tight truncate">
-                                                        {currentStory.metadata.summary.title}
-                                                    </h4>
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[9px] text-brand-red font-black uppercase tracking-[0.2em]">
-                                                            {currentStory.metadata.summary.sportType} PROTOCOL
+                                        {currentUserStories?.stories?.map((_, i) => (
+                                            <div key={i} className="flex-1 h-1 bg-white/20 rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full bg-white transition-all duration-100 ease-linear"
+                                                    style={{ width: i < activeStoryIndex ? '100%' : i === activeStoryIndex ? `${progress}%` : '0%' }}
+                                                />
+                                            </div>
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            <AnimatePresence>
+                                {!isPressed && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="absolute top-12 left-6 right-6 flex items-center justify-between z-50"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full border-2 border-brand-red overflow-hidden relative">
+                                                <Image
+                                                    src={currentUserStories?.user?.avatar_url || `https://ui-avatars.com/api/?name=${currentUserStories?.user?.full_name || 'User'}`}
+                                                    alt="Avatar" fill className="object-cover"
+                                                />
+                                            </div>
+                                            <div className="drop-shadow-lg">
+                                                <p className="text-white font-black text-sm uppercase italic tracking-tighter">
+                                                    {currentUserStories?.user?.full_name}
+                                                </p>
+                                                <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                                    {currentStory ? new Date(currentStory.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                                </p>
+                                                {currentStory?.music_url && (
+                                                    <div className="flex items-center gap-1.5 mt-1 bg-black/40 px-2 py-0.5 rounded-full border border-white/10 w-fit">
+                                                        <Music className="w-2.5 h-2.5 text-brand-red animate-bounce" />
+                                                        <span className="text-[8px] font-black text-white uppercase tracking-[0.1em] marquee-container whitespace-nowrap overflow-hidden max-w-[80px]">
+                                                            {currentStory.music_title} • {currentStory.music_artist}
                                                         </span>
                                                     </div>
-                                                </div>
-                                            </div>
-                                            <div className="shrink-0">
-                                                {showFullSummary ? <ChevronDown className="w-5 h-5 text-brand-red" /> : <ChevronUp className="w-5 h-5 text-gray-500" />}
+                                                )}
                                             </div>
                                         </div>
+                                        <div className="flex items-center gap-2">
+                                            {isOwner && (
+                                                <button
+                                                    onClick={handleDeleteStory}
+                                                    className="p-2 bg-black/40 hover:bg-red-500/60 text-white rounded-full backdrop-blur-md transition-all group/delete"
+                                                    title="Eliminar historia"
+                                                >
+                                                    <Trash2 className="w-5 h-5 group-hover/delete:scale-110 transition-transform" />
+                                                </button>
+                                            )}
+                                            <button onClick={() => setSelectedUserIndex(null)} className="p-2 bg-black/40 hover:text-brand-red text-white rounded-full backdrop-blur-md transition-colors border border-white/5 shadow-lg">
+                                                <X className="w-8 h-8" />
+                                            </button>
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
 
-                                        {!showFullSummary && (
-                                            <div className="grid grid-cols-2 gap-4">
-                                                <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <Clock className="w-3.5 h-3.5 text-brand-red" />
-                                                        <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Duración</p>
+
+                            <div className="absolute inset-0 z-35 flex">
+                                <div className="w-1/3 h-full cursor-pointer" onClick={prevStory} />
+                                <div className="w-2/3 h-full cursor-pointer" onClick={nextStory} />
+                            </div>
+
+
+                            <motion.div
+                                key={`${selectedUserIndex}-${activeStoryIndex}`}
+                                drag="x"
+                                dragConstraints={{ left: 0, right: 0 }}
+                                onDragEnd={(_: any, info: any) => {
+                                    if (info.offset.x < -100) {
+                                        // Swipe left -> Next User
+                                        if (selectedUserIndex < userStories.length - 1) {
+                                            setSelectedUserIndex(selectedUserIndex + 1)
+                                            setActiveStoryIndex(0)
+                                            recordView(userStories[selectedUserIndex + 1].stories[0].id)
+                                        } else {
+                                            setSelectedUserIndex(null)
+                                        }
+                                    } else if (info.offset.x > 100) {
+                                        // Swipe right -> Previous User
+                                        if (selectedUserIndex > 0) {
+                                            setSelectedUserIndex(selectedUserIndex - 1)
+                                            const lastStoryIdx = userStories[selectedUserIndex - 1].stories.length - 1
+                                            setActiveStoryIndex(lastStoryIdx)
+                                            recordView(userStories[selectedUserIndex - 1].stories[lastStoryIdx].id)
+                                        }
+                                    }
+                                }}
+                                className="w-full h-full relative cursor-grab active:cursor-grabbing touch-none flex-1"
+                                onMouseDown={handlePressStart}
+                                onMouseUp={handlePressEnd}
+                                onMouseLeave={handlePressEnd}
+                                onTouchStart={handlePressStart}
+                                onTouchEnd={handlePressEnd}
+
+                            >
+                                {currentStory.media_type === 'pr' ? (
+                                    (() => {
+                                        try {
+                                            const pr = JSON.parse(currentStory.media_url)
+                                            return (
+                                                <PRCard
+                                                    userName={userStories[selectedUserIndex].user.full_name}
+                                                    avatarUrl={userStories[selectedUserIndex].user.avatar_url || ''}
+                                                    sport={pr.sport}
+                                                    exerciseName={pr.exerciseName}
+                                                    weight={pr.weight}
+                                                    backgroundImage={pr.backgroundImage}
+                                                    isStory={true}
+                                                />
+                                            )
+                                        } catch (e) {
+                                            return <div className="flex items-center justify-center h-full text-white">Error cargando PR</div>
+                                        }
+                                    })()
+                                ) : (() => {
+                                    const ext = currentStory.media_url.split('.').pop()?.toLowerCase() || '';
+                                    const videoExts = ['mp4', 'mov', 'webm', 'ogg', 'm4v'];
+                                    const isVideo = currentStory.media_type === 'video' || videoExts.includes(ext);
+                                    return isVideo;
+                                })() ? (
+                                    <video ref={storyVideoRef} src={currentStory.media_url} autoPlay playsInline className="w-full h-full object-cover pointer-events-none" />
+                                ) : (
+                                    <Image src={currentStory.media_url} alt="Story content" fill className="object-cover pointer-events-none" />
+                                )}
+
+                                {/* Workout Summary Overlay */}
+                                {currentStory.metadata?.type === 'workout' && currentStory.metadata.summary && (
+                                    <div className="absolute inset-x-0 bottom-0 z-30 flex flex-col justify-end p-8 pointer-events-none">
+                                        <motion.div
+                                            layout
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setShowFullSummary(!showFullSummary);
+                                                setIsPaused(!showFullSummary);
+                                            }}
+                                            className={clsx(
+                                                "bg-black/60 backdrop-blur-3xl rounded-[32px] p-6 border border-white/10 space-y-4 animate-in fade-in slide-in-from-bottom-10 duration-700 delay-300 pointer-events-auto transition-all",
+                                                showFullSummary ? "max-h-[500px] overflow-y-auto no-scrollbar mb-10" : "mb-0"
+                                            )}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2.5 bg-brand-red rounded-xl shadow-lg shadow-brand-red/20">
+                                                        <Zap className="w-5 h-5 text-white animate-pulse" />
                                                     </div>
-                                                    <p className="text-sm font-black text-white italic">
-                                                        {Math.floor(currentStory.metadata.summary.duration / 60)}:{(currentStory.metadata.summary.duration % 60).toString().padStart(2, '0')} <span className="text-[10px] opacity-60">MIN</span>
-                                                    </p>
+                                                    <div className="min-w-0">
+                                                        <h4 className="text-white font-black uppercase italic tracking-tighter text-xl leading-tight truncate">
+                                                            {currentStory.metadata.summary.title}
+                                                        </h4>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[9px] text-brand-red font-black uppercase tracking-[0.2em]">
+                                                                {currentStory.metadata.summary.sportType} PROTOCOL
+                                                            </span>
+                                                        </div>
+                                                    </div>
                                                 </div>
+                                                <div className="shrink-0">
+                                                    {showFullSummary ? <ChevronDown className="w-5 h-5 text-brand-red" /> : <ChevronUp className="w-5 h-5 text-gray-500" />}
+                                                </div>
+                                            </div>
 
-                                                {currentStory.metadata.summary.metrics?.distance > 0 ? (
+                                            {!showFullSummary && (
+                                                <div className="grid grid-cols-2 gap-4">
                                                     <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
                                                         <div className="flex items-center gap-2 mb-1">
-                                                            <Activity className="w-3.5 h-3.5 text-brand-red" />
-                                                            <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Distancia</p>
+                                                            <Clock className="w-3.5 h-3.5 text-brand-red" />
+                                                            <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Duración</p>
                                                         </div>
                                                         <p className="text-sm font-black text-white italic">
-                                                            {(currentStory.metadata.summary.metrics.distance / 1000).toFixed(2)} <span className="text-[10px] opacity-60">KM</span>
+                                                            {Math.floor(currentStory.metadata.summary.duration / 60)}:{(currentStory.metadata.summary.duration % 60).toString().padStart(2, '0')} <span className="text-[10px] opacity-60">MIN</span>
                                                         </p>
                                                     </div>
-                                                ) : (
-                                                    <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <Trophy className="w-3.5 h-3.5 text-brand-red" />
-                                                            <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Status</p>
+
+                                                    {currentStory.metadata.summary.metrics?.distance > 0 ? (
+                                                        <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <Activity className="w-3.5 h-3.5 text-brand-red" />
+                                                                <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Distancia</p>
+                                                            </div>
+                                                            <p className="text-sm font-black text-white italic">
+                                                                {(currentStory.metadata.summary.metrics.distance / 1000).toFixed(2)} <span className="text-[10px] opacity-60">KM</span>
+                                                            </p>
                                                         </div>
-                                                        <p className="text-sm font-black text-white italic">COMPLETADO</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
+                                                    ) : (
+                                                        <div className="bg-white/5 rounded-2xl p-3 border border-white/5">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <Trophy className="w-3.5 h-3.5 text-brand-red" />
+                                                                <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Status</p>
+                                                            </div>
+                                                            <p className="text-sm font-black text-white italic">COMPLETADO</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
 
-                                        {showFullSummary && (
-                                            <div className="space-y-4 pt-2">
-                                                {currentStory.metadata.summary.metrics?.blocks && (
-                                                    <>
-                                                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mb-2 italic">Bloques de Entrenamiento</p>
-                                                        {currentStory.metadata.summary.metrics.blocks.map((block: any, idx: number) => (
-                                                            <motion.div
-                                                                initial={{ opacity: 0, x: -20 }}
-                                                                animate={{ opacity: 1, x: 0 }}
-                                                                transition={{ delay: idx * 0.1 }}
-                                                                key={idx}
-                                                                className="bg-white/5 rounded-[22px] p-4 border border-white/5"
-                                                            >
-                                                                <div className="flex justify-between items-center mb-3">
-                                                                    <span className="text-sm font-black text-white uppercase italic tracking-tighter">{block.title || block.type || `BLOQUE ${idx + 1}`}</span>
-                                                                    <span className="text-brand-red font-black text-base italic leading-none">{block.result?.time || (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : ''))}</span>
-                                                                </div>
-                                                                {block.exercises && (
-                                                                    <div className="space-y-1.5">
-                                                                        {block.exercises.map((ex: any, eIdx: number) => (
-                                                                            <div key={eIdx} className="flex justify-between items-center text-[10px] bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/5">
-                                                                                <span className="text-gray-300 font-black uppercase tracking-tight truncate pr-2">{ex.name}</span>
-                                                                                <span className="text-brand-red font-black italic whitespace-nowrap">
-                                                                                    {(() => {
-                                                                                        const s = ex.sets?.[0];
-                                                                                        const target = ex.target || ex.goal || '';
-
-                                                                                        // Try to get logged results first
-                                                                                        if (ex.value) return ex.value;
-
-                                                                                        if (s) {
-                                                                                            const weight = s.weight > 0 ? `${s.weight}KG` : '';
-                                                                                            const reps = s.reps > 0 ? `${s.reps}${s.measure && s.measure !== 'reps' ? s.measure : ''}` : '';
-                                                                                            if (weight && reps) return `${weight} x ${reps}`;
-                                                                                            if (weight || reps) return weight || reps;
-                                                                                        }
-
-                                                                                        // Fallback to top-level properties
-                                                                                        const tWeight = ex.weight > 0 ? `${ex.weight}KG` : '';
-                                                                                        const tReps = ex.reps > 0 ? `${ex.reps}${ex.measure && ex.measure !== 'reps' ? ex.measure : ''}` : '';
-                                                                                        if (tWeight || tReps) {
-                                                                                            if (tWeight && tReps) return `${tWeight} x ${tReps}`;
-                                                                                            return tWeight || tReps;
-                                                                                        }
-
-                                                                                        // Final fallback to instructions (target)
-                                                                                        return target !== '-' ? target : '';
-                                                                                    })()}</span>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </motion.div>
-                                                        ))}
-                                                    </>
-                                                )}
-
-                                                {!currentStory.metadata.summary.metrics?.blocks && currentStory.metadata.summary.exercises && (
-                                                    <>
-                                                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mb-2 italic">Ejercicios Realizados</p>
-                                                        <div className="space-y-2">
-                                                            {currentStory.metadata.summary.exercises.map((ex: any, idx: number) => (
+                                            {showFullSummary && (
+                                                <div className="space-y-4 pt-2">
+                                                    {currentStory.metadata.summary.metrics?.blocks && (
+                                                        <>
+                                                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mb-2 italic">Bloques de Entrenamiento</p>
+                                                            {currentStory.metadata.summary.metrics.blocks.map((block: any, idx: number) => (
                                                                 <motion.div
                                                                     initial={{ opacity: 0, x: -20 }}
                                                                     animate={{ opacity: 1, x: 0 }}
-                                                                    transition={{ delay: idx * 0.05 }}
+                                                                    transition={{ delay: idx * 0.1 }}
                                                                     key={idx}
-                                                                    className="bg-white/5 rounded-2xl p-3 border border-white/5 flex justify-between items-center"
+                                                                    className="bg-white/5 rounded-[22px] p-4 border border-white/5"
                                                                 >
-                                                                    <div className="flex flex-col min-w-0">
-                                                                        <span className="text-xs font-black text-white uppercase italic tracking-tighter truncate">{ex.name}</span>
-                                                                        <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">{ex.sets?.length || 0} Series</span>
+                                                                    <div className="flex justify-between items-center mb-3">
+                                                                        <span className="text-sm font-black text-white uppercase italic tracking-tighter">{block.title || block.type || `BLOQUE ${idx + 1}`}</span>
+                                                                        <span className="text-brand-red font-black text-base italic leading-none">{block.result?.time || (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : ''))}</span>
                                                                     </div>
-                                                                    <div className="text-right flex flex-col items-end gap-1">
-                                                                        {ex.sets?.map((s: any, sIdx: number) => (
-                                                                            <span key={sIdx} className="text-[10px] text-brand-red font-black italic leading-none">
-                                                                                {s.weight > 0 ? `${s.weight}KG x ` : ''}{s.reps}
-                                                                            </span>
-                                                                        ))}
-                                                                    </div>
+                                                                    {block.exercises && (
+                                                                        <div className="space-y-1.5">
+                                                                            {block.exercises.map((ex: any, eIdx: number) => (
+                                                                                <div key={eIdx} className="flex justify-between items-center text-[10px] bg-white/5 px-2.5 py-1.5 rounded-lg border border-white/5">
+                                                                                    <span className="text-gray-300 font-black uppercase tracking-tight truncate pr-2">{ex.name}</span>
+                                                                                    <span className="text-brand-red font-black italic whitespace-nowrap">
+                                                                                        {(() => {
+                                                                                            const s = ex.sets?.[0];
+                                                                                            const target = ex.target || ex.goal || '';
+
+                                                                                            // Try to get logged results first
+                                                                                            if (ex.value) return ex.value;
+
+                                                                                            if (s) {
+                                                                                                const weight = s.weight > 0 ? `${s.weight}KG` : '';
+                                                                                                const reps = s.reps > 0 ? `${s.reps}${s.measure && s.measure !== 'reps' ? s.measure : ''}` : '';
+                                                                                                if (weight && reps) return `${weight} x ${reps}`;
+                                                                                                if (weight || reps) return weight || reps;
+                                                                                            }
+
+                                                                                            // Fallback to top-level properties
+                                                                                            const tWeight = ex.weight > 0 ? `${ex.weight}KG` : '';
+                                                                                            const tReps = ex.reps > 0 ? `${ex.reps}${ex.measure && ex.measure !== 'reps' ? ex.measure : ''}` : '';
+                                                                                            if (tWeight || tReps) {
+                                                                                                if (tWeight && tReps) return `${tWeight} x ${tReps}`;
+                                                                                                return tWeight || tReps;
+                                                                                            }
+
+                                                                                            // Final fallback to instructions (target)
+                                                                                            return target !== '-' ? target : '';
+                                                                                        })()}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
                                                                 </motion.div>
                                                             ))}
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
-                                        )}
+                                                        </>
+                                                    )}
 
-                                        {!showFullSummary && currentStory.metadata.caption && (
-                                            <p className="text-[11px] text-white font-medium italic opacity-80 border-l-2 border-brand-red pl-3 pt-1">
-                                                "{currentStory.metadata.caption}"
-                                            </p>
-                                        )}
-                                    </motion.div>
-                                </div>
-                            )}
-
-                            {/* Render Viewer Overlays */}
-                            <div className="absolute inset-0 z-50 pointer-events-none">
-                                {currentStory.metadata?.overlays && currentStory.metadata.overlays.map((overlay: OverlayElement) => (
-                                    <div
-                                        key={overlay.id}
-                                        className={clsx(
-                                            "absolute z-50 pointer-events-auto origin-center touch-none select-none",
-                                            overlay.link && "cursor-pointer active:scale-95 hover:scale-105"
-                                        )}
-                                        style={{
-                                            left: `${overlay.x}%`,
-                                            top: `${overlay.y}%`,
-                                            transform: `translate(-50%, -50%) scale(${overlay.scale || 1}) rotate(${overlay.rotation || 0}deg)`
-                                        }}
-                                        onClick={(e) => {
-                                            if (overlay.link) {
-                                                e.stopPropagation();
-                                                setSelectedUserIndex(null);
-                                                router.push(overlay.link);
-                                            }
-                                        }}
-                                    >
-                                        {overlay.type === 'text' ? (
-                                            <p
-                                                className="font-black text-2xl uppercase tracking-wider drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-center break-words max-w-[300px]"
-                                                style={{ color: overlay.color || 'white' }}
-                                            >
-                                                {overlay.content}
-                                            </p>
-                                        ) : overlay.type === 'workout_sticker' ? (
-                                            (() => {
-                                                try {
-                                                    const data = JSON.parse(overlay.content);
-                                                    const hasBlocks = data.metrics?.blocks?.length > 0;
-                                                    const isExpanded = expandedWorkoutId === overlay.id;
-
-                                                    return (
-                                                        <div
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setExpandedWorkoutId(isExpanded ? null : overlay.id);
-                                                                setIsPaused(!isExpanded);
-                                                            }}
-                                                            className={clsx(
-                                                                "bg-black/60 backdrop-blur-3xl border border-white/10 p-5 rounded-[24px] shadow-2xl relative overflow-hidden select-none",
-                                                                isExpanded ? "w-[340px] max-h-[500px] overflow-y-auto no-scrollbar" : "w-[300px]"
-                                                            )}
-                                                        >
-                                                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
-                                                            <div className="flex items-center gap-4 mb-4 relative z-10">
-                                                                <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
-                                                                    <Trophy className="w-5 h-5 text-brand-red" />
-                                                                </div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em] mb-0.5">Entrenamiento</p>
-                                                                    <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || data.name || 'Sesión'}</h4>
-                                                                </div>
-                                                                <div className="shrink-0 flex items-center justify-center">
-                                                                    {isExpanded ? <ChevronUp className="w-4 h-4 text-brand-red" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-                                                                </div>
+                                                    {!currentStory.metadata.summary.metrics?.blocks && currentStory.metadata.summary.exercises && (
+                                                        <>
+                                                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em] mb-2 italic">Ejercicios Realizados</p>
+                                                            <div className="space-y-2">
+                                                                {currentStory.metadata.summary.exercises.map((ex: any, idx: number) => (
+                                                                    <motion.div
+                                                                        initial={{ opacity: 0, x: -20 }}
+                                                                        animate={{ opacity: 1, x: 0 }}
+                                                                        transition={{ delay: idx * 0.05 }}
+                                                                        key={idx}
+                                                                        className="bg-white/5 rounded-2xl p-3 border border-white/5 flex justify-between items-center"
+                                                                    >
+                                                                        <div className="flex flex-col min-w-0">
+                                                                            <span className="text-xs font-black text-white uppercase italic tracking-tighter truncate">{ex.name}</span>
+                                                                            <span className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">{ex.sets?.length || 0} Series</span>
+                                                                        </div>
+                                                                        <div className="text-right flex flex-col items-end gap-1">
+                                                                            {ex.sets?.map((s: any, sIdx: number) => (
+                                                                                <span key={sIdx} className="text-[10px] text-brand-red font-black italic leading-none">
+                                                                                    {s.weight > 0 ? `${s.weight}KG x ` : ''}{s.reps}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </motion.div>
+                                                                ))}
                                                             </div>
-                                                            <div className="space-y-2 relative z-10">
-                                                                {hasBlocks ? (
-                                                                    <div className="space-y-1.5">
-                                                                        {(isExpanded ? data.metrics.blocks : data.metrics.blocks.slice(0, 3)).map((block: any, idx: number) => (
-                                                                            <motion.div
-                                                                                initial={{ opacity: 0, y: 10 }}
-                                                                                animate={{ opacity: 1, y: 0 }}
-                                                                                transition={{ delay: idx * 0.05 }}
-                                                                                key={idx}
-                                                                                className="flex flex-col bg-white/5 p-3 rounded-xl border border-white/5 hover:border-white/10 transition-colors gap-2"
-                                                                            >
-                                                                                <div className="flex justify-between items-center">
-                                                                                    <div className="flex flex-col">
-                                                                                        <span className="text-[10px] font-black text-white uppercase tracking-tight">{block.title || block.type || 'BLOQUE'}</span>
-                                                                                        {isExpanded && block.type && (
-                                                                                            <span className="text-[8px] text-brand-red/70 font-bold uppercase tracking-widest">{block.type}</span>
-                                                                                        )}
-                                                                                    </div>
-                                                                                    <span className="text-brand-red font-black text-sm italic tracking-tighter">
-                                                                                        {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : '-'))}
-                                                                                    </span>
-                                                                                </div>
-
-                                                                                {isExpanded && block.exercises && block.exercises.length > 0 && (
-                                                                                    <div className="grid grid-cols-1 gap-1.5 mt-1 border-t border-white/5 pt-2">
-                                                                                        {block.exercises.map((ex: any, eIdx: number) => (
-                                                                                            <div key={eIdx} className="flex justify-between items-center bg-black/20 px-2 py-1.5 rounded-lg">
-                                                                                                <span className="text-[9px] text-gray-300 font-bold uppercase truncate max-w-[150px]">{ex.name}</span>
-                                                                                                <span className="text-[9px] text-white font-black italic">{ex.value || ex.weight_kg} {ex.reps ? `x ${ex.reps}` : ''}</span>
-                                                                                            </div>
-                                                                                        ))}
-                                                                                    </div>
-                                                                                )}
-                                                                            </motion.div>
-                                                                        ))}
-                                                                        {!isExpanded && data.metrics.blocks.length > 3 && (
-                                                                            <div className="text-[9px] text-center text-brand-red/70 font-black uppercase tracking-[0.2em] pt-2 animate-pulse">
-                                                                                Tocar para ver +{data.metrics.blocks.length - 3} bloques
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                ) : (
-                                                                    <>
-                                                                        {(data.total_volume_kg > 0 || data.max_weight) && (
-                                                                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
-                                                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Carga Máxima</span>
-                                                                                <span className="text-brand-red font-black text-sm">{data.total_volume_kg || data.max_weight} KG</span>
-                                                                            </div>
-                                                                        )}
-                                                                        {data.location_name && (
-                                                                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
-                                                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Lugar</span>
-                                                                                <span className="text-white font-bold text-xs truncate max-w-[150px] uppercase">{data.location_name}</span>
-                                                                            </div>
-                                                                        )}
-                                                                    </>
-                                                                )}
-                                                                {!hasBlocks && !data.total_volume_kg && !data.location_name && (
-                                                                    <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-                                                                        <p className="text-white/60 text-xs italic text-center">¡Entrenamiento completado!</p>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            <div className="mt-4 pt-3 border-t border-white/5 flex justify-center">
-                                                                <div className="flex items-center gap-1.5 opacity-50">
-                                                                    <div className="w-1.5 h-1.5 bg-brand-red rounded-full animate-pulse" />
-                                                                    <span className="text-[8px] text-gray-400 font-black uppercase tracking-[0.3em]">RIVAL FIT ATLETA</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )
-                                                } catch (e) { return null }
-                                            })()
-                                        ) : overlay.type === 'pr_sticker' ? (
-                                            (() => {
-                                                try {
-                                                    const prData = JSON.parse(overlay.content);
-                                                    return (
-                                                        <PRCard
-                                                            userName={currentUserStories?.user?.full_name || ''}
-                                                            avatarUrl={currentUserStories?.user?.avatar_url || ''}
-                                                            sport={prData.sport}
-                                                            exerciseName={prData.exerciseName}
-                                                            weight={prData.weight}
-                                                            unit={prData.unit}
-                                                            isStory={true}
-                                                        />
-                                                    )
-                                                } catch (e) { return null }
-                                            })()
-                                        ) : overlay.type === 'image' ? (
-                                            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 group w-full">
-                                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                <img
-                                                    src={overlay.content}
-                                                    alt="Shared Content"
-                                                    className="w-full h-auto object-contain pointer-events-none"
-                                                    crossOrigin="anonymous"
-                                                />
-                                                {previewUrl && (
-                                                    <button
-                                                        onClick={(e) => removeOverlay(overlay.id, e)}
-                                                        className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                                    >
-                                                        <X className="w-3 h-3" />
-                                                    </button>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <Image src={overlay.content} width={64} height={64} alt="sticker" className="drop-shadow-lg" />
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </motion.div>
-
-                        <AnimatePresence>
-                            {!isPressed && (
-                                <motion.div
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    exit={{ opacity: 0 }}
-                                    className="absolute bottom-10 left-0 right-0 px-6 flex items-center justify-between z-50 pointer-events-none"
-                                >
-                                    <div className="pointer-events-auto">
-                                        {isOwner ? (
-                                            <button
-                                                onClick={(e) => { e.stopPropagation(); setShowViewers(true); }}
-                                                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-xl px-4 py-2.5 rounded-2xl border border-white/10 transition-all group"
-                                            >
-                                                <div className="flex -space-x-2">
-                                                    {(currentStory as any).viewer_details?.slice(0, 3).map((v: any, i: number) => (
-                                                        <div key={i} className="w-5 h-5 rounded-full border border-black overflow-hidden relative">
-                                                            <Image src={v.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${v.profiles?.full_name}`} fill alt="v" className="object-cover" />
-                                                        </div>
-                                                    ))}
+                                                        </>
+                                                    )}
                                                 </div>
-                                                <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                                                    {(currentStory as any).views_count} {(currentStory as any).views_count === 1 ? 'Vista' : 'Vistas'}
-                                                </span>
-                                            </button>
-                                        ) : (
-                                            <div className="flex-1" />
-                                        )}
-                                    </div>
+                                            )}
 
-                                    <button
-                                        onClick={handleLike}
-                                        className={clsx(
-                                            "p-3 rounded-full backdrop-blur-xl border transition-all active:scale-90 pointer-events-auto",
-                                            (currentStory as any).has_liked
-                                                ? "bg-brand-red/20 border-brand-red text-brand-red"
-                                                : "bg-white/10 border-white/10 text-white hover:bg-white/20"
-                                        )}
-                                    >
-                                        <Heart className={clsx("w-6 h-6", (currentStory as any).has_liked && "fill-current animate-heart-pop")} />
-                                        {(currentStory as any).likes_count! > 0 && (
-                                            <span className="absolute -top-1 -right-1 bg-brand-red text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-black">
-                                                {(currentStory as any).likes_count}
-                                            </span>
-                                        )}
-                                    </button>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        {/* Viewers List Modal */}
-                        <AnimatePresence>
-                            {showViewers && (
-                                <motion.div
-                                    initial={{ y: '100%' }}
-                                    animate={{ y: 0 }}
-                                    exit={{ y: '100%' }}
-                                    transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                                    className="absolute inset-0 z-[60] bg-black/95 backdrop-blur-md flex flex-col pointer-events-auto"
-                                >
-                                    <div className="flex items-center justify-between p-6 border-b border-white/10 bg-black/50">
-                                        <div className="flex items-center gap-2">
-                                            <Eye className="w-5 h-5 text-brand-red" />
-                                            <h3 className="text-white font-black uppercase tracking-widest text-sm">
-                                                Vistas ({(currentStory as any).views_count})
-                                            </h3>
-                                        </div>
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setShowViewers(false); }}
-                                            className="p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors"
-                                        >
-                                            <X className="w-5 h-5" />
-                                        </button>
-                                    </div>
-                                    <div className="flex-1 overflow-y-auto p-4 space-y-2 no-scrollbar">
-                                        {(currentStory as any).viewer_details?.map((viewer: any, idx: number) => (
-                                            <div key={idx} className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
-                                                <div className="w-10 h-10 rounded-full border border-brand-red overflow-hidden relative shrink-0">
-                                                    <Image
-                                                        src={viewer.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${viewer.profiles?.full_name || 'User'}`}
-                                                        alt={viewer.profiles?.username || 'User'}
-                                                        fill
-                                                        className="object-cover"
-                                                    />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-white font-bold text-sm truncate">{viewer.profiles?.full_name || 'Usuario Desconocido'}</p>
-                                                    <p className="text-xs text-gray-400 truncate">@{viewer.profiles?.username || 'user'}</p>
-                                                </div>
-                                                <span className="text-[10px] text-gray-500 font-mono font-bold shrink-0">
-                                                    {viewer.created_at ? new Date(viewer.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                                                </span>
-                                            </div>
-                                        ))}
-                                        {(!(currentStory as any).viewer_details || (currentStory as any).viewer_details.length === 0) && (
-                                            <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 pb-20">
-                                                <Eye className="w-12 h-12 mb-4 opacity-20" />
-                                                <p className="text-sm font-medium">
-                                                    {(currentStory as any).views_count > 0 ? 'Cargando vistas...' : 'Aún no hay vistas'}
+                                            {!showFullSummary && currentStory.metadata.caption && (
+                                                <p className="text-[11px] text-white font-medium italic opacity-80 border-l-2 border-brand-red pl-3 pt-1">
+                                                    "{currentStory.metadata.caption}"
                                                 </p>
-                                            </div>
-                                        )}
+                                            )}
+                                        </motion.div>
                                     </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                </div>
-            )}
-            {showPRCreator && (
-                <div className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
-                    <div className="bg-brand-gray border border-white/10 w-full max-w-md rounded-[32px] p-8 shadow-2xl relative">
-                        <button onClick={() => setShowPRCreator(false)} className="absolute top-6 right-6 text-gray-400 hover:text-white">
-                            <X className="w-6 h-6" />
-                        </button>
-                        <div className="flex items-center gap-3 mb-8">
-                            <div className="p-3 bg-brand-red/10 rounded-2xl">
-                                <Trophy className="w-6 h-6 text-brand-red" />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Publicar Nuevo PR</h3>
-                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Se verá en tus historias por 24h</p>
-                            </div>
-                        </div>
+                                )}
 
-                        <form onSubmit={handlePRStoryPost} className="space-y-6">
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Ejercicio</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="p.ej. Back Squat"
-                                    value={prExercise}
-                                    onChange={(e) => setPrExercise(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-brand-red/50 text-base"
-                                />
-                            </div>
+                                {/* Render Viewer Overlays */}
+                                <div className="absolute inset-0 z-50 pointer-events-none">
+                                    {currentStory.metadata?.overlays && currentStory.metadata.overlays.map((overlay: OverlayElement) => (
+                                        <div
+                                            key={overlay.id}
+                                            className={clsx(
+                                                "absolute z-50 pointer-events-auto origin-center touch-none select-none",
+                                                overlay.link && "cursor-pointer active:scale-95 hover:scale-105"
+                                            )}
+                                            style={{
+                                                left: `${overlay.x}%`,
+                                                top: `${overlay.y}%`,
+                                                transform: `translate(-50%, -50%) scale(${overlay.scale || 1}) rotate(${overlay.rotation || 0}deg)`
+                                            }}
+                                            onClick={(e) => {
+                                                if (overlay.link) {
+                                                    e.stopPropagation();
+                                                    setSelectedUserIndex(null);
+                                                    router.push(overlay.link);
+                                                }
+                                            }}
+                                        >
+                                            {overlay.type === 'text' ? (
+                                                <p
+                                                    className="font-black text-2xl uppercase tracking-wider drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)] text-center break-words max-w-[300px]"
+                                                    style={{ color: overlay.color || 'white' }}
+                                                >
+                                                    {overlay.content}
+                                                </p>
+                                            ) : overlay.type === 'workout_sticker' ? (
+                                                (() => {
+                                                    try {
+                                                        const data = JSON.parse(overlay.content);
+                                                        const hasBlocks = data.metrics?.blocks?.length > 0;
+                                                        const isExpanded = expandedWorkoutId === overlay.id;
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Peso Elevado (KG)</label>
-                                <input
-                                    type="text"
-                                    required
-                                    placeholder="p.ej. 140"
-                                    value={prWeight}
-                                    onChange={(e) => setPrWeight(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-brand-red font-black focus:outline-none focus:border-brand-red/50 text-2xl"
-                                />
-                            </div>
+                                                        return (
+                                                            <div
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setExpandedWorkoutId(isExpanded ? null : overlay.id);
+                                                                    setIsPaused(!isExpanded);
+                                                                }}
+                                                                className={clsx(
+                                                                    "bg-black/60 backdrop-blur-3xl border border-white/10 p-5 rounded-[24px] shadow-2xl relative overflow-hidden select-none",
+                                                                    isExpanded ? "w-[340px] max-h-[500px] overflow-y-auto no-scrollbar" : "w-[300px]"
+                                                                )}
+                                                            >
+                                                                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
+                                                                <div className="flex items-center gap-4 mb-4 relative z-10">
+                                                                    <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
+                                                                        <Trophy className="w-5 h-5 text-brand-red" />
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em] mb-0.5">Entrenamiento</p>
+                                                                        <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || data.name || 'Sesión'}</h4>
+                                                                    </div>
+                                                                    <div className="shrink-0 flex items-center justify-center">
+                                                                        {isExpanded ? <ChevronUp className="w-4 h-4 text-brand-red" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="space-y-2 relative z-10">
+                                                                    {hasBlocks ? (
+                                                                        <div className="space-y-1.5">
+                                                                            {(isExpanded ? data.metrics.blocks : data.metrics.blocks.slice(0, 3)).map((block: any, idx: number) => (
+                                                                                <motion.div
+                                                                                    initial={{ opacity: 0, y: 10 }}
+                                                                                    animate={{ opacity: 1, y: 0 }}
+                                                                                    transition={{ delay: idx * 0.05 }}
+                                                                                    key={idx}
+                                                                                    className="flex flex-col bg-white/5 p-3 rounded-xl border border-white/5 hover:border-white/10 transition-colors gap-2"
+                                                                                >
+                                                                                    <div className="flex justify-between items-center">
+                                                                                        <div className="flex flex-col">
+                                                                                            <span className="text-[10px] font-black text-white uppercase tracking-tight">{block.title || block.type || 'BLOQUE'}</span>
+                                                                                            {isExpanded && block.type && (
+                                                                                                <span className="text-[8px] text-brand-red/70 font-bold uppercase tracking-widest">{block.type}</span>
+                                                                                            )}
+                                                                                        </div>
+                                                                                        <span className="text-brand-red font-black text-sm italic tracking-tighter">
+                                                                                            {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : '-'))}
+                                                                                        </span>
+                                                                                    </div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Disciplina</label>
-                                <input
-                                    type="text"
-                                    placeholder="p.ej. Cross Training"
-                                    value={prSport}
-                                    onChange={(e) => setPrSport(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-brand-red/50 text-sm"
-                                />
-                            </div>
+                                                                                    {isExpanded && block.exercises && block.exercises.length > 0 && (
+                                                                                        <div className="grid grid-cols-1 gap-1.5 mt-1 border-t border-white/5 pt-2">
+                                                                                            {block.exercises.map((ex: any, eIdx: number) => (
+                                                                                                <div key={eIdx} className="flex justify-between items-center bg-black/20 px-2 py-1.5 rounded-lg">
+                                                                                                    <span className="text-[9px] text-gray-300 font-bold uppercase truncate max-w-[150px]">{ex.name}</span>
+                                                                                                    <span className="text-[9px] text-white font-black italic">{ex.value || ex.weight_kg} {ex.reps ? `x ${ex.reps}` : ''}</span>
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </motion.div>
+                                                                            ))}
+                                                                            {!isExpanded && data.metrics.blocks.length > 3 && (
+                                                                                <div className="text-[9px] text-center text-brand-red/70 font-black uppercase tracking-[0.2em] pt-2 animate-pulse">
+                                                                                    Tocar para ver +{data.metrics.blocks.length - 3} bloques
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <>
+                                                                            {(data.total_volume_kg > 0 || data.max_weight) && (
+                                                                                <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                                                                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Carga Máxima</span>
+                                                                                    <span className="text-brand-red font-black text-sm">{data.total_volume_kg || data.max_weight} KG</span>
+                                                                                </div>
+                                                                            )}
+                                                                            {data.location_name && (
+                                                                                <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                                                                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Lugar</span>
+                                                                                    <span className="text-white font-bold text-xs truncate max-w-[150px] uppercase">{data.location_name}</span>
+                                                                                </div>
+                                                                            )}
+                                                                        </>
+                                                                    )}
+                                                                    {!hasBlocks && !data.total_volume_kg && !data.location_name && (
+                                                                        <div className="bg-white/5 p-3 rounded-xl border border-white/5">
+                                                                            <p className="text-white/60 text-xs italic text-center">¡Entrenamiento completado!</p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="mt-4 pt-3 border-t border-white/5 flex justify-center">
+                                                                    <div className="flex items-center gap-1.5 opacity-50">
+                                                                        <div className="w-1.5 h-1.5 bg-brand-red rounded-full animate-pulse" />
+                                                                        <span className="text-[8px] text-gray-400 font-black uppercase tracking-[0.3em]">RIVAL FIT ATLETA</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    } catch (e) { return null }
+                                                })()
+                                            ) : overlay.type === 'pr_sticker' ? (
+                                                (() => {
+                                                    try {
+                                                        const prData = JSON.parse(overlay.content);
+                                                        return (
+                                                            <PRCard
+                                                                userName={currentUserStories?.user?.full_name || ''}
+                                                                avatarUrl={currentUserStories?.user?.avatar_url || ''}
+                                                                sport={prData.sport}
+                                                                exerciseName={prData.exerciseName}
+                                                                weight={prData.weight}
+                                                                unit={prData.unit}
+                                                                isStory={true}
+                                                            />
+                                                        )
+                                                    } catch (e) { return null }
+                                                })()
+                                            ) : overlay.type === 'image' ? (
+                                                <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-white/10 group w-full">
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img
+                                                        src={overlay.content}
+                                                        alt="Shared Content"
+                                                        className="w-full h-auto object-contain pointer-events-none"
+                                                        crossOrigin="anonymous"
+                                                    />
+                                                    {previewUrl && (
+                                                        <button
+                                                            onClick={(e) => removeOverlay(overlay.id, e)}
+                                                            className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <Image src={overlay.content} width={64} height={64} alt="sticker" className="drop-shadow-lg" />
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </motion.div>
 
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Música</label>
-                                <div className="flex bg-black/40 border border-white/10 rounded-2xl p-2 items-center justify-between">
-                                    <MusicPicker onSelect={setSelectedTrack} selectedTrackId={selectedTrack?.id || null} />
-                                    <div className="flex-1 px-4 text-left">
-                                        {selectedTrack ? (
-                                            <div>
-                                                <p className="text-xs font-bold text-white leading-none">{selectedTrack.title}</p>
-                                                <p className="text-[9px] text-gray-500 uppercase font-black">{selectedTrack.artist}</p>
-                                            </div>
-                                        ) : (
-                                            <p className="text-xs text-gray-500 italic">Elegir música (opcional)</p>
-                                        )}
-                                    </div>
-                                    {selectedTrack && (
-                                        <button type="button" onClick={() => setSelectedTrack(null)} className="p-2 text-gray-500 hover:text-white">
-                                            <X className="w-4 h-4" />
+                            <AnimatePresence>
+                                {!isPressed && (
+                                    <motion.div
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        exit={{ opacity: 0 }}
+                                        className="absolute bottom-10 left-0 right-0 px-6 flex items-center justify-between z-50 pointer-events-none"
+                                    >
+                                        <div className="pointer-events-auto">
+                                            {isOwner ? (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setShowViewers(true); }}
+                                                    className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-xl px-4 py-2.5 rounded-2xl border border-white/10 transition-all group"
+                                                >
+                                                    <div className="flex -space-x-2">
+                                                        {(currentStory as any).viewer_details?.slice(0, 3).map((v: any, i: number) => (
+                                                            <div key={i} className="w-5 h-5 rounded-full border border-black overflow-hidden relative">
+                                                                <Image src={v.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${v.profiles?.full_name}`} fill alt="v" className="object-cover" />
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                                        {(currentStory as any).views_count} {(currentStory as any).views_count === 1 ? 'Vista' : 'Vistas'}
+                                                    </span>
+                                                </button>
+                                            ) : (
+                                                <div className="flex-1" />
+                                            )}
+                                        </div>
+
+                                        <button
+                                            onClick={handleLike}
+                                            className={clsx(
+                                                "p-3 rounded-full backdrop-blur-xl border transition-all active:scale-90 pointer-events-auto",
+                                                (currentStory as any).has_liked
+                                                    ? "bg-brand-red/20 border-brand-red text-brand-red"
+                                                    : "bg-white/10 border-white/10 text-white hover:bg-white/20"
+                                            )}
+                                        >
+                                            <Heart className={clsx("w-6 h-6", (currentStory as any).has_liked && "fill-current animate-heart-pop")} />
+                                            {(currentStory as any).likes_count! > 0 && (
+                                                <span className="absolute -top-1 -right-1 bg-brand-red text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-black">
+                                                    {(currentStory as any).likes_count}
+                                                </span>
+                                            )}
                                         </button>
-                                    )}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Viewers List Modal */}
+                            <AnimatePresence>
+                                {showViewers && (
+                                    <motion.div
+                                        initial={{ y: '100%' }}
+                                        animate={{ y: 0 }}
+                                        exit={{ y: '100%' }}
+                                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                                        className="absolute inset-0 z-[60] bg-black/95 backdrop-blur-md flex flex-col pointer-events-auto"
+                                    >
+                                        <div className="flex items-center justify-between p-6 border-b border-white/10 bg-black/50">
+                                            <div className="flex items-center gap-2">
+                                                <Eye className="w-5 h-5 text-brand-red" />
+                                                <h3 className="text-white font-black uppercase tracking-widest text-sm">
+                                                    Vistas ({(currentStory as any).views_count})
+                                                </h3>
+                                            </div>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setShowViewers(false); }}
+                                                className="p-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors"
+                                            >
+                                                <X className="w-5 h-5" />
+                                            </button>
+                                        </div>
+                                        <div className="flex-1 overflow-y-auto p-4 space-y-2 no-scrollbar">
+                                            {(currentStory as any).viewer_details?.map((viewer: any, idx: number) => (
+                                                <div key={idx} className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-colors border border-white/5">
+                                                    <div className="w-10 h-10 rounded-full border border-brand-red overflow-hidden relative shrink-0">
+                                                        <Image
+                                                            src={viewer.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${viewer.profiles?.full_name || 'User'}`}
+                                                            alt={viewer.profiles?.username || 'User'}
+                                                            fill
+                                                            className="object-cover"
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-white font-bold text-sm truncate">{viewer.profiles?.full_name || 'Usuario Desconocido'}</p>
+                                                        <p className="text-xs text-gray-400 truncate">@{viewer.profiles?.username || 'user'}</p>
+                                                    </div>
+                                                    <span className="text-[10px] text-gray-500 font-mono font-bold shrink-0">
+                                                        {viewer.created_at ? new Date(viewer.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            {(!(currentStory as any).viewer_details || (currentStory as any).viewer_details.length === 0) && (
+                                                <div className="flex flex-col items-center justify-center h-full text-center text-gray-500 pb-20">
+                                                    <Eye className="w-12 h-12 mb-4 opacity-20" />
+                                                    <p className="text-sm font-medium">
+                                                        {(currentStory as any).views_count > 0 ? 'Cargando vistas...' : 'Aún no hay vistas'}
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+                    </div>
+                )
+            }
+            {
+                showPRCreator && (
+                    <div className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
+                        <div className="bg-brand-gray border border-white/10 w-full max-w-md rounded-[32px] p-8 shadow-2xl relative">
+                            <button onClick={() => setShowPRCreator(false)} className="absolute top-6 right-6 text-gray-400 hover:text-white">
+                                <X className="w-6 h-6" />
+                            </button>
+                            <div className="flex items-center gap-3 mb-8">
+                                <div className="p-3 bg-brand-red/10 rounded-2xl">
+                                    <Trophy className="w-6 h-6 text-brand-red" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Publicar Nuevo PR</h3>
+                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Se verá en tus historias por 24h</p>
                                 </div>
                             </div>
 
-                            <div className="pt-4 flex gap-4">
-                                <button
-                                    type="button"
-                                    onClick={() => prFileInputRef.current?.click()}
-                                    className="flex-1 bg-white/5 hover:bg-white/10 text-white rounded-2xl py-4 font-black uppercase tracking-widest text-[10px] border border-white/5 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Activity className="w-4 h-4 text-brand-red" />
-                                    Fondo Foto
-                                </button>
-                                <input
-                                    ref={prFileInputRef}
-                                    type="file"
-                                    accept="image/*"
-                                    className="hidden"
-                                    onChange={() => { }} // No auto-post
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={isUploading}
-                                    className="flex-[2] bg-brand-red text-white rounded-2xl py-4 font-black uppercase tracking-widest text-xs shadow-glow transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
-                                >
-                                    {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-4 h-4" /> PUBLICAR PR</>}
-                                </button>
-                            </div>
-                        </form>
+                            <form onSubmit={handlePRStoryPost} className="space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Ejercicio</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="p.ej. Back Squat"
+                                        value={prExercise}
+                                        onChange={(e) => setPrExercise(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-brand-red/50 text-base"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Peso Elevado (KG)</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="p.ej. 140"
+                                        value={prWeight}
+                                        onChange={(e) => setPrWeight(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-brand-red font-black focus:outline-none focus:border-brand-red/50 text-2xl"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Disciplina</label>
+                                    <input
+                                        type="text"
+                                        placeholder="p.ej. Cross Training"
+                                        value={prSport}
+                                        onChange={(e) => setPrSport(e.target.value)}
+                                        className="w-full bg-black/40 border border-white/10 rounded-2xl px-5 py-4 text-white focus:outline-none focus:border-brand-red/50 text-sm"
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Música</label>
+                                    <div className="flex bg-black/40 border border-white/10 rounded-2xl p-2 items-center justify-between">
+                                        <MusicPicker onSelect={setSelectedTrack} selectedTrackId={selectedTrack?.id || null} />
+                                        <div className="flex-1 px-4 text-left">
+                                            {selectedTrack ? (
+                                                <div>
+                                                    <p className="text-xs font-bold text-white leading-none">{selectedTrack.title}</p>
+                                                    <p className="text-[9px] text-gray-500 uppercase font-black">{selectedTrack.artist}</p>
+                                                </div>
+                                            ) : (
+                                                <p className="text-xs text-gray-500 italic">Elegir música (opcional)</p>
+                                            )}
+                                        </div>
+                                        {selectedTrack && (
+                                            <button type="button" onClick={() => setSelectedTrack(null)} className="p-2 text-gray-500 hover:text-white">
+                                                <X className="w-4 h-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="pt-4 flex gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => prFileInputRef.current?.click()}
+                                        className="flex-1 bg-white/5 hover:bg-white/10 text-white rounded-2xl py-4 font-black uppercase tracking-widest text-[10px] border border-white/5 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Activity className="w-4 h-4 text-brand-red" />
+                                        Fondo Foto
+                                    </button>
+                                    <input
+                                        ref={prFileInputRef}
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={() => { }} // No auto-post
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={isUploading}
+                                        className="flex-[2] bg-brand-red text-white rounded-2xl py-4 font-black uppercase tracking-widest text-xs shadow-glow transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+                                    >
+                                        {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-4 h-4" /> PUBLICAR PR</>}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <audio
                 ref={audioRef}
@@ -1941,6 +1988,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 }}
                 style={{ width: '1px', height: '1px', opacity: 0.01, position: 'absolute', pointerEvents: 'none' }}
             />
-        </div>
+        </div >
     )
 }
