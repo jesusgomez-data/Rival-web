@@ -2,16 +2,18 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Image as ImageIcon, Loader2, X, Smile, Trophy, Activity, AlertCircle } from "lucide-react";
-import { createUserPost, createPRPost } from "./community/actions";
 import MentionInput from "@/components/MentionInput";
-import { createClient } from "@/utils/supabase/client";
 import Image from "next/image";
-import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import MusicPicker from "./MusicPicker";
 import { MusicTrack } from "./music-data";
 import { useUploads } from "./UploadContext";
+import dynamic from 'next/dynamic';
+
+// Import correctly for SSR safety
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
 export default function CreatePost({ currentUser, onSuccess }: { currentUser: any, onSuccess?: () => void }) {
+    const [mounted, setMounted] = useState(false);
     const [content, setContent] = useState("");
     const [preview, setPreview] = useState<string | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -33,10 +35,11 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
     const trimmerVideoRef = useRef<HTMLVideoElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
-    const supabaseClient = createClient();
     const { startUpload } = useUploads();
 
+    // Prevent hydration issues
     useEffect(() => {
+        setMounted(true);
         function handleClickOutside(event: MouseEvent) {
             if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
                 setShowEmojiPicker(false);
@@ -45,6 +48,8 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
         document.addEventListener("mousedown", handleClickOutside);
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    if (!mounted) return null;
 
     const processTrimming = async () => {
         if (!trimmerVideoRef.current || !trimmerVideoUrl) return;
@@ -55,7 +60,6 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
         setTrimError(null);
 
         try {
-            // Posicionamiento
             video.pause();
             video.currentTime = trimStart;
             video.muted = true;
@@ -66,7 +70,6 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                 setTimeout(onSeeked, 1500);
             });
 
-            // Setup Canvas (iOS Bridge)
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = video.videoWidth || 640;
@@ -140,11 +143,17 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
         if (postType === 'standard' && !content.trim() && !file) return;
         if (postType === 'pr' && (!exercise || !weight)) return;
 
+        // Corrected to match UploadContext structure
         startUpload({
-            type: postType === 'pr' ? 'pr' : 'standard',
+            postType,
             content,
             file,
-            metadata: postType === 'pr' ? { exercise, weight, sport } : { music: selectedTrack }
+            exercise,
+            weight,
+            sport,
+            selectedTrack,
+            currentUser,
+            preview
         });
 
         setContent(""); setExercise(""); setWeight(""); setPreview(null);
@@ -182,7 +191,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
     };
 
     return (
-        <div className="bg-brand-gray/30 border border-white/10 rounded-[28px] p-4 md:p-6 backdrop-blur-md mb-8 relative z-10 w-full">
+        <div className="bg-brand-gray/30 border border-white/10 rounded-[28px] p-4 md:p-6 backdrop-blur-md mb-8 relative z-10 w-full animate-in fade-in duration-500">
             <div className="flex gap-2 mb-4 md:mb-6">
                 <button type="button" onClick={() => setPostType('standard')} className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border ${postType === 'standard' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}><Activity className="w-3.5 h-3.5 text-brand-red" />Actualización</button>
                 <button type="button" onClick={() => setPostType('pr')} className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border ${postType === 'pr' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}><Trophy className="w-3.5 h-3.5 text-brand-yellow" />Nuevo PR</button>
@@ -198,11 +207,18 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                             </div>
                         )}
                         <div className="relative group">
-                            <MentionInput value={content} onChange={setContent} placeholder={postType === 'pr' ? "¿Cómo te sentiste en este levantamiento?" : currentUser ? `¿Qué hay de nuevo, ${currentUser.username}?` : "¿Qué hay de nuevo?"} className="w-full bg-black/20 border border-white/5 rounded-2xl md:rounded-[24px] p-4 text-xs md:text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/30 transition-all resize-none min-h-[100px] md:min-h-[120px] shadow-inner" />
+                            <MentionInput value={content} onChange={setContent} placeholder={postType === 'pr' ? "¿Cómo te sentiste en este levantamiento?" : currentUser ? `¿Qué hay de nuevo, ${currentUser.username || 'Atleta'}?` : "¿Qué hay de nuevo?"} className="w-full bg-black/20 border border-white/5 rounded-[24px] p-4 text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/30 transition-all resize-none min-h-[120px] shadow-inner" />
                             <div className="absolute bottom-4 right-4 flex items-center gap-2">
                                 <div className="relative" ref={emojiPickerRef}>
-                                    <button type="button" onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="p-2 text-gray-500 hover:text-brand-red transition-colors"><Smile className="w-4 h-4 md:w-5 md:h-5" /></button>
-                                    {showEmojiPicker && <div className="absolute bottom-full right-0 mb-4 z-[100] scale-75 md:scale-100 origin-bottom-right"><EmojiPicker theme={Theme.DARK} onEmojiClick={(ed) => setContent(p => p + ed.emoji)} lazyLoadEmojis /></div>}
+                                    <button type="button" onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="p-2 text-gray-500 hover:text-brand-red transition-colors"><Smile className="w-5 h-5" /></button>
+                                    {showEmojiPicker && (
+                                        <div className="absolute bottom-full right-0 mb-4 z-[100] scale-75 md:scale-100 origin-bottom-right">
+                                            <EmojiPicker
+                                                theme={"dark" as any}
+                                                onEmojiClick={(ed) => setContent(p => p + ed.emoji)}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
