@@ -267,6 +267,39 @@
         .animate-icon svg {
             animation: bounce 2s infinite ease-in-out;
         }
+
+        /* Download Button */
+        .download-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            border: 1px solid #3f3f46;
+            padding: 12px 24px;
+            border-radius: 99px;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            margin-top: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+            width: 100%;
+            max-width: 300px;
+            align-self: center;
+        }
+
+        .download-btn:active {
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .download-btn svg {
+            width: 18px;
+            height: 18px;
+        }
     </style>
 </head>
 
@@ -354,9 +387,20 @@
             </div>
         </div>
 
+        <button id="downloadBtn" class="download-btn" onclick="downloadImage()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Descargar como Imagen
+        </button>
+
         <div class="footer-logo">RIVAL FIT SYSTEM v1.0</div>
     </div>
 
+    <!-- Script para generar imagen -->
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
     <script>
         function setOS(os) {
             const body = document.body;
@@ -377,6 +421,38 @@
         const userAgent = navigator.userAgent || navigator.vendor || window.opera;
         if (/android/i.test(userAgent)) {
             setOS('android');
+        }
+
+        async function downloadImage() {
+            const btn = document.getElementById('downloadBtn');
+            const container = document.querySelector('.container');
+
+            // Ocultar botón temporalmente para la foto
+            btn.style.display = 'none';
+
+            try {
+                // Generar canvas
+                const canvas = await html2canvas(document.body, {
+                    backgroundColor: '#09090b',
+                    scale: 2, // Alta calidad (Retina)
+                    logging: false,
+                    useCORS: true,
+                    windowWidth: 420 // Forzar anchura móvil
+                });
+
+                // Crear enlace de descarga
+                const link = document.createElement('a');
+                link.download = 'instalar-rival-fit.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+
+            } catch (err) {
+                console.error("Error al generar imagen:", err);
+                alert("Hubo un error al generar la imagen. Intenta hacer una captura de pantalla.");
+            } finally {
+                // Volver a mostrar botón
+                btn.style.display = 'flex';
+            }
         }
     </script>
 </body>
