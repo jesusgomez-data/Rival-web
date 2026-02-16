@@ -170,10 +170,30 @@ function SessionContent() {
         if (!file) return;
 
         if (file.type.startsWith('video/')) {
-            // Open VideoEditor for all videos
-            setVideoToEdit(file);
-            setTrimmerVideoUrl(URL.createObjectURL(file));
-            setIsVideoTrimming(true);
+            // Check duration before opening editor
+            const video = document.createElement('video');
+            video.preload = 'metadata';
+            video.onloadedmetadata = () => {
+                window.URL.revokeObjectURL(video.src);
+                const duration = video.duration;
+
+                if (duration <= 65) {
+                    // Short video: Upload directly (Bypass Editor)
+                    startUpload(file);
+                } else {
+                    // Long video: Ask user
+                    const confirmUpload = window.confirm(`Tu video dura ${Math.round(duration)}s (Límite sugerido: 60s). \n\n¿Quieres recortarlo para mejor calidad o subirlo completo igualmente? \n\nACEPTAR = Recortar (Editor)\nCANCELAR = Subir Completo`);
+
+                    if (confirmUpload) {
+                        setVideoToEdit(file);
+                        setTrimmerVideoUrl(URL.createObjectURL(file));
+                        setIsVideoTrimming(true);
+                    } else {
+                        startUpload(file);
+                    }
+                }
+            };
+            video.src = URL.createObjectURL(file);
             return;
         }
 
