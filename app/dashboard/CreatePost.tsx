@@ -1,12 +1,10 @@
-
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Image as ImageIcon, Loader2, X, Smile } from "lucide-react";
+import { Send, Image as ImageIcon, Loader2, X, Smile, Trophy, Activity, AlertCircle } from "lucide-react";
 import { createUserPost, createPRPost } from "./community/actions";
 import MentionInput from "@/components/MentionInput";
 import { createClient } from "@/utils/supabase/client";
-import { Trophy, Activity, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import MusicPicker from "./MusicPicker";
@@ -30,13 +28,14 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
     const [trimError, setTrimError] = useState<string | null>(null);
     const [videoDuration, setVideoDuration] = useState(0);
     const [pendingFile, setPendingFile] = useState<File | null>(null);
+    const [trimProgress, setTrimProgress] = useState(0);
+
     const trimmerVideoRef = useRef<HTMLVideoElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
     const supabaseClient = createClient();
     const { startUpload } = useUploads();
 
-    // Close emoji picker when clicking outside
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
@@ -44,52 +43,120 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
-        return () => {
-            document.removeEventListener("mousedown", handleClickOutside);
-        };
+        return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
+
+    const processTrimming = async () => {
+        if (!trimmerVideoRef.current || !trimmerVideoUrl) return;
+
+        const video = trimmerVideoRef.current;
+        setIsTrimmingLoading(true);
+        setTrimProgress(1);
+        setTrimError(null);
+
+        try {
+            // Posicionamiento
+            video.pause();
+            video.currentTime = trimStart;
+            video.muted = true;
+
+            await new Promise(r => {
+                const onSeeked = () => { video.removeEventListener('seeked', onSeeked); r(true); };
+                video.addEventListener('seeked', onSeeked);
+                setTimeout(onSeeked, 1500);
+            });
+
+            // Setup Canvas (iOS Bridge)
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 640;
+
+            const streamFn = (canvas as any).captureStream || (canvas as any).webkitCaptureStream || (canvas as any).mozCaptureStream;
+            if (!streamFn) throw new Error("Captura no soportada.");
+
+            const stream = streamFn.call(canvas, 30);
+            const recorder = new MediaRecorder(stream, {
+                mimeType: MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm',
+                videoBitsPerSecond: 1000000
+            });
+
+            const chunks: Blob[] = [];
+            recorder.ondataavailable = (e) => chunks.push(e.data);
+
+            const recDuration = Math.min(60, video.duration - trimStart);
+            let frameReq: number;
+
+            const draw = () => {
+                if (ctx && video.readyState >= 2) {
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    frameReq = requestAnimationFrame(draw);
+                }
+            };
+
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: recorder.mimeType });
+                if (blob.size < 2000) {
+                    setTrimError("Error de captura");
+                } else {
+                    const file = new File([blob], "trimmed.mp4", { type: recorder.mimeType });
+                    setPreview(URL.createObjectURL(file));
+                    setPendingFile(file);
+                    setDuration(recDuration);
+                    setIsVideoTrimming(false);
+                    setTrimmerVideoUrl(null);
+                }
+                setIsTrimmingLoading(false);
+                setTrimProgress(0);
+            };
+
+            recorder.start();
+            try {
+                await video.play();
+                draw();
+                const startT = Date.now();
+                const interval = setInterval(() => {
+                    const elap = (Date.now() - startT) / 1000;
+                    setTrimProgress(Math.min(99, (elap / recDuration) * 100));
+                    if (elap >= recDuration) {
+                        clearInterval(interval);
+                        cancelAnimationFrame(frameReq);
+                        if (recorder.state === 'recording') recorder.stop();
+                        video.pause();
+                    }
+                }, 500);
+            } catch (e) {
+                throw new Error("Toca el video para iniciar (iPhone)");
+            }
+        } catch (err: any) {
+            setTrimError(err.message);
+            setIsTrimmingLoading(false);
+        }
+    };
 
     async function handlePost(e: React.FormEvent) {
         e.preventDefault();
         let file = pendingFile || fileInputRef.current?.files?.[0];
-
         if (postType === 'standard' && !content.trim() && !file) return;
         if (postType === 'pr' && (!exercise || !weight)) return;
 
-        // Mandar a segundo plano
         startUpload({
+            type: postType === 'pr' ? 'pr' : 'standard',
             content,
             file,
-            postType,
-            exercise,
-            weight,
-            sport,
-            selectedTrack,
-            currentUser,
-            preview
+            metadata: postType === 'pr' ? { exercise, weight, sport } : { music: selectedTrack }
         });
 
-        // Limpiar y cerrar inmediatamente
-        setContent("");
-        setExercise("");
-        setWeight("");
-        setPreview(null);
-        setDuration(null);
-        setPendingFile(null);
-        setShowEmojiPicker(false);
-        setPostType('standard');
-        setSelectedTrack(null);
+        setContent(""); setExercise(""); setWeight(""); setPreview(null);
+        setDuration(null); setPendingFile(null); setShowEmojiPicker(false);
+        setPostType('standard'); setSelectedTrack(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
-
-        // Cerrar modal
         onSuccess?.();
     }
-
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // No file size limit - all videos accepted, will be trimmed if needed
             if (file.type.startsWith('video/')) {
                 const docVideo = document.createElement('video');
                 docVideo.preload = 'metadata';
@@ -97,471 +164,108 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                     const dur = docVideo.duration;
                     setVideoDuration(dur);
                     setDuration(dur);
-                    window.URL.revokeObjectURL(docVideo.src);
-
                     if (dur > 60 || file.size > 48 * 1024 * 1024) {
-                        // Auto-open trimmer for videos longer than 1 minute OR > 48MB (to use compression)
                         setTrimStart(0);
                         setPendingFile(file);
                         setTrimmerVideoUrl(URL.createObjectURL(file));
                         setIsVideoTrimming(true);
-                        return;
+                    } else {
+                        setPreview(URL.createObjectURL(file));
                     }
-
-                    const url = URL.createObjectURL(file);
-                    setPreview(url);
-                };
-                docVideo.onerror = () => {
-                    alert("Error al procesar el video. Asegúrate de que sea un formato compatible.");
                 };
                 docVideo.src = URL.createObjectURL(file);
             } else {
-                const url = URL.createObjectURL(file);
-                setPreview(url);
+                setPreview(URL.createObjectURL(file));
                 setDuration(null);
             }
-        } else {
-            setPreview(null);
-            setDuration(null);
         }
-    };
-
-    const [trimProgress, setTrimProgress] = useState(0);
-
-    const processTrimming = async () => {
-        if (!trimmerVideoRef.current || !trimmerVideoUrl) {
-            console.error("Trimmer: Missing ref or URL");
-            return;
-        }
-
-        const video = trimmerVideoRef.current;
-        setIsTrimmingLoading(true);
-        setTrimProgress(5);
-        setTrimError(null);
-
-        try {
-            // 1. Asegurar que el video esté listo y posicionado
-            if (video.readyState < 2) {
-                await new Promise(r => {
-                    const check = () => video.readyState >= 2 ? r(true) : setTimeout(check, 100);
-                    check();
-                });
-            }
-
-            video.pause();
-            video.currentTime = trimStart;
-            video.muted = true;
-
-            await new Promise(r => {
-                video.onseeked = () => r(true);
-                setTimeout(r, 2000);
-            });
-
-            // 2. DETECCIÓN DE SOPORTE E IMPLEMENTACIÓN CANVAS (Bridge para iOS)
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = video.videoWidth || 640;
-            canvas.height = video.videoHeight || 640;
-
-            const stream = canvas.captureStream ? canvas.captureStream(30) : (canvas as any).mozCaptureStream ? (canvas as any).mozCaptureStream(30) : (canvas as any).webkitCaptureStream ? (canvas as any).webkitCaptureStream(30) : null;
-
-            if (!stream) {
-                throw new Error("Su navegador no permite la captura de video necesaria para el recorte.");
-            }
-
-            // 3. CONFIGURACIÓN GRABADORA (Codec compatible iOS)
-            const mimeType = MediaRecorder.isTypeSupported('video/mp4;codecs=avc1') ? 'video/mp4' : 'video/webm';
-            const recorder = new MediaRecorder(stream, {
-                mimeType,
-                videoBitsPerSecond: 1500000
-            });
-
-            const chunks: Blob[] = [];
-            recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) chunks.push(e.data);
-            };
-
-            const recordingDuration = Math.min(60, video.duration - trimStart);
-            let animationFrameId: number;
-
-            const drawFrame = () => {
-                if (ctx && !video.paused && !video.ended) {
-                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    animationFrameId = requestAnimationFrame(drawFrame);
-                }
-            };
-
-            // 4. INICIO DE GRABACIÓN
-            recorder.start();
-            await video.play();
-            drawFrame();
-
-            const startTime = Date.now();
-            const updateInterval = setInterval(() => {
-                const elapsed = (Date.now() - startTime) / 1000;
-                setTrimProgress(Math.min(99, (elapsed / recordingDuration) * 100));
-                if (elapsed >= recordingDuration) stopTrimming();
-            }, 500);
-
-            const stopTrimming = () => {
-                clearInterval(updateInterval);
-                cancelAnimationFrame(animationFrameId);
-                if (recorder.state === 'recording') {
-                    recorder.stop();
-                    video.pause();
-                }
-            };
-
-            recorder.onstop = async () => {
-                const blob = new Blob(chunks, { type: mimeType });
-                if (blob.size < 5000) {
-                    setTrimError("El recorte falló. Intenta seleccionar un segmento más largo.");
-                    setIsTrimmingLoading(false);
-                    return;
-                }
-
-                const file = new File([blob], "trimmed.mp4", { type: mimeType });
-                const url = URL.createObjectURL(file);
-                setPreview(url);
-                setPendingFile(file);
-                setDuration(recordingDuration);
-
-                setIsVideoTrimming(false);
-                setTrimmerVideoUrl(null);
-                setIsTrimmingLoading(false);
-                setTrimProgress(0);
-            };
-
-            setTimeout(stopTrimming, (recordingDuration + 1) * 1000);
-
-        } catch (err: any) {
-            console.error("Trimmer failure:", err);
-            setTrimError(err.message || "Error al procesar el video");
-            setIsTrimmingLoading(false);
-        }
-    };
-
-    const onEmojiClick = (emojiData: EmojiClickData) => {
-        setContent(prev => prev + emojiData.emoji);
     };
 
     return (
         <div className="bg-brand-gray/30 border border-white/10 rounded-[28px] p-4 md:p-6 backdrop-blur-md mb-8 relative z-10 w-full">
-            {/* Post Type Selector */}
             <div className="flex gap-2 mb-4 md:mb-6">
-                <button
-                    type="button"
-                    onClick={() => setPostType('standard')}
-                    className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border ${postType === 'standard' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
-                >
-                    <Activity className="w-3.5 h-3.5 text-brand-red" />
-                    Actualización
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setPostType('pr')}
-                    className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border ${postType === 'pr' ? 'bg-brand-red/10 border-brand-red/30 text-brand-red shadow-[0_0_15px_rgba(220,38,38,0.1)]' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
-                >
-                    <Trophy className="w-3.5 h-3.5" />
-                    Nuevo PR
-                </button>
+                <button type="button" onClick={() => setPostType('standard')} className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border ${postType === 'standard' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}><Activity className="w-3.5 h-3.5 text-brand-red" />Actualización</button>
+                <button type="button" onClick={() => setPostType('pr')} className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border ${postType === 'pr' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}><Trophy className="w-3.5 h-3.5 text-brand-yellow" />Nuevo PR</button>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-                {/* Avatar - Visible on larger screens */}
-                <div className="hidden sm:block shrink-0">
-                    <div className="w-12 h-12 rounded-full border-2 border-white/10 bg-black/40 overflow-hidden relative shadow-xl">
-                        {currentUser?.user_metadata?.avatar_url ? (
-                            <Image src={currentUser.user_metadata.avatar_url} alt="User" fill className="object-cover" />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-400 bg-gray-800">ME</div>
+            <div className="flex gap-4">
+                <div className="flex-1">
+                    <form onSubmit={handlePost} className="space-y-4">
+                        {postType === 'pr' && (
+                            <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
+                                <input type="text" placeholder="EJERCICIO" value={exercise} onChange={(e) => setExercise(e.target.value.toUpperCase())} className="bg-black/20 border border-white/5 rounded-xl px-4 py-3 text-[10px] font-bold text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/30 transition-all uppercase" />
+                                <input type="text" placeholder="PESO (KG/LBS)" value={weight} onChange={(e) => setWeight(e.target.value.toUpperCase())} className="bg-black/20 border border-white/5 rounded-xl px-4 py-3 text-[10px] font-bold text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/30 transition-all uppercase" />
+                            </div>
                         )}
-                    </div>
-                </div>
-
-                {/* Form Container */}
-                <div className="flex-1 min-w-0">
-                    <form onSubmit={handlePost} className="flex flex-col gap-4">
-                        {/* Text / PR Inputs */}
-                        <div className="bg-black/40 rounded-2xl p-4 border border-white/5 focus-within:border-brand-red/30 transition-all shadow-inner">
-                            {postType === 'standard' ? (
-                                <MentionInput
-                                    as="textarea"
-                                    value={content}
-                                    onChange={setContent}
-                                    placeholder="¿Qué estás entrenando hoy?"
-                                    className="w-full bg-transparent text-white placeholder:text-gray-500 text-sm md:text-lg resize-none focus:outline-none min-h-[80px] md:min-h-[100px]"
-                                />
-                            ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Ejercicio</label>
-                                        <input
-                                            type="text"
-                                            placeholder="p.ej. Back Squat"
-                                            value={exercise}
-                                            onChange={(e) => setExercise(e.target.value)}
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-red/50 text-sm italic font-bold"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Peso (kg)</label>
-                                        <input
-                                            type="text"
-                                            inputMode="decimal"
-                                            placeholder="p.ej. 140"
-                                            value={weight}
-                                            onChange={(e) => setWeight(e.target.value)}
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-brand-red font-black focus:outline-none focus:border-brand-red/50 text-sm"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5 sm:col-span-2">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Disciplina / Comentario</label>
-                                        <input
-                                            type="text"
-                                            placeholder="p.ej. Cross Training / Sede Norte"
-                                            value={sport}
-                                            onChange={(e) => setSport(e.target.value)}
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-red/50 text-sm"
-                                        />
-                                    </div>
+                        <div className="relative group">
+                            <MentionInput value={content} onChange={setContent} placeholder={postType === 'pr' ? "¿Cómo te sentiste en este levantamiento?" : currentUser ? `¿Qué hay de nuevo, ${currentUser.username}?` : "¿Qué hay de nuevo?"} className="w-full bg-black/20 border border-white/5 rounded-2xl md:rounded-[24px] p-4 text-xs md:text-sm text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/30 transition-all resize-none min-h-[100px] md:min-h-[120px] shadow-inner" />
+                            <div className="absolute bottom-4 right-4 flex items-center gap-2">
+                                <div className="relative" ref={emojiPickerRef}>
+                                    <button type="button" onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="p-2 text-gray-500 hover:text-brand-red transition-colors"><Smile className="w-4 h-4 md:w-5 md:h-5" /></button>
+                                    {showEmojiPicker && <div className="absolute bottom-full right-0 mb-4 z-[100] scale-75 md:scale-100 origin-bottom-right"><EmojiPicker theme={Theme.DARK} onEmojiClick={(ed) => setContent(p => p + ed.emoji)} lazyLoadEmojis /></div>}
                                 </div>
-                            )}
+                            </div>
                         </div>
 
-                        {/* Media Preview */}
                         {preview && (
-                            <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/60 shadow-inner group transition-all w-full">
-                                <div className="flex items-center justify-center bg-black/20 min-h-[120px] max-h-[300px]">
-                                    {/* Subida en segundo plano activa manejada por UploadContext */}
-                                    {fileInputRef.current?.files?.[0]?.type.startsWith('video/') || (pendingFile?.type.startsWith('video/')) ? (
-                                        <video src={preview} controls className="max-h-[300px] w-full object-contain" />
-                                    ) : (
-                                        <img src={preview} alt="Preview" className="max-h-[300px] w-full object-contain" />
-                                    )}
-                                </div>
-
-                                {/* Remove Button */}
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setPreview(null);
-                                        setDuration(null);
-                                        setPendingFile(null);
-                                        if (fileInputRef.current) fileInputRef.current.value = "";
-                                    }}
-                                    className="absolute top-3 right-3 bg-black/60 text-white p-2 rounded-full hover:bg-brand-red transition-all z-10 backdrop-blur-md border border-white/10"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-
-                                {/* Trimming Indicator / Button */}
-                                {duration !== null && duration > 60 && (
-                                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-brand-red/95 to-brand-red/80 text-white px-4 py-3 flex items-center justify-between backdrop-blur-md">
-                                        <div className="flex items-center gap-2">
-                                            <AlertCircle className="w-4 h-4" />
-                                            <div className="flex flex-col">
-                                                <span className="text-[8px] font-black uppercase tracking-widest leading-none mb-0.5 text-white/90">Demasiado Largo</span>
-                                                <span className="text-xs font-bold italic">{Math.round(duration)}s</span>
-                                            </div>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setTrimStart(0);
-                                                setTrimmerVideoUrl(preview);
-                                                setIsVideoTrimming(true);
-                                            }}
-                                            className="px-3 py-1.5 bg-white text-brand-red rounded-lg font-black uppercase text-[10px] shadow-xl hover:scale-105 active:scale-95 transition-all"
-                                        >
-                                            RECORTAR
-                                        </button>
-                                    </div>
+                            <div className="relative aspect-video rounded-2xl overflow-hidden border border-white/10 group animate-in zoom-in-95">
+                                {preview.startsWith('data:image') || preview.includes('image') ? (
+                                    <Image src={preview} alt="Preview" fill className="object-cover" />
+                                ) : (
+                                    <video src={preview} className="w-full h-full object-cover" controls playsInline />
                                 )}
-
-                                {/* Manual Trim Button */}
-                                {duration !== null && duration <= 60 && (fileInputRef.current?.files?.[0]?.type.startsWith('video/') || pendingFile?.type.startsWith('video/')) && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setTrimStart(0);
-                                            setTrimmerVideoUrl(preview);
-                                            setIsVideoTrimming(true);
-                                        }}
-                                        className="absolute bottom-3 right-3 bg-black/60 hover:bg-brand-red text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest backdrop-blur-md border border-white/10 transition-all flex items-center gap-2"
-                                    >
-                                        <Activity className="w-3 h-3" />
-                                        Recortar
-                                    </button>
-                                )}
+                                <button type="button" onClick={() => { setPreview(null); setPendingFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="absolute top-2 right-2 bg-black/60 backdrop-blur-md p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-4 h-4" /></button>
                             </div>
                         )}
 
-                        {/* Actions Bar */}
-                        <div className="flex items-center justify-between pt-2 gap-3 flex-wrap">
+                        <div className="flex items-center justify-between pt-2">
                             <div className="flex items-center gap-2">
-                                {/* Media Upload */}
-                                <button
-                                    type="button"
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="p-3 text-gray-400 hover:text-brand-red hover:bg-brand-red/5 rounded-2xl transition-all border border-transparent hover:border-brand-red/20 group flex items-center gap-2"
-                                    title="Añadir Multimedia"
-                                >
-                                    <ImageIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Multimedia</span>
-                                </button>
-                                <input
-                                    ref={fileInputRef}
-                                    type="file"
-                                    accept="image/*,video/*"
-                                    onChange={handleFileChange}
-                                    className="hidden"
-                                />
-
-                                {/* Emoji Picker */}
-                                {postType === 'standard' && (
-                                    <div ref={emojiPickerRef} className="relative">
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                            className={`p-3 rounded-2xl transition-all border border-transparent flex items-center gap-2 group ${showEmojiPicker ? 'text-yellow-400 bg-yellow-400/5 border-yellow-400/20' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/5 hover:border-yellow-400/20'}`}
-                                            title="Añadir Emoji"
-                                        >
-                                            <Smile className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                                        </button>
-                                        {showEmojiPicker && (
-                                            <div className="absolute top-14 left-0 shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-200">
-                                                <div className="relative">
-                                                    <div className="absolute -top-2 left-4 w-4 h-4 bg-[#1e1e1e] rotate-45 border-l border-t border-white/10" />
-                                                    <EmojiPicker
-                                                        theme={Theme.DARK}
-                                                        onEmojiClick={onEmojiClick}
-                                                        width={320}
-                                                        height={400}
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Music Picker */}
-                                <MusicPicker
-                                    onSelect={setSelectedTrack}
-                                    selectedTrackId={selectedTrack?.id || null}
-                                />
+                                <input type="file" hidden ref={fileInputRef} accept="image/*,video/*" onChange={handleFileChange} />
+                                <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-[10px] font-black uppercase tracking-widest"><ImageIcon className="w-4 h-4 text-brand-red" /> Multimedia</button>
+                                <MusicPicker onSelect={setSelectedTrack} selectedTrackId={selectedTrack?.id || null} />
                             </div>
-
-                            {/* Submit Button */}
-                            <button
-                                type="submit"
-                                disabled={(postType === 'standard' && !content.trim() && !preview) || (postType === 'pr' && (!exercise || !weight))}
-                                className="bg-brand-red text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-glow-sm hover:shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed flex items-center gap-3 ml-auto"
-                            >
-                                <Send className="w-4 h-4" />
-                                <span>{postType === 'pr' ? 'Publicar PR' : 'Publicar'}</span>
-                            </button>
+                            <button type="submit" disabled={(postType === 'standard' && !content.trim() && !preview) || (postType === 'pr' && (!exercise || !weight))} className="bg-brand-red text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-glow-sm hover:shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-30 flex items-center gap-3 ml-auto"><Send className="w-4 h-4" /><span>{postType === 'pr' ? 'Publicar PR' : 'Publicar'}</span></button>
                         </div>
                     </form>
                 </div>
             </div>
-            {/* Video Trimmer Modal */}
+
             {isVideoTrimming && trimmerVideoUrl && (
-                <div className="fixed inset-0 z-[500] bg-black/98 flex items-center justify-center p-4 backdrop-blur-xl overflow-y-auto">
-                    <div className="bg-brand-gray border border-white/10 w-full max-w-md rounded-[40px] p-6 md:p-10 shadow-2xl relative my-auto">
-                        <button
-                            onClick={() => { setIsVideoTrimming(false); setTrimmerVideoUrl(null); }}
-                            className="absolute top-6 right-6 text-gray-400 hover:text-white bg-white/5 p-2 rounded-full transition-colors"
-                        >
-                            <X className="w-5 h-5 md:w-6 md:h-6" />
-                        </button>
-
-                        <div className="mb-6 md:mb-8 text-center px-4">
-                            <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tighter">Recortar Video</h3>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Tu video dura {Math.round(videoDuration)}s - Recorta a máximo 60s</p>
+                <div className="fixed inset-0 z-[500] bg-black/98 flex items-center justify-center p-4 backdrop-blur-xl">
+                    <div className="bg-brand-gray border border-white/10 w-full max-w-md rounded-[40px] p-6 shadow-2xl relative">
+                        <button onClick={() => { setIsVideoTrimming(false); setTrimmerVideoUrl(null); }} className="absolute top-6 right-6 text-gray-400 hover:text-white bg-white/5 p-2 rounded-full"><X className="w-5 h-5" /></button>
+                        <div className="mb-6 text-center">
+                            <h3 className="text-xl font-black text-white italic uppercase">Recortar Video</h3>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase mt-1">Tu video dura {Math.round(videoDuration)}s - Recorta a máximo 60s</p>
                         </div>
-
-                        <div className="relative aspect-square bg-black rounded-3xl overflow-hidden border border-white/10 mb-6 md:mb-8 shadow-inner">
-                            <video
-                                ref={trimmerVideoRef}
-                                src={trimmerVideoUrl}
-                                className="w-full h-full object-contain"
-                                loop
-                                muted
-                                playsInline
-                                autoPlay
-                            />
-                            {/* Error display inside modal */}
+                        <div className="relative aspect-square bg-black rounded-3xl overflow-hidden border border-white/10 mb-6">
+                            <video ref={trimmerVideoRef} src={trimmerVideoUrl} className="w-full h-full object-contain" loop muted playsInline autoPlay />
                             {trimError && (
-                                <div className="absolute inset-x-4 top-4 z-50 bg-red-500/90 backdrop-blur-md p-4 rounded-2xl border border-white/20 animate-in fade-in slide-in-from-top-4">
-                                    <p className="text-white text-[10px] font-black uppercase tracking-widest mb-1 text-center">¡Atención iPhone!</p>
-                                    <p className="text-white text-[11px] font-bold text-center leading-tight">
-                                        {trimError.includes("capture")
-                                            ? "Tu iPhone tiene bloqueada la captura web. Por favor, recorta el video en tu GALERÍA y súbelo de nuevo."
-                                            : trimError}
-                                    </p>
-                                    <button
-                                        onClick={() => setTrimError(null)}
-                                        className="mt-3 w-full py-2 bg-white/20 hover:bg-white/30 rounded-xl text-[9px] font-black uppercase text-white transition-all"
-                                    >
-                                        Entendido
-                                    </button>
+                                <div className="absolute inset-x-4 top-4 z-50 bg-red-500/90 backdrop-blur-md p-4 rounded-2xl border border-white/20">
+                                    <p className="text-white text-[10px] font-black uppercase text-center mb-1">¡Atención!</p>
+                                    <p className="text-white text-[11px] font-bold text-center leading-tight">{trimError}</p>
+                                    <button onClick={() => setTrimError(null)} className="mt-3 w-full py-2 bg-white/20 rounded-xl text-[9px] font-black text-white uppercase">Entendido</button>
                                 </div>
                             )}
-
-                            {/* Visual feedback when loading or seeking */}
                             {isTrimmingLoading && (
                                 <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center gap-4 z-10">
                                     <div className="w-16 h-16 border-4 border-brand-red/20 border-t-brand-red rounded-full animate-spin" />
-                                    <div className="flex flex-col items-center">
-                                        <span className="text-white font-black italic text-xl">{Math.round(trimProgress)}%</span>
-                                        <span className="text-[10px] text-white/60 font-bold uppercase tracking-widest mt-1">Procesando...</span>
-                                    </div>
+                                    <span className="text-white font-black italic text-xl">{Math.round(trimProgress)}%</span>
                                 </div>
                             )}
                         </div>
-
                         <div className="space-y-6">
                             <div className="space-y-4">
                                 <div className="flex justify-between items-end px-1">
-                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Punto de inicio</label>
+                                    <label className="text-[10px] font-black text-gray-500 uppercase">Punto de inicio</label>
                                     <span className="text-xl font-black text-brand-red italic tracking-tighter">{Math.floor(trimStart)}s</span>
                                 </div>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max={Math.max(0, videoDuration - 60)}
-                                    step="0.5"
-                                    value={trimStart}
-                                    onChange={(e) => {
-                                        const val = parseFloat(e.target.value);
-                                        setTrimStart(val);
-                                        if (trimmerVideoRef.current) trimmerVideoRef.current.currentTime = val;
-                                    }}
-                                    className="w-full accent-brand-red h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
-                                />
-                                <div className="flex justify-between text-[8px] font-bold text-gray-600 uppercase tracking-widest px-1">
-                                    <span>Inicio</span>
-                                    <span>Fin - 60s</span>
-                                </div>
+                                <input type="range" min="0" max={Math.max(0, videoDuration - 60)} step="0.5" value={trimStart} onChange={(e) => { const val = parseFloat(e.target.value); setTrimStart(val); if (trimmerVideoRef.current) trimmerVideoRef.current.currentTime = val; }} className="w-full accent-brand-red h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer" />
                             </div>
-
-                            <button
-                                onClick={processTrimming}
-                                disabled={isTrimmingLoading}
-                                className="w-full bg-brand-red text-white py-4 md:py-5 rounded-2xl font-black uppercase tracking-widest text-xs md:text-sm shadow-glow transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 relative overflow-hidden"
-                            >
+                            <button onClick={processTrimming} disabled={isTrimmingLoading} className="w-full bg-brand-red text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-glow transition-all hover:scale-[1.02] flex items-center justify-center gap-3 relative overflow-hidden">
                                 {isTrimmingLoading ? (
-                                    <>
-                                        <div className="absolute inset-0 bg-white/10" style={{ width: `${trimProgress}%`, transition: 'width 0.3s ease' }} />
-                                        <div className="flex items-center gap-3 relative z-10">
-                                            <Loader2 className="w-5 h-5 animate-spin" />
-                                            Procesando {Math.round(trimProgress)}%
-                                        </div>
-                                    </>
-                                ) : (
-                                    <><Activity className="w-4 h-4 md:w-5 md:h-5" /> Confirmar Recorte</>
-                                )}
+                                    <><div className="absolute inset-0 bg-white/10" style={{ width: `${trimProgress}%` }} /><Loader2 className="w-5 h-5 animate-spin relative z-10" />Procesando {Math.round(trimProgress)}%</>
+                                ) : <><Activity className="w-4 h-4" /> Confirmar Recorte</>}
                             </button>
                         </div>
                     </div>
