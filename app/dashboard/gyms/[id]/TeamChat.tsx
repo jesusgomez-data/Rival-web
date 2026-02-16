@@ -35,6 +35,7 @@ export default function TeamChat({ centerId, className }: { centerId: string, cl
     const [postAsOrg, setPostAsOrg] = useState(false);
     const [sending, setSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [onlineCount, setOnlineCount] = useState(0);
 
     const loadMessages = async () => {
         if (isStaff === false) return;
@@ -46,14 +47,17 @@ export default function TeamChat({ centerId, className }: { centerId: string, cl
     };
 
     useEffect(() => {
-        async function verifyRole() {
+        let channel: any;
+
+        async function verifyRoleAndConnect() {
             const { isStaff } = await checkStaffRole(centerId);
             setIsStaff(isStaff);
 
-            // Also check if owner to show organization toggle
-            const supabase = await createClient();
+            const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
+
             if (user) {
+                // Check Owner Logic
                 const { data: org } = await supabase
                     .from('organizations')
                     .select('owner_id')
@@ -62,11 +66,44 @@ export default function TeamChat({ centerId, className }: { centerId: string, cl
                 if (org?.owner_id === user.id) {
                     setIsOwner(true);
                 }
+
+                // CONNECT TO PRESENCE
+                if (isStaff) {
+                    channel = supabase.channel(`team-chat:${centerId}`, {
+                        config: {
+                            presence: {
+                                key: user.id,
+                            },
+                        },
+                    });
+
+                    channel
+                        .on('presence', { event: 'sync' }, () => {
+                            const newState = channel.presenceState();
+                            const count = Object.keys(newState).length;
+                            setOnlineCount(count);
+                        })
+                        .subscribe(async (status: string) => {
+                            if (status === 'SUBSCRIBED') {
+                                await channel.track({
+                                    online_at: new Date().toISOString(),
+                                    user_id: user.id,
+                                });
+                            }
+                        });
+                }
             }
 
             if (!isStaff) setLoading(false);
         }
-        verifyRole();
+        verifyRoleAndConnect();
+
+        return () => {
+            if (channel) {
+                const supabase = createClient();
+                supabase.removeChannel(channel);
+            }
+        };
     }, [centerId]);
 
     useEffect(() => {
@@ -128,10 +165,22 @@ export default function TeamChat({ centerId, className }: { centerId: string, cl
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Solo Personal Autorizado</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                    <span className="text-[10px] font-bold text-green-500 uppercase">Live</span>
-                </div>
+                {onlineCount > 0 ? (
+                    <div className="flex items-center gap-2 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]">
+                        <div className="relative">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse z-10 relative" />
+                            <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75" />
+                        </div>
+                        <span className="text-[10px] font-black text-green-500 uppercase tracking-wider">
+                            {onlineCount === 1 ? 'Online' : `${onlineCount} Online`}
+                        </span>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-2 opacity-50 px-3 py-1.5 grayscale">
+                        <div className="w-2 h-2 bg-gray-500 rounded-full" />
+                        <span className="text-[10px] font-bold text-gray-500 uppercase">Offline</span>
+                    </div>
+                )}
             </div>
 
             {/* Messages Area */}

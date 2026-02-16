@@ -156,6 +156,8 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
             // Detect common Safari/Mobile upload errors for large files
             if (errorMessage.includes("Load failed") || errorMessage.includes("NetworkError") || errorMessage.includes("Failed to fetch")) {
                 errorMessage = "Error de conexión. El video podría ser muy pesado para tu red. Intenta con WiFi o un video más corto.";
+            } else if (errorMessage.toLowerCase().includes("maximum allowed size")) {
+                errorMessage = "El video es demasiado grande para el límite actual del servidor. Aumenta el 'File Size Limit' en el Dashboard de Supabase (Storage > posts > Configuration).";
             }
 
             setUploads(prev => prev.map(u => u.id === id ? { ...u, status: 'error', error: errorMessage } : u));
