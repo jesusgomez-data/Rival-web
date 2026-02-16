@@ -1593,7 +1593,7 @@ function SessionContent() {
                         setPendingFile(null);
                         if (fileInputRef.current) fileInputRef.current.value = "";
                     }}
-                    onSave={(file) => {
+                    onSave={(file, duration) => {
                         startUpload(file);
                         setIsVideoTrimming(false);
                         setTrimmerVideoUrl(null);
