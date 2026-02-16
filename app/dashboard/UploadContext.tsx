@@ -56,27 +56,61 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
             let mediaType = null;
 
             // 1. Storage Upload (Direct)
+            // 1. Storage Upload (Direct with Retry)
             if (data.file) {
+                // Large File Handling
+                const isLargeFile = data.file.size > 100 * 1024 * 1024; // 100MB
+                if (isLargeFile) {
+                    // Optional: You could use a toast here if you had one, for now console/caption update
+                    console.log("Large file detected, keeping upload robust.");
+                }
+
                 const fileExt = data.file.name.split('.').pop() || (data.file.type.startsWith('video/') ? 'mp4' : 'jpg');
-                const fileName = `${data.currentUser.id}/${Date.now()}.${fileExt}`;
+                const cleanFileName = data.file.name.replace(/[^a-zA-Z0-9]/g, '_'); // Sanitize
+                const userId = data.currentUser?.id || 'anon';
+                const fileName = `${userId}/${Date.now()}_${cleanFileName}.${fileExt}`;
+                const mimeType = data.file.type || (fileExt === 'mp4' ? 'video/mp4' : 'image/jpeg');
 
-                const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('posts')
-                    .upload(fileName, data.file, {
-                        cacheControl: '3600',
-                        upsert: true,
-                        contentType: data.file.type
-                    });
+                let uploadData = null;
+                let uploadError = null;
+                let attempts = 0;
+                const maxAttempts = 3;
 
-                if (uploadError) throw uploadError;
+                while (attempts < maxAttempts && !uploadData) {
+                    attempts++;
+                    try {
+                        console.log(`Upload attempt ${attempts}/${maxAttempts} for ${fileName}`);
+                        const result = await supabase.storage
+                            .from('posts')
+                            .upload(fileName, data.file, {
+                                cacheControl: '3600',
+                                upsert: true,
+                                contentType: mimeType,
+                                duplex: 'half' // Helps with some streaming uploads
+                            } as any);
+
+                        if (result.error) throw result.error;
+                        uploadData = result.data;
+                    } catch (err: any) {
+                        console.error(`Attempt ${attempts} failed:`, err.message);
+                        uploadError = err;
+
+                        // Wait before retry (exponential backoff: 1s, 2s, 4s...)
+                        if (attempts < maxAttempts) {
+                            await new Promise(r => setTimeout(r, 1000 * Math.pow(2, attempts - 1)));
+                        }
+                    }
+                }
+
+                if (!uploadData && uploadError) throw uploadError;
 
                 const { data: { publicUrl } } = supabase.storage
                     .from('posts')
                     .getPublicUrl(fileName);
 
                 mediaUrl = publicUrl;
-                mediaType = data.file.type.startsWith('video/') ? 'video' : 'image';
-                setUploads(prev => prev.map(u => u.id === id ? { ...u, progress: 60 } : u));
+                mediaType = mimeType.startsWith('video/') ? 'video' : 'image';
+                setUploads(prev => prev.map(u => u.id === id ? { ...u, progress: 60, status: 'processing' } : u));
             }
 
             // 2. Database Creation
