@@ -144,18 +144,40 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
             const captureFn = (video as any).captureStream || (video as any).mozCaptureStream;
 
             if (!captureFn) {
-                throw new Error("Su navegador no soporta el recorte de video en tiempo real.");
+                alert("Tu navegador no soporta el recorte. Intenta con un video más corto o usa Chrome/Safari actualizado.");
+                setIsTrimmingLoading(false);
+                return;
             }
 
-            // Ensure video is ready
+            // Ensure video duration is valid
+            if (!video.duration || isNaN(video.duration)) {
+                console.error("Trimmer: Invalid duration", video.duration);
+                // Try to wait a bit more
+                await new Promise(r => setTimeout(r, 1000));
+                if (!video.duration || isNaN(video.duration)) {
+                    throw new Error("El video no ha cargado su duración. Intenta reproducirlo un segundo antes de recortar.");
+                }
+            }
+
+            console.log("Trimmer: Video duration is", video.duration);
+
             if (video.readyState < 2) {
                 console.log("Trimmer: Waiting for video to be ready...");
+                setTrimProgress(10); // Show some progress while waiting
                 await new Promise((resolve) => {
-                    video.oncanplay = resolve;
-                    // Timeout if it takes too long
-                    setTimeout(resolve, 3000);
+                    const handleCanPlay = () => {
+                        video.removeEventListener('canplay', handleCanPlay);
+                        resolve(true);
+                    };
+                    video.addEventListener('canplay', handleCanPlay);
+                    setTimeout(() => {
+                        video.removeEventListener('canplay', handleCanPlay);
+                        resolve(false);
+                    }, 5000);
                 });
             }
+
+            setTrimProgress(15);
 
             const stream = captureFn.call(video);
 
@@ -228,7 +250,12 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                 throw new Error("Error en la grabadora de video.");
             };
 
-            const recordingDuration = Math.min(60, (video.duration - trimStart));
+            const durationToRecord = video.duration - trimStart;
+            const recordingDuration = Math.min(60, durationToRecord);
+
+            if (isNaN(recordingDuration) || recordingDuration <= 0) {
+                throw new Error("Duración de recorte inválida.");
+            }
 
             const startRecording = () => {
                 console.log("Trimmer: Starting recording for", recordingDuration, "seconds");
@@ -543,6 +570,16 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                                 playsInline
                                 autoPlay
                             />
+                            {/* Visual feedback when loading or seeking */}
+                            {isTrimmingLoading && (
+                                <div className="absolute inset-0 bg-black/40 backdrop-blur-sm flex flex-col items-center justify-center gap-4 z-10">
+                                    <div className="w-16 h-16 border-4 border-brand-red/20 border-t-brand-red rounded-full animate-spin" />
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-white font-black italic text-xl">{Math.round(trimProgress)}%</span>
+                                        <span className="text-[10px] text-white/60 font-bold uppercase tracking-widest mt-1">Procesando...</span>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="space-y-6">
