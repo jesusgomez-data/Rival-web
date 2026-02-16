@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath, unstable_noStore } from "next/cache";
+import { createNotification } from "../notifications-actions";
 
 // Feed Actions - Extracted from management-actions.ts to be client-safe (no stripe import)
 
@@ -42,7 +43,7 @@ export async function getCenterPosts(id: string, allowFuture: boolean = false, i
     return data.map((post: any) => ({
         ...post,
         is_liked: user ? post.likes.some((l: any) => l.user_id === user.id) : false,
-        likes_count: post.likes ? post.likes.length : 0, // In case we want real count, better use count in select or aggregate
+        likes_count: post.likes ? post.likes.length : 0, 
         comments_count: post.comments_count?.[0]?.count || 0,
         likes: undefined
     }));
@@ -150,22 +151,28 @@ export async function toggleCenterPostLike(centerId: string, postId: string) {
         await supabase.from('center_post_likes').insert({ post_id: postId, user_id: user.id });
         await supabase.rpc('increment_center_post_likes', { post_id: postId });
 
-        // Notification
+        // Notification Logic
         const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
-        const { data: org } = await supabase.from('organizations').select('owner_id, head_coach_id').eq('id', centerId).single();
+        const { data: org } = await supabase.from('organizations').select('owner_id, head_coach_id, name').eq('id', centerId).single();
 
         if (org) {
-            const notifications = [];
             const message = `${profile?.full_name || 'Alguien'} le dio like a tu publicación.`;
             const link = `/dashboard/gyms/${centerId}/feed`;
+            const recipients = new Set<string>();
 
-            if (org.owner_id && org.owner_id !== user.id) {
-                notifications.push({ user_id: org.owner_id, type: 'post_like', title: 'Nuevo Me Gusta', content: message, link, is_read: false });
-            }
-            if (org.head_coach_id && org.head_coach_id !== user.id && org.head_coach_id !== org.owner_id) {
-                notifications.push({ user_id: org.head_coach_id, type: 'post_like', title: 'Nuevo Me Gusta', content: message, link, is_read: false });
-            }
-            if (notifications.length > 0) await supabase.from('notifications').insert(notifications);
+            if (org.owner_id && org.owner_id !== user.id) recipients.add(org.owner_id);
+            if (org.head_coach_id && org.head_coach_id !== user.id) recipients.add(org.head_coach_id);
+
+            // Send to all recipients using createNotification (which sends Push)
+            await Promise.all(Array.from(recipients).map(recipientId =>
+                createNotification({
+                    userId: recipientId,
+                    type: 'post_like',
+                    title: `Nuevo Me Gusta - ${org.name}`,
+                    content: message,
+                    link
+                })
+            ));
         }
     }
 
@@ -204,21 +211,27 @@ export async function addCenterPostComment(centerId: string, postId: string, con
     if (error) return { error: error.message };
 
     const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
-    const { data: org } = await supabase.from('organizations').select('owner_id, head_coach_id').eq('id', centerId).single();
+    const { data: org } = await supabase.from('organizations').select('owner_id, head_coach_id, name').eq('id', centerId).single();
 
     if (org) {
-        const notifications = [];
         const truncated = content.length > 30 ? content.substring(0, 30) + '...' : content;
         const message = `${profile?.full_name || 'Un usuario'} comentó: "${truncated}"`;
         const link = `/dashboard/gyms/${centerId}/feed`;
+        const recipients = new Set<string>();
 
-        if (org.owner_id && org.owner_id !== user.id) {
-            notifications.push({ user_id: org.owner_id, type: 'post_comment', title: 'Nuevo Comentario', content: message, link, is_read: false });
-        }
-        if (org.head_coach_id && org.head_coach_id !== user.id && org.head_coach_id !== org.owner_id) {
-            notifications.push({ user_id: org.head_coach_id, type: 'post_comment', title: 'Nuevo Comentario', content: message, link, is_read: false });
-        }
-        if (notifications.length > 0) await supabase.from('notifications').insert(notifications);
+        if (org.owner_id && org.owner_id !== user.id) recipients.add(org.owner_id);
+        if (org.head_coach_id && org.head_coach_id !== user.id) recipients.add(org.head_coach_id);
+
+        // Send to all recipients
+        await Promise.all(Array.from(recipients).map(recipientId =>
+            createNotification({
+                userId: recipientId,
+                type: 'post_comment',
+                title: `Nuevo Comentario - ${org.name || 'Rival'}`,
+                content: message,
+                link
+            })
+        ));
     }
 
     revalidatePath(`/gym/${centerId}`);
