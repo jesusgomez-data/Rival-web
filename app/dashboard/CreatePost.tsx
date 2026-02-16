@@ -83,15 +83,10 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: Us
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            if (file.type.startsWith('video/')) {
-                setVideoToEdit(file);
-                setTrimmerVideoUrl(URL.createObjectURL(file));
-                setIsVideoTrimming(true);
-            } else {
-                setPreview(URL.createObjectURL(file));
-                setDuration(null);
-                setPendingFile(file);
-            }
+            // DIRECT UPLOAD - NO EDITOR
+            setPreview(URL.createObjectURL(file));
+            setDuration(null);
+            setPendingFile(file);
         }
     };
 

@@ -278,14 +278,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (!file) return
-
-        if (file.type.startsWith('video/')) {
-            setVideoToEdit(file);
-            setTrimmerVideoUrl(URL.createObjectURL(file));
-            setIsVideoTrimming(true);
-        } else {
-            setupPreview(file);
-        }
+        setupPreview(file)
     }
 
     const setupPreview = (file: File) => {
