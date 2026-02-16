@@ -97,19 +97,20 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                 mediaType = file.type.startsWith('video/') ? 'video' : 'image';
                 setUploadProgress(80);
                 console.log("Direct upload successful:", mediaUrl);
-            } catch (error) {
-                console.error("Direct upload failed, falling back to server action:", error);
+            } catch (error: any) {
+                console.error("Direct upload failed:", error);
 
-                // If direct upload fails, we check size. Server actions have ~4.5MB limit on Vercel
-                if (file.size > 4.5 * 1024 * 1024) {
-                    console.warn("File is > 4.5MB and direct upload failed. Server fallback might fail on Vercel.");
+                // If direct upload fails for a video/large file, we MUST STOP HERE.
+                // Fallback to server action will fail for files > 4.5MB on Vercel.
+                if (file.size > 4 * 1024 * 1024) {
+                    setIsPosting(false);
+                    setUploadProgress(0);
+                    const errorMsg = error?.message || "Error desconocido";
+                    alert(`Error de conexión directa a la base de datos: ${errorMsg}. \n\nNo se puede usar el modo de respaldo para archivos grandes (>4MB). Por favor, intenta de nuevo o revisa tu conexión.`);
+                    return; // Stop the whole handlePost function
                 }
 
-                // We don't alert the user anymore, just try to fallback silently
-                // or if it's REALLY large (>100MB) we give a heads up
-                if (file.size > 100 * 1024 * 1024) {
-                    alert("El archivo es muy grande. Si la subida falla, intenta con una conexión más estable.");
-                }
+                console.warn("Direct upload failed, but file is small enough to try server fallback.");
             }
         }
 
