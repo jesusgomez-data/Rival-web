@@ -107,49 +107,46 @@ export async function generateCoachResponse(userMessage: string, userProfile: Co
 
 
     // Lista de modelos priorizando los de mayor cuota en Free Tier
+    // Lista de modelos priorizando los de mayor cuota y velocidad
     const modelsToTry = [
         "gemini-1.5-flash",
         "gemini-1.5-flash-8b",
-        "gemini-2.0-flash"
+        "gemini-2.0-flash-exp", // Experimental suele tener menos carga
+        "gemini-1.5-pro"        // Último recurso
     ];
+
     let lastError = "";
 
     for (const modelName of modelsToTry) {
         try {
-            console.log(`[COACH AI] Intentando con: ${modelName}`);
+            // Pequeña pausa si no es el primer intento para dar respiro a la cuota
+            if (modelName !== modelsToTry[0]) {
+                await new Promise(r => setTimeout(r, 2000));
+            }
+
             const model = genAI.getGenerativeModel({
                 model: modelName,
-                generationConfig: {
-                    responseMimeType: "application/json",
-                }
+                generationConfig: { responseMimeType: "application/json" }
             });
 
             const result = await model.generateContent(systemPrompt + "\n\nUsuario: " + userMessage);
 
-            if (!result || !result.response) {
-                throw new Error("Respuesta vacía");
-            }
+            if (!result || !result.response) throw new Error("Respuesta vacía");
 
             const text = result.response.text();
 
             try {
                 return JSON.parse(text);
             } catch (parseError) {
+                // Limpieza agresiva de JSON si la IA devuelve markdown
                 const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
                 return JSON.parse(cleanJson);
             }
+
         } catch (error: any) {
-            console.error(`[COACH AI] Error en ${modelName}:`, error.message);
+            console.error(`[COACH AI] Fallo en ${modelName}:`, error.message);
             lastError = error.message;
-
-            // Si es un error de cuota (429), no quemamos más modelos en cadena
-            // porque suelen compartir la cuota del mismo proyecto
-            if (error.message.includes("429") || error.message.includes("quota")) {
-                console.warn("[COACH AI] Cuota excedida detectada. Saltando a protocolo manual.");
-                break;
-            }
-
-            // Para otros errores, intentamos el siguiente modelo
+            // No hacemos break, intentamos el siguiente modelo por si tiene cuota libre
             continue;
         }
     }
