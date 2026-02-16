@@ -291,8 +291,20 @@ export default function VideoEditor({ videoSrc, videoFile, onSave, onCancel }: V
                                     </div>
                                 </div>
                                 <div className="text-center">
-                                    <p className="text-white font-black uppercase text-sm tracking-widest italic">Procesando Video</p>
-                                    <p className="text-gray-500 text-[10px] uppercase font-bold mt-1">No cierres esta ventana</p>
+                                    <p className="text-white font-black uppercase text-sm tracking-widest italic animate-pulse">Procesando Video</p>
+                                    <p className="text-gray-500 text-[10px] uppercase font-bold mt-1 mb-4">No cierres esta ventana</p>
+
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            // Force skip processing
+                                            setIsProcessing(false);
+                                            onSave(videoFile, duration);
+                                        }}
+                                        className="bg-white/10 border border-white/20 text-white px-4 py-2 rounded-full text-[10px] font-black uppercase hover:bg-white/20 active:scale-95 transition-all shadow-glow-white"
+                                    >
+                                        ¿Tarda mucho? Omitir Edición
+                                    </button>
                                 </div>
                             </div>
                         )}
