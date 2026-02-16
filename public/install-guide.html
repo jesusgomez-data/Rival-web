@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Instalar Rival Fit</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
+        :root {
+            --brand-red: #ef4444;
+            --bg-dark: #09090b;
+            --bg-card: #18181b;
+            --text-main: #ffffff;
+            --text-muted: #a1a1aa;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 24px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 420px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            padding-bottom: 40px;
+        }
+
+        /* Header */
+        header {
+            text-align: center;
+            margin-bottom: 12px;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        h1 {
+            font-weight: 800;
+            font-size: 2.5rem;
+            letter-spacing: -0.05em;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            font-style: italic;
+        }
+
+        .highlight {
+            color: var(--brand-red);
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            max-width: 280px;
+            margin: 0 auto;
+        }
+
+        /* Toggle OS */
+        .os-toggle {
+            display: flex;
+            background: var(--bg-card);
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid #27272a;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .os-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 8px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            z-index: 2;
+        }
+
+        .os-btn.active {
+            color: white;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .indicator {
+            position: absolute;
+            top: 4px;
+            bottom: 4px;
+            left: 4px;
+            width: calc(50% - 4px);
+            background: var(--brand-red);
+            border-radius: 8px;
+            transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+            z-index: 1;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        /* Steps */
+        .step-card {
+            background: var(--bg-card);
+            border: 1px solid #27272a;
+            border-radius: 20px;
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.6s ease-out forwards;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .step-card:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .step-card:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        .step-card:nth-child(4) {
+            animation-delay: 0.6s;
+        }
+
+        .step-number {
+            font-size: 3rem;
+            font-weight: 800;
+            color: #27272a;
+            position: absolute;
+            right: -10px;
+            top: -10px;
+            line-height: 1;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .icon-box {
+            width: 48px;
+            height: 48px;
+            background: rgba(239, 68, 68, 0.1);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            z-index: 1;
+            color: var(--brand-red);
+        }
+
+        .step-content {
+            z-index: 1;
+            flex: 1;
+        }
+
+        .step-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+            color: white;
+        }
+
+        .step-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.4;
+        }
+
+        /* Footer */
+        .footer-logo {
+            margin-top: auto;
+            opacity: 0.5;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            text-align: center;
+            padding-top: 40px;
+        }
+
+        /* SVG Icons */
+        svg {
+            width: 24px;
+            height: 24px;
+            stroke-width: 2.5;
+        }
+
+        /* Animations */
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Specific modifications for Android/iOS toggle logic */
+        .ios-content {
+            display: flex;
+        }
+
+        .android-content {
+            display: none;
+        }
+
+        body.mode-android .ios-content {
+            display: none;
+        }
+
+        body.mode-android .android-content {
+            display: flex;
+        }
+
+        body.mode-android .indicator {
+            transform: translateX(100%);
+        }
+
+        /* Icon Animation */
+        @keyframes bounce {
+
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px);
+            }
+        }
+
+        .animate-icon svg {
+            animation: bounce 2s infinite ease-in-out;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Rival<span class="highlight">Fit</span></h1>
+            <p class="subtitle">Instala la App Oficial en segundos y empieza a entrenar.</p>
+        </header>
+
+        <!-- OS Toggle -->
+        <div class="os-toggle">
+            <div class="indicator"></div>
+            <button class="os-btn active" onclick="setOS('ios')">iPhone (iOS)</button>
+            <button class="os-btn" onclick="setOS('android')">Android</button>
+        </div>
+
+        <!-- Steps Container -->
+
+        <!-- Step 1 -->
+        <div class="step-card">
+            <div class="step-number">1</div>
+            <div class="icon-box animate-icon">
+                <!-- iOS Share Icon -->
+                <svg class="ios-content" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+                    <polyline points="16 6 12 2 8 6" />
+                    <line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+                <!-- Android Menu Icon -->
+                <svg class="android-content" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="1" />
+                    <circle cx="12" cy="5" r="1" />
+                    <circle cx="12" cy="19" r="1" />
+                </svg>
+            </div>
+            <div class="step-content">
+                <div class="step-title ios-content">Toca "Compartir"</div>
+                <div class="step-desc ios-content">Busca el botón en la barra inferior de Safari.</div>
+
+                <div class="step-title android-content">Abre el Menú</div>
+                <div class="step-desc android-content">Toca los 3 puntos verticales en la esquina superior derecha de
+                    Chrome.</div>
+            </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-card">
+            <div class="step-number">2</div>
+            <div class="icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                    <line x1="12" y1="8" x2="12" y2="16" />
+                    <line x1="8" y1="12" x2="16" y2="12" />
+                </svg>
+            </div>
+            <div class="step-content">
+                <div class="step-title ios-content">"Añadir a inicio"</div>
+                <div class="step-desc ios-content">Desliza hacia arriba en el menú hasta ver esta opción (Add to Home
+                    Screen).</div>
+
+                <div class="step-title android-content">"Instalar App"</div>
+                <div class="step-desc android-content">Busca la opción "Instalar aplicación" o "Añadir a pantalla de
+                    inicio".</div>
+            </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-card">
+            <div class="step-number">3</div>
+            <div class="icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"
+                    stroke-linejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                </svg>
+            </div>
+            <div class="step-content">
+                <div class="step-title">Confirma</div>
+                <div class="step-desc">Dale a "Añadir" o "Instalar" arriba a la derecha. ¡Listo!</div>
+            </div>
+        </div>
+
+        <div class="footer-logo">RIVAL FIT SYSTEM v1.0</div>
+    </div>
+
+    <script>
+        function setOS(os) {
+            const body = document.body;
+            const buttons = document.querySelectorAll('.os-btn');
+
+            if (os === 'android') {
+                body.classList.add('mode-android');
+                buttons[0].classList.remove('active');
+                buttons[1].classList.add('active');
+            } else {
+                body.classList.remove('mode-android');
+                buttons[0].classList.add('active');
+                buttons[1].classList.remove('active');
+            }
+        }
+
+        // Auto-detect OS
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+        if (/android/i.test(userAgent)) {
+            setOS('android');
+        }
+    </script>
+</body>
+
+</html>
