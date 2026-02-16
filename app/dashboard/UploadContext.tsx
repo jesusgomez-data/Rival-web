@@ -117,7 +117,14 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
 
         } catch (error: any) {
             console.error("Background upload failed:", error);
-            setUploads(prev => prev.map(u => u.id === id ? { ...u, status: 'error', error: error.message } : u));
+            let errorMessage = error.message || "Error desconocido";
+
+            // Detect common Safari/Mobile upload errors for large files
+            if (errorMessage.includes("Load failed") || errorMessage.includes("NetworkError") || errorMessage.includes("Failed to fetch")) {
+                errorMessage = "Error de conexión. El video podría ser muy pesado para tu red. Intenta con WiFi o un video más corto.";
+            }
+
+            setUploads(prev => prev.map(u => u.id === id ? { ...u, status: 'error', error: errorMessage } : u));
         }
     }, [supabase]);
 
