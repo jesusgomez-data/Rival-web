@@ -57,7 +57,6 @@ function ShareButton({
     onInstagramShare,
     onOpenShareCard,
     isOwner,
-    isOwner,
     authorName,
     authorAvatar,
     authorId
