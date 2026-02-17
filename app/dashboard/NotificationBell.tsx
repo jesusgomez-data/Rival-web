@@ -35,6 +35,7 @@ export default function NotificationBell() {
             setUnreadCount(data.filter((n: any) => !n.is_read).length);
         }
 
+
         async function setupRealtime() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
@@ -43,10 +44,9 @@ export default function NotificationBell() {
 
             // Unlocking AudioContext on first interaction
             const unlockAudio = () => {
-                playNotificationSound().then(() => {
-                    console.log("[NotificationBell] Sistema de audio desbloqueado.");
-                    window.removeEventListener('click', unlockAudio);
-                });
+                // playNotificationSound(); // Disabled auto-play sound on unlock
+                console.log("[NotificationBell] Sistema de audio desbloqueado.");
+                window.removeEventListener('click', unlockAudio);
             };
             window.addEventListener('click', unlockAudio);
 
@@ -63,7 +63,7 @@ export default function NotificationBell() {
                         console.log(`[NotificationBell] ¡Nueva señal detectada en el radar!`, payload);
                         if (payload.new.user_id === user.id) {
                             // Instant sound first, then load data
-                            playNotificationSound();
+                            // playNotificationSound(); // Disabled constant sound as per user request
                             loadNotifications();
                         }
                     }

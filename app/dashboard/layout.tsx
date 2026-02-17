@@ -24,7 +24,8 @@ import {
     Moon,
     Shield,
     ChevronRight,
-    ChevronLeft
+    ChevronLeft,
+    Flag
 } from "lucide-react";
 import clsx from "clsx";
 import { useRouter, usePathname } from "next/navigation";
@@ -172,6 +173,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         { name: t.navDashboard.training, href: "/dashboard/training", icon: Dumbbell },
         { name: t.navDashboard.affiliateGym, href: "/dashboard/gyms", icon: Building2 },
         { name: t.navDashboard.community, href: "/dashboard/community", icon: Users },
+        { name: "Competiciones", href: "/dashboard/competitions", icon: Flag },
         { name: t.navDashboard.leaderboard, href: "/dashboard/leaderboard", icon: Trophy },
         { name: t.navDashboard.analytics, href: "/dashboard/analytics", icon: BarChart2 },
         { name: t.navDashboard.profile, href: "/dashboard/profile", icon: Settings },
