@@ -78,6 +78,30 @@ export default function AnalyticsPage() {
     const maxMuscleVolume = Math.max(...muscleValues, 1);
     const isPremium = profile?.subscription_tier === 'premium' || profile?.subscription_tier === 'elite';
 
+    // Aggregate daily stats by date to prevent duplicate bars
+    const aggregatedStats = (() => {
+        if (!weeklyStats?.daily) return [];
+        const map = new Map<string, DailyStat>();
+
+        weeklyStats.daily.forEach(stat => {
+            const date = new Date(stat.created_at).toLocaleDateString();
+            const existing = map.get(date);
+
+            if (!existing) {
+                map.set(date, stat);
+            } else {
+                // Keep the session with the highest max weight for that day
+                if (stat.max_weight_kg > existing.max_weight_kg) {
+                    map.set(date, stat);
+                }
+            }
+        });
+
+        return Array.from(map.values()).sort((a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+    })();
+
     return (
         <div className="space-y-10 pb-20">
             {/* Header section */}
@@ -165,10 +189,10 @@ export default function AnalyticsPage() {
                             Protocolo de Fuerza
                         </h3>
 
-                        {(weeklyStats?.daily || []).length > 0 && Math.max(...((weeklyStats?.daily || []).map(x => x.max_weight_kg) || [0])) > 0 ? (
+                        {aggregatedStats.length > 0 && Math.max(...(aggregatedStats.map(x => x.max_weight_kg) || [0])) > 0 ? (
                             <div className="flex items-end gap-4 h-64 px-4">
-                                {(weeklyStats?.daily || []).map((s, i) => {
-                                    const maxInChart = Math.max(...((weeklyStats?.daily || []).map(x => x.max_weight_kg) || [1]), 1);
+                                {aggregatedStats.map((s, i) => {
+                                    const maxInChart = Math.max(...(aggregatedStats.map(x => x.max_weight_kg) || [1]), 1);
                                     const heightPercent = (s.max_weight_kg / maxInChart) * 100;
 
                                     return (

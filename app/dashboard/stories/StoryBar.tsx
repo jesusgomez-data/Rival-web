@@ -664,7 +664,30 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         } else {
             if (audioRef.current) audioRef.current.pause();
         }
+
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.src = "";
+            }
+        };
     }, [selectedUserIndex, activeStoryIndex, showViewers, currentStory?.music_url, previewUrl, isPaused])
+
+    // Handle App Visibility (Background/Foreground)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                if (audioRef.current) audioRef.current.pause();
+                if (storyVideoRef.current) storyVideoRef.current.pause();
+                setIsPaused(true);
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+        };
+    }, []);
 
     // Story Progression Logic
     useEffect(() => {

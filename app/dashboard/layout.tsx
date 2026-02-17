@@ -121,7 +121,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                             // Play Rival custom sound
                             import("@/app/utils/audio").then(m => m.playNotificationSound());
 
-                            if (!pathname?.startsWith('/dashboard/messages')) {
+                            // Check current path dynamically to avoid dependency on pathname state
+                            if (!window.location.pathname.startsWith('/dashboard/messages')) {
                                 setUnreadMessages(prev => prev + 1);
 
                                 if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
@@ -143,7 +144,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         };
 
         setupRealtime();
-    }, [pathname, supabase]);
+    }, [supabase]);
 
     useEffect(() => {
         if (pathname?.startsWith('/dashboard/messages')) {
@@ -484,13 +485,17 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
 import { UploadProvider } from "./UploadContext";
 
+import { PresenceProvider } from "./PresenceContext";
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
         <UploadProvider>
             <StoryProvider>
-                <DashboardContent>
-                    {children}
-                </DashboardContent>
+                <PresenceProvider>
+                    <DashboardContent>
+                        {children}
+                    </DashboardContent>
+                </PresenceProvider>
             </StoryProvider>
         </UploadProvider>
     );

@@ -76,16 +76,15 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     ) : (
                         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-30 grayscale mix-blend-overlay"></div>
                     )}
-
-                    {/* Manifiesto Overlay - Mobile Only - Positioned to avoid clash */}
+                    {/* Manifiesto Overlay - Compact & Top-Right */}
                     {!profile.is_official && profile.bio && (
-                        <div className="absolute top-4 right-4 z-[35] md:hidden max-w-[120px]">
-                            <div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-2xl p-3 shadow-2xl shadow-black/50 rotate-2 group-hover:rotate-0 transition-transform duration-500">
-                                <div className="flex items-center gap-1.5 mb-1.5 justify-end">
-                                    <MessageSquare className="w-2.5 h-2.5 text-brand-red" />
-                                    <h3 className="text-[8px] font-black text-brand-red uppercase tracking-widest text-right">Manifiesto</h3>
+                        <div className="absolute top-2 right-2 z-[35] md:hidden max-w-[100px]">
+                            <div className="bg-black/70 backdrop-blur-md border border-white/10 rounded-xl p-2 shadow-2xl shadow-black/50 transition-transform duration-500">
+                                <div className="flex items-center gap-1 mb-1 justify-end">
+                                    <MessageSquare className="w-2 h-2 text-brand-red" />
+                                    <h3 className="text-[7px] font-black text-brand-red uppercase tracking-widest text-right">Manifiesto</h3>
                                 </div>
-                                <p className="text-[10px] text-zinc-200 font-medium italic leading-snug line-clamp-4 text-right shadow-black drop-shadow-sm keep-white">
+                                <p className="text-[8px] text-zinc-200 font-medium italic leading-tight line-clamp-5 text-right shadow-black drop-shadow-sm keep-white">
                                     "{profile.bio}"
                                 </p>
                             </div>
@@ -93,11 +92,11 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     )}
                 </div>
 
-                <div className="absolute bottom-0 left-0 right-0 p-2 md:p-10 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-8 z-20">
+                <div className="absolute bottom-0 left-0 right-0 p-3 md:p-10 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-8 z-20">
                     <div className="flex items-end gap-3 md:gap-6 relative">
                         <button
                             onClick={() => setAvatarModalOpen(true)}
-                            className="w-20 h-20 md:w-40 md:h-40 rounded-full border-2 md:border-8 border-black bg-brand-gray overflow-hidden relative shadow-2xl shrink-0 transform translate-y-4 md:translate-y-0 -left-1 md:left-0 z-10 hover:scale-105 transition-transform"
+                            className="w-20 h-20 md:w-36 md:h-36 rounded-full border-2 md:border-8 border-black bg-brand-gray overflow-hidden relative shadow-2xl shrink-0 z-10"
                         >
                             <Image
                                 src={profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || 'User')}&background=random`}
@@ -107,108 +106,116 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             />
                         </button>
                         <div className="pb-1 md:pb-4 min-w-0 transform translate-y-2 md:translate-y-0 z-20 w-auto mr-auto mt-6 md:mt-0">
-
-                            {/* Followers / Following Counts & Name Block Wrapper */}
-                            <div className="flex flex-col gap-2 mt-20 md:mt-4">
-                                {/* Name & Handle - Mobile Moved Here */}
-                                <div className="mb-1">
-                                    <div className="flex items-center gap-1.5 md:gap-3">
-                                        <h1 className="text-lg md:text-4xl font-heading font-black text-white keep-white italic uppercase tracking-tight md:tracking-tighter truncate leading-none shadow-black drop-shadow-md">
-                                            {profile.full_name}
-                                            {profile.is_official && (
-                                                <span className="ml-2 bg-brand-red p-1 rounded-full inline-flex shadow-[0_0_15px_rgba(220,38,38,0.5)] border border-white/20">
-                                                    <Trophy className="w-3 h-3 md:w-5 md:h-5 text-white" />
-                                                </span>
-                                            )}
-                                        </h1>
-                                        {profile.level >= 5 && !profile.is_official && <Star className="w-4 h-4 md:w-6 md:h-6 text-yellow-500 fill-yellow-500 shrink-0" />}
-                                    </div>
-                                    <p className="text-brand-red font-black tracking-widest md:tracking-[0.3em] text-[10px] md:text-sm uppercase mt-0.5 truncate shadow-black drop-shadow-sm keep-white flex items-center gap-2">
-                                        @{profile.username}
-                                        {profile.is_official && <span className="text-[8px] md:text-[10px] bg-white/10 px-2 py-0.5 rounded-full border border-white/5">CUENTA OFICIAL</span>}
-                                    </p>
+                            {/* Name & Handle - Mobile Moved Here */}
+                            <div className="mb-0.5 md:mb-1 mt-8 md:mt-0">
+                                <div className="flex items-center gap-1.5 md:gap-3">
+                                    <h1 className="text-xl md:text-4xl font-heading font-black text-white keep-white italic uppercase tracking-tight md:tracking-tighter truncate leading-none shadow-black drop-shadow-md max-w-[260px] md:max-w-none">
+                                        {profile.full_name}
+                                        {profile.is_official && (
+                                            <span className="ml-2 bg-brand-red p-1 rounded-full inline-flex shadow-[0_0_15px_rgba(220,38,38,0.5)] border border-white/20">
+                                                <Trophy className="w-3 h-3 md:w-5 md:h-5 text-white" />
+                                            </span>
+                                        )}
+                                    </h1>
+                                    {profile.level >= 5 && !profile.is_official && <Star className="w-4 h-4 md:w-6 md:h-6 text-yellow-500 fill-yellow-500 shrink-0" />}
                                 </div>
-
-                                {!profile.is_official && (
-                                    <div className="flex gap-4 md:gap-8 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 w-fit shadow-2xl">
-                                        <button
-                                            onClick={() => handleOpenModal('followers')}
-                                            className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 hover:opacity-80 transition-opacity text-left"
-                                            disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                                        >
-                                            <span className="text-white font-black text-xs md:text-lg leading-none shadow-black drop-shadow-sm">{profile.followers_count || 0}</span>
-                                            <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidores</span>
-                                        </button>
-                                        <div className="w-px h-6 bg-white/10 hidden md:block"></div>
-                                        <button
-                                            onClick={() => handleOpenModal('following')}
-                                            className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 hover:opacity-80 transition-opacity text-left"
-                                            disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                                        >
-                                            <span className="text-white font-black text-xs md:text-lg leading-none shadow-black drop-shadow-sm">{profile.following_count || 0}</span>
-                                            <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidos</span>
-                                        </button>
-                                    </div>
-                                )}
-
-                                {/* Rank & Discipline - Mobile Badge */}
-                                {!profile.is_official ? (
-                                    <div className="flex items-center gap-3 px-2">
-                                        <div className="flex items-center gap-1.5">
-                                            <Award className="w-3 h-3 text-brand-red" />
-                                            <span className="text-[9px] text-white font-black uppercase tracking-wider shadow-black drop-shadow-sm keep-white">
-                                                {profile.level > 0 ? `Lvl ${profile.level}` : 'Recluta'}
-                                            </span>
-                                        </div>
-                                        <div className="w-1 h-1 rounded-full bg-white/30"></div>
-                                        <div className="flex items-center gap-1.5">
-                                            <Dumbbell className="w-3 h-3 text-brand-red" />
-                                            <span className="text-[9px] text-white font-black uppercase tracking-wider shadow-black drop-shadow-sm keep-white">
-                                                {profile.main_sport || 'General'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-1.5 px-2">
-                                        <Trophy className="w-3 h-3 text-brand-red" />
-                                        <span className="text-[9px] text-white font-black uppercase tracking-wider shadow-black drop-shadow-sm keep-white">
-                                            Soporte & Comunidad
-                                        </span>
-                                    </div>
-                                )}
+                                <p className="text-brand-red font-black tracking-widest md:tracking-[0.3em] text-[10px] md:text-sm uppercase mt-0.5 truncate shadow-black drop-shadow-sm keep-white flex items-center gap-2">
+                                    @{profile.username}
+                                    {profile.is_official && <span className="text-[8px] md:text-[10px] bg-white/10 px-2 py-0.5 rounded-full border border-white/5">CUENTA OFICIAL</span>}
+                                </p>
                             </div>
 
-                            {privacy === 'private' && (
-                                <div className="flex items-center gap-2 mt-4 px-3 py-1 bg-white/5 rounded-full w-fit border border-white/10">
-                                    <Lock className="w-3 h-3 text-gray-400" />
-                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Cuenta Privada</span>
+                            {/* Mobile Bio - Hidden now as it's back in the header */}
+                            {!profile.is_official && profile.bio && (
+                                <div className="md:hidden hidden max-w-[280px] mt-1">
+                                    <div className="flex items-start gap-1.5">
+                                        <MessageSquare className="w-3 h-3 text-brand-red mt-0.5 shrink-0" />
+                                        <p className="text-[11px] text-zinc-200 font-medium italic leading-tight line-clamp-2 shadow-black drop-shadow-sm keep-white">
+                                            "{profile.bio}"
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {!profile.is_official && (
+                                <div className="flex gap-4 md:gap-8 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 w-fit shadow-2xl">
+                                    <button
+                                        onClick={() => handleOpenModal('followers')}
+                                        className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 hover:opacity-80 transition-opacity text-left"
+                                        disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
+                                    >
+                                        <span className="text-white font-black text-xs md:text-lg leading-none shadow-black drop-shadow-sm">{profile.followers_count || 0}</span>
+                                        <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidores</span>
+                                    </button>
+                                    <div className="w-px h-6 bg-white/10 hidden md:block"></div>
+                                    <button
+                                        onClick={() => handleOpenModal('following')}
+                                        className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 hover:opacity-80 transition-opacity text-left"
+                                        disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
+                                    >
+                                        <span className="text-white font-black text-xs md:text-lg leading-none shadow-black drop-shadow-sm">{profile.following_count || 0}</span>
+                                        <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidos</span>
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Rank & Discipline - Mobile Badge */}
+                            {!profile.is_official ? (
+                                <div className="flex items-center gap-3 px-2">
+                                    <div className="flex items-center gap-1.5">
+                                        <Award className="w-3 h-3 text-brand-red" />
+                                        <span className="text-[9px] text-white font-black uppercase tracking-wider shadow-black drop-shadow-sm keep-white">
+                                            {profile.level > 0 ? `Lvl ${profile.level}` : 'Recluta'}
+                                        </span>
+                                    </div>
+                                    <div className="w-1 h-1 rounded-full bg-white/30"></div>
+                                    <div className="flex items-center gap-1.5">
+                                        <Dumbbell className="w-3 h-3 text-brand-red" />
+                                        <span className="text-[9px] text-white font-black uppercase tracking-wider shadow-black drop-shadow-sm keep-white">
+                                            {profile.main_sport || 'General'}
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="flex items-center gap-1.5 px-2">
+                                    <Trophy className="w-3 h-3 text-brand-red" />
+                                    <span className="text-[9px] text-white font-black uppercase tracking-wider shadow-black drop-shadow-sm keep-white">
+                                        Soporte & Comunidad
+                                    </span>
                                 </div>
                             )}
                         </div>
-                    </div>
 
-                    <div className="flex items-center gap-2 pb-2 pl-2 md:pl-0 md:pb-4 md:gap-3">
-                        {user?.id !== profile.id && !profile.is_official && (
-                            <div className="flex items-center gap-2">
-                                {isFollowing && (
-                                    <Link
-                                        href={`/dashboard/messages?userId=${profile.id}`}
-                                        className="p-2 md:p-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-brand-red hover:border-brand-red hover:text-white transition-all group flex items-center gap-2 shadow-xl backdrop-blur-md"
-                                        title="Enviar mensaje"
-                                    >
-                                        <MessageCircle className="w-4 h-4 md:w-5 md:h-5 text-brand-red group-hover:text-white transition-colors" />
-                                        <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest leading-none">Mensaje</span>
-                                    </Link>
-                                )}
-                                <div className="scale-90 md:scale-100 origin-left">
-                                    <DuelButton targetId={profile.id} isRival={isFollowing} />
-                                </div>
-                                <div className="w-24 md:w-32 scale-90 md:scale-100 origin-left">
-                                    <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
-                                </div>
+                        {privacy === 'private' && (
+                            <div className="flex items-center gap-2 mt-4 px-3 py-1 bg-white/5 rounded-full w-fit border border-white/10">
+                                <Lock className="w-3 h-3 text-gray-400" />
+                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Cuenta Privada</span>
                             </div>
                         )}
                     </div>
+                </div>
+
+                <div className="flex items-center gap-2 pb-2 pl-2 md:pl-0 md:pb-4 md:gap-3">
+                    {user?.id !== profile.id && !profile.is_official && (
+                        <div className="flex items-center gap-2">
+                            {isFollowing && (
+                                <Link
+                                    href={`/dashboard/messages?userId=${profile.id}`}
+                                    className="p-2 md:p-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-brand-red hover:border-brand-red hover:text-white transition-all group flex items-center gap-2 shadow-xl backdrop-blur-md"
+                                    title="Enviar mensaje"
+                                >
+                                    <MessageCircle className="w-4 h-4 md:w-5 md:h-5 text-brand-red group-hover:text-white transition-colors" />
+                                    <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest leading-none">Mensaje</span>
+                                </Link>
+                            )}
+                            <div className="scale-90 md:scale-100 origin-left">
+                                <DuelButton targetId={profile.id} isRival={isFollowing} />
+                            </div>
+                            <div className="w-24 md:w-32 scale-90 md:scale-100 origin-left">
+                                <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -520,86 +527,90 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                 </div>
             </div>
             {/* Avatar Fullscreen Modal */}
-            {avatarModalOpen && (
-                <div
-                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-fade-in"
-                    onClick={() => setAvatarModalOpen(false)}
-                >
-                    <button
-                        className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors z-10"
+            {
+                avatarModalOpen && (
+                    <div
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-fade-in"
                         onClick={() => setAvatarModalOpen(false)}
                     >
-                        <X className="w-8 h-8" />
-                    </button>
-                    <div
-                        className="relative w-full max-w-2xl aspect-square rounded-3xl overflow-hidden shadow-2xl border border-white/10"
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <Image
-                            src={profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || 'User')}&background=random`}
-                            alt={profile.full_name}
-                            fill
-                            className="object-contain bg-black"
-                        />
+                        <button
+                            className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors z-10"
+                            onClick={() => setAvatarModalOpen(false)}
+                        >
+                            <X className="w-8 h-8" />
+                        </button>
+                        <div
+                            className="relative w-full max-w-2xl aspect-square rounded-3xl overflow-hidden shadow-2xl border border-white/10"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <Image
+                                src={profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || 'User')}&background=random`}
+                                alt={profile.full_name}
+                                fill
+                                className="object-contain bg-black"
+                            />
+                        </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             {/* Simple Modal for Followers/Following */}
-            {modalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setModalOpen(null)}>
-                    <div className="bg-[#0A0A0A] border border-white/10 rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-                        <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-                            <h3 className="text-white font-heading font-black italic uppercase tracking-wider text-lg">
-                                {modalOpen === 'followers' ? 'Seguidores' : 'Seguidos'}
-                            </h3>
-                            <button onClick={() => setModalOpen(null)} className="text-gray-400 hover:text-white transition-colors">
-                                <Swords className="w-5 h-5 rotate-45" /> {/* Just using X icon logic if available or fallback */}
-                                <span className="text-2xl leading-none">&times;</span>
-                            </button>
-                        </div>
+            {
+                modalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setModalOpen(null)}>
+                        <div className="bg-[#0A0A0A] border border-white/10 rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+                            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
+                                <h3 className="text-white font-heading font-black italic uppercase tracking-wider text-lg">
+                                    {modalOpen === 'followers' ? 'Seguidores' : 'Seguidos'}
+                                </h3>
+                                <button onClick={() => setModalOpen(null)} className="text-gray-400 hover:text-white transition-colors">
+                                    <Swords className="w-5 h-5 rotate-45" /> {/* Just using X icon logic if available or fallback */}
+                                    <span className="text-2xl leading-none">&times;</span>
+                                </button>
+                            </div>
 
-                        <div className="overflow-y-auto p-4 space-y-2 flex-1 scrollbar-hide">
-                            {loadingModal ? (
-                                <div className="flex justify-center py-8">
-                                    <Activity className="w-8 h-8 text-brand-red animate-spin" />
-                                </div>
-                            ) : modalData.length > 0 ? (
-                                modalData.map((person) => (
-                                    <Link
-                                        key={person.id}
-                                        href={`/dashboard/profile/${person.username}`}
-                                        className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors group border border-transparent hover:border-white/5"
-                                        onClick={() => setModalOpen(null)}
-                                    >
-                                        <div className="w-10 h-10 rounded-full bg-brand-gray overflow-hidden relative border border-white/10">
-                                            <Image
-                                                src={person.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(person.full_name || 'User')}&background=random`}
-                                                alt={person.full_name}
-                                                fill
-                                                className="object-cover"
-                                            />
-                                        </div>
-                                        <div>
-                                            <p className="text-white font-bold text-sm leading-tight group-hover:text-brand-red transition-colors">{person.full_name}</p>
-                                            <p className="text-gray-500 text-xs font-medium">@{person.username}</p>
-                                        </div>
-                                        {person.level > 0 && (
-                                            <div className="ml-auto bg-brand-red/10 px-2 py-0.5 rounded text-[9px] font-black text-brand-red uppercase tracking-wider">
-                                                Lvl {person.level}
+                            <div className="overflow-y-auto p-4 space-y-2 flex-1 scrollbar-hide">
+                                {loadingModal ? (
+                                    <div className="flex justify-center py-8">
+                                        <Activity className="w-8 h-8 text-brand-red animate-spin" />
+                                    </div>
+                                ) : modalData.length > 0 ? (
+                                    modalData.map((person) => (
+                                        <Link
+                                            key={person.id}
+                                            href={`/dashboard/profile/${person.username}`}
+                                            className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors group border border-transparent hover:border-white/5"
+                                            onClick={() => setModalOpen(null)}
+                                        >
+                                            <div className="w-10 h-10 rounded-full bg-brand-gray overflow-hidden relative border border-white/10">
+                                                <Image
+                                                    src={person.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(person.full_name || 'User')}&background=random`}
+                                                    alt={person.full_name}
+                                                    fill
+                                                    className="object-cover"
+                                                />
                                             </div>
-                                        )}
-                                    </Link>
-                                ))
-                            ) : (
-                                <div className="text-center py-12">
-                                    <p className="text-gray-500 italic text-sm">No hay usuarios en esta lista aún.</p>
-                                </div>
-                            )}
+                                            <div>
+                                                <p className="text-white font-bold text-sm leading-tight group-hover:text-brand-red transition-colors">{person.full_name}</p>
+                                                <p className="text-gray-500 text-xs font-medium">@{person.username}</p>
+                                            </div>
+                                            {person.level > 0 && (
+                                                <div className="ml-auto bg-brand-red/10 px-2 py-0.5 rounded text-[9px] font-black text-brand-red uppercase tracking-wider">
+                                                    Lvl {person.level}
+                                                </div>
+                                            )}
+                                        </Link>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-12">
+                                        <p className="text-gray-500 italic text-sm">No hay usuarios en esta lista aún.</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )
+            }
+        </div >
     );
 }

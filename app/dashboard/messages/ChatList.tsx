@@ -8,6 +8,7 @@ import { Search, MessageSquarePlus, Zap, Trophy, ChevronRight, User } from 'luci
 import { clsx } from 'clsx'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLanguage } from '@/app/LanguageContext'
+import { usePresence } from '../PresenceContext'
 
 interface ChatListProps {
     conversations: any[]
@@ -19,6 +20,7 @@ interface ChatListProps {
 
 export default function ChatList({ conversations, activeId, onSearch, onSelect, onNewChat }: ChatListProps) {
     const { t, language } = useLanguage()
+    const { onlineUsers } = usePresence()
 
     return (
         <div className="flex flex-col h-full bg-card">
@@ -60,6 +62,7 @@ export default function ChatList({ conversations, activeId, onSearch, onSelect, 
                         conversations.map((conv) => {
                             const isActive = activeId === conv.id;
                             const person = conv.other_person;
+                            const isOnline = person?.id && onlineUsers.has(person.id);
 
                             return (
                                 <motion.button
@@ -95,7 +98,9 @@ export default function ChatList({ conversations, activeId, onSearch, onSelect, 
                                                 </div>
                                             )}
                                         </div>
-                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-card rounded-full" />
+                                        {isOnline && (
+                                            <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-card rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
+                                        )}
                                     </div>
 
                                     <div className="flex-1 min-w-0 text-left">

@@ -26,6 +26,26 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
         return () => window.removeEventListener('keydown', handleEsc);
     }, []);
 
+    // Handle App Visibility and Cleanup
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden && audioRef.current) {
+                audioRef.current.pause();
+                setPreviewingId(null);
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.src = "";
+            }
+        };
+    }, []);
+
     // Prevent scroll when modal is open
     useEffect(() => {
         if (isOpen && variant === 'button') {
@@ -96,6 +116,7 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
                 </div>
                 {isModal && (
                     <button
+                        type="button"
                         onClick={() => setIsOpen(false)}
                         className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-full transition-all"
                     >
@@ -113,6 +134,7 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
                         placeholder="Busca Phonk, Reggaeton, Rock..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
                         className="w-full bg-black/40 border border-white/5 rounded-2xl py-3.5 pl-11 pr-4 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-brand-red/30 focus:bg-black/60 transition-all shadow-inner"
                     />
                 </div>
@@ -133,6 +155,7 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
                             )}
                         >
                             <button
+                                type="button"
                                 onClick={(e) => handlePreview(e, track)}
                                 className={clsx(
                                     "w-12 h-12 rounded-xl flex items-center justify-center transition-all relative z-10",

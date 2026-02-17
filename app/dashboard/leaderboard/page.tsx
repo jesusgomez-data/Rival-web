@@ -14,6 +14,7 @@ export default async function LeaderboardPage() {
     const { data: athletes } = await supabase
         .from('profiles')
         .select('id, username, full_name, avatar_url, xp_points, level, is_official')
+        .neq('username', 'rivalfit')
         .order('xp_points', { ascending: false })
         .limit(20);
 
