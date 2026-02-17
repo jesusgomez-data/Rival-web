@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rival Fit - Push Limits Promo</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --brand-red: #dc2626;
+            --brand-black: #0a0a0a;
+            --brand-gray: #171717;
+            --brand-neon: #ff1a1a;
+        }
+
+        body {
+            margin: 0;
+            padding: 80px 40px;
+            background-color: #050505;
+            font-family: 'Inter', sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            gap: 50px;
+            align-items: center;
+        }
+
+        /* --- ASSET CONTAINER --- */
+        #promo-asset {
+            width: 1080px;
+            height: 1350px;
+            /* 4:5 Aspect Ratio for Social Media */
+            background: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            box-shadow: 0 0 100px rgba(0, 0, 0, 0.8);
+        }
+
+        /* --- BACKGROUND ELEMENTS --- */
+        .neon-frame {
+            position: absolute;
+            inset: 40px;
+            border: 4px solid var(--brand-red);
+            border-radius: 40px;
+            box-shadow:
+                0 0 20px var(--brand-red),
+                inset 0 0 40px rgba(220, 38, 38, 0.4);
+            opacity: 0.8;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .bg-image {
+            position: absolute;
+            inset: 0;
+            background-image: url('https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2069&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            filter: grayscale(100%) contrast(1.2) brightness(0.6);
+            mix-blend-mode: luminosity;
+            z-index: 1;
+        }
+
+        .red-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top,
+                    rgba(220, 38, 38, 0.8) 0%,
+                    rgba(0, 0, 0, 0.6) 40%,
+                    rgba(0, 0, 0, 0.2) 100%);
+            mix-blend-mode: overlay;
+            z-index: 2;
+        }
+
+        .smoke-overlay {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 50% 80%, rgba(220, 38, 38, 0.15), transparent 70%);
+            z-index: 3;
+        }
+
+        /* --- GLASS CONTENT --- */
+        .glass-card {
+            position: relative;
+            z-index: 30;
+            width: 85%;
+            margin-bottom: 120px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 30px;
+            padding: 60px 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Subtle scanlines effect on glass */
+        .glass-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: repeating-linear-gradient(transparent 0%,
+                    rgba(255, 255, 255, 0.03) 1px,
+                    transparent 2px);
+            pointer-events: none;
+            border-radius: 30px;
+        }
+
+        .main-text {
+            font-size: 110px;
+            font-weight: 900;
+            line-height: 0.9;
+            text-transform: uppercase;
+            letter-spacing: -2px;
+            color: transparent;
+            -webkit-text-stroke: 3px white;
+            position: relative;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 10px rgba(220, 38, 38, 0.8));
+        }
+
+        .main-text span {
+            display: block;
+            color: white;
+            text-shadow: 0 0 30px rgba(220, 38, 38, 0.8);
+            -webkit-text-stroke: 0;
+        }
+
+        .main-text .outline {
+            color: transparent;
+            -webkit-text-stroke: 3px var(--brand-red);
+            text-shadow: none;
+        }
+
+        .sub-text {
+            font-size: 24px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.4em;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 30px;
+            border-top: 2px solid var(--brand-red);
+            padding-top: 30px;
+        }
+
+        .logo-mark {
+            margin-top: 40px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            opacity: 0.9;
+        }
+
+        .logo-text {
+            font-size: 28px;
+            font-weight: 900;
+            letter-spacing: -1px;
+            color: white;
+        }
+
+        .logo-text span {
+            color: var(--brand-red);
+        }
+
+        /* --- BUTTONS --- */
+        .download-btn {
+            background: var(--brand-red);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 20px rgba(220, 38, 38, 0.2);
+            margin-top: 30px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(220, 38, 38, 0.4);
+            filter: brightness(1.2);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="promo-asset">
+        <div class="bg-image"></div>
+        <div class="red-overlay"></div>
+        <div class="smoke-overlay"></div>
+        <div class="neon-frame"></div>
+
+        <div class="glass-card">
+            <div class="main-text">
+                <div class="outline">PUSH YOUR</div>
+                <span>LIMITS</span>
+            </div>
+            <div class="sub-text">NO EXCUSES • JUST RESULTS</div>
+
+            <div class="logo-mark">
+                <svg width="40" height="40" viewBox="0 0 512 512" fill="none">
+                    <path
+                        d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z"
+                        fill="#DC2626" />
+                </svg>
+                <div class="logo-text">Rival<span>Fit</span></div>
+            </div>
+        </div>
+    </div>
+
+    <button class="download-btn" onclick="download('promo-asset', 'rival-push-limits.png')">
+        Descargar Diseño PNG
+    </button>
+
+    <script>
+        function download(id, filename) {
+            const element = document.getElementById(id);
+            html2canvas(element, {
+                scale: 2,
+                backgroundColor: '#0a0a0a',
+                logging: false,
+                useCORS: true,
+                allowTaint: true
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+    </script>
+
+</body>
+
+</html>
