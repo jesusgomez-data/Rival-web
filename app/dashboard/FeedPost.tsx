@@ -1187,7 +1187,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             authorName={user}
                             authorAvatar={avatar}
                             authorId={authorId}
-                            authorUsername={(username || user).toLowerCase().replace(/\s+/g, '')}
+                            authorUsername={username || user.toLowerCase().replace(/\s+/g, '')}
                         />
                     </>
                 ) : (
@@ -1221,7 +1221,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 authorName={user}
                                 authorAvatar={avatar}
                                 authorId={authorId}
-                                authorUsername={(username || user).toLowerCase().replace(/\s+/g, '')}
+                                authorUsername={username || user.toLowerCase().replace(/\s+/g, '')}
                             />
                         </div>
                     </div>
