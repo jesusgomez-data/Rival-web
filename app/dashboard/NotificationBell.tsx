@@ -7,6 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { playNotificationSound } from "@/app/utils/audio";
 
 interface Notification {
     id: string;
@@ -38,24 +39,40 @@ export default function NotificationBell() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // Supabase Realtime for "Perfect" instant notifications
-            // Specific filter for the current user to avoid catching everyone else's signals
+            console.log(`[NotificationBell] Activando radar para el usuario: ${user.id}`);
+
+            // Unlocking AudioContext on first interaction
+            const unlockAudio = () => {
+                playNotificationSound().then(() => {
+                    console.log("[NotificationBell] Sistema de audio desbloqueado.");
+                    window.removeEventListener('click', unlockAudio);
+                });
+            };
+            window.addEventListener('click', unlockAudio);
+
             channel = supabase
-                .channel(`notifications-${user.id}`)
+                .channel(`notifications-realtime-${user.id}`)
                 .on(
                     'postgres_changes',
                     {
                         event: 'INSERT',
                         schema: 'public',
                         table: 'notifications',
-                        filter: `user_id=eq.${user.id}`
                     },
                     (payload) => {
-                        loadNotifications();
-                        import("@/app/utils/audio").then(m => m.playNotificationSound());
+                        console.log(`[NotificationBell] ¡Nueva señal detectada en el radar!`, payload);
+                        if (payload.new.user_id === user.id) {
+                            loadNotifications();
+                            playNotificationSound();
+                        }
                     }
                 )
-                .subscribe();
+                .subscribe((status) => {
+                    console.log(`[NotificationBell] Estado de la conexión (${user.id}):`, status);
+                    if (status === 'CHANNEL_ERROR') {
+                        console.error("[NotificationBell] Error crítico en el canal de señales. Intentando reconectar...");
+                    }
+                });
         }
 
         loadNotifications();

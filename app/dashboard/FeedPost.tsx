@@ -6,7 +6,7 @@ import Link from "next/link";
 import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Trash2, Edit2, Save, Heart, Dumbbell, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram } from "lucide-react";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
-import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike } from "./community/actions";
+import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike, deleteComment } from "./community/actions";
 import { clsx } from "clsx";
 import { useTheme } from "../ThemeContext";
 import { useStories } from "./stories/StoryContext";
@@ -202,6 +202,7 @@ interface Comment {
     content: string;
     created_at: string;
     parent_id: string | null;
+    user_id: string;
     user: {
         username: string;
         avatar_url: string | null;
@@ -368,6 +369,24 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         await toggleCommentLike(commentId);
     };
 
+    const handleDeleteComment = async (commentId: string) => {
+        if (!confirm("¿Eliminar este comentario?")) return;
+
+        // Optimistic update
+        setCommentList(prev => prev.filter(c => c.id !== commentId));
+        setCommentsCount(prev => Math.max(0, prev - 1));
+
+        const res = await deleteComment(commentId);
+        if (res.error) {
+            alert(res.error);
+            // Revert on error (re-fetch is safest)
+            getComments(postId).then(data => {
+                setCommentList(data || []);
+                setCommentsCount(data?.length || 0);
+            });
+        }
+    };
+
     const handleDelete = async () => {
         if (!confirm("¿Estás seguro de que quieres eliminar esta publicación?")) return;
         setIsDeleting(true);
@@ -429,6 +448,15 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             <Heart className={clsx("w-3 h-3", comment.has_liked && "fill-current")} />
                             {comment.likes_count > 0 && comment.likes_count}
                         </button>
+
+                        {(currentUserId === comment.user_id || isAdminUser) && (
+                            <button
+                                onClick={() => handleDeleteComment(comment.id)}
+                                className="text-gray-500 hover:text-brand-red transition-colors"
+                            >
+                                <Trash2 className="w-3 h-3" />
+                            </button>
+                        )}
                     </div>
                 </div>
                 <div className="flex items-center gap-4 text-[10px] text-gray-600 mt-1 ml-2 font-bold">

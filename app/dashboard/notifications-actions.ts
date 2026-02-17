@@ -56,8 +56,9 @@ export async function createNotification({ userId, type, title, content, link }:
     content?: string,
     link?: string
 }) {
+    console.log(`[createNotification] Attempting to create notification for ${userId}, type: ${type}`);
     const adminSupabase = createAdminClient();
-    const { error } = await adminSupabase
+    const { data: insertData, error } = await adminSupabase
         .from('notifications')
         .insert({
             user_id: userId,
@@ -65,9 +66,14 @@ export async function createNotification({ userId, type, title, content, link }:
             title,
             content,
             link
-        });
+        })
+        .select();
 
-    if (error) return { error: error.message };
+    if (error) {
+        console.error(`[createNotification] Database error:`, error);
+        return { error: error.message };
+    }
+    console.log(`[createNotification] Success! Inserted:`, insertData);
 
     // Send Push Notification
     // Don't await this to avoid slowing down the response

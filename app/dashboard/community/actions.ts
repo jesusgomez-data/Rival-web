@@ -228,13 +228,17 @@ export async function addComment(postId: string, content: string, parentId?: str
 
     // Notify Post Author
     if (post && post.user_id !== user.id) {
-        await createNotification({
+        console.log(`[addComment] Notifying author ${post.user_id} of comment from ${user.id}`);
+        const res = await createNotification({
             userId: post.user_id,
             type: 'comment',
             title: 'Nuevo Comentario',
             content: `${profile?.full_name || 'Alguien'} comentó: "${truncated}"`,
             link: `/dashboard/post/${postId}`
         });
+        console.log(`[addComment] Notification result:`, res);
+    } else {
+        console.log(`[addComment] No notification sent. Post author: ${post?.user_id}, Current user: ${user.id}`);
     }
 
     // Notify Parent Comment Author (if it's a reply)
@@ -298,6 +302,7 @@ export async function getComments(postId: string) {
             content,
             created_at,
             parent_id,
+            user_id,
             user:user_id (
                 username,
                 avatar_url
@@ -307,7 +312,10 @@ export async function getComments(postId: string) {
         .eq('post_id', postId)
         .order('created_at', { ascending: true })
 
-    if (error) return []
+    if (error) {
+        console.error("[getComments] Error:", error);
+        return [];
+    }
 
     // Process data to add nice properties
     return data.map((comment: any) => ({
@@ -358,24 +366,49 @@ export async function deletePost(postId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
 
-    // RLS policies should handle the 'only delete own posts' check, 
-    // but explicit check is good practice or if we need to clean up storage manually.
+    const { data: profile } = await supabase.from('profiles').select('is_official').eq('id', user.id).single();
+    const isAdmin = profile?.is_official === true;
+
     const { data: post } = await supabase.from('posts').select('user_id, media_url').eq('id', postId).single()
     if (!post) return { error: 'Post not found' }
-    if (post.user_id !== user.id) return { error: 'Unauthorized' }
 
-    // Delete media from storage if it exists (optional, but keeps bucket clean)
+    if (post.user_id !== user.id && !isAdmin) return { error: 'Unauthorized' }
+
+    const adminSupabase = createAdminClient();
+
+    // Delete media from storage if it exists
     if (post.media_url) {
-        // Extract filename from URL. URL format: .../storage/v1/object/public/posts/userId/timestamp.ext
-        // We stored it as `userId/timestamp.ext`
         const urlParts = post.media_url.split('/posts/')
         if (urlParts.length > 1) {
             const filePath = urlParts[1]
-            await supabase.storage.from('posts').remove([filePath])
+            await adminSupabase.storage.from('posts').remove([filePath])
         }
     }
 
-    const { error } = await supabase.from('posts').delete().eq('id', postId)
+    const { error } = await adminSupabase.from('posts').delete().eq('id', postId)
+    if (error) return { error: error.message }
+
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/community')
+    return { success: true }
+}
+
+export async function deleteComment(commentId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
+
+    const { data: profile } = await supabase.from('profiles').select('is_official').eq('id', user.id).single();
+    const isAdmin = profile?.is_official === true;
+
+    const { data: comment } = await supabase.from('comments').select('user_id').eq('id', commentId).single()
+    if (!comment) return { error: 'Comment not found' }
+
+    if (comment.user_id !== user.id && !isAdmin) return { error: 'Unauthorized' }
+
+    const adminSupabase = createAdminClient();
+    const { error } = await adminSupabase.from('comments').delete().eq('id', commentId)
+
     if (error) return { error: error.message }
 
     revalidatePath('/dashboard')
@@ -388,13 +421,22 @@ export async function updatePost(postId: string, newCaption: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
 
+    const { data: profile } = await supabase.from('profiles').select('is_official').eq('id', user.id).single();
+    const isAdmin = profile?.is_official === true;
+
     const { error } = await supabase
         .from('posts')
         .update({ caption: newCaption })
         .eq('id', postId)
-        .eq('user_id', user.id)
+        .eq('user_id', isAdmin ? undefined : user.id) // This is tricky for RLS, but if admin, we should maybe use admin client
 
-    if (error) return { error: error.message }
+    if (isAdmin) {
+        const adminSupabase = createAdminClient();
+        const { error: adminError } = await adminSupabase.from('posts').update({ caption: newCaption }).eq('id', postId);
+        if (adminError) return { error: adminError.message };
+    } else {
+        if (error) return { error: error.message }
+    }
 
     revalidatePath('/dashboard')
     revalidatePath('/dashboard/community')
