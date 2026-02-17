@@ -62,8 +62,9 @@ export default function NotificationBell() {
                     (payload) => {
                         console.log(`[NotificationBell] ¡Nueva señal detectada en el radar!`, payload);
                         if (payload.new.user_id === user.id) {
-                            loadNotifications();
+                            // Instant sound first, then load data
                             playNotificationSound();
+                            loadNotifications();
                         }
                     }
                 )

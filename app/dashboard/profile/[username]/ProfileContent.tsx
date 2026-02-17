@@ -362,6 +362,8 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                                         music_artist={post.music_artist}
                                                         isOfficial={profile.is_official}
                                                         isAdminUser={isAdminUser}
+                                                        currentUserId={user?.id}
+                                                        authorId={post.user_id}
                                                     />
                                                 );
                                             })}
