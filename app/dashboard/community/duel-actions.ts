@@ -136,10 +136,29 @@ export async function getPublicProfile(username: string) {
             followers_count:follows!following_id(count),
             following_count:follows!follower_id(count)
         `)
-        .eq('username', username)
-        .single();
+        .eq('username', username) // Try exact match first for performance/indexes
+        .maybeSingle();
 
-    if (error) return null;
+    if (!data) {
+        // Fallback to case-insensitive match
+        const { data: insensitiveData, error: insensitiveError } = await supabase
+            .from('profiles')
+            .select(`
+            *,
+            followers_count:follows!following_id(count),
+            following_count:follows!follower_id(count)
+        `)
+            .ilike('username', username)
+            .single();
+
+        if (insensitiveError || !insensitiveData) return null;
+
+        return {
+            ...insensitiveData,
+            followers_count: insensitiveData.followers_count?.[0]?.count || 0,
+            following_count: insensitiveData.following_count?.[0]?.count || 0
+        };
+    }
 
     // Flatten count results
     return {
