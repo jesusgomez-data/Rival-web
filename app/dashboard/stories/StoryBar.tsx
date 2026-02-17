@@ -172,10 +172,11 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             type: 'attribution',
                             content: JSON.stringify({
                                 username: attribution.username,
-                                avatar: attribution.avatar
+                                avatar: attribution.avatar,
+                                id: attribution.id
                             }),
                             x: 50,
-                            y: 15,
+                            y: 75,
                             scale: 1,
                             rotation: 0,
                             link: `/dashboard/profile/${attribution.username}`
@@ -261,10 +262,11 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     type: 'attribution',
                                     content: JSON.stringify({
                                         username: attribution.username,
-                                        avatar: attribution.avatar
+                                        avatar: attribution.avatar,
+                                        id: attribution.id
                                     }),
                                     x: 50,
-                                    y: 15,
+                                    y: 80,
                                     scale: 1,
                                     rotation: 0,
                                     link: `/dashboard/profile/${attribution.username}`

@@ -57,8 +57,10 @@ function ShareButton({
     onInstagramShare,
     onOpenShareCard,
     isOwner,
+    isOwner,
     authorName,
-    authorAvatar
+    authorAvatar,
+    authorId
 }: {
     image?: string,
     workoutData?: WorkoutDetails,
@@ -70,7 +72,8 @@ function ShareButton({
     onOpenShareCard?: () => void,
     isOwner: boolean,
     authorName?: string,
-    authorAvatar?: string
+    authorAvatar?: string,
+    authorId?: string
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -99,7 +102,8 @@ function ShareButton({
 
         const attribution = !isOwner ? {
             username: authorName,
-            avatar: authorAvatar
+            avatar: authorAvatar,
+            id: authorId
         } : undefined;
 
         if (workoutData) {
@@ -1181,6 +1185,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             isOwner={!!isOwner}
                             authorName={user}
                             authorAvatar={avatar}
+                            authorId={authorId}
                         />
                     </>
                 ) : (
@@ -1213,6 +1218,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 isOwner={isOwner}
                                 authorName={user}
                                 authorAvatar={avatar}
+                                authorId={authorId}
                             />
                         </div>
                     </div>

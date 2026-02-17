@@ -82,6 +82,39 @@ export async function createStory(formData: FormData) {
             return { error: `Error de base de datos: ${dbError.message}` }
         }
 
+        // Check for Mentions/Attribution in Overlays
+        try {
+            // Cast metadata to any to access overlays
+            const meta = metadata as any;
+            if (meta.overlays && Array.isArray(meta.overlays)) {
+                // Fetch profile once for notification context
+                const { data: profile } = await supabase.from('profiles').select('username').eq('id', user.id).single();
+                const mentalUsername = profile?.username || 'Alguien';
+
+                for (const overlay of meta.overlays) {
+                    if (overlay.type === 'attribution') {
+                        try {
+                            const content = JSON.parse(overlay.content);
+                            if (content.id && content.id !== user.id) {
+                                console.log(`[createStory] Sending mention notification to ${content.id}`);
+                                await createNotification({
+                                    userId: content.id,
+                                    type: 'mention',
+                                    title: 'Mención en Historia',
+                                    content: `@${mentalUsername} te mencionó en su historia.`,
+                                    link: '/dashboard'
+                                });
+                            }
+                        } catch (e) {
+                            console.error("Error parsing attribution content:", e);
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Error processing story mentions:", e);
+        }
+
         revalidatePath('/dashboard')
         return { success: true }
     } catch (err: any) {
@@ -154,6 +187,36 @@ export async function createPRStory(formData: FormData) {
             })
 
         if (dbError) return { error: dbError.message }
+
+        // Check for Mentions in PR Story
+        try {
+            const meta = metadata as any;
+            if (meta.overlays && Array.isArray(meta.overlays)) {
+                const { data: profile } = await supabase.from('profiles').select('username').eq('id', user.id).single();
+                const mentalUsername = profile?.username || 'Alguien';
+
+                for (const overlay of meta.overlays) {
+                    if (overlay.type === 'attribution') {
+                        try {
+                            const content = JSON.parse(overlay.content);
+                            if (content.id && content.id !== user.id) {
+                                await createNotification({
+                                    userId: content.id,
+                                    type: 'mention',
+                                    title: 'Mención en Historia',
+                                    content: `@${mentalUsername} te mencionó en su historia de PR.`,
+                                    link: '/dashboard'
+                                });
+                            }
+                        } catch (e) {
+                            console.error("Error parsing attribution content:", e);
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error("Error processing story mentions:", e);
+        }
 
         revalidatePath('/dashboard')
         return { success: true }
