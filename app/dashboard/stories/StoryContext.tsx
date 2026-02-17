@@ -3,6 +3,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react'
 import { getActiveStories } from './actions'
 
+interface OverlayElement {
+    id: string
+    type: 'text' | 'image' | 'sticker' | 'workout_sticker' | 'pr_sticker'
+    content: string
+    x: number
+    y: number
+    scale: number
+    rotation: number
+    color?: string
+    link?: string
+}
+
 interface Story {
     id: string
     media_url: string
@@ -13,6 +25,7 @@ interface Story {
     music_title?: string | null
     music_artist?: string | null
     metadata?: any
+    overlays?: OverlayElement[]
 }
 
 interface UserStories {

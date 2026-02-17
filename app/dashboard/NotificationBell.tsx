@@ -25,34 +25,44 @@ export default function NotificationBell() {
     const [unreadCount, setUnreadCount] = useState(0);
 
     useEffect(() => {
+        const supabase = createClient();
+        let channel: any = null;
+
         async function loadNotifications() {
             const data = await getNotifications();
             setNotifications(data);
             setUnreadCount(data.filter((n: any) => !n.is_read).length);
         }
-        loadNotifications();
 
-        // Supabase Realtime for "Perfect" instant notifications
-        const supabase = createClient();
-        const channel = supabase
-            .channel('app-notifications')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'notifications'
-                },
-                (payload) => {
-                    // Logic to check if notification belongs to user should be handled by RLS, 
-                    // but we can also check payload.new.user_id if needed.
-                    loadNotifications();
-                }
-            )
-            .subscribe();
+        async function setupRealtime() {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // Supabase Realtime for "Perfect" instant notifications
+            // Specific filter for the current user to avoid catching everyone else's signals
+            channel = supabase
+                .channel(`notifications-${user.id}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'notifications',
+                        filter: `user_id=eq.${user.id}`
+                    },
+                    (payload) => {
+                        loadNotifications();
+                        import("@/app/utils/audio").then(m => m.playNotificationSound());
+                    }
+                )
+                .subscribe();
+        }
+
+        loadNotifications();
+        setupRealtime();
 
         return () => {
-            supabase.removeChannel(channel);
+            if (channel) supabase.removeChannel(channel);
         };
     }, []);
 

@@ -5,7 +5,7 @@ import { getUserProfile, deleteProfile } from "../training/actions";
 import { getUpcomingTrial } from "../gyms/trial-booking-actions";
 
 import { createClient } from "@/utils/supabase/client";
-import { User, Camera, Save, Loader2, Mail, Hash, MapPin, Trophy, Dumbbell, Swords, Award, ExternalLink, TrendingUp, Building2, Smile, Edit2, Move, Check, X, Calendar, LayoutGrid, Settings, Trash2, Lock, AlertTriangle } from "lucide-react";
+import { User, Camera, Save, Loader2, Mail, Hash, MapPin, Trophy, Dumbbell, Swords, Award, ExternalLink, TrendingUp, Building2, Smile, Edit2, Move, Check, X, Calendar, LayoutGrid, Settings, Trash2, Lock, AlertTriangle, Zap } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -853,6 +853,31 @@ export default function ProfilePage() {
                                     </div>
                                 </div>
                             </div>
+
+                            <div className="space-y-4 pt-4 border-t border-white/5">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Sistema de Sonido</label>
+                                <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex items-center justify-between group hover:border-brand-red/30 transition-all">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red">
+                                            <Zap className="w-4 h-4" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-white">Sonido de Notificaciones</p>
+                                            <p className="text-[10px] text-gray-500 font-bold uppercase">Pulsa para probar el tono de identidad Rival</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            import("@/app/utils/audio").then(m => m.playNotificationSound());
+                                        }}
+                                        className="px-4 py-2 bg-brand-red/10 hover:bg-brand-red text-brand-red hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl border border-brand-red/20 transition-all shadow-glow-sm"
+                                    >
+                                        Probar Sonido
+                                    </button>
+                                </div>
+                            </div>
+
 
                             <div className="space-y-4 pt-4 border-t border-white/5">
                                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Récords Personales Destacados</label>

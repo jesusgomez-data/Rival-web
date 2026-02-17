@@ -121,19 +121,8 @@ function MessagesContent() {
                 event: 'INSERT',
                 schema: 'public',
                 table: 'messages'
-            }, async (payload) => {
-                // Si el mensaje es para nosotros, refrescamos la lista
+            }, async () => {
                 await loadConversations()
-
-                // Si el mensaje no es del usuario actual, avisar
-                if (payload.new.sender_id !== currentUserId) {
-                    if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
-                        new Notification("Rival: Nuevo mensaje", {
-                            body: payload.new.text,
-                            icon: "/logo.svg"
-                        })
-                    }
-                }
             })
             .subscribe()
 

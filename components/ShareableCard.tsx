@@ -101,11 +101,12 @@ export default function ShareableCard({ user, data }: ShareableCardProps) {
                 <div className="flex items-center justify-between mb-6 sm:mb-8">
                     <div className="flex items-center gap-3 sm:gap-4 bg-white/5 backdrop-blur-md p-1.5 sm:p-2 pr-4 sm:pr-6 rounded-full border border-white/10">
                         <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border-2 border-brand-red relative shrink-0 shadow-glow-sm">
-                            <Image
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
                                 src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
                                 alt={user.name}
-                                fill
-                                className="object-cover"
+                                className="w-full h-full object-cover"
+                                crossOrigin="anonymous"
                             />
                         </div>
                         <div className="min-w-0">

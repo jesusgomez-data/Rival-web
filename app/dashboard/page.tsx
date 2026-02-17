@@ -89,7 +89,7 @@ function CollapsibleCreatePost({ currentUser, language }: { currentUser: any, la
                     </div>
                 </button>
             ) : (
-                <div className="animate-in fade-in slide-in-from-top-4 duration-500 bg-brand-gray/20 border border-white/5 rounded-[32px] p-6 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-xl relative overflow-hidden">
+                <div className="animate-in fade-in slide-in-from-top-4 duration-500 bg-brand-gray/20 border border-white/5 rounded-[32px] p-4 md:p-6 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-xl relative overflow-hidden">
                     {/* Decorative element */}
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
 
@@ -274,7 +274,7 @@ export default function DashboardHome() {
     }
 
     return (
-        <div className="max-w-full mx-auto space-y-8 pb-12 px-0 lg:px-8">
+        <div className="max-w-full mx-auto space-y-8 pb-12 px-4 lg:px-8">
             {/* Hero Welcome Banner */}
             <div className="relative min-h-[200px] md:h-64 rounded-[32px] md:rounded-[40px] overflow-hidden border border-white/5 shadow-2xl flex flex-col justify-center dark-section">
                 <Image
@@ -467,6 +467,7 @@ export default function DashboardHome() {
                                             isOfficial={post.profiles?.is_official}
                                             isMember={data.activeCenterIds.has(post.user_id) || post.user_id === data.currentUser?.id}
                                             context={activeTab as 'following' | 'global'}
+                                            isAdminUser={data.profile?.is_official}
                                         />
                                     </div>
                                 ))}

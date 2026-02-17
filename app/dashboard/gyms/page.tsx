@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Plus, Building2, MapPin, Users, ArrowRight, ArrowLeft, Loader2, Sun, Moon, Search, Check, Rocket, Zap, Shield, Globe, Instagram, Phone, Trash2, LogOut } from "lucide-react";
 import clsx from "clsx";
 import { useTheme } from "../../ThemeContext";
-import { getUserOrganizations, createOrganization, searchOrganizations, deleteOrganization, leaveOrganization } from "./actions";
+import { getUserOrganizations, createOrganization, searchOrganizations, deleteOrganization, leaveOrganization, getNearbyOrganizations } from "./actions";
 
 export default function CenterListPage() {
     const [orgs, setOrgs] = useState<any[]>([]);
@@ -20,6 +20,14 @@ export default function CenterListPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
+
+    // Geolocation & Nearby Orgs
+    const [nearbyOrgs, setNearbyOrgs] = useState<any[]>([]);
+    const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
+    const [isLocating, setIsLocating] = useState(false);
+    const [newOrgLat, setNewOrgLat] = useState<number | null>(null);
+    const [newOrgLng, setNewOrgLng] = useState<number | null>(null);
+    const [isCapturingLoc, setIsCapturingLoc] = useState(false);
 
 
     const PLANS = [
@@ -75,6 +83,52 @@ export default function CenterListPage() {
         setLoading(false);
     }
 
+    const requestLocation = () => {
+        if (!navigator.geolocation) {
+            alert("La geolocalización no está soportada por tu navegador.");
+            return;
+        }
+
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            async (position) => {
+                const { latitude, longitude } = position.coords;
+                setUserLocation({ lat: latitude, lng: longitude });
+                const nearby = await getNearbyOrganizations(latitude, longitude);
+                setNearbyOrgs(nearby);
+                setIsLocating(false);
+            },
+            (error) => {
+                console.error("Error obtaining location:", error);
+                setIsLocating(false);
+                alert("No pudimos obtener tu ubicación. Por favor, asegúrate de dar permisos de geolocalización.");
+            },
+            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+    };
+
+    useEffect(() => {
+        if ("geolocation" in navigator) {
+            requestLocation();
+        }
+    }, []);
+
+    const captureCurrentLocation = () => {
+        if (!navigator.geolocation) return;
+        setIsCapturingLoc(true);
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setNewOrgLat(position.coords.latitude);
+                setNewOrgLng(position.coords.longitude);
+                setIsCapturingLoc(false);
+            },
+            () => {
+                setIsCapturingLoc(false);
+                alert("No se pudo obtener la ubicación actual.");
+            }
+        );
+    };
+
     async function handleCreate(formData: FormData) {
         setIsCreating(true);
         // Ensure plan is included
@@ -127,8 +181,8 @@ export default function CenterListPage() {
             <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div>
-                        <h1 className={`text-3xl font-heading font-black italic uppercase ${textHeading}`}>Afilia tu centro</h1>
-                        <p className={textMuted}>Gestiona tus centros o explora nuevos campos de batalla.</p>
+                        <h1 className={`text-3xl font-heading font-black italic uppercase ${textHeading}`}>Centros</h1>
+                        <p className={textMuted}>Gestiona tus centros o explora nuevos campos de batalla cercanos.</p>
                     </div>
 
                     <div className="flex items-center gap-4 w-full md:w-auto">
@@ -284,6 +338,22 @@ export default function CenterListPage() {
                                                 </div>
                                             </div>
 
+                                            {/* Geolocation capture */}
+                                            <div className="space-y-2">
+                                                <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Coordenadas GPS (Opcional)</label>
+                                                <button
+                                                    type="button"
+                                                    onClick={captureCurrentLocation}
+                                                    disabled={isCapturingLoc}
+                                                    className={`w-full py-3 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-all ${newOrgLat ? 'border-brand-red text-brand-red bg-brand-red/5' : 'border-white/10 text-gray-400 hover:border-brand-red/30 hover:text-brand-red'}`}
+                                                >
+                                                    {isCapturingLoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
+                                                    {newOrgLat ? `Ubicación Capturada: ${newOrgLat.toFixed(4)}, ${newOrgLng?.toFixed(4)}` : "Establecer ubicación actual del centro"}
+                                                </button>
+                                                <input type="hidden" name="latitude" value={newOrgLat || ""} />
+                                                <input type="hidden" name="longitude" value={newOrgLng || ""} />
+                                            </div>
+
                                             {/* Multi-Center Toggle */}
                                             <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-100 bg-gray-50'} flex items-center justify-between`}>
                                                 <div className="flex items-center gap-3">
@@ -365,62 +435,65 @@ export default function CenterListPage() {
                             </div>
                         </div>
                     </div>
-                )}
+                )
+                }
 
                 {/* Search Results Section */}
-                {searchTerm.length >= 2 && (
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Search className="w-4 h-4 text-brand-red" />
-                            <h2 className={`text-sm font-black uppercase tracking-widest ${textMuted}`}>Resultados de búsqueda</h2>
-                        </div>
-
-                        {searchResults.length === 0 && !isSearching ? (
-                            <div className={`text-center py-12 border border-dashed rounded-3xl ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-200 bg-gray-50'}`}>
-                                <p className={textMuted}>No se encontraron centros que coincidan con "<span className="text-brand-red">{searchTerm}</span>".</p>
+                {
+                    searchTerm.length >= 2 && (
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Search className="w-4 h-4 text-brand-red" />
+                                <h2 className={`text-sm font-black uppercase tracking-widest ${textMuted}`}>Resultados de búsqueda</h2>
                             </div>
-                        ) : (
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {searchResults.map((org) => (
-                                    <Link key={org.id} href={`/gym/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
-                                        <div className="h-32 bg-gradient-to-br from-gray-800 to-black relative">
-                                            {org.cover_photo_url ? (
-                                                <img src={org.cover_photo_url} alt={org.name} className="w-full h-full object-cover opacity-50" />
-                                            ) : (
-                                                <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-20 grayscale"></div>
-                                            )}
-                                        </div>
 
-                                        <div className="p-6 relative">
-                                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center -mt-14 mb-4 relative z-10 overflow-hidden border-2 ${theme === 'dark' ? 'bg-black border-brand-gray' : 'bg-white border-gray-100'}`}>
-                                                {org.logo_url ? (
-                                                    <img src={org.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                            {searchResults.length === 0 && !isSearching ? (
+                                <div className={`text-center py-12 border border-dashed rounded-3xl ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-200 bg-gray-50'}`}>
+                                    <p className={textMuted}>No se encontraron centros que coincidan con "<span className="text-brand-red">{searchTerm}</span>".</p>
+                                </div>
+                            ) : (
+                                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {searchResults.map((org) => (
+                                        <Link key={org.id} href={`/gym/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
+                                            <div className="h-32 bg-gradient-to-br from-gray-800 to-black relative">
+                                                {org.cover_photo_url ? (
+                                                    <img src={org.cover_photo_url} alt={org.name} className="w-full h-full object-cover opacity-50" />
                                                 ) : (
-                                                    <Building2 className="w-8 h-8 text-gray-500" />
+                                                    <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-20 grayscale"></div>
                                                 )}
                                             </div>
 
-                                            <h3 className={`text-xl font-heading font-black italic uppercase mb-2 group-hover:text-brand-red transition-colors ${textHeading}`}>{org.name}</h3>
+                                            <div className="p-6 relative">
+                                                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center -mt-14 mb-4 relative z-10 overflow-hidden border-2 ${theme === 'dark' ? 'bg-black border-brand-gray' : 'bg-white border-gray-100'}`}>
+                                                    {org.logo_url ? (
+                                                        <img src={org.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <Building2 className="w-8 h-8 text-gray-500" />
+                                                    )}
+                                                </div>
 
-                                            <div className="space-y-3 mb-6">
-                                                <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
-                                                    <MapPin className="w-4 h-4" /> {org.city}, {org.country}
+                                                <h3 className={`text-xl font-heading font-black italic uppercase mb-2 group-hover:text-brand-red transition-colors ${textHeading}`}>{org.name}</h3>
+
+                                                <div className="space-y-3 mb-6">
+                                                    <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
+                                                        <MapPin className="w-4 h-4" /> {org.city}, {org.country}
+                                                    </div>
+                                                </div>
+
+                                                <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider transition-colors text-brand-red`}>
+                                                    <span>Ver Perfil Público</span>
+                                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                                 </div>
                                             </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
 
-                                            <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider transition-colors text-brand-red`}>
-                                                <span>Ver Perfil Público</span>
-                                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                            </div>
-                                        </div>
-                                    </Link>
-                                ))}
-                            </div>
-                        )}
-
-                        <div className="h-px w-full bg-gradient-to-r from-transparent via-gray-700 to-transparent my-8 opacity-20"></div>
-                    </div>
-                )}
+                            <div className="h-px w-full bg-gradient-to-r from-transparent via-gray-700 to-transparent my-8 opacity-20"></div>
+                        </div>
+                    )
+                }
 
                 {/* My Centers Section */}
                 <div className={searchTerm.length >= 2 ? 'opacity-50 hover:opacity-100 transition-opacity' : ''}>
@@ -505,7 +578,96 @@ export default function CenterListPage() {
                         </div>
                     )}
                 </div>
-            </div>
-        </div>
+
+                {/* Nearby Centers Section */}
+                <div className="space-y-6 pt-8">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <MapPin className="w-4 h-4 text-brand-red" />
+                            <h2 className={`text-sm font-black uppercase tracking-widest ${textHeading}`}>Centros Cercanos</h2>
+                        </div>
+                        {!userLocation && (
+                            <button
+                                onClick={requestLocation}
+                                disabled={isLocating}
+                                className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border transition-all flex items-center gap-2 ${theme === 'dark' ? 'border-white/10 hover:bg-brand-red/10 hover:border-brand-red' : 'border-gray-200 hover:bg-brand-red/5 hover:border-brand-red'} ${isLocating ? 'opacity-50' : ''}`}
+                            >
+                                {isLocating ? <Loader2 className="w-3 h-3 animate-spin" /> : <MapPin className="w-3 h-3" />}
+                                Activar Geolocalización
+                            </button>
+                        )}
+                    </div>
+
+                    {!userLocation && !isLocating ? (
+                        <div className={`text-center py-12 border-2 border-dashed rounded-3xl ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-200 bg-gray-50'}`}>
+                            <MapPin className={`w-12 h-12 mx-auto mb-4 ${textMuted} opacity-20`} />
+                            <p className={`mb-6 ${textMuted}`}>Activa tu ubicación para descubrir los centros más cercanos a ti.</p>
+                            <button
+                                onClick={requestLocation}
+                                className="bg-brand-red/10 text-brand-red border border-brand-red/20 px-6 py-2.5 rounded-xl font-bold uppercase text-xs tracking-widest hover:bg-brand-red hover:text-white transition-all shadow-glow-sm"
+                            >
+                                Descubrir Centros
+                            </button>
+                        </div>
+                    ) : isLocating ? (
+                        <div className="flex flex-col items-center justify-center py-20 animate-pulse">
+                            <Loader2 className="w-8 h-8 text-brand-red animate-spin mb-4" />
+                            <p className={textMuted}>Rastreando coordenadas tácticas...</p>
+                        </div>
+                    ) : nearbyOrgs.length === 0 ? (
+                        <div className={`text-center py-12 border-2 border-dashed rounded-3xl ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-200 bg-gray-50'}`}>
+                            <p className={textMuted}>No se encontraron centros registrados cerca de tu ubicación actual.</p>
+                            <p className={`text-[10px] mt-2 italic ${textMuted}`}>¡Sé el primero en afiliar uno!</p>
+                        </div>
+                    ) : (
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {nearbyOrgs.map((org) => (
+                                <Link key={org.id} href={`/gym/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
+                                    <div className="h-32 bg-gradient-to-br from-gray-800 to-black relative">
+                                        {org.cover_photo_url ? (
+                                            <img src={org.cover_photo_url} alt={org.name} className="w-full h-full object-cover opacity-50" />
+                                        ) : (
+                                            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-20 grayscale"></div>
+                                        )}
+                                        <div className="absolute top-4 right-4">
+                                            <div className="bg-brand-red px-3 py-1 rounded-full text-[10px] font-black text-white shadow-glow-sm flex items-center gap-1">
+                                                <MapPin className="w-2.5 h-2.5" />
+                                                {org.distance < 1 ? `${(org.distance * 1000).toFixed(0)}m` : `${org.distance.toFixed(1)}km`}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="p-6 relative">
+                                        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center -mt-14 mb-4 relative z-10 overflow-hidden border-2 ${theme === 'dark' ? 'bg-black border-brand-gray' : 'bg-white border-gray-100'}`}>
+                                            {org.logo_url ? (
+                                                <img src={org.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <Building2 className="w-8 h-8 text-gray-500" />
+                                            )}
+                                        </div>
+
+                                        <h3 className={`text-xl font-heading font-black italic uppercase mb-2 group-hover:text-brand-red transition-colors ${textHeading}`}>{org.name}</h3>
+
+                                        <div className="space-y-3 mb-6">
+                                            <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
+                                                <MapPin className="w-4 h-4" /> {org.city}, {org.country}
+                                            </div>
+                                            <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
+                                                <Users className="w-4 h-4" /> {org.member_count || 0} Miembros
+                                            </div>
+                                        </div>
+
+                                        <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider transition-colors text-brand-red`}>
+                                            <span>Entrenar Aquí</span>
+                                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                        </div>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div >
+        </div >
     );
 }

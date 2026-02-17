@@ -169,7 +169,7 @@ function SessionContent() {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (false && file.type.startsWith('video/')) {
+        if (file.type.startsWith('video/')) {
             // Check duration before opening editor
             const video = document.createElement('video');
             video.preload = 'metadata';
@@ -3805,10 +3805,14 @@ function FinishModal({
                     <div className="relative group">
                         {imageUrl ? (
                             <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10">
-                                <img src={imageUrl} alt="Workout" className="w-full h-full object-cover" />
+                                {mediaType === 'image' ? (
+                                    <img src={imageUrl} alt="Workout" className="w-full h-full object-cover" />
+                                ) : (
+                                    <video src={imageUrl} className="w-full h-full object-cover" controls playsInline />
+                                )}
                                 <button
                                     onClick={() => setImageUrl(null)}
-                                    className="absolute top-2 right-2 p-2 bg-black/60 rounded-full text-white hover:bg-brand-red transition-colors"
+                                    className="absolute top-2 right-2 p-2 bg-black/60 rounded-full text-white hover:bg-brand-red transition-colors z-10"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>

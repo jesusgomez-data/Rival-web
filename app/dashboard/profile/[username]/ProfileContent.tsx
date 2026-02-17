@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { clsx } from "clsx";
-import { Trophy, Swords, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, MessageSquare, ChevronRight } from "lucide-react";
+import { Trophy, Swords, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, MessageSquare, ChevronRight, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import DuelButton from "../../community/DuelButton";
@@ -25,11 +25,13 @@ interface ProfileContentProps {
     workouts: any[];
     badges: any[];
     gear: any[];
+    isAdminUser?: boolean;
 }
 
-export default function ProfileContent({ profile, combatStats, user, isFollowing, posts, canViewContent, privacy, workouts, badges, gear }: ProfileContentProps) {
+export default function ProfileContent({ profile, combatStats, user, isFollowing, posts, canViewContent, privacy, workouts, badges, gear, isAdminUser = false }: ProfileContentProps) {
     const [mobileTab, setMobileTab] = useState<'activity' | 'gallery' | 'stats'>('activity');
     const [modalOpen, setModalOpen] = useState<'followers' | 'following' | null>(null);
+    const [avatarModalOpen, setAvatarModalOpen] = useState(false);
     const [modalData, setModalData] = useState<any[]>([]);
     const [loadingModal, setLoadingModal] = useState(false);
 
@@ -48,7 +50,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
     };
 
     return (
-        <div className="max-w-5xl mx-auto space-y-6 md:space-y-12 animate-fade-in pb-20">
+        <div className="max-w-5xl mx-auto space-y-6 md:space-y-12 animate-fade-in pb-20 px-4 md:px-0">
             {/* Tactical Banner */}
             <div className={clsx(
                 "relative group rounded-[40px] overflow-hidden border shadow-2xl dark-section transition-all duration-500",
@@ -77,10 +79,13 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
 
                     {/* Manifiesto Overlay - Mobile Only - Positioned to avoid clash */}
                     {!profile.is_official && profile.bio && (
-                        <div className="absolute top-[40px] right-0 z-[35] md:hidden max-w-[100px]">
-                            <div className="bg-black/80 backdrop-blur-md border border-white/10 rounded-xl p-2 shadow-2xl shadow-black/50">
-                                <h3 className="text-[7px] font-black text-brand-red uppercase tracking-widest mb-1 text-right">Manifiesto</h3>
-                                <p className="text-[9px] text-white font-medium italic leading-tight line-clamp-5 text-right shadow-black drop-shadow-sm keep-white">
+                        <div className="absolute top-4 right-4 z-[35] md:hidden max-w-[120px]">
+                            <div className="bg-black/60 backdrop-blur-md border border-white/10 rounded-2xl p-3 shadow-2xl shadow-black/50 rotate-2 group-hover:rotate-0 transition-transform duration-500">
+                                <div className="flex items-center gap-1.5 mb-1.5 justify-end">
+                                    <MessageSquare className="w-2.5 h-2.5 text-brand-red" />
+                                    <h3 className="text-[8px] font-black text-brand-red uppercase tracking-widest text-right">Manifiesto</h3>
+                                </div>
+                                <p className="text-[10px] text-zinc-200 font-medium italic leading-snug line-clamp-4 text-right shadow-black drop-shadow-sm keep-white">
                                     "{profile.bio}"
                                 </p>
                             </div>
@@ -90,18 +95,21 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
 
                 <div className="absolute bottom-0 left-0 right-0 p-2 md:p-10 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-8 z-20">
                     <div className="flex items-end gap-3 md:gap-6 relative">
-                        <div className="w-20 h-20 md:w-40 md:h-40 rounded-full border-2 md:border-8 border-black bg-brand-gray overflow-hidden relative shadow-2xl shrink-0 transform translate-y-4 md:translate-y-0 -left-1 md:left-0 z-10">
+                        <button
+                            onClick={() => setAvatarModalOpen(true)}
+                            className="w-20 h-20 md:w-40 md:h-40 rounded-full border-2 md:border-8 border-black bg-brand-gray overflow-hidden relative shadow-2xl shrink-0 transform translate-y-4 md:translate-y-0 -left-1 md:left-0 z-10 hover:scale-105 transition-transform"
+                        >
                             <Image
                                 src={profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || 'User')}&background=random`}
                                 alt={profile.full_name}
                                 fill
                                 className="object-cover"
                             />
-                        </div>
+                        </button>
                         <div className="pb-1 md:pb-4 min-w-0 transform translate-y-2 md:translate-y-0 z-20 w-auto mr-auto mt-6 md:mt-0">
 
                             {/* Followers / Following Counts & Name Block Wrapper */}
-                            <div className="flex flex-col gap-2 mt-28 md:mt-4">
+                            <div className="flex flex-col gap-2 mt-20 md:mt-4">
                                 {/* Name & Handle - Mobile Moved Here */}
                                 <div className="mb-1">
                                     <div className="flex items-center gap-1.5 md:gap-3">
@@ -353,6 +361,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                                         music_title={post.music_title}
                                                         music_artist={post.music_artist}
                                                         isOfficial={profile.is_official}
+                                                        isAdminUser={isAdminUser}
                                                     />
                                                 );
                                             })}
@@ -508,6 +517,32 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     )}
                 </div>
             </div>
+            {/* Avatar Fullscreen Modal */}
+            {avatarModalOpen && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-fade-in"
+                    onClick={() => setAvatarModalOpen(false)}
+                >
+                    <button
+                        className="absolute top-6 right-6 text-white/50 hover:text-white transition-colors z-10"
+                        onClick={() => setAvatarModalOpen(false)}
+                    >
+                        <X className="w-8 h-8" />
+                    </button>
+                    <div
+                        className="relative w-full max-w-2xl aspect-square rounded-3xl overflow-hidden shadow-2xl border border-white/10"
+                        onClick={e => e.stopPropagation()}
+                    >
+                        <Image
+                            src={profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || 'User')}&background=random`}
+                            alt={profile.full_name}
+                            fill
+                            className="object-contain bg-black"
+                        />
+                    </div>
+                </div>
+            )}
+
             {/* Simple Modal for Followers/Following */}
             {modalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setModalOpen(null)}>

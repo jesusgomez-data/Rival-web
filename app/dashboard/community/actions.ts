@@ -53,7 +53,7 @@ export async function toggleLike(postId: string) {
                 type: 'like',
                 title: 'Nuevo Me Gusta',
                 content: `${profile?.full_name || 'Alguien'} le ha dado like a tu publicación.`,
-                link: '/dashboard/community'
+                link: `/dashboard/post/${postId}`
             });
         }
     }
@@ -233,7 +233,7 @@ export async function addComment(postId: string, content: string, parentId?: str
             type: 'comment',
             title: 'Nuevo Comentario',
             content: `${profile?.full_name || 'Alguien'} comentó: "${truncated}"`,
-            link: '/dashboard/community'
+            link: `/dashboard/post/${postId}`
         });
     }
 
@@ -246,7 +246,7 @@ export async function addComment(postId: string, content: string, parentId?: str
                 type: 'comment_reply',
                 title: 'Respuesta a tu comentario',
                 content: `${profile?.full_name || 'Alguien'} ha respondido a tu comentario.`,
-                link: '/dashboard/community'
+                link: `/dashboard/post/${postId}`
             });
         }
     }
@@ -274,7 +274,7 @@ export async function addComment(postId: string, content: string, parentId?: str
                         type: 'mention',
                         title: 'Has sido mencionado',
                         content: `${profile?.full_name || 'Alguien'} te mencionó en un comentario.`,
-                        link: '/dashboard/community'
+                        link: `/dashboard/post/${postId}`
                     });
                 }
             }
@@ -335,7 +335,7 @@ export async function toggleCommentLike(commentId: string) {
         await supabase.from('comment_likes').insert({ user_id: user.id, comment_id: commentId })
 
         // Trigger Notification
-        const { data: comment } = await supabase.from('comments').select('user_id').eq('id', commentId).single();
+        const { data: comment } = await supabase.from('comments').select('user_id, post_id').eq('id', commentId).single();
         if (comment && comment.user_id !== user.id) {
             const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
             await createNotification({
@@ -343,7 +343,7 @@ export async function toggleCommentLike(commentId: string) {
                 type: 'comment_like',
                 title: 'Like en tu comentario',
                 content: `${profile?.full_name || 'Alguien'} le dio like a tu comentario.`,
-                link: '/dashboard/community'
+                link: `/dashboard/post/${comment.post_id}`
             });
         }
     }

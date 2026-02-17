@@ -13,6 +13,7 @@ export default function FeedManager({ centerId, initialPosts, currentUserId }: a
     const [content, setContent] = useState("");
     const [isPosting, setIsPosting] = useState(false);
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
     const [postAsCenter, setPostAsCenter] = useState(false);
 
     async function handlePost(e: React.FormEvent) {
@@ -39,8 +40,10 @@ export default function FeedManager({ centerId, initialPosts, currentUserId }: a
         if (file) {
             const url = URL.createObjectURL(file);
             setPreviewUrl(url);
+            setMediaType(file.type.startsWith('video/') ? 'video' : 'image');
         } else {
             setPreviewUrl(null);
+            setMediaType('image');
         }
     };
 
@@ -95,7 +98,11 @@ export default function FeedManager({ centerId, initialPosts, currentUserId }: a
                                 />
                                 {previewUrl && (
                                     <div className="mt-4 relative rounded-xl overflow-hidden aspect-video border border-border bg-black/40">
-                                        <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                        {mediaType === 'image' ? (
+                                            <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <video src={previewUrl} className="w-full h-full object-cover" controls playsInline />
+                                        )}
                                         <button
                                             type="button"
                                             onClick={() => { setPreviewUrl(null); (document.querySelector('input[name="media"]') as any).value = ""; }}

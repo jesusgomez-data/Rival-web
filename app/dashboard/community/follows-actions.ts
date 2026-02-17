@@ -48,13 +48,13 @@ export async function toggleFollow(followingId: string) {
         await updateMissionProgress(user.id, 'social_interactions', 1)
 
         // Trigger Notification
-        const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+        const { data: profile } = await supabase.from('profiles').select('full_name, username').eq('id', user.id).single();
         await createNotification({
             userId: followingId,
             type: 'follow',
             title: '¡Nuevo Rival!',
             content: `${profile?.full_name || 'Alguien'} ha comenzado a seguirte.`,
-            link: '/dashboard/community'
+            link: profile?.username ? `/dashboard/profile/${profile.username}` : '/dashboard/community'
         });
     }
 

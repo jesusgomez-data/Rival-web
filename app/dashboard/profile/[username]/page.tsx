@@ -76,7 +76,7 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
         .select(`
             *,
             profiles:user_id (full_name, avatar_url, username),
-            workouts:workout_id (title, total_volume_kg, workout_sets(*), location_name, metrics),
+            workouts:workout_id (title, sport_type, total_volume_kg, workout_sets(*), location_name, metrics),
             likes:likes(user_id)
         `)
         .eq('user_id', profile.id)
@@ -87,6 +87,12 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
     // Privacy Check - Official accounts are always visible
     const privacy = profile.privacy_setting || 'public';
     const canViewContent = profile.is_official || privacy === 'public' || (user && user.id === profile.id) || isFollowing;
+
+    let currentUserProfile = null;
+    if (user) {
+        const { data: p } = await supabase.from('profiles').select('is_official').eq('id', user.id).single();
+        currentUserProfile = p;
+    }
 
     return (
         <ProfileContent
@@ -100,6 +106,7 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
             workouts={workouts || []}
             badges={userBadges || []}
             gear={userGear || []}
+            isAdminUser={currentUserProfile?.is_official === true}
         />
     );
 }

@@ -37,6 +37,8 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: Us
     const [videoToEdit, setVideoToEdit] = useState<File | null>(null);
     const [pendingFile, setPendingFile] = useState<File | null>(null);
 
+    const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
     const { startUpload } = useUploads();
@@ -75,7 +77,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: Us
 
         setContent(""); setExercise(""); setWeight(""); setPreview(null);
         setDuration(null); setPendingFile(null); setShowEmojiPicker(false);
-        setPostType('standard'); setSelectedTrack(null);
+        setPostType('standard'); setSelectedTrack(null); setMediaType(null);
         if (fileInputRef.current) fileInputRef.current.value = "";
         onSuccess?.();
     }
@@ -83,7 +85,8 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: Us
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // DIRECT UPLOAD - NO EDITOR
+            const isVideo = file.type.startsWith('video/');
+            setMediaType(isVideo ? 'video' : 'image');
             setPreview(URL.createObjectURL(file));
             setDuration(null);
             setPendingFile(file);
@@ -93,8 +96,8 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: Us
     return (
         <div className="bg-brand-gray/30 border border-white/10 rounded-[28px] p-4 md:p-6 backdrop-blur-md mb-8 relative z-10 w-full animate-in fade-in duration-500">
             <div className="flex gap-2 mb-4 md:mb-6">
-                <button type="button" onClick={() => setPostType('standard')} className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border ${postType === 'standard' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}><Activity className="w-3.5 h-3.5 text-brand-red" />Actualización</button>
-                <button type="button" onClick={() => setPostType('pr')} className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border ${postType === 'pr' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}><Trophy className="w-3.5 h-3.5 text-brand-yellow" />Nuevo PR</button>
+                <button type="button" onClick={() => setPostType('standard')} className={`flex-1 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 md:gap-2 border ${postType === 'standard' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}><Activity className="w-3.5 h-3.5 text-brand-red" />Actualización</button>
+                <button type="button" onClick={() => setPostType('pr')} className={`flex-1 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 md:gap-2 border ${postType === 'pr' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}><Trophy className="w-3.5 h-3.5 text-brand-yellow" />Nuevo PR</button>
             </div>
 
             <div className="flex gap-4">
@@ -125,22 +128,22 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: Us
 
                         {preview && (
                             <div className="relative aspect-video rounded-2xl overflow-hidden border border-white/10 group animate-in zoom-in-95">
-                                {preview.startsWith('data:image') || preview.includes('image') ? (
+                                {mediaType === 'image' ? (
                                     <Image src={preview} alt="Preview" fill className="object-cover" />
                                 ) : (
                                     <video src={preview} className="w-full h-full object-cover" controls playsInline />
                                 )}
-                                <button type="button" onClick={() => { setPreview(null); setPendingFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="absolute top-2 right-2 bg-black/60 backdrop-blur-md p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-4 h-4" /></button>
+                                <button type="button" onClick={() => { setPreview(null); setPendingFile(null); setMediaType(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="absolute top-2 right-2 bg-black/60 backdrop-blur-md p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-4 h-4" /></button>
                             </div>
                         )}
 
-                        <div className="flex items-center justify-between pt-2">
-                            <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center justify-between pt-2 gap-3">
+                            <div className="flex items-center gap-1.5 md:gap-2">
                                 <input type="file" hidden ref={fileInputRef} accept="image/*,video/*" onChange={handleFileChange} />
-                                <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 border border-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-[10px] font-black uppercase tracking-widest"><ImageIcon className="w-4 h-4 text-brand-red" /> Multimedia</button>
+                                <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 px-3 md:px-4 py-2.5 rounded-xl bg-white/5 border border-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-[9px] md:text-[10px] font-black uppercase tracking-widest"><ImageIcon className="w-4 h-4 text-brand-red" /> Multimedia</button>
                                 <MusicPicker onSelect={setSelectedTrack} selectedTrackId={selectedTrack?.id || null} />
                             </div>
-                            <button type="submit" disabled={(postType === 'standard' && !content.trim() && !preview) || (postType === 'pr' && (!exercise || !weight))} className="bg-brand-red text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-glow-sm hover:shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-30 flex items-center gap-3 ml-auto"><Send className="w-4 h-4" /><span>{postType === 'pr' ? 'Publicar PR' : 'Publicar'}</span></button>
+                            <button type="submit" disabled={(postType === 'standard' && !content.trim() && !preview) || (postType === 'pr' && (!exercise || !weight))} className="bg-brand-red text-white px-5 md:px-8 py-3.5 rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.2em] shadow-glow-sm hover:shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-30 flex items-center gap-2 md:gap-3 ml-auto"><Send className="w-4 h-4" /><span>{postType === 'pr' ? 'Publicar PR' : 'Publicar'}</span></button>
                         </div>
                     </form>
                 </div>
@@ -158,6 +161,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: Us
                     }}
                     onSave={(file, dur) => {
                         setPendingFile(file);
+                        setMediaType('video');
                         setPreview(URL.createObjectURL(file));
                         setDuration(dur);
                         setIsVideoTrimming(false);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown, Share2 } from 'lucide-react'
 import { createStory, createPRStory, toggleStoryLike, recordStoryView, deleteStory } from './actions'
 import { clsx } from 'clsx'
 import PRCard from '../community/PRCard'
@@ -13,6 +13,18 @@ import { MusicTrack } from '../music-data'
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
 import { createClient } from '@/utils/supabase/client'
 import VideoEditor from '../VideoEditor'
+
+interface OverlayElement {
+    id: string
+    type: 'text' | 'image' | 'sticker' | 'workout_sticker' | 'pr_sticker'
+    content: string
+    x: number
+    y: number
+    scale: number
+    rotation: number
+    color?: string
+    link?: string
+}
 
 interface Story {
     id: string
@@ -27,8 +39,8 @@ interface Story {
     music_title?: string | null
     music_artist?: string | null
     metadata?: any
+    overlays?: OverlayElement[]
 }
-
 interface UserStories {
     user: {
         id: string
@@ -37,18 +49,6 @@ interface UserStories {
         avatar_url: string | null
     }
     stories: Story[]
-}
-
-interface OverlayElement {
-    id: string
-    type: 'text' | 'image' | 'sticker' | 'workout_sticker' | 'pr_sticker'
-    content: string
-    x: number
-    y: number
-    scale: number
-    rotation: number
-    color?: string
-    link?: string
 }
 
 export default function StoryBar({ currentUser }: { currentUser: any }) {
@@ -135,22 +135,25 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     useEffect(() => {
         const handleShareToStory = async (e: Event) => {
             const customEvent = e as CustomEvent;
-            const { type, url } = customEvent.detail;
+            const { type, url, attribution } = customEvent.detail;
 
-            if (type === 'image' && url) {
+            if ((type === 'image' || type === 'video') && url) {
                 setIsUploading(true);
                 try {
-                    // Fetch the image to use as the main story file (full screen background)
+                    // Fetch the media to use as the main story file
                     const response = await fetch(url);
                     const blob = await response.blob();
-                    const file = new File([blob], "shared_story_image.jpg", { type: blob.type });
+                    const fileName = type === 'video' ? "shared_story_video.mp4" : "shared_story_image.jpg";
+                    const file = new File([blob], fileName, { type: blob.type });
 
                     setupPreview(file);
 
+                    const newOverlays: OverlayElement[] = [];
+
                     // Add "View Post" sticker if postId is present
                     if (customEvent.detail.postId) {
-                        const linkOverlay: OverlayElement = {
-                            id: Date.now().toString(),
+                        newOverlays.push({
+                            id: `link-${Date.now()}`,
                             type: 'text',
                             content: 'VER POST 🔗',
                             x: 50,
@@ -159,13 +162,29 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             rotation: 0,
                             color: '#FFFFFF',
                             link: `/dashboard`
-                        };
-                        // Use setTimeout to ensure state update happens after setupPreview's state clear
-                        setTimeout(() => setOverlays([linkOverlay]), 100);
+                        });
+                    }
+
+                    // Add attribution if present
+                    if (attribution) {
+                        newOverlays.push({
+                            id: `attr-${Date.now()}`,
+                            type: 'text',
+                            content: `DE: @${attribution.username}`,
+                            x: 50,
+                            y: 15,
+                            scale: 0.8,
+                            rotation: 0,
+                            color: '#DC2626' // Brand red for attribution
+                        });
+                    }
+
+                    if (newOverlays.length > 0) {
+                        setTimeout(() => setOverlays(newOverlays), 100);
                     }
                 } catch (err) {
                     console.error("Error preparing shared story:", err);
-                    alert("Error al cargar la imagen para la historia.");
+                    alert(`Error al cargar ${type === 'video' ? 'el video' : 'la imagen'} para la historia.`);
                 } finally {
                     setIsUploading(false);
                 }
@@ -218,8 +237,10 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             setupPreview(file);
 
                             const data = customEvent.detail.data;
-                            const newOverlay: OverlayElement = {
-                                id: Date.now().toString(),
+                            const newOverlays: OverlayElement[] = [];
+
+                            const stickerOverlay: OverlayElement = {
+                                id: `sticker-${Date.now()}`,
                                 type: type === 'pr' ? 'pr_sticker' : 'workout_sticker',
                                 content: JSON.stringify(data),
                                 x: 50,
@@ -228,10 +249,26 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                 rotation: 0,
                                 link: postId ? `/dashboard` : undefined
                             };
+                            newOverlays.push(stickerOverlay);
+
+                            // Add attribution if present
+                            if (attribution) {
+                                newOverlays.push({
+                                    id: `attr-${Date.now()}`,
+                                    type: 'text',
+                                    content: `DE: @${attribution.username}`,
+                                    x: 50,
+                                    y: 15,
+                                    scale: 0.8,
+                                    rotation: 0,
+                                    color: '#DC2626'
+                                });
+                            }
+
                             // Use setTimeout to ensure state update happens after setupPreview's state clear
                             setTimeout(() => {
-                                setOverlays([newOverlay]);
-                                setSelectedOverlayId(newOverlay.id);
+                                setOverlays(newOverlays);
+                                if (!attribution) setSelectedOverlayId(stickerOverlay.id);
                             }, 100);
                         }
                     }, 'image/png');
@@ -1789,22 +1826,56 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                             )}
                                         </div>
 
-                                        <button
-                                            onClick={handleLike}
-                                            className={clsx(
-                                                "p-3 rounded-full backdrop-blur-xl border transition-all active:scale-90 pointer-events-auto",
-                                                (currentStory as any).has_liked
-                                                    ? "bg-brand-red/20 border-brand-red text-brand-red"
-                                                    : "bg-white/10 border-white/10 text-white hover:bg-white/20"
+                                        <div className="flex items-center gap-3 pointer-events-auto">
+                                            {!isOwner && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        const detail: any = {
+                                                            attribution: {
+                                                                username: currentUserStories?.user?.username || currentUserStories?.user?.full_name,
+                                                                avatar: currentUserStories?.user?.avatar_url
+                                                            }
+                                                        };
+
+                                                        const postOverlay = (currentStory as any).overlays?.find((o: any) => o.type === 'workout_sticker' || o.type === 'pr_sticker');
+                                                        if (postOverlay) {
+                                                            detail.type = postOverlay.type === 'pr_sticker' ? 'pr' : 'workout';
+                                                            detail.data = JSON.parse(postOverlay.content);
+                                                        } else if (currentStory.media_type === 'video') {
+                                                            detail.type = 'video';
+                                                            detail.url = currentStory.media_url;
+                                                        } else {
+                                                            detail.type = 'image';
+                                                            detail.url = currentStory.media_url;
+                                                        }
+
+                                                        window.dispatchEvent(new CustomEvent('share-to-story', { detail }));
+                                                        // Close the viewer to go to the story editor
+                                                        setSelectedUserIndex(null);
+                                                    }}
+                                                    className="p-3 rounded-full backdrop-blur-xl border bg-white/10 border-white/10 text-white hover:bg-white/20 transition-all active:scale-90"
+                                                >
+                                                    <Share2 className="w-6 h-6" />
+                                                </button>
                                             )}
-                                        >
-                                            <Heart className={clsx("w-6 h-6", (currentStory as any).has_liked && "fill-current animate-heart-pop")} />
-                                            {(currentStory as any).likes_count! > 0 && (
-                                                <span className="absolute -top-1 -right-1 bg-brand-red text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-black">
-                                                    {(currentStory as any).likes_count}
-                                                </span>
-                                            )}
-                                        </button>
+                                            <button
+                                                onClick={handleLike}
+                                                className={clsx(
+                                                    "p-3 rounded-full backdrop-blur-xl border transition-all active:scale-90 relative",
+                                                    (currentStory as any).has_liked
+                                                        ? "bg-brand-red/20 border-brand-red text-brand-red"
+                                                        : "bg-white/10 border-white/10 text-white hover:bg-white/20"
+                                                )}
+                                            >
+                                                <Heart className={clsx("w-6 h-6", (currentStory as any).has_liked && "fill-current animate-heart-pop")} />
+                                                {(currentStory as any).likes_count! > 0 && (
+                                                    <span className="absolute -top-1 -right-1 bg-brand-red text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-black">
+                                                        {(currentStory as any).likes_count}
+                                                    </span>
+                                                )}
+                                            </button>
+                                        </div>
                                     </motion.div>
                                 )}
                             </AnimatePresence>

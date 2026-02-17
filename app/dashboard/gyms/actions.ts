@@ -89,6 +89,8 @@ export async function createOrganization(formData: FormData) {
     const instagram = formData.get('instagram') as string;
     const type = formData.get('type') as string;
     const plan = formData.get('plan') as string;
+    const latitude = formData.get('latitude') ? parseFloat(formData.get('latitude') as string) : null;
+    const longitude = formData.get('longitude') ? parseFloat(formData.get('longitude') as string) : null;
     const logoFile = formData.get('logo') as File;
     const coverFile = formData.get('cover') as File;
 
@@ -154,7 +156,9 @@ export async function createOrganization(formData: FormData) {
             member_count: 1,
             logo_url: logoUrl,
             cover_photo_url: coverUrl,
-            is_multi_center: isMultiCenter
+            is_multi_center: isMultiCenter,
+            latitude,
+            longitude
         })
         .select()
         .single();
@@ -228,6 +232,8 @@ export async function createCenter(orgId: string, formData: FormData) {
     const zipCode = formData.get('zip_code') as string;
     const phone = formData.get('phone') as string;
     const type = formData.get('type') as string;
+    const latitude = formData.get('latitude') ? parseFloat(formData.get('latitude') as string) : null;
+    const longitude = formData.get('longitude') ? parseFloat(formData.get('longitude') as string) : null;
     const logoFile = formData.get('logo') as File;
 
     if (!name || !city || !country) return { error: "Faltan campos obligatorios" };
@@ -260,7 +266,9 @@ export async function createCenter(orgId: string, formData: FormData) {
             phone,
             center_type: type,
             logo_url: logoUrl,
-            status: 'active'
+            status: 'active',
+            latitude,
+            longitude
         })
         .select()
         .single();
@@ -482,6 +490,63 @@ export async function searchOrganizations(query: string) {
         ...o,
         member_count: countMap[o.id] || 0
     }));
+}
+
+export async function getNearbyOrganizations(lat: number, lng: number) {
+    const supabase = await createClient();
+
+    // Fetch all public organizations that have lat/lng
+    // In a production app with many orgs, we would use a PostGIS spatial query.
+    const { data: orgs, error } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('is_public', true)
+        .not('latitude', 'is', null)
+        .not('longitude', 'is', null);
+
+    if (error || !orgs) return [];
+
+    // Haversine formula to calculate distance in KM
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+        const R = 6371; // Earth radius in km
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
+    };
+
+    const orgsWithDistance = orgs.map(org => ({
+        ...org,
+        distance: calculateDistance(lat, lng, Number(org.latitude), Number(org.longitude))
+    }));
+
+    // Sort by nearest
+    orgsWithDistance.sort((a, b) => a.distance - b.distance);
+
+    // Fetch member counts for these orgs
+    const orgIds = orgsWithDistance.map(o => o.id);
+    if (orgIds.length > 0) {
+        const { data: counts } = await supabase
+            .from('members')
+            .select('center_id')
+            .in('center_id', orgIds);
+
+        const countMap = counts?.reduce((acc: any, curr: any) => {
+            acc[curr.center_id] = (acc[curr.center_id] || 0) + 1;
+            return acc;
+        }, {}) || {};
+
+        return orgsWithDistance.map(o => ({
+            ...o,
+            member_count: countMap[o.id] || 0
+        }));
+    }
+
+    return orgsWithDistance;
 }
 
 export async function deleteCenter(orgId: string, centerId: string) {

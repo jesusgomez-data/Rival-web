@@ -104,7 +104,7 @@ export default function CommunityPage({
                     .select(`
                         *,
                         profiles:user_id (id, full_name, avatar_url, username, is_official),
-                        workouts:workout_id (title, total_volume_kg, workout_sets(*), location_name, metrics),
+                        workouts:workout_id (title, sport_type, total_volume_kg, workout_sets(*), location_name, metrics),
                         likes:likes(user_id)
                     `)
                     .order('created_at', { ascending: false });
@@ -278,6 +278,7 @@ export default function CommunityPage({
                                         music_title={post.music_title}
                                         music_artist={post.music_artist}
                                         isOfficial={post.profiles?.is_official}
+                                        isAdminUser={data.profile?.is_official}
                                     />
                                     {(index + 1) % 4 === 0 && (
                                         <FeedAd tier={data.profile?.subscription_tier} />

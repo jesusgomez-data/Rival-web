@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 export async function getNotifications() {
@@ -55,8 +56,8 @@ export async function createNotification({ userId, type, title, content, link }:
     content?: string,
     link?: string
 }) {
-    const supabase = await createClient();
-    const { error } = await supabase
+    const adminSupabase = createAdminClient();
+    const { error } = await adminSupabase
         .from('notifications')
         .insert({
             user_id: userId,

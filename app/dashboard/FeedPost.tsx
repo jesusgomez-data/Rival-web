@@ -47,7 +47,31 @@ interface WorkoutDetails {
     workout_sets?: WorkoutSet[];
 }
 
-function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5", onInstagramShare, onOpenShareCard }: { image?: string, workoutData?: WorkoutDetails, mediaType?: string, postId?: string, className?: string, iconClassName?: string, onInstagramShare?: () => void, onOpenShareCard?: () => void }) {
+function ShareButton({
+    image,
+    workoutData,
+    mediaType,
+    postId,
+    className,
+    iconClassName = "w-5 h-5",
+    onInstagramShare,
+    onOpenShareCard,
+    isOwner,
+    authorName,
+    authorAvatar
+}: {
+    image?: string,
+    workoutData?: WorkoutDetails,
+    mediaType?: string,
+    postId?: string,
+    className?: string,
+    iconClassName?: string,
+    onInstagramShare?: () => void,
+    onOpenShareCard?: () => void,
+    isOwner: boolean,
+    authorName?: string,
+    authorAvatar?: string
+}) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -69,26 +93,37 @@ function ShareButton({ image, workoutData, mediaType, postId, className, iconCla
     };
 
     const handleShareToStory = () => {
+        const fileExt = image?.split('.').pop()?.toLowerCase() || '';
+        const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'm4v'];
+        const isVideo = image && (videoExtensions.includes(fileExt) || mediaType === 'video');
+
+        const attribution = !isOwner ? {
+            username: authorName,
+            avatar: authorAvatar
+        } : undefined;
+
         if (workoutData) {
-            window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'workout', data: workoutData, postId } }));
+            window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'workout', data: workoutData, postId, attribution } }));
         } else if (mediaType === 'class_result' && image) {
             try {
                 const data = JSON.parse(image);
-                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'class_result', data, postId } }));
+                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'class_result', data, postId, attribution } }));
             } catch (e) {
                 console.error("Error parsing class result", e);
             }
         } else if (mediaType === 'pr' && image) {
             try {
                 const data = JSON.parse(image);
-                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'pr', data, postId } }));
+                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'pr', data, postId, attribution } }));
             } catch (e) {
                 console.error("Error parsing PR", e);
             }
+        } else if (isVideo) {
+            window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'video', url: image, postId, attribution } }));
         } else {
             const isImageUrl = image && !image.startsWith('{') && !image.startsWith('[');
             if (isImageUrl) {
-                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'image', url: image, postId } }));
+                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'image', url: image, postId, attribution } }));
             } else {
                 alert("Este contenido no se puede convertir a historia automáticamente.");
             }
@@ -106,22 +141,28 @@ function ShareButton({ image, workoutData, mediaType, postId, className, iconCla
             </button>
             {isOpen && (
                 <div className="absolute right-0 bottom-full mb-2 w-56 bg-black border border-white/10 rounded-2xl shadow-2xl z-[50] overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
-                    <button onClick={handleShareLink} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3">
-                        <Share2 className="w-4 h-4" /> Compartir enlace
+                    <button onClick={handleShareLink} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 transition-colors">
+                        <Share2 className="w-4 h-4 text-brand-red" /> Compartir enlace
                     </button>
-                    <button onClick={handleShareToStory} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5">
-                        <Plus className="w-4 h-4" /> Enviar a Mis Historias
+
+                    <button onClick={handleShareToStory} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5 transition-colors">
+                        <Plus className="w-4 h-4 text-brand-red" /> {isOwner ? 'Enviar a Mis Historias' : 'Compartir en mi Historia'}
                     </button>
-                    <button
-                        onClick={(e) => { e.stopPropagation(); onInstagramShare?.(); setIsOpen(false); }}
-                        className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5"
-                    >
-                        <Instagram className="w-4 h-4" /> Instagram Story
-                    </button>
-                    {onOpenShareCard && (
-                        <button onClick={() => { onOpenShareCard(); setIsOpen(false); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red bg-brand-red/5 hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5">
-                            <Trophy className="w-4 h-4" /> Tarjeta Elite
-                        </button>
+
+                    {isOwner && (
+                        <>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onInstagramShare?.(); setIsOpen(false); }}
+                                className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5 transition-colors"
+                            >
+                                <Instagram className="w-4 h-4 text-brand-red" /> Instagram Story
+                            </button>
+                            {onOpenShareCard && (
+                                <button onClick={() => { onOpenShareCard(); setIsOpen(false); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red bg-brand-red/5 hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5 transition-colors">
+                                    <Trophy className="w-4 h-4" /> Tarjeta Elite
+                                </button>
+                            )}
+                        </>
                     )}
                 </div>
             )}
@@ -153,6 +194,7 @@ interface FeedPostProps {
     music_artist?: string | null;
     isMember?: boolean;
     context?: 'following' | 'global';
+    isAdminUser?: boolean;
 }
 
 interface Comment {
@@ -170,7 +212,7 @@ interface Comment {
 }
 
 export default function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId,
-    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global'
+    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global', isAdminUser = false
 }: FeedPostProps) {
     const { theme } = useTheme();
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -184,6 +226,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [isPostingComment, setIsPostingComment] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
     const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
     const [expandedInnerBlocks, setExpandedInnerBlocks] = useState<number[]>([]);
@@ -225,7 +268,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic'];
     const isActuallyVideo = (videoExtensions.includes(fileExt) || mediaType === 'video') && !imageExtensions.includes(fileExt);
     const isVideo = image && isActuallyVideo;
-    const isOwner = currentUserId && authorId && currentUserId === authorId;
+    const isOwner = !!(currentUserId && authorId && currentUserId === authorId);
+    const canEdit = !!(isOwner || isAdminUser);
 
     useEffect(() => {
         if (showComments && commentList.length === 0) {
@@ -482,7 +526,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
                 <div className="flex items-center gap-4">
                     <p className="hidden sm:block text-[10px] text-gray-500 font-bold uppercase tracking-widest">{time}</p>
-                    {isOwner && (
+                    {canEdit && (
                         <div className="relative" ref={menuRef}>
                             <button
                                 onClick={() => setShowMenu(!showMenu)}
@@ -856,7 +900,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                         const isInnerExpanded = expandedInnerBlocks.includes(idx + 1000); // Unique ID offset
                                                         const resultStr =
                                                             block.type === 'fortime' ? (block.result?.time || '--:--') :
-                                                                block.type === 'rft' ? (`${block.rounds || 0} Rds` + (block.result?.time ? ` - ${block.result.time}` : '')) :
+                                                                block.type === 'rft' ? (`${block.result?.rounds || 0} Rds` + (block.result?.time ? ` - ${block.result.time}` : '')) :
                                                                     block.type === 'emom' ? `${block.duration || 0}' - ${block.result?.rounds || 0} Rds` :
                                                                         `${block.result?.rounds || 0} Rds`;
 
@@ -1059,8 +1103,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                                                         "text-xs md:text-sm font-bold tracking-tight",
                                                                                         theme === 'dark' ? "text-white" : "text-black"
                                                                                     )}>
-                                                                                        {set.weight_kg > 0 && <span className="text-brand-red mr-1">{set.weight_kg}KG</span>}
-                                                                                        <span className="opacity-60">x</span> {set.reps > 0 ? (set.reps > 500 ? `${set.reps} M/CAL` : `${set.reps} REPS`) : "COMPLETADO"}
+                                                                                        {(set.weight_kg ?? 0) > 0 && <span className="text-brand-red mr-1">{set.weight_kg}KG</span>}
+                                                                                        <span className="opacity-60">x</span> {(set.reps ?? 0) > 0 ? (set.reps! > 500 ? `${set.reps} M/CAL` : `${set.reps} REPS`) : "COMPLETADO"}
                                                                                     </p>
                                                                                 </div>
                                                                             ))}
@@ -1105,7 +1149,10 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             className="p-3 md:p-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl md:rounded-2xl border border-white/5 transition-all"
                             iconClassName="w-5 h-5"
                             onInstagramShare={() => setShowInstagramCard(true)}
-                            onOpenShareCard={() => setShowShareCard(true)}
+                            {...(setShowShareCard && { onOpenShareCard: () => setShowShareCard(true) })}
+                            isOwner={!!isOwner}
+                            authorName={user}
+                            authorAvatar={avatar}
                         />
                     </>
                 ) : (
@@ -1135,6 +1182,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 iconClassName="w-6 h-6"
                                 onInstagramShare={() => setShowInstagramCard(true)}
                                 onOpenShareCard={() => setShowShareCard(true)}
+                                isOwner={isOwner}
+                                authorName={user}
+                                authorAvatar={avatar}
                             />
                         </div>
                     </div>

@@ -118,6 +118,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                     },
                     (payload) => {
                         if (payload.new.sender_id !== user.id) {
+                            // Play Rival custom sound
+                            import("@/app/utils/audio").then(m => m.playNotificationSound());
+
                             if (!pathname?.startsWith('/dashboard/messages')) {
                                 setUnreadMessages(prev => prev + 1);
 
