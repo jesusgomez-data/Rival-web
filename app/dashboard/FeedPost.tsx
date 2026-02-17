@@ -59,7 +59,8 @@ function ShareButton({
     isOwner,
     authorName,
     authorAvatar,
-    authorId
+    authorId,
+    authorUsername
 }: {
     image?: string,
     workoutData?: WorkoutDetails,
@@ -72,7 +73,8 @@ function ShareButton({
     isOwner: boolean,
     authorName?: string,
     authorAvatar?: string,
-    authorId?: string
+    authorId?: string,
+    authorUsername?: string
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -100,7 +102,7 @@ function ShareButton({
         const isVideo = image && (videoExtensions.includes(fileExt) || mediaType === 'video');
 
         const attribution = !isOwner ? {
-            username: authorName,
+            username: authorUsername || authorName,
             avatar: authorAvatar,
             id: authorId
         } : undefined;
@@ -1185,6 +1187,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             authorName={user}
                             authorAvatar={avatar}
                             authorId={authorId}
+                            authorUsername={username || user.toLowerCase().replace(/\s+/g, '')}
                         />
                     </>
                 ) : (
@@ -1218,6 +1221,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 authorName={user}
                                 authorAvatar={avatar}
                                 authorId={authorId}
+                                authorUsername={username || user.toLowerCase().replace(/\s+/g, '')}
                             />
                         </div>
                     </div>
