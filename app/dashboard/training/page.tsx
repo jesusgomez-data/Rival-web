@@ -4,7 +4,7 @@ import { getMissions, getRecentPRs, getUserProfile, getScheduledWorkouts, getWor
 import { type TrainingPlan } from "./types";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy, X } from "lucide-react";
+import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy, X, Sparkles } from "lucide-react";
 import Image from "next/image";
 
 export default function TrainingPage() {
@@ -192,6 +192,7 @@ export default function TrainingPage() {
             <div className="grid lg:grid-cols-12 gap-8">
                 {/* Left Column (Main Focus) */}
                 <div className="lg:col-span-8 space-y-8">
+
                     {/* Week Calendar */}
                     <div className="bg-brand-gray/50 border border-border/10 rounded-3xl p-6 backdrop-blur-sm">
                         <div className="flex items-center justify-between mb-6">

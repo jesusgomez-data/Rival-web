@@ -92,131 +92,130 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     )}
                 </div>
 
-                <div className="absolute bottom-0 left-0 right-0 p-3 md:p-10 flex flex-col md:flex-row md:items-end justify-between gap-4 md:gap-8 z-20">
-                    <div className="flex items-end gap-3 md:gap-6 relative">
-                        <button
-                            onClick={() => setAvatarModalOpen(true)}
-                            className="w-20 h-20 md:w-36 md:h-36 rounded-full border-2 md:border-8 border-black bg-brand-gray overflow-hidden relative shadow-2xl shrink-0 z-10"
-                        >
-                            <Image
-                                src={profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || 'User')}&background=random`}
-                                alt={profile.full_name}
-                                fill
-                                className="object-cover"
-                            />
-                        </button>
-                        <div className="pb-1 md:pb-4 min-w-0 transform translate-y-2 md:translate-y-0 z-20 w-auto mr-auto mt-6 md:mt-0">
-                            {/* Name & Handle - Mobile Moved Here */}
-                            <div className="mb-0.5 md:mb-1 mt-8 md:mt-0">
-                                <div className="flex items-center gap-1.5 md:gap-3">
-                                    <h1 className="text-xl md:text-4xl font-heading font-black text-white keep-white italic uppercase tracking-tight md:tracking-tighter truncate leading-none shadow-black drop-shadow-md max-w-[260px] md:max-w-none">
-                                        {profile.full_name}
-                                        {profile.is_official && (
-                                            <span className="ml-2 bg-brand-red p-1 rounded-full inline-flex shadow-[0_0_15px_rgba(220,38,38,0.5)] border border-white/20">
-                                                <Trophy className="w-3 h-3 md:w-5 md:h-5 text-white" />
-                                            </span>
-                                        )}
-                                    </h1>
-                                    {profile.level >= 5 && !profile.is_official && <Star className="w-4 h-4 md:w-6 md:h-6 text-yellow-500 fill-yellow-500 shrink-0" />}
-                                </div>
-                                <p className="text-brand-red font-black tracking-widest md:tracking-[0.3em] text-[10px] md:text-sm uppercase mt-0.5 truncate shadow-black drop-shadow-sm keep-white flex items-center gap-2">
-                                    @{profile.username}
-                                    {profile.is_official && <span className="text-[8px] md:text-[10px] bg-white/10 px-2 py-0.5 rounded-full border border-white/5">CUENTA OFICIAL</span>}
-                                </p>
-                            </div>
+                {/* Header Content Container - FIXED LAYOUT */}
+                <div className="absolute inset-x-0 bottom-0 p-3 md:p-10 z-20">
+                    <div className="flex flex-col md:flex-row items-end justify-between gap-6 w-full">
+                        {/* Left Side: Avatar & Info */}
+                        <div className="flex items-end gap-3 md:gap-6 min-w-0 flex-1">
+                            <button
+                                onClick={() => setAvatarModalOpen(true)}
+                                className="w-20 h-20 md:w-36 md:h-36 rounded-full border-2 md:border-8 border-black bg-brand-gray overflow-hidden relative shadow-2xl shrink-0 z-10"
+                            >
+                                <Image
+                                    src={profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || 'User')}&background=random`}
+                                    alt={profile.full_name}
+                                    fill
+                                    className="object-cover"
+                                />
+                            </button>
 
-                            {/* Mobile Bio - Hidden now as it's back in the header */}
-                            {!profile.is_official && profile.bio && (
-                                <div className="md:hidden hidden max-w-[280px] mt-1">
-                                    <div className="flex items-start gap-1.5">
-                                        <MessageSquare className="w-3 h-3 text-brand-red mt-0.5 shrink-0" />
-                                        <p className="text-[11px] text-zinc-200 font-medium italic leading-tight line-clamp-2 shadow-black drop-shadow-sm keep-white">
-                                            "{profile.bio}"
-                                        </p>
+                            <div className="pb-1 md:pb-4 min-w-0 transform translate-y-2 md:translate-y-0 z-20">
+                                <div className="mb-1">
+                                    <div className="flex items-center gap-1.5 md:gap-3">
+                                        <h1 className="text-xl md:text-4xl font-heading font-black text-white italic uppercase tracking-tight md:tracking-tighter truncate leading-none shadow-black drop-shadow-md max-w-[200px] md:max-w-md">
+                                            {profile.full_name}
+                                            {profile.is_official && (
+                                                <span className="ml-2 bg-brand-red p-1 rounded-full inline-flex shadow-[0_0_15px_rgba(220,38,38,0.5)] border border-white/20">
+                                                    <Trophy className="w-3 h-3 md:w-5 md:h-5 text-white" />
+                                                </span>
+                                            )}
+                                        </h1>
+                                        {profile.level >= 5 && !profile.is_official && <Star className="w-4 h-4 md:w-6 md:h-6 text-yellow-500 fill-yellow-500 shrink-0" />}
                                     </div>
+                                    <p className="text-brand-red font-black tracking-widest md:tracking-[0.3em] text-[10px] md:text-sm uppercase mt-0.5 truncate shadow-black drop-shadow-sm flex items-center gap-2">
+                                        @{profile.username}
+                                        {profile.is_official && <span className="text-[8px] md:text-[10px] bg-white/10 px-2 py-0.5 rounded-full border border-white/5">CUENTA OFICIAL</span>}
+                                    </p>
                                 </div>
-                            )}
 
-                            {!profile.is_official && (
-                                <div className="flex gap-4 md:gap-8 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 w-fit shadow-2xl">
-                                    <button
-                                        onClick={() => handleOpenModal('followers')}
-                                        className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 hover:opacity-80 transition-opacity text-left"
-                                        disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                                    >
-                                        <span className="text-white font-black text-xs md:text-lg leading-none shadow-black drop-shadow-sm">{profile.followers_count || 0}</span>
-                                        <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidores</span>
-                                    </button>
-                                    <div className="w-px h-6 bg-white/10 hidden md:block"></div>
-                                    <button
-                                        onClick={() => handleOpenModal('following')}
-                                        className="flex flex-col md:flex-row md:items-center gap-1 md:gap-2 hover:opacity-80 transition-opacity text-left"
-                                        disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                                    >
-                                        <span className="text-white font-black text-xs md:text-lg leading-none shadow-black drop-shadow-sm">{profile.following_count || 0}</span>
-                                        <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidos</span>
-                                    </button>
-                                </div>
-                            )}
+                                {!profile.is_official && (
+                                    <div className="flex gap-4 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 w-fit shadow-2xl mb-2">
+                                        <button
+                                            onClick={() => handleOpenModal('followers')}
+                                            className="flex items-center gap-2 hover:opacity-80 transition-opacity disabled:opacity-50"
+                                            disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
+                                        >
+                                            <span className="text-white font-black text-xs md:text-lg leading-none">{profile.followers_count || 0}</span>
+                                            <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidores</span>
+                                        </button>
+                                        <div className="w-px h-4 bg-white/10"></div>
+                                        <button
+                                            onClick={() => handleOpenModal('following')}
+                                            className="flex items-center gap-2 hover:opacity-80 transition-opacity disabled:opacity-50"
+                                            disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
+                                        >
+                                            <span className="text-white font-black text-xs md:text-lg leading-none">{profile.following_count || 0}</span>
+                                            <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidos</span>
+                                        </button>
+                                    </div>
+                                )}
 
-                            {/* Rank & Discipline - Mobile Badge */}
-                            {!profile.is_official ? (
-                                <div className="flex items-center gap-3 px-2">
-                                    <div className="flex items-center gap-1.5">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-1">
                                         <Award className="w-3 h-3 text-brand-red" />
-                                        <span className="text-[9px] text-white font-black uppercase tracking-wider shadow-black drop-shadow-sm keep-white">
-                                            {profile.level > 0 ? `Lvl ${profile.level}` : 'Recluta'}
+                                        <span className="text-[9px] text-white font-black uppercase tracking-wider">
+                                            {profile.is_official ? 'Soporte' : (profile.level > 0 ? `Lvl ${profile.level}` : 'Recluta')}
                                         </span>
                                     </div>
                                     <div className="w-1 h-1 rounded-full bg-white/30"></div>
-                                    <div className="flex items-center gap-1.5">
+                                    <div className="flex items-center gap-1">
                                         <Dumbbell className="w-3 h-3 text-brand-red" />
-                                        <span className="text-[9px] text-white font-black uppercase tracking-wider shadow-black drop-shadow-sm keep-white">
-                                            {profile.main_sport || 'General'}
+                                        <span className="text-[9px] text-white font-black uppercase tracking-wider">
+                                            {profile.is_official ? 'Oficial' : (profile.main_sport || 'General')}
                                         </span>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="flex items-center gap-1.5 px-2">
-                                    <Trophy className="w-3 h-3 text-brand-red" />
-                                    <span className="text-[9px] text-white font-black uppercase tracking-wider shadow-black drop-shadow-sm keep-white">
-                                        Soporte & Comunidad
-                                    </span>
-                                </div>
-                            )}
+                            </div>
                         </div>
 
-                        {privacy === 'private' && (
-                            <div className="flex items-center gap-2 mt-4 px-3 py-1 bg-white/5 rounded-full w-fit border border-white/10">
-                                <Lock className="w-3 h-3 text-gray-400" />
-                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Cuenta Privada</span>
-                            </div>
-                        )}
+                        {/* Right Side: Desktop Buttons */}
+                        <div className="hidden md:flex items-center gap-3 shrink-0 mb-4 h-full">
+                            {user?.id !== profile.id && !profile.is_official && (
+                                <>
+                                    {isFollowing && (
+                                        <Link
+                                            href={`/dashboard/messages?userId=${profile.id}`}
+                                            className="p-4 bg-black/60 border border-white/10 rounded-2xl text-white hover:bg-brand-red hover:border-brand-red hover:text-white transition-all group flex items-center gap-2 shadow-2xl backdrop-blur-xl shrink-0"
+                                        >
+                                            <MessageCircle className="w-5 h-5 text-brand-red group-hover:text-white transition-colors" />
+                                            <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">Mensaje</span>
+                                        </Link>
+                                    )}
+                                    <div className="shrink-0">
+                                        <DuelButton targetId={profile.id} isRival={isFollowing} />
+                                    </div>
+                                    <div className="min-w-[140px] shrink-0">
+                                        <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <div className="flex items-center gap-2 pb-2 pl-2 md:pl-0 md:pb-4 md:gap-3">
-                    {user?.id !== profile.id && !profile.is_official && (
-                        <div className="flex items-center gap-2">
-                            {isFollowing && (
-                                <Link
-                                    href={`/dashboard/messages?userId=${profile.id}`}
-                                    className="p-2 md:p-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-brand-red hover:border-brand-red hover:text-white transition-all group flex items-center gap-2 shadow-xl backdrop-blur-md"
-                                    title="Enviar mensaje"
-                                >
-                                    <MessageCircle className="w-4 h-4 md:w-5 md:h-5 text-brand-red group-hover:text-white transition-colors" />
-                                    <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest leading-none">Mensaje</span>
-                                </Link>
-                            )}
-                            <div className="scale-90 md:scale-100 origin-left">
-                                <DuelButton targetId={profile.id} isRival={isFollowing} />
-                            </div>
-                            <div className="w-24 md:w-32 scale-90 md:scale-100 origin-left">
-                                <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
-                            </div>
+
+            {/* Mobile Actions Bar - Moved out of banner to prevent overlap */}
+            <div className="flex md:hidden px-4 mb-2">
+                {user?.id !== profile.id && !profile.is_official && (
+                    <div className="flex items-center gap-3 w-full overflow-x-auto custom-scrollbar pb-2">
+                        {isFollowing && (
+                            <Link
+                                href={`/dashboard/messages?userId=${profile.id}`}
+                                className="flex-1 min-w-[100px] py-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-brand-red hover:border-brand-red hover:text-white transition-all group flex justify-center items-center gap-2"
+                            >
+                                <MessageCircle className="w-4 h-4 text-brand-red group-hover:text-white transition-colors" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Mensaje</span>
+                            </Link>
+                        )}
+                        <div className="flex-1 min-w-[120px]">
+                            <DuelButton targetId={profile.id} isRival={isFollowing} />
                         </div>
-                    )}
-                </div>
+                        <div className="flex-1 min-w-[140px]">
+                            <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Mobile Tabs */}
@@ -611,6 +610,6 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     </div>
                 )
             }
-        </div >
+        </div>
     );
 }

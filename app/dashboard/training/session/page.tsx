@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, Minus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap, Share2, Camera, Award, AlertTriangle, ChevronRight, Youtube, Video, Lock, Wind, Heart, TrendingUp, Download } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, Minus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap, Share2, Camera, Award, AlertTriangle, ChevronRight, Youtube, Video, Lock, Wind, Heart, TrendingUp, Download, Watch, Triangle } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect, Suspense, useMemo, useRef } from "react";
 import { saveWorkout, getExercises, getExercisePreviousRecord, getWorkoutDetails, uploadWorkoutMedia, getUserProfile, getGuidedWorkoutsCount } from "../actions";
@@ -1106,10 +1106,11 @@ function SessionContent() {
                         isSaving={isSaving}
                         imageUrl={imageUrl}
                         setImageUrl={setImageUrl}
+                        mediaType={mediaType}
                         isUploading={isUploading}
                         onImageUpload={handleImageUpload}
                         fileInputRef={fileInputRef}
-                        workoutTitle={workoutTitle}
+                        workoutTitle={workoutTitle || "Sesión de Entrenamiento"}
                         rpe={rpe}
                         setRpe={setRpe}
                     />
@@ -1624,6 +1625,8 @@ function SessionContent() {
                 />
             )}
 
+            <SyncWatchModal isOpen={showSyncModal} onClose={() => setShowSyncModal(false)} />
+
         </div >
     );
 }
@@ -1631,19 +1634,83 @@ function SessionContent() {
 const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
     gym: {
         upper: [
-            { id: 'g-u-1', title: 'Torso Fuerza', sport: 'gym', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Tracciones y empujes pesados.', exercises: [{ name: 'Bench Press', sets: [{ reps: 8, weight: 60 }] }] },
-            { id: 'g-u-2', title: 'Upper Body Pump', sport: 'gym', difficulty: 'beginner', duration_min: 35, is_premium: false, description: 'Congestión muscular rápida.', exercises: [{ name: 'Push Ups', sets: [{ reps: 15 }] }] },
-            { id: 'g-u-3', title: 'Hombros de Acero', sport: 'gym', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Enfoque en deltoides y trapecio.', exercises: [{ name: 'Military Press', sets: [{ reps: 6 }] }] }
+            {
+                id: 'g-u-1',
+                title: 'Empuje & Tracción Pesados',
+                sport: 'gym',
+                difficulty: 'intermediate',
+                duration_min: 60,
+                is_premium: false,
+                description: 'Fuerza básica multiarticular. Enfoque en control y carga progresiva.',
+                exercises: [
+                    { name: 'Press de Banca Plano', target: '4 sets x 6 reps (RPE 8)', sets: [{ reps: 6, weight: 60 }], note: "120" },
+                    { name: 'Dominadas / Jalón Pecho', target: '4 sets x 8-10 reps', sets: [{ reps: 10, weight: 0 }], note: "90" },
+                    { name: 'Press Militar Mancuernas', target: '3 sets x 10 reps', sets: [{ reps: 10, weight: 15 }], note: "90" },
+                    { name: 'Remo con Barra', target: '3 sets x 8 reps', sets: [{ reps: 8, weight: 40 }], note: "90" }
+                ]
+            },
+            {
+                id: 'g-u-2',
+                title: 'Hipertrofia - Torso Pump',
+                sport: 'gym',
+                difficulty: 'beginner',
+                duration_min: 50,
+                is_premium: false,
+                description: 'Volumen moderado, rests cortos para máximo bombeo.',
+                exercises: [
+                    { name: 'Press Inclinado Manc.', target: '3 sets x 12 reps', sets: [{ reps: 12, weight: 20 }], note: "60" },
+                    { name: 'Aperturas Polea', target: '3 sets x 15 reps', sets: [{ reps: 15, weight: 10 }], note: "45" },
+                    { name: 'Remo Polea Baja', target: '3 sets x 12 reps', sets: [{ reps: 12, weight: 35 }], note: "60" },
+                    { name: 'Face Pulls', target: '3 sets x 20 reps', sets: [{ reps: 20, weight: 5 }], note: "45" }
+                ]
+            },
+            {
+                id: 'g-u-3',
+                title: 'Elite Upper Power',
+                sport: 'gym',
+                difficulty: 'elite',
+                duration_min: 75,
+                is_premium: true,
+                description: 'Combinación de potencia y accesorios aislados de alta carga.',
+                exercises: [
+                    { name: 'Weighted Pull Ups', target: '5 sets x 5 reps', sets: [{ reps: 5, weight: 15 }], note: "150" },
+                    { name: 'Bench Press (Pausa)', target: '5 sets x 3 reps', sets: [{ reps: 3, weight: 80 }], note: "180" },
+                    { name: 'Dips Lastrados', target: '3 sets x 8 reps', sets: [{ reps: 8, weight: 20 }], note: "120" },
+                    { name: 'Curl Bíceps + Tríceps', target: 'Superset x 3', sets: [{ reps: 12, weight: 12 }], note: "60" }
+                ]
+            }
         ],
         lower: [
-            { id: 'g-l-1', title: 'Pierna Potencia', sport: 'gym', difficulty: 'elite', duration_min: 60, is_premium: false, description: 'Sentadillas y peso muerto.', exercises: [{ name: 'Squat', sets: [{ reps: 5 }] }] },
-            { id: 'g-l-2', title: 'Glúteo & Isquios', sport: 'gym', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Aislamiento de cadena posterior.', exercises: [{ name: 'Hip Thrust', sets: [{ reps: 10 }] }] },
-            { id: 'g-l-3', title: 'Cuádriceps Blast', sport: 'gym', difficulty: 'intermediate', duration_min: 40, is_premium: true, description: 'Volumen alto en cuádriceps.', exercises: [{ name: 'Leg Press', sets: [{ reps: 12 }] }] }
+            {
+                id: 'g-l-1',
+                title: 'Sentadilla & Cadena Post.',
+                sport: 'gym',
+                difficulty: 'intermediate',
+                duration_min: 70,
+                is_premium: false,
+                description: 'Fuerza absoluta en piernas con grandes descansos.',
+                exercises: [
+                    { name: 'Back Squat (Sentadilla)', target: '4 sets x 5-8 reps', sets: [{ reps: 6, weight: 80 }], note: "120" },
+                    { name: 'Peso Muerto Rumano', target: '3 sets x 10 reps', sets: [{ reps: 10, weight: 60 }], note: "90" },
+                    { name: 'Búlgaras Mancuerna', target: '3 sets x 10 reps', sets: [{ reps: 10, weight: 12 }], note: "90" }
+                ]
+            }
         ],
         full: [
-            { id: 'g-f-1', title: 'Full Body Classics', sport: 'gym', difficulty: 'beginner', duration_min: 45, is_premium: false, description: 'Cuerpo completo balanceado.', exercises: [{ name: 'Goblet Squat', sets: [{ reps: 12 }] }] },
-            { id: 'g-f-2', title: 'Athlete Metabolic', sport: 'gym', difficulty: 'intermediate', duration_min: 50, is_premium: false, description: 'Entrenamiento funcional híbrido.', exercises: [{ name: 'Cleans', sets: [{ reps: 8 }] }] },
-            { id: 'g-f-3', title: 'Total Body Strength', sport: 'gym', difficulty: 'elite', duration_min: 55, is_premium: true, description: 'Fuerza absoluta multiarticular.', exercises: [{ name: 'Front Squat', sets: [{ reps: 5 }] }] }
+            {
+                id: 'g-f-1',
+                title: 'Full Body Efficiency',
+                sport: 'gym',
+                difficulty: 'beginner',
+                duration_min: 45,
+                is_premium: false,
+                description: 'Un ejercicio multiarticular por grupo muscular principal.',
+                exercises: [
+                    { name: 'Sentadilla Goblet', target: '3 sets x 12 reps', sets: [{ reps: 12, weight: 20 }], note: "90" },
+                    { name: 'Press de Banca', target: '3 sets x 10 reps', sets: [{ reps: 10, weight: 50 }], note: "90" },
+                    { name: 'Remo con Mancuerna', target: '3 sets x 12 reps', sets: [{ reps: 12, weight: 18 }], note: "90" }
+                ]
+            }
         ]
     },
     running: {
@@ -2344,47 +2411,63 @@ function RunningView({
 
 function SyncWatchModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
     const { theme } = useTheme();
+    const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
+
+    const providers = [
+        { id: 'apple', name: 'Apple Health', icon: <Heart className="w-5 h-5 text-red-500" />, color: 'bg-red-500/10' },
+        { id: 'garmin', name: 'Garmin Connect', icon: <Watch className="w-5 h-5 text-blue-500" />, color: 'bg-blue-500/10' },
+        { id: 'strava', name: 'Strava', icon: <Triangle className="w-5 h-5 text-orange-500" />, color: 'bg-orange-500/10' },
+        { id: 'google', name: 'Google Fit', icon: <Activity className="w-5 h-5 text-green-500" />, color: 'bg-green-500/10' },
+    ];
+
+    const handleSyncClick = async (providerName: string) => {
+        setConnectingProvider(providerName);
+        await new Promise(r => setTimeout(r, 1500));
+        alert(`Próximamente: Estamos trabajando en la integración oficial con ${providerName} para que puedas sincronizar tus datos reales de forma directa.`);
+        setConnectingProvider(null);
+        onClose();
+    };
+
     return (
         <div className={clsx("fixed inset-0 z-[400] flex items-center justify-center p-4 transition-all duration-300", isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")}>
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
-            <div className={clsx("relative w-full max-w-sm rounded-[40px] border p-8 space-y-8 animate-in zoom-in-95 duration-300",
+            <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={onClose} />
+            <div className={clsx("relative w-full max-w-sm rounded-[40px] border p-8 space-y-6 animate-in zoom-in-95 duration-300 overflow-hidden",
                 theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white shadow-2xl"
             )}>
-                <div className="text-center">
-                    <h3 className="text-2xl font-heading font-black italic uppercase text-white mb-2">Sync <span className="text-brand-red">Reloj</span></h3>
-                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Importa tus datos de carrera automáticamente</p>
+                <div className="text-center relative z-10">
+                    <h3 className="text-2xl font-heading font-black italic uppercase text-white mb-2">Sync <span className="text-brand-red">Reloj</span>_</h3>
+                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Importa datos de carrera automáticamente</p>
                 </div>
 
-                <div className="space-y-3">
-                    <button
-                        className="w-full p-6 rounded-3xl bg-orange-600/10 border border-orange-600/20 hover:bg-orange-600 hover:border-orange-600 transition-all flex items-center justify-between group"
-                        onClick={() => { alert('Conectando con Strava...'); onClose(); }}
-                    >
-                        <div className="flex items-center gap-4 text-orange-600 group-hover:text-white transition-colors">
-                            <span className="font-black italic text-xl">STRAVA</span>
-                        </div>
-                        <Plus className="w-5 h-5 text-orange-600 group-hover:text-white" />
-                    </button>
-
-                    <button
-                        className="w-full p-6 rounded-3xl bg-blue-600/10 border border-blue-600/20 hover:bg-blue-600 hover:border-blue-600 transition-all flex items-center justify-between group"
-                        onClick={() => { alert('Conectando con Garmin...'); onClose(); }}
-                    >
-                        <div className="flex items-center gap-4 text-blue-600 group-hover:text-white transition-colors">
-                            <span className="font-black italic text-xl uppercase">Garmin Connect</span>
-                        </div>
-                        <Plus className="w-5 h-5 text-blue-600 group-hover:text-white" />
-                    </button>
-
-                    <button
-                        className="w-full p-6 rounded-3xl bg-white/5 border border-white/10 hover:bg-white hover:text-black transition-all flex items-center justify-between group"
-                        onClick={() => { alert('Abre la App Rival en tu Apple Watch para sincronizar.'); onClose(); }}
-                    >
-                        <div className="flex items-center gap-4 text-white group-hover:text-black transition-colors">
-                            <span className="font-black italic text-xl uppercase">Apple Watch</span>
-                        </div>
-                        <Activity className="w-5 h-5 text-white group-hover:text-black" />
-                    </button>
+                <div className="space-y-3 relative z-10">
+                    {providers.map((provider) => (
+                        <button
+                            key={provider.id}
+                            disabled={!!connectingProvider}
+                            onClick={() => handleSyncClick(provider.name)}
+                            className={clsx(
+                                "w-full p-4 rounded-2xl border transition-all flex items-center justify-between group",
+                                connectingProvider === provider.name
+                                    ? "bg-white/10 border-white/20 scale-[0.98]"
+                                    : "bg-white/5 border-white/5 hover:border-white/20 hover:bg-white/10 active:scale-95"
+                            )}
+                        >
+                            <div className="flex items-center gap-4">
+                                <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center", provider.color)}>
+                                    {provider.icon}
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-xs font-black uppercase tracking-widest text-white">{provider.name}</p>
+                                    <p className="text-[9px] text-gray-500 font-bold uppercase">Click para vincular</p>
+                                </div>
+                            </div>
+                            {connectingProvider === provider.name ? (
+                                <RefreshCw className="w-4 h-4 text-white animate-spin" />
+                            ) : (
+                                <ChevronRight className="w-4 h-4 text-gray-700 group-hover:text-white transition-colors" />
+                            )}
+                        </button>
+                    ))}
 
                     <div className="relative py-4 flex items-center gap-4">
                         <div className="flex-1 h-px bg-white/10" />
@@ -2393,15 +2476,25 @@ function SyncWatchModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => v
                     </div>
 
                     <button
-                        className="w-full p-4 rounded-2xl bg-gray-900 border border-white/5 hover:bg-gray-800 transition-colors flex items-center justify-center gap-3"
-                        onClick={() => alert('Selecciona archivo .GPX o .FIT')}
+                        className="w-full p-4 rounded-2xl bg-gray-900/50 border border-white/5 hover:bg-gray-800 transition-colors flex items-center justify-center gap-3 group"
+                        onClick={() => alert('Próximamente: Podrás subir archivos .GPX o .FIT directamente.')}
                     >
-                        <Download className="w-4 h-4 text-gray-500" />
+                        <Download className="w-4 h-4 text-gray-600 group-hover:text-white transition-colors" />
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Importar GPX / FIT</span>
                     </button>
                 </div>
 
-                <button onClick={onClose} className="w-full text-center text-gray-600 hover:text-white transition-colors text-[10px] font-black uppercase tracking-[0.3em]">Cancelar</button>
+                <button
+                    onClick={onClose}
+                    className="w-full text-center text-gray-600 hover:text-white transition-colors text-[10px] font-black uppercase tracking-[0.3em] relative z-10"
+                >
+                    Cancelar
+                </button>
+
+                {/* Decoration */}
+                <div className="absolute -bottom-12 -right-12 p-12 opacity-5 -rotate-12 pointer-events-none">
+                    <Watch className="w-40 h-40 text-brand-red" />
+                </div>
             </div>
         </div>
     )
@@ -3476,6 +3569,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
     const [catalog, setCatalog] = useState<WorkoutExercise[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [viewingVideo, setViewingVideo] = useState<string | null>(null);
+    const [restTimer, setRestTimer] = useState<{ seconds: number; exerciseIndex: number } | null>(null);
 
     // Update title based on muscle focus if possible
     useEffect(() => {
@@ -3488,7 +3582,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                 else if (unique.length > 1) setWorkoutTitle(`Rutina de ${unique.slice(0, 2).join(" & ")}`);
             }
         }
-    }, [exercises.length]);
+    }, [exercises, setWorkoutTitle, workoutTitle]);
 
     // Load catalog only when modal opens
     useEffect(() => {
@@ -3502,7 +3596,20 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
         return catalog.filter(ex => ex.name.toLowerCase().includes(searchQuery.toLowerCase()));
     }, [catalog, searchQuery]);
 
-    const addExercise = async (template: any) => {
+    // Timer effect for rest
+    useEffect(() => {
+        if (!restTimer) return;
+        const t = setInterval(() => {
+            setRestTimer(prev => {
+                if (!prev) return null;
+                if (prev.seconds <= 1) return null;
+                return { ...prev, seconds: prev.seconds - 1 };
+            });
+        }, 1000);
+        return () => clearInterval(t);
+    }, [restTimer]);
+
+    const addExercise = async (template: WorkoutExercise) => {
         const prev = await getExercisePreviousRecord(template.name) || "0kg x 0";
 
         // Auto-detect unit type based on exercise name
@@ -3521,47 +3628,56 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
             defaultMeasure = 'reps';
         }
 
-        const newEx = {
+        const newEx: WorkoutExercise = {
             id: Math.random().toString(36).substr(2, 9),
             name: template.name,
-            target: mode === 'gym' ? "3 series x 8-12 reps" : "-",
+            target: mode === 'gym' ? "4 sets x 10-12 reps" : "-",
             prev: prev,
             sets: [{ order: 1, weight: 0, reps: 0, completed: false, unit: defaultUnit, measure: defaultMeasure }],
-            video_url: template.video_url
+            video_url: template.video_url,
+            note: "60" // Default 60s rest
         };
         setExercises([...exercises, newEx]);
         setShowAddModal(false);
     };
 
-    const updateSet = (widthIndex: number, setIndex: number, field: string, val: any) => {
+    const updateSet = (exIdx: number, sIdx: number, field: string, val: string | number) => {
         const copy = [...exercises];
-        const s = copy[widthIndex].sets[setIndex];
-        // @ts-ignore
+        const s = copy[exIdx].sets[sIdx];
+        // @ts-expect-error
         s[field] = val;
         setExercises(copy);
     }
 
     const toggleSet = (exIdx: number, sIdx: number) => {
         const copy = [...exercises];
-        copy[exIdx].sets[sIdx].completed = !copy[exIdx].sets[sIdx].completed;
+        const becomingCompleted = !copy[exIdx].sets[sIdx].completed;
+        copy[exIdx].sets[sIdx].completed = becomingCompleted;
         setExercises(copy);
+
+        // If completed, trigger rest timer if exercise has one set
+        if (becomingCompleted) {
+            const rest = parseInt(copy[exIdx].note || "0");
+            if (rest > 0) {
+                setRestTimer({ seconds: rest, exerciseIndex: exIdx });
+            }
+        }
     }
 
     const addSet = (exIdx: number) => {
         const copy = [...exercises];
-        const prev = copy[exIdx].sets[copy[exIdx].sets.length - 1] || { weight: 0, reps: 0 };
+        const last = copy[exIdx].sets[copy[exIdx].sets.length - 1] || { weight: 0, reps: 0, unit: 'kg', measure: 'reps' };
         copy[exIdx].sets.push({
             order: copy[exIdx].sets.length + 1,
-            weight: prev.weight,
-            reps: prev.reps,
+            weight: last.weight,
+            reps: last.reps,
             completed: false,
-            unit: prev.unit || 'kg',
-            measure: prev.measure || 'reps'
+            unit: last.unit || 'kg',
+            measure: last.measure || 'reps'
         });
         setExercises(copy);
     }
 
-    // Simple remove set handler
     const removeSet = (exIdx: number) => {
         const copy = [...exercises];
         if (copy[exIdx].sets.length > 0) {
@@ -3573,99 +3689,139 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
     return (
         <div className="space-y-8 animate-in slide-in-from-bottom-10 fade-in duration-500">
             {viewingVideo && <VideoModal url={viewingVideo} onClose={() => setViewingVideo(null)} />}
+
+            {restTimer && (
+                <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[300] bg-brand-red text-white px-8 py-4 rounded-[32px] shadow-2xl flex items-center gap-4 animate-in slide-in-from-top-10 duration-500">
+                    <div className="flex flex-col">
+                        <span className="text-[8px] font-black uppercase tracking-widest opacity-70">En Descanso</span>
+                        <span className="text-2xl font-mono font-black">{Math.floor(restTimer.seconds / 60)}:{(restTimer.seconds % 60).toString().padStart(2, '0')}</span>
+                    </div>
+                    <button onClick={() => setRestTimer(null)} className="p-2 bg-black/20 rounded-full hover:bg-black/40"><X className="w-4 h-4" /></button>
+                </div>
+            )}
+
             {exercises.map((ex: WorkoutExercise, i: number) => (
-                <div key={ex.id} className={clsx(
-                    "border rounded-[32px] overflow-hidden shadow-sm transition-all",
+                <div key={ex.id || i} className={clsx(
+                    "border rounded-[40px] overflow-hidden shadow-xl transition-all relative group",
                     theme === 'dark' ? "bg-[#111] border-white/5" : "bg-white border-gray-100"
                 )}>
+                    {/* Header: Title and Tools */}
                     <div className={clsx(
-                        "p-6 border-b flex justify-between items-start",
-                        theme === 'dark' ? "border-white/5 bg-white/[0.02]" : "border-gray-100 bg-gray-50/50"
+                        "p-8 border-b transition-colors",
+                        theme === 'dark' ? "border-white/5 bg-white/[0.02] group-hover:bg-white/[0.04]" : "border-gray-100 bg-gray-50/50"
                     )}>
-                        <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                                <input
-                                    value={ex.name}
-                                    onChange={(e) => {
-                                        const copy = [...exercises];
-                                        copy[i].name = e.target.value;
-                                        setExercises(copy);
-                                    }}
-                                    className={clsx("bg-transparent text-xl font-heading font-black italic uppercase outline-none w-full", theme === 'dark' ? "text-white placeholder-white/20" : "text-black placeholder-gray-300")}
-                                />
-                                {ex.video_url && (
-                                    <button
-                                        onClick={() => setViewingVideo(ex.video_url || null)}
-                                        className="group flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-red-600 rounded-full text-gray-400 hover:text-white transition-all shrink-0 border border-white/10 hover:border-red-600 shadow-sm"
-                                    >
-                                        <Youtube className="w-4 h-4 fill-current" />
-                                        <span className="text-[8px] font-black uppercase tracking-widest hidden sm:block">Video</span>
-                                    </button>
-                                )}
+                        <div className="flex justify-between items-start mb-4">
+                            <div className="flex-1 space-y-2">
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        value={ex.name}
+                                        onChange={(e) => {
+                                            const copy = [...exercises];
+                                            copy[i].name = e.target.value;
+                                            setExercises(copy);
+                                        }}
+                                        className={clsx("bg-transparent text-2xl font-heading font-black italic uppercase outline-none w-full tracking-tighter", theme === 'dark' ? "text-white" : "text-black")}
+                                        placeholder="NOMBRE DEL EJERCICIO"
+                                    />
+                                    {ex.video_url && (
+                                        <button onClick={() => setViewingVideo(ex.video_url || null)} className="p-2 bg-brand-red/10 text-brand-red rounded-full hover:bg-brand-red hover:text-white transition-all shadow-sm">
+                                            <Youtube className="w-4 h-4 fill-current" />
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="flex flex-wrap gap-3">
+                                    <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-xl border border-white/5">
+                                        <Trophy className="w-3 h-3 text-brand-red" />
+                                        <input
+                                            value={ex.target || ''}
+                                            onChange={(e) => {
+                                                const copy = [...exercises];
+                                                copy[i].target = e.target.value;
+                                                setExercises(copy);
+                                            }}
+                                            placeholder="Ej: 4x12 RPE 8"
+                                            className="bg-transparent text-[9px] font-black uppercase tracking-widest text-gray-400 outline-none w-24"
+                                        />
+                                    </div>
+                                    <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-xl border border-white/5">
+                                        <Clock className="w-3 h-3 text-orange-500" />
+                                        <input
+                                            type="number"
+                                            value={ex.note || ''}
+                                            onChange={(e) => {
+                                                const copy = [...exercises];
+                                                copy[i].note = e.target.value;
+                                                setExercises(copy);
+                                            }}
+                                            placeholder="Descanso (s)"
+                                            className="bg-transparent text-[9px] font-black uppercase tracking-widest text-gray-400 outline-none w-16"
+                                        />
+                                        <span className="text-[7px] text-gray-600 font-black">SEG</span>
+                                    </div>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-4 mt-1">
-                                {ex.target && ex.target !== "-" && (
-                                    <p className="text-[10px] text-brand-red font-black uppercase tracking-[0.2em]">{ex.target}</p>
-                                )}
-                                {ex.prev && <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded">PR: {ex.prev}</p>}
-                            </div>
+                            <button onClick={() => {
+                                const copy = exercises.filter((_, idx) => idx !== i);
+                                setExercises(copy);
+                            }} className="p-2 text-gray-600 hover:text-red-500 transition-colors opacity-40 hover:opacity-100">
+                                <Trash2 className="w-5 h-5" />
+                            </button>
                         </div>
-                        <button onClick={() => {
-                            const copy = exercises.filter((_: any, idx: number) => idx !== i);
-                            setExercises(copy);
-                        }} className="p-2 text-gray-600 hover:text-red-500 transition-colors opacity-40 hover:opacity-100"><Trash2 className="w-5 h-5" /></button>
                     </div>
-                    <div className="p-4 space-y-2">
+
+                    {/* Sets Grid */}
+                    <div className="p-6 space-y-3">
+                        <div className="grid grid-cols-12 px-4 mb-2">
+                            <span className="col-span-1 text-[8px] font-black text-gray-600 uppercase">#</span>
+                            <span className="col-span-4 text-[8px] font-black text-gray-600 uppercase text-center">Peso / Unit</span>
+                            <span className="col-span-4 text-[8px] font-black text-gray-600 uppercase text-center">Reps / Med</span>
+                            <span className="col-span-3"></span>
+                        </div>
+
                         {ex.sets.map((set: any, j: number) => (
                             <div key={j} className={clsx(
-                                "grid grid-cols-12 gap-2 p-3 rounded-[24px] items-center transition-all duration-300 relative",
-                                set.completed ? "bg-green-500/10 border border-green-500/30" : "bg-white/5 border border-white/5 hover:bg-white/[0.08]"
+                                "grid grid-cols-12 gap-3 p-2 rounded-[28px] items-center transition-all duration-300 border",
+                                set.completed
+                                    ? "bg-brand-red border-brand-red shadow-glow-sm"
+                                    : "bg-white/5 border-white/5 hover:border-white/20"
                             )}>
-                                {/* Float Index */}
-                                <div className="absolute top-2 left-3 font-black text-[8px] opacity-30 pointer-events-none">
-                                    #{j + 1}
+                                <div className={clsx("col-span-1 text-center font-mono text-xs font-black", set.completed ? "text-white" : "text-gray-600")}>
+                                    {j + 1}
                                 </div>
 
+                                {/* Weight */}
                                 <div className={clsx(
-                                    "col-span-4 flex items-center rounded-2xl px-2 border transition-all",
-                                    theme === 'dark' ? "bg-black/40 border-white/5 focus-within:border-brand-red/50" : "bg-gray-100 border-gray-200 focus-within:border-brand-red/30"
+                                    "col-span-4 flex items-center rounded-2xl px-3 border transition-all h-14",
+                                    set.completed ? "bg-black/20 border-white/20" : "bg-black/40 border-white/5"
                                 )}>
-                                    <input type="number" placeholder="0" className={clsx("w-full bg-transparent text-center font-black py-4 outline-none text-xl", theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-400")}
-                                        value={set.weight === 0 ? '0' : (set.weight || '')} onChange={(e) => updateSet(i, j, 'weight', e.target.value === '' ? null : parseFloat(e.target.value))} />
-                                    <select
-                                        value={set.unit || 'kg'}
-                                        onChange={(e) => updateSet(i, j, 'unit', e.target.value)}
-                                        className={clsx("bg-transparent text-[8px] font-black uppercase outline-none border-none cursor-pointer", theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-black")}
-                                    >
-                                        <option value="kg">KG</option>
-                                        <option value="lb">LB</option>
-                                        <option value="bw">BW</option>
-                                        <option value="sec">SEC</option>
-                                        <option value="m">M</option>
-                                    </select>
+                                    <input
+                                        type="number"
+                                        className={clsx("w-full bg-transparent text-center font-black outline-none text-xl", set.completed ? "text-white" : "text-white")}
+                                        value={set.weight || ''}
+                                        onChange={(e) => updateSet(i, j, 'weight', parseFloat(e.target.value) || 0)}
+                                    />
+                                    <span className={clsx("text-[8px] font-black uppercase", set.completed ? "text-white/60" : "text-gray-600")}>{set.unit || 'kg'}</span>
                                 </div>
+
+                                {/* Reps */}
                                 <div className={clsx(
-                                    "col-span-4 flex items-center rounded-2xl px-2 border transition-all",
-                                    theme === 'dark' ? "bg-black/40 border-white/5 focus-within:border-brand-red/50" : "bg-gray-100 border-gray-200 focus-within:border-brand-red/30"
+                                    "col-span-4 flex items-center rounded-2xl px-3 border transition-all h-14",
+                                    set.completed ? "bg-black/20 border-white/20" : "bg-black/40 border-white/5"
                                 )}>
-                                    <input type="number" placeholder="0" className={clsx("w-full bg-transparent text-center font-black py-4 outline-none text-xl", theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-400")}
-                                        value={set.reps === 0 ? '0' : (set.reps || '')} onChange={(e) => updateSet(i, j, 'reps', e.target.value === '' ? null : parseFloat(e.target.value))} />
-                                    <select
-                                        value={set.measure || 'reps'}
-                                        onChange={(e) => updateSet(i, j, 'measure', e.target.value)}
-                                        className={clsx("bg-transparent text-[8px] font-black uppercase outline-none border-none cursor-pointer", theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-black")}
-                                    >
-                                        <option value="reps">REPS</option>
-                                        <option value="sec">SEC</option>
-                                        <option value="min">MIN</option>
-                                        <option value="cal">CAL</option>
-                                        <option value="m">M</option>
-                                    </select>
+                                    <input
+                                        type="number"
+                                        className={clsx("w-full bg-transparent text-center font-black outline-none text-xl", set.completed ? "text-white" : "text-white")}
+                                        value={set.reps || ''}
+                                        onChange={(e) => updateSet(i, j, 'reps', parseFloat(e.target.value) || 0)}
+                                    />
+                                    <span className={clsx("text-[8px] font-black uppercase", set.completed ? "text-white/60" : "text-gray-600")}>{set.measure || 'reps'}</span>
                                 </div>
-                                <div className="col-span-4 flex justify-center">
+
+                                {/* Action */}
+                                <div className="col-span-3 flex justify-center">
                                     <button onClick={() => toggleSet(i, j)} className={clsx(
-                                        "w-11 h-11 rounded-2xl flex items-center justify-center transition-all transform active:scale-90",
-                                        set.completed ? "bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)]" : "bg-white/10 text-gray-500 hover:bg-white/20 hover:text-white"
+                                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg",
+                                        set.completed ? "bg-white text-brand-red scale-110" : "bg-white/10 text-gray-500 hover:bg-white/20"
                                     )}>
                                         <CheckCircle className={clsx("w-6 h-6", set.completed ? "fill-current" : "stroke-current")} />
                                     </button>
@@ -3673,16 +3829,18 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                             </div>
                         ))}
                     </div>
-                    <div className={clsx("p-2 flex border-t", theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-50/50 border-gray-100")}>
-                        <button onClick={() => removeSet(i)} className="flex-1 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest hover:text-red-500 transition-colors">- Serie</button>
-                        <div className={clsx("w-px my-2", theme === 'dark' ? "bg-white/5" : "bg-gray-200")}></div>
-                        <button onClick={() => addSet(i)} className="flex-1 py-3 text-[10px] font-black text-brand-red uppercase tracking-widest hover:bg-brand-red/10 transition-colors">+ Serie</button>
+
+                    {/* Footer: Add/Remove Series */}
+                    <div className={clsx("p-4 flex gap-2 border-t", theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-100/50 border-gray-100")}>
+                        <button onClick={() => removeSet(i)} className="flex-1 py-4 bg-white/5 rounded-2xl text-[9px] font-black text-gray-500 uppercase tracking-widest hover:text-red-500 hover:bg-white/10 transition-all">Eliminar Serie</button>
+                        <button onClick={() => addSet(i)} className="flex-1 py-4 bg-brand-red/10 border border-brand-red/20 rounded-2xl text-[9px] font-black text-brand-red uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all">+ Añadir Serie</button>
                     </div>
                 </div>
             ))}
 
-            <button onClick={() => setShowAddModal(true)} className="w-full py-6 border-2 border-dashed border-white/10 rounded-[32px] text-gray-500 font-black uppercase tracking-[0.2em] hover:border-brand-red/50 hover:text-white hover:bg-white/5 transition-all">
-                + Añadir Ejercicio
+            <button onClick={() => setShowAddModal(true)} className="w-full py-10 border-2 border-dashed border-white/10 rounded-[40px] text-gray-500 font-black uppercase tracking-[0.3em] hover:border-brand-red/50 hover:text-white hover:bg-white/5 transition-all flex flex-col items-center gap-3">
+                <Plus className="w-8 h-8" />
+                <span>Diseñar Siguiente Movimiento</span>
             </button>
 
             {/* Add Modal */}
@@ -3705,7 +3863,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                                 className="w-full text-left p-6 bg-brand-red/10 rounded-2xl border border-brand-red/30 hover:bg-brand-red/20 transition-all group"
                             >
                                 <div className="flex items-center justify-between mb-2">
-                                    <h4 className="text-white font-bold uppercase text-lg">Cargar "{searchQuery}"</h4>
+                                    <h4 className="text-white font-bold uppercase text-lg">Cargar &quot;{searchQuery}&quot;</h4>
                                     <Plus className="w-6 h-6 text-brand-red" />
                                 </div>
                                 <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Crear ejercicio personalizado ahora.</p>
@@ -3747,6 +3905,7 @@ function FinishModal({
     isSaving,
     imageUrl,
     setImageUrl,
+    mediaType,
     isUploading,
     onImageUpload,
     fileInputRef,
@@ -3763,6 +3922,7 @@ function FinishModal({
     isSaving: boolean;
     imageUrl: string | null;
     setImageUrl: (url: string | null) => void;
+    mediaType: 'image' | 'video';
     isUploading: boolean;
     onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
     fileInputRef: React.RefObject<HTMLInputElement | null>;

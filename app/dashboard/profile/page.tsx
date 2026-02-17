@@ -16,8 +16,11 @@ import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import { useStories } from "../stories/StoryContext";
 import StoryBar from "../stories/StoryBar";
 import { createStory } from "../stories/actions";
-import { Plus } from "lucide-react";
+import { Plus, Brain } from "lucide-react";
 import { clsx } from "clsx";
+import SkillTree from "./SkillTree";
+import HealthHub from "./HealthHub";
+import NutritionHub from "./NutritionHub";
 
 export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null);
@@ -44,7 +47,7 @@ export default function ProfilePage() {
     const [isDragging, setIsDragging] = useState(false);
     const [startY, setStartY] = useState(0);
     const [startPos, setStartPos] = useState(50);
-    const [mobileTab, setMobileTab] = useState<'gallery' | 'stats' | 'workouts' | 'settings'>('gallery');
+    const [mobileTab, setMobileTab] = useState<'gallery' | 'stats' | 'workouts' | 'settings' | 'intel'>('gallery');
 
     // Featured RMs State
     const [featuredRms, setFeaturedRms] = useState<any[]>([]);
@@ -640,6 +643,16 @@ export default function ProfilePage() {
                     {mobileTab === 'workouts' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red rounded-t-full" />}
                 </button>
                 <button
+                    onClick={() => setMobileTab('intel')}
+                    className={clsx(
+                        "flex flex-col items-center gap-2 pb-3 px-4 transition-all relative",
+                        mobileTab === 'intel' ? "text-brand-red" : "text-gray-500 hover:text-gray-300"
+                    )}
+                >
+                    <Brain className="w-6 h-6" />
+                    {mobileTab === 'intel' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red rounded-t-full" />}
+                </button>
+                <button
                     onClick={() => setMobileTab('settings')}
                     className={clsx(
                         "flex flex-col items-center gap-2 pb-3 px-4 transition-all relative",
@@ -717,7 +730,23 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Right side: Form y Workouts */}
-                <div className={clsx("lg:col-span-8 space-y-8", mobileTab !== 'settings' && mobileTab !== 'workouts' && "hidden lg:block")}>
+                <div className={clsx("lg:col-span-8 space-y-8", mobileTab !== 'settings' && mobileTab !== 'workouts' && mobileTab !== 'intel' && "hidden lg:block")}>
+                    {/* Intelligence Section */}
+                    <div className={clsx("grid grid-cols-1 md:grid-cols-2 gap-6", mobileTab !== 'intel' && "hidden lg:grid")}>
+                        <div className="space-y-6">
+                            <SkillTree stats={{
+                                power: profile?.power_stat || 0,
+                                endurance: profile?.endurance_stat || 0,
+                                agility: profile?.agility_stat || 0,
+                                consistency: profile?.consistency_stat || 0
+                            }} />
+                            <HealthHub />
+                        </div>
+                        <div className="space-y-6">
+                            <NutritionHub />
+                        </div>
+                    </div>
+
                     {/* Settings Form */}
                     <div className={clsx("bg-brand-gray/30 border border-white/5 rounded-3xl p-3 md:p-8 backdrop-blur-xl", mobileTab !== 'settings' && "hidden lg:block")}>
                         <form onSubmit={handleSave} className="space-y-6">

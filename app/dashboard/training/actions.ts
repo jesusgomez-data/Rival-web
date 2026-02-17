@@ -287,6 +287,46 @@ export async function saveWorkout(workoutData: any) {
         await updateMissionProgress(user.id, 'volume_kg', totalVolume)
     }
 
+    // NEW: Update Skill Stats & Fatigue Index
+    try {
+        const { data: currentStats } = await supabase
+            .from('profiles')
+            .select('power_stat, endurance_stat, agility_stat, consistency_stat')
+            .eq('id', user.id)
+            .single();
+
+        if (currentStats) {
+            // Power: derived from max weight
+            const powerGain = Math.floor(sessionMaxWeight / 50) || 1;
+            // Endurance: derived from volume/duration
+            const enduranceGain = Math.floor(totalVolume / 500) || 1;
+            // Agility: based on sport type
+            const agilityGain = (workoutData.sportType?.toLowerCase().includes('cross') || workoutData.sportType?.toLowerCase().includes('function')) ? 3 : 1;
+
+            await supabase
+                .from('profiles')
+                .update({
+                    power_stat: (currentStats.power_stat || 0) + powerGain,
+                    endurance_stat: (currentStats.endurance_stat || 0) + enduranceGain,
+                    agility_stat: (currentStats.agility_stat || 0) + agilityGain,
+                    consistency_stat: (currentStats.consistency_stat || 0) + 1
+                })
+                .eq('id', user.id);
+
+            // Calculate Fatigue Index (RPE and Duration based)
+            const rpe = parseFloat(workoutData.rpe) || 5;
+            const durationMin = (workoutData.duration || 0) / 60;
+            const fatigueIndex = (rpe * 0.7) + (durationMin * 0.3); // Simple heuristic
+
+            await supabase
+                .from('workouts')
+                .update({ fatigue_index: fatigueIndex })
+                .eq('id', workout.id);
+        }
+    } catch (err) {
+        console.error("Error updating skills/fatigue:", err);
+    }
+
     // 6. AUTO-POST to Community Feed & Stories
     const isNewWorkout = !workoutData.id;
     const shouldPostToArena = workoutData.shareToArena || (isNewWorkout && workoutData.shareToArena !== false);
@@ -1104,4 +1144,170 @@ export async function deleteProfile() {
     await supabase.auth.signOut()
 
     return { success: true }
+}
+
+// --- NEW HEALTH & NUTRITION ACTIONS ---
+
+export async function getHealthHistory(days: number = 7) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const { data, error } = await supabase
+        .from('health_metrics')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('synced_at', { ascending: true })
+        .limit(days);
+
+    if (error) console.error("Error fetching health history:", error);
+    return data || [];
+}
+
+export async function getHealthMetrics() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data, error } = await supabase
+        .from('health_metrics')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('synced_at', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (error && error.code !== 'PGRST116') console.error("Error fetching health metrics:", error);
+    return data;
+}
+
+export async function syncHealthData(metrics: { steps: number, sleep_hours: number, avg_hr: number }) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Not authenticated' };
+
+    // Calculate recovery score based on HR and sleep
+    // This is a simplified mock simulation
+    const hrFactor = Math.max(0, 100 - (metrics.avg_hr - 50) * 1.5);
+    const sleepFactor = Math.min(100, (metrics.sleep_hours / 8) * 100);
+    const recoveryScore = Math.floor((hrFactor + sleepFactor) / 2);
+
+    const { data, error } = await supabase
+        .from('health_metrics')
+        .insert({
+            user_id: user.id,
+            steps: metrics.steps,
+            sleep_hours: metrics.sleep_hours,
+            avg_hr: metrics.avg_hr,
+            recovery_score: recoveryScore
+        })
+        .select()
+        .single();
+
+    if (error) return { error: error.message };
+    return { success: true, data };
+}
+
+export async function getNutritionLogs(dateStr?: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const date = dateStr || new Date().toISOString().split('T')[0];
+
+    const { data, error } = await supabase
+        .from('nutrition_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('log_date', date)
+        .order('created_at', { ascending: false });
+
+    if (error) console.error("Error fetching nutrition logs:", error);
+    return data || [];
+}
+
+export async function addNutritionLog(log: { calories: number, protein: number, carbs: number, fat: number, media_url?: string }) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Not authenticated' };
+
+    const { data, error } = await supabase
+        .from('nutrition_logs')
+        .insert({
+            user_id: user.id,
+            ...log,
+            log_date: new Date().toISOString().split('T')[0]
+        })
+        .select()
+        .single();
+
+    if (error) return { error: error.message };
+    return { success: true, data };
+}
+
+export async function deleteNutritionLog(logId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Not authenticated' };
+
+    const { error } = await supabase
+        .from('nutrition_logs')
+        .delete()
+        .eq('id', logId)
+        .eq('user_id', user.id);
+
+    if (error) return { error: error.message };
+    return { success: true };
+}
+
+export async function getAIPredictions() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // Fetch recent workouts and fatigue
+    const { data: recentWorkouts } = await supabase
+        .from('workouts')
+        .select('fatigue_index, effort_rpe, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(7);
+
+    // Fetch recent recovery
+    const { data: health } = await supabase
+        .from('health_metrics')
+        .select('recovery_score, sleep_hours')
+        .eq('user_id', user.id)
+        .order('synced_at', { ascending: false })
+        .limit(3);
+
+    const avgFatigue = (recentWorkouts?.reduce((acc, w) => acc + (Number(w.fatigue_index) || 0), 0) || 0) / (recentWorkouts?.length || 1);
+    const lastRecovery = health?.[0]?.recovery_score || null;
+
+    if (lastRecovery === null) {
+        return {
+            recommendation: "Sincroniza tus datos de salud para recibir recomendaciones de la IA.",
+            plan: "Esperando biometría...",
+            fatigueLevel: "0",
+            recoveryScore: 0
+        };
+    }
+
+    let recommendation = "¡Listo para la acción! Tu recuperación es óptima.";
+    let plan = "Sesión de alta intensidad recomendada.";
+
+    if (avgFatigue > 7 && lastRecovery < 60) {
+        recommendation = "Cuidado. Tu fatiga acumulada es alta y la recuperación baja.";
+        plan = "Día de descanso activo o movilidad ligera.";
+    } else if (avgFatigue > 5) {
+        recommendation = "Nivel de carga moderado. Mantén la consistencia.";
+        plan = "Entrenamiento de fuerza controlada.";
+    }
+
+    return {
+        recommendation,
+        plan,
+        fatigueLevel: Math.min(10, avgFatigue).toFixed(1),
+        recoveryScore: lastRecovery
+    };
 }

@@ -38,6 +38,7 @@ import { useLanguage } from "@/app/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import PendingReviewPrompt from "./PendingReviewPrompt";
 import SupportModal from "./gyms/SupportModal";
+import AnalyticsTracker from "./admin/AnalyticsTracker";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -185,6 +186,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
     return (
         <div className="min-h-screen bg-background flex font-sans text-foreground selection:bg-brand-red selection:text-white transition-colors duration-300">
+            <AnalyticsTracker />
             {/* Sidebar Toggle Button (Floating) */}
             {hideSidebarDefault && (
                 <button

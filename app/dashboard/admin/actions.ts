@@ -27,19 +27,120 @@ export async function getAdminStats() {
 
     const { data: orgs } = await supabaseAdmin
         .from('organizations')
-        .select('plan');
+        .select('plan, monthly_revenue');
 
     const mrr = orgs?.reduce((acc: number, org: any) => {
         if (org.plan === 'starter') return acc + 49.99;
         if (org.plan === 'pro') return acc + 99.99;
-        return acc;
+        return acc + (Number(org.monthly_revenue) || 0);
     }, 0) || 0;
+
+    // Visitors Stats (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const { count: totalVisits } = await supabaseAdmin
+        .from('site_visits')
+        .select('*', { count: 'exact', head: true });
+
+    const { count: recentVisits } = await supabaseAdmin
+        .from('site_visits')
+        .select('*', { count: 'exact', head: true })
+        .gte('created_at', thirtyDaysAgo.toISOString());
+
+    // Churn Stats (downgrades/cancellations in subscription_logs)
+    const { count: churnCount } = await supabaseAdmin
+        .from('subscription_logs')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_type', 'downgrade');
 
     return {
         users: userCount || 0,
         centers: orgCount || 0,
         workouts: workoutCount || 0,
-        mrr: mrr
+        mrr: mrr,
+        visits: totalVisits || 0,
+        recentVisits: recentVisits || 0,
+        churn: churnCount || 0
+    };
+}
+
+export async function logVisit(path: string, userAgent?: string) {
+    // This is a public-ish action, but we check if user is logged in
+    const supabase = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    await supabaseAdmin.from('site_visits').insert({
+        user_id: user?.id || null,
+        page_path: path,
+        user_agent: userAgent
+    });
+}
+
+export async function getBusinessStats() {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
+
+    // 1. Visitor Breakdown (Last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const { data: visits } = await supabaseAdmin
+        .from('site_visits')
+        .select('created_at')
+        .gte('created_at', sevenDaysAgo.toISOString());
+
+    // 2. Churn Breakdown (Recent unsubscribes)
+    const { data: churnData } = await supabaseAdmin
+        .from('subscription_logs')
+        .select(`
+            *,
+            profiles(username, full_name, email)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+    // 3. Inactive Users (No workouts in 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const { data: activeWorkouts } = await supabaseAdmin
+        .from('workouts')
+        .select('user_id')
+        .gte('created_at', thirtyDaysAgo.toISOString());
+
+    const uniqueActiveIds = Array.from(new Set(activeWorkouts?.map(w => w.user_id) || []));
+
+    let inactiveQuery = supabaseAdmin.from('profiles').select('*').limit(20);
+    if (uniqueActiveIds.length > 0) {
+        inactiveQuery = inactiveQuery.not('id', 'in', `(${uniqueActiveIds.join(',')})`);
+    }
+
+    const { data: inactiveUsers } = await inactiveQuery;
+
+    // 4. Popular Pages
+    const { data: popularPages } = await supabaseAdmin
+        .from('site_visits')
+        .select('page_path');
+
+    const pageCounts = (popularPages || []).reduce((acc: any, curr: any) => {
+        acc[curr.page_path] = (acc[curr.page_path] || 0) + 1;
+        return acc;
+    }, {});
+
+    const topPages = Object.entries(pageCounts)
+        .map(([path, count]) => ({ path, count: count as number }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+
+    return {
+        visits,
+        churn: churnData || [],
+        inactiveUsers: inactiveUsers || [],
+        topPages
     };
 }
 
@@ -85,17 +186,41 @@ export async function updateOrganizationPlan(orgId: string, plan: string) {
         .eq('id', orgId);
 
     if (error) throw new Error(error.message);
+    await logAdminAction('update_org_plan', 'organization', orgId, { new_plan: plan });
     revalidatePath('/dashboard/admin');
 }
 
 export async function updateUserPlan(userId: string, tier: string) {
     if (!(await isUserAdmin())) throw new Error("Unauthorized");
+
+    // Get old tier for logging
+    const { data: profile } = await supabaseAdmin.from('profiles').select('subscription_tier').eq('id', userId).single();
+    const oldTier = profile?.subscription_tier;
+
     const { error } = await supabaseAdmin
         .from('profiles')
         .update({ subscription_tier: tier })
         .eq('id', userId);
 
     if (error) throw new Error(error.message);
+
+    // Log the change
+    if (oldTier !== tier) {
+        let eventType = 'upgrade';
+        const tiers = ['free', 'premium', 'elite'];
+        if (tiers.indexOf(oldTier) > tiers.indexOf(tier)) eventType = 'downgrade';
+        if (tier === 'free') eventType = 'cancel';
+
+        await supabaseAdmin.from('subscription_logs').insert({
+            user_id: userId,
+            old_tier: oldTier,
+            new_tier: tier,
+            event_type: eventType
+        });
+
+        await logAdminAction('update_user_plan', 'user', userId, { old_tier: oldTier, new_tier: tier, event: eventType });
+    }
+
     revalidatePath('/dashboard/admin');
 }
 
@@ -141,6 +266,7 @@ export async function deleteOrganization(orgId: string) {
     }
 
     console.log(`[NUCLEAR ORG DELETE] Success for orgId: ${orgId}`);
+    await logAdminAction('delete_organization', 'organization', orgId);
     revalidatePath('/dashboard/admin');
 }
 
@@ -245,5 +371,127 @@ export async function deleteUser(userId: string) {
     }
 
     console.log(`[NUCLEAR DELETE] Success for userId: ${userId}`);
+    await logAdminAction('delete_user', 'user', userId);
     revalidatePath('/dashboard/admin');
+}
+
+export async function createAnnouncement(title: string, content: string) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
+    const supabase = await createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { error } = await supabaseAdmin.from('announcements').insert({
+        title,
+        content,
+        created_by: user?.id
+    });
+
+    if (error) throw new Error(error.message);
+
+    // Also send a notification to everyone (simplified for now)
+    const { data: users } = await supabaseAdmin.from('profiles').select('id');
+    if (users) {
+        const notifications = users.map(u => ({
+            recipient_id: u.id,
+            type: 'announcement',
+            title: title,
+            content: content.substring(0, 100)
+        }));
+
+        for (let i = 0; i < notifications.length; i += 100) {
+            await supabaseAdmin.from('notifications').insert(notifications.slice(i, i + 100));
+        }
+    }
+
+    await logAdminAction('create_announcement', 'announcement', 'global', { title });
+    revalidatePath('/dashboard/admin');
+    return { success: true };
+}
+
+export async function getExportData(type: 'users' | 'centers' | 'workouts') {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
+
+    const { data, error } = await supabaseAdmin.from(type).select('*');
+    if (error) throw new Error(error.message);
+
+    if (!data || data.length === 0) return "";
+
+    const headers = Object.keys(data[0]).join(",");
+    const rows = data.map((row: any) =>
+        Object.values(row).map(val => String(val).replace(/,/g, " ")).join(",")
+    ).join("\n");
+
+    return `${headers}\n${rows}`;
+}
+// --- PROFESSIONAL ADMIN TOOLS ---
+
+export async function logAdminAction(action: string, type: string, targetId: string, details: any = {}) {
+    const supabase = await createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+
+    await supabaseAdmin.from('admin_audit_logs').insert({
+        admin_id: user?.id,
+        action_type: action,
+        target_type: type,
+        target_id: targetId,
+        details
+    });
+}
+
+export async function getAdminAuditLogs() {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
+    const { data } = await supabaseAdmin
+        .from('admin_audit_logs')
+        .select(`
+            *,
+            admin:admin_id(email)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(50);
+    return data || [];
+}
+
+export async function getSystemActivity() {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
+
+    // Most recent activities across the system
+    const [visits, signups, subscriptions, workouts] = await Promise.all([
+        supabaseAdmin.from('site_visits').select('*, profiles(full_name)').order('created_at', { ascending: false }).limit(10),
+        supabaseAdmin.from('profiles').select('*').order('created_at', { ascending: false }).limit(10),
+        supabaseAdmin.from('subscription_logs').select('*, profiles(full_name)').order('created_at', { ascending: false }).limit(10),
+        supabaseAdmin.from('workouts').select('*, profiles(full_name)').order('created_at', { ascending: false }).limit(10)
+    ]);
+
+    const allEvents = [
+        ...(visits.data || []).map(v => ({ ...v, type: 'visit', label: 'Visita', icon: 'Eye', color: 'text-blue-500' })),
+        ...(signups.data || []).map(s => ({ ...s, type: 'signup', label: 'Nuevo Registro', icon: 'UserPlus', color: 'text-green-500' })),
+        ...(subscriptions.data || []).map(s => ({ ...s, type: 'subscription', label: 'Suscripción', icon: 'CreditCard', color: 'text-purple-500' })),
+        ...(workouts.data || []).map(w => ({ ...w, type: 'workout', label: 'Entrenamiento', icon: 'Zap', color: 'text-yellow-500' }))
+    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 30);
+
+    return allEvents as any[];
+}
+
+export async function getFinanceStats() {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
+
+    const { data: orders } = await supabaseAdmin
+        .from('orders')
+        .select('*, profiles(full_name, email)')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+    const { data: sales } = await supabaseAdmin
+        .from('sales')
+        .select('*, organizations(name)')
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+    return { orders: orders || [], sales: sales || [] };
 }

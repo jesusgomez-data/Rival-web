@@ -129,6 +129,10 @@ export async function getMyDuels() {
 
 export async function getPublicProfile(username: string) {
     const supabase = await createClient();
+
+    // Decoded just in case
+    const target = decodeURIComponent(username);
+
     const { data, error } = await supabase
         .from('profiles')
         .select(`
@@ -136,11 +140,11 @@ export async function getPublicProfile(username: string) {
             followers_count:follows!following_id(count),
             following_count:follows!follower_id(count)
         `)
-        .eq('username', username) // Try exact match first for performance/indexes
+        .or(`username.eq."${target}",email.eq."${target}"`)
         .maybeSingle();
 
     if (!data) {
-        // Fallback to case-insensitive match
+        // Fallback to case-insensitive match on username ONLY
         const { data: insensitiveData, error: insensitiveError } = await supabase
             .from('profiles')
             .select(`
@@ -148,8 +152,8 @@ export async function getPublicProfile(username: string) {
             followers_count:follows!following_id(count),
             following_count:follows!follower_id(count)
         `)
-            .ilike('username', username)
-            .single();
+            .ilike('username', target)
+            .maybeSingle(); // Changed from .single() to avoid throws
 
         if (insensitiveError || !insensitiveData) return null;
 

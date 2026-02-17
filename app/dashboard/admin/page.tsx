@@ -22,13 +22,27 @@ import {
     Sun,
     Moon
 } from 'lucide-react';
-import { getAdminStats, getRecentOrganizations, getAllUsers, deleteUser } from './actions';
+import {
+    getAdminStats,
+    getRecentOrganizations,
+    getAllUsers,
+    deleteUser,
+    getBusinessStats,
+    logVisit,
+    getExportData,
+    getAdminAuditLogs,
+    getSystemActivity,
+    getFinanceStats
+} from './actions';
 import { getSupportTickets } from './support-actions';
 import { getModerationReports, takeModerationAction, deleteModerationReport } from './report-actions';
 import { getAds, toggleAd, deleteAd, updateAd } from './ad-actions';
 import CreateAdModal from './CreateAdModal';
 import EditAdModal from './EditAdModal';
-import { Megaphone, ExternalLink, Eye, MousePointer2 } from 'lucide-react';
+import BroadcastModal from './BroadcastModal';
+import TerminalActivity from './TerminalActivity';
+import ManagementIntelligence from './ManagementIntelligence';
+import { Megaphone, ExternalLink, Eye, MousePointer2, ZapOff, BarChart3, LineChart, Terminal as TerminalIcon } from 'lucide-react';
 import SupportInbox from './SupportInbox';
 import EditCenterModal from './EditCenterModal';
 import EditUserModal from './EditUserModal';
@@ -48,10 +62,16 @@ export default function AdminDashboard() {
     const [tickets, setTickets] = useState<any[]>([]);
     const [reports, setReports] = useState<any[]>([]);
     const [ads, setAds] = useState<any[]>([]);
+    const [businessStats, setBusinessStats] = useState<any>({ visits: [], churn: [], inactiveUsers: [], topPages: [] });
+    const [auditLogs, setAuditLogs] = useState<any[]>([]);
+    const [systemActivity, setSystemActivity] = useState<any[]>([]);
+    const [financeData, setFinanceData] = useState<any>({ orders: [], sales: [] });
     const [loading, setLoading] = useState(true);
 
     // UI State
-    const [activeTab, setActiveTab] = useState<'centers' | 'users' | 'plans' | 'reports' | 'ads'>('centers');
+    const [activeTab, setActiveTab] = useState<'centers' | 'users' | 'plans' | 'reports' | 'ads' | 'system'>('centers');
+    const [systemSubTab, setSystemSubTab] = useState<'terminal' | 'audit' | 'finance'>('terminal');
+    const [reportsSubTab, setReportsSubTab] = useState<'moderation' | 'intelligence'>('moderation');
     const [searchQuery, setSearchQuery] = useState('');
     const [filterPlan, setFilterPlan] = useState('all');
 
@@ -62,6 +82,7 @@ export default function AdminDashboard() {
     const [editingPlan, setEditingPlan] = useState<any>(null);
     const [editingAd, setEditingAd] = useState<any>(null);
     const [isCreatingAd, setIsCreatingAd] = useState(false);
+    const [isBroadcasting, setIsBroadcasting] = useState(false);
 
     const handleAdd = () => {
         if (activeTab === 'plans') setEditingPlan({});
@@ -72,13 +93,17 @@ export default function AdminDashboard() {
     };
 
     async function refreshData() {
-        const [statsData, centersData, usersData, ticketsData, reportsData, adsData] = await Promise.all([
+        const [statsData, centersData, usersData, ticketsData, reportsData, adsData, bizData, auditData, activityData, finData] = await Promise.all([
             getAdminStats(),
             getRecentOrganizations(),
             getAllUsers(),
             getSupportTickets(),
             getModerationReports(),
-            getAds()
+            getAds(),
+            getBusinessStats(),
+            getAdminAuditLogs(),
+            getSystemActivity(),
+            getFinanceStats()
         ]);
         setStats(statsData);
         setCenters(centersData);
@@ -86,6 +111,10 @@ export default function AdminDashboard() {
         setTickets(ticketsData || []);
         setReports(reportsData || []);
         setAds(adsData || []);
+        setBusinessStats(bizData);
+        setAuditLogs(auditData);
+        setSystemActivity(activityData);
+        setFinanceData(finData);
     }
 
     useEffect(() => {
@@ -94,7 +123,7 @@ export default function AdminDashboard() {
                 const supabase = createClient();
                 const { data: { user } } = await supabase.auth.getUser();
 
-                const adminEmails = ['rival.app.official@gmail.com', 'jesusgomez.s@hotmail.com'];
+                const adminEmails = ['rival.app.official@gmail.com', 'jesusgomez.s@hotmail.com', 'rubenblcs@gmail.com'];
                 const userEmail = user?.email?.toLowerCase().trim();
 
                 if (!user || !userEmail || !adminEmails.includes(userEmail)) {
@@ -104,6 +133,7 @@ export default function AdminDashboard() {
                 }
 
                 await refreshData();
+                logVisit('/admin', navigator.userAgent);
             } catch (e) {
                 console.error("Error loading admin data", e);
             } finally {
@@ -175,7 +205,7 @@ export default function AdminDashboard() {
                         </button>
                         <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse shadow-[0_0_10px_#22c55e]" />
                         <span className="text-xs font-mono text-green-500 hidden sm:inline-block italic uppercase">
-                            System Online • {theme}
+                            System Online • v2.2 - Intelligence & Broadcast • {theme}
                         </span>
                     </div>
                 </div>
@@ -210,9 +240,9 @@ export default function AdminDashboard() {
                         delay={0.2}
                     />
                     <KpiCard
-                        title="Entrenamientos"
-                        value={stats.workouts}
-                        trend="+1.2k"
+                        title="Visitas (Totales)"
+                        value={stats.visits || 0}
+                        trend={`+${stats.recentVisits || 0} (30d)`}
                         icon={Activity}
                         color="text-yellow-500"
                         delay={0.3}
@@ -227,7 +257,7 @@ export default function AdminDashboard() {
 
                         {/* Control Bar (Tabs & Filters) */}
                         <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                            <div className="flex p-1 bg-gray-200 dark:bg-white/5 rounded-xl self-start overflow-x-auto max-w-full no-scrollbar transition-colors">
+                            <div className="flex p-1 bg-gray-200 dark:bg-white/5 rounded-xl self-start overflow-x-auto max-w-full transition-colors">
                                 <button
                                     onClick={() => setActiveTab('centers')}
                                     className={cn(
@@ -245,6 +275,15 @@ export default function AdminDashboard() {
                                     )}
                                 >
                                     Atletas
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('reports')}
+                                    className={cn(
+                                        "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap",
+                                        activeTab === 'reports' ? "bg-brand-red text-white shadow-lg" : "text-gray-500 hover:text-black dark:hover:text-white"
+                                    )}
+                                >
+                                    Reportes
                                 </button>
                                 <button
                                     onClick={() => setActiveTab('plans')}
@@ -265,13 +304,13 @@ export default function AdminDashboard() {
                                     Publicidad
                                 </button>
                                 <button
-                                    onClick={() => setActiveTab('reports')}
+                                    onClick={() => setActiveTab('system')}
                                     className={cn(
-                                        "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap",
-                                        activeTab === 'reports' ? "bg-brand-red text-white shadow-lg" : "text-gray-500 hover:text-black dark:hover:text-white"
+                                        "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-2",
+                                        activeTab === 'system' ? "bg-blue-600 text-white shadow-lg" : "text-gray-500 hover:text-black dark:hover:text-white"
                                     )}
                                 >
-                                    Reportes
+                                    <TerminalIcon className="w-3 h-3" /> System Hub
                                 </button>
                             </div>
 
@@ -300,6 +339,63 @@ export default function AdminDashboard() {
                             </div>
                         </div>
 
+                        {/* REQUISITION: Enhanced Reports Section */}
+                        {activeTab === 'reports' && (
+                            <div className="flex gap-4 mb-4">
+                                <button
+                                    onClick={() => setReportsSubTab('moderation')}
+                                    className={cn(
+                                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ring-1 ring-gray-200 dark:ring-white/10",
+                                        reportsSubTab === 'moderation' ? "bg-brand-red text-white ring-brand-red" : "bg-white dark:bg-white/5 text-gray-500 hover:text-foreground"
+                                    )}
+                                >
+                                    Moderación
+                                </button>
+                                <button
+                                    onClick={() => setReportsSubTab('intelligence')}
+                                    className={cn(
+                                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ring-1 ring-gray-200 dark:ring-white/10 flex items-center gap-2",
+                                        reportsSubTab === 'intelligence' ? "bg-blue-600 text-white ring-blue-600" : "bg-white dark:bg-white/5 text-gray-500 hover:text-foreground"
+                                    )}
+                                >
+                                    <BarChart3 className="w-3 h-3" /> Inteligencia de Negocio
+                                </button>
+                            </div>
+                        )}
+
+                        {/* REQUISITION: System Hub Section */}
+                        {activeTab === 'system' && (
+                            <div className="flex gap-4 mb-4">
+                                <button
+                                    onClick={() => setSystemSubTab('terminal')}
+                                    className={cn(
+                                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ring-1 ring-gray-200 dark:ring-white/10",
+                                        systemSubTab === 'terminal' ? "bg-black text-white ring-black" : "bg-white dark:bg-white/5 text-gray-500 hover:text-foreground"
+                                    )}
+                                >
+                                    Server Activity
+                                </button>
+                                <button
+                                    onClick={() => setSystemSubTab('audit')}
+                                    className={cn(
+                                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ring-1 ring-gray-200 dark:ring-white/10 flex items-center gap-2",
+                                        systemSubTab === 'audit' ? "bg-purple-600 text-white ring-purple-600" : "bg-white dark:bg-white/5 text-gray-500 hover:text-foreground"
+                                    )}
+                                >
+                                    <Shield className="w-3 h-3" /> Audit Logs
+                                </button>
+                                <button
+                                    onClick={() => setSystemSubTab('finance')}
+                                    className={cn(
+                                        "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ring-1 ring-gray-200 dark:ring-white/10 flex items-center gap-2",
+                                        systemSubTab === 'finance' ? "bg-emerald-600 text-white ring-emerald-600" : "bg-white dark:bg-white/5 text-gray-500 hover:text-foreground"
+                                    )}
+                                >
+                                    <CreditCard className="w-3 h-3" /> Transacciones
+                                </button>
+                            </div>
+                        )}
+
                         {/* DATA TABLE */}
                         <div className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/5 rounded-3xl overflow-hidden min-h-[400px] shadow-sm dark:shadow-none transition-colors duration-300">
                             <div className="p-6 border-b border-gray-200 dark:border-white/5 flex items-center justify-between">
@@ -308,12 +404,16 @@ export default function AdminDashboard() {
                                         activeTab === 'users' ? <Users className="w-5 h-5 text-brand-red" /> :
                                             activeTab === 'plans' ? <Zap className="w-5 h-5 text-brand-red" /> :
                                                 activeTab === 'ads' ? <Megaphone className="w-5 h-5 text-brand-red" /> :
-                                                    <Flag className="w-5 h-5 text-brand-red" />}
+                                                    activeTab === 'reports' && reportsSubTab === 'moderation' ? <Flag className="w-5 h-5 text-brand-red" /> :
+                                                        activeTab === 'system' ? <TerminalIcon className="w-5 h-5 text-blue-500" /> :
+                                                            <LineChart className="w-5 h-5 text-blue-500" />}
                                     {activeTab === 'centers' ? 'Base de Datos de Centros' :
                                         activeTab === 'users' ? 'Directorio de Atletas' :
                                             activeTab === 'plans' ? 'Configuración de Planes' :
                                                 activeTab === 'ads' ? 'Gestión Publicitaria' :
-                                                    'Reportes de Moderación'}
+                                                    activeTab === 'reports' && reportsSubTab === 'moderation' ? 'Reportes de Moderación' :
+                                                        activeTab === 'system' ? (systemSubTab === 'terminal' ? 'Sistema en Tiempo Real' : systemSubTab === 'audit' ? 'Registro de Auditoría' : 'Control Financiero') :
+                                                            'Inteligencia y Retención'}
                                 </h3>
                                 <div className="flex items-center gap-4">
                                     <span className="text-xs font-mono text-gray-500">
@@ -321,7 +421,8 @@ export default function AdminDashboard() {
                                             activeTab === 'users' ? filteredUsers.length :
                                                 activeTab === 'plans' ? mockPlans.length :
                                                     activeTab === 'ads' ? ads.length :
-                                                        reports.length} REGISTROS
+                                                        activeTab === 'system' ? (systemSubTab === 'terminal' ? systemActivity.length : systemSubTab === 'audit' ? auditLogs.length : financeData.sales.length) :
+                                                            reports.length} REGISTROS
                                     </span>
                                     {(activeTab === 'plans' || activeTab === 'ads') && (
                                         <button
@@ -335,299 +436,335 @@ export default function AdminDashboard() {
                                 </div>
                             </div>
 
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="text-[10px] text-gray-500 uppercase bg-gray-50 dark:bg-white/5 font-black tracking-widest">
-                                        <tr>
-                                            <th className="px-6 py-4">
-                                                {activeTab === 'centers' ? 'Organización' :
-                                                    activeTab === 'users' ? 'Usuario' :
-                                                        activeTab === 'plans' ? 'Nombre del Plan' :
-                                                            activeTab === 'ads' ? 'Título del Anuncio' :
-                                                                'Tipo de Reporte'}
-                                            </th>
-                                            <th className="px-6 py-4">
-                                                {activeTab === 'centers' || activeTab === 'users' ? 'Plan / Tier' :
-                                                    activeTab === 'plans' ? 'Precio' :
-                                                        activeTab === 'ads' ? 'Estadísticas' :
-                                                            'Usuario Reportado'}
-                                            </th>
-                                            <th className="px-6 py-4">
-                                                {activeTab === 'reports' ? 'Objetivo' : 'Estado'}
-                                            </th>
-                                            <th className="px-6 py-4">
-                                                {activeTab === 'centers' ? 'Ingresos' :
-                                                    activeTab === 'users' ? 'Nivel' :
-                                                        activeTab === 'ads' ? 'Fecha Creación' :
-                                                            activeTab === 'plans' ? 'Características' :
-                                                                'Fecha'}
-                                            </th>
-                                            <th className="px-6 py-4 text-right">Acciones</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-gray-200 dark:divide-white/5">
-                                        {activeTab === 'centers' ? (
-                                            filteredCenters.map((center) => (
-                                                <tr key={center.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                                                    <td className="px-6 py-4 font-medium">
-                                                        <Link href={`/gym/${center.id}`} className="flex items-center gap-3 group/link">
-                                                            <div className="w-8 h-8 rounded bg-gray-100 dark:bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                                                                {center.logo_url ? (
-                                                                    <Image src={center.logo_url} width={32} height={32} alt={center.name} className="w-full h-full object-cover" />
-                                                                ) : (
-                                                                    <Building2 className="w-4 h-4 text-gray-500" />
-                                                                )}
-                                                            </div>
-                                                            <div>
-                                                                <div className="text-foreground group-hover/link:text-brand-red transition-colors font-bold">{center.name}</div>
-                                                                <div className="text-[10px] text-gray-500 truncate max-w-[150px]">{center.city || 'N/A'}, {center.country}</div>
-                                                            </div>
-                                                        </Link>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <PlanBadge plan={center.plan || 'free'} type="center" />
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <StatusBadge active={true} />
-                                                    </td>
-                                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300 font-mono">
-                                                        {center.plan === 'pro' ? '99.99€' : center.plan === 'starter' ? '49.99€' : '0.00€'}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <button
-                                                            onClick={() => setEditingCenter(center)}
-                                                            className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-black dark:hover:text-white transition-colors"
-                                                        >
-                                                            <MoreHorizontal className="w-4 h-4" />
-                                                        </button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : activeTab === 'users' ? (
-                                            filteredUsers.map((user) => (
-                                                <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                                                    <td className="px-6 py-4 font-medium">
-                                                        <Link href={`/dashboard/profile/${user.username || user.id}`} className="flex items-center gap-3 group/link">
-                                                            <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
-                                                                {user.avatar_url ? (
-                                                                    <Image src={user.avatar_url} width={32} height={32} alt={user.full_name || 'U'} className="w-full h-full object-cover" />
-                                                                ) : (
-                                                                    <User className="w-4 h-4 text-gray-500" />
-                                                                )}
-                                                            </div>
-                                                            <div>
-                                                                <div className="text-foreground group-hover/link:text-brand-red transition-colors font-bold">{user.full_name || 'Usuario'}</div>
-                                                                <div className="text-[10px] text-gray-500 truncate max-w-[150px]">{user.email}</div>
-                                                            </div>
-                                                        </Link>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <PlanBadge plan={user.subscription_tier || 'free'} type="user" />
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <StatusBadge active={true} />
-                                                    </td>
-                                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300 font-mono text-xs">
-                                                        Lvl {user.level || '1'}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="flex justify-end gap-2">
+                            {activeTab === 'reports' && reportsSubTab === 'intelligence' && (
+                                <div className="p-6">
+                                    <ManagementIntelligence />
+                                </div>
+                            )}
+
+                            {activeTab === 'system' && systemSubTab === 'terminal' && (
+                                <div className="p-6">
+                                    <div className="bg-[#0f0f0f] border border-white/5 rounded-3xl overflow-hidden h-[500px] shadow-2xl">
+                                        <TerminalActivity activities={systemActivity} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {((activeTab !== 'reports' || reportsSubTab !== 'intelligence') && (activeTab !== 'system' || systemSubTab !== 'terminal')) && (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm text-left">
+                                        <thead className="text-[10px] text-gray-500 uppercase bg-gray-50 dark:bg-white/5 font-black tracking-widest">
+                                            <tr>
+                                                <th className="px-6 py-4">
+                                                    {activeTab === 'centers' ? 'Organización' :
+                                                        activeTab === 'users' ? 'Usuario' :
+                                                            activeTab === 'plans' ? 'Nombre del Plan' :
+                                                                activeTab === 'ads' ? 'Título del Anuncio' :
+                                                                    activeTab === 'reports' && reportsSubTab === 'intelligence' ? 'Métrica' :
+                                                                        activeTab === 'system' && systemSubTab === 'audit' ? 'Acción' :
+                                                                            activeTab === 'system' && systemSubTab === 'finance' ? 'Referencia' :
+                                                                                'Tipo de Reporte'}
+                                                </th>
+                                                <th className="px-6 py-4">
+                                                    {activeTab === 'centers' || activeTab === 'users' ? 'Plan / Tier' :
+                                                        activeTab === 'plans' ? 'Precio' :
+                                                            activeTab === 'ads' ? 'Estadísticas' :
+                                                                activeTab === 'reports' && reportsSubTab === 'intelligence' ? 'Valor' :
+                                                                    activeTab === 'system' && systemSubTab === 'audit' ? 'Target / Admin' :
+                                                                        activeTab === 'system' && systemSubTab === 'finance' ? 'Importe' :
+                                                                            'Usuario Reportado'}
+                                                </th>
+                                                <th className="px-6 py-4 text-right">Acciones</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-200 dark:divide-white/5">
+                                            {activeTab === 'centers' ? (
+                                                filteredCenters.map((center) => (
+                                                    <tr key={center.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                                                        <td className="px-6 py-4 font-medium">
+                                                            <Link href={`/gym/${center.id}`} className="flex items-center gap-3 group/link">
+                                                                <div className="w-8 h-8 rounded bg-gray-100 dark:bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                                                    {center.logo_url ? (
+                                                                        <Image src={center.logo_url} width={32} height={32} alt={center.name} className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <Building2 className="w-4 h-4 text-gray-500" />
+                                                                    )}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-foreground group-hover/link:text-brand-red transition-colors font-bold">{center.name}</div>
+                                                                    <div className="text-[10px] text-gray-500 truncate max-w-[150px]">{center.city || 'N/A'}, {center.country}</div>
+                                                                </div>
+                                                            </Link>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <PlanBadge plan={center.plan || 'free'} type="center" />
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
                                                             <button
-                                                                onClick={() => setEditingUser(user)}
+                                                                onClick={() => setEditingCenter(center)}
                                                                 className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-black dark:hover:text-white transition-colors"
                                                             >
                                                                 <MoreHorizontal className="w-4 h-4" />
                                                             </button>
-                                                            <button
-                                                                onClick={async () => {
-                                                                    if (confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario ${user.full_name || user.email}? Esta acción no se puede deshacer.`)) {
-                                                                        try {
-                                                                            await deleteUser(user.id);
-                                                                            await refreshData();
-                                                                            alert('Usuario eliminado correctamente.');
-                                                                        } catch (error: any) {
-                                                                            alert('Error al eliminar usuario: ' + error.message);
-                                                                        }
-                                                                    }
-                                                                }}
-                                                                className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-500 transition-colors"
-                                                                title="Eliminar Usuario"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : activeTab === 'plans' ? (
-                                            mockPlans.map((plan) => (
-                                                <tr key={plan.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                                                    <td className="px-6 py-4 font-medium">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded bg-brand-red/10 flex items-center justify-center shrink-0">
-                                                                <Zap className="w-4 h-4 text-brand-red" />
-                                                            </div>
-                                                            <div className="text-foreground font-bold">{plan.name}</div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-brand-red font-black">
-                                                        {plan.price}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <StatusBadge active={true} />
-                                                    </td>
-                                                    <td className="px-6 py-4 text-gray-400 text-xs">
-                                                        {plan.features}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="flex justify-end gap-2">
-                                                            <button
-                                                                onClick={() => setEditingPlan(plan)}
-                                                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-black dark:hover:text-white transition-colors"
-                                                            >
-                                                                <Edit2 className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => { if (confirm('¿Seguro que deseas eliminar este plan?')) alert('Plan eliminado (Simulado)'); }}
-                                                                className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-500 transition-colors"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : activeTab === 'ads' ? (
-                                            ads.map((ad) => (
-                                                <tr key={ad.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                                                    <td className="px-6 py-4">
-                                                        <div
-                                                            className="flex items-center gap-3 cursor-pointer group/item"
-                                                            onClick={() => setEditingAd(ad)}
-                                                        >
-                                                            <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-gray-200 dark:border-white/10 group-hover/item:border-brand-red transition-colors">
-                                                                <img src={ad.image_url} alt="" className="w-full h-full object-cover group-hover/item:scale-110 transition-transform" />
-                                                            </div>
-                                                            <div>
-                                                                <div className="font-bold text-foreground leading-none mb-1 group-hover/item:text-brand-red transition-colors">{ad.title}</div>
-                                                                <div className="text-[10px] text-gray-500 uppercase font-black truncate max-w-[150px]">{ad.description}</div>
-                                                            </div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <div className="flex flex-col gap-1">
-                                                            <div className="text-[10px] text-gray-400 flex items-center gap-1.5"><Eye className="w-3 h-3" /> {ad.views_count} vistas</div>
-                                                            <div className="text-[10px] text-gray-400 flex items-center gap-1.5"><MousePointer2 className="w-3 h-3" /> {ad.clicks_count} clics</div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                toggleAd(ad.id, ad.is_active).then(refreshData);
-                                                            }}
-                                                            title={ad.is_active ? "Pausar" : "Activar"}
-                                                            className={cn(
-                                                                "px-2 py-0.5 rounded text-[10px] font-black uppercase transition-all",
-                                                                ad.is_active ? "bg-green-500 text-black hover:bg-yellow-500" : "bg-white/10 text-gray-500 hover:text-white hover:bg-white/20"
-                                                            )}
-                                                        >
-                                                            {ad.is_active ? 'Activo' : 'Pausado'}
-                                                        </button>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-[10px] font-mono text-gray-500">
-                                                        {new Date(ad.created_at).toLocaleDateString()}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="flex justify-end gap-2">
-                                                            <button
-                                                                onClick={() => setEditingAd(ad)}
-                                                                className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-black dark:hover:text-white transition-colors"
-                                                            >
-                                                                <Edit2 className="w-4 h-4" />
-                                                            </button>
-                                                            {ad.link_url && (
-                                                                <a href={ad.link_url} target="_blank" className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-black dark:hover:text-white transition-colors">
-                                                                    <ExternalLink className="w-4 h-4" />
-                                                                </a>
-                                                            )}
-                                                            <button
-                                                                onClick={() => { if (confirm('Eliiminar anuncio?')) deleteAd(ad.id).then(refreshData) }}
-                                                                className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-500 transition-colors"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            reports.map((report) => (
-                                                <tr key={report.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
-                                                    <td className="px-6 py-4 font-medium">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={cn(
-                                                                "w-2 h-2 rounded-full",
-                                                                report.severity === 'high' ? "bg-red-500 animate-ping" : "bg-yellow-500"
-                                                            )} />
-                                                            <div className="text-foreground font-bold">{report.type}</div>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
-                                                        @{report.user}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={cn(
-                                                            "px-2 py-0.5 rounded text-[10px] font-bold uppercase",
-                                                            report.status === 'Pending' ? "bg-yellow-500/20 text-yellow-500" : "bg-green-500/20 text-green-500"
-                                                        )}>
-                                                            {report.status}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-gray-500 text-xs text-mono uppercase tracking-tighter">
-                                                        {report.target} · {report.date}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-right">
-                                                        <div className="flex justify-end gap-2">
-                                                            <button
-                                                                onClick={() => setReviewingReport(report)}
-                                                                className="bg-gray-100 dark:bg-white/5 hover:bg-brand-red px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all"
-                                                            >
-                                                                Revisar
-                                                            </button>
-                                                            {report.status === 'Resolved' && (
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : activeTab === 'users' ? (
+                                                filteredUsers.map((user) => (
+                                                    <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                                                        <td className="px-6 py-4 font-medium">
+                                                            <Link href={`/dashboard/profile/${user.username || user.id}`} className="flex items-center gap-3 group/link">
+                                                                <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
+                                                                    {user.avatar_url ? (
+                                                                        <Image src={user.avatar_url} width={32} height={32} alt={user.full_name || 'U'} className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <User className="w-4 h-4 text-gray-500" />
+                                                                    )}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-foreground group-hover/link:text-brand-red transition-colors font-bold">{user.full_name || 'Usuario'}</div>
+                                                                    <div className="text-[10px] text-gray-500 truncate max-w-[150px]">{user.email}</div>
+                                                                </div>
+                                                            </Link>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <PlanBadge plan={user.subscription_tier || 'free'} type="user" />
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className="flex justify-end gap-2">
+                                                                <button
+                                                                    onClick={() => setEditingUser(user)}
+                                                                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                                                                >
+                                                                    <MoreHorizontal className="w-4 h-4" />
+                                                                </button>
                                                                 <button
                                                                     onClick={async () => {
-                                                                        if (confirm('¿Eliminar este reporte resuelto?')) {
-                                                                            await deleteModerationReport(report.id);
-                                                                            refreshData();
+                                                                        if (confirm(`¿Estás seguro de que deseas eliminar permanentemente al usuario ${user.full_name || user.email}? Esta acción no se puede deshacer.`)) {
+                                                                            try {
+                                                                                await deleteUser(user.id);
+                                                                                await refreshData();
+                                                                                alert('Usuario eliminado correctamente.');
+                                                                            } catch (error: any) {
+                                                                                alert('Error al eliminar usuario: ' + error.message);
+                                                                            }
                                                                         }
                                                                     }}
                                                                     className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-500 transition-colors"
-                                                                    title="Eliminar reporte resuelto"
+                                                                    title="Eliminar Usuario"
                                                                 >
                                                                     <Trash2 className="w-4 h-4" />
                                                                 </button>
-                                                            )}
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                        {(activeTab === 'centers' ? filteredCenters :
-                                            activeTab === 'users' ? filteredUsers :
-                                                activeTab === 'plans' ? mockPlans :
-                                                    activeTab === 'ads' ? ads :
-                                                        reports).length === 0 && (
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : activeTab === 'plans' ? (
+                                                mockPlans.map((plan) => (
+                                                    <tr key={plan.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                                                        <td className="px-6 py-4 font-medium">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded bg-brand-red/10 flex items-center justify-center shrink-0">
+                                                                    <Zap className="w-4 h-4 text-brand-red" />
+                                                                </div>
+                                                                <div className="text-foreground font-bold">{plan.name}</div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-brand-red font-black">
+                                                            {plan.price}
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className="flex justify-end gap-2">
+                                                                <button
+                                                                    onClick={() => setEditingPlan(plan)}
+                                                                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                                                                >
+                                                                    <Edit2 className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => { if (confirm('¿Seguro que deseas eliminar este plan?')) alert('Plan eliminado (Simulado)'); }}
+                                                                    className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-500 transition-colors"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : activeTab === 'ads' ? (
+                                                ads.map((ad) => (
+                                                    <tr key={ad.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                                                        <td className="px-6 py-4">
+                                                            <div
+                                                                className="flex items-center gap-3 cursor-pointer group/item"
+                                                                onClick={() => setEditingAd(ad)}
+                                                            >
+                                                                <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 border border-gray-200 dark:border-white/10 group-hover/item:border-brand-red transition-colors">
+                                                                    <img src={ad.image_url} alt="" className="w-full h-full object-cover group-hover/item:scale-110 transition-transform" />
+                                                                </div>
+                                                                <div>
+                                                                    <div className="text-foreground font-bold group-hover/item:text-brand-red transition-colors">{ad.title}</div>
+                                                                    <div className="text-[10px] text-gray-500 uppercase">{ad.placement}</div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4">
+                                                            <div className="flex items-center gap-4 text-xs font-mono">
+                                                                <div className="flex items-center gap-1 text-blue-500"><Eye className="w-3 h-3" /> {ad.views_count || 0}</div>
+                                                                <div className="flex items-center gap-1 text-brand-red"><MousePointer2 className="w-3 h-3" /> {ad.clicks_count || 0}</div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-6 py-4 text-right">
+                                                            <div className="flex justify-end gap-2">
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        toggleAd(ad.id, !ad.is_active).then(refreshData);
+                                                                    }}
+                                                                    className={cn("p-1.5 rounded-lg transition-colors", ad.is_active ? "text-green-500 hover:bg-green-500/10" : "text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10")}
+                                                                >
+                                                                    <Zap className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => setEditingAd(ad)}
+                                                                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg text-gray-500 hover:text-black dark:hover:text-white transition-colors"
+                                                                >
+                                                                    <Edit2 className="w-4 h-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={async () => { if (confirm('¿Eliminar este anuncio?')) { await deleteAd(ad.id); refreshData(); } }}
+                                                                    className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-500 transition-colors"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                ))
+                                            ) : activeTab === 'reports' ? (
+                                                reportsSubTab === 'moderation' ? (
+                                                    reports.map((report) => (
+                                                        <tr key={report.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                                                            <td className="px-6 py-4 font-medium flex items-center gap-3">
+                                                                <div className="p-2 rounded-lg bg-red-500/10 text-red-500">
+                                                                    <Flag className="w-4 h-4" />
+                                                                </div>
+                                                                <div>
+                                                                    <div className="className text-foreground font-bold">{report.reason}</div>
+                                                                    <div className="text-[10px] text-gray-500">Por: {report.reporter?.full_name || 'Alguien'}</div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-4 text-foreground font-mono text-xs">
+                                                                ID: {report.target_id?.substring(0, 8)}...
+                                                            </td>
+                                                            <td className="px-6 py-4 text-right">
+                                                                <button
+                                                                    onClick={() => setReviewingReport(report)}
+                                                                    className="px-3 py-1 bg-brand-red/10 text-brand-red rounded text-[10px] font-black uppercase hover:bg-brand-red hover:text-white transition-all shadow-sm"
+                                                                >
+                                                                    Revisar
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    <>
+                                                        {businessStats.topPages.map((page: any, i: number) => (
+                                                            <tr key={`page-${i}`} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                                                <td className="px-6 py-4 font-medium flex items-center gap-3">
+                                                                    <div className="w-6 h-6 rounded bg-blue-500/10 text-blue-500 flex items-center justify-center text-[10px] font-black">
+                                                                        {i + 1}
+                                                                    </div>
+                                                                    <div className="text-foreground">Página: {page.path}</div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-blue-500 font-black">
+                                                                    {page.count} VISITAS
+                                                                </td>
+                                                                <td className="px-6 py-4 text-right text-[10px] text-gray-500 uppercase tracking-widest font-black">Populares</td>
+                                                            </tr>
+                                                        ))}
+                                                        {businessStats.churn.map((log: any, i: number) => (
+                                                            <tr key={`churn-${i}`} className="hover:bg-red-500/5 transition-colors">
+                                                                <td className="px-6 py-4 font-medium flex items-center gap-3 text-red-500">
+                                                                    <ZapOff className="w-4 h-4" />
+                                                                    <div>
+                                                                        <div className="font-bold">{log.profiles?.full_name || 'Desconocido'}</div>
+                                                                        <div className="text-[10px] text-gray-500 uppercase">{log.event_type}</div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4">
+                                                                    <div className="text-[10px] text-gray-500 font-mono">
+                                                                        {log.old_tier} → {log.new_tier}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-6 py-4 text-right text-[10px] text-red-500 uppercase font-black">Churn log</td>
+                                                            </tr>
+                                                        ))}
+                                                    </>
+                                                )
+                                            ) : activeTab === 'system' ? (
+                                                systemSubTab === 'terminal' ? (
+                                                    null
+                                                ) : systemSubTab === 'audit' ? (
+                                                    auditLogs.map((log) => (
+                                                        <tr key={log.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                                                            <td className="px-6 py-4 font-medium">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="w-2 h-2 rounded-full bg-purple-500" />
+                                                                    <div className="className text-foreground font-bold uppercase text-[11px] tracking-wider">{log.action_type.replace(/_/g, ' ')}</div>
+                                                                </div>
+                                                                <div className="text-[9px] text-gray-400 font-mono mt-0.5">{new Date(log.created_at).toLocaleString()}</div>
+                                                            </td>
+                                                            <td className="px-6 py-4">
+                                                                <div className="text-[10px] text-foreground font-bold">{log.target_type}: {log.target_id?.substring(0, 8)}</div>
+                                                                <div className="text-[9px] text-purple-600 font-mono">{log.admin?.email}</div>
+                                                            </td>
+                                                            <td className="px-6 py-4 text-right">
+                                                                <div className="text-[10px] text-gray-400 truncate max-w-[150px]">{JSON.stringify(log.details)}</div>
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                ) : (
+                                                    financeData.sales.map((sale: any) => (
+                                                        <tr key={sale.id} className="hover:bg-emerald-500/5 transition-colors">
+                                                            <td className="px-6 py-4 font-medium flex items-center gap-3">
+                                                                <div className="p-1.5 rounded bg-emerald-500/10 text-emerald-500">
+                                                                    <CreditCard className="w-4 h-4" />
+                                                                </div>
+                                                                <div>
+                                                                    <div className="font-bold">Pago: {sale.organizations?.name}</div>
+                                                                    <div className="text-[10px] text-gray-500">{new Date(sale.created_at).toLocaleDateString()}</div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-6 py-4 text-emerald-600 font-black">
+                                                                +{sale.amount}€
+                                                            </td>
+                                                            <td className="px-6 py-4 text-right text-[10px] text-gray-400 font-mono">
+                                                                S_REF_{sale.id.substring(0, 8)}
+                                                            </td>
+                                                        </tr>
+                                                    ))
+                                                )
+                                            ) : (
                                                 <tr>
-                                                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500 italic">
-                                                        No hay registros disponibles en esta sección.
-                                                    </td>
+                                                    <td colSpan={3} className="px-6 py-4 text-center text-gray-500 italic">No se encontraron registros en esta sección.</td>
                                                 </tr>
                                             )}
-                                    </tbody>
-                                </table>
-                            </div>
+                                            {(activeTab === 'centers' ? filteredCenters :
+                                                activeTab === 'users' ? filteredUsers :
+                                                    activeTab === 'plans' ? mockPlans :
+                                                        activeTab === 'ads' ? ads :
+                                                            reports).length === 0 && (
+                                                    <tr>
+                                                        <td colSpan={5} className="px-6 py-12 text-center text-gray-500 italic">
+                                                            No hay registros disponibles en esta sección.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -656,11 +793,31 @@ export default function AdminDashboard() {
 
                         {/* Quick Actions Grid */}
                         <div className="grid grid-cols-2 gap-3">
-                            <button className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/5 hover:bg-brand-red hover:text-white dark:hover:text-white hover:border-brand-red transition-all p-4 rounded-3xl flex flex-col items-center justify-center gap-3 group h-32 text-muted-foreground font-bold shadow-sm dark:shadow-none">
+                            <button
+                                onClick={() => setIsBroadcasting(true)}
+                                className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/5 hover:bg-brand-red hover:text-white dark:hover:text-white hover:border-brand-red transition-all p-4 rounded-3xl flex flex-col items-center justify-center gap-3 group h-32 text-muted-foreground font-bold shadow-sm dark:shadow-none"
+                            >
                                 <Zap className="w-8 h-8 text-brand-red group-hover:text-white" />
                                 <span className="text-[10px] font-black uppercase tracking-widest text-foreground group-hover:text-white transition-colors">Broadcast Global</span>
                             </button>
-                            <button className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/5 hover:bg-blue-600 hover:text-white dark:hover:text-white hover:border-blue-600 transition-all p-4 rounded-3xl flex flex-col items-center justify-center gap-3 group h-32 text-muted-foreground font-bold shadow-sm dark:shadow-none">
+                            <button
+                                onClick={async () => {
+                                    const type = confirm('¿Exportar base de datos de usuarios?') ? 'users' :
+                                        confirm('¿Exportar centros?') ? 'centers' : 'workouts';
+                                    try {
+                                        const csv = await getExportData(type as any);
+                                        const blob = new Blob([csv], { type: 'text/csv' });
+                                        const url = window.URL.createObjectURL(blob);
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = `rival_export_${type}_${new Date().toISOString()}.csv`;
+                                        a.click();
+                                    } catch (err: any) {
+                                        alert('Error al exportar: ' + err.message);
+                                    }
+                                }}
+                                className="bg-white dark:bg-[#0a0a0a] border border-gray-200 dark:border-white/5 hover:bg-blue-600 hover:text-white dark:hover:text-white hover:border-blue-600 transition-all p-4 rounded-3xl flex flex-col items-center justify-center gap-3 group h-32 text-muted-foreground font-bold shadow-sm dark:shadow-none"
+                            >
                                 <Download className="w-8 h-8 text-blue-500 group-hover:text-white" />
                                 <span className="text-[10px] font-black uppercase tracking-widest text-foreground group-hover:text-white transition-colors">Exportar Datos</span>
                             </button>
@@ -713,6 +870,12 @@ export default function AdminDashboard() {
                 onClose={() => setEditingAd(null)}
                 onUpdate={refreshData}
                 ad={editingAd}
+            />
+
+            <BroadcastModal
+                open={isBroadcasting}
+                onClose={() => setIsBroadcasting(false)}
+                onSuccess={() => alert('Comunicado enviado con éxito')}
             />
         </div>
     );
