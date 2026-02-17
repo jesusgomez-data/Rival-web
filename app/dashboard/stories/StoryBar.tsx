@@ -1888,38 +1888,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                         </div>
 
                                         <div className="flex items-center gap-3 pointer-events-auto">
-                                            {!isOwner && (
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        const detail: any = {
-                                                            attribution: {
-                                                                username: currentUserStories?.user?.username || currentUserStories?.user?.full_name,
-                                                                avatar: currentUserStories?.user?.avatar_url
-                                                            }
-                                                        };
 
-                                                        const postOverlay = (currentStory as any).overlays?.find((o: any) => o.type === 'workout_sticker' || o.type === 'pr_sticker');
-                                                        if (postOverlay) {
-                                                            detail.type = postOverlay.type === 'pr_sticker' ? 'pr' : 'workout';
-                                                            detail.data = JSON.parse(postOverlay.content);
-                                                        } else if (currentStory.media_type === 'video') {
-                                                            detail.type = 'video';
-                                                            detail.url = currentStory.media_url;
-                                                        } else {
-                                                            detail.type = 'image';
-                                                            detail.url = currentStory.media_url;
-                                                        }
-
-                                                        window.dispatchEvent(new CustomEvent('share-to-story', { detail }));
-                                                        // Close the viewer to go to the story editor
-                                                        setSelectedUserIndex(null);
-                                                    }}
-                                                    className="p-3 rounded-full backdrop-blur-xl border bg-white/10 border-white/10 text-white hover:bg-white/20 transition-all active:scale-90"
-                                                >
-                                                    <Share2 className="w-6 h-6" />
-                                                </button>
-                                            )}
                                             <button
                                                 onClick={handleLike}
                                                 className={clsx(
