@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Plus, Minus, Trash2, FileText, Image as ImageIcon, X, Video, ChevronDown, Check, Edit2, Search, Clock } from "lucide-react";
+import { Plus, Minus, Trash2, FileText, Image as ImageIcon, X, Video, ChevronDown, Check, Edit2, Search, Clock, Trophy } from "lucide-react";
 import { createWod, updateWod } from "../../wod-actions";
 import { deletePost } from "../../feed-actions";
 import clsx from "clsx";
@@ -14,13 +14,28 @@ interface WodBlock {
     id: string;
     type: BlockType;
     format?: BlockFormat;
-    duration?: string;
+    // Standard Config for WodCard
+    config?: {
+        timecap?: string;
+        rounds?: number;
+        work?: string;
+        rest?: string;
+        frequency?: string;
+        minutes?: number;
+    };
     title?: string;
+    duration?: string;
     content: string;
     media_urls?: string[]; // Existing media
     // New Fields for Builder Mode
     mode?: 'text' | 'builder';
     exercises?: WodExercise[];
+}
+
+interface WodSummary {
+    totalTime: string;
+    scoreType: 'TIME' | 'REPS' | 'WEIGHT' | 'ROUNDS' | 'CALORIES' | 'OTHER';
+    scoreLabel: string;
 }
 
 interface WodExercise {
@@ -58,8 +73,14 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
 
     // Form State
     const [editingId, setEditingId] = useState<string | null>(null);
+    const [title, setTitle] = useState("");
     const [warmup, setWarmup] = useState("");
     const [blocks, setBlocks] = useState<WodBlock[]>([]);
+    const [summary, setSummary] = useState<WodSummary>({
+        totalTime: '60:00',
+        scoreType: 'REPS',
+        scoreLabel: 'TOTAL REPS'
+    });
     const getLocalDate = () => {
         const d = new Date();
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -102,8 +123,14 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
 
     const resetForm = () => {
         setEditingId(null);
+        setTitle("");
         setWarmup("");
         setBlocks([]);
+        setSummary({
+            totalTime: '60:00',
+            scoreType: 'REPS',
+            scoreLabel: 'TOTAL REPS'
+        });
         setDate(getLocalDate());
         setTime(getLocalTime());
         setBlockFiles({});
@@ -122,7 +149,13 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
         }
 
         setEditingId(post.id);
+        setTitle(wodData.title || "");
         setWarmup(wodData.warmup || "");
+        setSummary(wodData.summary || {
+            totalTime: '60:00',
+            scoreType: 'REPS',
+            scoreLabel: 'TOTAL REPS'
+        });
 
         // Handle transforming old data structures to blocks if needed, 
         // typically handled in rendering but for editing we might want to normalize.
@@ -133,6 +166,8 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                 ...b,
                 id: b.id || Math.random().toString(36).substr(2, 9),
                 mode: (b.exercises && b.exercises.length > 0) ? 'builder' : 'text',
+                // Migrate duration to config if editing old post
+                config: b.config || (b.duration ? { timecap: b.duration } : {}),
                 exercises: b.exercises ? b.exercises.map((e: any) => ({ ...e, id: Math.random().toString(36).substr(2, 9) })) : []
             }));
             setBlocks(mappedBlocks);
@@ -143,6 +178,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                     id: Math.random().toString(36).substr(2, 9),
                     type: 'wod',
                     format: 'FREE',
+                    config: {},
                     content: wodData.workout
                 }]);
             } else {
@@ -170,8 +206,10 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
         setIsPosting(true);
 
         const formData = new FormData();
+        formData.append("title", title);
         formData.append("warmup", warmup);
         formData.append("blocks", JSON.stringify(blocks));
+        formData.append("summary", JSON.stringify(summary));
         // Combine date and time
         const scheduledDateTime = new Date(`${date}T${time}`).toISOString();
         formData.append("scheduled_for", scheduledDateTime);
@@ -264,6 +302,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
             id: Math.random().toString(36).substr(2, 9),
             type: 'wod',
             format: 'FREE',
+            config: { timecap: '20:00' },
             content: "",
             mode: 'text',
             exercises: []
@@ -433,6 +472,18 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
 
                     <form onSubmit={handleSubmit} className="space-y-6">
 
+                        {/* Section 0: Title */}
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-brand-red uppercase tracking-widest">WOD Title</label>
+                            <input
+                                type="text"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value.toUpperCase())}
+                                placeholder="Ej: THE CHIEF, MURPH, PUSH & BURN..."
+                                className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white focus:border-brand-red focus:bg-black/60 outline-none text-sm font-black italic uppercase transition-colors"
+                            />
+                        </div>
+
                         {/* Section 1: Warm Up */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-brand-red uppercase tracking-widest">Warm Up</label>
@@ -461,7 +512,16 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                         <div className="relative">
                                             <select
                                                 value={block.format}
-                                                onChange={(e) => updateBlock(index, { format: e.target.value as BlockFormat })}
+                                                onChange={(e) => {
+                                                    const newFormat = e.target.value as BlockFormat;
+                                                    let newConfig = { ...block.config };
+                                                    if (newFormat === 'EMOM') newConfig = { frequency: '1 MIN', minutes: 12 };
+                                                    else if (newFormat === 'AMRAP') newConfig = { timecap: '20:00' };
+                                                    else if (newFormat === 'FOR TIME') newConfig = { timecap: '' };
+                                                    else if (newFormat === 'TABATA') newConfig = { rounds: 8, work: '20S', rest: '10S' };
+
+                                                    updateBlock(index, { format: newFormat, config: newConfig });
+                                                }}
                                                 className="appearance-none bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-red focus:border-brand-red outline-none cursor-pointer pr-8"
                                             >
                                                 <option value="FREE">Free Style</option>
@@ -477,13 +537,30 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                             <ChevronDown className="w-3 h-3 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                                         </div>
 
-                                        {(block.format === 'EMOM' || block.format === 'AMRAP' || block.format === 'FOR TIME' || block.format === 'INTERVALS' || block.format === 'DEATH BY') && (
+                                        {(block.format === 'AMRAP' || block.format === 'FOR TIME') && (
                                             <input
-                                                value={block.duration || ''}
-                                                onChange={(e) => updateBlock(index, { duration: e.target.value })}
-                                                placeholder={block.format === 'EMOM' ? '12:00' : block.format === 'AMRAP' ? '20:00' : 'Time Cap'}
+                                                value={block.config?.timecap || ''}
+                                                onChange={(e) => updateBlock(index, { config: { ...block.config, timecap: e.target.value } })}
+                                                placeholder="Time Cap"
                                                 className="w-24 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-brand-red outline-none placeholder-gray-600 font-bold"
                                             />
+                                        )}
+
+                                        {block.format === 'EMOM' && (
+                                            <div className="flex gap-2">
+                                                <input
+                                                    value={block.config?.minutes || ''}
+                                                    onChange={(e) => updateBlock(index, { config: { ...block.config, minutes: parseInt(e.target.value) || 0 } })}
+                                                    placeholder="Mins"
+                                                    className="w-16 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-brand-red outline-none placeholder-gray-600 font-bold"
+                                                />
+                                                <input
+                                                    value={block.config?.frequency || '1 MIN'}
+                                                    onChange={(e) => updateBlock(index, { config: { ...block.config, frequency: e.target.value } })}
+                                                    placeholder="Freq"
+                                                    className="w-20 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-brand-red outline-none placeholder-gray-600 font-bold"
+                                                />
+                                            </div>
                                         )}
                                     </div>
 
@@ -754,6 +831,53 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                         >
                             <Plus className="w-4 h-4" /> Add Block
                         </button>
+
+                        {/* Section: Summary / Goal */}
+                        <div className="bg-brand-red/5 border border-brand-red/20 rounded-2xl p-4 space-y-4">
+                            <div className="flex items-center gap-2 text-white">
+                                <Trophy className="w-4 h-4 text-brand-red" />
+                                <span className="text-xs font-black uppercase italic tracking-tighter">WOD Summary & Goal</span>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase">Estimated Time</label>
+                                    <input
+                                        type="text"
+                                        value={summary.totalTime}
+                                        onChange={(e) => setSummary({ ...summary, totalTime: e.target.value.toUpperCase() })}
+                                        placeholder="Ej: 60:00"
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white text-xs font-bold outline-none focus:border-brand-red"
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase">Score Type</label>
+                                    <select
+                                        value={summary.scoreType}
+                                        onChange={(e) => setSummary({ ...summary, scoreType: e.target.value as any })}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-brand-red text-xs font-bold outline-none focus:border-brand-red cursor-pointer"
+                                    >
+                                        <option value="TIME">TIME</option>
+                                        <option value="REPS">REPS</option>
+                                        <option value="WEIGHT">WEIGHT</option>
+                                        <option value="ROUNDS">ROUNDS</option>
+                                        <option value="CALORIES">CALORIES</option>
+                                        <option value="OTHER">OTHER</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-bold text-gray-500 uppercase">Score Label / Target</label>
+                                <input
+                                    type="text"
+                                    value={summary.scoreLabel}
+                                    onChange={(e) => setSummary({ ...summary, scoreLabel: e.target.value.toUpperCase() })}
+                                    placeholder="Ej: PR: 21:05 / RX: 43KG"
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white text-xs font-bold outline-none focus:border-brand-red"
+                                />
+                            </div>
+                        </div>
 
                         <div className="border-t border-white/10 pt-4">
                             <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Programar Publicación</label>

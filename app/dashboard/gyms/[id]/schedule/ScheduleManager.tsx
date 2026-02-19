@@ -135,7 +135,9 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
         <div className="space-y-6">
             <div className="flex flex-col md:flex-row justify-between items-center gap-4 bg-card p-4 rounded-2xl border border-border">
                 <div className="flex items-center gap-4">
-                    <h2 className="text-xl font-bold text-foreground hidden md:block">Schedule ({classes.length})</h2>
+                    <h2 className="text-xl font-bold text-foreground hidden md:block">
+                        {organizationDetails?.center_type === 'personal_trainer' ? 'Citas' : 'Schedule'} ({classes.length})
+                    </h2>
                     <div className="flex bg-background rounded-lg p-1 border border-border">
                         <button
                             onClick={() => setViewMode('list')}
@@ -201,7 +203,7 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
                             onClick={() => openCreateModal()}
                             className="bg-brand-red text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-red-600 transition-all shadow-lg shadow-brand-red/20"
                         >
-                            <Plus className="w-4 h-4" /> Add Class
+                            <Plus className="w-4 h-4" /> {organizationDetails?.center_type === 'personal_trainer' ? 'Nueva Cita' : 'Add Class'}
                         </button>
                     )}
                 </div>
@@ -332,11 +334,11 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
             {showModal && (
                 <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                     <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
-                        <h3 className="text-lg font-black text-foreground italic uppercase mb-4">Schedule Class</h3>
+                        <h3 className="text-lg font-black text-foreground italic uppercase mb-4">{organizationDetails?.center_type === 'personal_trainer' ? 'Programar Cita' : 'Schedule Class'}</h3>
                         <form onSubmit={handleCreate} className="space-y-4">
                             <div>
-                                <label className="label">Class Name</label>
-                                <input required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="input" placeholder="WOD, Yoga Flow..." />
+                                <label className="label">{organizationDetails?.center_type === 'personal_trainer' ? 'Nombre de la Sesión' : 'Class Name'}</label>
+                                <input required value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} className="input" placeholder={organizationDetails?.center_type === 'personal_trainer' ? 'Sesión Personal, Evaluación...' : 'WOD, Yoga Flow...'} />
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>

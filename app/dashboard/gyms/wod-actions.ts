@@ -63,7 +63,17 @@ export async function createWod(centerId: string, formData: FormData) {
         }
     }
 
-    const structure = { warmup: formData.get('warmup') as string, blocks };
+    const structure = {
+        title: formData.get('title') as string || 'WORKOUT OF THE DAY',
+        warmup: formData.get('warmup') as string,
+        blocks,
+        summary: formData.get('summary') ? JSON.parse(formData.get('summary') as string) : {
+            scoreType: 'REPS',
+            scoreLabel: 'TOTAL REPS',
+            totalTime: '60:00'
+        }
+    };
+
     const { error } = await supabase.from('center_posts').insert({
         organization_id: centerId,
         author_id: user?.id,
@@ -123,7 +133,17 @@ export async function updateWod(centerId: string, wodId: string, formData: FormD
         }
     }
 
-    const structure = { warmup: formData.get('warmup') as string, blocks };
+    const structure = {
+        title: formData.get('title') as string || 'WORKOUT OF THE DAY',
+        warmup: formData.get('warmup') as string,
+        blocks,
+        summary: formData.get('summary') ? JSON.parse(formData.get('summary') as string) : {
+            scoreType: 'REPS',
+            scoreLabel: 'TOTAL REPS',
+            totalTime: '60:00'
+        }
+    };
+
     const { error } = await supabase.from('center_posts').update({
         content: JSON.stringify(structure),
         scheduled_for: scheduledFor || new Date().toISOString(),

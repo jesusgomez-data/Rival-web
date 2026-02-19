@@ -11,6 +11,7 @@ import UserMediaGallery from "../../UserMediaGallery";
 import TrophyCabinet from "./TrophyCabinet";
 import FeedPost from "../../FeedPost";
 import ActivityHeatmap from "@/components/ActivityHeatmap";
+import InfoTooltip from "@/components/InfoTooltip";
 
 import { getFollows } from "../../community/follows-actions";
 
@@ -325,6 +326,13 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                 {/* Trophy Cabinet */}
                                 {!profile.is_official && (
                                     <div className="mb-10">
+                                        <h3 className="font-heading font-black text-white italic tracking-wider mb-6 flex items-center gap-3">
+                                            <Trophy className="w-5 h-5 text-yellow-500" /> VITRINA DE TROFEOS
+                                            <InfoTooltip
+                                                title="Logros"
+                                                content="Aquí se muestran tus medallas y reconocimientos por completar desafíos globales o hitos de entrenamiento."
+                                            />
+                                        </h3>
                                         <TrophyCabinet combatStats={combatStats} profileLevel={profile.level} />
                                     </div>
                                 )}
@@ -386,7 +394,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                 </div>
 
                 {/* Right: Combat History & Stats */}
-                <div className={clsx("lg:col-span-4 space-y-8", mobileTab !== 'stats' && "hidden lg:block")}>
+                <div className="lg:col-span-4 space-y-8">
                     {/* Simplified or blurred stats if private could be done here, but requirement implied strict privacy */}
                     {canViewContent ? (
                         <>
@@ -399,6 +407,10 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                     <div className="relative z-10">
                                         <h3 className="font-heading font-black text-white italic tracking-wider mb-8 flex items-center gap-3">
                                             <TrendingUp className="w-5 h-5 text-brand-red" /> REGISTRO DE COMBATE
+                                            <InfoTooltip
+                                                title="Registro de Combate"
+                                                content="Tu historial de victorias, derrotas y empates en duelos contra otros atletas."
+                                            />
                                         </h3>
 
                                         <div className="space-y-6">
@@ -438,13 +450,26 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
 
                             {/* Activity Heatmap */}
                             {!profile.is_official && (
-                                <ActivityHeatmap workouts={workouts} />
+                                <div className="relative">
+                                    <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-6 flex items-center gap-2 ml-4">
+                                        <Calendar className="w-4 h-4 text-brand-red" /> CALENDARIO DE ACTIVIDAD
+                                        <InfoTooltip
+                                            title="Calendario de Actividad"
+                                            content="Un resumen visual de tus días de entrenamiento. Los días más oscuros indican mayor actividad."
+                                        />
+                                    </h3>
+                                    <ActivityHeatmap workouts={workouts} />
+                                </div>
                             )}
 
                             {/* Vitals Card */}
                             <div className="bg-brand-gray/30 border border-white/10 rounded-[40px] p-8 backdrop-blur-md">
-                                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-6">
+                                <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
                                     {profile.is_official ? 'Información de la App' : 'Vitales del Atleta'}
+                                    <InfoTooltip
+                                        title="Ficha Técnica"
+                                        content="Datos básicos del atleta: rango actual, disciplina principal y base de operaciones."
+                                    />
                                 </h3>
                                 <div className="space-y-4">
                                     <div className="flex items-center justify-between py-2 border-b border-white/5">

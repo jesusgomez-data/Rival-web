@@ -5,7 +5,7 @@ import { getActiveStories } from './actions'
 
 interface OverlayElement {
     id: string
-    type: 'text' | 'image' | 'sticker' | 'workout_sticker' | 'pr_sticker'
+    type: 'text' | 'image' | 'sticker' | 'workout_sticker' | 'pr_sticker' | 'wod_sticker' | 'attribution'
     content: string
     x: number
     y: number

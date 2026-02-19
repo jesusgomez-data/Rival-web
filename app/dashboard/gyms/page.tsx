@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, Building2, MapPin, Users, ArrowRight, ArrowLeft, Loader2, Sun, Moon, Search, Check, Rocket, Zap, Shield, Globe, Instagram, Phone, Trash2, LogOut } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Plus, Building2, MapPin, Users, User, ArrowRight, ArrowLeft, Loader2, Sun, Moon, Search, Check, Rocket, Zap, Shield, Globe, Instagram, Phone, Trash2, LogOut } from "lucide-react";
 import clsx from "clsx";
 import { useTheme } from "../../ThemeContext";
 import { getUserOrganizations, createOrganization, searchOrganizations, deleteOrganization, leaveOrganization, getNearbyOrganizations } from "./actions";
@@ -15,6 +16,8 @@ export default function CenterListPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const { theme } = useTheme();
+    const searchParams = useSearchParams();
+    const filterType = searchParams.get('type');
 
     // Search State
     const [searchTerm, setSearchTerm] = useState("");
@@ -181,8 +184,14 @@ export default function CenterListPage() {
             <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div>
-                        <h1 className={`text-3xl font-heading font-black italic uppercase ${textHeading}`}>Centros</h1>
-                        <p className={textMuted}>Gestiona tus centros o explora nuevos campos de batalla cercanos.</p>
+                        <h1 className={`text-3xl font-heading font-black italic uppercase ${textHeading}`}>
+                            {filterType === 'personal_trainer' ? 'Entrenadores' : 'Centros'}
+                        </h1>
+                        <p className={textMuted}>
+                            {filterType === 'personal_trainer'
+                                ? 'Gestiona tus alumnos o descubre nuevos entrenadores personales.'
+                                : 'Gestiona tus centros o explora nuevos campos de batalla cercanos.'}
+                        </p>
                     </div>
 
                     <div className="flex items-center gap-4 w-full md:w-auto">
@@ -264,6 +273,7 @@ export default function CenterListPage() {
                                                         <option value="cross_training">Box de Cross Training</option>
                                                         <option value="gym">Gimnasio Comercial</option>
                                                         <option value="studio">Estudio Personal</option>
+                                                        <option value="personal_trainer">Entrenador Personal</option>
                                                         <option value="club">Club Deportivo</option>
                                                         <option value="other">Otro</option>
                                                     </select>
@@ -498,25 +508,33 @@ export default function CenterListPage() {
                 {/* My Centers Section */}
                 <div className={searchTerm.length >= 2 ? 'opacity-50 hover:opacity-100 transition-opacity' : ''}>
                     <div className="flex items-center gap-2 mb-6">
-                        <Building2 className={`w-4 h-4 ${textMuted}`} />
-                        <h2 className={`text-sm font-black uppercase tracking-widest ${textMuted}`}>Mis Centros</h2>
+                        {filterType === 'personal_trainer' ? <User className={`w-4 h-4 ${textMuted}`} /> : <Building2 className={`w-4 h-4 ${textMuted}`} />}
+                        <h2 className={`text-sm font-black uppercase tracking-widest ${textMuted}`}>
+                            {filterType === 'personal_trainer' ? 'Mis Perfiles de Entrenador' : 'Mis Centros'}
+                        </h2>
                     </div>
 
-                    {orgs.length === 0 ? (
+                    {orgs.filter(o => !filterType || o.center_type === filterType).length === 0 ? (
                         <div className={`text-center py-20 border-2 border-dashed rounded-3xl ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-200 bg-gray-50'}`}>
-                            <Building2 className={`w-16 h-16 mx-auto mb-4 ${textMuted}`} />
-                            <h3 className={`text-xl font-bold mb-2 ${textHeading}`}>¿Eres dueño de un centro deportivo?</h3>
-                            <p className={`mb-8 ${textMuted}`}>Únete a nosotros y lleva el rendimiento de tus atletas al próximo nivel con RIVAL.</p>
+                            {filterType === 'personal_trainer' ? <User className={`w-16 h-16 mx-auto mb-4 ${textMuted}`} /> : <Building2 className={`w-16 h-16 mx-auto mb-4 ${textMuted}`} />}
+                            <h3 className={`text-xl font-bold mb-2 ${textHeading}`}>
+                                {filterType === 'personal_trainer' ? '¿Eres entrenador personal?' : '¿Eres dueño de un centro deportivo?'}
+                            </h3>
+                            <p className={`mb-8 ${textMuted}`}>
+                                {filterType === 'personal_trainer'
+                                    ? 'Gestiona a tus alumnos de forma profesional y automatiza su programación con RIVAL.'
+                                    : 'Únete a nosotros y lleva el rendimiento de tus atletas al próximo nivel con RIVAL.'}
+                            </p>
                             <button
-                                onClick={() => setShowCreate(true)}
+                                onClick={() => { setShowCreate(true); setStep(1); }}
                                 className="text-brand-red font-bold uppercase tracking-widest hover:text-white transition-colors"
                             >
-                                Afiliar ahora
+                                {filterType === 'personal_trainer' ? 'Empezar ahora' : 'Afiliar ahora'}
                             </button>
                         </div>
                     ) : (
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {orgs.map((org) => (
+                            {orgs.filter(o => !filterType || o.center_type === filterType).map((org) => (
                                 <Link key={org.id} href={`/dashboard/gyms/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
                                     <div className="h-32 bg-gradient-to-br from-gray-800 to-black relative">
                                         {org.cover_photo_url ? (
@@ -583,8 +601,10 @@ export default function CenterListPage() {
                 <div className="space-y-6 pt-8">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <MapPin className="w-4 h-4 text-brand-red" />
-                            <h2 className={`text-sm font-black uppercase tracking-widest ${textHeading}`}>Centros Cercanos</h2>
+                            {filterType === 'personal_trainer' ? <User className="w-4 h-4 text-brand-red" /> : <MapPin className="w-4 h-4 text-brand-red" />}
+                            <h2 className={`text-sm font-black uppercase tracking-widest ${textHeading}`}>
+                                {filterType === 'personal_trainer' ? 'Entrenadores Cercanos' : 'Centros Cercanos'}
+                            </h2>
                         </div>
                         {!userLocation && (
                             <button
@@ -621,7 +641,7 @@ export default function CenterListPage() {
                         </div>
                     ) : (
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {nearbyOrgs.map((org) => (
+                            {nearbyOrgs.filter(o => !filterType || o.center_type === filterType).map((org) => (
                                 <Link key={org.id} href={`/gym/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
                                     <div className="h-32 bg-gradient-to-br from-gray-800 to-black relative">
                                         {org.cover_photo_url ? (

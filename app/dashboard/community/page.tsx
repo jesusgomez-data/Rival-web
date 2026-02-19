@@ -15,6 +15,7 @@ import { useLanguage } from "@/app/LanguageContext";
 import SidebarAd from "./SidebarAd";
 import FeedAd from "./FeedAd";
 import clsx from "clsx";
+import InfoTooltip from "@/components/InfoTooltip";
 
 export default function CommunityPage({
     searchParams
@@ -169,9 +170,15 @@ export default function CommunityPage({
                     <h1 className="text-4xl font-heading font-bold text-white uppercase italic tracking-tighter leading-none mb-2">Comunidad <span className="text-brand-red">Rival</span></h1>
                     <p className="text-gray-400 text-sm font-medium tracking-wide">El campo de batalla donde se forja el carácter.</p>
                 </div>
-                <Suspense fallback={<div className="h-10 w-full max-w-md bg-brand-gray animate-pulse rounded-2xl" />}>
-                    <SearchAthletes />
-                </Suspense>
+                <div className="flex items-center gap-3">
+                    <Suspense fallback={<div className="h-10 w-full max-w-md bg-brand-gray animate-pulse rounded-2xl" />}>
+                        <SearchAthletes />
+                    </Suspense>
+                    <InfoTooltip
+                        title="Buscar Rivales"
+                        content="Encuentra a otros atletas por nombre o usuario para seguirlos o retarlos a un duelo."
+                    />
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -204,6 +211,11 @@ export default function CommunityPage({
                             <Users className={clsx("w-4 h-4", activeTab === 'following' ? "text-brand-red" : "")} />
                             Siguiendo
                             {activeTab === 'following' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red shadow-glow-sm" />}
+                            <InfoTooltip
+                                title="Tu Círculo"
+                                content="Filtra el contenido para ver solo a los atletas que sigues y las cuentas oficiales."
+                                className="ml-1"
+                            />
                         </button>
                     </div>
 
@@ -300,6 +312,10 @@ export default function CommunityPage({
                             <TrendingUp className="absolute -right-8 -top-8 w-32 h-32 text-brand-red opacity-5 group-hover:rotate-12 transition-transform duration-700" />
                             <h3 className="text-xs font-black text-gray-400 uppercase tracking-[0.4em] mb-6 flex items-center gap-2">
                                 Eventos del Gimnasio
+                                <InfoTooltip
+                                    title="Actividades"
+                                    content="Competiciones, clases especiales y eventos sociales organizados por tu sede oficial."
+                                />
                             </h3>
                             <div className="space-y-6">
                                 <div className="flex gap-4 group/item cursor-pointer">

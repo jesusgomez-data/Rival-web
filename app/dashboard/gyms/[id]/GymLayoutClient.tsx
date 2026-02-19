@@ -61,7 +61,7 @@ export default function GymLayoutClient({
                         <X className="w-5 h-5" />
                     </button>
                 </div>
-                <SidebarNav id={org.id} isAdmin={isAdmin} />
+                <SidebarNav id={org.id} isAdmin={isAdmin} centerType={org.center_type} />
                 <div className="p-4 border-t border-border shrink-0">
                     <Link href="/dashboard/gyms" className="flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-widest text-gray-500 hover:text-foreground transition-all">
                         <LogOut className="w-4 h-4" /> Cambiar Centro
@@ -136,7 +136,7 @@ export default function GymLayoutClient({
                             </Link>
                         </div>
                     </div>
-                    <SidebarNav id={org.id} isAdmin={isAdmin} />
+                    <SidebarNav id={org.id} isAdmin={isAdmin} centerType={org.center_type} />
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 lg:p-8 custom-scrollbar">

@@ -544,3 +544,52 @@ export async function getReelPosts(context: 'following' | 'global') {
         hasLikedInitial: user ? post.likes?.some((l: any) => l.user_id === user.id) : false
     }));
 }
+export async function getWodResults(title: string) {
+    const supabase = await createClient()
+
+    // Fetch posts of type 'wod' that contain the title in their media_url JSON
+    // Note: title matching is a simple way to group results for the same workout name
+    const { data: posts, error } = await supabase
+        .from('posts')
+        .select(`
+            id,
+            media_url,
+            created_at,
+            user_id,
+            profiles:user_id (
+                username,
+                full_name,
+                avatar_url
+            )
+        `)
+        .eq('media_type', 'wod')
+        .order('created_at', { ascending: false })
+
+    if (error) {
+        console.error("Error fetching WOD results:", error);
+        return [];
+    }
+
+    // Filter and parse in JS (easier than complex JSON path matching in SQL for this schema)
+    return posts.filter(post => {
+        try {
+            const wodData = JSON.parse(post.media_url || '{}');
+            return wodData.title === title || (wodData.title?.toUpperCase() === title?.toUpperCase());
+        } catch (e) {
+            return false;
+        }
+    }).map(post => {
+        const wodData = JSON.parse(post.media_url);
+        return {
+            id: post.id,
+            userId: post.user_id,
+            username: (post as any).profiles?.username,
+            fullName: (post as any).profiles?.full_name,
+            avatarUrl: (post as any).profiles?.avatar_url,
+            score: wodData.summary?.scoreLabel || '-',
+            time: wodData.summary?.totalTime || '--:--',
+            scoreType: wodData.summary?.scoreType || 'RESULTADO',
+            createdAt: post.created_at
+        };
+    });
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, Minus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap, Share2, Camera, Award, AlertTriangle, ChevronRight, Youtube, Video, Lock, Wind, Heart, TrendingUp, Download, Watch, Triangle } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, Minus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap, Share2, Camera, Award, AlertTriangle, ChevronRight, Youtube, Video, Lock, Wind, Heart, TrendingUp, Download, Watch, Triangle, PlayCircle } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect, Suspense, useMemo, useRef } from "react";
 import { saveWorkout, getExercises, getExercisePreviousRecord, getWorkoutDetails, uploadWorkoutMedia, getUserProfile, getGuidedWorkoutsCount } from "../actions";
@@ -895,7 +895,15 @@ function SessionContent() {
                     }}
                     onPlanSelect={(plan) => {
                         setIsGuided(true);
-                        setPreStartPlan(plan);
+                        // Pre-calculate sets if not present
+                        const planWithSets = {
+                            ...plan,
+                            exercises: plan.exercises?.map(ex => ({
+                                ...ex,
+                                sets: ex.sets || [{ order: 1, weight: 0, reps: 10, completed: false }]
+                            }))
+                        };
+                        setPreStartPlan(planWithSets);
                     }}
                 />
 
@@ -1257,6 +1265,8 @@ function SessionContent() {
                         mode={sportMode}
                         workoutTitle={workoutTitle}
                         setWorkoutTitle={setWorkoutTitle}
+                        isGuided={isGuided}
+                        onFinish={() => setShowFinishModal(true)}
                     />
                 )}
                 {sportMode === 'running' && (
@@ -1627,6 +1637,27 @@ function SessionContent() {
 
             <SyncWatchModal isOpen={showSyncModal} onClose={() => setShowSyncModal(false)} />
 
+            {showFinishModal && (
+                <FinishModal
+                    onConfirm={handleFinish}
+                    onCancel={() => setShowFinishModal(false)}
+                    shareToArena={shareToArena}
+                    setShareToArena={setShareToArena}
+                    shareToStory={shareToStory}
+                    setShareToStory={setShareToStory}
+                    isSaving={isSaving}
+                    imageUrl={imageUrl}
+                    setImageUrl={setImageUrl}
+                    mediaType={mediaType}
+                    isUploading={isUploading}
+                    onImageUpload={handleImageUpload}
+                    fileInputRef={fileInputRef}
+                    workoutTitle={workoutTitle || "Sesión de Entrenamiento"}
+                    rpe={rpe}
+                    setRpe={setRpe}
+                />
+            )}
+
         </div >
     );
 }
@@ -1635,80 +1666,57 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
     gym: {
         upper: [
             {
-                id: 'g-u-1',
-                title: 'Empuje & Tracción Pesados',
+                id: 'gym-upper-1',
+                title: 'Día 1: Enfoque Superior',
                 sport: 'gym',
                 difficulty: 'intermediate',
-                duration_min: 60,
+                duration_min: 55,
                 is_premium: false,
-                description: 'Fuerza básica multiarticular. Enfoque en control y carga progresiva.',
+                description: 'Enfoque en pecho, espalda y hombros con carga progresiva.',
                 exercises: [
-                    { name: 'Press de Banca Plano', target: '4 sets x 6 reps (RPE 8)', sets: [{ reps: 6, weight: 60 }], note: "120" },
-                    { name: 'Dominadas / Jalón Pecho', target: '4 sets x 8-10 reps', sets: [{ reps: 10, weight: 0 }], note: "90" },
-                    { name: 'Press Militar Mancuernas', target: '3 sets x 10 reps', sets: [{ reps: 10, weight: 15 }], note: "90" },
-                    { name: 'Remo con Barra', target: '3 sets x 8 reps', sets: [{ reps: 8, weight: 40 }], note: "90" }
-                ]
-            },
-            {
-                id: 'g-u-2',
-                title: 'Hipertrofia - Torso Pump',
-                sport: 'gym',
-                difficulty: 'beginner',
-                duration_min: 50,
-                is_premium: false,
-                description: 'Volumen moderado, rests cortos para máximo bombeo.',
-                exercises: [
-                    { name: 'Press Inclinado Manc.', target: '3 sets x 12 reps', sets: [{ reps: 12, weight: 20 }], note: "60" },
-                    { name: 'Aperturas Polea', target: '3 sets x 15 reps', sets: [{ reps: 15, weight: 10 }], note: "45" },
-                    { name: 'Remo Polea Baja', target: '3 sets x 12 reps', sets: [{ reps: 12, weight: 35 }], note: "60" },
-                    { name: 'Face Pulls', target: '3 sets x 20 reps', sets: [{ reps: 20, weight: 5 }], note: "45" }
-                ]
-            },
-            {
-                id: 'g-u-3',
-                title: 'Elite Upper Power',
-                sport: 'gym',
-                difficulty: 'elite',
-                duration_min: 75,
-                is_premium: true,
-                description: 'Combinación de potencia y accesorios aislados de alta carga.',
-                exercises: [
-                    { name: 'Weighted Pull Ups', target: '5 sets x 5 reps', sets: [{ reps: 5, weight: 15 }], note: "150" },
-                    { name: 'Bench Press (Pausa)', target: '5 sets x 3 reps', sets: [{ reps: 3, weight: 80 }], note: "180" },
-                    { name: 'Dips Lastrados', target: '3 sets x 8 reps', sets: [{ reps: 8, weight: 20 }], note: "120" },
-                    { name: 'Curl Bíceps + Tríceps', target: 'Superset x 3', sets: [{ reps: 12, weight: 12 }], note: "60" }
+                    { name: 'Press de Banca', target: '4 series x 8-10 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=rT7DgCr-3pg', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }, { order: 4, reps: 10, weight: 0, completed: false }] },
+                    { name: 'Dominadas (o Lat Pulldown)', target: '3 series x 8-12 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=eGo4IYlbE5g', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }] },
+                    { name: 'Press Militar (Mancuernas)', target: '3 series x 10 reps', note: '60', video_url: 'https://www.youtube.com/watch?v=2yjwxtZ4f6s', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }] },
+                    { name: 'Remo con Barra', target: '3 series x 10 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=6PkaVn-r_Sg', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }] },
+                    { name: 'Elevaciones Laterales', target: '3 series x 15 reps', note: '45', video_url: 'https://www.youtube.com/watch?v=PzsOxWzOkYI', sets: [{ order: 1, reps: 15, weight: 0, completed: false }, { order: 2, reps: 15, weight: 0, completed: false }, { order: 3, reps: 15, weight: 0, completed: false }] }
                 ]
             }
         ],
         lower: [
             {
-                id: 'g-l-1',
-                title: 'Sentadilla & Cadena Post.',
+                id: 'gym-lower-1',
+                title: 'Tren Inferior: Potencia de Piernas',
                 sport: 'gym',
                 difficulty: 'intermediate',
-                duration_min: 70,
+                duration_min: 60,
                 is_premium: false,
-                description: 'Fuerza absoluta en piernas con grandes descansos.',
+                description: 'Sentadilla y básicos para construir una base sólida de piernas.',
                 exercises: [
-                    { name: 'Back Squat (Sentadilla)', target: '4 sets x 5-8 reps', sets: [{ reps: 6, weight: 80 }], note: "120" },
-                    { name: 'Peso Muerto Rumano', target: '3 sets x 10 reps', sets: [{ reps: 10, weight: 60 }], note: "90" },
-                    { name: 'Búlgaras Mancuerna', target: '3 sets x 10 reps', sets: [{ reps: 10, weight: 12 }], note: "90" }
+                    { name: 'Sentadilla con Barra', target: '4 series x 10 reps', note: '120', video_url: 'https://www.youtube.com/watch?v=MVMh0HiJCXQ', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }, { order: 4, reps: 10, weight: 0, completed: false }] },
+                    { name: 'Peso Muerto Rumano', target: '4 series x 10 reps', note: '120', video_url: 'https://www.youtube.com/watch?v=JCXUYuzwNrM', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }, { order: 4, reps: 10, weight: 0, completed: false }] },
+                    { name: 'Prensa de Piernas', target: '3 series x 12 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=IZxyjW7MPJQ', sets: [{ order: 1, reps: 12, weight: 0, completed: false }, { order: 2, reps: 12, weight: 0, completed: false }, { order: 3, reps: 12, weight: 0, completed: false }] },
+                    { name: 'Curl Femoral', target: '3 series x 12 reps', note: '60', video_url: 'https://www.youtube.com/watch?v=OrxowZ4GTts', sets: [{ order: 1, reps: 12, weight: 0, completed: false }, { order: 2, reps: 12, weight: 0, completed: false }, { order: 3, reps: 12, weight: 0, completed: false }] },
+                    { name: 'Extensiones de Cuádriceps', target: '3 series x 15 reps', note: '60', video_url: 'https://www.youtube.com/watch?v=YyvSfVjQeL0', sets: [{ order: 1, reps: 15, weight: 0, completed: false }, { order: 2, reps: 15, weight: 0, completed: false }, { order: 3, reps: 15, weight: 0, completed: false }] },
+                    { name: 'Elevación de Talones', target: '4 series x 15 reps', note: '60', video_url: 'https://www.youtube.com/watch?v=YMmgqO8Jo-k', sets: [{ order: 1, reps: 15, weight: 0, completed: false }, { order: 2, reps: 15, weight: 0, completed: false }, { order: 3, reps: 15, weight: 0, completed: false }, { order: 4, reps: 15, weight: 0, completed: false }] }
                 ]
             }
         ],
         full: [
             {
-                id: 'g-f-1',
-                title: 'Full Body Efficiency',
+                id: 'gym-full-1',
+                title: 'Full Body: Fuerza General',
                 sport: 'gym',
-                difficulty: 'beginner',
-                duration_min: 45,
+                difficulty: 'intermediate',
+                duration_min: 50,
                 is_premium: false,
-                description: 'Un ejercicio multiarticular por grupo muscular principal.',
+                description: 'Cuerpo completo en una sola sesión para máxima eficiencia.',
                 exercises: [
-                    { name: 'Sentadilla Goblet', target: '3 sets x 12 reps', sets: [{ reps: 12, weight: 20 }], note: "90" },
-                    { name: 'Press de Banca', target: '3 sets x 10 reps', sets: [{ reps: 10, weight: 50 }], note: "90" },
-                    { name: 'Remo con Mancuerna', target: '3 sets x 12 reps', sets: [{ reps: 12, weight: 18 }], note: "90" }
+                    { name: 'Sentadilla Goblet', target: '3 series x 12 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=MVMh0HiJCXQ', sets: [{ order: 1, reps: 12, weight: 0, completed: false }, { order: 2, reps: 12, weight: 0, completed: false }, { order: 3, reps: 12, weight: 0, completed: false }] },
+                    { name: 'Press de Banca', target: '3 series x 10 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=rT7DgCr-3pg', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }] },
+                    { name: 'Remo con Mancuerna', target: '3 series x 12 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=pYcpY20QaE8', sets: [{ order: 1, reps: 12, weight: 0, completed: false }, { order: 2, reps: 12, weight: 0, completed: false }, { order: 3, reps: 12, weight: 0, completed: false }] },
+                    { name: 'Hip Thrust Mancuerna', target: '3 series x 12 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=SEdqd1n0cvg', sets: [{ order: 1, reps: 12, weight: 0, completed: false }, { order: 2, reps: 12, weight: 0, completed: false }, { order: 3, reps: 12, weight: 0, completed: false }] },
+                    { name: 'Press de Hombros', target: '3 series x 12 reps', note: '75', video_url: 'https://www.youtube.com/watch?v=qEwKCR5JCog', sets: [{ order: 1, reps: 12, weight: 0, completed: false }, { order: 2, reps: 12, weight: 0, completed: false }, { order: 3, reps: 12, weight: 0, completed: false }] },
+                    { name: 'Plancha Abdominal', target: '3 series x 45 seg', note: '60', video_url: 'https://www.youtube.com/watch?v=Xyd_fa5zoEU', sets: [{ order: 1, reps: 45, weight: 0, completed: false }, { order: 2, reps: 45, weight: 0, completed: false }, { order: 3, reps: 45, weight: 0, completed: false }] }
                 ]
             }
         ]
@@ -1783,19 +1791,14 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
     },
     calisthenics: {
         upper: [
-            { id: 'c-u-1', title: 'Handstand Mastery', sport: 'calisthenics', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Control de pino.', exercises: [{ name: 'Handstand Hold', sets: [{ reps: 3 }] }] },
-            { id: 'c-u-2', title: 'Planche Progress', sport: 'calisthenics', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Fuerza de empuje.', exercises: [{ name: 'Planche Lean', sets: [{ reps: 5 }] }] },
-            { id: 'c-u-3', title: 'Dips & Push Ups', sport: 'calisthenics', difficulty: 'beginner', duration_min: 35, is_premium: false, description: 'Base de empuje.', exercises: [{ name: 'Dips', sets: [{ reps: 15 }] }] }
+            { id: 'c-u-1', title: 'Handstand mastery & Push', sport: 'calisthenics', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Control de pino y fuerza de empuje básica.', exercises: [{ name: 'Handstand Hold', target: '4 series x 30 seg', note: '60', video_url: 'https://www.youtube.com/watch?v=3uIpsm5L-iU', sets: [{ order: 1, reps: 30, weight: 0, completed: false }, { order: 2, reps: 30, weight: 0, completed: false }, { order: 3, reps: 30, weight: 0, completed: false }, { order: 4, reps: 30, weight: 0, completed: false }] }, { name: 'Pike Push Ups', target: '3 series x 8-10 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=npP9Z6vW4sc', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }] }] },
+            { id: 'c-u-2', title: 'Planche Path - Static Force', sport: 'calisthenics', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Fuerza isométrica de empuje para Planche.', exercises: [{ name: 'Planche Lean', target: '5 series x 15 seg', note: '60', video_url: 'https://www.youtube.com/watch?v=LlvX7zYg3U0', sets: [{ order: 1, reps: 15, weight: 0, completed: false }, { order: 2, reps: 15, weight: 0, completed: false }, { order: 3, reps: 15, weight: 0, completed: false }, { order: 4, reps: 15, weight: 0, completed: false }, { order: 5, reps: 15, weight: 0, completed: false }] }] }
         ],
         lower: [
-            { id: 'c-l-1', title: 'Pistol Foundation', sport: 'calisthenics', difficulty: 'intermediate', duration_min: 40, is_premium: false, description: 'Sentadilla a una pierna.', exercises: [{ name: 'Pistol Squat', sets: [{ reps: 5 }] }] },
-            { id: 'c-l-2', title: 'Explosive Body', sport: 'calisthenics', difficulty: 'elite', duration_min: 35, is_premium: true, description: 'Saltos de potencia.', exercises: [{ name: 'Box Jumps', sets: [{ reps: 12 }] }] },
-            { id: 'c-l-3', title: 'Bodyweight Legs', sport: 'calisthenics', difficulty: 'beginner', duration_min: 45, is_premium: false, description: 'Zancadas y saltos.', exercises: [{ name: 'Lunges', sets: [{ reps: 40 }] }] }
+            { id: 'c-l-1', title: 'Pistol Foundation', sport: 'calisthenics', difficulty: 'intermediate', duration_min: 40, is_premium: false, description: 'Sentadilla a una pierna y movilidad.', exercises: [{ name: 'Pistol Squat', target: '4 series x 5 reps/lado', note: '90', video_url: 'https://www.youtube.com/watch?v=mD9iKInN0U0', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }, { order: 4, reps: 10, weight: 0, completed: false }] }] }
         ],
         pull: [
-            { id: 'c-p-1', title: 'Muscle Up Prep', sport: 'calisthenics', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Tracción explosiva.', exercises: [{ name: 'Muscle Ups', sets: [{ reps: 5 }] }] },
-            { id: 'c-p-2', title: 'Front Lever Path', sport: 'calisthenics', difficulty: 'elite', duration_min: 45, is_premium: false, description: 'Fuerza isométrica.', exercises: [{ name: 'Tuck Lever', sets: [{ reps: 3 }] }] },
-            { id: 'c-p-3', title: 'Back Lever Basics', sport: 'calisthenics', difficulty: 'intermediate', duration_min: 40, is_premium: false, description: 'Control de suspensión.', exercises: [{ name: 'Skin the Cat', sets: [{ reps: 5 }] }] }
+            { id: 'c-p-1', title: 'Muscle Up Explosive Path', sport: 'calisthenics', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Tracción explosiva para el Muscle Up.', exercises: [{ name: 'High Pull Ups', target: '5 series x 5 reps', note: '120', video_url: 'https://www.youtube.com/watch?v=ykKpxuI1Snc', sets: [{ order: 1, reps: 5, weight: 0, completed: false }, { order: 2, reps: 5, weight: 0, completed: false }, { order: 3, reps: 5, weight: 0, completed: false }, { order: 4, reps: 5, weight: 0, completed: false }, { order: 5, reps: 5, weight: 0, completed: false }] }] }
         ]
     },
     other: {
@@ -1984,7 +1987,22 @@ function SportSelector({ onSelect, onPlanSelect, guidedCount, userTier }: { onSe
                         return currentOptions.map((opt: { id: string, title: string, desc: string, icon: React.ReactNode }) => (
                             <button
                                 key={opt.id}
-                                onClick={() => { setSelectedFocus(opt.id); fetchRecommendations(opt.id); }}
+                                onClick={() => {
+                                    if (selectedSport === 'gym' || selectedSport === 'calisthenics') {
+                                        // Directly start for Gym/Cali to avoid extra steps
+                                        const rotationIdx = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % (WORKOUT_POOL[selectedSport as string]?.[opt.id]?.length || 1);
+                                        const plan = WORKOUT_POOL[selectedSport as string]?.[opt.id]?.[rotationIdx];
+                                        if (plan) {
+                                            startPlan(plan);
+                                        } else {
+                                            setSelectedFocus(opt.id);
+                                            fetchRecommendations(opt.id);
+                                        }
+                                    } else {
+                                        setSelectedFocus(opt.id);
+                                        fetchRecommendations(opt.id);
+                                    }
+                                }}
                                 className={clsx(
                                     "w-full p-6 rounded-3xl bg-card border border-border hover:bg-muted transition-all text-left flex items-center justify-between group",
                                     selectedSport === 'running' ? "hover:border-blue-500" :
@@ -3557,12 +3575,14 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
     )
 }
 
-function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorkoutTitle }: {
+function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorkoutTitle, isGuided, onFinish }: {
     exercises: WorkoutExercise[];
     setExercises: (ex: WorkoutExercise[]) => void;
     mode?: string;
     workoutTitle?: string;
     setWorkoutTitle?: (t: string) => void;
+    isGuided?: boolean;
+    onFinish?: () => void;
 }) {
     const { theme } = useTheme();
     const [showAddModal, setShowAddModal] = useState(false);
@@ -3684,6 +3704,131 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
             copy[exIdx].sets.pop();
             setExercises(copy);
         }
+    }
+
+    if (isGuided) {
+        return (
+            <div className="space-y-8 animate-in fade-in duration-500 max-w-2xl mx-auto px-1">
+                {viewingVideo && <VideoModal url={viewingVideo} onClose={() => setViewingVideo(null)} />}
+
+                {restTimer && (
+                    <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[300] bg-brand-red text-white px-8 py-4 rounded-[32px] shadow-glow flex items-center gap-4 animate-in slide-in-from-top-10 duration-500">
+                        <div className="flex flex-col">
+                            <span className="text-[8px] font-black uppercase tracking-widest opacity-70 text-white/80">Protocolo de Descanso</span>
+                            <span className="text-2xl font-mono font-black">{Math.floor(restTimer.seconds / 60)}:{(restTimer.seconds % 60).toString().padStart(2, '0')}</span>
+                        </div>
+                        <button onClick={() => setRestTimer(null)} className="p-2 bg-black/20 rounded-full hover:bg-black/40"><X className="w-4 h-4" /></button>
+                    </div>
+                )}
+
+                {/* Protocol Table Inspired by Image */}
+                <div className={clsx(
+                    "rounded-[40px] border overflow-hidden shadow-2xl relative",
+                    theme === 'dark' ? "bg-[#0c0c0c] border-white/5" : "bg-white border-gray-100"
+                )}>
+                    {/* Header: DIA X - ENFOQUE */}
+                    <div className="bg-brand-red/5 p-8 border-b border-inherit text-center">
+                        <h3 className="text-[10px] font-black text-brand-red uppercase tracking-[0.4em] mb-1">DÍA DE ENTRENAMIENTO</h3>
+                        <h2 className={clsx("text-3xl font-heading font-black italic uppercase italic tracking-tighter", theme === 'dark' ? "text-white" : "text-black")}>
+                            {workoutTitle?.split(':')[1]?.trim() || workoutTitle}
+                        </h2>
+                        <div className="flex items-center justify-center gap-4 mt-4 opacity-60">
+                            <div className="flex items-center gap-1.5">
+                                <Clock className="w-3 h-3 text-orange-500" />
+                                <span className="text-[9px] font-black uppercase tracking-widest">Sugerido: 45-60 MIN</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Table Column Headers */}
+                    <div className={clsx(
+                        "grid grid-cols-12 border-b bg-muted/10 opacity-50",
+                        theme === 'dark' ? "border-white/5" : "border-gray-100"
+                    )}>
+                        <div className="col-span-8 p-4 text-[9px] font-black uppercase tracking-widest border-r border-inherit pl-8">EJERCICIO</div>
+                        <div className="col-span-4 p-4 text-[9px] font-black uppercase tracking-widest text-center">SERIES / REPS</div>
+                    </div>
+
+                    {exercises.map((ex, idx) => (
+                        <div key={ex.id || idx} className={clsx(
+                            "grid grid-cols-12 border-b last:border-0 hover:bg-white/[0.01] transition-colors relative group",
+                            theme === 'dark' ? "border-white/5" : "border-gray-100"
+                        )}>
+                            {/* Exercise Cell */}
+                            <div className="col-span-8 p-6 md:p-8 border-r border-inherit pl-8">
+                                <div className="flex items-center gap-3">
+                                    <h4 className={clsx("text-lg md:text-xl font-heading font-black italic uppercase leading-none tracking-tight", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</h4>
+                                    {ex.video_url && (
+                                        <button
+                                            onClick={() => setViewingVideo(ex.video_url || null)}
+                                            className="p-1.5 bg-brand-red/10 text-brand-red rounded-full hover:bg-brand-red hover:text-white transition-all shadow-sm"
+                                        >
+                                            <PlayCircle className="w-4 h-4 fill-current" />
+                                        </button>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-4 mt-2 opacity-50">
+                                    <div className="flex items-center gap-1">
+                                        <Clock className="w-2.5 h-2.5" />
+                                        <span className="text-[8px] font-bold uppercase tracking-widest">Rest: {ex.note || '60'}s</span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <Trophy className="w-2.5 h-2.5" />
+                                        <span className="text-[8px] font-bold uppercase tracking-widest">{ex.target || '-'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Series Cell */}
+                            <div className="col-span-4 p-6 md:p-8 flex flex-col items-center justify-center gap-2">
+                                <div className="text-center">
+                                    <p className="text-2xl md:text-3xl font-heading font-black italic text-brand-red leading-none">{ex.sets.length}</p>
+                                    <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mt-1">SERIES</p>
+                                </div>
+
+                                {/* Status Toggle (Optional but helpful to track progress) */}
+                                <button
+                                    onClick={() => toggleSet(idx, 0)}
+                                    className={clsx(
+                                        "px-4 py-1.5 rounded-full text-[7px] font-black uppercase tracking-widest transition-all",
+                                        ex.sets[0]?.completed
+                                            ? "bg-green-500 text-white"
+                                            : "bg-white/5 text-gray-500 border border-white/5 hover:border-brand-red/30"
+                                    )}
+                                >
+                                    {ex.sets[0]?.completed ? '✓ LISTO' : 'MARCAR'}
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {onFinish && (
+                    <div className="pt-12 pb-20 flex flex-col items-center gap-6">
+                        <div className="text-center space-y-2">
+                            <p className="text-[9px] text-gray-500 font-black uppercase tracking-[0.4em]">Fin del Protocolo</p>
+                            <h3 className="text-2xl font-heading font-black italic text-white uppercase italic tracking-tight translate-y-2">Misión Cumplida</h3>
+                        </div>
+                        <button
+                            onClick={onFinish}
+                            className="w-full max-w-sm py-8 rounded-[40px] bg-brand-red text-white font-heading font-black italic uppercase text-2xl shadow-glow-lg hover:scale-[1.05] active:scale-95 transition-all group overflow-hidden relative pr-12 pl-20"
+                        >
+                            <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="absolute left-6 top-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                                <Trophy className="w-6 h-6 text-brand-red fill-current" />
+                            </div>
+                            <div className="relative z-10 flex flex-col items-center leading-none">
+                                <span className="text-lg opacity-80 mb-1">FINALIZAR</span>
+                                <span className="text-3xl tracking-tighter">ENTRENAMIENTO</span>
+                            </div>
+                        </button>
+                        <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest text-center max-w-[280px] leading-relaxed">
+                            Al finalizar podrás compartir tu victoria con la comunidad y registrar tu racha.
+                        </p>
+                    </div>
+                )}
+            </div>
+        );
     }
 
     return (
@@ -3891,6 +4036,22 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                     </div>
                 </div>
             )}
+            {exercises.length > 0 && isGuided && onFinish && (
+                <div className="pt-8 pb-12 flex flex-col items-center gap-4">
+                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em]">¿Has terminado tu rutina guiada?</p>
+                    <button
+                        onClick={onFinish}
+                        className="w-full max-w-sm py-6 rounded-[32px] bg-brand-red text-white font-heading font-black italic uppercase text-lg shadow-glow hover:scale-[1.02] active:scale-95 transition-all group overflow-hidden relative"
+                    >
+                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="relative z-10 flex items-center justify-center gap-3">
+                            <CheckCircle className="w-6 h-6" />
+                            <span>Finalizar & Publicar</span>
+                        </div>
+                    </button>
+                    <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest max-w-[280px] text-center">Al finalizar podrás añadir una foto/video y compartir tus resultados con la comunidad.</p>
+                </div>
+            )}
         </div>
     )
 }
@@ -3946,7 +4107,7 @@ function FinishModal({
     };
 
     return (
-        <div className={clsx("fixed inset-0 z-[200] backdrop-blur-xl flex items-center justify-center p-4", theme === 'dark' ? "bg-black/95" : "bg-white/90")}>
+        <div className={clsx("fixed inset-0 z-[300] backdrop-blur-xl flex items-center justify-center p-4", theme === 'dark' ? "bg-black/95" : "bg-white/90")}>
             <div className={clsx(
                 "w-full max-w-md rounded-[40px] border overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300",
                 theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-100"

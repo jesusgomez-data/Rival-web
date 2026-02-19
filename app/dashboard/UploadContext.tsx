@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { createUserPost, createPRPost } from './community/actions';
+import { createUserPost, createPRPost, createWodPost } from './community/actions';
 import { Loader2, CheckCircle2, XCircle, Clock } from 'lucide-react';
 import Image from 'next/image';
 
@@ -35,6 +35,9 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
         exercise?: string;
         weight?: string;
         sport?: string;
+        totalTime?: string; // Added based on user's partial edit, assuming it's optional
+        scoreType?: string; // Added based on user's partial edit, assuming it's optional
+        scoreLabel?: string; // Added based on user's partial edit, assuming it's optional
         selectedTrack?: any;
         currentUser: any;
         preview?: string;

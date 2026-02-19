@@ -11,12 +11,18 @@ interface InstagramShareCardProps {
     avatar: string;
     username: string;
     content: {
-        type: 'workout' | 'pr' | 'image' | 'class_result' | 'running' | 'challenge';
+        type: 'workout' | 'pr' | 'image' | 'class_result' | 'running' | 'challenge' | 'wod';
         title?: string;
         highlight?: string;
         stats?: Array<{ label: string, value: string, icon?: string }>;
         image?: string;
         mapData?: string; // Base64 or URL for the path preview
+        wodData?: any;
+        attribution?: {
+            username: string;
+            avatar: string;
+            id?: string;
+        };
     };
     onClose: () => void;
 }
@@ -133,7 +139,7 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                                     <p className="text-gray-400 text-[10px] font-black uppercase tracking-[0.3em]">ATLETA</p>
                                     <Trophy className="w-3 h-3 text-brand-red" />
                                 </div>
-                                <h2 className="text-white font-black text-3xl italic uppercase tracking-tighter leading-none">{user}</h2>
+                                <h2 className="text-white font-black text-3xl italic uppercase tracking-tighter leading-none text-center">{user}</h2>
                                 <p className="text-brand-red font-bold text-sm tracking-[0.2em] uppercase mt-1">@{username}</p>
                             </div>
                         </div>
@@ -147,20 +153,85 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                             <div className="relative z-10 space-y-4">
                                 <div className="space-y-1">
                                     <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] italic">
-                                        {content.type === 'pr' ? 'NUEVO RÉCORD' : (content.type === 'challenge' ? 'DESAFÍO COMPLETADO' : 'ACTIVIDAD COMPLETADA')}
+                                        {content.type === 'pr' ? 'NUEVO RÉCORD' : (content.type === 'challenge' ? 'DESAFÍO COMPLETADO' : (content.type === 'wod' ? 'WOD COMPLETADO' : 'ACTIVIDAD COMPLETADA'))}
                                     </p>
                                     <h3 className="text-white font-black text-2xl italic uppercase tracking-tight leading-none">
                                         {content.title || 'Entrenamiento'}
                                     </h3>
                                 </div>
 
-                                {content.highlight && (
+                                {content.type === 'wod' && content.wodData && (
+                                    <div className="space-y-3">
+                                        {content.wodData.blocks?.slice(0, 2).map((block: any, bi: number) => (
+                                            <div key={bi} className="bg-white/5 rounded-2xl p-3 border border-white/5">
+                                                <div className="flex justify-between items-center mb-2">
+                                                    <span className="text-[10px] font-black text-brand-red uppercase italic">{block.format || 'METCON'}</span>
+                                                    <span className="text-[8px] font-bold text-gray-500 uppercase">
+                                                        {block.format === 'EMOM' || block.format === 'DEATH BY' ? (
+                                                            `${block.config?.minutes || 15} MINS`
+                                                        ) : (block.format === 'TABATA' || block.format === 'INTERVALS') ? (
+                                                            `${block.config?.rounds || 8} RDS`
+                                                        ) : block.config?.timecap ? (
+                                                            `CAP: ${block.config.timecap}`
+                                                        ) : null}
+                                                    </span>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    {block.exercises?.slice(0, 4).map((ex: any, ei: number) => (
+                                                        <div key={ei} className="space-y-1">
+                                                            <div className="flex justify-between items-center text-[10px]">
+                                                                <span className="text-gray-300 font-bold uppercase truncate pr-4">{ex.name}</span>
+                                                                <span className="text-white font-black shrink-0">{ex.reps} {ex.detail && `(${ex.detail})`}</span>
+                                                            </div>
+                                                            {ex.showRounds && ex.roundDetails && ex.roundDetails.length > 0 && (
+                                                                <div className="grid grid-cols-5 gap-1 pt-1 pb-2">
+                                                                    {ex.roundDetails.map((rd: string, ri: number) => rd && (
+                                                                        <div key={ri} className="bg-white/10 rounded-md py-1 text-[8px] text-center font-black text-brand-red border border-white/5">
+                                                                            {rd}
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                    {(block.exercises?.length > 4) && (
+                                                        <p className="text-[8px] text-gray-600 font-bold uppercase mt-1">+ {block.exercises.length - 4} EJERCICIOS MÁS</p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {/* Result Summary - Compact at the Bottom */}
+                                        {(content.wodData.summary || content.stats?.length > 0 || content.wodData._stats?.length > 0) && (
+                                            <div className="flex items-center gap-2 pt-2 border-t border-white/10 mt-1">
+                                                <div className="flex-1">
+                                                    <p className="text-[8px] text-gray-500 font-black uppercase tracking-wider">
+                                                        {content.wodData.summary?.scoreType || content.stats?.[0]?.label || content.wodData._stats?.[0]?.label || 'PUNTUACIÓN'}
+                                                    </p>
+                                                    <p className="text-brand-red font-black text-lg italic leading-none truncate">
+                                                        {content.wodData.summary?.scoreLabel || content.stats?.[0]?.value || content.wodData._stats?.[0]?.value || '-'}
+                                                    </p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[8px] text-gray-500 font-black uppercase tracking-wider">
+                                                        {content.stats?.[1]?.label || content.wodData._stats?.[1]?.label || 'TIEMPO'}
+                                                    </p>
+                                                    <p className="text-white font-black text-sm italic leading-none truncate">
+                                                        {content.wodData.summary?.totalTime || content.stats?.[1]?.value || content.wodData._stats?.[1]?.value || '--:--'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+
+                                {content.highlight && content.type !== 'wod' && (
                                     <div className="bg-brand-red/10 border-l-4 border-brand-red py-3 px-4 rounded-r-xl">
                                         <p className="text-brand-red font-bold text-lg leading-tight uppercase italic">{content.highlight}</p>
                                     </div>
                                 )}
 
-                                {content.stats && content.stats.length > 0 && (
+                                {content.stats && content.stats.length > 0 && content.type !== 'wod' && (
                                     <div className={clsx(
                                         "grid gap-4 pt-2",
                                         content.type === 'running' ? "grid-cols-3" : "grid-cols-2"
@@ -199,8 +270,9 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                         {/* Footer */}
                         <div className="relative z-10 flex flex-col items-center gap-4">
                             <div className="flex items-center gap-3">
-                                <div className="p-2 bg-white/5 border border-white/10 rounded-xl">
-                                    <Trophy className="w-5 h-5 text-brand-red" />
+                                <div className="p-2 bg-white/5 border border-white/10 rounded-xl relative overflow-hidden group">
+                                    <div className="absolute inset-0 bg-brand-red opacity-0 group-hover:opacity-20 transition-opacity animate-pulse" />
+                                    <Trophy className="w-5 h-5 text-brand-red relative z-10" />
                                 </div>
                                 <div className="text-left leading-none">
                                     <p className="text-white font-black text-[10px] uppercase tracking-widest">DESCÁRGATE LA APP</p>
@@ -213,7 +285,7 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                 </div>
 
                 {/* UI Buttons */}
-                <div className="flex flex-col gap-4 w-full bg-white/5 p-6 rounded-[32px] border border-white/10 backdrop-blur-xl">
+                <div className="flex flex-col gap-4 w-full bg-white/5 p-6 rounded-[32px] border border-white/10 backdrop-blur-xl shrink-0">
                     <button
                         onClick={handleShare}
                         disabled={isGenerating}

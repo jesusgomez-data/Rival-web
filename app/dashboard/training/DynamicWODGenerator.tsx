@@ -17,39 +17,73 @@ export default function DynamicWODGenerator() {
 
     const generateWorkout = async () => {
         setIsGenerating(true);
-        // Simular llamada a IA
-        await new Promise(r => setTimeout(r, 2000));
+        // Simular llamada a IA siguiendo CROSSFIT_WOD_SYSTEM.md
+        await new Promise(r => setTimeout(r, 2500));
 
-        const mockWods = [
+        const professionalWods = [
             {
-                title: "RIVAL BLAST 🔥",
-                type: "AMRAP 20",
-                description: "Máximas rondas posibles en 20 minutos de:",
-                exercises: [
-                    "20 Kettlebell Swings (24/16kg)",
-                    "15 Box Jumps",
-                    "10 Burpees over bar",
-                    "5 Pull-ups"
+                title: "ARENA BLITZ ⚡",
+                blocks: [
+                    {
+                        id: "b1",
+                        title: "PILLAR STRENGTH",
+                        format: "EMOM",
+                        config: { frequency: "1 MIN", minutes: 12 },
+                        content: "Alternate between exercises every minute",
+                        exercises: [
+                            { name: "Back Squat", reps: "8-10 reps", detail: "65-70% 1RM" },
+                            { name: "Strict Press", reps: "10-12 reps", detail: "RPE 8" }
+                        ]
+                    },
+                    {
+                        id: "b2",
+                        title: "METCON",
+                        format: "AMRAP",
+                        config: { timecap: "15:00" },
+                        content: "As many rounds as possible in 15 mins",
+                        exercises: [
+                            { name: "Kettlebell Swings", reps: "20 reps", detail: "24/16kg" },
+                            { name: "Box Jumps", reps: "15 reps", detail: "24/20\"" },
+                            { name: "Burpees", reps: "10 reps", detail: "Standard" }
+                        ]
+                    }
                 ],
-                focus: "Potencia Metabólica",
-                rpe: 9
+                summary: {
+                    totalTime: "40:00",
+                    scoreType: "REPS",
+                    scoreLabel: "TOTAL REPS"
+                },
+                rpe: 8,
+                focus: "Power & Capacity"
             },
             {
-                title: "IRON FLOW 🦾",
-                type: "4 Rondas por tiempo",
-                description: "Calidad de movimiento y tensión constante:",
-                exercises: [
-                    "12 Goblet Squats",
-                    "12 Dumbbell Rows",
-                    "12 Overhead Press",
-                    "20 Plank Shoulders Taps"
+                title: "GRIZZLY ENDURANCE 🐻",
+                blocks: [
+                    {
+                        id: "b1",
+                        title: "THE ENGINE",
+                        format: "FOR TIME",
+                        config: { timecap: "25:00" },
+                        content: "Complete all work as fast as possible",
+                        exercises: [
+                            { name: "Row", reps: "1000m", detail: "Moderate Pace" },
+                            { name: "Thrusters", reps: "50 reps", detail: "43/30kg" },
+                            { name: "Pull-ups", reps: "50 reps", detail: "Kipping" },
+                            { name: "Row", reps: "1000m", detail: "Max Effort" }
+                        ]
+                    }
                 ],
-                focus: "Fuerza e Hipertrofia",
-                rpe: 7
+                summary: {
+                    totalTime: "35:00",
+                    scoreType: "TIME",
+                    scoreLabel: "FINISH TIME"
+                },
+                rpe: 9,
+                focus: "Lactate Threshold"
             }
         ];
 
-        setWorkout(mockWods[Math.floor(Math.random() * mockWods.length)]);
+        setWorkout(professionalWods[Math.floor(Math.random() * professionalWods.length)]);
         setIsGenerating(false);
     };
 
@@ -128,17 +162,34 @@ export default function DynamicWODGenerator() {
                             </div>
 
                             <h3 className="text-2xl font-heading font-black italic text-white mb-1 uppercase tracking-tighter">{workout.title}</h3>
-                            <div className="text-sm font-bold text-indigo-400 mb-4">{workout.type}</div>
+                            <div className="text-[10px] font-black tracking-widest text-indigo-400 mb-6 uppercase border-b border-white/5 pb-2">
+                                FOCUS: {workout.focus} | TOTAL TIME: {workout.summary.totalTime}
+                            </div>
 
-                            <p className="text-xs text-gray-400 mb-6 italic">{workout.description}</p>
-
-                            <div className="space-y-3">
-                                {workout.exercises.map((ex: string, i: number) => (
-                                    <div key={i} className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
-                                        <div className="w-6 h-6 rounded-lg bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-[10px] font-black text-indigo-400">
-                                            {i + 1}
+                            <div className="space-y-6">
+                                {workout.blocks.map((block: any, i: number) => (
+                                    <div key={block.id} className="space-y-3">
+                                        <div className="flex items-center gap-2">
+                                            <div className="px-2 py-1 bg-white/5 rounded-md text-[8px] font-black text-white uppercase tracking-widest border border-white/10">
+                                                {block.format}
+                                            </div>
+                                            <h4 className="text-xs font-black text-white uppercase tracking-widest">{block.title}</h4>
+                                            {block.config?.timecap && <span className="text-[8px] font-bold text-gray-500 ml-auto">CAP: {block.config.timecap}</span>}
                                         </div>
-                                        <span className="text-sm font-medium text-gray-200">{ex}</span>
+                                        <div className="space-y-2 pl-4 border-l border-white/5 ml-1">
+                                            {block.exercises.map((ex: any, ei: number) => (
+                                                <div key={ei} className="flex justify-between items-center group/ex transition-all">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[8px] font-black text-gray-700">0{ei + 1}</span>
+                                                        <span className="text-xs font-bold text-gray-300 group-hover/ex:text-white">{ex.name}</span>
+                                                    </div>
+                                                    <div className="flex flex-col items-end">
+                                                        <span className="text-[10px] font-black text-indigo-400 tracking-tighter italic">{ex.reps}</span>
+                                                        <span className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">{ex.detail}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 ))}
                             </div>

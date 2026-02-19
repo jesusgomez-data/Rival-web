@@ -4,6 +4,48 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 
+async function calculateWorkoutStreak(supabase: any, userId: string) {
+    // Fetch unified history (independent and classes)
+    const { data: workouts } = await supabase.from('workouts').select('created_at').eq('user_id', userId).order('created_at', { ascending: false });
+    const { data: classResults } = await supabase.from('class_results').select('date_performed').eq('user_id', userId).order('date_performed', { ascending: false });
+
+    const allDates = [
+        ...(workouts || []).map(w => new Date(w.created_at).toISOString().split('T')[0]),
+        ...(classResults || []).map(c => new Date(c.date_performed).toISOString().split('T')[0])
+    ];
+
+    // Unique dates and sort descending
+    const uniqueDates = Array.from(new Set(allDates)).sort((a, b) => b.localeCompare(a));
+
+    if (uniqueDates.length === 0) return 0;
+
+    const today = new Date().toISOString().split('T')[0];
+    const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+
+    // If no workout today or yesterday, streak is 0 (broken)
+    // Note: If they haven't worked out yet today, streak is still alive from yesterday
+    if (uniqueDates[0] !== today && uniqueDates[0] !== yesterday) return 0;
+
+    let streak = 0;
+    // Start checking from the most recent workout date
+    let currentCheckDate = new Date(uniqueDates[0]);
+
+    for (const dateStr of uniqueDates) {
+        const date = new Date(dateStr);
+        const diffMs = currentCheckDate.getTime() - date.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        if (diffDays <= 1) {
+            streak++;
+            currentCheckDate = date;
+        } else {
+            break;
+        }
+    }
+
+    return streak;
+}
+
 export async function getMissions() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -20,7 +62,6 @@ export async function getMissions() {
     }
 
     // 2. Get user's progress for this week
-    // We assume week starts on Monday for simplicity, or just use CURRENT_DATE's week
     const { data: userMissions, error: progressError } = await supabase
         .from('user_missions')
         .select('*')
@@ -30,13 +71,40 @@ export async function getMissions() {
         console.error('Error fetching user progress:', progressError)
     }
 
-    // 3. Merge data
+    // 3. Calculate dynamic streak
+    const realStreak = await calculateWorkoutStreak(supabase, user.id);
+
+    // 4. Merge data
     return missions.map(mission => {
         const progress = userMissions?.find(um => um.mission_id === mission.id)
+
+        // If it's a streak mission, use the live calculated value
+        let currentValue = progress?.current_value || 0;
+        if (mission.goal_type === 'streak') {
+            currentValue = realStreak;
+
+            // Proactively update the progress in DB if it changed and mission not completed
+            if (currentValue !== (progress?.current_value || 0) && !progress?.is_completed) {
+                supabase
+                    .from('user_missions')
+                    .upsert({
+                        user_id: user.id,
+                        mission_id: mission.id,
+                        current_value: currentValue,
+                        is_completed: currentValue >= mission.goal_value,
+                        completed_at: currentValue >= mission.goal_value ? new Date().toISOString() : null,
+                        week_start: new Date().toISOString().split('T')[0]
+                    })
+                    .then(({ error }) => {
+                        if (error) console.error("Error syncing streak mission:", error);
+                    });
+            }
+        }
+
         return {
             ...mission,
-            current_value: progress?.current_value || 0,
-            is_completed: progress?.is_completed || false
+            current_value: currentValue,
+            is_completed: progress?.is_completed || (mission.goal_type === 'streak' && currentValue >= mission.goal_value)
         }
     })
 }

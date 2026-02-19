@@ -23,8 +23,10 @@ export default async function SchedulePage({ params }: { params: { id: string } 
                     <Calendar className="w-6 h-6 md:w-8 md:h-8" />
                 </div>
                 <div>
-                    <h1 className="text-2xl md:text-3xl font-heading font-black text-white italic uppercase">Schedule</h1>
-                    <p className="text-sm md:text-base text-gray-400">Manage class times, coaches, and capacity.</p>
+                    <h1 className="text-2xl md:text-3xl font-heading font-black text-white italic uppercase">{details?.center_type === 'personal_trainer' ? 'Agenda de Citas' : 'Schedule'}</h1>
+                    <p className="text-sm md:text-base text-gray-400">
+                        {details?.center_type === 'personal_trainer' ? 'Gestiona tus sesiones individuales y disponibilidad.' : 'Manage class times, coaches, and capacity.'}
+                    </p>
                 </div>
             </div>
 

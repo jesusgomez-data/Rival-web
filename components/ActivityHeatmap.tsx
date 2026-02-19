@@ -3,6 +3,7 @@
 
 import { clsx } from "clsx";
 import { Activity, Flame } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface Workout {
     start_time: string;
@@ -15,6 +16,7 @@ interface ActivityHeatmapProps {
 }
 
 export default function ActivityHeatmap({ workouts }: ActivityHeatmapProps) {
+    const router = useRouter();
     const today = new Date();
     const currentMonth = today.getMonth();
     const currentYear = today.getFullYear();
@@ -105,10 +107,18 @@ export default function ActivityHeatmap({ workouts }: ActivityHeatmapProps) {
                                 className={clsx(
                                     "aspect-square rounded-lg md:rounded-xl flex flex-col items-center justify-center relative transition-all duration-300 group select-none",
                                     hasWorkout
-                                        ? "bg-brand-red shadow-[0_0_15px_rgba(220,38,38,0.3)] hover:scale-105 z-10"
-                                        : "bg-white/5 hover:bg-white/10",
+                                        ? "bg-brand-red shadow-[0_0_15px_rgba(220,38,38,0.3)] hover:scale-110 cursor-pointer z-10"
+                                        : "bg-white/5",
                                     slot.isToday && !hasWorkout && "border border-white/20"
                                 )}
+                                onClick={() => {
+                                    if (hasWorkout) {
+                                        const year = slot.date.getFullYear();
+                                        const month = String(slot.date.getMonth() + 1).padStart(2, '0');
+                                        const day = String(slot.date.getDate()).padStart(2, '0');
+                                        router.push(`/dashboard/training/logs?date=${year}-${month}-${day}`);
+                                    }
+                                }}
                             >
                                 <span className={clsx(
                                     "text-[10px] md:text-xl font-black italic tracking-tighter z-10 relative",

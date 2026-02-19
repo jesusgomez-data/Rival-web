@@ -21,7 +21,17 @@ interface UserProfile {
     full_name?: string;
 }
 
-export default function CreatePost({ currentUser, onSuccess, initialPostType }: { currentUser: UserProfile | null, onSuccess?: () => void, initialPostType?: 'standard' | 'pr' | 'wod' }) {
+export default function CreatePost({
+    currentUser,
+    onSuccess,
+    initialPostType,
+    initialData
+}: {
+    currentUser: UserProfile | null,
+    onSuccess?: () => void,
+    initialPostType?: 'standard' | 'pr' | 'wod',
+    initialData?: any
+}) {
     const [mounted, setMounted] = useState(false);
 
     const [content, setContent] = useState("");
@@ -30,7 +40,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType }: 
     const [postType, setPostType] = useState<'standard' | 'pr' | 'wod'>(initialPostType || 'standard');
     const [exercise, setExercise] = useState("");
     const [weight, setWeight] = useState("");
-    const [wodData, setWodData] = useState<any>(null);
+    const [wodData, setWodData] = useState<any>(initialData || null);
     const [sport, setSport] = useState("Cross Training");
     const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
     const [duration, setDuration] = useState<number | null>(null);
@@ -44,6 +54,14 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType }: 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
     const { startUpload } = useUploads();
+
+    // Reset when initialData changes (for reposting different WODs)
+    useEffect(() => {
+        if (initialData) {
+            setWodData(initialData);
+            setPostType('wod');
+        }
+    }, [initialData]);
 
     // Prevent hydration issues
     useEffect(() => {
@@ -107,7 +125,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType }: 
     };
 
     return (
-        <div className="bg-brand-gray/30 border border-white/10 rounded-[28px] p-4 md:p-6 backdrop-blur-md mb-8 relative z-10 w-full animate-in fade-in duration-500">
+        <div className="relative z-10 w-full animate-in fade-in duration-500">
             <div className="flex gap-2 mb-4 md:mb-6">
                 <button type="button" onClick={() => setPostType('standard')} className={`flex-1 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 md:gap-2 border ${postType === 'standard' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}><Activity className="w-3.5 h-3.5 text-brand-red" />Actualización</button>
                 <button type="button" onClick={() => setPostType('pr')} className={`flex-1 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 md:gap-2 border ${postType === 'pr' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}><Trophy className="w-3.5 h-3.5 text-brand-yellow" />Nuevo PR</button>
@@ -125,7 +143,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType }: 
                         )}
                         {postType === 'wod' && (
                             <div className="animate-in fade-in slide-in-from-top-2 mb-6">
-                                <WodCreator onUpdate={(data) => setWodData(data)} />
+                                <WodCreator onUpdate={(data) => setWodData(data)} initialData={wodData} />
                             </div>
                         )}
                         <div className="relative group">

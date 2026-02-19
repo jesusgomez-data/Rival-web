@@ -16,6 +16,7 @@ import { getMyDuels, acceptDuel } from "./community/duel-actions";
 import UserMediaGallery from "./UserMediaGallery";
 import DashboardTour from "@/components/onboarding/DashboardTour";
 import EssentialsHero from "@/components/onboarding/EssentialsHero";
+import InfoTooltip from "@/components/InfoTooltip";
 
 function SuggestedUser({ id, name, username, role, avatar, isFollowing, isOfficial }: { id: string, name: string, username: string, role: string, avatar?: string, isFollowing: boolean, isOfficial?: boolean }) {
     const { t } = useLanguage();
@@ -66,6 +67,17 @@ function StatCard({ label, value, subtext, icon }: { label: string, value: strin
 
 function CollapsibleCreatePost({ currentUser, language }: { currentUser: any, language: string }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [repostData, setRepostData] = useState<any>(null);
+
+    useEffect(() => {
+        const handleRepost = (e: any) => {
+            setRepostData(e.detail);
+            setIsOpen(true);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+        window.addEventListener('repost-wod', handleRepost as any);
+        return () => window.removeEventListener('repost-wod', handleRepost as any);
+    }, []);
 
     return (
         <div className="mb-10">
@@ -91,24 +103,35 @@ function CollapsibleCreatePost({ currentUser, language }: { currentUser: any, la
                     </div>
                 </button>
             ) : (
-                <div className="animate-in fade-in slide-in-from-top-4 duration-500 bg-brand-gray/20 border border-white/5 rounded-[32px] p-4 md:p-6 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-xl relative overflow-hidden">
+                <div className="animate-in fade-in slide-in-from-top-4 duration-500 bg-brand-gray/20 border border-white/5 rounded-[32px] px-2 py-4 md:px-4 md:py-6 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-xl relative overflow-hidden">
                     {/* Decorative element */}
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
 
                     <div className="flex justify-between items-center mb-8 relative z-10 border-b border-white/5 pb-5">
                         <div className="flex items-center gap-2">
                             <Plus className="w-3.5 h-3.5 text-brand-red" />
-                            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground italic">Nueva Publicación</h2>
+                            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground italic">{repostData ? 'REPOSTEAR WOD' : 'Nueva Publicación'}</h2>
                         </div>
                         <button
-                            onClick={() => setIsOpen(false)}
+                            onClick={() => {
+                                setIsOpen(false);
+                                setRepostData(null);
+                            }}
                             className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all flex items-center gap-2 group bg-white/5 px-3 py-1.5 rounded-full border border-white/5 hover:border-white/20 shadow-sm"
                         >
                             {language === 'es' ? 'Cancelar' : 'Cancel'} <X className="w-3.5 h-3.5 group-hover:rotate-90 transition-transform" />
                         </button>
                     </div>
 
-                    <CreatePost currentUser={currentUser} onSuccess={() => setIsOpen(false)} />
+                    <CreatePost
+                        currentUser={currentUser}
+                        onSuccess={() => {
+                            setIsOpen(false);
+                            setRepostData(null);
+                        }}
+                        initialPostType={repostData ? 'wod' : 'standard'}
+                        initialData={repostData}
+                    />
                 </div>
             )}
         </div>
@@ -144,7 +167,7 @@ export default function DashboardHome() {
                 const user = authData?.user;
                 if (!user) return;
 
-                // Fetch всё параллельно для скорости
+                // Fetch todo paralelo para velocidad
                 const [
                     { data: memberships },
                     { data: profileData },
@@ -330,6 +353,10 @@ export default function DashboardHome() {
                         <div className="mb-8">
                             <h2 className="text-xl font-black text-foreground italic uppercase tracking-tighter mb-4 flex items-center gap-2">
                                 <Dumbbell className="w-5 h-5 text-brand-red" /> {t.dashboard.myGyms}
+                                <InfoTooltip
+                                    title="Tus Sedes"
+                                    content="Centros oficiales donde estás inscrito. Accede para ver WODs exclusivos y chatear con tu equipo."
+                                />
                             </h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {data.myGyms.map((gym: any) => (
@@ -368,6 +395,11 @@ export default function DashboardHome() {
                             className="w-full flex lg:hidden items-center justify-between bg-white/5 border border-white/5 p-4 rounded-2xl mb-4 text-xs font-black uppercase tracking-widest text-gray-400"
                         >
                             <span>Tus Estadísticas</span>
+                            <InfoTooltip
+                                title="Tus Estadísticas"
+                                content="Un resumen rápido de tu progreso y logros en Rival Fit."
+                                className="scale-75"
+                            />
                             <div className="flex items-center gap-2">
                                 <span className="text-brand-red">{showStats ? 'Ocultar' : 'Ver'}</span>
                                 <ChevronDown className={clsx("w-4 h-4 transition-transform", showStats ? "rotate-180" : "")} />
@@ -418,8 +450,13 @@ export default function DashboardHome() {
                     {/* 4. Feed Header & Feed */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                         <div>
-                            <h2 className="text-2xl md:text-3xl font-heading font-black text-foreground italic tracking-tighter uppercase">
+                            <h2 className="text-2xl md:text-3xl font-heading font-black text-foreground italic tracking-tighter uppercase flex items-center gap-3">
                                 {language === 'es' ? 'Feed de ' : 'Activity '}<span className="text-brand-red">{language === 'es' ? 'Actividad' : 'Feed'}</span>
+                                <InfoTooltip
+                                    title="Noticias"
+                                    content="Aquí verás los registros de entrenamiento públicos y anuncios globales de la comunidad."
+                                    className="scale-75"
+                                />
                             </h2>
                             <div className="flex items-center gap-2 mt-2">
                                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -521,8 +558,15 @@ export default function DashboardHome() {
 
                     {data.duels.length > 0 && (
                         <div id="duels-section" className="bg-black/40 border border-brand-red/20 rounded-[32px] p-5 md:p-8 backdrop-blur-xl shadow-[0_0_30px_rgba(220,38,38,0.1)] relative overflow-hidden group">
-                            <h3 className="font-heading font-black text-foreground italic tracking-wider mb-10 flex items-center gap-3 text-lg">
+                            <div className="absolute top-0 right-0 p-8 text-brand-red/5 group-hover:text-brand-red/10 transition-all pointer-events-none">
+                                <Swords className="w-32 h-32 rotate-12" />
+                            </div>
+                            <h3 className="font-heading font-black text-white italic tracking-wider mb-8 flex items-center gap-3">
                                 <Swords className="w-6 h-6 text-brand-red" /> {t.dashboard.duelsTitle}
+                                <InfoTooltip
+                                    title="Reglas del Duelo"
+                                    content="Gana puntos entrenando. El volumen (kg) y la duración de carrera suman a tu marcador en tiempo real."
+                                />
                             </h3>
                             <div className="space-y-6">
                                 {data.duels.map((duel: any) => {

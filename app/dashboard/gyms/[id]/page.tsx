@@ -126,6 +126,17 @@ export default function CenterDashboardHome() {
 
     return (
         <div className="px-2 py-4 sm:p-8 space-y-4 sm:space-y-10 animate-fade-in max-w-7xl mx-auto">
+            {centerDetails?.center_type === 'personal_trainer' && (
+                <div className="bg-brand-red/10 border border-brand-red/20 p-4 rounded-2xl mb-6 flex items-center gap-4">
+                    <div className="bg-brand-red p-3 rounded-xl text-white shadow-glow">
+                        <Users className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h4 className="text-lg font-black italic uppercase italic tracking-tight text-white">Panel de Entrenador Personal</h4>
+                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Gestiona tus alumnos y su programación desde aquí.</p>
+                    </div>
+                </div>
+            )}
 
             {/* KPI Section Control (Mobile Only) */}
             {canViewKPIs && (
@@ -197,20 +208,30 @@ export default function CenterDashboardHome() {
                 )}>
                     {/* Quick Actions */}
                     <section>
-                        <h3 className="text-lg font-bold text-foreground mb-4 font-heading uppercase tracking-widest text-xs opacity-50">Gestión del Centro</h3>
+                        <h3 className="text-lg font-bold text-foreground mb-4 font-heading uppercase tracking-widest text-xs opacity-50">
+                            {centerDetails?.center_type === 'personal_trainer' ? 'Gestión Personal' : 'Gestión del Centro'}
+                        </h3>
                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                             <QuickAction
                                 href={`/dashboard/gyms/${id}/schedule`}
                                 icon={Calendar}
-                                label="Agenda de Clases"
-                                description="Horarios y asistencias"
+                                label={centerDetails?.center_type === 'personal_trainer' ? 'Reserva de Citas' : 'Agenda de Clases'}
+                                description={centerDetails?.center_type === 'personal_trainer' ? 'Gestionar sesiones alumnos' : 'Horarios y asistencias'}
                             />
                             <QuickAction
                                 href={`/dashboard/gyms/${id}/members`}
                                 icon={Users}
-                                label="Base de Atletas"
-                                description="Gestión de socios y altas"
+                                label={centerDetails?.center_type === 'personal_trainer' ? 'Mis Alumnos' : 'Base de Atletas'}
+                                description={centerDetails?.center_type === 'personal_trainer' ? 'Gestión de clientes y fichas' : 'Gestión de socios y altas'}
                             />
+                            {centerDetails?.center_type === 'personal_trainer' && (
+                                <QuickAction
+                                    href={`/dashboard/gyms/${id}/programming`}
+                                    icon={Activity}
+                                    label="Programación"
+                                    description="Crear rutinas para alumnos"
+                                />
+                            )}
                             <QuickAction
                                 href={`/dashboard/gyms/${id}/memberships`}
                                 icon={CreditCard}
@@ -220,8 +241,8 @@ export default function CenterDashboardHome() {
                             <QuickAction
                                 href={`/dashboard/gyms/${id}/store`}
                                 icon={ShoppingBag}
-                                label="Tienda y Stock"
-                                description="Venta de productos y bonos"
+                                label="Tienda y Pagos"
+                                description="Venta de servicios y bonos"
                             />
                             <QuickAction
                                 icon={Settings}
@@ -229,12 +250,14 @@ export default function CenterDashboardHome() {
                                 description="Ajustes de perfil y pagos"
                                 onClick={() => window.location.href = `/center-owner/centers/${id}/edit`}
                             />
-                            <QuickAction
-                                icon={Building2}
-                                label="Registrar Sede"
-                                description="Añadir nueva ubicación"
-                                onClick={() => setShowAddCenter(true)}
-                            />
+                            {centerDetails?.center_type !== 'personal_trainer' && (
+                                <QuickAction
+                                    icon={Building2}
+                                    label="Registrar Sede"
+                                    description="Añadir nueva ubicación"
+                                    onClick={() => setShowAddCenter(true)}
+                                />
+                            )}
                         </div>
                     </section>
 

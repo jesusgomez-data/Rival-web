@@ -22,7 +22,7 @@ interface NavItem {
     adminOnly?: boolean;
 }
 
-export default function SidebarNav({ id, isAdmin }: { id: string, isAdmin: boolean }) {
+export default function SidebarNav({ id, isAdmin, centerType }: { id: string, isAdmin: boolean, centerType?: string }) {
     const params = useParams();
     const pathname = usePathname();
 
@@ -30,13 +30,14 @@ export default function SidebarNav({ id, isAdmin }: { id: string, isAdmin: boole
     const sedeId = params.sedeId as string;
     const query = sedeId ? `?centerId=${sedeId}` : "";
 
+    const isPT = centerType === 'personal_trainer';
     const navigation: NavItem[] = [
         { name: 'Resumen', href: `/dashboard/gyms/${id}${sedeId ? `/sedes/${sedeId}` : ''}`, icon: LayoutDashboard },
         { name: 'Perfil', href: `/center-owner/centers/${id}/edit`, icon: Edit, adminOnly: true },
-        { name: 'Horario', href: `/dashboard/gyms/${id}/schedule${query}`, icon: Calendar },
-        { name: 'Miembros', href: `/dashboard/gyms/${id}/members${query}`, icon: Users },
+        { name: isPT ? 'Citas y Horario' : 'Horario', href: `/dashboard/gyms/${id}/schedule${query}`, icon: Calendar },
+        { name: isPT ? 'Mis Alumnos' : 'Miembros', href: `/dashboard/gyms/${id}/members${query}`, icon: Users },
         { name: 'Equipo y Roles', href: `/dashboard/gyms/${id}/team${query}`, icon: Shield, adminOnly: true },
-        { name: 'Entrenamientos (WODs)', href: `/dashboard/gyms/${id}/wods${query}`, icon: Dumbbell },
+        { name: isPT ? 'Programación' : 'Entrenamientos (WODs)', href: `/dashboard/gyms/${id}/${isPT ? 'programming' : 'wods'}${query}`, icon: Dumbbell },
         { name: 'Muro Social', href: `/dashboard/gyms/${id}/feed${query}`, icon: Zap },
         { name: 'Tienda', href: `/dashboard/gyms/${id}/store${query}`, icon: ShoppingBag },
         { name: 'Facturación', href: `/dashboard/gyms/${id}/settings/billing`, icon: CreditCard, adminOnly: true },

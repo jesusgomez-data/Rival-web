@@ -1,15 +1,19 @@
 "use client";
 
 import { getMissions, getRecentPRs, getUserProfile, getScheduledWorkouts, getWorkoutHistory, getPublishedResults, deleteScheduledWorkout } from "./actions";
+import { getMyDuels } from "../community/duel-actions";
 import { type TrainingPlan } from "./types";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy, X, Sparkles, Plus } from "lucide-react";
+import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy, X, Sparkles, Plus, Swords } from "lucide-react";
 import Image from "next/image";
 import CreatePost from "../CreatePost";
+import InfoTooltip from "@/components/InfoTooltip";
 
 export default function TrainingPage() {
+    const router = useRouter();
     const [missions, setMissions] = useState<any[]>([]);
     const [prs, setPrs] = useState<any[]>([]);
     const [profile, setProfile] = useState<any>(null);
@@ -20,17 +24,19 @@ export default function TrainingPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [showUploadModal, setShowUploadModal] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [duels, setDuels] = useState<any[]>([]);
 
     useEffect(() => {
         async function fetchData() {
             try {
-                const [missionsData, prsData, profileData, scheduledData, workoutsData, publishedData] = await Promise.all([
+                const [missionsData, prsData, profileData, scheduledData, workoutsData, publishedData, duelsData] = await Promise.all([
                     getMissions(),
                     getRecentPRs(),
                     getUserProfile(),
                     getScheduledWorkouts(),
                     getWorkoutHistory(30),
-                    getPublishedResults(1)
+                    getPublishedResults(1),
+                    getMyDuels()
                 ]);
                 setMissions(missionsData || []);
                 setPrs(prsData || []);
@@ -38,6 +44,7 @@ export default function TrainingPage() {
                 setScheduled(scheduledData || []);
                 setWorkouts(workoutsData || []);
                 setPublishedResults(publishedData || []);
+                setDuels(duelsData || []);
             } catch (err: any) {
                 console.error("Error loading training data:", err);
                 setError(err.message);
@@ -258,6 +265,10 @@ export default function TrainingPage() {
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="font-heading font-bold text-foreground flex items-center gap-2">
                                 <Calendar className="w-5 h-5 text-brand-red" /> Semana Actual
+                                <InfoTooltip
+                                    title="Calendario"
+                                    content="Visualiza tu consistencia semanal. Los días en rojo indican combate completado. Pulsa un día para ver sus detalles."
+                                />
                             </h3>
                             <Link href="/dashboard/training/logs" className="text-xs font-bold text-gray-500 hover:text-white transition-colors flex items-center gap-1">
                                 VER REGISTROS <ChevronRight className="w-4 h-4" />
@@ -270,9 +281,14 @@ export default function TrainingPage() {
                                     className={`
                                             flex flex-col items-center p-4 rounded-2xl border transition-all cursor-pointer relative group
                                             ${d.status === 'active' ? 'bg-brand-red border-brand-red text-white shadow-[0_0_20px_rgba(220,38,38,0.3)] scale-105' :
-                                            d.status === 'done' ? 'bg-white/5 border-green-500/20 text-gray-400 opacity-60' :
+                                            d.status === 'done' ? 'bg-white/5 border-green-500/20 text-gray-400 opacity-60 hover:opacity-100 hover:scale-105' :
                                                 'bg-white/5 border-white/5 text-gray-600 hover:border-white/20'}
                                         `}
+                                    onClick={() => {
+                                        if (d.status === 'done' || d.status === 'active') {
+                                            router.push(`/dashboard/training/logs?date=${d.fullDate}`);
+                                        }
+                                    }}
                                 >
                                     <span className="text-[10px] font-bold uppercase mb-1 tracking-tighter">{d.day}</span>
                                     <span className={`text-xl font-heading font-black ${d.status === 'done' ? 'text-green-500' : ''}`}>{d.date}</span>
@@ -302,6 +318,10 @@ export default function TrainingPage() {
                                 <div className="flex items-center justify-between mb-6">
                                     <h3 className="font-heading font-bold text-foreground flex items-center gap-2">
                                         <Calendar className="w-5 h-5 text-blue-400" /> Entrenamientos Programados
+                                        <InfoTooltip
+                                            title="Programación"
+                                            content="Aquí aparecen las sesiones que has planeado tú o tu coach para fechas específicas."
+                                        />
                                     </h3>
                                     <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded font-bold uppercase tracking-widest">
                                         {scheduled.length} Pendiente{scheduled.length !== 1 ? 's' : ''}
@@ -418,7 +438,14 @@ export default function TrainingPage() {
                                 <span className="bg-brand-red/20 text-brand-red px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-brand-red/20">
                                     <Zap className="w-3 h-3 fill-current" /> RECOMENDADO POR EL COACH
                                 </span>
-                                <h2 className="text-xl font-heading font-bold !text-white uppercase tracking-wider">{activeRoutine.title}</h2>
+                                <h2 className="text-xl font-heading font-bold !text-white uppercase tracking-wider">
+                                    {activeRoutine.title}
+                                    <InfoTooltip
+                                        title="Sugerencia IA"
+                                        content="Rutina calculada según tu nivel y racha actual para optimizar tu progresión."
+                                        className="ml-2"
+                                    />
+                                </h2>
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 bg-black/40 p-6 rounded-2xl border border-white/5">
@@ -569,6 +596,10 @@ export default function TrainingPage() {
                         />
                         <h3 className="font-heading font-bold text-foreground mb-6 flex items-center gap-2">
                             <Target className="w-5 h-5 text-brand-red" /> Control de Misiones
+                            <InfoTooltip
+                                title="Objetivos"
+                                content="Completa estos retos para ganar XP extra y subir de nivel más rápido."
+                            />
                         </h3>
                         <div className="space-y-6">
                             {isLoading ? (
@@ -590,10 +621,70 @@ export default function TrainingPage() {
                         </div>
                     </div>
 
+                    {/* Active Duels Widget */}
+                    {duels.filter(d => d.status === 'active').length > 0 && (
+                        <div className="bg-black/60 border border-brand-red/30 rounded-[40px] p-8 relative overflow-hidden group shadow-glow-sm">
+                            <div className="absolute top-0 right-0 p-8 text-brand-red/5 group-hover:text-brand-red/10 transition-all pointer-events-none">
+                                <Swords className="w-32 h-32 rotate-12" />
+                            </div>
+                            <h3 className="font-heading font-black text-white italic tracking-wider mb-8 flex items-center gap-3">
+                                <Trophy className="w-5 h-5 text-brand-red" /> DUELOS ACTIVOS
+                                <InfoTooltip
+                                    title="La Arena"
+                                    content="Tus combates 1 VS 1 en tiempo real. Se puntúa por volumen de peso y duración de cardio."
+                                />
+                            </h3>
+
+                            <div className="space-y-6">
+                                {duels.filter(d => d.status === 'active').map((duel) => {
+                                    const isChallenger = duel.challenger_id === profile?.id;
+                                    const rival = isChallenger ? duel.opponent : duel.challenger;
+                                    const myScore = isChallenger ? duel.challenger_score : duel.opponent_score;
+                                    const rivalScore = isChallenger ? duel.opponent_score : duel.challenger_score;
+
+                                    return (
+                                        <div key={duel.id} className="bg-white/5 border border-white/10 rounded-3xl p-5 hover:bg-white/10 transition-all">
+                                            <div className="flex items-center gap-3 mb-4">
+                                                <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden relative">
+                                                    <Image src={rival?.avatar_url || `https://ui-avatars.com/api/?name=${rival?.username}`} alt="Rival" fill className="object-cover" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-black text-white uppercase italic truncate">VS {rival?.full_name || rival?.username}</p>
+                                                    <p className="text-[10px] text-brand-red font-black uppercase tracking-widest mt-0.5 animate-pulse">EN COMBATE</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4 bg-black/40 rounded-2xl p-4 border border-white/5">
+                                                <div className="text-center">
+                                                    <p className="text-[8px] font-black text-gray-500 uppercase mb-1">TÚ</p>
+                                                    <p className={`text-2xl font-black italic ${myScore >= rivalScore ? 'text-brand-red' : 'text-white'}`}>{myScore}</p>
+                                                </div>
+                                                <div className="text-center border-l border-white/5">
+                                                    <p className="text-[8px] font-black text-gray-500 uppercase mb-1">RIVAL</p>
+                                                    <p className={`text-2xl font-black italic ${rivalScore > myScore ? 'text-brand-red' : 'text-white'}`}>{rivalScore}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-4 relative z-20">
+                                                <Link href="/dashboard#duels-section" className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-center block transition-all cursor-pointer">
+                                                    Ver Detalles en Arena
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Personal Best Widget */}
                     <div className="bg-gradient-to-br from-yellow-600/20 to-brand-gray border border-white/10 rounded-3xl p-6">
                         <h3 className="font-heading font-bold !text-white mb-4 flex items-center gap-2">
                             <Award className="w-5 h-5 text-yellow-500" /> Trofeos Recientes
+                            <InfoTooltip
+                                title="Hitos"
+                                content="Tus Records Personales (PR) más recientes detectados en tus sesiones."
+                            />
                         </h3>
                         <div className="space-y-4">
                             {isLoading ? (

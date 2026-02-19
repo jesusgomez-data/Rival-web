@@ -72,8 +72,8 @@ async function calculateDuelScores(duel: any, supabase: any) {
             .from('workouts')
             .select('total_volume_kg, duration_seconds')
             .eq('user_id', userId)
-            .gte('created_at', duel.start_date)
-            .lte('created_at', endDateTime.toISOString());
+            .gte('start_time', duel.start_date)
+            .lte('start_time', endDateTime.toISOString());
 
         if (!data) return 0;
 

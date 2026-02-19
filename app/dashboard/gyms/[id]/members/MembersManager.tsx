@@ -503,7 +503,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
         <div className="space-y-4 sm:space-y-6">
             <div className="flex justify-between items-end mb-2 sm:mb-4">
                 <div className="flex flex-col">
-                    <h2 className="text-xl sm:text-2xl italic font-black text-white uppercase tracking-tighter">Gestión de Atletas</h2>
+                    <h2 className="text-xl sm:text-2xl italic font-black text-white uppercase tracking-tighter">Gestión de {orgDetails?.center_type === 'personal_trainer' ? 'Alumnos' : 'Atletas'}</h2>
                     <div className="flex items-center gap-2">
                         <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                             Registrados: {members.length} | Filtrados: {filteredMembers.length}
@@ -601,7 +601,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                 <table className="w-full text-left text-sm min-w-[600px] sm:min-w-0">
                     <thead className="bg-white/5 text-gray-400 font-bold uppercase text-[9px] sm:text-[10px] tracking-wider">
                         <tr>
-                            <th className="px-4 sm:px-6 py-3 sm:py-4">Atleta / Edad</th>
+                            <th className="px-4 sm:px-6 py-3 sm:py-4">{orgDetails?.center_type === 'personal_trainer' ? 'Alumno' : 'Atleta'} / Edad</th>
                             <th className="px-4 sm:px-6 py-3 sm:py-4">Tarifa</th>
                             <th className="px-4 sm:px-6 py-3 sm:py-4">Facturación</th>
                             <th className="px-4 sm:px-6 py-3 sm:py-4 text-center">Estado</th>
@@ -710,7 +710,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                 <td colSpan={4} className="px-6 py-20 text-center">
                                     <div className="flex flex-col items-center gap-2">
                                         <User className="w-8 h-8 text-gray-600 mb-2" />
-                                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">No se han encontrado atletas</p>
+                                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">No se han encontrado {orgDetails?.center_type === 'personal_trainer' ? 'alumnos' : 'atletas'}</p>
                                         <p className="text-gray-600 text-[10px] uppercase tracking-tighter">Prueba con otro nombre o asegúrate de que el centro tiene miembros activos.</p>
                                     </div>
                                 </td>
@@ -738,9 +738,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                     )}
                                 </div>
                                 <div className="min-w-0">
-                                    <h3 className="text-lg sm:text-xl font-black text-white italic uppercase tracking-tighter leading-none truncate pr-2">
-                                        {viewingMember.user?.full_name || viewingMember.full_name || username || 'Ficha de Atleta'}
-                                    </h3>
+                                    {viewingMember.user?.full_name || viewingMember.full_name || username || (orgDetails?.center_type === 'personal_trainer' ? 'Ficha de Alumno' : 'Ficha de Atleta')}
                                     <div className="flex items-center gap-2 mt-1">
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest truncate">

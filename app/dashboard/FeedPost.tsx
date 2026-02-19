@@ -124,6 +124,17 @@ function ShareButton({
             } catch (e) {
                 console.error("Error parsing PR", e);
             }
+        } else if (mediaType === 'wod' && image) {
+            try {
+                const data = JSON.parse(image);
+                const stats = data.summary ? [
+                    { label: data.summary.scoreType || "RESULTADO", value: data.summary.scoreLabel || "-" },
+                    { label: "TIEMPO", value: data.summary.totalTime || "--:--" }
+                ] : [];
+                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'wod', data, stats, postId, attribution } }));
+            } catch (e) {
+                console.error("Error parsing WOD", e);
+            }
         } else if (isVideo) {
             window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'video', url: image, postId, attribution } }));
         } else {
@@ -278,6 +289,12 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const isOwner = !!(currentUserId && authorId && currentUserId === authorId);
     const canEdit = !!(isOwner || isAdminUser);
 
+    const attribution = !isOwner ? {
+        username: username || user,
+        avatar: avatar,
+        id: authorId
+    } : undefined;
+
     useEffect(() => {
         if (showComments && commentList.length === 0) {
             setIsLoadingComments(true);
@@ -340,6 +357,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             content: newComment,
             created_at: new Date().toISOString(),
             parent_id: parentId,
+            user_id: currentUserId || "",
             user: { username: "Tú", avatar_url: null },
             likes_count: 0,
             has_liked: false,
@@ -674,6 +692,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             <WodCard
                                 data={wodData}
                                 userName={user}
+                                publishDate={time}
                             />
                         );
                     })()}
@@ -956,7 +975,10 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                             block.type === 'fortime' ? (block.result?.time || '--:--') :
                                                                 block.type === 'rft' ? (`${block.result?.rounds || 0} Rds` + (block.result?.time ? ` - ${block.result.time}` : '')) :
                                                                     block.type === 'emom' ? `${block.duration || 0}' - ${block.result?.rounds || 0} Rds` :
-                                                                        `${block.result?.rounds || 0} Rds`;
+                                                                        block.type === 'amrap' ? `${block.result?.rounds || 0} Rds` :
+                                                                            (block.result?.rounds && block.result.rounds > 0) ? `${block.result.rounds} Rds` :
+                                                                                (block.result?.time && block.result.time !== '00:00' && block.result.time !== '') ? block.result.time :
+                                                                                    '';
 
                                                         return (
                                                             <div key={idx} className={clsx(
@@ -970,7 +992,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                                             "text-sm md:text-base font-heading font-black italic uppercase tracking-tighter leading-none truncate pr-2",
                                                                             theme === 'dark' ? "text-white" : "text-gray-900"
                                                                         )}>
-                                                                            {(block.title === 'Entrenamiento Libre' || block.title === 'Hybrid' || !block.title) ? (w.sport_type || 'Bloque') : block.title} <span className="text-[9px] text-gray-500 ml-1 not-italic font-bold tracking-widest">({block.type.toUpperCase()})</span>
+                                                                            {(block.title === 'Entrenamiento Libre' || block.title === 'Hybrid' || !block.title) ? (w.sport_type || 'Bloque') : block.title} {block.type !== 'other' && <span className="text-[9px] text-gray-500 ml-1 not-italic font-bold tracking-widest">({block.type.toUpperCase()})</span>}
                                                                         </h3>
                                                                     </div>
                                                                     <div className="flex items-center gap-3">
@@ -1324,9 +1346,20 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         avatar={avatar}
                         content={{
                             type: workoutData?.metrics?.type === 'running' ? 'running' : (mediaType as any || 'workout'),
-                            title: (workoutData?.title === 'Entrenamiento Híbrido Libre' || workoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (workoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (workoutData?.title || (mediaType === 'running' ? 'RUNNING' : 'ENTRENAMIENTO'))),
+                            title: (workoutData?.title === 'Entrenamiento Híbrido Libre' || workoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (workoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (workoutData?.title || (mediaType === 'running' ? 'RUNNING' : (mediaType === 'wod' ? 'WOD ARENA' : 'ENTRENAMIENTO')))),
                             highlight: highlight || caption,
-                            stats: workoutData?.metrics?.type === 'running'
+                            stats: mediaType === 'wod' ? (() => {
+                                try {
+                                    const d = JSON.parse(image || '{}');
+                                    if (d.summary) {
+                                        return [
+                                            { label: d.summary.scoreType || "RESULTADO", value: d.summary.scoreLabel || "-" },
+                                            { label: "TIEMPO", value: d.summary.totalTime || "--:--" }
+                                        ];
+                                    }
+                                    return [];
+                                } catch (e) { return [] }
+                            })() : workoutData?.metrics?.type === 'running'
                                 ? [
                                     { label: 'DISTANCIA', value: `${(workoutData.metrics.distance || 0) / 1000} KM`, icon: 'distance' },
                                     { label: 'RITMO', value: workoutData.metrics.pace || '0:00', icon: 'pace' },
@@ -1336,7 +1369,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 ]
                                 : workoutData?.metrics?.blocks?.map((b: any) => ({
                                     label: b.type?.toUpperCase(),
-                                    value: b.result?.time || `${b.result?.rounds || b.result?.reps || '-'} ${b.result?.rounds ? 'RDS' : (b.result?.reps ? 'REPS' : '')}`
+                                    value: b.result?.time || (b.result?.rounds > 0 ? `${b.result.rounds} RDS` : (b.result?.reps > 0 ? `${b.result.reps} REPS` : (b.type === 'other' ? '-' : `0 RDS`)))
                                 })).slice(0, 4) || (mediaType === 'pr' ? (() => {
                                     try {
                                         const d = JSON.parse(image || '{}');
@@ -1344,7 +1377,11 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     } catch (e) { return [] }
                                 })() : []),
                             image: image,
-                            mapData: (workoutData as any)?.metrics?.path ? 'GPS_PATH_ACTIVE' : undefined
+                            mapData: (workoutData as any)?.metrics?.path ? 'GPS_PATH_ACTIVE' : undefined,
+                            wodData: mediaType === 'wod' ? (() => {
+                                try { return JSON.parse(image); } catch (e) { return null; }
+                            })() : null,
+                            attribution
                         }}
                         onClose={() => setShowInstagramCard(false)}
                     />
@@ -1370,16 +1407,31 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     rank: "ELITE"
                                 }}
                                 data={{
-                                    type: mediaType === 'pr' ? 'pr' : mediaType === 'class_result' ? 'medal' : 'workout',
-                                    title: (workoutData?.sport_type && workoutData.sport_type !== 'fitness') ? workoutData.sport_type.toUpperCase() : (highlight || workoutData?.title || 'ENTRENAMIENTO'),
+                                    type: mediaType === 'pr' ? 'pr' : mediaType === 'wod' ? 'wod' : mediaType === 'class_result' ? 'medal' : 'workout',
+                                    title: (workoutData?.sport_type && workoutData.sport_type !== 'fitness') ? workoutData.sport_type.toUpperCase() : (highlight || (mediaType === 'wod' ? 'WOD ARENA' : workoutData?.title) || 'ENTRENAMIENTO'),
                                     date: time,
                                     stats: mediaType === 'pr' ? (() => {
                                         try { const d = JSON.parse(image || '{}'); return [{ label: "PESO", value: `${d.weight}${d.unit}` }, { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }]; } catch (e) { return [] }
+                                    })() : mediaType === 'wod' ? (() => {
+                                        try {
+                                            const d = JSON.parse(image || '{}');
+                                            if (d.summary) {
+                                                return [
+                                                    { label: d.summary.scoreType || "RESULTADO", value: d.summary.scoreLabel || "-" },
+                                                    { label: "TIEMPO", value: d.summary.totalTime || "--:--" }
+                                                ];
+                                            }
+                                            return [{ label: "ESTADO", value: "COMPLETADO" }];
+                                        } catch (e) { return [] }
                                     })() : workoutData?.metrics?.blocks?.map((b) => ({
                                         label: b.type?.toUpperCase(),
                                         value: b.result?.time || `${b.result?.rounds || 0} RDS`
                                     })).slice(0, 3) || [{ label: "DISCIPLINA", value: (workoutData?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "COMPLETADO" }],
-                                    image: !isVideo ? image : undefined
+                                    image: !isVideo && mediaType !== 'wod' ? image : undefined,
+                                    wodData: mediaType === 'wod' ? (() => {
+                                        try { return JSON.parse(image); } catch (e) { return null; }
+                                    })() : null,
+                                    attribution
                                 }}
                             />
                         </div>
