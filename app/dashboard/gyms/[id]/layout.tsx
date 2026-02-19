@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
 import GymLayoutClient from "./GymLayoutClient";
@@ -56,14 +57,16 @@ export default async function CenterLayout({
     const roleLabel = userRole === 'owner' ? 'VISTA DE PROPIETARIO' : userRole === 'head_coach' ? 'VISTA DE HEAD COACH' : 'VISTA DE COACH';
 
     return (
-        <GymLayoutClient
-            org={org}
-            isAdmin={isAdmin}
-            roleLabel={roleLabel}
-            userRole={userRole}
-            profile={profile}
-        >
-            {children}
-        </GymLayoutClient>
+        <Suspense fallback={<div className="h-screen bg-black flex items-center justify-center"><div className="w-8 h-8 border-4 border-brand-red border-t-transparent rounded-full animate-spin"></div></div>}>
+            <GymLayoutClient
+                org={org}
+                isAdmin={isAdmin}
+                roleLabel={roleLabel}
+                userRole={userRole}
+                profile={profile}
+            >
+                {children}
+            </GymLayoutClient>
+        </Suspense>
     );
 }
