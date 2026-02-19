@@ -7,6 +7,7 @@ import clsx from "clsx";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { createOrganizationCheckoutSession } from "@/app/dashboard/settings/billing/stripe-actions";
+import { User } from "lucide-react";
 
 const plans = [
     {
@@ -61,6 +62,39 @@ const plans = [
     }
 ];
 
+const PT_PLANS = [
+    {
+        id: 'pt_free',
+        name: 'TRAINER BASIC',
+        price: '€0',
+        description: 'Gestiona tus primeros alumnos gratis.',
+        features: ['Perfil público', 'Hasta 3 alumnos', 'Programación Manual', 'Agenda Básica', 'Pagos Manuales'],
+        cta: 'Plan Actual',
+        color: 'gray'
+    },
+    {
+        id: 'pt_pro',
+        name: 'TRAINER PRO',
+        price: '€29.99',
+        period: '/mes',
+        description: 'Para entrenadores en crecimiento.',
+        features: ['Alumnos ilimitados', 'Programación con IA', 'Pagos integrados (Stripe)', 'Agenda Avanzada', 'Chat directo'],
+        cta: 'Mejorar a Pro',
+        highlight: true,
+        color: 'brand-red'
+    },
+    {
+        id: 'pt_elite',
+        name: 'TRAINER ELITE',
+        price: '€59.99',
+        period: '/mes',
+        description: 'Automatiza tu negocio al 100%.',
+        features: ['Todo en Pro', 'App personalizada (PWA)', 'Análisis de retención', 'Soporte prioritario 24/7', 'Web Personalizada'],
+        cta: 'Obtener Elite',
+        color: 'purple'
+    }
+];
+
 export default function GymBillingPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
     return (
@@ -80,7 +114,7 @@ function BillingContent({ organizationId }: { organizationId: string }) {
     useEffect(() => {
         async function load() {
             const supabase = createClient();
-            const { data } = await supabase.from('organizations').select('plan').eq('id', organizationId).single();
+            const { data } = await supabase.from('organizations').select('plan, center_type').eq('id', organizationId).single();
             setOrg(data);
             setLoading(false);
         }
@@ -107,8 +141,15 @@ function BillingContent({ organizationId }: { organizationId: string }) {
                 // NOTA: Usando IDs de ejemplo. Asegúrate de configurar IDs reales para Starter/Pro
                 // Si no tienes IDs distintos para PRO/STARTER creados aun, usa el Premium/Elite de atletas como placeholder temporal
                 if (!process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER) {
-                    console.warn("Using Fallback Price IDs for Gyms");
-                    priceId = plan.id === 'starter' ? 'price_1SxdaPCpwHwK9MuevBVancPf' : 'price_1SxdavCpwHwK9Mueeesvlq6T';
+                    // Fallback IDs based on Plan Type
+                    if (plan.id.startsWith('pt_')) {
+                        // PT Plans
+                        priceId = plan.id === 'pt_pro' ? 'price_1SxdaPCpwHwK9MuevBVancPf_PT' : 'price_1SxdavCpwHwK9Mueeesvlq6T_PT';
+                    } else {
+                        // Gym Plans
+                        priceId = plan.id === 'starter' ? 'price_1SxdaPCpwHwK9MuevBVancPf' : 'price_1SxdavCpwHwK9Mueeesvlq6T';
+                    }
+                    console.warn("Using Fallback Price ID:", priceId);
                 }
 
                 await createOrganizationCheckoutSession(priceId, organizationId);
@@ -138,19 +179,23 @@ function BillingContent({ organizationId }: { organizationId: string }) {
 
             <header className="text-center space-y-4">
                 <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-1.5 rounded-full mb-4">
-                    <Building2 className="w-4 h-4 text-brand-red" />
-                    <span className="text-[10px] uppercase tracking-widest font-bold text-gray-400">Planes para Centros</span>
+                    {org?.center_type === 'personal_trainer' ? <User className="w-4 h-4 text-brand-red" /> : <Building2 className="w-4 h-4 text-brand-red" />}
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-gray-400">{org?.center_type === 'personal_trainer' ? 'Planes para Entrenadores' : 'Planes para Centros'}</span>
                 </div>
                 <h1 className="text-4xl lg:text-5xl font-heading font-extrabold italic uppercase tracking-tighter text-white">
-                    Potencia tu <span className="text-brand-red">Centro</span>
+                    {org?.center_type === 'personal_trainer' ? (
+                        <>Eleva tu <span className="text-brand-red">Carrera</span></>
+                    ) : (
+                        <>Potencia tu <span className="text-brand-red">Centro</span></>
+                    )}
                 </h1>
                 <p className="text-gray-400 max-w-xl mx-auto text-sm leading-relaxed">
-                    Herramientas profesionales para gestionar, medir y escalar tu comunidad fitness.
+                    Herramientas profesionales para gestionar, medir y escalar tu {org?.center_type === 'personal_trainer' ? 'negocio de coaching' : 'comunidad fitness'}.
                 </p>
             </header>
 
             <div className="grid md:grid-cols-3 gap-8">
-                {plans.map((plan) => {
+                {(org?.center_type === 'personal_trainer' ? PT_PLANS : plans).map((plan) => {
                     const isCurrent = (org?.plan || 'free') === plan.id;
                     return (
                         <motion.div

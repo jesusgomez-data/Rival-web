@@ -342,17 +342,17 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="label">Date</label>
+                                    <label className="label">Fecha</label>
                                     <input type="date" required value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} className="input" />
                                 </div>
                                 <div>
-                                    <label className="label">Time</label>
+                                    <label className="label">Hora</label>
                                     <input type="time" required value={formData.time} onChange={e => setFormData({ ...formData, time: e.target.value })} className="input" />
                                 </div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="label">Coach</label>
+                                    <label className="label">{organizationDetails?.center_type === 'personal_trainer' ? 'Responsable' : 'Entrenador'}</label>
                                     <div className="relative">
                                         <button
                                             type="button"
@@ -394,14 +394,18 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
                                     </div>
                                 </div>
                                 <div>
-                                    <label className="label">Capacity</label>
+                                    <label className="label">{organizationDetails?.center_type === 'personal_trainer' ? 'Plazas / Cupos' : 'Capacidad'}</label>
                                     <input type="number" required value={formData.capacity} onChange={e => setFormData({ ...formData, capacity: e.target.value })} className="input" />
                                 </div>
                             </div>
 
                             <div className="flex gap-2 mt-6">
-                                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">Cancel</button>
-                                <button type="submit" disabled={isSaving} className="btn-primary flex-1">{isSaving ? 'Scheduling...' : 'Create Class'}</button>
+                                <button type="button" onClick={() => setShowModal(false)} className="bg-transparent border border-white/10 text-white p-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/5 transition-all flex-1">
+                                    Cancelar
+                                </button>
+                                <button type="submit" disabled={isSaving} className="bg-white text-black p-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all flex-1 shadow-lg">
+                                    {isSaving ? 'Guardando...' : (organizationDetails?.center_type === 'personal_trainer' ? 'Agendar Cita' : 'Crear Clase')}
+                                </button>
                             </div>
                         </form>
                     </div>
