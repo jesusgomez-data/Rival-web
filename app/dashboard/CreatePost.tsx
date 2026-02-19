@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Image as ImageIcon, X, Smile, Trophy, Activity } from "lucide-react";
+import { Send, Image as ImageIcon, X, Smile, Trophy, Activity, Dumbbell } from "lucide-react";
 import MentionInput from "@/components/MentionInput";
 import Image from "next/image";
 import MusicPicker from "./MusicPicker";
@@ -9,6 +9,7 @@ import { MusicTrack } from "./music-data";
 import { useUploads } from "./UploadContext";
 import dynamic from 'next/dynamic';
 import VideoEditor from "./VideoEditor";
+import WodCreator from "@/components/training/WodCreator";
 
 // Import correctly for SSR safety
 import { Theme } from 'emoji-picker-react';
@@ -20,15 +21,16 @@ interface UserProfile {
     full_name?: string;
 }
 
-export default function CreatePost({ currentUser, onSuccess }: { currentUser: UserProfile | null, onSuccess?: () => void }) {
+export default function CreatePost({ currentUser, onSuccess, initialPostType }: { currentUser: UserProfile | null, onSuccess?: () => void, initialPostType?: 'standard' | 'pr' | 'wod' }) {
     const [mounted, setMounted] = useState(false);
 
     const [content, setContent] = useState("");
     const [preview, setPreview] = useState<string | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-    const [postType, setPostType] = useState<'standard' | 'pr'>('standard');
+    const [postType, setPostType] = useState<'standard' | 'pr' | 'wod'>(initialPostType || 'standard');
     const [exercise, setExercise] = useState("");
     const [weight, setWeight] = useState("");
+    const [wodData, setWodData] = useState<any>(null);
     const [sport, setSport] = useState("Cross Training");
     const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
     const [duration, setDuration] = useState<number | null>(null);
@@ -62,6 +64,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: Us
         let file = pendingFile || fileInputRef.current?.files?.[0];
         if (postType === 'standard' && !content.trim() && !file) return;
         if (postType === 'pr' && (!exercise || !weight)) return;
+        if (postType === 'wod' && (!wodData || wodData.blocks.length === 0)) return;
 
         startUpload({
             postType,
@@ -72,12 +75,22 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: Us
             sport,
             selectedTrack,
             currentUser,
-            preview
+            preview,
+            wodData
         });
 
-        setContent(""); setExercise(""); setWeight(""); setPreview(null);
-        setDuration(null); setPendingFile(null); setShowEmojiPicker(false);
-        setPostType('standard'); setSelectedTrack(null); setMediaType(null);
+        setContent("");
+        setExercise("");
+        setWeight("");
+        setPreview(null);
+        setDuration(null);
+        setPendingFile(null);
+        setShowEmojiPicker(false);
+        setPostType('standard');
+        setSelectedTrack(null);
+        setMediaType(null);
+        setWodData(null);
+
         if (fileInputRef.current) fileInputRef.current.value = "";
         onSuccess?.();
     }
@@ -98,6 +111,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: Us
             <div className="flex gap-2 mb-4 md:mb-6">
                 <button type="button" onClick={() => setPostType('standard')} className={`flex-1 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 md:gap-2 border ${postType === 'standard' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}><Activity className="w-3.5 h-3.5 text-brand-red" />Actualización</button>
                 <button type="button" onClick={() => setPostType('pr')} className={`flex-1 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 md:gap-2 border ${postType === 'pr' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}><Trophy className="w-3.5 h-3.5 text-brand-yellow" />Nuevo PR</button>
+                <button type="button" onClick={() => setPostType('wod')} className={`flex-1 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.2em] transition-all flex items-center justify-center gap-1.5 md:gap-2 border ${postType === 'wod' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}><Dumbbell className="w-3.5 h-3.5 text-brand-red" />WOD</button>
             </div>
 
             <div className="flex gap-4">
@@ -107,6 +121,11 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: Us
                             <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2">
                                 <input type="text" placeholder="EJERCICIO" value={exercise} onChange={(e) => setExercise(e.target.value.toUpperCase())} className="bg-black/20 border border-white/5 rounded-xl px-4 py-3 text-[10px] font-bold text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/30 transition-all uppercase" />
                                 <input type="text" placeholder="PESO (KG/LBS)" value={weight} onChange={(e) => setWeight(e.target.value.toUpperCase())} className="bg-black/20 border border-white/5 rounded-xl px-4 py-3 text-[10px] font-bold text-white placeholder:text-gray-600 focus:outline-none focus:border-brand-red/30 transition-all uppercase" />
+                            </div>
+                        )}
+                        {postType === 'wod' && (
+                            <div className="animate-in fade-in slide-in-from-top-2 mb-6">
+                                <WodCreator onUpdate={(data) => setWodData(data)} />
                             </div>
                         )}
                         <div className="relative group">
@@ -143,7 +162,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: Us
                                 <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-1.5 px-3 md:px-4 py-2.5 rounded-xl bg-white/5 border border-white/5 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-[9px] md:text-[10px] font-black uppercase tracking-widest"><ImageIcon className="w-4 h-4 text-brand-red" /> Multimedia</button>
                                 <MusicPicker onSelect={setSelectedTrack} selectedTrackId={selectedTrack?.id || null} />
                             </div>
-                            <button type="submit" disabled={(postType === 'standard' && !content.trim() && !preview) || (postType === 'pr' && (!exercise || !weight))} className="bg-brand-red text-white px-5 md:px-8 py-3.5 rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.2em] shadow-glow-sm hover:shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-30 flex items-center gap-2 md:gap-3 ml-auto"><Send className="w-4 h-4" /><span>{postType === 'pr' ? 'Publicar PR' : 'Publicar'}</span></button>
+                            <button type="submit" disabled={(postType === 'standard' && !content.trim() && !preview) || (postType === 'pr' && (!exercise || !weight)) || (postType === 'wod' && (!wodData || wodData.blocks.length === 0))} className="bg-brand-red text-white px-5 md:px-8 py-3.5 rounded-2xl text-[9px] md:text-[10px] font-black uppercase tracking-widest md:tracking-[0.2em] shadow-glow-sm hover:shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-30 flex items-center gap-2 md:gap-3 ml-auto"><Send className="w-4 h-4" /><span>{postType === 'pr' ? 'Publicar PR' : postType === 'wod' ? 'Publicar WOD' : 'Publicar'}</span></button>
                         </div>
                     </form>
                 </div>

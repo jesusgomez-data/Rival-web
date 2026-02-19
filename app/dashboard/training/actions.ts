@@ -1311,3 +1311,35 @@ export async function getAIPredictions() {
         recoveryScore: lastRecovery
     };
 }
+
+export async function addNewExercise(exercise: { name: string, muscle_group?: string, video_url?: string }) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Not authenticated' };
+
+    // Check if it already exists (case insensitive)
+    const { data: existing } = await supabase
+        .from('exercises_catalog')
+        .select('id')
+        .ilike('name', exercise.name)
+        .maybeSingle();
+
+    if (existing) return { success: true, data: existing, note: 'Already exists' };
+
+    const { data, error } = await supabase
+        .from('exercises_catalog')
+        .insert({
+            name: exercise.name,
+            muscle_group: exercise.muscle_group || 'Otros',
+            video_url: exercise.video_url || null
+        })
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error adding new exercise:", error);
+        return { error: error.message };
+    }
+
+    return { success: true, data };
+}

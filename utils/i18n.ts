@@ -14,10 +14,10 @@ export const translations = {
             future: 'EL FUTURO DEL FITNESS 2026',
             title: 'ENFRÉNTATE',
             subtitle: 'A TI MISMO.',
-            description: 'La primera red social creada para la mentalidad del 1%. Registra cada repetición, compite globalmente y próximamente accede a gimnasios de élite en todo el mundo.',
+            description: 'La primera red social creada para la mentalidad del 1%. Registra cada repetición, compite globalmente y conecta con gimnasios de élite en todo el mundo.',
             descPrefix: 'La primera red social creada para la mentalidad del 1%. Registra cada repetición, compite globalmente y ',
-            descHighlight: 'próximamente',
-            descSuffix: ' accede a gimnasios de élite en todo el mundo.',
+            descHighlight: 'conecta',
+            descSuffix: ' con gimnasios de élite en todo el mundo.',
             ctaStart: 'Empieza gratis',
             ctaDemo: 'Ver demo'
         },

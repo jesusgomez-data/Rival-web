@@ -54,13 +54,46 @@ export async function createDuel(opponentId: string, type: string = 'classic', r
         type: 'duel_challenge',
         title: 'Duel Issued!',
         content: `${user.user_metadata?.full_name || 'A Rival'} has challenged you to a 7-day duel.`,
-        link: '/dashboard'
+        link: '/dashboard#duels-section'
     });
 
     revalidatePath('/dashboard/community');
     revalidatePath('/dashboard');
     return { success: true, duel: data };
 }
+
+async function calculateDuelScores(duel: any, supabase: any) {
+    const getUserScore = async (userId: string) => {
+        // Adjust end date to include the full end day
+        const endDateTime = new Date(duel.end_date);
+        endDateTime.setHours(23, 59, 59, 999);
+
+        const { data } = await supabase
+            .from('workouts')
+            .select('total_volume_kg, duration_seconds')
+            .eq('user_id', userId)
+            .gte('created_at', duel.start_date)
+            .lte('created_at', endDateTime.toISOString());
+
+        if (!data) return 0;
+
+        // Scoring Balanced:
+        // 1. Volume: 0.2 pts per kg. (e.g. 10,000kg = 2,000 pts)
+        // 2. Duration: 30 pts per minute. (e.g. 60 mins = 1,800 pts)
+        // This makes strength and cardio sessions roughly comparable in score.
+        return data.reduce((acc: number, w: any) => {
+            const vol = (w.total_volume_kg || 0) * 0.2;
+            const dur = ((w.duration_seconds || 0) / 60) * 30;
+            return acc + vol + dur;
+        }, 0);
+    };
+
+    const challengerScore = Math.floor(await getUserScore(duel.challenger_id));
+    const opponentScore = Math.floor(await getUserScore(duel.opponent_id));
+
+    return { challengerScore, opponentScore };
+}
+
 
 export async function acceptDuel(duelId: string) {
     const supabase = await createClient();
@@ -101,7 +134,7 @@ export async function acceptDuel(duelId: string) {
         type: 'duel_active',
         title: 'Duel Accepted!',
         content: `Your challenge has been accepted. The 7-day clash begins now!`,
-        link: '/dashboard'
+        link: '/dashboard#duels-section'
     });
 
     revalidatePath('/dashboard/community');
@@ -124,7 +157,46 @@ export async function getMyDuels() {
         .or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
 
-    return data || [];
+    const duelsWithScores = await Promise.all((data || []).map(async (duel: any) => {
+        // Only calculate for active or completed, or just active to show progress
+        if (duel.status !== 'pending') {
+            const { challengerScore, opponentScore } = await calculateDuelScores(duel, supabase);
+
+            // --- AUTO CLOSE EXPIRED DUELS ---
+            const endDate = new Date(duel.end_date);
+            const now = new Date();
+            // If active and past end date, finalize it
+            if (duel.status === 'active' && now > endDate) {
+                let winnerId = null;
+                if (challengerScore > opponentScore) winnerId = duel.challenger_id;
+                else if (opponentScore > challengerScore) winnerId = duel.opponent_id;
+
+                // Update DB
+                await supabase.from('duels').update({
+                    status: 'completed',
+                    winner_id: winnerId
+                }).eq('id', duel.id);
+
+                // Notify Winner (if not a draw)
+                if (winnerId) {
+                    await createNotification({
+                        userId: winnerId,
+                        type: 'duel_won',
+                        title: '¡Victoria!',
+                        content: `Has ganado el duelo contra ${winnerId === duel.challenger_id ? duel.opponent.full_name : duel.challenger.full_name}`,
+                        link: '/dashboard#duels-section'
+                    });
+                }
+
+                return { ...duel, status: 'completed', winner_id: winnerId, challenger_score: challengerScore, opponent_score: opponentScore };
+            }
+
+            return { ...duel, challenger_score: challengerScore, opponent_score: opponentScore };
+        }
+        return { ...duel, challenger_score: 0, opponent_score: 0 };
+    }));
+
+    return duelsWithScores;
 }
 
 export async function getPublicProfile(username: string) {

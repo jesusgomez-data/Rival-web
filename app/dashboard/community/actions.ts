@@ -134,6 +134,48 @@ export async function createPRPost(formData: FormData) {
     }
 }
 
+export async function createWodPost(formData: FormData) {
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        if (!user) return { error: 'Unauthorized' }
+
+        const title = formData.get('title') as string
+        const content = formData.get('content') as string
+        const wodDataJson = formData.get('wod_data') as string
+        const mediaUrl = formData.get('media_url') as string || null
+
+        if (!wodDataJson) {
+            return { error: "WOD data is required" }
+        }
+
+        const { error: insertError } = await supabase
+            .from('posts')
+            .insert({
+                user_id: user.id,
+                caption: content || title || 'ENTRENAMIENTO COMPLETADO',
+                media_url: wodDataJson,
+                media_type: 'wod',
+                music_url: formData.get('music_url') as string || null,
+                music_title: formData.get('music_title') as string || null,
+                music_artist: formData.get('music_artist') as string || null
+            })
+
+        if (insertError) {
+            console.error("Database insert error (WOD):", insertError)
+            return { error: `Database error: ${insertError.message}` }
+        }
+
+        revalidatePath('/dashboard/community')
+        revalidatePath('/dashboard')
+        return { success: true }
+    } catch (e: any) {
+        console.error("Critical error in createWodPost:", e)
+        return { error: `Server exception: ${e.message || "Unknown error"}` }
+    }
+}
+
 export async function createUserPost(formData: FormData) {
     try {
         const supabase = await createClient()

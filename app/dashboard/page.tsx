@@ -14,6 +14,8 @@ import CreatePost from "./CreatePost";
 import StoryBar from "./stories/StoryBar";
 import { getMyDuels, acceptDuel } from "./community/duel-actions";
 import UserMediaGallery from "./UserMediaGallery";
+import DashboardTour from "@/components/onboarding/DashboardTour";
+import EssentialsHero from "@/components/onboarding/EssentialsHero";
 
 function SuggestedUser({ id, name, username, role, avatar, isFollowing, isOfficial }: { id: string, name: string, username: string, role: string, avatar?: string, isFollowing: boolean, isOfficial?: boolean }) {
     const { t } = useLanguage();
@@ -84,7 +86,7 @@ function CollapsibleCreatePost({ currentUser, language }: { currentUser: any, la
                             {language === 'es' ? '¿Qué tenemos para hoy?' : 'Share your workout...'}
                         </span>
                     </div>
-                    <div className="w-8 h-8 md:w-10 md:h-10 rounded-2xl bg-brand-red/10 border border-brand-red/20 shadow-glow-sm flex items-center justify-center text-brand-red group-hover:bg-brand-red group-hover:text-white transition-all transform group-hover:rotate-90">
+                    <div id="create-post-btn" className="w-8 h-8 md:w-10 md:h-10 rounded-2xl bg-brand-red/10 border border-brand-red/20 shadow-glow-sm flex items-center justify-center text-brand-red group-hover:bg-brand-red group-hover:text-white transition-all transform group-hover:rotate-90">
                         <Plus className="w-4 h-4 md:w-5 md:h-5" />
                     </div>
                 </button>
@@ -118,6 +120,7 @@ export default function DashboardHome() {
     const supabase = createClient();
     const [loading, setLoading] = useState(true);
     const [showStats, setShowStats] = useState(false);
+    const [showTour, setShowTour] = useState(false);
     const [data, setData] = useState<any>({
         profile: null,
         workoutCount: 0,
@@ -191,6 +194,12 @@ export default function DashboardHome() {
             }
         }
         loadData();
+
+        // Check for first-time visit
+        const hasSeenTour = localStorage.getItem("rival_dashboard_tour_seen");
+        if (!hasSeenTour) {
+            setShowTour(true);
+        }
     }, []);
 
     // NEW: Fetch Feed based on activeTab
@@ -237,21 +246,29 @@ export default function DashboardHome() {
 
     // Scroll to post if hash is present
     useEffect(() => {
-        if (typeof window !== 'undefined' && window.location.hash) {
-            const hash = window.location.hash.substring(1); // Remove #
-            setTimeout(() => {
-                const element = document.getElementById(hash);
-                if (element) {
-                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    // Add highlight effect
-                    element.classList.add('ring-2', 'ring-brand-red', 'ring-offset-2', 'ring-offset-background');
-                    setTimeout(() => {
-                        element.classList.remove('ring-2', 'ring-brand-red', 'ring-offset-2', 'ring-offset-background');
-                    }, 3000);
-                }
-            }, 500); // Wait for posts to render
-        }
-    }, [data.feedPosts]);
+        const handleHashScroll = () => {
+            if (typeof window !== 'undefined' && window.location.hash) {
+                const hash = window.location.hash.substring(1); // Remove #
+                // Wait for content to render/layout
+                setTimeout(() => {
+                    const element = document.getElementById(hash);
+                    if (element) {
+                        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        // Add highlight effect
+                        element.classList.add('ring-2', 'ring-brand-red', 'ring-offset-2', 'ring-offset-background');
+                        setTimeout(() => {
+                            element.classList.remove('ring-2', 'ring-brand-red', 'ring-offset-2', 'ring-offset-background');
+                        }, 3000);
+                    }
+                }, 500);
+            }
+        };
+
+        handleHashScroll(); // Run on mount/update
+
+        window.addEventListener('hashchange', handleHashScroll);
+        return () => window.removeEventListener('hashchange', handleHashScroll);
+    }, [data.feedPosts, data.duels]);
 
     const formatTimeAgo = (date: string) => {
         try {
@@ -357,7 +374,7 @@ export default function DashboardHome() {
                             </div>
                         </button>
 
-                        <div className={clsx(
+                        <div id="stats-grid" className={clsx(
                             "grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 transition-all duration-300",
                             !showStats ? "hidden lg:grid" : "grid"
                         )}>
@@ -411,7 +428,7 @@ export default function DashboardHome() {
                                 </p>
                             </div>
                         </div>
-                        <div className="flex bg-white/5 backdrop-blur-md rounded-2xl p-1.5 border border-white/10 self-start sm:self-auto shadow-2xl">
+                        <div id="activity-feed" className="flex bg-white/5 backdrop-blur-md rounded-2xl p-1.5 border border-white/10 self-start sm:self-auto shadow-2xl">
                             <button
                                 onClick={() => setActiveTab('following')}
                                 className={clsx(
@@ -436,6 +453,8 @@ export default function DashboardHome() {
                     {/* Social Feed */}
                     <div className="space-y-8">
                         {/* Old StoryBar location removed */}
+
+                        {data.workoutCount === 0 && <EssentialsHero />}
 
                         <CollapsibleCreatePost currentUser={data.currentUser} language={language} />
 
@@ -473,10 +492,25 @@ export default function DashboardHome() {
                                 ))}
                             </div>
                         ) : (
-                            <div className="group relative p-20 text-center border-2 border-dashed border-white/5 rounded-[40px] bg-white/[0.02] hover:bg-white/[0.04] transition-all overflow-hidden">
+                            <div className="group relative p-12 md:p-20 text-center border-2 border-dashed border-white/5 rounded-[40px] bg-white/[0.02] hover:bg-white/[0.04] transition-all overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-br from-brand-red/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                <Flame className="w-12 h-12 text-gray-700 mx-auto mb-4" />
-                                <p className="text-gray-500 italic font-medium">{t.dashboard.noActivity}</p>
+                                <div className="relative z-10">
+                                    <div className="w-20 h-20 rounded-full bg-brand-red/10 flex items-center justify-center mx-auto mb-6 border border-brand-red/20 group-hover:scale-110 transition-transform">
+                                        <Flame className="w-10 h-10 text-brand-red" />
+                                    </div>
+                                    <h3 className="text-xl font-heading font-black italic uppercase text-white mb-2">{language === 'es' ? 'TU ARENA ESTÁ VACÍA' : 'YOUR ARENA IS EMPTY'}</h3>
+                                    <p className="text-gray-500 font-medium max-w-sm mx-auto mb-8">
+                                        {language === 'es' ? 'Sigue a otros atletas o sube tu primer entrenamiento para empezar a ver actividad.' : 'Follow other athletes or upload your first workout to see activity.'}
+                                    </p>
+                                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                        <button
+                                            onClick={() => setActiveTab('global')}
+                                            className="px-8 py-3 bg-white text-black rounded-xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all outline-none"
+                                        >
+                                            {language === 'es' ? 'Explorar Rival Fit' : 'Explore Rival Fit'}
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -486,7 +520,7 @@ export default function DashboardHome() {
                     <UserMediaGallery userId={data.currentUser?.id} />
 
                     {data.duels.length > 0 && (
-                        <div className="bg-black/40 border border-brand-red/20 rounded-[32px] p-5 md:p-8 backdrop-blur-xl shadow-[0_0_30px_rgba(220,38,38,0.1)] relative overflow-hidden group">
+                        <div id="duels-section" className="bg-black/40 border border-brand-red/20 rounded-[32px] p-5 md:p-8 backdrop-blur-xl shadow-[0_0_30px_rgba(220,38,38,0.1)] relative overflow-hidden group">
                             <h3 className="font-heading font-black text-foreground italic tracking-wider mb-10 flex items-center gap-3 text-lg">
                                 <Swords className="w-6 h-6 text-brand-red" /> {t.dashboard.duelsTitle}
                             </h3>
@@ -508,7 +542,32 @@ export default function DashboardHome() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-black text-foreground uppercase italic truncate">VS {rival?.full_name || rival?.username}</p>
-                                                    <p className="text-xs text-gray-500 uppercase font-bold mt-1">{isPending ? (language === 'es' ? 'Esperando aceptación' : 'Waiting Acceptance') : (language === 'es' ? 'Duelo de 7 días' : '7 Day Duel')}</p>
+                                                    <p className="text-xs text-gray-500 uppercase font-bold mt-1">
+                                                        {isPending
+                                                            ? (language === 'es' ? 'Esperando...' : 'Pending...')
+                                                            : (duel.status === 'completed' ? (language === 'es' ? 'Finalizado' : 'Ended') : (language === 'es' ? 'Duelo Activo' : 'Active Duel'))}
+                                                    </p>
+
+                                                    {/* SCORE DISPLAY */}
+                                                    {!isPending && (
+                                                        <div className="flex justify-between items-center text-xs font-mono bg-black/20 rounded p-2 mt-2 border border-white/5">
+                                                            <div className="text-center">
+                                                                <span className="text-brand-gray block text-[10px] mb-0.5">YOU</span>
+                                                                <span className={`font-black text-sm ${(isChallenger ? duel.challenger_score : duel.opponent_score) > (isChallenger ? duel.opponent_score : duel.challenger_score) ? 'text-brand-red' : 'text-white'}`}>
+                                                                    {isChallenger ? duel.challenger_score : duel.opponent_score}
+                                                                </span>
+                                                            </div>
+                                                            <div className="text-center flex flex-col justify-center">
+                                                                <span className="text-white/20 text-[10px] font-bold">PTS</span>
+                                                            </div>
+                                                            <div className="text-center">
+                                                                <span className="text-brand-gray block text-[10px] mb-0.5">RIVAL</span>
+                                                                <span className={`font-black text-sm ${(isChallenger ? duel.opponent_score : duel.challenger_score) > (isChallenger ? duel.challenger_score : duel.opponent_score) ? 'text-brand-red' : 'text-white'}`}>
+                                                                    {isChallenger ? duel.opponent_score : duel.challenger_score}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             {isPending && !isChallenger && (
@@ -567,6 +626,12 @@ export default function DashboardHome() {
                     </div>
                 </div>
             </div>
+            {showTour && (
+                <DashboardTour onComplete={() => {
+                    setShowTour(false);
+                    localStorage.setItem("rival_dashboard_tour_seen", "true");
+                }} />
+            )}
         </div>
     );
 }

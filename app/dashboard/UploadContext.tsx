@@ -13,7 +13,7 @@ interface UploadTask {
     error?: string;
     caption: string;
     preview?: string;
-    type: 'standard' | 'pr';
+    type: 'standard' | 'pr' | 'wod';
 }
 
 interface UploadContextType {
@@ -31,13 +31,14 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     const startUpload = useCallback(async (data: {
         content: string;
         file: File | null;
-        postType: 'standard' | 'pr';
+        postType: 'standard' | 'pr' | 'wod';
         exercise?: string;
         weight?: string;
         sport?: string;
         selectedTrack?: any;
         currentUser: any;
         preview?: string;
+        wodData?: any;
     }) => {
         const id = Math.random().toString(36).substring(7);
         const newTask: UploadTask = {
@@ -134,6 +135,15 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                 if (mediaUrl) formData.append("media_url", mediaUrl);
                 else if (data.file) formData.append("media", data.file);
                 res = await createPRPost(formData);
+            } else if (data.postType === 'wod') {
+                formData.append("content", data.content);
+                if (data.wodData) {
+                    formData.append("wod_data", JSON.stringify({
+                        ...data.wodData,
+                        media_url: mediaUrl
+                    }));
+                }
+                res = await createWodPost(formData);
             } else {
                 formData.append("content", data.content);
                 if (mediaUrl) {

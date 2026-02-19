@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Trophy, Activity, Users, Play, BarChart3, Dumbbell, Flame, Check, Star, TrendingUp, Zap, Layout, CalendarCheck, UploadCloud, Building2, ShoppingBag, Globe, Mail, Instagram } from "lucide-react";
+import { ArrowRight, Trophy, Activity, Users, Play, BarChart3, Dumbbell, Flame, Check, Star, TrendingUp, Zap, Layout, CalendarCheck, UploadCloud, Building2, ShoppingBag, Globe, Mail, Instagram, Camera } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLanguage } from "@/app/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -335,12 +335,12 @@ export default function Home() {
             </div>
 
             <div className="grid md:grid-cols-3 gap-6">
-              <FeatureCard icon={<Activity className="w-6 h-6 text-brand-red" />} title="Registro Inteligente" desc="Registra tus entrenamientos en segundos. Nuestro sistema aprende tus curvas de fuerza y ajusta tu próxima sesión automáticamente." />
-              <FeatureCard icon={<Users className="w-6 h-6 text-brand-red" />} title="Comunidad de Tribu" desc="Conecta con atletas que comparten tu pasión. Filtra el feed por deporte, nivel o ubicación." />
-              <FeatureCard icon={<Dumbbell className="w-6 h-6 text-brand-red" />} title="Coach Online" desc="Obtén un programa personalizado que evoluciona contigo. Desde hipertrofia hasta preparación para Hybrid." />
-              <FeatureCard icon={<Trophy className="w-6 h-6 text-brand-red" />} title="Rankings en Vivo" desc="Compite en desafíos en tiempo real. Mira tu posición en tu ciudad, país o globalmente." />
-              <FeatureCard icon={<BarChart3 className="w-6 h-6 text-brand-red" />} title="Analíticas Pro" desc="Visualiza tu progreso con gráficos profesionales. Volumen, intensidad y gestión de fatiga." />
-              <FeatureCard icon={<Zap className="w-6 h-6 text-brand-red" />} title="Duelos en Tiempo Real" desc="Reta a tus rivales a duelos de 7 días. Compara volumen, fuerza y constancia cara a cara." />
+              <FeatureCard icon={<Globe className="w-6 h-6 text-brand-red" />} title="Red Social Vertical" desc="Un feed libre de ruido. Solo sudor, PRs y motivación real. Sube fotos de tus entrenos y comparte tu historia con atletas que te entienden." />
+              <FeatureCard icon={<Dumbbell className="w-6 h-6 text-brand-red" />} title="Registro de Élite" desc="WODs, AMRAPs, EMOMs, Fuerza y Running. Herramientas profesionales de logging para Cross Training, Hyrox, Powerlifting y más." />
+              <FeatureCard icon={<Trophy className="w-6 h-6 text-brand-red" />} title="Competición Global" desc="No entrenes solo. Escala en los Leaderboards mundiales cada semana y demuestra tu nivel ante toda la comunidad." />
+              <FeatureCard icon={<Zap className="w-6 h-6 text-brand-red" />} title="Duelos 1vs1" desc="¿Quién ha entrenado más fuerte esta semana? Desafía a un amigo a un Duelo de 7 días y dejad que los números hablen." />
+              <FeatureCard icon={<Building2 className="w-6 h-6 text-brand-red" />} title="Conexión con tu Box" desc="Tu gimnasio en tu bolsillo. Reserva clases, consulta la pizarra del WOD del día y conecta con tus compañeros de entreno." />
+              <FeatureCard icon={<BarChart3 className="w-6 h-6 text-brand-red" />} title="Analíticas de Progreso" desc="Visualiza tu evolución real. Gráficas de volumen, frecuencia cardiaca, estimación de 1RM y consistencia mensual." />
             </div>
           </div>
         </section>

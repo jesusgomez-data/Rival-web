@@ -4,8 +4,10 @@ import { getMissions, getRecentPRs, getUserProfile, getScheduledWorkouts, getWor
 import { type TrainingPlan } from "./types";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy, X, Sparkles } from "lucide-react";
+import { motion } from "framer-motion";
+import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy, X, Sparkles, Plus } from "lucide-react";
 import Image from "next/image";
+import CreatePost from "../CreatePost";
 
 export default function TrainingPage() {
     const [missions, setMissions] = useState<any[]>([]);
@@ -16,24 +18,32 @@ export default function TrainingPage() {
     const [publishedResults, setPublishedResults] = useState<any[]>([]);
     const [isWodExpanded, setIsWodExpanded] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [showUploadModal, setShowUploadModal] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
         async function fetchData() {
-            const [missionsData, prsData, profileData, scheduledData, workoutsData, publishedData] = await Promise.all([
-                getMissions(),
-                getRecentPRs(),
-                getUserProfile(),
-                getScheduledWorkouts(),
-                getWorkoutHistory(30),
-                getPublishedResults(1)
-            ]);
-            setMissions(missionsData);
-            setPrs(prsData);
-            setProfile(profileData);
-            setScheduled(scheduledData);
-            setWorkouts(workoutsData);
-            setPublishedResults(publishedData);
-            setIsLoading(false);
+            try {
+                const [missionsData, prsData, profileData, scheduledData, workoutsData, publishedData] = await Promise.all([
+                    getMissions(),
+                    getRecentPRs(),
+                    getUserProfile(),
+                    getScheduledWorkouts(),
+                    getWorkoutHistory(30),
+                    getPublishedResults(1)
+                ]);
+                setMissions(missionsData || []);
+                setPrs(prsData || []);
+                setProfile(profileData);
+                setScheduled(scheduledData || []);
+                setWorkouts(workoutsData || []);
+                setPublishedResults(publishedData || []);
+            } catch (err: any) {
+                console.error("Error loading training data:", err);
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
         }
         fetchData();
     }, []);
@@ -182,10 +192,60 @@ export default function TrainingPage() {
                         </div>
                         <h1 className="text-4xl md:text-5xl font-heading font-black !text-white glow-text">CENTRO DE ENTRENAMIENTO</h1>
                     </div>
-                    <Link href="/dashboard/training/session" className="bg-white text-black px-8 py-4 rounded-xl font-bold flex items-center gap-2 hover:bg-brand-red hover:text-white transition-all transform hover:-translate-y-1 shadow-2xl">
-                        <Play className="w-5 h-5 fill-current" /> INICIAR SESIÓN
-                    </Link>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        <Link href="/dashboard/training/session" className="bg-white text-black px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-brand-red hover:text-white transition-all transform hover:-translate-y-1 shadow-2xl flex-1 whitespace-nowrap">
+                            <Play className="w-5 h-5 fill-current" /> INICIAR SESIÓN
+                        </Link>
+                        <button
+                            onClick={() => setShowUploadModal(true)}
+                            className="bg-black/40 backdrop-blur-md border border-white/10 text-white px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-white/10 transition-all transform hover:-translate-y-1 shadow-2xl flex-1 whitespace-nowrap"
+                        >
+                            <Plus className="w-5 h-5" /> SUBIR WOD
+                        </button>
+                    </div>
                 </div>
+
+                {/* Upload Modal Overlay */}
+                {showUploadModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                            onClick={() => setShowUploadModal(false)}
+                        />
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            className="relative w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-[40px] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+                        >
+                            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-2xl bg-brand-red/10 flex items-center justify-center text-brand-red shadow-glow-sm">
+                                        <Dumbbell className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-lg font-black italic uppercase tracking-tighter text-white">Nuevo Reporte WOD</h2>
+                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest text-[#666]">Sección Cross Training</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowUploadModal(false)}
+                                    className="w-10 h-10 rounded-full hover:bg-white/5 flex items-center justify-center text-gray-500 hover:text-white transition-colors"
+                                >
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="flex-1 overflow-y-auto p-2">
+                                <CreatePost
+                                    currentUser={profile}
+                                    initialPostType="wod"
+                                    onSuccess={() => setShowUploadModal(false)}
+                                />
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
             </div>
 
             {/* Main Content Grid */}
@@ -427,7 +487,8 @@ export default function TrainingPage() {
                                                     <WorkoutItem
                                                         key={`${sIdx}-${eIdx}`}
                                                         name={ex.name || 'Ejercicio'}
-                                                        sets={section.type === 'weight' ? `${ex.sets || '?'}x${ex.reps || '?'} • ${ex.value || '0'}kg` : section.value || 'Completado'}
+                                                        sets={section.type === 'weight' ? `${ex.sets || '?'}x${ex.reps || '?'} • ${ex.value || '0'}kg` :
+                                                            (typeof section.value === 'object' ? JSON.stringify(section.value) : (section.value || 'Completado'))}
                                                         note={section.title || section.type}
                                                     />
                                                 ))

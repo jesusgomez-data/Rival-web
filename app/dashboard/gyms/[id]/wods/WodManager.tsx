@@ -8,7 +8,7 @@ import clsx from "clsx";
 import { useTheme } from "../../../../ThemeContext";
 
 type BlockType = 'strength' | 'wod' | 'skill' | 'other';
-type BlockFormat = 'emom' | 'fortime' | 'amrap' | 'free';
+type BlockFormat = 'EMOM' | 'AMRAP' | 'FOR TIME' | 'INTERVALS' | 'TABATA' | 'QUALITY' | 'REST' | 'DEATH BY' | 'FREE';
 
 interface WodBlock {
     id: string;
@@ -142,7 +142,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                 setBlocks([{
                     id: Math.random().toString(36).substr(2, 9),
                     type: 'wod',
-                    format: 'free',
+                    format: 'FREE',
                     content: wodData.workout
                 }]);
             } else {
@@ -263,7 +263,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
         setBlocks([...blocks, {
             id: Math.random().toString(36).substr(2, 9),
             type: 'wod',
-            format: 'free',
+            format: 'FREE',
             content: "",
             mode: 'text',
             exercises: []
@@ -464,20 +464,25 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                 onChange={(e) => updateBlock(index, { format: e.target.value as BlockFormat })}
                                                 className="appearance-none bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-red focus:border-brand-red outline-none cursor-pointer pr-8"
                                             >
-                                                <option value="free">Free Style</option>
-                                                <option value="emom">EMOM</option>
-                                                <option value="fortime">For Time</option>
-                                                <option value="amrap">AMRAP</option>
+                                                <option value="FREE">Free Style</option>
+                                                <option value="EMOM">EMOM</option>
+                                                <option value="FOR TIME">For Time</option>
+                                                <option value="AMRAP">AMRAP</option>
+                                                <option value="INTERVALS">Intervals</option>
+                                                <option value="TABATA">Tabata</option>
+                                                <option value="DEATH BY">Death By</option>
+                                                <option value="QUALITY">Quality</option>
+                                                <option value="REST">Rest</option>
                                             </select>
                                             <ChevronDown className="w-3 h-3 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                                         </div>
 
-                                        {(block.format === 'emom' || block.format === 'amrap' || block.format === 'fortime') && (
+                                        {(block.format === 'EMOM' || block.format === 'AMRAP' || block.format === 'FOR TIME' || block.format === 'INTERVALS' || block.format === 'DEATH BY') && (
                                             <input
                                                 value={block.duration || ''}
                                                 onChange={(e) => updateBlock(index, { duration: e.target.value })}
-                                                placeholder={block.format === 'emom' ? '12 min' : block.format === 'amrap' ? '20 min' : 'Time Cap'}
-                                                className="w-24 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-brand-red outline-none placeholder-gray-600"
+                                                placeholder={block.format === 'EMOM' ? '12:00' : block.format === 'AMRAP' ? '20:00' : 'Time Cap'}
+                                                className="w-24 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-brand-red outline-none placeholder-gray-600 font-bold"
                                             />
                                         )}
                                     </div>
@@ -914,7 +919,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                             <div className="flex items-center gap-3">
                                                                 <h5 className="text-white font-heading font-black text-xs uppercase tracking-widest flex items-center gap-2 italic">
                                                                     <span className={`w-2 h-2 rounded-full ${block.type === 'wod' ? 'bg-white' : 'bg-gray-500'}`}></span>
-                                                                    {(block.title || (block.format && block.format !== 'free' ? block.format : (block.type === 'wod' ? 'Workout' : block.type))).toUpperCase()}
+                                                                    {(block.title || (block.format && block.format !== 'FREE' ? block.format : (block.type === 'wod' ? 'Workout' : block.type))).toUpperCase()}
 
                                                                     {block.duration && (
                                                                         <span className="ml-1 text-brand-red text-[10px] font-black uppercase tracking-widest opacity-80 italic">

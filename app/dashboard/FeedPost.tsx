@@ -11,6 +11,7 @@ import { clsx } from "clsx";
 import { useTheme } from "../ThemeContext";
 import { useStories } from "./stories/StoryContext";
 import PRCard from "./community/PRCard";
+import WodCard from "@/components/community/WodCard";
 import VideoReelsModal from "./VideoReelsModal";
 import dynamic from 'next/dynamic';
 import ShareableCard from "@/components/ShareableCard";
@@ -653,6 +654,26 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 weight={prData.weight || "0"}
                                 unit={prData.unit || "kg"}
                                 backgroundImage={prData.backgroundImage || (/\.(jpg|jpeg|png|webp|gif)$/i.test(image) ? image : undefined)}
+                            />
+                        );
+                    })()}
+                </div>
+            ) : mediaType === 'wod' ? (
+                <div className="px-4 pb-6 mt-2">
+                    {(() => {
+                        let wodData: any = null;
+                        try {
+                            if (typeof image === 'string' && image.startsWith('{')) {
+                                wodData = JSON.parse(image);
+                            }
+                        } catch (e) { }
+
+                        if (!wodData) return null;
+
+                        return (
+                            <WodCard
+                                data={wodData}
+                                userName={user}
                             />
                         );
                     })()}
