@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "../notifications-actions";
 
@@ -62,30 +63,105 @@ export async function createDuel(opponentId: string, type: string = 'classic', r
     return { success: true, duel: data };
 }
 
-async function calculateDuelScores(duel: any, supabase: any) {
+async function calculateDuelScores(duel: any) {
+    const supabase = await createAdminClient();
     const getUserScore = async (userId: string) => {
         // Adjust end date to include the full end day
         const endDateTime = new Date(duel.end_date);
         endDateTime.setHours(23, 59, 59, 999);
 
-        const { data } = await supabase
+        // 1. Fetch Regular Workouts
+        const { data: workouts } = await supabase
             .from('workouts')
-            .select('total_volume_kg, duration_seconds')
+            .select('id, total_volume_kg, duration_seconds, metrics')
             .eq('user_id', userId)
             .gte('start_time', duel.start_date)
             .lte('start_time', endDateTime.toISOString());
 
-        if (!data) return 0;
+        // 2. Fetch Class Results (WODs Arena)
+        const { data: classResults } = await supabase
+            .from('class_results')
+            .select('data, date_performed')
+            .eq('user_id', userId)
+            .gte('date_performed', duel.start_date)
+            .lte('date_performed', endDateTime.toISOString());
 
-        // Scoring Balanced:
-        // 1. Volume: 0.2 pts per kg. (e.g. 10,000kg = 2,000 pts)
-        // 2. Duration: 30 pts per minute. (e.g. 60 mins = 1,800 pts)
-        // This makes strength and cardio sessions roughly comparable in score.
-        return data.reduce((acc: number, w: any) => {
-            const vol = (w.total_volume_kg || 0) * 0.2;
-            const dur = ((w.duration_seconds || 0) / 60) * 30;
-            return acc + vol + dur;
-        }, 0);
+        // 3. Fetch Manual Posts (WOD/PR from feed not linked to workouts)
+        const { data: manualPosts } = await supabase
+            .from('posts')
+            .select('id, media_type, workout_id')
+            .eq('user_id', userId)
+            .in('media_type', ['wod', 'pr'])
+            .is('workout_id', null)
+            .gte('created_at', duel.start_date)
+            .lte('created_at', endDateTime.toISOString());
+
+        let totalScore = 0;
+
+        // Process Regular Workouts Score
+        if (workouts) {
+            totalScore += workouts.reduce((acc: number, w: any) => {
+                let vol = (w.total_volume_kg || 0);
+
+                // Fallback: Calculate volume from metrics blocks if header is 0
+                if (vol === 0 && w.metrics?.blocks) {
+                    w.metrics.blocks.forEach((block: any) => {
+                        if (block.exercises) {
+                            block.exercises.forEach((ex: any) => {
+                                const weight = parseFloat(ex.value || ex.weight) || 0;
+                                const sets = parseInt(ex.sets) || 1;
+                                const reps = parseInt(ex.reps) || 1;
+                                vol += weight * sets * reps;
+                            });
+                        }
+                    });
+                }
+
+                let durationMins = (w.duration_seconds || 0) / 60;
+                // Fallback for Hybrid: Roughly 12 mins per block if duration is 0
+                if (durationMins === 0 && w.metrics?.blocks) {
+                    durationMins = w.metrics.blocks.length * 12;
+                }
+
+                // Ensure at least 20 mins for any workout that has data
+                if (durationMins === 0 && (vol > 0 || w.metrics?.blocks?.length > 0)) {
+                    durationMins = 20;
+                }
+
+                return acc + (vol * 0.2) + (durationMins * 30);
+            }, 0);
+        }
+
+        // Process Class Results Score
+        if (classResults) {
+            totalScore += classResults.reduce((acc: number, c: any) => {
+                let classVolume = 0;
+                if (c.data && Array.isArray(c.data)) {
+                    c.data.forEach((block: any) => {
+                        if (block.type === 'weight' && block.exercises) {
+                            block.exercises.forEach((ex: any) => {
+                                const w = parseFloat(ex.value) || 0;
+                                const r = parseInt(ex.reps) || 0;
+                                const s = parseInt(ex.sets) || 1;
+                                classVolume += w * r * s;
+                            });
+                        } else if (block.wod_weight) {
+                            classVolume += parseFloat(block.wod_weight) || 0;
+                        }
+                    });
+                }
+                const volScore = classVolume * 0.2;
+                // Classes are assumed to be 60 mins -> 1800 pts
+                return acc + volScore + 1800;
+            }, 0);
+        }
+
+        // Process Manual Posts Score
+        if (manualPosts) {
+            totalScore += (manualPosts.length * 1800); // 1800 pts (1h) baseline per manual WOD/PR
+        }
+
+        return totalScore;
     };
 
     const challengerScore = Math.floor(await getUserScore(duel.challenger_id));
@@ -160,7 +236,7 @@ export async function getMyDuels() {
     const duelsWithScores = await Promise.all((data || []).map(async (duel: any) => {
         // Only calculate for active or completed, or just active to show progress
         if (duel.status !== 'pending') {
-            const { challengerScore, opponentScore } = await calculateDuelScores(duel, supabase);
+            const { challengerScore, opponentScore } = await calculateDuelScores(duel);
 
             // --- AUTO CLOSE EXPIRED DUELS ---
             const endDate = new Date(duel.end_date);

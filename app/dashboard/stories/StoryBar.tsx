@@ -246,7 +246,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             const stickerOverlay: OverlayElement = {
                                 id: `sticker-${Date.now()}`,
                                 type: type === 'pr' ? 'pr_sticker' : (type === 'wod' ? 'wod_sticker' : 'workout_sticker'),
-                                content: JSON.stringify({ ...data, _stats: customEvent.detail.stats }),
+                                content: JSON.stringify(Array.isArray(data) ? { metrics: { blocks: data }, _stats: customEvent.detail.stats } : { ...data, _stats: customEvent.detail.stats }),
                                 x: 50,
                                 y: 50, // Perfectly centered
                                 scale: 1,
@@ -1898,6 +1898,94 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                                     {!hasBlocks && !data.total_volume_kg && !data.location_name && (
                                                                         <div className="bg-white/5 p-3 rounded-xl border border-white/5">
                                                                             <p className="text-white/60 text-xs italic text-center">¡Entrenamiento completado!</p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className="mt-4 pt-3 border-t border-white/5 flex justify-center">
+                                                                    <div className="flex items-center gap-1.5 opacity-50">
+                                                                        <div className="w-1.5 h-1.5 bg-brand-red rounded-full animate-pulse" />
+                                                                        <span className="text-[8px] text-gray-400 font-black uppercase tracking-[0.3em]">RIVAL FIT ATLETA</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    } catch (e) { return null }
+                                                })()
+                                            ) : overlay.type === 'wod_sticker' ? (
+                                                (() => {
+                                                    try {
+                                                        const data = JSON.parse(overlay.content);
+                                                        return (
+                                                            <div className="bg-black/60 backdrop-blur-3xl border border-white/10 p-5 rounded-[24px] shadow-2xl w-[300px] max-w-[calc(100vw-40px)] relative overflow-hidden group select-none transition-all">
+                                                                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
+                                                                <div className="flex items-center gap-4 mb-4 relative z-10 text-left">
+                                                                    <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shadow-[0_0_15px_rgba(220,38,38,0.3)] shrink-0">
+                                                                        <Dumbbell className="w-5 h-5 text-brand-red" />
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em] mb-0.5 whitespace-nowrap overflow-hidden">WOD Completado</p>
+                                                                        <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || 'WOD ARENA'}</h4>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="space-y-3 relative z-10 text-left">
+                                                                    {data.blocks?.slice(0, 2).map((block: any, bi: number) => (
+                                                                        <div key={bi} className="bg-white/5 rounded-xl p-3 border border-white/5 text-left">
+                                                                            <div className="flex justify-between items-center mb-2">
+                                                                                <span className="text-[9px] font-black text-brand-red uppercase italic">{block.format || 'METCON'}</span>
+                                                                                <span className="text-[7px] font-bold text-gray-500 uppercase">
+                                                                                    {block.format === 'EMOM' || block.format === 'DEATH BY' ? (
+                                                                                        `${block.config?.minutes || 15} MINS`
+                                                                                    ) : (block.format === 'TABATA' || block.format === 'INTERVALS') ? (
+                                                                                        `${block.config?.rounds || 8} RDS`
+                                                                                    ) : block.config?.timecap ? (
+                                                                                        `CAP: ${block.config.timecap}`
+                                                                                    ) : null}
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="space-y-1">
+                                                                                {block.exercises?.slice(0, 3).map((ex: any, ei: number) => (
+                                                                                    <div key={ei} className="space-y-1">
+                                                                                        <div className="flex justify-between items-center text-[9px]">
+                                                                                            <span className="text-gray-300 font-bold uppercase truncate pr-4 text-left">{ex.name}</span>
+                                                                                            <span className="text-white font-black shrink-0">{ex.reps} {ex.detail && `(${ex.detail})`}</span>
+                                                                                        </div>
+                                                                                        {ex.showRounds && ex.roundDetails && ex.roundDetails.length > 0 && (
+                                                                                            <div className="grid grid-cols-5 gap-1 pt-0.5 pb-1">
+                                                                                                {ex.roundDetails.map((rd: string, ri: number) => rd && (
+                                                                                                    <div key={ri} className="bg-white/10 rounded py-0.5 text-[7px] text-center font-black text-brand-red border border-white/5">
+                                                                                                        {rd}
+                                                                                                    </div>
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                ))}
+                                                                                {(block.exercises?.length > 3) && (
+                                                                                    <p className="text-[7px] text-gray-600 font-bold uppercase mt-1 text-center">+ {block.exercises.length - 3} EJERCICIOS MÁS</p>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                    {(data.summary?.scoreLabel || data.summary?.totalTime || data._stats?.length > 0) && (
+                                                                        <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                                                                            <div className="flex-1 text-left">
+                                                                                <p className="text-[8px] text-gray-500 font-black uppercase tracking-wider">
+                                                                                    {data.summary?.scoreType || data._stats?.[0]?.label || 'RESULTADO'}
+                                                                                </p>
+                                                                                <p className="text-brand-red font-black text-sm italic leading-none truncate pr-2">
+                                                                                    {data.summary?.scoreLabel || data._stats?.[0]?.value || '-'}
+                                                                                </p>
+                                                                            </div>
+                                                                            {(data.summary?.totalTime || data._stats?.[1]) && (
+                                                                                <div className="text-right">
+                                                                                    <p className="text-[8px] text-gray-500 font-black uppercase tracking-wider">
+                                                                                        {data._stats?.[1]?.label || 'TIEMPO'}
+                                                                                    </p>
+                                                                                    <p className="text-white font-black text-xs italic leading-none truncate">
+                                                                                        {data.summary?.totalTime || data._stats?.[1]?.value || '--:--'}
+                                                                                    </p>
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                     )}
                                                                 </div>

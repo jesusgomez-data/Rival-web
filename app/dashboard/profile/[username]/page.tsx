@@ -50,9 +50,28 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
     // Fetch all workouts for heatmap
     const { data: workouts } = await supabase
         .from('workouts')
-        .select('*')
+        .select('start_time')
+        .eq('user_id', profile.id);
+
+    // Fetch class results for heatmap
+    const { data: classResults } = await supabase
+        .from('class_results')
+        .select('date_performed')
+        .eq('user_id', profile.id);
+
+    // Fetch manual WOD/PR posts for heatmap
+    const { data: manualPosts } = await supabase
+        .from('posts')
+        .select('created_at')
         .eq('user_id', profile.id)
-        .order('start_time', { ascending: false });
+        .in('media_type', ['wod', 'pr', 'class_result']);
+
+    // Merge all training activities for the heatmap
+    const allActivities = [
+        ...(workouts || []).map(w => ({ start_time: w.start_time })),
+        ...(classResults || []).map(c => ({ start_time: c.date_performed })),
+        ...(manualPosts || []).map(p => ({ start_time: p.created_at }))
+    ];
 
     // Fetch badges
     const { data: userBadges } = await supabase
@@ -103,7 +122,7 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
             posts={posts}
             privacy={privacy}
             canViewContent={canViewContent}
-            workouts={workouts || []}
+            workouts={allActivities}
             badges={userBadges || []}
             gear={userGear || []}
             isAdminUser={currentUserProfile?.is_official === true}
