@@ -1,10 +1,11 @@
+import { Suspense } from "react";
 import { getCenterClasses } from "../../management-actions";
 import { getCenterTeam, getCenterDetails, getOrganizationCenters } from "../../actions";
 import { checkStaffRole } from "../../team-actions";
 import ScheduleManager from "./ScheduleManager";
-import { Calendar } from "lucide-react";
+import { Calendar, Loader2 } from "lucide-react";
 
-export default async function SchedulePage({ params }: { params: { id: string } }) {
+export default async function SchedulePage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = await params;
 
     // Fetch data parallelly
@@ -30,14 +31,21 @@ export default async function SchedulePage({ params }: { params: { id: string } 
                 </div>
             </div>
 
-            <ScheduleManager
-                centerId={id}
-                initialClasses={classes}
-                coaches={coaches}
-                userRole={role}
-                centers={centers}
-                organizationDetails={details}
-            />
+            <Suspense fallback={
+                <div className="flex flex-col items-center justify-center p-20 bg-brand-gray/50 rounded-3xl border border-white/5 animate-pulse">
+                    <Loader2 className="w-10 h-10 text-brand-red animate-spin mb-4" />
+                    <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Cargando horario...</p>
+                </div>
+            }>
+                <ScheduleManager
+                    centerId={id}
+                    initialClasses={classes}
+                    coaches={coaches}
+                    userRole={role}
+                    centers={centers}
+                    organizationDetails={details}
+                />
+            </Suspense>
         </div>
     );
 }

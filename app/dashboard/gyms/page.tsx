@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Plus, Building2, MapPin, Users, User, ArrowRight, ArrowLeft, Loader2, Sun, Moon, Search, Check, Rocket, Zap, Shield, Globe, Instagram, Phone, Trash2, LogOut } from "lucide-react";
@@ -9,6 +9,18 @@ import { useTheme } from "../../ThemeContext";
 import { getUserOrganizations, createOrganization, searchOrganizations, deleteOrganization, leaveOrganization, getNearbyOrganizations } from "./actions";
 
 export default function CenterListPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center min-h-[50vh]">
+                <Loader2 className="w-8 h-8 text-brand-red animate-spin" />
+            </div>
+        }>
+            <CenterListPageContent />
+        </Suspense>
+    );
+}
+
+function CenterListPageContent() {
     const [orgs, setOrgs] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [step, setStep] = useState(1);
