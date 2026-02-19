@@ -13,9 +13,10 @@ interface Workout {
 
 interface ActivityHeatmapProps {
     workouts: Workout[];
+    userId?: string;
 }
 
-export default function ActivityHeatmap({ workouts }: ActivityHeatmapProps) {
+export default function ActivityHeatmap({ workouts, userId }: ActivityHeatmapProps) {
     const router = useRouter();
     const today = new Date();
     const currentMonth = today.getMonth();
@@ -116,7 +117,9 @@ export default function ActivityHeatmap({ workouts }: ActivityHeatmapProps) {
                                         const year = slot.date.getFullYear();
                                         const month = String(slot.date.getMonth() + 1).padStart(2, '0');
                                         const day = String(slot.date.getDate()).padStart(2, '0');
-                                        router.push(`/dashboard/training/logs?date=${year}-${month}-${day}`);
+                                        const baseUrl = '/dashboard/training/logs';
+                                        const query = `?date=${year}-${month}-${day}${userId ? `&userId=${userId}` : ''}`;
+                                        router.push(`${baseUrl}${query}`);
                                     }
                                 }}
                             >

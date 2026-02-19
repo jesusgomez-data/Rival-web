@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { getUserProfile } from "./training/actions";
+import { getUnreadMessageCount } from "./messages/actions";
 import GlobalSearch from "./GlobalSearch";
 import {
     Home,
@@ -92,6 +93,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 setUserEmail(email);
                 const data = await getUserProfile();
                 if (isMounted) setProfile(data);
+
+                const unread = await getUnreadMessageCount();
+                if (isMounted) setUnreadMessages(unread);
             }
         }
         loadProfile();
@@ -125,7 +129,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
                             // Check current path dynamically to avoid dependency on pathname state
                             if (!window.location.pathname.startsWith('/dashboard/messages')) {
-                                setUnreadMessages(prev => prev + 1);
+                                // Re-calculate or increment
+                                getUnreadMessageCount().then(count => {
+                                    if (isMounted) setUnreadMessages(count);
+                                });
 
                                 if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
                                     new Notification("Rival: Nuevo Mensaje", {
@@ -141,11 +148,14 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 .subscribe();
 
             return () => {
+                isMounted = false;
                 supabase.removeChannel(channel);
             };
         };
 
+        let isMounted = true;
         setupRealtime();
+        return () => { isMounted = false; };
     }, [supabase]);
 
     useEffect(() => {
@@ -228,7 +238,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                                 >
                                     <div className="relative">
                                         <Icon className={clsx("w-5 h-5", isActive ? "text-white" : "group-hover:text-foreground")} />
-                                        {(item.name === t.navDashboard.messages) && unreadMessages > 0 && (
+                                        {item.href === "/dashboard/messages" && unreadMessages > 0 && (
                                             <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-white text-brand-red text-[8px] font-black rounded-full flex items-center justify-center border border-brand-red animate-bounce">
                                                 {unreadMessages}
                                             </span>
@@ -456,7 +466,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                                 >
                                     <div className="relative">
                                         <Icon className={clsx("w-6 h-6 transition-transform group-active:scale-90", isActive && "drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]")} />
-                                        {item.name === t.navDashboard.messages && unreadMessages > 0 && !isActive && (
+                                        {item.href === "/dashboard/messages" && unreadMessages > 0 && !isActive && (
                                             <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-red text-white text-[8px] font-black rounded-full flex items-center justify-center border border-background animate-pulse">
                                                 {unreadMessages}
                                             </span>

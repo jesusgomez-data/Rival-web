@@ -5,11 +5,13 @@ import { createClient } from '@/utils/supabase/client'
 import ChatList from './ChatList'
 import ChatWindow from './ChatWindow'
 import NewChatModal from './NewChatModal'
-import { getConversations, getMessages, sendMessage, getOrCreateConversation, getFriendsToChat, deleteMessage, editMessage, uploadChatImage, toggleMessageLike, deleteConversation } from './actions'
+import { getConversations, getMessages, sendMessage, getOrCreateConversation, getFriendsToChat, deleteMessage, editMessage, uploadChatImage, toggleMessageLike, deleteConversation, markConversationAsRead } from './actions'
 import { Loader2 } from 'lucide-react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { clsx } from 'clsx'
 import { Suspense } from 'react'
+import { usePresence } from '../PresenceContext'
+import { useLanguage } from '@/app/LanguageContext'
 
 export default function MessagesPage() {
     return (
@@ -30,13 +32,22 @@ function MessagesContent() {
     const [otherPerson, setOtherPerson] = useState<any>(null)
     const [isLoadingConversations, setIsLoadingConversations] = useState(true)
     const [isLoadingMessages, setIsLoadingMessages] = useState(false)
+    const [otherParticipantLastRead, setOtherParticipantLastRead] = useState<string | null>(null)
     const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false)
     const [friends, setFriends] = useState<any[]>([])
     const [currentUserId, setCurrentUserId] = useState<string>('')
     const [searchQuery, setSearchQuery] = useState('')
     const [isMobileListVisible, setIsMobileListVisible] = useState(true)
+    const { onlineUsers } = usePresence()
 
     const supabase = createClient()
+
+    // Sound effect for new messages
+    const playNotificationSound = useCallback(() => {
+        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
+        audio.volume = 0.5
+        audio.play().catch(e => console.log('Audio play blocked:', e))
+    }, [])
 
     const loadConversations = useCallback(async () => {
         const data = await getConversations()
@@ -45,8 +56,9 @@ function MessagesContent() {
 
     const loadMessages = useCallback(async (id: string) => {
         setIsLoadingMessages(true)
-        const data = await getMessages(id)
-        setMessages(data)
+        const { messages: msgs, lastReadAt } = await getMessages(id)
+        setMessages(msgs)
+        setOtherParticipantLastRead(lastReadAt)
         setIsLoadingMessages(false)
     }, [])
 
@@ -103,11 +115,12 @@ function MessagesContent() {
         init()
     }, [loadConversations, targetUserId, loadMessages])
 
-    // SISTEMA DE NOTIFICACIÓN Y ACTUALIZACIÓN EN TIEMPO REAL
+    // NOTIFICACIONES EN TIEMPO REAL
     useEffect(() => {
         if (!currentUserId) return
 
-        const channel = supabase
+        // Global Updates & Sound
+        const updatesChannel = supabase
             .channel(`user-updates-${currentUserId}`)
             .on('postgres_changes', {
                 event: '*',
@@ -121,13 +134,21 @@ function MessagesContent() {
                 event: 'INSERT',
                 schema: 'public',
                 table: 'messages'
-            }, async () => {
+            }, async (payload) => {
+                const newMessage = payload.new
+                // Solo sonar si el mensaje pertenece a una conversación del usuario
+                // y no es un mensaje enviado por él mismo
+                if (newMessage.sender_id !== currentUserId) {
+                    playNotificationSound()
+                }
                 await loadConversations()
             })
             .subscribe()
 
-        return () => { supabase.removeChannel(channel) }
-    }, [currentUserId, loadConversations, conversations])
+        return () => {
+            supabase.removeChannel(updatesChannel)
+        }
+    }, [currentUserId, loadConversations, playNotificationSound])
 
     // ACTUALIZACIÓN DE LA VENTANA DE CHAT ACTIVA
     useEffect(() => {
@@ -142,6 +163,13 @@ function MessagesContent() {
                 filter: `conversation_id=eq.${activeConversationId}`
             }, (payload) => {
                 const newMessage = payload.new
+
+                // Si el chat está activo y el mensaje es de la otra persona, marcar como leído
+                if (newMessage.sender_id !== currentUserId && activeConversationId) {
+                    markConversationAsRead(activeConversationId).then(() => {
+                        loadConversations() // Recargar para limpiar notificación en lista
+                    })
+                }
 
                 setMessages(prev => {
                     // 1. Evitar duplicado exacto por ID
@@ -191,6 +219,16 @@ function MessagesContent() {
                     setMessages(prev => prev.filter(m => m.id !== deletedId))
                 }
             })
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'conversation_participants',
+                filter: `conversation_id=eq.${activeConversationId}`
+            }, (payload) => {
+                if (payload.new.user_id !== currentUserId) {
+                    setOtherParticipantLastRead(payload.new.last_read_at)
+                }
+            })
             .subscribe()
 
         return () => { supabase.removeChannel(channel) }
@@ -202,6 +240,8 @@ function MessagesContent() {
             setOtherPerson(person)
             setIsMobileListVisible(false)
             await loadMessages(id)
+            await markConversationAsRead(id)
+            await loadConversations()
         } catch (err) {
             console.error("Error al seleccionar:", err)
         }
@@ -306,7 +346,9 @@ function MessagesContent() {
                     onToggleLike={handleToggleLike}
                     onDeleteConversation={handleDeleteConversation}
                     isLoading={isLoadingMessages}
+                    otherParticipantLastRead={otherParticipantLastRead}
                     onBack={() => setIsMobileListVisible(true)}
+                    isOnline={otherPerson ? onlineUsers.has(otherPerson.id) : false}
                 />
             </div>
 

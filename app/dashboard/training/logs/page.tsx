@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createClient } from "@/utils/supabase/client";
 import { getWorkoutHistory, deleteWorkout } from "../actions";
 import { ChevronLeft, Dumbbell, Calendar, Clock, Trash2, Edit2, Loader2, Trophy, X } from "lucide-react";
 import Link from "next/link";
@@ -23,16 +24,26 @@ export default function WorkoutLogsPage() {
 function WorkoutLogsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const targetUserId = searchParams.get('userId');
     const dateFilter = searchParams.get('date');
+    const [currentUserId, setCurrentUserId] = useState<string | null>(null);
     const [workouts, setWorkouts] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
     const fetchLogs = async () => {
-        setIsLoading(true);
-        const data = await getWorkoutHistory(50);
-        setWorkouts(data);
-        setIsLoading(false);
+        try {
+            setIsLoading(true);
+            const { data: { user } } = await createClient().auth.getUser();
+            if (user) setCurrentUserId(user.id);
+
+            const data = await getWorkoutHistory(50, targetUserId || undefined);
+            setWorkouts(data || []);
+        } catch (error) {
+            console.error("Error loading workouts:", error);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     useEffect(() => {
@@ -69,7 +80,7 @@ function WorkoutLogsContent() {
                             {dateFilter ? `Sesiones: ${dateFilter}` : 'Registros de Combate'}
                         </h1>
                         <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">
-                            {dateFilter ? 'Filtrado por fecha seleccionada' : 'Tu historial completo de entrenamiento'}
+                            {targetUserId ? 'Historial de entrenamiento del atleta' : (dateFilter ? 'Filtrado por fecha seleccionada' : 'Tu historial completo de entrenamiento')}
                         </p>
                     </div>
                 </div>
@@ -181,24 +192,26 @@ function WorkoutLogsContent() {
                                             <p className="text-white font-heading font-black text-2xl italic">{thirdStatValue}</p>
                                         </div>
 
-                                        {/* Actions */}
-                                        <div className="flex items-center gap-2 pl-4 border-l border-white/5">
-                                            <Link
-                                                href={`/dashboard/training/session?editId=${workout.id}`}
-                                                className="p-3 text-gray-600 hover:text-white hover:bg-white/5 rounded-2xl transition-all"
-                                                title="Editar entreno"
-                                            >
-                                                <Edit2 className="w-5 h-5" />
-                                            </Link>
-                                            <button
-                                                onClick={() => handleDelete(workout.id)}
-                                                disabled={deletingId === workout.id}
-                                                className="p-3 text-gray-600 hover:text-red-500 hover:bg-red-500/10 rounded-2xl transition-all"
-                                                title="Borrar entreno"
-                                            >
-                                                {deletingId === workout.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
-                                            </button>
-                                        </div>
+                                        {/* Actions - Only if owner */}
+                                        {(!targetUserId || targetUserId === currentUserId) && (
+                                            <div className="flex items-center gap-2 pl-4 border-l border-white/5">
+                                                <Link
+                                                    href={`/dashboard/training/session?editId=${workout.id}`}
+                                                    className="p-3 text-gray-600 hover:text-white hover:bg-white/5 rounded-2xl transition-all"
+                                                    title="Editar entreno"
+                                                >
+                                                    <Edit2 className="w-5 h-5" />
+                                                </Link>
+                                                <button
+                                                    onClick={() => handleDelete(workout.id)}
+                                                    disabled={deletingId === workout.id}
+                                                    className="p-3 text-gray-600 hover:text-red-500 hover:bg-red-500/10 rounded-2xl transition-all"
+                                                    title="Borrar entreno"
+                                                >
+                                                    {deletingId === workout.id ? <Loader2 className="w-5 h-5 animate-spin" /> : <Trash2 className="w-5 h-5" />}
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 

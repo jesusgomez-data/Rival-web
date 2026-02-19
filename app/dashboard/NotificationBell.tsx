@@ -106,6 +106,7 @@ export default function NotificationBell() {
             case 'post_like':
             case 'comment_like': return <Heart className="w-4 h-4 text-rose-500" />;
             case 'comment':
+            case 'message':
             case 'post_comment': return <MessageSquare className="w-4 h-4 text-sky-500" />;
             default: return <Zap className="w-4 h-4 text-yellow-500" />;
         }

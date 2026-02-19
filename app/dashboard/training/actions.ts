@@ -10,8 +10,8 @@ async function calculateWorkoutStreak(supabase: any, userId: string) {
     const { data: classResults } = await supabase.from('class_results').select('date_performed').eq('user_id', userId).order('date_performed', { ascending: false });
 
     const allDates = [
-        ...(workouts || []).map(w => new Date(w.created_at).toISOString().split('T')[0]),
-        ...(classResults || []).map(c => new Date(c.date_performed).toISOString().split('T')[0])
+        ...(workouts || []).map((w: any) => new Date(w.created_at).toISOString().split('T')[0]),
+        ...(classResults || []).map((c: any) => new Date(c.date_performed).toISOString().split('T')[0])
     ];
 
     // Unique dates and sort descending
@@ -1025,10 +1025,13 @@ export async function getDetailedAnalytics() {
 
 
 // 14. Get Workout History
-export async function getWorkoutHistory(limit = 10) {
+export async function getWorkoutHistory(limit = 10, userId?: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return []
+
+    // Use provided userId or fallback to current user
+    const targetUserId = userId || user?.id
+    if (!targetUserId) return []
 
     // 1. Fetch Independent Workouts
     const { data: workouts, error: wError } = await supabase
@@ -1037,7 +1040,7 @@ export async function getWorkoutHistory(limit = 10) {
             *,
             workout_sets (*)
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .order('created_at', { ascending: false })
         .limit(limit)
 
@@ -1048,7 +1051,7 @@ export async function getWorkoutHistory(limit = 10) {
             *,
             class:class_id (name, organization:organization_id (name))
         `)
-        .eq('user_id', user.id)
+        .eq('user_id', targetUserId)
         .order('date_performed', { ascending: false })
         .limit(limit)
 

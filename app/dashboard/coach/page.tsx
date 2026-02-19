@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Bot, User as UserIcon, Loader2, Dumbbell, PlayCircle, BarChart2, Calendar, Activity, TrendingUp, Award, Zap, X, Check, Clock, Trophy } from "lucide-react";
+import { Send, Bot, User as UserIcon, Loader2, Dumbbell, PlayCircle, BarChart2, Calendar, Activity, TrendingUp, Award, Zap, X, Check, Clock, Trophy, RefreshCw } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -72,6 +72,8 @@ export default function CoachPage() {
         scrollToBottom();
     }, [messages]);
 
+    const [loadingStep, setLoadingStep] = useState("Analizando métricas...");
+
     const handleSend = async (customInput?: string) => {
         const messageText = customInput || input;
         if (!messageText.trim()) return;
@@ -85,9 +87,15 @@ export default function CoachPage() {
         setMessages(prev => [...prev, userMsg]);
         setInput("");
         setIsTyping(true);
+        setLoadingStep("Conectando con CG Rival...");
 
         try {
+            // ... (keep stats scoring logic)
+            setTimeout(() => setLoadingStep("Sincronizando modelos tácticos..."), 2000);
+            setTimeout(() => setLoadingStep("Generando programación personalizada..."), 6000);
+
             const activityCount = stats.daily?.length || 0;
+            // ... (keep prCount, fatigue logic)
             const prCount = prs?.length || 0;
             const fatigue = stats.fatigue || 0;
 
@@ -104,13 +112,19 @@ export default function CoachPage() {
                 detectedLevel = 'Beginner';
             }
 
+            // Prepare history for AI
+            const history = messages.map(m => ({
+                role: m.role,
+                content: m.content
+            }));
+
             const aiResponse = await generateCoachResponse(messageText, {
                 level: detectedLevel,
                 main_sport: profile?.main_sport || 'General Fitness',
                 full_name: profile?.full_name,
                 recent_activity_score: recentActivityScore,
                 injuries: profile?.injuries
-            });
+            }, history);
 
             const botMsg: Message = {
                 id: (Date.now() + 1).toString(),
@@ -125,7 +139,7 @@ export default function CoachPage() {
             const errorMsg: Message = {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
-                content: "Fallo del sistema. No se pueden procesar los datos tácticos.",
+                content: "Atleta, la línea está saturada. Inténtalo de nuevo o usa el Protocolo de Emergencia.",
             };
             setMessages(prev => [...prev, errorMsg]);
         } finally {
@@ -166,7 +180,23 @@ export default function CoachPage() {
                     </div>
                 </div>
 
-                <div className="flex bg-white/5 rounded-lg p-1 border border-white/10">
+                <div className="flex bg-white/5 rounded-lg p-1 border border-white/10 gap-1">
+                    <button
+                        onClick={() => {
+                            if (confirm("¿Reiniciar sesión táctica?")) {
+                                setMessages([{
+                                    id: '1',
+                                    role: 'assistant',
+                                    content: "Sesión reiniciada. Estoy listo para una nueva programación. ¿Cuál es el objetivo de hoy?",
+                                }]);
+                            }
+                        }}
+                        className="px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white"
+                        title="Reiniciar Chat"
+                    >
+                        <RefreshCw className="w-3 h-3" />
+                    </button>
+                    <div className="w-px h-4 bg-white/10 self-center mx-1" />
                     <button
                         onClick={() => setActiveTab('chat')}
                         className={clsx("px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all", activeTab === 'chat' ? "bg-brand-red text-white" : "text-gray-500 hover:text-white")}
@@ -289,7 +319,7 @@ export default function CoachPage() {
                                 </div>
                                 <div className="bg-black/50 border border-white/10 text-gray-200 rounded-2xl rounded-tl-none p-4 flex items-center gap-2">
                                     <Loader2 className="w-4 h-4 animate-spin text-brand-red" />
-                                    <span className="text-xs text-gray-400">Analizando métricas...</span>
+                                    <span className="text-xs text-gray-400">{loadingStep}</span>
                                 </div>
                             </div>
                         )}

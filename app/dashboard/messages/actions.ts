@@ -65,14 +65,65 @@ export async function getConversations() {
     }
 }
 
+export async function getUnreadMessageCount() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return 0
+
+    const { data: participations } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id, last_read_at, conversations(last_message_at)')
+        .eq('user_id', user.id)
+
+    if (!participations) return 0
+
+    const unreadCount = participations.filter((p: any) => {
+        const lastMsgAt = p.conversations?.last_message_at
+        if (!lastMsgAt) return false
+        if (!p.last_read_at) return true
+        return new Date(lastMsgAt) > new Date(p.last_read_at)
+    }).length
+
+    return unreadCount
+}
+
 export async function getMessages(conversationId: string) {
     const supabase = await createClient()
-    const { data } = await supabase
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { messages: [], lastReadAt: null }
+
+    const { data: messages } = await supabase
         .from('messages')
         .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true })
-    return data || []
+
+    // Obtener la última vez que la OTRA persona leyó
+    const { data: otherParticipant } = await supabase
+        .from('conversation_participants')
+        .select('last_read_at')
+        .eq('conversation_id', conversationId)
+        .neq('user_id', user.id)
+        .maybeSingle()
+
+    return {
+        messages: messages || [],
+        lastReadAt: otherParticipant?.last_read_at || null
+    }
+}
+
+export async function markConversationAsRead(conversationId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
+
+    const { error } = await supabase
+        .from('conversation_participants')
+        .update({ last_read_at: new Date().toISOString() })
+        .eq('conversation_id', conversationId)
+        .eq('user_id', user.id)
+
+    return { error: error?.message }
 }
 
 export async function sendMessage(conversationId: string, text: string, imageUrl?: string) {

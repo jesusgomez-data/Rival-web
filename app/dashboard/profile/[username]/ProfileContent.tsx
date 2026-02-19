@@ -458,7 +458,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                             content="Un resumen visual de tus días de entrenamiento. Los días más oscuros indican mayor actividad."
                                         />
                                     </h3>
-                                    <ActivityHeatmap workouts={workouts} />
+                                    <ActivityHeatmap workouts={workouts} userId={profile.id} />
                                 </div>
                             )}
 

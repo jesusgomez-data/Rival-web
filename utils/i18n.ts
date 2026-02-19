@@ -156,7 +156,8 @@ export const translations = {
             commandCenter: 'CENTRO DE MANDO',
             commandSubtitle: 'Selecciona a un rival para coordinar vuestro próximo enfrentamiento.',
             edited: '(editado)',
-            image: '📷 Imagen'
+            image: '📷 Imagen',
+            offline: 'Fuera de línea'
         }
     },
     en: {
@@ -314,7 +315,8 @@ export const translations = {
             commandCenter: 'COMMAND CENTER',
             commandSubtitle: 'Select a rival to coordinate your next showdown.',
             edited: '(edited)',
-            image: '📷 Image'
+            image: '📷 Image',
+            offline: 'Offline'
         }
     }
 };
