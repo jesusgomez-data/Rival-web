@@ -124,19 +124,148 @@ export default function CenterDashboardHome() {
 
     const canViewKPIs = userRole === 'owner' || userRole === 'head_coach';
 
-    return (
-        <div className="px-2 py-4 sm:p-8 space-y-4 sm:space-y-10 animate-fade-in max-w-7xl mx-auto">
-            {centerDetails?.center_type === 'personal_trainer' && (
-                <div className="bg-brand-red/10 border border-brand-red/20 p-4 rounded-2xl mb-6 flex items-center gap-4">
-                    <div className="bg-brand-red p-3 rounded-xl text-white shadow-glow">
-                        <Users className="w-6 h-6" />
-                    </div>
+    if (centerDetails?.center_type === 'personal_trainer') {
+        return (
+            <div className="px-4 py-8 max-w-7xl mx-auto animate-fade-in space-y-8">
+                {/* PT Header */}
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                     <div>
-                        <h4 className="text-lg font-black italic uppercase italic tracking-tight text-white">Panel de Entrenador Personal</h4>
-                        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">Gestiona tus alumnos y su programación desde aquí.</p>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="bg-brand-red p-2 rounded-lg text-white shadow-glow">
+                                <Users className="w-5 h-5" />
+                            </div>
+                            <span className="text-xs font-black uppercase tracking-widest text-brand-red">Modo Entrenador</span>
+                        </div>
+                        <h1 className="text-3xl font-heading font-black italic uppercase text-foreground">{centerDetails.name}</h1>
+                        <p className="text-muted-foreground font-medium">Panel de Gestión Profesional</p>
+                    </div>
+                    <Link
+                        href={`/dashboard/gyms/${id}/schedule`}
+                        className="bg-brand-red text-white px-6 py-3 rounded-xl font-bold uppercase tracking-widest hover:bg-red-600 transition-all shadow-glow flex items-center gap-2"
+                    >
+                        <Calendar className="w-5 h-5" />
+                        Ver Agenda
+                    </Link>
+                </div>
+
+                {/* PT Metrics Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <StatCard
+                        title="Alumnos Activos"
+                        value={currentMonth.members}
+                        subtext="Total clientes activos"
+                        trend="up"
+                        icon={Users}
+                    />
+                    <StatCard
+                        title="Citas Semanales"
+                        value={metrics?.weeklyAttendance ?? 0}
+                        subtext="Sesiones programadas"
+                        trend="up"
+                        icon={Activity}
+                    />
+                    <StatCard
+                        title="Ingresos Estimados"
+                        value={`€${currentMonth.revenue}`}
+                        subtext="Facturación mensual"
+                        trend={Number(revenueGrowth) >= 0 ? 'up' : 'down'}
+                        icon={DollarSign}
+                    />
+                    <StatCard
+                        title="Programas Activos"
+                        value={metrics?.newMembersMonth ?? 0} // Using this as placeholder for programs for now
+                        subtext="Planes asignados"
+                        trend="up"
+                        icon={Activity}
+                    />
+                </div>
+
+                {/* Main PT Actions Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Left Col: Primary Actions */}
+                    <div className="lg:col-span-2 space-y-8">
+                        <section>
+                            <h3 className="text-sm font-black text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Activity className="w-4 h-4" /> Control de Mando
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <QuickAction
+                                    href={`/dashboard/gyms/${id}/programming`}
+                                    icon={Activity}
+                                    label="Programación y Rutinas"
+                                    description="Crear y asignar entrenamientos con IA"
+                                />
+                                <QuickAction
+                                    href={`/dashboard/gyms/${id}/members`}
+                                    icon={Users}
+                                    label="Mis Alumnos"
+                                    description="Fichas, progreso y contacto"
+                                />
+                                <QuickAction
+                                    href={`/dashboard/gyms/${id}/schedule`}
+                                    icon={Calendar}
+                                    label="Agenda de Citas"
+                                    description="Gestionar disponibilidad y reservas"
+                                />
+                                <QuickAction
+                                    href={`/dashboard/gyms/${id}/store`}
+                                    icon={CreditCard}
+                                    label="Pagos y Suscripciones"
+                                    description="Gestionar cobros de clientes"
+                                />
+                            </div>
+                        </section>
+
+                        {/* Recent Activity / Feed */}
+                        <section>
+                            <h3 className="text-sm font-black text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Activity className="w-4 h-4" /> Actividad Reciente
+                            </h3>
+                            <div className="bg-card border border-border rounded-2xl p-1 min-h-[300px]">
+                                <ActivityFeed centerId={id} />
+                            </div>
+                        </section>
+                    </div>
+
+                    {/* Right Col: Secondary / Analytics */}
+                    <div className="space-y-8">
+                        <div className="bg-card border border-border rounded-2xl p-6 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-4 opacity-10">
+                                <Users className="w-32 h-32 text-brand-red" />
+                            </div>
+                            <h3 className="text-lg font-heading font-black italic uppercase mb-2 relative z-10">Nuevo Alumno</h3>
+                            <p className="text-muted-foreground text-sm mb-6 relative z-10 font-medium">
+                                Registra un nuevo cliente manualmente y asígnale su primera rutina.
+                            </p>
+                            <Link
+                                href={`/dashboard/gyms/${id}/members?action=new`}
+                                className="w-full bg-white text-center block text-black hover:bg-gray-200 py-3 rounded-xl font-black uppercase tracking-widest transition-colors relative z-10"
+                            >
+                                Registrar
+                            </Link>
+                        </div>
+
+                        <div className="bg-card border border-border rounded-2xl p-6">
+                            <h3 className="text-sm font-black uppercase tracking-widest mb-4 text-muted-foreground">Configuración</h3>
+                            <div className="space-y-2">
+                                <Link href={`/center-owner/centers/${id}/edit`} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors group">
+                                    <span className="font-bold text-sm">Editar Perfil</span>
+                                    <ChevronDown className="-rotate-90 w-4 h-4 text-muted-foreground group-hover:text-foreground" />
+                                </Link>
+                                <Link href={`/dashboard/gyms/${id}/settings/billing`} className="flex items-center justify-between p-3 rounded-xl hover:bg-muted/50 transition-colors group">
+                                    <span className="font-bold text-sm">Facturación</span>
+                                    <ChevronDown className="-rotate-90 w-4 h-4 text-muted-foreground group-hover:text-foreground" />
+                                </Link>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            )}
+            </div>
+        );
+    }
+
+    return (
+        <div className="px-2 py-4 sm:p-8 space-y-4 sm:space-y-10 animate-fade-in max-w-7xl mx-auto">
 
             {/* KPI Section Control (Mobile Only) */}
             {canViewKPIs && (

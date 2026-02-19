@@ -60,6 +60,33 @@ export default function CenterListPage() {
         }
     ];
 
+    const PT_PLANS = [
+        {
+            id: 'pt_free',
+            name: 'Trainer Basic',
+            price: '0€',
+            description: 'Gestiona tus primeros alumnos gratis.',
+            icon: <Zap className="w-6 h-6 text-yellow-500" />,
+            features: ['Perfil público entrenador', 'Hasta 3 alumnos', 'Programación Manual', 'Agenda Básica']
+        },
+        {
+            id: 'pt_pro',
+            name: 'Trainer Pro',
+            price: '29.99€',
+            description: 'Para entrenadores en crecimiento.',
+            icon: <Rocket className="w-6 h-6 text-brand-red" />,
+            features: ['Alumnos ilimitados', 'Programación con IA', 'Pagos integrados (Stripe)', 'Agenda Avanzada', 'Chat directo']
+        },
+        {
+            id: 'pt_elite',
+            name: 'Trainer Elite',
+            price: '59.99€',
+            description: 'Automatiza tu negocio al 100%.',
+            icon: <Shield className="w-6 h-6 text-purple-500" />,
+            features: ['Todo en Pro', 'App personalizada (PWA)', 'Análisis de retención', 'Soporte prioritario 24/7']
+        }
+    ];
+
     useEffect(() => {
         loadOrgs();
     }, []);
@@ -243,44 +270,57 @@ export default function CenterListPage() {
                                         <span className="bg-brand-red transition-colors text-white px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">Paso {step} de 3</span>
                                     </div>
                                     <h2 className={`text-2xl font-black italic uppercase italic tracking-tight ${textHeading}`}>
-                                        {step === 1 && "Identidad del Centro"}
-                                        {step === 2 && "Ubicación e Impacto"}
-                                        {step === 3 && "Selecciona tu Arsenal"}
+                                        {step === 1 && (filterType === 'personal_trainer' ? "Identidad Profesional" : "Identidad del Centro")}
+                                        {step === 2 && (filterType === 'personal_trainer' ? "Zona de Operaciones" : "Ubicación e Impacto")}
+                                        {step === 3 && (filterType === 'personal_trainer' ? "Tu Plan de Entrenador" : "Selecciona tu Arsenal")}
                                     </h2>
                                     <p className={textMuted}>
-                                        {step === 1 && "Cuéntanos sobre tu marca y visión."}
-                                        {step === 2 && "¿Dónde te encontrarán tus futuros atletas?"}
-                                        {step === 3 && "Elegir el plan adecuado para el tamaño de tu centro."}
+                                        {step === 1 && (filterType === 'personal_trainer' ? "Define tu marca personal y especialidad." : "Cuéntanos sobre tu marca y visión.")}
+                                        {step === 2 && (filterType === 'personal_trainer' ? "¿Dónde entrenas a tus alumnos?" : "¿Dónde te encontrarán tus futuros atletas?")}
+                                        {step === 3 && (filterType === 'personal_trainer' ? "Elige las herramientas que necesitas." : "Elegir el plan adecuado para el tamaño de tu centro.")}
                                     </p>
                                 </div>
 
                                 <form action={handleCreate} className="space-y-6">
+
                                     {/* STEP 1: IDENTITY */}
                                     {step === 1 && (
                                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                                             <div>
-                                                <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Nombre del Campo de Batalla</label>
-                                                <input name="name" required placeholder="e.g. Iron Forge Cross Training" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
+                                                    {filterType === 'personal_trainer' ? 'Marca Personal o Nombre Profesional' : 'Nombre del Campo de Batalla'}
+                                                </label>
+                                                <input name="name" required placeholder={filterType === 'personal_trainer' ? "e.g. Coach David Elite" : "e.g. Iron Forge Cross Training"} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
                                             </div>
                                             <div>
-                                                <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Manifiesto / Bio</label>
-                                                <textarea name="bio" placeholder="Describe la esencia de tu centro..." className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 h-20 resize-none ${bgInput}`} />
+                                                <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
+                                                    {filterType === 'personal_trainer' ? 'Tu especialidad (Bio)' : 'Manifiesto / Bio'}
+                                                </label>
+                                                <textarea name="bio" placeholder={filterType === 'personal_trainer' ? "Cuéntanos en qué te especializas (CrossFit, Powerlifting, Nutrición...)" : "Describe la esencia de tu centro..."} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 h-20 resize-none ${bgInput}`} />
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
-                                                    <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Tipo de Centro</label>
-                                                    <select name="type" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 appearance-none ${bgInput}`}>
-                                                        <option value="cross_training">Box de Cross Training</option>
-                                                        <option value="gym">Gimnasio Comercial</option>
-                                                        <option value="studio">Estudio Personal</option>
-                                                        <option value="personal_trainer">Entrenador Personal</option>
-                                                        <option value="club">Club Deportivo</option>
-                                                        <option value="other">Otro</option>
+                                                    <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Tipo de Perfil</label>
+                                                    <select name="type" defaultValue={filterType === 'personal_trainer' ? 'personal_trainer' : 'cross_training'} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 appearance-none ${bgInput}`}>
+                                                        {filterType === 'personal_trainer' ? (
+                                                            <option value="personal_trainer">Entrenador Personal</option>
+                                                        ) : (
+                                                            <>
+                                                                <option value="cross_training">Box de Cross Training</option>
+                                                                <option value="gym">Gimnasio Comercial</option>
+                                                                <option value="studio">Estudio Personal</option>
+                                                                <option value="personal_trainer">Entrenador Personal</option>
+                                                                <option value="club">Club Deportivo</option>
+                                                                <option value="other">Otro</option>
+                                                            </>
+                                                        )}
                                                     </select>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-2">
                                                     <div>
-                                                        <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Logo</label>
+                                                        <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
+                                                            {filterType === 'personal_trainer' ? 'Foto Perfil' : 'Logo'}
+                                                        </label>
                                                         <div className={`relative group w-full h-14 mt-1 border border-dashed rounded-xl flex items-center justify-center cursor-pointer hover:border-brand-red transition-colors ${bgInput}`}>
                                                             <Plus className="w-4 h-4 text-gray-500 group-hover:text-brand-red" />
                                                             <input type="file" name="logo" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" />
@@ -307,8 +347,10 @@ export default function CenterListPage() {
                                     {step === 2 && (
                                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                                             <div>
-                                                <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Dirección Física</label>
-                                                <input name="address" required placeholder="Calle Principal 123" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
+                                                    {filterType === 'personal_trainer' ? 'Gimnasio Base / Dirección' : 'Dirección Física'}
+                                                </label>
+                                                <input name="address" required placeholder={filterType === 'personal_trainer' ? "Donde realizas tus entrenamientos" : "Calle Principal 123"} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
                                             </div>
                                             <div className="grid grid-cols-3 gap-4">
                                                 <div className="col-span-1">
@@ -336,12 +378,14 @@ export default function CenterListPage() {
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Instagram</label>
                                                     <div className="relative">
                                                         <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                                                        <input name="instagram" placeholder="@centro_gym" className={`w-full rounded-xl pl-12 pr-4 py-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                        <input name="instagram" placeholder={filterType === 'personal_trainer' ? "@coach_david" : "@centro_gym"} className={`w-full rounded-xl pl-12 pr-4 py-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
                                                     </div>
                                                 </div>
                                             </div>
                                             <div>
-                                                <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Sitio Web</label>
+                                                <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
+                                                    {filterType === 'personal_trainer' ? 'Sitio Web / Linktree' : 'Sitio Web'}
+                                                </label>
                                                 <div className="relative">
                                                     <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                                     <input name="website" placeholder="www.centro.com" className={`w-full rounded-xl pl-12 pr-4 py-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
@@ -350,7 +394,9 @@ export default function CenterListPage() {
 
                                             {/* Geolocation capture */}
                                             <div className="space-y-2">
-                                                <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Coordenadas GPS (Opcional)</label>
+                                                <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
+                                                    {filterType === 'personal_trainer' ? 'Ubicación Principal (Opcional)' : 'Coordenadas GPS (Opcional)'}
+                                                </label>
                                                 <button
                                                     type="button"
                                                     onClick={captureCurrentLocation}
@@ -358,28 +404,30 @@ export default function CenterListPage() {
                                                     className={`w-full py-3 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-all ${newOrgLat ? 'border-brand-red text-brand-red bg-brand-red/5' : 'border-white/10 text-gray-400 hover:border-brand-red/30 hover:text-brand-red'}`}
                                                 >
                                                     {isCapturingLoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
-                                                    {newOrgLat ? `Ubicación Capturada: ${newOrgLat.toFixed(4)}, ${newOrgLng?.toFixed(4)}` : "Establecer ubicación actual del centro"}
+                                                    {newOrgLat ? `Ubicación Capturada: ${newOrgLat.toFixed(4)}, ${newOrgLng?.toFixed(4)}` : (filterType === 'personal_trainer' ? "Establecer ubicación de entrenamiento" : "Establecer ubicación actual del centro")}
                                                 </button>
                                                 <input type="hidden" name="latitude" value={newOrgLat || ""} />
                                                 <input type="hidden" name="longitude" value={newOrgLng || ""} />
                                             </div>
 
-                                            {/* Multi-Center Toggle */}
-                                            <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-100 bg-gray-50'} flex items-center justify-between`}>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
-                                                        <Building2 className="w-5 h-5" />
+                                            {/* Multi-Center Toggle - Hidden for Personal Trainers */}
+                                            {filterType !== 'personal_trainer' && (
+                                                <div className={`p-4 rounded-2xl border ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-100 bg-gray-50'} flex items-center justify-between`}>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-500">
+                                                            <Building2 className="w-5 h-5" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-black uppercase italic tracking-tighter">Empresa Multi-sede</p>
+                                                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-none">Gestiona múltiples ubicaciones</p>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <p className="text-sm font-black uppercase italic tracking-tighter">Empresa Multi-sede</p>
-                                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest leading-none">Gestiona múltiples ubicaciones</p>
-                                                    </div>
+                                                    <label className="relative inline-flex items-center cursor-pointer">
+                                                        <input type="checkbox" name="is_multi_center" value="true" className="sr-only peer" />
+                                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                                                    </label>
                                                 </div>
-                                                <label className="relative inline-flex items-center cursor-pointer">
-                                                    <input type="checkbox" name="is_multi_center" value="true" className="sr-only peer" />
-                                                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
-                                                </label>
-                                            </div>
+                                            )}
 
                                             <div className="pt-4 flex gap-4">
                                                 <button type="button" onClick={() => setStep(1)} className={`flex-1 font-black uppercase tracking-widest py-3 rounded-xl border transition-all ${theme === 'dark' ? 'border-white/10 hover:bg-white/5' : 'border-gray-200 hover:bg-gray-50'}`}>
@@ -396,7 +444,7 @@ export default function CenterListPage() {
                                     {step === 3 && (
                                         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                {PLANS.map((p) => (
+                                                {(filterType === 'personal_trainer' ? PT_PLANS : PLANS).map((p) => (
                                                     <div
                                                         key={p.id}
                                                         onClick={() => setSelectedPlan(p.id)}
