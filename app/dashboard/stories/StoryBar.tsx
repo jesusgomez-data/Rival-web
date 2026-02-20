@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown, Share2 } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown, Share2, Volume2, VolumeX } from 'lucide-react'
 import { createStory, createPRStory, toggleStoryLike, recordStoryView, deleteStory } from './actions'
 import { clsx } from 'clsx'
 import PRCard from '../community/PRCard'
@@ -622,6 +622,12 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         setExpandedWorkoutId(null)
         setShowFullSummary(false)
         setIsPaused(false)
+
+        // Try to keep audio "hot" on user interaction
+        if (audioRef.current && (currentUserStories?.stories?.[activeStoryIndex + 1]?.music_url || userStories[selectedUserIndex + 1]?.stories?.[0]?.music_url)) {
+            audioRef.current.play().catch(() => { });
+        }
+
         if (activeStoryIndex < (currentUserStories?.stories?.length || 0) - 1) {
             const nextIdx = activeStoryIndex + 1
             setActiveStoryIndex(nextIdx)
@@ -671,6 +677,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const currentStory = currentUserStories?.stories?.[activeStoryIndex] || null
     const isOwner = currentUserStories?.user?.id === currentUser?.id
 
+    const [isAudioMuted, setIsAudioMuted] = useState(false);
+
     useEffect(() => {
         let isCancelled = false;
 
@@ -679,14 +687,15 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
 
             if (selectedUserIndex !== null && currentStory?.music_url && !showViewers && !previewUrl && !isPaused) {
                 try {
-                    // Pre-stop any current playback
-                    audioRef.current.pause();
+                    // Update source if it actually changed
+                    if (audioRef.current.src !== currentStory.music_url) {
+                        audioRef.current.pause();
+                        audioRef.current.src = currentStory.music_url;
+                        audioRef.current.load();
+                    }
 
-                    // Update source and load
-                    audioRef.current.src = currentStory.music_url;
-                    audioRef.current.load();
                     audioRef.current.volume = 1.0;
-                    audioRef.current.muted = false;
+                    audioRef.current.muted = isAudioMuted;
 
                     const playPromise = audioRef.current.play();
                     if (playPromise !== undefined) {
@@ -709,10 +718,10 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
             isCancelled = true;
             if (audioRef.current) {
                 audioRef.current.pause();
-                // Avoid clearing src here to prevent flickering/reloading issues if the effect re-runs fast
+                // Do NOT clear src here to allow smoother transition and avoid autoplay locks
             }
         };
-    }, [selectedUserIndex, activeStoryIndex, showViewers, currentStory?.music_url, previewUrl, isPaused])
+    }, [selectedUserIndex, activeStoryIndex, showViewers, currentStory?.music_url, previewUrl, isPaused, isAudioMuted])
 
     // Handle App Visibility (Background/Foreground)
     useEffect(() => {
@@ -1129,6 +1138,11 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 <div key={us.user.id} className="flex flex-col items-center gap-2 shrink-0">
                     <button
                         onClick={() => {
+                            // Prime the audio on first interaction
+                            if (audioRef.current) {
+                                audioRef.current.play().catch(() => { });
+                                audioRef.current.pause();
+                            }
                             setSelectedUserIndex(idx)
                             setActiveStoryIndex(0)
                             recordView(us.stories[0].id)
@@ -1566,12 +1580,21 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                     {currentStory ? new Date(currentStory.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                                 </p>
                                                 {currentStory?.music_url && (
-                                                    <div className="flex items-center gap-1.5 mt-1 bg-black/40 px-2 py-0.5 rounded-full border border-white/10 w-fit">
-                                                        <Music className="w-2.5 h-2.5 text-brand-red animate-bounce" />
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (audioRef.current) {
+                                                                audioRef.current.play().catch(() => { });
+                                                                setIsAudioMuted(false);
+                                                            }
+                                                        }}
+                                                        className="flex items-center gap-1.5 mt-1 bg-black/40 hover:bg-brand-red/20 px-2 py-0.5 rounded-full border border-white/10 w-fit transition-colors group"
+                                                    >
+                                                        <Music className={clsx("w-2.5 h-2.5 text-brand-red", !isAudioMuted && "animate-bounce")} />
                                                         <span className="text-[8px] font-black text-white uppercase tracking-[0.1em] marquee-container whitespace-nowrap overflow-hidden max-w-[80px]">
                                                             {currentStory.music_title} • {currentStory.music_artist}
                                                         </span>
-                                                    </div>
+                                                    </button>
                                                 )}
                                             </div>
                                         </div>
@@ -1583,6 +1606,19 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                     title="Eliminar historia"
                                                 >
                                                     <Trash2 className="w-5 h-5 group-hover/delete:scale-110 transition-transform" />
+                                                </button>
+                                            )}
+                                            {currentStory?.music_url && (
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setIsAudioMuted(!isAudioMuted); }}
+                                                    className="p-2 bg-black/40 hover:bg-white/10 text-white rounded-full backdrop-blur-md transition-all border border-white/5"
+                                                    title={isAudioMuted ? "Activar sonido" : "Silenciar"}
+                                                >
+                                                    {isAudioMuted ? (
+                                                        <VolumeX className="w-5 h-5 text-brand-red" />
+                                                    ) : (
+                                                        <Volume2 className="w-5 h-5" />
+                                                    )}
                                                 </button>
                                             )}
                                             <button onClick={() => setSelectedUserIndex(null)} className="p-2 bg-black/40 hover:text-brand-red text-white rounded-full backdrop-blur-md transition-colors border border-white/5 shadow-lg">

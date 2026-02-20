@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Trash2, Edit2, Save, Heart, Dumbbell, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram } from "lucide-react";
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown, Share2, Volume2, VolumeX, CheckCircle2, Instagram } from "lucide-react";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
 import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike, deleteComment } from "./community/actions";
@@ -267,6 +267,10 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const handleAvatarClick = (e: React.MouseEvent) => {
         if (hasStory) {
             e.preventDefault();
+            // Unlock audio session for mobile browsers
+            const tempAudio = new Audio();
+            tempAudio.play().then(() => tempAudio.pause()).catch(() => { });
+
             openStory(authorId || '');
         }
     };
