@@ -27,9 +27,10 @@ interface ProfileContentProps {
     badges: any[];
     gear: any[];
     isAdminUser?: boolean;
+    hasActiveDuel?: boolean;
 }
 
-export default function ProfileContent({ profile, combatStats, user, isFollowing, posts, canViewContent, privacy, workouts, badges, gear, isAdminUser = false }: ProfileContentProps) {
+export default function ProfileContent({ profile, combatStats, user, isFollowing, posts, canViewContent, privacy, workouts, badges, gear, isAdminUser = false, hasActiveDuel = false }: ProfileContentProps) {
     const [mobileTab, setMobileTab] = useState<'activity' | 'gallery' | 'stats'>('activity');
     const [modalOpen, setModalOpen] = useState<'followers' | 'following' | null>(null);
     const [avatarModalOpen, setAvatarModalOpen] = useState(false);
@@ -183,7 +184,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                         </Link>
                                     )}
                                     <div className="shrink-0">
-                                        <DuelButton targetId={profile.id} isRival={isFollowing} />
+                                        <DuelButton targetId={profile.id} isRival={isFollowing} hasActiveDuel={hasActiveDuel} />
                                     </div>
                                     <div className="min-w-[140px] shrink-0">
                                         <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
@@ -210,7 +211,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             </Link>
                         )}
                         <div className="flex-1 min-w-[120px]">
-                            <DuelButton targetId={profile.id} isRival={isFollowing} />
+                            <DuelButton targetId={profile.id} isRival={isFollowing} hasActiveDuel={hasActiveDuel} />
                         </div>
                         <div className="flex-1 min-w-[140px]">
                             <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
@@ -394,7 +395,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                 </div>
 
                 {/* Right: Combat History & Stats */}
-                <div className="lg:col-span-4 space-y-8">
+                <div className={clsx("lg:col-span-4 space-y-8", mobileTab !== 'stats' && "hidden md:block")}>
                     {/* Simplified or blurred stats if private could be done here, but requirement implied strict privacy */}
                     {canViewContent ? (
                         <>

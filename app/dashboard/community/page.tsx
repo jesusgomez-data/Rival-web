@@ -8,6 +8,7 @@ import LikeButton from "./LikeButton";
 import FollowButton from "./FollowButton";
 import DuelButton from "./DuelButton";
 import SearchAthletes from "./SearchAthletes";
+import { getMyDuels } from "./duel-actions";
 import { useEffect, useState, Suspense, Fragment } from "react";
 import FeedPost from "../FeedPost";
 import StoryBar from "../stories/StoryBar";
@@ -32,7 +33,8 @@ export default function CommunityPage({
         searchResults: [],
         posts: [],
         loading: true,
-        isMember: false
+        isMember: false,
+        activeDuelUserIds: new Set()
     });
 
     const supabase = createClient();
@@ -51,26 +53,26 @@ export default function CommunityPage({
                 const { data: { user } } = await supabase.auth.getUser();
                 if (!user) return;
 
-                const { data: myFollows } = await supabase
-                    .from('follows')
-                    .select('following_id')
-                    .eq('follower_id', user.id);
-
-                const { data: profile } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('id', user.id)
-                    .single();
-
-                const { data: membership } = await supabase
-                    .from('members')
-                    .select('id')
-                    .eq('user_id', user.id)
-                    .in('status', ['active', 'trial'])
-                    .limit(1);
+                const [
+                    { data: myFollows },
+                    { data: profile },
+                    { data: membership },
+                    { data: officialAccounts },
+                    duelsData
+                ] = await Promise.all([
+                    supabase.from('follows').select('following_id').eq('follower_id', user.id),
+                    supabase.from('profiles').select('*').eq('id', user.id).single(),
+                    supabase.from('members').select('id').eq('user_id', user.id).in('status', ['active', 'trial']).limit(1),
+                    supabase.from('profiles').select('id').eq('is_official', true),
+                    getMyDuels()
+                ]);
 
                 const followedIds = new Set(myFollows?.map(f => f.following_id) || []);
+                const officialIds = officialAccounts?.map(acc => acc.id) || [];
+                const activeDuelUserIds = new Set(duelsData?.filter((d: any) => d.status === 'active' || d.status === 'pending').map((d: any) => d.challenger_id === user.id ? d.opponent_id : d.challenger_id));
+
                 let searchResults: any[] = [];
+                // ... (previous searchResults logic)
 
                 if (query) {
                     const { data: profiles } = await supabase
@@ -91,14 +93,7 @@ export default function CommunityPage({
                     }).slice(0, 10);
                 }
 
-                // Fetch official accounts to include their posts in "Following" feed automatically
-                const { data: officialAccounts } = await supabase
-                    .from('profiles')
-                    .select('id')
-                    .eq('is_official', true);
-
-                const officialIds = officialAccounts?.map(acc => acc.id) || [];
-
+                // Fetch Posts based on tab or query
                 // Fetch Posts based on tab or query
                 let postsQuery = supabase
                     .from('posts')
@@ -134,7 +129,8 @@ export default function CommunityPage({
                     searchResults,
                     posts: posts || [],
                     loading: false,
-                    isMember: (membership && membership.length > 0)
+                    isMember: (membership && membership.length > 0),
+                    activeDuelUserIds
                 });
             } catch (e) {
                 console.error(e);
@@ -251,7 +247,7 @@ export default function CommunityPage({
                                                 </div>
                                             </Link>
                                             <div className="flex items-center gap-2">
-                                                <DuelButton targetId={profile.id} isRival={data.followedIds.has(profile.id)} />
+                                                <DuelButton targetId={profile.id} isRival={data.followedIds.has(profile.id)} hasActiveDuel={data.activeDuelUserIds.has(profile.id)} />
                                             </div>
                                         </div>
                                     ))}
@@ -291,6 +287,7 @@ export default function CommunityPage({
                                         music_artist={post.music_artist}
                                         isOfficial={post.profiles?.is_official}
                                         isAdminUser={data.profile?.is_official}
+                                        hasActiveDuel={data.activeDuelUserIds.has(post.user_id)}
                                     />
                                     {(index + 1) % 4 === 0 && (
                                         <FeedAd tier={data.profile?.subscription_tier} />

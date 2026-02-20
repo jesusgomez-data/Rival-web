@@ -10,12 +10,14 @@ interface DuelButtonProps {
     isRival?: boolean;
     type?: string;
     postId?: string;
+    hasActiveDuel?: boolean;
 }
 
-export default function DuelButton({ targetId, isRival, type = 'classic', postId }: DuelButtonProps) {
+export default function DuelButton({ targetId, isRival, type = 'classic', postId, hasActiveDuel }: DuelButtonProps) {
     const [status, setStatus] = useState<'idle' | 'loading' | 'sent'>('idle');
 
     const handleDuel = async () => {
+        if (hasActiveDuel) return;
         setStatus('loading');
         const res = await createDuel(targetId, type, postId);
         if (res.success) {
@@ -25,6 +27,14 @@ export default function DuelButton({ targetId, isRival, type = 'classic', postId
             alert(res.error || "Error al enviar el desafío.");
         }
     };
+
+    if (hasActiveDuel) {
+        return (
+            <button className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-red/10 text-brand-red rounded-lg text-[10px] font-black uppercase tracking-widest border border-brand-red/20 opacity-80 cursor-default">
+                <Swords className="w-3.5 h-3.5" /> En Duelo
+            </button>
+        );
+    }
 
     if (status === 'sent') {
         return (

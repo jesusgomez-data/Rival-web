@@ -46,10 +46,15 @@ async function calculateWorkoutStreak(supabase: any, userId: string) {
     return streak;
 }
 
+import { getMonday } from '@/utils/date'
+
 export async function getMissions() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
+
+    const currentWeekStart = getMonday();
+    const weekStartDate = new Date(currentWeekStart);
 
     // 1. Get all active missions
     const { data: missions, error: missionsError } = await supabase
@@ -66,47 +71,76 @@ export async function getMissions() {
         .from('user_missions')
         .select('*')
         .eq('user_id', user.id)
+        .eq('week_start', currentWeekStart)
 
     if (progressError) {
         console.error('Error fetching user progress:', progressError)
     }
 
-    // 3. Calculate dynamic streak
+    // 3. ACTUAL SYNC: Calculate real sessions and volume for this week to fix any sync issues
+    const { data: workoutsThisWeek } = await supabase
+        .from('workouts')
+        .select('total_volume_kg, created_at')
+        .eq('user_id', user.id)
+        .gte('created_at', weekStartDate.toISOString());
+
+    const { data: classesThisWeek } = await supabase
+        .from('class_results')
+        .select('date_performed')
+        .eq('user_id', user.id)
+        .gte('date_performed', weekStartDate.toISOString());
+
+    const realSessionsCount = (workoutsThisWeek?.length || 0) + (classesThisWeek?.length || 0);
+    const realTotalVolume = (workoutsThisWeek || []).reduce((acc: number, w: any) => acc + (Number(w.total_volume_kg) || 0), 0);
+
+    // 4. Calculate dynamic streak
     const realStreak = await calculateWorkoutStreak(supabase, user.id);
 
-    // 4. Merge data
-    return missions.map(mission => {
+    // 5. Merge and update missions
+    const finalMissions = []
+
+    for (const mission of missions) {
         const progress = userMissions?.find(um => um.mission_id === mission.id)
-
-        // If it's a streak mission, use the live calculated value
         let currentValue = progress?.current_value || 0;
-        if (mission.goal_type === 'streak') {
-            currentValue = realStreak;
 
-            // Proactively update the progress in DB if it changed and mission not completed
-            if (currentValue !== (progress?.current_value || 0) && !progress?.is_completed) {
-                supabase
-                    .from('user_missions')
-                    .upsert({
-                        user_id: user.id,
-                        mission_id: mission.id,
-                        current_value: currentValue,
-                        is_completed: currentValue >= mission.goal_value,
-                        completed_at: currentValue >= mission.goal_value ? new Date().toISOString() : null,
-                        week_start: new Date().toISOString().split('T')[0]
-                    })
-                    .then(({ error }) => {
-                        if (error) console.error("Error syncing streak mission:", error);
-                    });
+        // Auto-sync for sessions and volume
+        if (mission.goal_type === 'sessions_count' || mission.goal_type === 'workouts') {
+            currentValue = realSessionsCount;
+        } else if (mission.goal_type === 'volume_kg' || mission.goal_type === 'volume') {
+            currentValue = realTotalVolume;
+        } else if (mission.goal_type === 'streak') {
+            currentValue = realStreak;
+        }
+
+        // If DB is out of sync or mission just completed, update it
+        const isCompleted = currentValue >= mission.goal_value;
+        const needsUpdate = currentValue !== (progress?.current_value || 0) || (isCompleted && !progress?.is_completed);
+
+        if (needsUpdate) {
+            await supabase
+                .from('user_missions')
+                .upsert({
+                    user_id: user.id,
+                    mission_id: mission.id,
+                    current_value: currentValue,
+                    is_completed: isCompleted,
+                    completed_at: isCompleted ? (progress?.completed_at || new Date().toISOString()) : null,
+                    week_start: currentWeekStart
+                }, { onConflict: 'user_id,mission_id,week_start' });
+
+            if (isCompleted && (!progress || !progress.is_completed)) {
+                await supabase.rpc('increment_xp', { amount: mission.xp_reward, profile_id: user.id });
             }
         }
 
-        return {
+        finalMissions.push({
             ...mission,
             current_value: currentValue,
-            is_completed: progress?.is_completed || (mission.goal_type === 'streak' && currentValue >= mission.goal_value)
-        }
-    })
+            is_completed: isCompleted
+        });
+    }
+
+    return finalMissions;
 }
 
 export async function updateMissionProgress(userId: string, type: 'volume_kg' | 'sessions_count' | 'social_interactions', amount: number) {
@@ -120,6 +154,8 @@ export async function updateMissionProgress(userId: string, type: 'volume_kg' | 
 
     if (!relevantMissions) return
 
+    const currentWeekStart = getMonday();
+
     for (const mission of relevantMissions) {
         // 2. Upsert progress
         const { data: existingProgress } = await supabase
@@ -127,6 +163,7 @@ export async function updateMissionProgress(userId: string, type: 'volume_kg' | 
             .select('*')
             .eq('user_id', userId)
             .eq('mission_id', mission.id)
+            .eq('week_start', currentWeekStart)
             .single()
 
         if (existingProgress) {
@@ -157,7 +194,7 @@ export async function updateMissionProgress(userId: string, type: 'volume_kg' | 
                     current_value: amount,
                     is_completed: isCompleted,
                     completed_at: isCompleted ? new Date().toISOString() : null,
-                    week_start: new Date().toISOString().split('T')[0] // simplified
+                    week_start: currentWeekStart
                 })
 
             if (isCompleted) {

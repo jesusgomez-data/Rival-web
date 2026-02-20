@@ -39,9 +39,7 @@ export async function getConversations() {
                 .neq('user_id', user.id)
                 .maybeSingle()
 
-            const hasUnread = conv.last_message_at && p.last_read_at
-                ? new Date(conv.last_message_at) > new Date(p.last_read_at)
-                : false;
+            const hasUnread = conv.last_message_at && (!p.last_read_at || new Date(conv.last_message_at) > new Date(p.last_read_at));
 
             return {
                 id: conv.id,
@@ -117,9 +115,13 @@ export async function markConversationAsRead(conversationId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
 
+    // Usamos una fecha ligeramente en el futuro para evitar problemas de precisión
+    const futureDate = new Date();
+    futureDate.setSeconds(futureDate.getSeconds() + 2);
+
     const { error } = await supabase
         .from('conversation_participants')
-        .update({ last_read_at: new Date().toISOString() })
+        .update({ last_read_at: futureDate.toISOString() })
         .eq('conversation_id', conversationId)
         .eq('user_id', user.id)
 

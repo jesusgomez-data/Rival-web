@@ -339,3 +339,17 @@ export async function getCombatStats(userId: string) {
 
     return stats;
 }
+
+export async function getActiveDuel(userId1: string, userId2: string) {
+    const supabase = await createClient();
+
+    const { data, error } = await supabase
+        .from('duels')
+        .select('*')
+        .or(`and(challenger_id.eq.${userId1},opponent_id.eq.${userId2}),and(challenger_id.eq.${userId2},opponent_id.eq.${userId1})`)
+        .in('status', ['active', 'pending'])
+        .maybeSingle();
+
+    if (error) return null;
+    return data;
+}

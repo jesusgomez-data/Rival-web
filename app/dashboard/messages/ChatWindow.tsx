@@ -318,13 +318,13 @@ export default function ChatWindow({
                                                             )}
                                                             <div className={clsx(
                                                                 "absolute bottom-1 right-2 flex items-center gap-1 bg-black/40 backdrop-blur-md px-1.5 py-0.5 rounded-full",
-                                                                !(otherParticipantLastRead && new Date(msg.created_at) <= new Date(otherParticipantLastRead)) && "opacity-80"
+                                                                !(otherParticipantLastRead && new Date(msg.created_at).getTime() <= new Date(otherParticipantLastRead).getTime() + 1000) && "opacity-80"
                                                             )}>
                                                                 {msg.is_liked && <Heart className="w-2.5 h-2.5 fill-brand-red text-brand-red" />}
                                                                 <span className="text-[9px] font-bold text-white/80">{format(new Date(msg.created_at), 'HH:mm')}</span>
                                                                 {isMine && (
                                                                     <div className="flex items-center">
-                                                                        {otherParticipantLastRead && new Date(msg.created_at) <= new Date(otherParticipantLastRead) ? (
+                                                                        {otherParticipantLastRead && new Date(msg.created_at).getTime() <= new Date(otherParticipantLastRead).getTime() + 1000 ? (
                                                                             <div className="flex items-center gap-0.5 ml-1">
                                                                                 <div className="flex -space-x-1">
                                                                                     <Check className="w-2.5 h-2.5 text-blue-400 stroke-[3px]" />
@@ -349,13 +349,13 @@ export default function ChatWindow({
                                                             />
                                                             <div className={clsx(
                                                                 "text-[9px] flex items-center gap-1.5 font-black tracking-widest uppercase italic self-end absolute bottom-[-2px] right-[-4px]",
-                                                                (otherParticipantLastRead && new Date(msg.created_at) <= new Date(otherParticipantLastRead)) ? "opacity-100" : "opacity-50"
+                                                                (otherParticipantLastRead && new Date(msg.created_at).getTime() <= new Date(otherParticipantLastRead).getTime() + 1000) ? "opacity-100" : "opacity-50"
                                                             )}>
                                                                 {msg.is_liked && <Heart className="w-2.5 h-2.5 fill-brand-red text-brand-red" />}
                                                                 {format(new Date(msg.created_at), 'HH:mm')}
                                                                 {isMine && (
                                                                     <div className="flex items-center ml-1">
-                                                                        {otherParticipantLastRead && new Date(msg.created_at) <= new Date(otherParticipantLastRead) ? (
+                                                                        {otherParticipantLastRead && new Date(msg.created_at).getTime() <= new Date(otherParticipantLastRead).getTime() + 1000 ? (
                                                                             <div className="flex items-center gap-0.5">
                                                                                 <div className="flex -space-x-1">
                                                                                     <Check className="w-2.5 h-2.5 text-blue-400 stroke-[3px]" />

@@ -103,6 +103,8 @@ function MessagesContent() {
                             setOtherPerson(person || { full_name: 'Direct Match' })
                             setIsMobileListVisible(false)
                             await loadMessages(result.conversationId)
+                            await markConversationAsRead(result.conversationId)
+                            await loadConversations()
                         }
                     }
                 }
@@ -225,6 +227,7 @@ function MessagesContent() {
                 table: 'conversation_participants',
                 filter: `conversation_id=eq.${activeConversationId}`
             }, (payload) => {
+                // Si la otra persona ha leído, actualizamos su timestamp
                 if (payload.new.user_id !== currentUserId) {
                     setOtherParticipantLastRead(payload.new.last_read_at)
                 }
@@ -232,7 +235,7 @@ function MessagesContent() {
             .subscribe()
 
         return () => { supabase.removeChannel(channel) }
-    }, [activeConversationId, currentUserId])
+    }, [activeConversationId, currentUserId, loadConversations])
 
     const handleSelectConversation = async (id: string, person: any) => {
         try {

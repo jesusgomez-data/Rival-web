@@ -212,6 +212,7 @@ interface FeedPostProps {
     isMember?: boolean;
     context?: 'following' | 'global';
     isAdminUser?: boolean;
+    hasActiveDuel?: boolean;
 }
 
 interface Comment {
@@ -230,7 +231,8 @@ interface Comment {
 }
 
 export default function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId,
-    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global', isAdminUser = false
+    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global', isAdminUser,
+    hasActiveDuel = false
 }: FeedPostProps) {
     const { theme } = useTheme();
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -1247,7 +1249,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         {/* Quick Duel Button */}
                         {authorId && postId && authorId !== currentUserId && !isOfficial && (
                             <div className="scale-75 origin-left h-auto -my-2">
-                                <DuelButton targetId={authorId as string} postId={postId} type="quick" isRival={true} />
+                                <DuelButton targetId={authorId as string} postId={postId} type="quick" isRival={true} hasActiveDuel={hasActiveDuel} />
                             </div>
                         )}
                         <div className="ml-auto">

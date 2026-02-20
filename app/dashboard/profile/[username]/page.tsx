@@ -1,6 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { getPublicProfile, getCombatStats } from "../../community/duel-actions";
+import { getPublicProfile, getCombatStats, getActiveDuel } from "../../community/duel-actions";
 import { Trophy, Swords, Zap, Dumbbell, Calendar, MapPin, Hash, User, TrendingUp, Award, Star, Lock, Image as ImageIcon } from "lucide-react";
 import FeedPost from "../../FeedPost";
 import Image from "next/image";
@@ -34,15 +34,15 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
 
     // Fetch if current user follows this profile
     let isFollowing = false;
+    let activeDuel = null;
     if (user) {
         const adminSupabase = createAdminClient();
-        const { data: follow } = await adminSupabase
-            .from('follows')
-            .select('*')
-            .eq('follower_id', user.id)
-            .eq('following_id', profile.id)
-            .single();
-        isFollowing = !!follow;
+        const [followRes, duelData] = await Promise.all([
+            adminSupabase.from('follows').select('*').eq('follower_id', user.id).eq('following_id', profile.id).maybeSingle(),
+            getActiveDuel(user.id, profile.id)
+        ]);
+        isFollowing = !!followRes.data;
+        activeDuel = duelData;
     }
 
     // Pseudo-Trophies logic moved to TrophyCabinet component
@@ -126,6 +126,7 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
             badges={userBadges || []}
             gear={userGear || []}
             isAdminUser={currentUserProfile?.is_official === true}
+            hasActiveDuel={!!activeDuel}
         />
     );
 }

@@ -14,9 +14,11 @@ import CreatePost from "./CreatePost";
 import StoryBar from "./stories/StoryBar";
 import { getMyDuels, acceptDuel } from "./community/duel-actions";
 import UserMediaGallery from "./UserMediaGallery";
+import { getMissions } from "./training/actions";
 import DashboardTour from "@/components/onboarding/DashboardTour";
 import EssentialsHero from "@/components/onboarding/EssentialsHero";
 import InfoTooltip from "@/components/InfoTooltip";
+import { getMonday } from "@/utils/date";
 
 function SuggestedUser({ id, name, username, role, avatar, isFollowing, isOfficial }: { id: string, name: string, username: string, role: string, avatar?: string, isFollowing: boolean, isOfficial?: boolean }) {
     const { t } = useLanguage();
@@ -167,6 +169,8 @@ export default function DashboardHome() {
                 const user = authData?.user;
                 if (!user) return;
 
+                const currentWeekStart = getMonday();
+
                 // Fetch todo paralelo para velocidad
                 const [
                     { data: memberships },
@@ -176,7 +180,7 @@ export default function DashboardHome() {
                     { count: followingCount },
                     { data: myFollows },
                     { data: trending },
-                    { data: missionData },
+                    missionsData,
                     duelsData
                 ] = await Promise.all([
                     supabase.from('members').select('*, organization:center_id(id, name, logo_url, city)').eq('user_id', user.id).in('status', ['active', 'trial']),
@@ -191,11 +195,19 @@ export default function DashboardHome() {
                         .eq('is_official', false) // Exclude official accounts from follow recommendations
                         .order('xp_points', { ascending: false })
                         .limit(4),
-                    supabase.from('missions').select('*, user_missions!inner(current_value, user_id)').eq('goal_type', 'sessions_count').eq('user_missions.user_id', user.id).single(),
+                    getMissions(),
                     getMyDuels()
                 ]);
 
                 const followedIds = new Set(myFollows?.map(f => f.following_id) || []);
+
+                // Find the sessions_count mission for the weekly goal widget
+                const sessionMission = missionsData?.find((m: any) => m.goal_type === 'sessions_count' || m.goal_type === 'workouts');
+                const weeklyProgress = {
+                    current: sessionMission?.current_value || 0,
+                    goal: sessionMission?.goal_value || 5,
+                    percentage: Math.min(100, Math.round(((sessionMission?.current_value || 0) / (sessionMission?.goal_value || 5)) * 100))
+                };
 
                 setData((prev: any) => ({
                     ...prev,
@@ -204,8 +216,8 @@ export default function DashboardHome() {
                     trendingAthletes: trending?.map(athlete => ({ ...athlete, isFollowing: followedIds.has(athlete.id) })) || [],
                     rivalsCount: followingCount || 0,
                     currentUser: user,
-                    missionProgress: missionData?.user_missions?.[0]?.current_value || 0,
-                    missionGoal: missionData?.goal_value || 5,
+                    missionProgress: weeklyProgress.current, // Use the calculated weeklyProgress
+                    missionGoal: weeklyProgress.goal, // Use the calculated weeklyProgress
                     duels: duelsData || [],
                     myGyms: memberships?.map((m: any) => m.organization) || [],
                     activeCenterIds: new Set(memberships?.filter((m: any) => m.status === 'active').map((m: any) => m.center_id) || [])
@@ -498,35 +510,40 @@ export default function DashboardHome() {
                         <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] ml-2">{t.dashboard.recentActivity}</h3>
                         {data.feedPosts && data.feedPosts.length > 0 ? (
                             <div className="space-y-10">
-                                {data.feedPosts.map((post: any) => (
-                                    <div key={post.id} id={`post-${post.id}`} className="scroll-mt-24 transition-all duration-300 rounded-3xl">
-                                        <FeedPost
-                                            postId={post.id}
-                                            username={post.profiles?.username}
-                                            user={post.profiles?.full_name || "Unknown Athlete"}
-                                            action={post.media_type === 'class_result' ? (language === 'es' ? "ha completado una sesión de clase" : "completed a class session") : post.workout_id ? (language === 'es' ? "ha completado un entrenamiento" : "completed a workout") : (language === 'es' ? "ha publicado una actualización" : "posted an update")}
-                                            time={formatTimeAgo(post.created_at)}
-                                            avatar={post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.profiles?.full_name || 'User')}&background=random`}
-                                            image={post.media_url}
-                                            initialLikes={post.likes ? post.likes.length : (post.likes_count || 0)}
-                                            hasLikedInitial={post.likes?.some((l: any) => l.user_id === data.currentUser?.id)}
-                                            comments={post.comments_count || 0}
-                                            highlight={post.workouts?.title}
-                                            mediaType={post.media_type}
-                                            caption={post.caption}
-                                            currentUserId={data.currentUser?.id}
-                                            authorId={post.user_id}
-                                            workoutData={post.workouts}
-                                            music_url={post.music_url}
-                                            music_title={post.music_title}
-                                            music_artist={post.music_artist}
-                                            isOfficial={post.profiles?.is_official}
-                                            isMember={data.activeCenterIds.has(post.user_id) || post.user_id === data.currentUser?.id}
-                                            context={activeTab as 'following' | 'global'}
-                                            isAdminUser={data.profile?.is_official}
-                                        />
-                                    </div>
-                                ))}
+                                {(() => {
+                                    const activeDuelUserIds = new Set(data.duels.filter((d: any) => d.status === 'active' || d.status === 'pending').map((d: any) => d.challenger_id === data.currentUser?.id ? d.opponent_id : d.challenger_id));
+
+                                    return data.feedPosts.map((post: any) => (
+                                        <div key={post.id} id={`post-${post.id}`} className="scroll-mt-24 transition-all duration-300 rounded-3xl">
+                                            <FeedPost
+                                                postId={post.id}
+                                                username={post.profiles?.username}
+                                                user={post.profiles?.full_name || "Unknown Athlete"}
+                                                action={post.media_type === 'class_result' ? (language === 'es' ? "ha completado una sesión de clase" : "completed a class session") : post.workout_id ? (language === 'es' ? "ha completado un entrenamiento" : "completed a workout") : (language === 'es' ? "ha publicado una actualización" : "posted an update")}
+                                                time={formatTimeAgo(post.created_at)}
+                                                avatar={post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.profiles?.full_name || 'User')}&background=random`}
+                                                image={post.media_url}
+                                                initialLikes={post.likes ? post.likes.length : (post.likes_count || 0)}
+                                                hasLikedInitial={post.likes?.some((l: any) => l.user_id === data.currentUser?.id)}
+                                                comments={post.comments_count || 0}
+                                                highlight={post.workouts?.title}
+                                                mediaType={post.media_type}
+                                                caption={post.caption}
+                                                currentUserId={data.currentUser?.id}
+                                                authorId={post.user_id}
+                                                workoutData={post.workouts}
+                                                music_url={post.music_url}
+                                                music_title={post.music_title}
+                                                music_artist={post.music_artist}
+                                                isOfficial={post.profiles?.is_official}
+                                                isMember={data.activeCenterIds.has(post.user_id) || post.user_id === data.currentUser?.id}
+                                                context={activeTab as 'following' | 'global'}
+                                                isAdminUser={data.profile?.is_official}
+                                                hasActiveDuel={activeDuelUserIds.has(post.user_id)}
+                                            />
+                                        </div>
+                                    ));
+                                })()}
                             </div>
                         ) : (
                             <div className="group relative p-12 md:p-20 text-center border-2 border-dashed border-white/5 rounded-[40px] bg-white/[0.02] hover:bg-white/[0.04] transition-all overflow-hidden">
