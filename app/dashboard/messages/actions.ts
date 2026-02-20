@@ -125,6 +125,10 @@ export async function markConversationAsRead(conversationId: string) {
         .eq('conversation_id', conversationId)
         .eq('user_id', user.id)
 
+    if (!error) {
+        revalidatePath('/dashboard', 'layout')
+    }
+
     return { error: error?.message }
 }
 

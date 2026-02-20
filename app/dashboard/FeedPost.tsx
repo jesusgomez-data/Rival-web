@@ -433,14 +433,22 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         }
     };
 
-    const toggleMusic = (e: React.MouseEvent) => {
+    const toggleMusic = async (e: React.MouseEvent) => {
         e.stopPropagation();
         if (!audioRef.current) return;
 
         if (isPlaying) {
             audioRef.current.pause();
         } else {
-            audioRef.current.play().catch(console.error);
+            try {
+                // Ensure loaded
+                if (!audioRef.current.src || audioRef.current.src === window.location.href) {
+                    audioRef.current.load();
+                }
+                await audioRef.current.play();
+            } catch (err) {
+                console.error("FeedPost Audio Playback Error:", err);
+            }
         }
     };
 
@@ -570,6 +578,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     src={music_url}
                                     loop
                                     className="hidden"
+                                    crossOrigin="anonymous"
+                                    preload="auto"
                                     onPlay={() => setIsPlaying(true)}
                                     onPause={() => setIsPlaying(false)}
                                 />

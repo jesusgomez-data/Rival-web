@@ -145,6 +145,21 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         }
                     }
                 )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'conversation_participants',
+                        filter: `user_id=eq.${user.id}`
+                    },
+                    () => {
+                        // When user marks messages as read in ANY tab, refresh count
+                        getUnreadMessageCount().then(count => {
+                            if (isMounted) setUnreadMessages(count);
+                        });
+                    }
+                )
                 .subscribe();
 
             return () => {

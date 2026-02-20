@@ -571,7 +571,7 @@ export async function getWodResults(title: string) {
     }
 
     // Filter and parse in JS (easier than complex JSON path matching in SQL for this schema)
-    return posts.filter(post => {
+    const results = posts.filter(post => {
         try {
             const wodData = JSON.parse(post.media_url || '{}');
             return wodData.title === title || (wodData.title?.toUpperCase() === title?.toUpperCase());
@@ -588,8 +588,35 @@ export async function getWodResults(title: string) {
             avatarUrl: (post as any).profiles?.avatar_url,
             score: wodData.summary?.scoreLabel || '-',
             time: wodData.summary?.totalTime || '--:--',
-            scoreType: wodData.summary?.scoreType || 'RESULTADO',
+            scoreType: wodData.summary?.scoreType || 'REPS',
             createdAt: post.created_at
         };
     });
+
+    // Sort results based on scoreType
+    return results.sort((a, b) => {
+        if (a.scoreType === 'TIME') {
+            // Lower time is better
+            const timeA = parseTimeToSeconds(a.score);
+            const timeB = parseTimeToSeconds(b.score);
+            return timeA - timeB;
+        } else {
+            // Higher points/reps/weight is better
+            const valueA = parseFloat(a.score.replace(/[^0-9.]/g, '')) || 0;
+            const valueB = parseFloat(b.score.replace(/[^0-9.]/g, '')) || 0;
+            return valueB - valueA;
+        }
+    });
+}
+
+function parseTimeToSeconds(timeStr: string): number {
+    if (!timeStr || timeStr === '-' || timeStr === '--:--') return 999999;
+    const parts = timeStr.split(':');
+    if (parts.length === 2) {
+        return parseInt(parts[0]) * 60 + parseInt(parts[1]);
+    }
+    if (parts.length === 3) {
+        return parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
+    }
+    return parseFloat(timeStr) || 999999;
 }

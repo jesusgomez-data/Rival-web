@@ -29,7 +29,7 @@ function Modal({ open, onClose, children }: { open: boolean; onClose: () => void
     return createPortal(content, document.body);
 }
 
-export default function SupportModal() {
+export default function SupportModal({ trigger }: { trigger?: React.ReactNode }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [sent, setSent] = useState(false);
@@ -59,10 +59,16 @@ export default function SupportModal() {
 
     return (
         <>
-            <button onClick={() => setOpen(true)} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors group">
-                <HelpCircle className="w-4 h-4 group-hover:text-brand-red transition-all" />
-                <span>Ayuda / Soporte</span>
-            </button>
+            {trigger ? (
+                <div onClick={() => setOpen(true)} className="cursor-pointer h-full w-full flex items-center justify-center">
+                    {trigger}
+                </div>
+            ) : (
+                <button onClick={() => setOpen(true)} className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-colors group">
+                    <HelpCircle className="w-4 h-4 group-hover:text-brand-red transition-all" />
+                    <span>Ayuda / Soporte</span>
+                </button>
+            )}
 
             <Modal open={open} onClose={() => setOpen(false)}>
                 <div className="p-6 border-b border-white/10 bg-gradient-to-br from-brand-red/10 via-transparent to-transparent relative overflow-hidden">

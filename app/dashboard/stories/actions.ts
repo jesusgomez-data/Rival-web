@@ -71,9 +71,9 @@ export async function createStory(formData: FormData) {
                 media_type: mediaType || 'image',
                 duration_seconds: 30,
                 expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-                music_url: formData.get('music_url') as string || null,
-                music_title: formData.get('music_title') as string || null,
-                music_artist: formData.get('music_artist') as string || null,
+                music_url: (formData.get('music_url') as string) || (metadata as any).music?.url || null,
+                music_title: (formData.get('music_title') as string) || (metadata as any).music?.title || null,
+                music_artist: (formData.get('music_artist') as string) || (metadata as any).music?.artist || null,
                 metadata: metadata
             })
 
@@ -180,9 +180,9 @@ export async function createPRStory(formData: FormData) {
                 media_type: 'pr',
                 duration_seconds: 30,
                 expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-                music_url: formData.get('music_url') as string || null,
-                music_title: formData.get('music_title') as string || null,
-                music_artist: formData.get('music_artist') as string || null,
+                music_url: (formData.get('music_url') as string) || (metadata as any).music?.url || null,
+                music_title: (formData.get('music_title') as string) || (metadata as any).music?.title || null,
+                music_artist: (formData.get('music_artist') as string) || (metadata as any).music?.artist || null,
                 metadata: metadata
             })
 
@@ -280,6 +280,9 @@ export async function getActiveStories() {
 
             const enhancedStory = {
                 ...story,
+                music_url: story.music_url || (story.metadata as any)?.music?.url || null,
+                music_title: story.music_title || (story.metadata as any)?.music?.title || null,
+                music_artist: story.music_artist || (story.metadata as any)?.music?.artist || null,
                 likes_count: story.story_likes?.length || 0,
                 has_liked: story.story_likes?.some((l: any) => l.user_id === user?.id),
                 has_seen: story.story_views?.some((v: any) => (v.user_id === user?.id) || (v.profiles?.id === user?.id)),

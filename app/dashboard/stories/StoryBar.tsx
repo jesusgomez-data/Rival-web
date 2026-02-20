@@ -509,8 +509,18 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 formData.append('music_title', selectedTrack.title)
                 formData.append('music_artist', selectedTrack.artist)
             }
-            if (overlays.length > 0) {
-                formData.append('metadata', JSON.stringify({ overlays }))
+            if (selectedTrack || overlays.length > 0 || imageZoom !== 1 || imagePositionX !== 50 || imagePositionY !== 50) {
+                formData.append('metadata', JSON.stringify({
+                    overlays,
+                    zoom: imageZoom,
+                    posX: imagePositionX,
+                    posY: imagePositionY,
+                    music: selectedTrack ? {
+                        url: selectedTrack.url,
+                        title: selectedTrack.title,
+                        artist: selectedTrack.artist
+                    } : null
+                }))
             }
 
             const res = await createStory(formData)
@@ -563,6 +573,13 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 formData.append('music_url', selectedTrack.url)
                 formData.append('music_title', selectedTrack.title)
                 formData.append('music_artist', selectedTrack.artist)
+                formData.append('metadata', JSON.stringify({
+                    music: {
+                        url: selectedTrack.url,
+                        title: selectedTrack.title,
+                        artist: selectedTrack.artist
+                    }
+                }))
             }
 
             const res = await createPRStory(formData)
@@ -655,20 +672,44 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const isOwner = currentUserStories?.user?.id === currentUser?.id
 
     useEffect(() => {
-        if (selectedUserIndex !== null && currentStory?.music_url && !showViewers && !previewUrl && !isPaused) {
-            if (audioRef.current) {
-                audioRef.current.src = currentStory.music_url;
-                audioRef.current.currentTime = 0;
-                audioRef.current.play().catch(e => console.log("Audio play blocked by browser"));
+        let isCancelled = false;
+
+        const playAudio = async () => {
+            if (!audioRef.current) return;
+
+            if (selectedUserIndex !== null && currentStory?.music_url && !showViewers && !previewUrl && !isPaused) {
+                try {
+                    // Pre-stop any current playback
+                    audioRef.current.pause();
+
+                    // Update source and load
+                    audioRef.current.src = currentStory.music_url;
+                    audioRef.current.load();
+                    audioRef.current.volume = 1.0;
+                    audioRef.current.muted = false;
+
+                    const playPromise = audioRef.current.play();
+                    if (playPromise !== undefined) {
+                        await playPromise;
+                        if (isCancelled) {
+                            audioRef.current.pause();
+                        }
+                    }
+                } catch (e) {
+                    console.log("Audio play blocked by browser or failed:", e);
+                }
+            } else {
+                audioRef.current.pause();
             }
-        } else {
-            if (audioRef.current) audioRef.current.pause();
-        }
+        };
+
+        playAudio();
 
         return () => {
+            isCancelled = true;
             if (audioRef.current) {
                 audioRef.current.pause();
-                audioRef.current.src = "";
+                // Avoid clearing src here to prevent flickering/reloading issues if the effect re-runs fast
             }
         };
     }, [selectedUserIndex, activeStoryIndex, showViewers, currentStory?.music_url, previewUrl, isPaused])
@@ -1166,30 +1207,34 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                         <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
                                             {/* Backdrop */}
                                             <div
-                                                className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                                                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
                                                 onClick={() => setIsMusicPickerOpen(false)}
                                             />
 
                                             {/* Centered Picker Container */}
                                             <div className="relative z-10 w-full max-w-md animate-in zoom-in-95 duration-200">
                                                 <MusicPicker
-                                                    onSelect={(track) => {
+                                                    variant="embedded"
+                                                    onClose={() => setIsMusicPickerOpen(false)}
+                                                    onSelect={async (track) => {
                                                         console.log("Track selected in StoryBar:", track?.title);
                                                         setSelectedTrack(track);
                                                         setIsMusicPickerOpen(false);
                                                         if (track && audioRef.current) {
-                                                            console.log("Setting StoryBar audio src to:", track.url);
-                                                            audioRef.current.src = track.url;
-                                                            audioRef.current.volume = 1.0;
-                                                            audioRef.current.muted = false;
-                                                            audioRef.current.load();
-                                                            const playPromise = audioRef.current.play();
-                                                            if (playPromise !== undefined) {
-                                                                playPromise.then(() => {
+                                                            try {
+                                                                console.log("Setting StoryBar audio src to:", track.url);
+                                                                audioRef.current.pause();
+                                                                audioRef.current.src = track.url;
+                                                                audioRef.current.volume = 1.0;
+                                                                audioRef.current.muted = false;
+                                                                audioRef.current.load();
+                                                                const playPromise = audioRef.current.play();
+                                                                if (playPromise !== undefined) {
+                                                                    await playPromise;
                                                                     console.log("StoryBar audio playing successfully");
-                                                                }).catch(error => {
-                                                                    console.error("StoryBar playback error:", error);
-                                                                });
+                                                                }
+                                                            } catch (error) {
+                                                                console.error("StoryBar playback error:", error);
                                                             }
                                                         } else if (!track && audioRef.current) {
                                                             console.log("No track selected, pausing StoryBar audio");
@@ -1197,7 +1242,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                         }
                                                     }}
                                                     selectedTrackId={selectedTrack?.id || null}
-                                                    variant="embedded"
                                                 />
                                             </div>
                                         </div>
@@ -1232,7 +1276,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                         autoPlay
                                         loop
                                         playsInline
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-contain"
                                         style={{
                                             transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
                                             transformOrigin: 'center center'
@@ -1242,7 +1286,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     <img
                                         src={previewUrl}
                                         alt="Preview"
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-contain"
                                         style={{
                                             transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
                                             transformOrigin: 'center center'
@@ -1296,9 +1340,9 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                 </div>
                                                 <input
                                                     type="range"
-                                                    min="1"
-                                                    max="3"
-                                                    step="0.1"
+                                                    min="0.1"
+                                                    max="5"
+                                                    step="0.01"
                                                     value={imageZoom}
                                                     onChange={(e) => setImageZoom(parseFloat(e.target.value))}
                                                     className="w-full accent-brand-red cursor-pointer h-2 bg-white/10 rounded-full appearance-none"
@@ -1415,16 +1459,24 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                         </div>
                                         <div className="flex items-center gap-1 border-l border-white/10 pl-2 ml-2">
                                             <button
-                                                onClick={(e) => {
+                                                onClick={async (e) => {
                                                     e.stopPropagation();
-                                                    if (audioRef.current) {
-                                                        console.log("Manual Play/Pause clicked. Current src:", audioRef.current.src);
-                                                        if (audioRef.current.paused) {
-                                                            audioRef.current.volume = 1.0;
-                                                            audioRef.current.play().then(() => console.log("Manual play success")).catch(err => console.error("Manual play failed:", err));
+                                                    if (audioRef.current && selectedTrack) {
+                                                        const audio = audioRef.current;
+                                                        if (audio.paused) {
+                                                            try {
+                                                                if (!audio.src || audio.src === window.location.href || audio.src !== selectedTrack.url) {
+                                                                    audio.src = selectedTrack.url;
+                                                                    audio.load();
+                                                                }
+                                                                audio.volume = 1.0;
+                                                                audio.muted = false;
+                                                                await audio.play();
+                                                            } catch (err) {
+                                                                console.error("Manual play failed:", err);
+                                                            }
                                                         } else {
-                                                            audioRef.current.pause();
-                                                            console.log("Manual pause success");
+                                                            audio.pause();
                                                         }
                                                     }
                                                 }}
@@ -1605,9 +1657,32 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     const isVideo = currentStory.media_type === 'video' || videoExts.includes(ext);
                                     return isVideo;
                                 })() ? (
-                                    <video ref={storyVideoRef} src={currentStory.media_url} autoPlay playsInline className="w-full h-full object-cover pointer-events-none" />
+                                    <div className="relative w-full h-full overflow-hidden bg-black/40 flex items-center justify-center">
+                                        <video
+                                            ref={storyVideoRef}
+                                            src={currentStory.media_url}
+                                            autoPlay
+                                            playsInline
+                                            className="w-full h-full object-contain pointer-events-none"
+                                            style={{
+                                                transform: currentStory.metadata?.zoom ? `scale(${currentStory.metadata.zoom}) translate(${(currentStory.metadata.posX - 50) / currentStory.metadata.zoom}%, ${(currentStory.metadata.posY - 50) / currentStory.metadata.zoom}%)` : 'none',
+                                                transformOrigin: 'center center'
+                                            }}
+                                        />
+                                    </div>
                                 ) : (
-                                    <Image src={currentStory.media_url} alt="Story content" fill className="object-cover pointer-events-none" />
+                                    <div className="relative w-full h-full overflow-hidden bg-black/40 flex items-center justify-center">
+                                        <Image
+                                            src={currentStory.media_url}
+                                            alt="Story content"
+                                            fill
+                                            className="object-contain pointer-events-none"
+                                            style={{
+                                                transform: currentStory.metadata?.zoom ? `scale(${currentStory.metadata.zoom}) translate(${(currentStory.metadata.posX - 50) / currentStory.metadata.zoom}%, ${(currentStory.metadata.posY - 50) / currentStory.metadata.zoom}%)` : 'none',
+                                                transformOrigin: 'center center'
+                                            }}
+                                        />
+                                    </div>
                                 )}
 
                                 {/* Workout Summary Overlay */}
@@ -2233,7 +2308,13 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Música</label>
                                     <div className="flex bg-black/40 border border-white/10 rounded-2xl p-2 items-center justify-between">
-                                        <MusicPicker onSelect={setSelectedTrack} selectedTrackId={selectedTrack?.id || null} />
+                                        <div className="relative">
+                                            <MusicPicker
+                                                onSelect={setSelectedTrack}
+                                                selectedTrackId={selectedTrack?.id || null}
+                                                variant="button"
+                                            />
+                                        </div>
                                         <div className="flex-1 px-4 text-left">
                                             {selectedTrack ? (
                                                 <div>
@@ -2287,6 +2368,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 loop
                 playsInline
                 preload="auto"
+                crossOrigin="anonymous"
                 onError={(e) => console.error("StoryBar Audio Error:", e)}
                 onPlay={(e) => {
                     console.log("StoryBar Audio onPlay triggered");

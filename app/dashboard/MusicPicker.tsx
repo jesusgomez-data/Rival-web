@@ -9,9 +9,10 @@ interface MusicPickerProps {
     onSelect: (track: MusicTrack | null) => void;
     selectedTrackId: string | null;
     variant?: 'button' | 'embedded';
+    onClose?: () => void;
 }
 
-export default function MusicPicker({ onSelect, selectedTrackId, variant = 'button' }: MusicPickerProps) {
+export default function MusicPicker({ onSelect, selectedTrackId, variant = 'button', onClose }: MusicPickerProps) {
     const [isOpen, setIsOpen] = useState(variant === 'embedded');
     const [searchQuery, setSearchQuery] = useState("");
     const [previewingId, setPreviewingId] = useState<string | null>(null);
@@ -20,11 +21,14 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
     // Close on escape
     useEffect(() => {
         const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setIsOpen(false);
+            if (e.key === 'Escape') {
+                if (onClose) onClose();
+                else setIsOpen(false);
+            }
         };
         window.addEventListener('keydown', handleEsc);
         return () => window.removeEventListener('keydown', handleEsc);
-    }, []);
+    }, [onClose]);
 
     // Handle App Visibility and Cleanup
     useEffect(() => {
@@ -61,7 +65,7 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
         track.genre.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const handlePreview = (e: React.MouseEvent, track: MusicTrack) => {
+    const handlePreview = async (e: React.MouseEvent, track: MusicTrack) => {
         e.stopPropagation();
         if (!audioRef.current) return;
 
@@ -69,17 +73,26 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
             audioRef.current.pause();
             setPreviewingId(null);
         } else {
-            audioRef.current.pause();
-            audioRef.current.src = track.url;
-            audioRef.current.currentTime = 0;
-            audioRef.current.muted = false;
-            audioRef.current.volume = 1.0;
+            try {
+                // Pause and clear
+                audioRef.current.pause();
 
-            audioRef.current.play().then(() => {
-                setPreviewingId(track.id);
-            }).catch(error => {
-                console.error("Playback failed:", error);
-            });
+                // Assign new source and volume
+                audioRef.current.src = track.url;
+                audioRef.current.load();
+                audioRef.current.volume = 1.0;
+
+                // Set explicitly as playsInline
+                const playPromise = audioRef.current.play();
+
+                if (playPromise !== undefined) {
+                    await playPromise;
+                    setPreviewingId(track.id);
+                }
+            } catch (error) {
+                console.error("Playback Failure:", error);
+                setPreviewingId(null);
+            }
         }
     };
 
@@ -104,23 +117,29 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
             isModal ? "w-full max-w-lg h-[80vh] sm:h-[600px] rounded-[32px] shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)]" : "w-full rounded-[24px] p-4"
         )}>
             {/* Header */}
-            <div className={clsx("flex items-center justify-between p-6 pb-2", !isModal && "p-0 mb-4")}>
-                <div>
-                    <h4 className="text-xl font-black text-white italic uppercase tracking-tighter flex items-center gap-3">
-                        <div className="p-2 bg-brand-red/10 rounded-xl">
-                            <Music className="w-5 h-5 text-brand-red" />
-                        </div>
-                        Biblioteca Rival
-                    </h4>
-                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1 ml-11">Selecciona el ritmo de tu post</p>
+            <div className={clsx("flex items-center justify-between p-6 pb-2 relative", !isModal && "p-0 mb-4")}>
+                <div className="flex items-center gap-3 pr-12">
+                    <div className="p-2 bg-brand-red/10 rounded-xl shrink-0">
+                        <Music className="w-5 h-5 text-brand-red" />
+                    </div>
+                    <div className="min-w-0">
+                        <h4 className="text-xl font-black text-white italic uppercase tracking-tighter truncate">Biblioteca Rival</h4>
+                        <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest truncate">Ritmo para tu post</p>
+                    </div>
                 </div>
-                {isModal && (
+
+                {(isModal || onClose) && (
                     <button
                         type="button"
-                        onClick={() => setIsOpen(false)}
-                        className="p-2 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-full transition-all"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            if (onClose) onClose();
+                            else setIsOpen(false);
+                        }}
+                        className="absolute right-4 top-5 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all shrink-0 shadow-xl border border-white/10 active:scale-95 z-50"
+                        title="Cerrar"
                     >
-                        <X className="w-5 h-5" />
+                        <X className="w-6 h-6" />
                     </button>
                 )}
             </div>
@@ -134,7 +153,6 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
                         placeholder="Busca Phonk, Reggaeton, Rock..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
                         className="w-full bg-black/40 border border-white/5 rounded-2xl py-3.5 pl-11 pr-4 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-brand-red/30 focus:bg-black/60 transition-all shadow-inner"
                     />
                 </div>
@@ -159,7 +177,11 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
                                 onClick={(e) => handlePreview(e, track)}
                                 className={clsx(
                                     "w-12 h-12 rounded-xl flex items-center justify-center transition-all relative z-10",
-                                    previewingId === track.id ? "bg-brand-red text-white scale-95" : "bg-black/40 text-brand-red hover:scale-110"
+                                    previewingId === track.id
+                                        ? "bg-brand-red text-white scale-95 shadow-[0_0_15px_rgba(255,49,49,0.5)]"
+                                        : selectedTrackId === track.id
+                                            ? "bg-brand-red/20 text-brand-red scale-100"
+                                            : "bg-black/40 text-brand-red hover:scale-110"
                                 )}
                             >
                                 {previewingId === track.id ? (
@@ -170,7 +192,12 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
                             </button>
 
                             <div className="flex-1 min-w-0 relative z-10">
-                                <p className="text-sm font-black text-white truncate mb-0.5 italic">{track.title}</p>
+                                <p className={clsx(
+                                    "text-sm font-black truncate mb-0.5 italic",
+                                    selectedTrackId === track.id ? "text-brand-red" : "text-white"
+                                )}>
+                                    {track.title}
+                                </p>
                                 <div className="flex items-center gap-2">
                                     <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest truncate">{track.artist}</span>
                                     <span className="w-1 h-1 rounded-full bg-white/10" />
@@ -179,8 +206,14 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
                             </div>
 
                             {selectedTrackId === track.id && (
-                                <div className="bg-brand-red p-1.5 rounded-full relative z-10">
-                                    <Check className="w-3.5 h-3.5 text-white stroke-[3.5]" />
+                                <div className="absolute inset-0 bg-brand-red/5 border-2 border-brand-red/30 rounded-2xl animate-pulse pointer-events-none" />
+                            )}
+
+                            {selectedTrackId === track.id && (
+                                <div className="absolute right-4 z-10 scale-110">
+                                    <div className="bg-brand-red text-white p-1 rounded-full shadow-[0_0_15px_rgba(255,0,0,0.6)]">
+                                        <Check className="w-3.5 h-3.5" />
+                                    </div>
                                 </div>
                             )}
 
@@ -217,6 +250,9 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
                 ref={audioRef}
                 onEnded={() => setPreviewingId(null)}
                 style={{ display: 'none' }}
+                preload="auto"
+                playsInline
+                crossOrigin="anonymous"
             />
         </div>
     );
