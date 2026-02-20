@@ -46,5 +46,6 @@ export interface TrainingPlan {
     difficulty: 'beginner' | 'intermediate' | 'elite';
     duration_min: number;
     exercises: WorkoutExercise[];
+    blocks?: WorkoutBlock[];
     is_premium: boolean;
 }

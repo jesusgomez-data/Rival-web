@@ -1,16 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown, Share2, Volume2, VolumeX } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Heart, Eye, Users, Trash2, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown, Share2, Trophy, Activity } from 'lucide-react'
 import { createStory, createPRStory, toggleStoryLike, recordStoryView, deleteStory } from './actions'
 import { clsx } from 'clsx'
 import PRCard from '../community/PRCard'
-import { Trophy, Activity } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useStories } from './StoryContext'
 import { motion, AnimatePresence } from 'framer-motion'
-import MusicPicker from '../MusicPicker'
-import { MusicTrack } from '../music-data'
-import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
 import { createClient } from '@/utils/supabase/client'
 import VideoEditor from '../VideoEditor'
 
@@ -67,8 +63,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const [prExercise, setPrExercise] = useState("")
     const [prWeight, setPrWeight] = useState("")
     const [prSport, setPrSport] = useState("Cross Training")
-    const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null)
-    const audioRef = useRef<HTMLAudioElement | null>(null)
     const router = useRouter()
 
     // Preview/Editor State
@@ -79,7 +73,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const [showTextInput, setShowTextInput] = useState(false)
     const [currentTextInput, setCurrentTextInput] = useState("")
     const [textColor, setTextColor] = useState("#FFFFFF")
-    const [isMusicPickerOpen, setIsMusicPickerOpen] = useState(false)
 
     // Image adjustment controls (Instagram-style)
     const [imageZoom, setImageZoom] = useState(1)
@@ -623,11 +616,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         setShowFullSummary(false)
         setIsPaused(false)
 
-        // Try to keep audio "hot" on user interaction
-        if (audioRef.current && (currentUserStories?.stories?.[activeStoryIndex + 1]?.music_url || userStories[selectedUserIndex + 1]?.stories?.[0]?.music_url)) {
-            audioRef.current.play().catch(() => { });
-        }
-
         if (activeStoryIndex < (currentUserStories?.stories?.length || 0) - 1) {
             const nextIdx = activeStoryIndex + 1
             setActiveStoryIndex(nextIdx)
@@ -643,7 +631,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
             }
         } else {
             setSelectedUserIndex(null)
-            if (audioRef.current) audioRef.current.pause()
         }
     }
 
@@ -677,57 +664,10 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const currentStory = currentUserStories?.stories?.[activeStoryIndex] || null
     const isOwner = currentUserStories?.user?.id === currentUser?.id
 
-    const [isAudioMuted, setIsAudioMuted] = useState(false);
-
-    useEffect(() => {
-        let isCancelled = false;
-
-        const playAudio = async () => {
-            if (!audioRef.current) return;
-
-            if (selectedUserIndex !== null && currentStory?.music_url && !showViewers && !previewUrl && !isPaused) {
-                try {
-                    // Update source if it actually changed
-                    if (audioRef.current.src !== currentStory.music_url) {
-                        audioRef.current.pause();
-                        audioRef.current.src = currentStory.music_url;
-                        audioRef.current.load();
-                    }
-
-                    audioRef.current.volume = 1.0;
-                    audioRef.current.muted = isAudioMuted;
-
-                    const playPromise = audioRef.current.play();
-                    if (playPromise !== undefined) {
-                        await playPromise;
-                        if (isCancelled) {
-                            audioRef.current.pause();
-                        }
-                    }
-                } catch (e) {
-                    console.log("Audio play blocked by browser or failed:", e);
-                }
-            } else {
-                audioRef.current.pause();
-            }
-        };
-
-        playAudio();
-
-        return () => {
-            isCancelled = true;
-            if (audioRef.current) {
-                audioRef.current.pause();
-                // Do NOT clear src here to allow smoother transition and avoid autoplay locks
-            }
-        };
-    }, [selectedUserIndex, activeStoryIndex, showViewers, currentStory?.music_url, previewUrl, isPaused, isAudioMuted])
-
     // Handle App Visibility (Background/Foreground)
     useEffect(() => {
         const handleVisibilityChange = () => {
             if (document.hidden) {
-                if (audioRef.current) audioRef.current.pause();
                 if (storyVideoRef.current) storyVideoRef.current.pause();
                 setIsPaused(true);
             }
@@ -1138,11 +1078,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 <div key={us.user.id} className="flex flex-col items-center gap-2 shrink-0">
                     <button
                         onClick={() => {
-                            // Prime the audio on first interaction
-                            if (audioRef.current) {
-                                audioRef.current.play().catch(() => { });
-                                audioRef.current.pause();
-                            }
                             setSelectedUserIndex(idx)
                             setActiveStoryIndex(0)
                             recordView(us.stories[0].id)
@@ -1173,94 +1108,47 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                         {us.user.username}
                     </span>
                 </div>
-            ))}
+            ))
+            }
 
-            {isVideoTrimming && trimmerVideoUrl && videoToEdit && (
-                <VideoEditor
-                    videoSrc={trimmerVideoUrl}
-                    videoFile={videoToEdit}
-                    onCancel={() => {
-                        setIsVideoTrimming(false);
-                        setTrimmerVideoUrl(null);
-                        setVideoToEdit(null);
-                        if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                    onSave={(file, dur) => {
-                        setupPreview(file);
-                        setIsVideoTrimming(false);
-                        setTrimmerVideoUrl(null);
-                        setVideoToEdit(null);
-                    }}
-                />
-            )}
+            {
+                isVideoTrimming && trimmerVideoUrl && videoToEdit && (
+                    <VideoEditor
+                        videoSrc={trimmerVideoUrl}
+                        videoFile={videoToEdit}
+                        onCancel={() => {
+                            setIsVideoTrimming(false);
+                            setTrimmerVideoUrl(null);
+                            setVideoToEdit(null);
+                            if (fileInputRef.current) fileInputRef.current.value = "";
+                        }}
+                        onSave={(file, dur) => {
+                            setupPreview(file);
+                            setIsVideoTrimming(false);
+                            setTrimmerVideoUrl(null);
+                            setVideoToEdit(null);
+                        }}
+                    />
+                )
+            }
 
             {/* Editor Modal */}
-            {previewUrl && (
-                <div className="fixed inset-0 z-[250] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm">
-                    <div
-                        className="relative w-full max-w-[400px] h-[90vh] bg-black rounded-[32px] overflow-hidden shadow-2xl border border-white/10 flex flex-col"
-                        onMouseMove={handleDragMove}
-                        onMouseUp={handleDragEnd}
-                        onTouchMove={handleDragMove}
-                        onTouchEnd={handleDragEnd}
-                    >
-                        {/* Top Toolbar */}
-                        <div className="absolute top-0 left-0 right-0 p-6 z-50 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
-                            <button onClick={closePreview} className="p-2 bg-black/40 rounded-full hover:bg-white/10 transition-colors border border-white/5">
-                                <X className="w-5 h-5 text-white" />
-                            </button>
-                            <div className="flex items-center gap-3">
-                                <div className="relative">
-                                    <button
-                                        onClick={() => setIsMusicPickerOpen(!isMusicPickerOpen)}
-                                        className={clsx("p-2 rounded-full transition-all border border-white/5", selectedTrack ? "bg-brand-red text-white" : "bg-black/40 text-white hover:bg-white/10")}
-                                    >
-                                        <Music className="w-5 h-5" />
-                                    </button>
-                                    {isMusicPickerOpen && (
-                                        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
-                                            {/* Backdrop */}
-                                            <div
-                                                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                                                onClick={() => setIsMusicPickerOpen(false)}
-                                            />
+            {
+                previewUrl && (
+                    <div className="fixed inset-0 z-[250] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm">
+                        <div
+                            className="relative w-full max-w-[400px] h-[90vh] bg-black rounded-[32px] overflow-hidden shadow-2xl border border-white/10 flex flex-col"
+                            onMouseMove={handleDragMove}
+                            onMouseUp={handleDragEnd}
+                            onTouchMove={handleDragMove}
+                            onTouchEnd={handleDragEnd}
+                        >
+                            {/* Top Toolbar */}
+                            <div className="absolute top-0 left-0 right-0 p-6 z-50 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
+                                <button onClick={closePreview} className="p-2 bg-black/40 rounded-full hover:bg-white/10 transition-colors border border-white/5">
+                                    <X className="w-5 h-5 text-white" />
+                                </button>
 
-                                            {/* Centered Picker Container */}
-                                            <div className="relative z-10 w-full max-w-md animate-in zoom-in-95 duration-200">
-                                                <MusicPicker
-                                                    variant="embedded"
-                                                    onClose={() => setIsMusicPickerOpen(false)}
-                                                    onSelect={async (track) => {
-                                                        console.log("Track selected in StoryBar:", track?.title);
-                                                        setSelectedTrack(track);
-                                                        setIsMusicPickerOpen(false);
-                                                        if (track && audioRef.current) {
-                                                            try {
-                                                                console.log("Setting StoryBar audio src to:", track.url);
-                                                                audioRef.current.pause();
-                                                                audioRef.current.src = track.url;
-                                                                audioRef.current.volume = 1.0;
-                                                                audioRef.current.muted = false;
-                                                                audioRef.current.load();
-                                                                const playPromise = audioRef.current.play();
-                                                                if (playPromise !== undefined) {
-                                                                    await playPromise;
-                                                                    console.log("StoryBar audio playing successfully");
-                                                                }
-                                                            } catch (error) {
-                                                                console.error("StoryBar playback error:", error);
-                                                            }
-                                                        } else if (!track && audioRef.current) {
-                                                            console.log("No track selected, pausing StoryBar audio");
-                                                            audioRef.current.pause();
-                                                        }
-                                                    }}
-                                                    selectedTrackId={selectedTrack?.id || null}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
                                 <button
                                     onClick={() => setShowImageAdjust(!showImageAdjust)}
                                     className={clsx("p-2 rounded-full transition-all border border-white/5", showImageAdjust ? "bg-brand-red text-white" : "bg-black/40 text-white hover:bg-white/10")}
@@ -1275,262 +1163,213 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     <Smile className="w-5 h-5 text-white" />
                                 </button>
                             </div>
-                        </div>
 
-                        {/* Canvas Area */}
-                        <div className="relative flex-1 w-full h-full bg-gray-900 overflow-hidden flex items-center justify-center">
-                            {(() => {
-                                const ext = previewFile?.name.split('.').pop()?.toLowerCase() || '';
-                                const videoExts = ['mp4', 'mov', 'webm', 'ogg', 'm4v'];
-                                const isVideo = previewFile?.type.startsWith('video/') || videoExts.includes(ext);
+                            {/* Canvas Area */}
+                            <div className="relative flex-1 w-full h-full bg-gray-900 overflow-hidden flex items-center justify-center">
+                                {(() => {
+                                    const ext = previewFile?.name.split('.').pop()?.toLowerCase() || '';
+                                    const videoExts = ['mp4', 'mov', 'webm', 'ogg', 'm4v'];
+                                    const isVideo = previewFile?.type.startsWith('video/') || videoExts.includes(ext);
 
-                                return isVideo ? (
-                                    <video
-                                        src={previewUrl}
-                                        autoPlay
-                                        loop
-                                        playsInline
-                                        className="w-full h-full object-contain"
-                                        style={{
-                                            transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
-                                            transformOrigin: 'center center'
-                                        }}
-                                    />
-                                ) : (
-                                    <img
-                                        src={previewUrl}
-                                        alt="Preview"
-                                        className="w-full h-full object-contain"
-                                        style={{
-                                            transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
-                                            transformOrigin: 'center center'
-                                        }}
-                                    />
-                                );
-                            })()}
-
-                            {/* Overlays Rendering */}
-                            <div className="absolute inset-0 z-20 pointer-events-none">
-                                {renderOverlays(overlays)}
-                            </div>
-
-                            {/* Text Input Modal Overlay */}
-                            {showTextInput && (
-                                <div className="absolute inset-0 bg-black/80 z-[350] flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
-                                    <input
-                                        type="text"
-                                        autoFocus
-                                        placeholder="Escribe algo..."
-                                        value={currentTextInput}
-                                        onChange={(e) => setCurrentTextInput(e.target.value)}
-                                        className="bg-transparent text-center text-3xl font-black text-white placeholder-white/50 border-none outline-none w-full mb-8 uppercase tracking-wider"
-                                    />
-                                    <div className="flex gap-4 mb-8">
-                                        {['#FFFFFF', '#DC2626', '#FACC15', '#22C55E', '#3B82F6', '#A855F7'].map(color => (
-                                            <button
-                                                key={color}
-                                                onClick={() => setTextColor(color)}
-                                                className={clsx("w-8 h-8 rounded-full border-2", textColor === color ? "border-white scale-110" : "border-transparent")}
-                                                style={{ backgroundColor: color }}
-                                            />
-                                        ))}
-                                    </div>
-                                    <div className="flex gap-4">
-                                        <button onClick={() => setShowTextInput(false)} className="px-6 py-2 rounded-full border border-white/20 text-white font-bold uppercase tracking-widest text-xs hover:bg-white/10">Cancelar</button>
-                                        <button onClick={addTextOverlay} className="px-6 py-2 rounded-full bg-white text-black font-black uppercase tracking-widest text-xs hover:scale-105 transition-transform">Listo</button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Image Adjustment Controls */}
-                            {showImageAdjust && (
-                                <div className="absolute bottom-24 left-0 right-0 flex justify-center z-[350] pointer-events-auto px-4">
-                                    <div className="bg-black/90 backdrop-blur-xl px-6 py-4 rounded-3xl border border-white/10 w-full max-w-sm shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200">
-                                        <div className="space-y-4">
-                                            <div className="flex flex-col gap-2">
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Zoom</span>
-                                                    <span className="text-sm font-black text-white">{imageZoom.toFixed(1)}x</span>
-                                                </div>
-                                                <input
-                                                    type="range"
-                                                    min="0.1"
-                                                    max="5"
-                                                    step="0.01"
-                                                    value={imageZoom}
-                                                    onChange={(e) => setImageZoom(parseFloat(e.target.value))}
-                                                    className="w-full accent-brand-red cursor-pointer h-2 bg-white/10 rounded-full appearance-none"
-                                                />
-                                            </div>
-                                            <div className="flex flex-col gap-2">
-                                                <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Posición Horizontal</span>
-                                                <input
-                                                    type="range"
-                                                    min="0"
-                                                    max="100"
-                                                    step="1"
-                                                    value={imagePositionX}
-                                                    onChange={(e) => setImagePositionX(parseFloat(e.target.value))}
-                                                    className="w-full accent-brand-red cursor-pointer h-2 bg-white/10 rounded-full appearance-none"
-                                                />
-                                            </div>
-                                            <div className="flex flex-col gap-2">
-                                                <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Posición Vertical</span>
-                                                <input
-                                                    type="range"
-                                                    min="0"
-                                                    max="100"
-                                                    step="1"
-                                                    value={imagePositionY}
-                                                    onChange={(e) => setImagePositionY(parseFloat(e.target.value))}
-                                                    className="w-full accent-brand-red cursor-pointer h-2 bg-white/10 rounded-full appearance-none"
-                                                />
-                                            </div>
-                                            <div className="flex gap-3 pt-2">
-                                                <button
-                                                    onClick={() => {
-                                                        setImageZoom(1);
-                                                        setImagePositionX(50);
-                                                        setImagePositionY(50);
-                                                    }}
-                                                    className="flex-1 px-4 py-2 rounded-xl border border-white/20 text-white font-bold uppercase tracking-widest text-xs hover:bg-white/10 transition-colors"
-                                                >
-                                                    Resetear
-                                                </button>
-                                                <button
-                                                    onClick={() => setShowImageAdjust(false)}
-                                                    className="flex-1 px-4 py-2 rounded-xl bg-brand-red text-white font-black uppercase tracking-widest text-xs hover:scale-105 transition-transform"
-                                                >
-                                                    Listo
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Overlay Controls (Resize & Delete) */}
-                            {selectedOverlayId && (
-                                <div className="absolute top-28 left-0 right-0 flex justify-center z-50 pointer-events-auto">
-                                    <div className="bg-black/80 backdrop-blur-xl px-4 py-3 rounded-2xl border border-white/10 flex items-center gap-4 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
-                                        <div className="flex flex-col gap-1">
-                                            <span className="text-[9px] uppercase font-black text-gray-500 tracking-widest pl-1">Tamaño</span>
-                                            <input
-                                                type="range"
-                                                min="0.5"
-                                                max="2.0"
-                                                step="0.1"
-                                                value={overlays.find(o => o.id === selectedOverlayId)?.scale || 1}
-                                                onChange={(e) => {
-                                                    const newScale = parseFloat(e.target.value);
-                                                    setOverlays(prev => prev.map(o => o.id === selectedOverlayId ? { ...o, scale: newScale } : o));
-                                                }}
-                                                className="w-32 accent-brand-red cursor-pointer h-1.5 bg-white/10 rounded-full appearance-none"
-                                            />
-                                        </div>
-                                        <div className="w-px h-8 bg-white/10" />
-                                        <button
-                                            onClick={() => {
-                                                setOverlays(prev => prev.filter(o => o.id !== selectedOverlayId));
-                                                setSelectedOverlayId(null);
+                                    return isVideo ? (
+                                        <video
+                                            src={previewUrl}
+                                            autoPlay
+                                            loop
+                                            playsInline
+                                            className="w-full h-full object-contain"
+                                            style={{
+                                                transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
+                                                transformOrigin: 'center center'
                                             }}
-                                            className="p-2 bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-500 rounded-xl transition-colors group"
-                                        >
-                                            <Trash2 className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Emoji Picker Modal Overlay */}
-
-                            {/* Emoji Picker Overlay */}
-                            {showEmojiPicker && (
-                                <div className="absolute top-20 right-4 z-[350]">
-                                    <div className="relative">
-                                        <button onClick={() => setShowEmojiPicker(false)} className="absolute -top-2 -right-2 bg-black/50 text-white rounded-full p-1 z-10"><X className="w-4 h-4" /></button>
-                                        <EmojiPicker
-                                            onEmojiClick={addEmojiOverlay}
-                                            theme={Theme.DARK}
-                                            lazyLoadEmojis={true}
-                                            width={300}
-                                            height={400}
                                         />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                                    ) : (
+                                        <img
+                                            src={previewUrl}
+                                            alt="Preview"
+                                            className="w-full h-full object-contain"
+                                            style={{
+                                                transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
+                                                transformOrigin: 'center center'
+                                            }}
+                                        />
+                                    );
+                                })()}
 
-                        {/* Bottom Toolbar */}
-                        <div className="absolute bottom-0 left-0 right-0 p-6 flex items-center justify-between bg-gradient-to-t from-black/90 via-black/40 to-transparent z-50">
-                            <div className="flex items-center gap-2 max-w-[50%]">
-                                {selectedTrack && (
-                                    <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 truncate pointer-events-auto">
-                                        <Music className="w-3 h-3 text-brand-red animate-pulse flex-shrink-0" />
-                                        <div className="flex flex-col min-w-0">
-                                            <span className="text-[10px] font-bold text-white leading-none truncate">{selectedTrack.title}</span>
-                                            <span className="text-[8px] text-gray-400 uppercase font-black truncate">{selectedTrack.artist}</span>
+                                {/* Overlays Rendering */}
+                                <div className="absolute inset-0 z-20 pointer-events-none">
+                                    {renderOverlays(overlays)}
+                                </div>
+
+                                {/* Text Input Modal Overlay */}
+                                {showTextInput && (
+                                    <div className="absolute inset-0 bg-black/80 z-[350] flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
+                                        <input
+                                            type="text"
+                                            autoFocus
+                                            placeholder="Escribe algo..."
+                                            value={currentTextInput}
+                                            onChange={(e) => setCurrentTextInput(e.target.value)}
+                                            className="bg-transparent text-center text-3xl font-black text-white placeholder-white/50 border-none outline-none w-full mb-8 uppercase tracking-wider"
+                                        />
+                                        <div className="flex gap-4 mb-8">
+                                            {['#FFFFFF', '#DC2626', '#FACC15', '#22C55E', '#3B82F6', '#A855F7'].map(color => (
+                                                <button
+                                                    key={color}
+                                                    onClick={() => setTextColor(color)}
+                                                    className={clsx("w-8 h-8 rounded-full border-2", textColor === color ? "border-white scale-110" : "border-transparent")}
+                                                    style={{ backgroundColor: color }}
+                                                />
+                                            ))}
                                         </div>
-                                        <div className="flex items-center gap-1 border-l border-white/10 pl-2 ml-2">
+                                        <div className="flex gap-4">
+                                            <button onClick={() => setShowTextInput(false)} className="px-6 py-2 rounded-full border border-white/20 text-white font-bold uppercase tracking-widest text-xs hover:bg-white/10">Cancelar</button>
+                                            <button onClick={addTextOverlay} className="px-6 py-2 rounded-full bg-white text-black font-black uppercase tracking-widest text-xs hover:scale-105 transition-transform">Listo</button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Image Adjustment Controls */}
+                                {showImageAdjust && (
+                                    <div className="absolute bottom-24 left-0 right-0 flex justify-center z-[350] pointer-events-auto px-4">
+                                        <div className="bg-black/90 backdrop-blur-xl px-6 py-4 rounded-3xl border border-white/10 w-full max-w-sm shadow-2xl animate-in fade-in slide-in-from-bottom-4 duration-200">
+                                            <div className="space-y-4">
+                                                <div className="flex flex-col gap-2">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Zoom</span>
+                                                        <span className="text-sm font-black text-white">{imageZoom.toFixed(1)}x</span>
+                                                    </div>
+                                                    <input
+                                                        type="range"
+                                                        min="0.1"
+                                                        max="5"
+                                                        step="0.01"
+                                                        value={imageZoom}
+                                                        onChange={(e) => setImageZoom(parseFloat(e.target.value))}
+                                                        className="w-full accent-brand-red cursor-pointer h-2 bg-white/10 rounded-full appearance-none"
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Posición Horizontal</span>
+                                                    <input
+                                                        type="range"
+                                                        min="0"
+                                                        max="100"
+                                                        step="1"
+                                                        value={imagePositionX}
+                                                        onChange={(e) => setImagePositionX(parseFloat(e.target.value))}
+                                                        className="w-full accent-brand-red cursor-pointer h-2 bg-white/10 rounded-full appearance-none"
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <span className="text-[10px] uppercase font-black text-gray-400 tracking-widest">Posición Vertical</span>
+                                                    <input
+                                                        type="range"
+                                                        min="0"
+                                                        max="100"
+                                                        step="1"
+                                                        value={imagePositionY}
+                                                        onChange={(e) => setImagePositionY(parseFloat(e.target.value))}
+                                                        className="w-full accent-brand-red cursor-pointer h-2 bg-white/10 rounded-full appearance-none"
+                                                    />
+                                                </div>
+                                                <div className="flex gap-3 pt-2">
+                                                    <button
+                                                        onClick={() => {
+                                                            setImageZoom(1);
+                                                            setImagePositionX(50);
+                                                            setImagePositionY(50);
+                                                        }}
+                                                        className="flex-1 px-4 py-2 rounded-xl border border-white/20 text-white font-bold uppercase tracking-widest text-xs hover:bg-white/10 transition-colors"
+                                                    >
+                                                        Resetear
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setShowImageAdjust(false)}
+                                                        className="flex-1 px-4 py-2 rounded-xl bg-brand-red text-white font-black uppercase tracking-widest text-xs hover:scale-105 transition-transform"
+                                                    >
+                                                        Listo
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Overlay Controls (Resize & Delete) */}
+                                {selectedOverlayId && (
+                                    <div className="absolute top-28 left-0 right-0 flex justify-center z-50 pointer-events-auto">
+                                        <div className="bg-black/80 backdrop-blur-xl px-4 py-3 rounded-2xl border border-white/10 flex items-center gap-4 shadow-xl animate-in fade-in slide-in-from-top-2 duration-200">
+                                            <div className="flex flex-col gap-1">
+                                                <span className="text-[9px] uppercase font-black text-gray-500 tracking-widest pl-1">Tamaño</span>
+                                                <input
+                                                    type="range"
+                                                    min="0.5"
+                                                    max="2.0"
+                                                    step="0.1"
+                                                    value={overlays.find(o => o.id === selectedOverlayId)?.scale || 1}
+                                                    onChange={(e) => {
+                                                        const newScale = parseFloat(e.target.value);
+                                                        setOverlays(prev => prev.map(o => o.id === selectedOverlayId ? { ...o, scale: newScale } : o));
+                                                    }}
+                                                    className="w-32 accent-brand-red cursor-pointer h-1.5 bg-white/10 rounded-full appearance-none"
+                                                />
+                                            </div>
+                                            <div className="w-px h-8 bg-white/10" />
                                             <button
-                                                onClick={async (e) => {
-                                                    e.stopPropagation();
-                                                    if (audioRef.current && selectedTrack) {
-                                                        const audio = audioRef.current;
-                                                        if (audio.paused) {
-                                                            try {
-                                                                if (!audio.src || audio.src === window.location.href || audio.src !== selectedTrack.url) {
-                                                                    audio.src = selectedTrack.url;
-                                                                    audio.load();
-                                                                }
-                                                                audio.volume = 1.0;
-                                                                audio.muted = false;
-                                                                await audio.play();
-                                                            } catch (err) {
-                                                                console.error("Manual play failed:", err);
-                                                            }
-                                                        } else {
-                                                            audio.pause();
-                                                        }
-                                                    }
+                                                onClick={() => {
+                                                    setOverlays(prev => prev.filter(o => o.id !== selectedOverlayId));
+                                                    setSelectedOverlayId(null);
                                                 }}
-                                                className="text-white hover:scale-110 transition-transform flex-shrink-0"
+                                                className="p-2 bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-500 rounded-xl transition-colors group"
                                             >
-                                                <Play className="w-3 h-3 fill-current" />
+                                                <Trash2 className="w-4 h-4" />
                                             </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    setSelectedTrack(null);
-                                                    if (audioRef.current) audioRef.current.pause();
-                                                }}
-                                                className="text-gray-400 hover:text-white flex-shrink-0"
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Emoji Picker Modal Overlay */}
+
+                                {/* Emoji Picker Overlay */}
+                                {showEmojiPicker && (
+                                    <div className="absolute top-20 right-4 z-[350]">
+                                        <div className="relative">
+                                            <button onClick={() => setShowEmojiPicker(false)} className="absolute -top-2 -right-2 bg-black/50 text-white rounded-full p-1 z-10"><X className="w-4 h-4" /></button>
+                                            <EmojiPicker
+                                                onEmojiClick={addEmojiOverlay}
+                                                theme={Theme.DARK}
+                                                lazyLoadEmojis={true}
+                                                width={300}
+                                                height={400}
+                                            />
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            <button
-                                onClick={handlePostStory}
-                                disabled={isUploading}
-                                className="bg-brand-red text-white pl-6 pr-4 py-3 rounded-full font-black uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(220,38,38,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-2 flex-shrink-0"
-                            >
-                                {isUploading ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <>
-                                        Compartir <ChevronRight className="w-5 h-5" />
-                                    </>
-                                )}
-                            </button>
+                            {/* Bottom Toolbar */}
+                            <div className="absolute bottom-0 left-0 right-0 p-6 flex items-center justify-between bg-gradient-to-t from-black/90 via-black/40 to-transparent z-50">
+                                <div className="flex items-center gap-2 max-w-[50%]">
+                                </div>
+
+                                <button
+                                    onClick={handlePostStory}
+                                    disabled={isUploading}
+                                    className="bg-brand-red text-white pl-6 pr-4 py-3 rounded-full font-black uppercase tracking-widest text-sm shadow-[0_0_20px_rgba(220,38,38,0.4)] hover:scale-105 active:scale-95 transition-all flex items-center gap-2 flex-shrink-0"
+                                >
+                                    {isUploading ? (
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                    ) : (
+                                        <>
+                                            Compartir <ChevronRight className="w-5 h-5" />
+                                        </>
+                                    )}
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )
-            }
+                )}
 
             {/* Story Viewer (Updated to show overlays) */}
             {
@@ -1579,23 +1418,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                 <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
                                                     {currentStory ? new Date(currentStory.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                                                 </p>
-                                                {currentStory?.music_url && (
-                                                    <button
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            if (audioRef.current) {
-                                                                audioRef.current.play().catch(() => { });
-                                                                setIsAudioMuted(false);
-                                                            }
-                                                        }}
-                                                        className="flex items-center gap-1.5 mt-1 bg-black/40 hover:bg-brand-red/20 px-2 py-0.5 rounded-full border border-white/10 w-fit transition-colors group"
-                                                    >
-                                                        <Music className={clsx("w-2.5 h-2.5 text-brand-red", !isAudioMuted && "animate-bounce")} />
-                                                        <span className="text-[8px] font-black text-white uppercase tracking-[0.1em] marquee-container whitespace-nowrap overflow-hidden max-w-[80px]">
-                                                            {currentStory.music_title} • {currentStory.music_artist}
-                                                        </span>
-                                                    </button>
-                                                )}
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
@@ -1608,19 +1430,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                     <Trash2 className="w-5 h-5 group-hover/delete:scale-110 transition-transform" />
                                                 </button>
                                             )}
-                                            {currentStory?.music_url && (
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setIsAudioMuted(!isAudioMuted); }}
-                                                    className="p-2 bg-black/40 hover:bg-white/10 text-white rounded-full backdrop-blur-md transition-all border border-white/5"
-                                                    title={isAudioMuted ? "Activar sonido" : "Silenciar"}
-                                                >
-                                                    {isAudioMuted ? (
-                                                        <VolumeX className="w-5 h-5 text-brand-red" />
-                                                    ) : (
-                                                        <Volume2 className="w-5 h-5" />
-                                                    )}
-                                                </button>
-                                            )}
+
                                             <button onClick={() => setSelectedUserIndex(null)} className="p-2 bg-black/40 hover:text-brand-red text-white rounded-full backdrop-blur-md transition-colors border border-white/5 shadow-lg">
                                                 <X className="w-8 h-8" />
                                             </button>
@@ -2341,33 +2151,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     />
                                 </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-1">Música</label>
-                                    <div className="flex bg-black/40 border border-white/10 rounded-2xl p-2 items-center justify-between">
-                                        <div className="relative">
-                                            <MusicPicker
-                                                onSelect={setSelectedTrack}
-                                                selectedTrackId={selectedTrack?.id || null}
-                                                variant="button"
-                                            />
-                                        </div>
-                                        <div className="flex-1 px-4 text-left">
-                                            {selectedTrack ? (
-                                                <div>
-                                                    <p className="text-xs font-bold text-white leading-none">{selectedTrack.title}</p>
-                                                    <p className="text-[9px] text-gray-500 uppercase font-black">{selectedTrack.artist}</p>
-                                                </div>
-                                            ) : (
-                                                <p className="text-xs text-gray-500 italic">Elegir música (opcional)</p>
-                                            )}
-                                        </div>
-                                        {selectedTrack && (
-                                            <button type="button" onClick={() => setSelectedTrack(null)} className="p-2 text-gray-500 hover:text-white">
-                                                <X className="w-4 h-4" />
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
+
 
                                 <div className="pt-4 flex gap-4">
                                     <button
@@ -2398,22 +2182,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                     </div>
                 )
             }
-
-            <audio
-                ref={audioRef}
-                loop
-                playsInline
-                preload="auto"
-                crossOrigin="anonymous"
-                onError={(e) => console.error("StoryBar Audio Error:", e)}
-                onPlay={(e) => {
-                    console.log("StoryBar Audio onPlay triggered");
-                    const audio = e.currentTarget;
-                    audio.volume = 1.0;
-                    audio.muted = false;
-                }}
-                style={{ width: '1px', height: '1px', opacity: 0.01, position: 'absolute', pointerEvents: 'none' }}
-            />
-        </div >
+        </div>
     )
 }

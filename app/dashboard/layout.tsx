@@ -123,25 +123,33 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         table: 'messages'
                     },
                     (payload) => {
-                        if (payload.new.sender_id !== user.id) {
-                            // Play Rival custom sound
-                            import("@/app/utils/audio").then(m => m.playNotificationSound());
+                        const newMessage = payload.new;
+                        if (newMessage.sender_id !== user.id) {
+                            // VERIFICACIÓN CRÍTICA: ¿Esta conversación me pertenece?
+                            supabase
+                                .from('conversation_participants')
+                                .select('id')
+                                .eq('conversation_id', newMessage.conversation_id)
+                                .eq('user_id', user.id)
+                                .maybeSingle()
+                                .then(({ data: isMyConversation }) => {
+                                    if (isMyConversation) {
+                                        // Solo si es una conversación en la que participo, juego sonido y refresco
+                                        import("@/app/utils/audio").then(m => m.playNotificationSound());
 
-                            // Check current path dynamically to avoid dependency on pathname state
-                            if (!window.location.pathname.startsWith('/dashboard/messages')) {
-                                // Re-calculate or increment
-                                getUnreadMessageCount().then(count => {
-                                    if (isMounted) setUnreadMessages(count);
+                                        getUnreadMessageCount().then(count => {
+                                            if (isMounted) setUnreadMessages(count);
+                                        });
+
+                                        if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
+                                            new Notification("Rival: Nuevo Mensaje", {
+                                                body: newMessage.text || "📷 Imagen",
+                                                icon: "/logo.svg",
+                                                tag: newMessage.conversation_id
+                                            });
+                                        }
+                                    }
                                 });
-
-                                if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
-                                    new Notification("Rival: Nuevo Mensaje", {
-                                        body: payload.new.text,
-                                        icon: "/logo.svg",
-                                        tag: payload.new.conversation_id
-                                    });
-                                }
-                            }
                         }
                     }
                 )

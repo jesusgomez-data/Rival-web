@@ -458,33 +458,37 @@ function SessionContent() {
 
                     if (plan.duration_min) setTargetDuration(plan.duration_min);
 
-                    if (plan.sport === 'gym' && plan.exercises) {
-                        const mapped = plan.exercises.map((ex: WorkoutExercise) => {
-                            const found = catalogMap.get(ex.name.toLowerCase());
-                            return {
-                                ...ex,
-                                video_url: ex.video_url || found?.video_url,
-                                sets: ex.sets.map((s: WorkoutSet, i: number) => ({
-                                    ...s,
-                                    order: i + 1,
-                                    weight: s.weight || 0,
-                                    reps: s.reps || 0,
-                                    completed: false,
-                                    unit: s.unit || 'kg',
-                                    measure: s.measure || 'reps'
-                                }))
-                            };
-                        });
-                        setExercises(mapped);
-                        setBlocks([{ id: 'main', title: plan.title, exercises: mapped, type: 'other' }]);
+                    if (plan.blocks && plan.blocks.length > 0) {
+                        // Support multi-block plans
+                        const enrichedBlocks = plan.blocks.map((block: WorkoutBlock, bIdx: number) => ({
+                            ...block,
+                            id: block.id || `plan-block-${bIdx}`,
+                            exercises: block.exercises.map((ex: WorkoutExercise, eIdx: number) => {
+                                const found = catalogMap.get(ex.name.toLowerCase());
+                                return {
+                                    ...ex,
+                                    video_url: ex.video_url || found?.video_url,
+                                    id: ex.id || `plan-ex-${bIdx}-${eIdx}`,
+                                    sets: ex.sets?.map((s: WorkoutSet, i: number) => ({
+                                        ...s,
+                                        order: i + 1,
+                                        weight: s.weight || 0,
+                                        reps: s.reps || 0,
+                                        completed: false,
+                                        unit: s.unit || 'kg',
+                                        measure: s.measure || 'reps'
+                                    })) || [{ order: 1, weight: 0, reps: 0, completed: false, unit: 'kg', measure: 'reps' }]
+                                };
+                            })
+                        }));
+                        setBlocks(enrichedBlocks);
                     } else if (plan.exercises) {
-                        // For other modes that might have exercises (Cross Training blocks)
                         const mapped = plan.exercises.map((ex: WorkoutExercise, idx: number) => {
                             const found = catalogMap.get(ex.name.toLowerCase());
                             return {
                                 ...ex,
                                 video_url: ex.video_url || found?.video_url,
-                                id: ex.id || `plan-${idx}`,
+                                id: ex.id || `plan-ex-${idx}`,
                                 sets: ex.sets?.map((s: WorkoutSet, i: number) => ({
                                     ...s,
                                     order: i + 1,
@@ -498,7 +502,7 @@ function SessionContent() {
                         });
                         setExercises(mapped);
 
-                        // Create a block for Cross Training / OCR
+                        // Fallback to single block for Cross Training / OCR
                         const titleUpper = plan.title.toUpperCase();
                         let format: any = 'fortime';
                         if (titleUpper.includes('AMRAP')) format = 'amrap';
@@ -1037,7 +1041,7 @@ function SessionContent() {
                                         }}
                                         className="flex-[2] py-5 rounded-2xl bg-white text-black text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-white/10 flex items-center justify-center gap-2"
                                     >
-                                        Ponerle Empezar <ChevronRight className="w-5 h-5" />
+                                        EMPEZAR ENTRENAMIENTO <ChevronRight className="w-5 h-5" />
                                     </button>
                                 </div>
                             </div>
@@ -1066,8 +1070,11 @@ function SessionContent() {
                             'bg-brand-red/10 border-brand-red/20';
 
     const isAiCoach = searchParams.get('mode') === 'ai-coach';
+    const isRecommendation = searchParams.get('mode') === 'recommendation';
+    const isProfessionalGuided = (isGuided || isAiCoach || isRecommendation || !!wodId) &&
+        (sportMode === 'cross_training' || sportMode === 'hybrid' || sportMode === 'ocr');
 
-    if (isAiCoach && sportMode) {
+    if (isProfessionalGuided && sportMode) {
         const displayTime = timerMode === 'down' && targetDuration
             ? Math.max(0, (targetDuration * 60) - elapsedSeconds)
             : elapsedSeconds;
@@ -1740,36 +1747,160 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
     },
     cross_training: {
         endurance: [
-            { id: 'c-e-1', title: 'Engine Builder (AMRAP 20)', sport: 'cross_training', difficulty: 'intermediate', duration_min: 20, is_premium: false, description: 'AMRAP 20: 400m Run, 20 KB Swings, 15 Box Jumps.', exercises: [{ name: 'Run 400m', sets: [{ reps: 1 }] }, { name: 'KB Swings', sets: [{ reps: 20 }] }, { name: 'Box Jumps', sets: [{ reps: 15 }] }] },
-            { id: 'c-e-2', title: 'Row & Burpee Long (For Time)', sport: 'cross_training', difficulty: 'elite', duration_min: 30, is_premium: true, description: 'For Time: 2000m Row + 50 Burpees over Row.', exercises: [{ name: 'Row', sets: [{ reps: 1, weight: 2000 }] }, { name: 'Burpees over Row', sets: [{ reps: 50 }] }] },
-            { id: 'c-e-3', title: 'Turbo EMOM (40 min)', sport: 'cross_training', difficulty: 'elite', duration_min: 40, is_premium: true, description: 'EMOM 40: Min 1: 15 Cal Row, Min 2: 15 Cal Ski, Min 3: 15 Cal Bike, Min 4: Rest.', exercises: [{ name: 'Row Cal', sets: [{ reps: 15 }] }, { name: 'Ski Cal', sets: [{ reps: 15 }] }, { name: 'Bike Cal', sets: [{ reps: 15 }] }] }
+            {
+                id: 'c-e-1',
+                title: 'Engine Builder (Conditioning)',
+                sport: 'cross_training',
+                difficulty: 'intermediate',
+                duration_min: 35,
+                is_premium: false,
+                description: 'Focused on aerobic capacity and sustain endurance.',
+                exercises: [],
+                blocks: [
+                    { title: "WARM UP: 1000m ROW", type: "other", exercises: [{ name: "Row", target: "1000m Easy", sets: [] }] },
+                    {
+                        title: "BLOCK A: AMRAP 20",
+                        type: "amrap",
+                        duration: 20,
+                        exercises: [
+                            { name: "Run 400m", target: "Z3 Pace", sets: [] },
+                            { name: "KB Swings", target: "20 reps (24/16kg)", sets: [] },
+                            { name: "Box Jumps", target: "15 reps (24/20\")", sets: [] }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'c-e-2',
+                title: 'Row & Burpee Long',
+                sport: 'cross_training',
+                difficulty: 'elite',
+                duration_min: 30,
+                is_premium: true,
+                description: 'High intensity metabolic conditioning.',
+                exercises: [],
+                blocks: [
+                    {
+                        title: "FOR TIME SEQUENCE",
+                        type: "fortime",
+                        exercises: [
+                            { name: "Row", target: "2000m", sets: [] },
+                            { name: "Burpees over Row", target: "50 reps", sets: [] }
+                        ]
+                    },
+                    {
+                        title: "SCALING",
+                        type: "scaling",
+                        exercises: [{ name: "SB: 2000m\nGO: 1500m\nMO: 1000m", target: "N/A", sets: [] }]
+                    }
+                ]
+            }
         ],
         gymnastics: [
-            { id: 'c-g-1', title: 'Cindy (AMRAP 20)', sport: 'cross_training', difficulty: 'intermediate', duration_min: 20, is_premium: false, description: 'Clásico: 5 Pull-ups, 10 Push-ups, 15 Air Squats.', exercises: [{ name: 'Pull-ups', sets: [{ reps: 5 }] }, { name: 'Push-ups', sets: [{ reps: 10 }] }, { name: 'Air Squats', sets: [{ reps: 15 }] }] },
-            { id: 'c-g-2', title: 'Strict Skill EMOM', sport: 'cross_training', difficulty: 'elite', duration_min: 15, is_premium: false, description: 'EMOM 12: Min 1: 5 HSPU, Min 2: 8 C2B, Min 3: 10 Pistol Squats.', exercises: [{ name: 'HSPU', sets: [{ reps: 5 }] }, { name: 'C2B Pull-ups', sets: [{ reps: 8 }] }, { name: 'Pistol Squats', sets: [{ reps: 10 }] }] },
-            { id: 'c-g-3', title: 'Muscle Up Flow', sport: 'cross_training', difficulty: 'elite', duration_min: 20, is_premium: true, description: '3 Rounds: 10 Muscle Ups + 30 Double Unders + 20 Hollow Rocks.', exercises: [{ name: 'Muscle Ups', sets: [{ reps: 10 }] }, { name: 'Double Unders', sets: [{ reps: 30 }] }, { name: 'Hollow Rocks', sets: [{ reps: 20 }] }] }
-        ],
-        halterofilia: [
-            { id: 'c-h-1', title: 'Grace (For Time)', sport: 'cross_training', difficulty: 'intermediate', duration_min: 10, is_premium: false, description: 'CrossFit Hero: 30 Clean & Jerks (60/40kg) por tiempo.', exercises: [{ name: 'Clean & Jerk', sets: [{ reps: 30, weight: 60 }] }] },
-            { id: 'c-h-2', title: 'Snatch Technique & Strength', sport: 'cross_training', difficulty: 'elite', duration_min: 30, is_premium: false, description: '5 sets of: 2 Power Snatch + 1 Squat Snatch + 2 Overhead Squat.', exercises: [{ name: 'Snatch Complex', sets: [{ reps: 5 }] }] },
-            { id: 'c-h-3', title: 'Hero WOD: DT', sport: 'cross_training', difficulty: 'elite', duration_min: 20, is_premium: true, description: '5 Rounds: 12 Deadlifts, 9 Hang Power Cleans, 6 Push Jerks (70/45kg).', exercises: [{ name: 'Deadlift', sets: [{ reps: 12, weight: 70 }] }, { name: 'Hang Power Clean', sets: [{ reps: 9, weight: 70 }] }, { name: 'Push Jerk', sets: [{ reps: 6, weight: 70 }] }] }
+            {
+                id: 'c-g-1',
+                title: 'Cindy Advanced',
+                sport: 'cross_training',
+                difficulty: 'intermediate',
+                duration_min: 20,
+                is_premium: false,
+                description: 'The classic Cindy with structured blocks.',
+                exercises: [],
+                blocks: [
+                    {
+                        title: "AMRAP 20: CINDY",
+                        type: "amrap",
+                        duration: 20,
+                        exercises: [
+                            { name: 'Pull-ups', target: "5 reps", sets: [] },
+                            { name: 'Push-ups', target: "10 reps", sets: [] },
+                            { name: 'Air Squats', target: "15 reps", sets: [] }
+                        ]
+                    }
+                ]
+            },
+            {
+                id: 'c-g-3',
+                title: 'Muscle Up Flow',
+                sport: 'cross_training',
+                difficulty: 'elite',
+                duration_min: 20,
+                is_premium: true,
+                description: 'Elite gymnastics flow for power and skill.',
+                exercises: [],
+                blocks: [
+                    {
+                        title: "EMOM 12'",
+                        type: "emom",
+                        duration: 12,
+                        exercises: [
+                            { name: 'Muscle Ups', target: "3-5 reps (RIR 2)", sets: [] },
+                            { name: 'Double Unders', target: "30-50 reps", sets: [] }
+                        ]
+                    },
+                    { title: "4' REST", type: "rest", exercises: [], duration: 4 },
+                    {
+                        title: "FINISHER",
+                        type: "amrap",
+                        duration: 5,
+                        exercises: [{ name: 'Hollow Rocks', target: "Max Reps", sets: [] }]
+                    }
+                ]
+            }
         ]
     },
     hybrid: {
         'run-focus': [
-            { id: 'h-r-1', title: 'Interv. Híbridos', sport: 'hybrid', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Carrera intercalada con ejercicios funcionales de alta repetición.', exercises: [{ name: 'Run 1km', sets: [{ reps: 1 }] }, { name: 'Burpees', sets: [{ reps: 30 }] }, { name: 'Run 1km', sets: [{ reps: 1 }] }, { name: 'Air Squats', sets: [{ reps: 50 }] }] },
-            { id: 'h-r-2', title: 'RIVAL Race Pace', sport: 'hybrid', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Ritmo de competición. Burpees, zancadas y carrera rápida.', exercises: [{ name: 'Run 2km', sets: [{ reps: 1 }] }, { name: 'Burpees', sets: [{ reps: 80 }] }, { name: 'Lunges', sets: [{ reps: 100 }] }] },
-            { id: 'h-r-3', title: 'Tempo Híbrido', sport: 'hybrid', difficulty: 'intermediate', duration_min: 40, is_premium: false, description: 'Zonas de potencia sostenida en remo y carrera.', exercises: [{ name: 'Row 500m', sets: [{ reps: 4 }] }, { name: 'Run 1km', sets: [{ reps: 3 }] }] }
+            {
+                id: 'h-r-1',
+                title: 'RIVAL Race Simulation',
+                sport: 'hybrid',
+                difficulty: 'intermediate',
+                duration_min: 50,
+                is_premium: false,
+                description: 'Hybrid race simulations.',
+                exercises: [],
+                blocks: [
+                    { title: "RUN 1KM", type: "other", exercises: [{ name: "Run", target: "1km", sets: [] }] },
+                    {
+                        title: "STATION 1",
+                        type: "fortime",
+                        exercises: [{ name: "Burpees", target: "30 reps", sets: [] }]
+                    },
+                    { title: "RUN 1KM", type: "other", exercises: [{ name: "Run", target: "1km", sets: [] }] },
+                    {
+                        title: "STATION 2",
+                        type: "fortime",
+                        exercises: [{ name: "Air Squats", target: "50 reps", sets: [] }]
+                    }
+                ]
+            }
         ],
         'strength-focus': [
-            { id: 'h-s-1', title: 'Strongman Cardio', sport: 'hybrid', difficulty: 'elite', duration_min: 55, is_premium: false, description: 'Sleds, Farmer Carries y empuje de potencia.', exercises: [{ name: 'Sled Push 50m', sets: [{ reps: 4 }] }, { name: 'Farmer Carry 100m', sets: [{ reps: 4 }] }, { name: 'Run 400m', sets: [{ reps: 4 }] }] },
-            { id: 'h-s-2', title: 'Burpee Broad Jump Flow', sport: 'hybrid', difficulty: 'intermediate', duration_min: 40, is_premium: false, description: 'Saltos de longitud combinados con resistencia muscular.', exercises: [{ name: 'Burpee Broad Jumps', sets: [{ reps: 100 }] }, { name: 'Run 800m', sets: [{ reps: 2 }] }] },
-            { id: 'h-s-3', title: 'Sandbag Carry Blast', sport: 'hybrid', difficulty: 'elite', duration_min: 45, is_premium: true, description: 'Cargas inestables para estabilidad central y potencia.', exercises: [{ name: 'Sandbag Carry 200m', sets: [{ reps: 3 }] }, { name: 'Sandbag Lunges', sets: [{ reps: 50 }] }, { name: 'Run 1km', sets: [{ reps: 1 }] }] }
-        ],
-        race: [
-            { id: 'h-ra-1', title: 'HYROX Full Sim', sport: 'hybrid', difficulty: 'elite', duration_min: 75, is_premium: true, description: 'Simulación completa: Ski Erg, Sleds y Burpee Broad Jumps.', exercises: [{ name: 'Ski Erg 1000m', sets: [{ reps: 1 }] }, { name: 'Sled Push 50m', sets: [{ reps: 2 }] }, { name: 'Sled Pull 50m', sets: [{ reps: 2 }] }, { name: 'Burpee Broad Jumps 80m', sets: [{ reps: 1 }] }] },
-            { id: 'h-ra-2', title: 'Deka Strong Prep', sport: 'hybrid', difficulty: 'intermediate', duration_min: 30, is_premium: false, description: 'Estaciones de alta intensidad para Deka Fit/Strong.', exercises: [{ name: 'Lunges', sets: [{ reps: 100 }] }, { name: 'Row 500m', sets: [{ reps: 1 }] }, { name: 'Box Jumps', sets: [{ reps: 30 }] }] },
-            { id: 'h-ra-3', title: 'Hybrid Power Trail', sport: 'hybrid', difficulty: 'elite', duration_min: 60, is_premium: true, description: 'Carrera por montaña combinada con ejercicios funcionales pesados.', exercises: [{ name: 'Mountain Run 2km', sets: [{ reps: 1 }] }, { name: 'Step Ups', sets: [{ reps: 50 }] }, { name: 'Sandbag Carry', sets: [{ reps: 1 }] }] }
+            {
+                id: 'h-s-1',
+                title: 'Hybrid Power Burner',
+                sport: 'hybrid',
+                difficulty: 'elite',
+                duration_min: 60,
+                is_premium: true,
+                description: 'Heavy carries and sled work combined with high intensity intervals.',
+                exercises: [],
+                blocks: [
+                    {
+                        title: "BLOCK 1: STRENGTH",
+                        type: "other",
+                        exercises: [{ name: "Sled Push", target: "50m Heavy", sets: [] }, { name: "Farmer Carry", target: "100m", sets: [] }]
+                    },
+                    { title: "3' REST", type: "rest", exercises: [], duration: 3 },
+                    {
+                        title: "BLOCK 2: ENGINE",
+                        type: "emom",
+                        duration: 15,
+                        exercises: [{ name: "Run 200m", target: "Sprint", sets: [] }, { name: "Burpees", target: "10 reps", sets: [] }]
+                    }
+                ]
+            }
         ]
     },
     ocr: {
@@ -3175,14 +3306,16 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
 }) {
     const { theme } = useTheme();
     const searchParams = useSearchParams();
-    const [hybridMode, setHybridMode] = useState<'race' | 'pft' | 'any'>(searchParams.get('mode') === 'ai-coach' ? 'any' : 'race');
-    const [initialized, setInitialized] = useState(false);
+    const [hybridMode, setHybridMode] = useState<'race' | 'pft' | 'any'>(
+        (searchParams.get('mode') === 'ai-coach' || blocks.length > 0) ? 'any' : 'race'
+    );
+    const [initialized, setInitialized] = useState(blocks.length > 0 || exercises.length > 0);
     const [viewingVideo, setViewingVideo] = useState<string | null>(null);
     const [activeBlockIndex, setActiveBlockIndex] = useState(0);
 
     // Initialize first block for 'any' mode if empty
     useEffect(() => {
-        if (hybridMode === 'any' && blocks.length === 0) {
+        if (hybridMode === 'any' && blocks.length === 0 && !initialized) {
             setBlocks([{
                 id: Math.random().toString(36).substr(2, 9),
                 type: 'fortime',
@@ -3191,7 +3324,7 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
                 result: { time: '', rounds: 0 }
             }]);
         }
-    }, [hybridMode, blocks.length]);
+    }, [hybridMode, blocks.length, initialized]);
 
     const addBlock = () => {
         const newBlock = {
@@ -3261,13 +3394,13 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
         { name: 'Wall Balls', target: '30 reps' }
     ];
 
-    // Initialize exercises based on mode
+    // Initialize exercises based on mode if empty and not using blocks
     useEffect(() => {
-        if (!initialized && exercises.length === 0) {
+        if (!initialized && exercises.length === 0 && blocks.length === 0) {
             loadTemplate(hybridMode);
             setInitialized(true);
         }
-    }, [hybridMode, initialized]);
+    }, [hybridMode, initialized, exercises.length, blocks.length]);
 
     const loadTemplate = (mode: string) => {
         let template = [];
@@ -4367,81 +4500,107 @@ function CoachAiView({
 
                         {/* Exercises in Block */}
                         <div className="space-y-3 md:space-y-4">
-                            {block.exercises.map((ex: any, eIdx: number) => (
-                                <div key={ex.id || eIdx} className={clsx(
-                                    "border rounded-[28px] md:rounded-[32px] p-5 md:p-6 space-y-4 shadow-xl relative overflow-hidden group hover:border-brand-red/30 transition-all duration-500",
-                                    theme === 'dark' ? "bg-[#111] border-white/5" : "bg-white border-gray-100"
-                                )}>
-                                    <div className="absolute top-0 right-0 p-6 opacity-0 md:group-hover:opacity-5 transition-opacity pointer-events-none">
-                                        <Activity className="w-16 h-16 text-brand-red" />
+                            {block.type === 'rest' ? (
+                                <div className="py-12 flex flex-col items-center justify-center space-y-4 bg-brand-red/5 rounded-[32px] border border-brand-red/10">
+                                    <div className="w-20 h-20 rounded-full bg-brand-red/20 flex items-center justify-center text-brand-red animate-pulse border-4 border-brand-red/20">
+                                        <Timer className="w-10 h-10" />
                                     </div>
-
-                                    <div className="flex items-center justify-between relative z-10">
-                                        <div className="flex items-center gap-3 md:gap-4">
-                                            <div className={clsx("w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center font-heading font-black italic text-xs md:text-sm text-brand-red border", theme === 'dark' ? "bg-white/5 border-white/5" : "bg-gray-50 border-gray-100")}>
-                                                {eIdx + 1}
-                                            </div>
-                                            <div>
-                                                <h4 className={clsx("text-base md:text-lg font-heading font-black italic uppercase tracking-tight leading-none", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</h4>
-                                                <p className="text-brand-red text-[8px] md:text-[9px] font-black uppercase tracking-widest mt-1 opacity-70">{ex.target}</p>
-                                            </div>
-                                        </div>
-                                        {ex.video_url && (
-                                            <button
-                                                onClick={() => setViewingVideo(ex.video_url)}
-                                                className="p-2 bg-white/5 hover:bg-red-600 rounded-xl text-gray-400 hover:text-white transition-all border border-white/10 hover:border-red-600"
-                                            >
-                                                <Youtube className="w-4 h-4 fill-current" />
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-2 md:gap-3 relative z-10">
-                                        <div className={clsx(
-                                            "border p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all",
-                                            theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-100 border-gray-200"
-                                        )}>
-                                            <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">Peso</p>
-                                            <div className="flex items-end gap-1">
-                                                <input
-                                                    type="number"
-                                                    placeholder="0"
-                                                    value={ex.sets[0]?.weight || ''}
-                                                    onChange={(e) => {
-                                                        const newBlocks = [...blocks];
-                                                        newBlocks[bIdx].exercises[eIdx].sets[0].weight = parseFloat(e.target.value) || 0;
-                                                        setBlocks(newBlocks);
-                                                    }}
-                                                    className={clsx("bg-transparent text-lg md:text-xl font-mono font-black w-full outline-none", theme === 'dark' ? "text-white" : "text-black")}
-                                                />
-                                                <span className="text-[9px] md:text-[10px] font-black text-gray-600 mb-0.5">KG</span>
-                                            </div>
-                                        </div>
-                                        <div className={clsx(
-                                            "border p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all",
-                                            theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-100 border-gray-200"
-                                        )}>
-                                            <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">
-                                                {ex.target.toLowerCase().includes('reps') ? 'Reps' : 'Log'}
-                                            </p>
-                                            <div className="flex items-end gap-1">
-                                                <input
-                                                    type="number"
-                                                    placeholder="0"
-                                                    value={ex.sets[0]?.reps || ''}
-                                                    onChange={(e) => {
-                                                        const newBlocks = [...blocks];
-                                                        newBlocks[bIdx].exercises[eIdx].sets[0].reps = parseInt(e.target.value) || 0;
-                                                        setBlocks(newBlocks);
-                                                    }}
-                                                    className={clsx("bg-transparent text-lg md:text-xl font-mono font-black w-full outline-none", theme === 'dark' ? "text-white" : "text-black")}
-                                                />
-                                                <span className="text-[9px] md:text-[10px] font-black text-gray-600 mb-0.5 uppercase">VAL</span>
-                                            </div>
-                                        </div>
+                                    <div className="text-center">
+                                        <h4 className="text-3xl font-heading font-black italic text-white uppercase tracking-tighter">{block.title || 'REST'}</h4>
+                                        <p className="text-brand-red/60 font-black uppercase tracking-[0.3em] text-[10px] mt-2">RECUPERACIÓN ACTIVA</p>
                                     </div>
                                 </div>
-                            ))}
+                            ) : (
+                                block.exercises.map((ex: any, eIdx: number) => (
+                                    <div key={ex.id || eIdx} className={clsx(
+                                        "border rounded-[28px] md:rounded-[32px] p-5 md:p-6 space-y-4 shadow-xl relative overflow-hidden group hover:border-brand-red/30 transition-all duration-500",
+                                        theme === 'dark' ? "bg-[#111] border-white/5" : "bg-white border-gray-100"
+                                    )}>
+                                        <div className="absolute top-0 right-0 p-6 opacity-0 md:group-hover:opacity-5 transition-opacity pointer-events-none">
+                                            <Activity className="w-16 h-16 text-brand-red" />
+                                        </div>
+
+                                        <div className="flex items-center justify-between relative z-10">
+                                            <div className="flex items-center gap-3 md:gap-4">
+                                                <div className={clsx("w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center font-heading font-black italic text-xs md:text-sm text-brand-red border", theme === 'dark' ? "bg-white/5 border-white/5" : "bg-gray-50 border-gray-100")}>
+                                                    {eIdx + 1}
+                                                </div>
+                                                <div>
+                                                    <h4 className={clsx("text-base md:text-lg font-heading font-black italic uppercase tracking-tight leading-none", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</h4>
+                                                    <p className="text-brand-red text-[8px] md:text-[9px] font-black uppercase tracking-widest mt-1 opacity-70">{ex.target}</p>
+                                                </div>
+                                            </div>
+                                            {ex.video_url && !block.title.includes('REST') && (
+                                                <button
+                                                    onClick={() => setViewingVideo(ex.video_url)}
+                                                    className="p-2 bg-white/5 hover:bg-red-600 rounded-xl text-gray-400 hover:text-white transition-all border border-white/10 hover:border-red-600"
+                                                >
+                                                    <Youtube className="w-4 h-4 fill-current" />
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Support for Scaling content if it is a Scaling Block */}
+                                        {block.type === 'scaling' && (
+                                            <div className="mt-4 p-6 bg-brand-red/5 rounded-3xl border border-brand-red/10 text-center">
+                                                <p className="text-[10px] font-black text-brand-red uppercase tracking-[0.3em] mb-4">OPCIONES DE ESCALADO</p>
+                                                <div className="space-y-2 font-mono text-xl font-black italic text-white">
+                                                    {ex.name.split('\n').map((line: string, lIdx: number) => (
+                                                        <p key={lIdx} className="tracking-tighter">{line}</p>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {block.type !== 'scaling' && !block.title.includes('REST') && (
+                                            <div className="grid grid-cols-2 gap-2 md:gap-3 relative z-10">
+                                                <div className={clsx(
+                                                    "border p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all",
+                                                    theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-100 border-gray-200"
+                                                )}>
+                                                    <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">Peso</p>
+                                                    <div className="flex items-end gap-1">
+                                                        <input
+                                                            type="number"
+                                                            placeholder="0"
+                                                            value={ex.sets[0]?.weight || ''}
+                                                            onChange={(e) => {
+                                                                const newBlocks = [...blocks];
+                                                                newBlocks[bIdx].exercises[eIdx].sets[0].weight = parseFloat(e.target.value) || 0;
+                                                                setBlocks(newBlocks);
+                                                            }}
+                                                            className={clsx("bg-transparent text-lg md:text-xl font-mono font-black w-full outline-none", theme === 'dark' ? "text-white" : "text-black")}
+                                                        />
+                                                        <span className="text-[9px] md:text-[10px] font-black text-gray-600 mb-0.5">KG</span>
+                                                    </div>
+                                                </div>
+                                                <div className={clsx(
+                                                    "border p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all",
+                                                    theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-100 border-gray-200"
+                                                )}>
+                                                    <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">
+                                                        {ex.target.toLowerCase().includes('reps') ? 'Reps' : 'Log'}
+                                                    </p>
+                                                    <div className="flex items-end gap-1">
+                                                        <input
+                                                            type="number"
+                                                            placeholder="0"
+                                                            value={ex.sets[0]?.reps || ''}
+                                                            onChange={(e) => {
+                                                                const newBlocks = [...blocks];
+                                                                newBlocks[bIdx].exercises[eIdx].sets[0].reps = parseInt(e.target.value) || 0;
+                                                                setBlocks(newBlocks);
+                                                            }}
+                                                            className={clsx("bg-transparent text-lg md:text-xl font-mono font-black w-full outline-none", theme === 'dark' ? "text-white" : "text-black")}
+                                                        />
+                                                        <span className="text-[9px] md:text-[10px] font-black text-gray-600 mb-0.5 uppercase">VAL</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))
+                            )}
                         </div>
                     </div>
                 ))}

@@ -108,11 +108,26 @@ export default function TrainingPage() {
                 title: "WOD Híbrido: RIVAL 500",
                 description: "Reto metabólico combinando remo y ejercicios de peso corporal.",
                 sport: 'hybrid', difficulty: 'intermediate', duration_min: 35, is_premium: false,
-                exercises: [
-                    { id: 'ih1', name: "Row 500m", target: "Max Effort", sets: [] },
-                    { id: 'ih2', name: "Burpees", target: "50 reps", sets: [] },
-                    { id: 'ih3', name: "Kettlebell Swings", target: "50 reps", sets: [] },
-                    { id: 'ih4', name: "Row 500m", target: "Finish strong", sets: [] }
+                exercises: [],
+                blocks: [
+                    {
+                        title: "STRENGTH PORTION",
+                        type: "other",
+                        exercises: [
+                            { name: "Deadlift", target: "3 series x 8 reps @ 70%", sets: [] }
+                        ]
+                    },
+                    { title: "4' REST", type: "rest", exercises: [], duration: 4 },
+                    {
+                        title: "RIVAL 500 (METCON)",
+                        type: "amrap",
+                        duration: 15,
+                        exercises: [
+                            { name: "Row 500m", target: "Max Effort", sets: [] },
+                            { name: "Burpees", target: "50 reps", sets: [] },
+                            { name: "Kettlebell Swings", target: "50 reps", sets: [] }
+                        ]
+                    }
                 ]
             }
         ],
@@ -134,11 +149,31 @@ export default function TrainingPage() {
                 title: "Hyrox Simulation: Elite",
                 description: "Entrenamiento de volumen Hyrox para atletas avanzados.",
                 sport: 'hybrid', difficulty: 'elite', duration_min: 80, is_premium: true,
-                exercises: [
-                    { id: 'eh1', name: "Run 1km", target: "4:00 pace", sets: [] },
-                    { id: 'eh2', name: "Sled Push 50m", target: "Heavy", sets: [] },
-                    { id: 'eh3', name: "Run 1km", target: "4:15 pace", sets: [] },
-                    { id: 'eh4', name: "Burpee Broad Jumps", target: "80 meters", sets: [] }
+                exercises: [],
+                blocks: [
+                    {
+                        title: "BLOCK A: AEROBIC POWER",
+                        type: "fortime",
+                        exercises: [
+                            { name: "Run 1km", target: "@ Race Pace", sets: [] },
+                            { name: "Sled Push 50m", target: "Extremely Heavy", sets: [] }
+                        ]
+                    },
+                    { title: "2' REST", type: "rest", exercises: [], duration: 2 },
+                    {
+                        title: "BLOCK B: CAPACITY",
+                        type: "amrap",
+                        duration: 20,
+                        exercises: [
+                            { name: "Run 1km", target: "Moderate", sets: [] },
+                            { name: "Burpee Broad Jumps", target: "80 meters", sets: [] }
+                        ]
+                    },
+                    {
+                        title: "SCALING OPTIONS",
+                        type: "scaling",
+                        exercises: [{ name: "SB: 100% Load\nGO: 80% Load\nMO: 60% Load", target: "N/A", sets: [] }]
+                    }
                 ]
             }
         ]
@@ -462,10 +497,29 @@ export default function TrainingPage() {
                                     </h3>
                                     <span className="text-[10px] font-black text-brand-red uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Pulsa para empezar →</span>
                                 </div>
-                                <div className="grid gap-3">
-                                    {activeRoutine.exercises.map((ex: any, idx: number) => (
-                                        <WorkoutItem key={idx} name={ex.name} sets={ex.target} note={ex.note} />
-                                    ))}
+                                <div className="grid gap-4">
+                                    {activeRoutine.blocks && activeRoutine.blocks.length > 0 ? (
+                                        activeRoutine.blocks.filter((b: any) => b.type !== 'scaling').map((block: any, bIdx: number) => (
+                                            <div key={bIdx} className="bg-white/5 border border-white/5 p-4 rounded-2xl space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <p className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic">{block.title}</p>
+                                                    <span className="text-[8px] font-black text-brand-red bg-brand-red/10 px-2 py-0.5 rounded uppercase border border-brand-red/20">{block.type}</span>
+                                                </div>
+                                                <div className="space-y-1.5">
+                                                    {block.exercises.map((ex: any, idx: number) => (
+                                                        <div key={idx} className="flex justify-between items-center text-[11px]">
+                                                            <span className="text-gray-400 font-bold uppercase tracking-tight">{ex.name}</span>
+                                                            <span className="text-white font-mono font-black italic">{ex.target}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        activeRoutine.exercises.map((ex: any, idx: number) => (
+                                            <WorkoutItem key={idx} name={ex.name} sets={ex.target} note={ex.note} />
+                                        ))
+                                    )}
                                 </div>
                             </div>
                         </div>

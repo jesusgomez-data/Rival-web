@@ -39,14 +39,20 @@ export async function getConversations() {
                 .neq('user_id', user.id)
                 .maybeSingle()
 
-            const hasUnread = conv.last_message_at && (!p.last_read_at || new Date(conv.last_message_at) > new Date(p.last_read_at));
+            // Contar mensajes no leídos de forma directa y real
+            const { count: unreadCount } = await supabase
+                .from('messages')
+                .select('id', { count: 'exact', head: true })
+                .eq('conversation_id', p.conversation_id)
+                .neq('sender_id', user.id)
+                .gt('created_at', p.last_read_at || '1900-01-01')
 
             return {
                 id: conv.id,
                 last_message_text: conv.last_message_text,
                 last_message_at: conv.last_message_at || conv.updated_at,
                 other_person: otherParts?.profiles || { full_name: 'Usuario Rival', username: 'rival' },
-                unread_count: hasUnread ? 1 : 0
+                unread_count: (unreadCount || 0) > 0 ? 1 : 0
             }
         }))
 
@@ -70,19 +76,32 @@ export async function getUnreadMessageCount() {
 
     const { data: participations } = await supabase
         .from('conversation_participants')
-        .select('conversation_id, last_read_at, conversations(last_message_at)')
+        .select('conversation_id, last_read_at, conversations(last_message_at, last_message_text)')
         .eq('user_id', user.id)
 
     if (!participations) return 0
 
-    const unreadCount = participations.filter((p: any) => {
-        const lastMsgAt = p.conversations?.last_message_at
-        if (!lastMsgAt) return false
-        if (!p.last_read_at) return true
-        return new Date(lastMsgAt) > new Date(p.last_read_at)
-    }).length
+    // Filtramos para ignorar mensajes de "basura" o muy antiguos (más de 30 días)
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    return unreadCount
+    const unreadConvs = new Set<string>()
+
+    await Promise.all(participations.map(async (p: any) => {
+        const { count, data: debugMsgs } = await supabase
+            .from('messages')
+            .select('id, sender_id', { count: 'exact' })
+            .eq('conversation_id', p.conversation_id)
+            .neq('sender_id', user.id) // IMPORTANTÍSIMO: Que NO sea yo
+            .gt('created_at', p.last_read_at || '1900-01-01')
+            .gt('created_at', thirtyDaysAgo.toISOString()) // Solo mensajes recientes
+
+        if (count && count > 0) {
+            unreadConvs.add(p.conversation_id)
+        }
+    }))
+
+    return unreadConvs.size
 }
 
 export async function getMessages(conversationId: string) {
@@ -115,13 +134,9 @@ export async function markConversationAsRead(conversationId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
 
-    // Usamos una fecha ligeramente en el futuro para evitar problemas de precisión
-    const futureDate = new Date();
-    futureDate.setSeconds(futureDate.getSeconds() + 2);
-
     const { error } = await supabase
         .from('conversation_participants')
-        .update({ last_read_at: futureDate.toISOString() })
+        .update({ last_read_at: new Date().toISOString() })
         .eq('conversation_id', conversationId)
         .eq('user_id', user.id)
 
@@ -161,6 +176,9 @@ export async function sendMessage(conversationId: string, text: string, imageUrl
         })
         .eq('id', conversationId)
         .then(() => { })
+
+    // Mark as read for sender
+    await markConversationAsRead(conversationId)
 
     // Trigger Notification
     const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
