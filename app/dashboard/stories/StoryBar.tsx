@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Plus, X, ChevronLeft, ChevronRight, Loader2, Heart, Eye, Users, Trash2, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown, Share2, Trophy, Activity } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Heart, Eye, Users, Trash2, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown, Share2, Trophy, Activity, Volume2, VolumeX } from 'lucide-react'
 import { createStory, createPRStory, toggleStoryLike, recordStoryView, deleteStory } from './actions'
 import { clsx } from 'clsx'
 import PRCard from '../community/PRCard'
@@ -9,6 +9,8 @@ import { useStories } from './StoryContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/utils/supabase/client'
 import VideoEditor from '../VideoEditor'
+import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
+import { useUploads } from '../UploadContext'
 
 interface OverlayElement {
     id: string
@@ -49,6 +51,7 @@ interface UserStories {
 
 export default function StoryBar({ currentUser }: { currentUser: any }) {
     const { userStories, setUserStories, refreshStories } = useStories()
+    const { startStoryUpload } = useUploads()
     const [selectedUserIndex, setSelectedUserIndex] = useState<number | null>(null)
     const [activeStoryIndex, setActiveStoryIndex] = useState(0)
     const [isUploading, setIsUploading] = useState(false)
@@ -84,6 +87,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const [trimmerVideoUrl, setTrimmerVideoUrl] = useState<string | null>(null)
     const [videoToEdit, setVideoToEdit] = useState<File | null>(null)
     const [videoDuration, setVideoDuration] = useState(0)
+    const [selectedTrack, setSelectedTrack] = useState<any>(null)
+    const [trimRange, setTrimRange] = useState<{ start: number, end: number } | null>(null)
 
     // Interaction State for Dragging
     const [draggingId, setDraggingId] = useState<string | null>(null)
@@ -91,6 +96,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null)
     const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null)
     const [showFullSummary, setShowFullSummary] = useState(false)
+    const [isMuted, setIsMuted] = useState(false)
 
     useEffect(() => {
         // Poll for stories every 30 seconds to catch new ones
@@ -325,19 +331,10 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         const isVideo = file.type.startsWith('video/') || (ext && videoExts.includes(ext));
 
         if (isVideo) {
-            // Check duration if it's a video
-            const video = document.createElement('video');
-            video.preload = 'metadata';
-            video.onloadedmetadata = () => {
-                window.URL.revokeObjectURL(video.src);
-                if (video.duration > 65) {
-                    alert('Los videos deben durar menos de 60 segundos.');
-                    if (fileInputRef.current) fileInputRef.current.value = '';
-                } else {
-                    setupPreview(file);
-                }
-            };
-            video.src = URL.createObjectURL(file);
+            setVideoToEdit(file);
+            const vUrl = URL.createObjectURL(file);
+            setTrimmerVideoUrl(vUrl);
+            setIsVideoTrimming(true);
         } else {
             setupPreview(file);
         }
@@ -353,6 +350,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         setImagePositionX(50)
         setImagePositionY(50)
         setShowImageAdjust(false)
+        setIsMuted(false)
         if (fileInputRef.current) fileInputRef.current.value = ""
     }
 
@@ -442,98 +440,35 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const handlePostStory = async () => {
         if (!previewFile) return
 
-        setIsUploading(true)
-        console.log("Starting upload for:", previewFile.name, previewFile.size);
+        // 1. Capture current data to send to background
+        const dataToUpload = {
+            file: previewFile,
+            trimRange: trimRange || undefined,
+            overlays: [...overlays],
+            selectedTrack,
+            currentUser,
+            previewUrl: previewUrl || undefined
+        };
+
+        // 2. Immediately close the editor for instant feedback
+        setPreviewFile(null)
+        setPreviewUrl(null)
+        setSelectedTrack(null)
+        setOverlays([])
+        setTrimRange(null)
+        setIsVideoTrimming(false)
+        setVideoToEdit(null)
+        setIsUploading(false)
+
+        // 3. Start background upload (don't await)
         try {
-            const formData = new FormData()
-            let mediaUrl = null;
-            let mediaType = previewFile.type.startsWith('video/') ? 'video' : 'image';
-
-            // DIRECT CLIENT UPLOAD for "pesados" (heavy) files
-            try {
-                const supabase = createClient();
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) throw new Error("No user found");
-
-                const fileExt = previewFile.name.split('.').pop() || 'jpg';
-                const fileName = `${user.id}/story_${Date.now()}.${fileExt}`;
-
-                console.log("Directly uploading story to storage...");
-                const { data: uploadData, error: uploadError } = await supabase.storage
-                    .from('posts')
-                    .upload(fileName, previewFile, {
-                        cacheControl: '3600',
-                        upsert: false
-                    });
-
-                if (uploadError) throw uploadError;
-
-                const { data: { publicUrl } } = supabase.storage
-                    .from('posts')
-                    .getPublicUrl(fileName);
-
-                mediaUrl = publicUrl;
-                console.log("Direct upload successful:", mediaUrl);
-            } catch (storageError) {
-                console.error("Direct storage upload failed, falling back to server action if small:", storageError);
-                if (previewFile.size > 4.5 * 1024 * 1024) {
-                    alert("El archivo es demasiado grande para el modo de respaldo. Por favor, asegúrate de tener buena conexión.");
-                    setIsUploading(false);
-                    return;
-                }
-                // If it's small enough, let the server action handle it by NOT setting mediaUrl
-                formData.append('media', previewFile);
-            }
-
-            if (mediaUrl) {
-                formData.append('media_url', mediaUrl);
-            }
-
-            // Refined media type detection for stories
-            const fileExt = previewFile.name.split('.').pop()?.toLowerCase() || '';
-            const videoExtensions = ['mp4', 'mov', 'webm', 'ogg', 'm4v'];
-            const isVideo = previewFile.type.startsWith('video/') || videoExtensions.includes(fileExt);
-            const finalMediaType = isVideo ? 'video' : 'image';
-
-            formData.append('media_type', finalMediaType);
-
-            if (selectedTrack) {
-                formData.append('music_url', selectedTrack.url)
-                formData.append('music_title', selectedTrack.title)
-                formData.append('music_artist', selectedTrack.artist)
-            }
-            if (selectedTrack || overlays.length > 0 || imageZoom !== 1 || imagePositionX !== 50 || imagePositionY !== 50) {
-                formData.append('metadata', JSON.stringify({
-                    overlays,
-                    zoom: imageZoom,
-                    posX: imagePositionX,
-                    posY: imagePositionY,
-                    music: selectedTrack ? {
-                        url: selectedTrack.url,
-                        title: selectedTrack.title,
-                        artist: selectedTrack.artist
-                    } : null
-                }))
-            }
-
-            const res = await createStory(formData)
-            if (res.error) {
-                console.error("Upload error:", res.error);
-                alert(`Error: ${res.error}`)
+            if (startStoryUpload) {
+                startStoryUpload(dataToUpload);
             } else {
-                console.log("Upload success!");
-                setPreviewFile(null)
-                setPreviewUrl(null)
-                setSelectedTrack(null)
-                setOverlays([])
-                await refreshStories()
-                router.refresh()
+                console.error("UploadContext: startStoryUpload not found");
             }
         } catch (err) {
-            console.error("Post story critical error:", err);
-            alert("Error crítico al subir la historia.");
-        } finally {
-            setIsUploading(false)
+            console.error("Critical error starting story upload:", err);
         }
     }
 
@@ -709,7 +644,11 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const handlePressEnd = () => {
         setIsPressed(false);
         setIsPaused(false);
-        if (storyVideoRef.current) storyVideoRef.current.play().catch(() => { });
+        if (storyVideoRef.current) {
+            storyVideoRef.current.muted = isMuted;
+            storyVideoRef.current.volume = 1;
+            storyVideoRef.current.play().catch(() => { });
+        }
     };
 
 
@@ -1122,11 +1061,13 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                             setVideoToEdit(null);
                             if (fileInputRef.current) fileInputRef.current.value = "";
                         }}
-                        onSave={(file, dur) => {
+                        onSave={(file, range) => {
+                            setTrimRange(range);
                             setupPreview(file);
                             setIsVideoTrimming(false);
                             setTrimmerVideoUrl(null);
                             setVideoToEdit(null);
+                            setIsMuted(false);
                         }}
                     />
                 )
@@ -1175,8 +1116,19 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                         <video
                                             src={previewUrl}
                                             autoPlay
-                                            loop
+                                            loop={!trimRange}
                                             playsInline
+                                            muted={isMuted}
+                                            onTimeUpdate={(e) => {
+                                                if (trimRange && e.currentTarget.currentTime >= trimRange.end) {
+                                                    e.currentTarget.currentTime = trimRange.start;
+                                                }
+                                            }}
+                                            onLoadedData={(e) => {
+                                                if (trimRange) e.currentTarget.currentTime = trimRange.start;
+                                                e.currentTarget.muted = isMuted;
+                                                e.currentTarget.volume = 1;
+                                            }}
                                             className="w-full h-full object-contain"
                                             style={{
                                                 transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
@@ -1421,6 +1373,20 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setIsMuted(!isMuted);
+                                                    if (storyVideoRef.current) {
+                                                        storyVideoRef.current.muted = !isMuted;
+                                                        storyVideoRef.current.volume = 1;
+                                                    }
+                                                }}
+                                                className="p-2 bg-black/40 hover:bg-white/10 text-white rounded-full backdrop-blur-md transition-all border border-white/5"
+                                            >
+                                                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                                            </button>
+
                                             {isOwner && (
                                                 <button
                                                     onClick={handleDeleteStory}
@@ -1509,6 +1475,11 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                             src={currentStory.media_url}
                                             autoPlay
                                             playsInline
+                                            muted={isMuted}
+                                            onLoadedData={(e) => {
+                                                e.currentTarget.muted = isMuted;
+                                                e.currentTarget.volume = 1;
+                                            }}
                                             className="w-full h-full object-contain pointer-events-none"
                                             style={{
                                                 transform: currentStory.metadata?.zoom ? `scale(${currentStory.metadata.zoom}) translate(${(currentStory.metadata.posX - 50) / currentStory.metadata.zoom}%, ${(currentStory.metadata.posY - 50) / currentStory.metadata.zoom}%)` : 'none',

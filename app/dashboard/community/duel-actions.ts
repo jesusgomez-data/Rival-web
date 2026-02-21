@@ -323,18 +323,49 @@ export async function getPublicProfile(username: string) {
 export async function getCombatStats(userId: string) {
     const supabase = await createClient();
 
-    // Fetch all completed duels for this user
-    const { data: duels } = await supabase
+    // 1. Fetch all duels for this user (including active to check for expiration)
+    const { data: allDuels } = await supabase
         .from('duels')
         .select('*')
-        .or(`challenger_id.eq.${userId},opponent_id.eq.${userId}`)
-        .eq('status', 'completed');
+        .or(`challenger_id.eq.${userId},opponent_id.eq.${userId}`);
+
+    if (!allDuels) return { total: 0, wins: 0, losses: 0, draws: 0, active: 0 };
+
+    const now = new Date();
+
+    // 2. Identify and Process expired active duels (mirroring getMyDuels logic)
+    // This ensures stats are accurate even if the user hasn't visited the dashboard
+    const processedDuels = await Promise.all(allDuels.map(async (duel) => {
+        const endDate = new Date(duel.end_date);
+        endDate.setHours(23, 59, 59, 999);
+
+        if (duel.status === 'active' && now > endDate) {
+            const { challengerScore, opponentScore } = await calculateDuelScores(duel);
+            let winnerId = null;
+            if (challengerScore > opponentScore) winnerId = duel.challenger_id;
+            else if (opponentScore > challengerScore) winnerId = duel.opponent_id;
+
+            // Update DB using admin client to ensure it persists correctly
+            const adminSupabase = createAdminClient();
+            await adminSupabase.from('duels').update({
+                status: 'completed',
+                winner_id: winnerId
+            }).eq('id', duel.id);
+
+            return { ...duel, status: 'completed', winner_id: winnerId };
+        }
+        return duel;
+    }));
+
+    const completed = processedDuels.filter(d => d.status === 'completed');
+    const activeCount = processedDuels.filter(d => d.status === 'active').length;
 
     const stats = {
-        total: duels?.length || 0,
-        wins: duels?.filter(d => d.winner_id === userId).length || 0,
-        losses: duels?.filter(d => d.winner_id && d.winner_id !== userId).length || 0,
-        draws: duels?.filter(d => d.status === 'completed' && !d.winner_id).length || 0
+        total: completed.length,
+        wins: completed.filter(d => d.winner_id === userId).length,
+        losses: completed.filter(d => d.winner_id && d.winner_id !== userId).length,
+        draws: completed.filter(d => d.status === 'completed' && !d.winner_id).length,
+        active: activeCount
     };
 
     return stats;

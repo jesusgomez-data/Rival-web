@@ -82,3 +82,20 @@ export async function createNotification({ userId, type, title, content, link }:
 
     return { success: true };
 }
+
+export async function markMessageNotificationsAsRead() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "No user" };
+
+    const { error } = await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', user.id)
+        .eq('type', 'message')
+        .eq('is_read', false);
+
+    if (error) return { error: error.message };
+    revalidatePath('/dashboard');
+    return { success: true };
+}

@@ -1,59 +1,95 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Check, Scissors, Play, Pause, AlertTriangle } from 'lucide-react';
+import { X, Check, Play, Pause, AlertTriangle, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface VideoEditorProps {
     videoSrc: string;
     videoFile: File;
-    onSave: (processedFile: File, duration: number) => void;
+    onSave: (file: File, range: { start: number, end: number }) => void;
     onCancel: () => void;
 }
 
 export default function VideoEditor({ videoSrc, videoFile, onSave, onCancel }: VideoEditorProps) {
-    const [trimRange, setTrimRange] = useState({ start: 0, end: 60 });
+    const [trimRange, setTrimRange] = useState({ start: 0, end: 30 });
     const [duration, setDuration] = useState(0);
     const [isPlaying, setIsPlaying] = useState(false);
-
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [processProgress, setProcessProgress] = useState(0);
-    const [statusMessage, setStatusMessage] = useState("");
+    const [isMuted, setIsMuted] = useState(false);
+    const [thumbnails, setThumbnails] = useState<string[]>([]);
 
     const videoRef = useRef<HTMLVideoElement>(null);
-    const abortController = useRef<AbortController | null>(null);
+    const scrollRef = useRef<HTMLDivElement>(null);
 
-    // Initial Load
+    const PIXELS_PER_SECOND = 40;
+    const WINDOW_DURATION = 30;
+    const WINDOW_WIDTH = 300;
+    const THUMBNAIL_COUNT = 15;
+
     useEffect(() => {
         const v = document.createElement('video');
         v.src = videoSrc;
         v.preload = "metadata";
-        v.onloadedmetadata = () => {
-            setDuration(v.duration);
-            setTrimRange({ start: 0, end: Math.min(v.duration, 60) });
+        v.crossOrigin = "anonymous";
+
+        v.onloadedmetadata = async () => {
+            const videoDuration = v.duration;
+            setDuration(videoDuration);
+            setTrimRange({ start: 0, end: Math.min(videoDuration, WINDOW_DURATION) });
+            generateThumbnails(v, videoDuration);
         };
     }, [videoSrc]);
 
-    // Playback Loop
+    const generateThumbnails = async (video: HTMLVideoElement, totalDuration: number) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        canvas.width = 80; canvas.height = 140;
+
+        const thumbs: string[] = [];
+        const interval = totalDuration / THUMBNAIL_COUNT;
+
+        for (let i = 0; i < THUMBNAIL_COUNT; i++) {
+            const time = i * interval;
+            video.currentTime = time;
+            await new Promise((resolve) => {
+                const onSeeked = () => {
+                    video.removeEventListener('seeked', onSeeked);
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    thumbs.push(canvas.toDataURL('image/jpeg', 0.5));
+                    resolve(true);
+                };
+                video.addEventListener('seeked', onSeeked);
+                setTimeout(resolve, 500);
+            });
+        }
+        setThumbnails(thumbs);
+    };
+
+    const handleScroll = () => {
+        if (!duration || !scrollRef.current) return;
+        const scrollLeft = scrollRef.current.scrollLeft;
+        const newStart = scrollLeft / PIXELS_PER_SECOND;
+        const actualStart = Math.max(0, Math.min(newStart, duration - Math.min(duration, WINDOW_DURATION)));
+        const actualEnd = Math.min(actualStart + WINDOW_DURATION, duration);
+        setTrimRange({ start: actualStart, end: actualEnd });
+        if (videoRef.current) videoRef.current.currentTime = actualStart;
+    };
+
     useEffect(() => {
         const video = videoRef.current;
         if (!video) return;
-
         const handleTimeUpdate = () => {
-            if (video.currentTime >= trimRange.end) {
-                video.pause();
+            if (video.currentTime >= trimRange.end || video.currentTime < trimRange.start - 0.5) {
                 video.currentTime = trimRange.start;
-                setIsPlaying(false);
+                if (!video.paused) video.play().catch(() => { });
             }
         };
-
         const handlePlay = () => setIsPlaying(true);
         const handlePause = () => setIsPlaying(false);
-
         video.addEventListener('timeupdate', handleTimeUpdate);
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
-
         return () => {
             video.removeEventListener('timeupdate', handleTimeUpdate);
             video.removeEventListener('play', handlePlay);
@@ -61,278 +97,80 @@ export default function VideoEditor({ videoSrc, videoFile, onSave, onCancel }: V
         };
     }, [trimRange]);
 
-    const processVideo = async () => {
-        setIsProcessing(true);
-        setStatusMessage("Preparando...");
-        setProcessProgress(0);
-        abortController.current = new AbortController();
-
-        const fallbackToOriginal = (reason: string) => {
-            console.warn("Fallback triggered:", reason);
-            setStatusMessage("Subiendo original...");
-            setTimeout(() => {
-                onSave(videoFile, duration);
-            }, 500);
-        };
-
-        try {
-            const video = document.createElement('video');
-            video.src = videoSrc;
-            video.muted = true;
-            video.playsInline = true;
-            video.crossOrigin = "anonymous";
-
-            await video.play(); video.pause();
-
-            const canvas = document.createElement('canvas');
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-
-            if (!ctx) throw new Error("Canvas context failed");
-
-            // @ts-ignore
-            const streamFn = canvas.captureStream || canvas.webkitCaptureStream;
-            if (!streamFn) return fallbackToOriginal("No capture support");
-
-            const stream = streamFn.call(canvas, 30);
-            const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm';
-
-            const recorder = new MediaRecorder(stream, {
-                mimeType,
-                videoBitsPerSecond: 2500000
-            });
-
-            const chunks: Blob[] = [];
-            recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-
-            video.currentTime = trimRange.start;
-            await new Promise(r => {
-                const once = () => { video.removeEventListener('seeked', once); r(true); };
-                video.addEventListener('seeked', once);
-                setTimeout(once, 1000);
-            });
-
-            const recDuration = trimRange.end - trimRange.start;
-
-            // If trim is full video, just upload original
-            if (Math.abs(recDuration - duration) < 0.5) {
-                return fallbackToOriginal("Full video selected");
-            }
-
-            let animationFrame: number;
-            const draw = () => {
-                if (video.paused || video.ended) return;
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                animationFrame = requestAnimationFrame(draw);
-                const progress = ((video.currentTime - trimRange.start) / recDuration) * 100;
-                setProcessProgress(Math.min(99, progress));
-            };
-
-            recorder.onstop = () => {
-                cancelAnimationFrame(animationFrame);
-                const blob = new Blob(chunks, { type: mimeType });
-
-                if (blob.size < 1000) {
-                    return fallbackToOriginal("Empty recording");
-                }
-
-                const newFile = new File([blob], `trimmed.mp4`, { type: mimeType });
-                onSave(newFile, recDuration);
-                setIsProcessing(false);
-            };
-
-            recorder.start();
-            video.play();
-            draw();
-            setStatusMessage("Procesando clip...");
-
-            const checkInt = setInterval(() => {
-                if (abortController.current?.signal.aborted) {
-                    clearInterval(checkInt);
-                    recorder.stop();
-                    return;
-                }
-                if (video.currentTime >= trimRange.end || video.ended) {
-                    clearInterval(checkInt);
-                    recorder.stop();
-                    video.pause();
-                }
-            }, 100);
-
-        } catch (err) {
-            console.error(err);
-            fallbackToOriginal("Exception");
-        }
+    const formatTime = (seconds: number) => {
+        const m = Math.floor(seconds / 60);
+        const s = Math.floor(seconds % 60);
+        return `${m}:${s.toString().padStart(2, '0')}`;
     };
 
     return (
-        <div className="fixed inset-0 z-[99999] bg-black flex flex-col safe-area-inset font-sans">
-
+        <div className="fixed inset-0 z-[99999] bg-black flex flex-col safe-area-inset font-sans select-none overflow-hidden h-full">
             {/* Header */}
-            <div className="h-16 flex items-center justify-between px-4 bg-[#111] border-b border-white/10 shrink-0 z-50">
+            <div className="h-16 flex items-center justify-between px-6 shrink-0 z-50">
+                <button onClick={onCancel} className="p-2 -ml-2 text-white/90 hover:text-white"><X className="w-7 h-7" /></button>
+                <div className="flex flex-col items-center">
+                    <span className="text-white text-[11px] font-black uppercase tracking-[0.2em] italic">Story Editor</span>
+                    <span className="text-brand-red text-[10px] font-bold tracking-widest">{formatTime(trimRange.start)} — {formatTime(trimRange.end)}</span>
+                </div>
                 <button
-                    onClick={onCancel}
-                    className="p-4 -ml-2 text-gray-400 hover:text-white active:scale-95 transition-transform"
+                    onClick={() => onSave(videoFile, trimRange)}
+                    className="text-brand-red font-black text-xs uppercase tracking-widest px-6 py-2 bg-white/10 rounded-full border border-brand-red/20 active:scale-95 transition-all"
                 >
-                    <X className="w-8 h-8" />
-                </button>
-
-                <span className="text-white text-sm font-black uppercase tracking-wider">
-                    Recortar
-                </span>
-
-                <button
-                    onClick={() => {
-                        if (duration > 65) {
-                            alert(`El video dura ${Math.round(duration)}s. El límite es 60s.`);
-                            return;
-                        }
-                        onSave(videoFile, duration);
-                    }}
-                    className="text-xs font-bold text-gray-500 uppercase underline decoration-gray-500/50"
-                >
-                    Omitir
+                    Siguiente
                 </button>
             </div>
 
-            {/* Video Player */}
-            <div className="flex-1 bg-black flex items-center justify-center overflow-hidden relative">
+            {/* Video Preview */}
+            <div className="flex-1 bg-black flex items-center justify-center overflow-hidden relative px-4">
                 <video
-                    ref={videoRef}
-                    src={videoSrc}
-                    className="max-h-full max-w-full object-contain pointer-events-auto"
-                    playsInline
-                    webkit-playsinline="true"
-                    muted={false}
-                    onClick={() => {
-                        if (videoRef.current) {
-                            videoRef.current.paused ? videoRef.current.play() : videoRef.current.pause();
-                        }
-                    }}
+                    ref={videoRef} src={videoSrc} className="max-h-[85%] max-w-full rounded-2xl object-contain shadow-2xl border border-white/5"
+                    playsInline autoPlay muted={isMuted}
+                    onLoadedData={(e) => { e.currentTarget.volume = 1; }}
+                    onClick={() => { if (videoRef.current) videoRef.current.paused ? videoRef.current.play() : videoRef.current.pause(); }}
                 />
-
-                {!isPlaying && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="w-20 h-20 bg-black/40 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/20">
-                            <Play className="w-10 h-10 fill-white text-white translate-x-1" />
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Controls */}
-            <div className="bg-[#111] border-t border-white/10 p-6 pb-12 flex flex-col gap-6 shrink-0 z-50">
-
-                {/* Sliders Separados */}
-                <div className="grid grid-cols-1 gap-6">
-                    {/* Inicio Slider */}
-                    <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                        <div className="flex justify-between text-xs font-black uppercase tracking-wider text-gray-400 mb-2">
-                            <span>Inicio</span>
-                            <span className="text-white">{trimRange.start.toFixed(1)}s</span>
-                        </div>
-                        <input
-                            type="range" min={0} max={duration || 100} step={0.1}
-                            value={trimRange.start}
-                            onChange={(e) => {
-                                const val = parseFloat(e.target.value);
-                                setTrimRange(p => ({ ...p, start: Math.min(val, p.end - 1) }));
-                                if (videoRef.current) {
-                                    videoRef.current.pause();
-                                    videoRef.current.currentTime = val;
-                                }
-                            }}
-                            className="w-full h-10 bg-transparent cursor-pointer appearance-none"
-                            style={{
-                                backgroundImage: `linear-gradient(to right, #ef4444 0%, #ef4444 ${(trimRange.start / duration) * 100}%, #333 ${(trimRange.start / duration) * 100}%, #333 100%)`,
-                                height: '6px',
-                                borderRadius: '999px'
-                            }}
-                        />
-                    </div>
-
-                    {/* Fin Slider */}
-                    <div className="bg-white/5 p-4 rounded-xl border border-white/5">
-                        <div className="flex justify-between text-xs font-black uppercase tracking-wider text-gray-400 mb-2">
-                            <span>Fin</span>
-                            <span className="text-white">{trimRange.end.toFixed(1)}s</span>
-                        </div>
-                        <input
-                            type="range" min={0} max={duration || 100} step={0.1}
-                            value={trimRange.end}
-                            onChange={(e) => {
-                                const val = parseFloat(e.target.value);
-                                setTrimRange(p => ({ ...p, end: Math.max(val, p.start + 1) }));
-                                if (videoRef.current) {
-                                    videoRef.current.pause();
-                                    videoRef.current.currentTime = val;
-                                }
-                            }}
-                            className="w-full h-10 bg-transparent cursor-pointer appearance-none"
-                            style={{
-                                backgroundImage: `linear-gradient(to right, #333 0%, #333 ${(trimRange.end / duration) * 100}%, #ef4444 ${(trimRange.end / duration) * 100}%, #ef4444 100%)`,
-                                height: '6px',
-                                borderRadius: '999px'
-                            }}
-                        />
-                    </div>
-                </div>
-
-                <div className="flex justify-between items-center px-2">
-                    <span className="text-xs font-bold text-gray-500 uppercase">Duración Final:</span>
-                    <span className="text-xl font-black italic text-brand-red">{Math.round(trimRange.end - trimRange.start)}s</span>
-                </div>
-
-                {/* Main Action */}
-                <button
-                    onClick={processVideo}
-                    disabled={isProcessing}
-                    className="w-full bg-brand-red text-white h-14 rounded-xl font-black uppercase tracking-widest text-lg shadow-lg hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:grayscale"
-                >
-                    {isProcessing ? "Procesando..." : (
-                        <>
-                            <Check className="w-6 h-6" />
-                            GUARDAR
-                        </>
-                    )}
-                </button>
-            </div>
-
-            {/* PROCESSING OVERLAY */}
-            <AnimatePresence>
-                {isProcessing && (
-                    <motion.div
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                        className="fixed inset-0 z-[100000] bg-black/95 flex flex-col items-center justify-center p-8 text-center"
-                    >
-                        <AlertTriangle className="w-12 h-12 text-brand-red mb-4 animate-bounce" />
-                        <h3 className="text-white text-xl font-black italic uppercase mb-2">
-                            {statusMessage}
-                        </h3>
-                        <p className="text-gray-400 text-sm mb-8 animate-pulse">
-                            No cierres esta ventana
-                        </p>
-
-                        <div className="w-full max-w-xs h-2 bg-gray-800 rounded-full overflow-hidden mb-8">
-                            <div
-                                className="h-full bg-brand-red transition-all duration-300"
-                                style={{ width: `${processProgress}%` }}
-                            />
-                        </div>
-
-                        <button
-                            onClick={() => {
-                                abortController.current?.abort();
-                                onSave(videoFile, duration); // Fallback manual
-                            }}
-                            className="text-xs text-gray-500 font-bold uppercase underline"
-                        >
-                            ¿Tarda mucho? Omitir
+                <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-8">
+                    <div className="flex justify-end pt-2">
+                        <button onClick={(e) => { e.stopPropagation(); setIsMuted(!isMuted); }} className="p-4 bg-black/40 backdrop-blur-md rounded-full border border-white/10 pointer-events-auto active:scale-90 shadow-xl transition-all">
+                            {isMuted ? <VolumeX className="w-6 h-6 text-white" /> : <Volume2 className="w-6 h-6 text-white" />}
                         </button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                    </div>
+                </div>
+            </div>
+
+            {/* Timeline */}
+            <div className="bg-[#050505] p-6 pb-14 shrink-0 border-t border-white/10 relative">
+                <div className="mb-4 flex items-center justify-center">
+                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Desliza para elegir el momento</span>
+                </div>
+                <div className="relative h-20 flex items-center justify-center">
+                    <div className="absolute h-full z-30 pointer-events-none rounded-xl border-4 border-brand-red shadow-[0_0_20px_rgba(239,68,68,0.4)] bg-brand-red/5" style={{ width: `${WINDOW_WIDTH}px` }}>
+                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[9px] font-black text-white bg-brand-red px-2 py-0.5 rounded-full uppercase tracking-tighter">30s</div>
+                    </div>
+                    <div ref={scrollRef} onScroll={handleScroll} className="w-full h-full overflow-x-auto overflow-y-hidden flex items-center scroll-smooth touch-pan-x no-scrollbar">
+                        <div className="shrink-0 h-full" style={{ width: `calc(50% - ${WINDOW_WIDTH / 2}px)` }} />
+                        <div className="h-16 relative flex items-center bg-white/5 border-y border-white/10 shrink-0 overflow-hidden rounded-md" style={{ width: `${duration * PIXELS_PER_SECOND}px` }}>
+                            <div className="absolute inset-0 flex">
+                                {thumbnails.length > 0 ? (
+                                    thumbnails.map((src, i) => (<img key={i} src={src} className="h-full flex-1 object-cover opacity-60 border-r border-black/20" alt="" />))
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-white/5 animate-pulse"><div className="w-full h-px bg-white/10" /></div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="shrink-0 h-full" style={{ width: `calc(50% - ${WINDOW_WIDTH / 2}px)` }} />
+                    </div>
+                </div>
+                <div className="flex justify-between items-center mt-6 px-1">
+                    <div className="flex flex-col flex-1"><span className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">Inicio</span><span className="text-xs font-black text-white">{formatTime(trimRange.start)}</span></div>
+                    <div className="flex flex-col items-center flex-1"><span className="text-sm font-black italic text-brand-red">{(trimRange.end - trimRange.start).toFixed(1)}s</span></div>
+                    <div className="flex flex-col items-end flex-1"><span className="text-[8px] font-bold text-gray-600 uppercase tracking-widest">Fin</span><span className="text-xs font-black text-white">{formatTime(trimRange.end)}</span></div>
+                </div>
+            </div>
+
+            <style jsx global>{`
+                .no-scrollbar::-webkit-scrollbar { display: none; }
+                .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+            `}</style>
         </div>
     );
 }

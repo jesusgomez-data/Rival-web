@@ -81,20 +81,15 @@ export async function getUnreadMessageCount() {
 
     if (!participations) return 0
 
-    // Filtramos para ignorar mensajes de "basura" o muy antiguos (más de 30 días)
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
     const unreadConvs = new Set<string>()
 
     await Promise.all(participations.map(async (p: any) => {
-        const { count, data: debugMsgs } = await supabase
+        const { count } = await supabase
             .from('messages')
-            .select('id, sender_id', { count: 'exact' })
+            .select('id', { count: 'exact', head: true })
             .eq('conversation_id', p.conversation_id)
-            .neq('sender_id', user.id) // IMPORTANTÍSIMO: Que NO sea yo
+            .neq('sender_id', user.id)
             .gt('created_at', p.last_read_at || '1900-01-01')
-            .gt('created_at', thirtyDaysAgo.toISOString()) // Solo mensajes recientes
 
         if (count && count > 0) {
             unreadConvs.add(p.conversation_id)

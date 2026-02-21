@@ -1316,57 +1316,6 @@ export async function syncHealthData(metrics: { steps: number, sleep_hours: numb
     return { success: true, data };
 }
 
-export async function getNutritionLogs(dateStr?: string) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return [];
-
-    const date = dateStr || new Date().toISOString().split('T')[0];
-
-    const { data, error } = await supabase
-        .from('nutrition_logs')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('log_date', date)
-        .order('created_at', { ascending: false });
-
-    if (error) console.error("Error fetching nutrition logs:", error);
-    return data || [];
-}
-
-export async function addNutritionLog(log: { calories: number, protein: number, carbs: number, fat: number, media_url?: string }) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: 'Not authenticated' };
-
-    const { data, error } = await supabase
-        .from('nutrition_logs')
-        .insert({
-            user_id: user.id,
-            ...log,
-            log_date: new Date().toISOString().split('T')[0]
-        })
-        .select()
-        .single();
-
-    if (error) return { error: error.message };
-    return { success: true, data };
-}
-
-export async function deleteNutritionLog(logId: string) {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return { error: 'Not authenticated' };
-
-    const { error } = await supabase
-        .from('nutrition_logs')
-        .delete()
-        .eq('id', logId)
-        .eq('user_id', user.id);
-
-    if (error) return { error: error.message };
-    return { success: true };
-}
 
 export async function getAIPredictions() {
     const supabase = await createClient();

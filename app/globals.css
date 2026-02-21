@@ -241,6 +241,16 @@ body {
   animation: marquee 10s linear infinite;
 }
 
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
+}
+
 /* Ocultar el indicador de desarrollo/carga de Next.js (La 'N') */
 nextjs-portal {
   display: none !important;

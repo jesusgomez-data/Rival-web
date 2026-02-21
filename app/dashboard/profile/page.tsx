@@ -20,7 +20,6 @@ import { Plus, Brain } from "lucide-react";
 import { clsx } from "clsx";
 import SkillTree from "./SkillTree";
 import HealthHub from "./HealthHub";
-import NutritionHub from "./NutritionHub";
 
 export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null);
@@ -732,19 +731,14 @@ export default function ProfilePage() {
                 {/* Right side: Form y Workouts */}
                 <div className={clsx("lg:col-span-8 space-y-8", mobileTab !== 'settings' && mobileTab !== 'workouts' && mobileTab !== 'intel' && "hidden lg:block")}>
                     {/* Intelligence Section */}
-                    <div className={clsx("grid grid-cols-1 md:grid-cols-2 gap-6", mobileTab !== 'intel' && "hidden lg:grid")}>
-                        <div className="space-y-6">
-                            <SkillTree stats={{
-                                power: profile?.power_stat || 0,
-                                endurance: profile?.endurance_stat || 0,
-                                agility: profile?.agility_stat || 0,
-                                consistency: profile?.consistency_stat || 0
-                            }} />
-                            <HealthHub />
-                        </div>
-                        <div className="space-y-6">
-                            <NutritionHub />
-                        </div>
+                    <div className={clsx("space-y-6", mobileTab !== 'intel' && "hidden lg:block")}>
+                        <SkillTree stats={{
+                            power: profile?.power_stat || 0,
+                            endurance: profile?.endurance_stat || 0,
+                            agility: profile?.agility_stat || 0,
+                            consistency: profile?.consistency_stat || 0
+                        }} />
+                        <HealthHub />
                     </div>
 
                     {/* Settings Form */}

@@ -433,16 +433,25 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                             </div>
 
                                             <div className="pt-4 border-t border-white/5">
-                                                <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center justify-between mb-2">
                                                     <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Win Rate</span>
                                                     <span className="text-white font-black italic">{combatStats.total > 0 ? ((combatStats.wins / combatStats.total) * 100).toFixed(0) : 0}%</span>
                                                 </div>
-                                                <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                                                <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden mb-4">
                                                     <div
                                                         className="bg-brand-red h-full rounded-full transition-all duration-1000"
                                                         style={{ width: `${combatStats.total > 0 ? (combatStats.wins / combatStats.total) * 100 : 0}%` }}
                                                     />
                                                 </div>
+
+                                                {combatStats.active > 0 && (
+                                                    <div className="flex items-center gap-2 bg-brand-red/10 border border-brand-red/20 px-3 py-1.5 rounded-xl w-fit">
+                                                        <Swords className="w-3 h-3 text-brand-red animate-pulse" />
+                                                        <span className="text-[8px] font-black text-brand-red uppercase tracking-widest">
+                                                            {combatStats.active} {combatStats.active === 1 ? 'Duelo en curso' : 'Duelos en curso'}
+                                                        </span>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

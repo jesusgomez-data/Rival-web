@@ -184,6 +184,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (pathname?.startsWith('/dashboard/messages')) {
             setUnreadMessages(0);
+            // Clear message notifications when entering the messages page
+            import("./notifications-actions").then(m => m.markMessageNotificationsAsRead());
+        } else {
+            getUnreadMessageCount().then(unread => {
+                setUnreadMessages(unread);
+            });
         }
     }, [pathname]);
 
