@@ -169,8 +169,8 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                                                     <span className="text-[8px] font-bold text-gray-500 uppercase">
                                                         {block.format === 'EMOM' || block.format === 'DEATH BY' ? (
                                                             `${block.config?.minutes || 15} MINS`
-                                                        ) : (block.format === 'TABATA' || block.format === 'INTERVALS') ? (
-                                                            `${block.config?.rounds || 8} RDS`
+                                                        ) : (block.format === 'TABATA' || block.format === 'INTERVALS' || block.format === 'ROUNDS FOR TIME') ? (
+                                                            `${block.config?.rounds || (block.format === 'ROUNDS FOR TIME' ? 5 : 8)} RDS`
                                                         ) : block.config?.timecap ? (
                                                             `CAP: ${block.config.timecap}`
                                                         ) : null}
@@ -202,7 +202,7 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                                         ))}
 
                                         {/* Result Summary - Compact at the Bottom */}
-                                        {(content.wodData.summary || content.stats?.length > 0 || content.wodData._stats?.length > 0) && (
+                                        {(content.wodData.summary || (content.stats && content.stats.length > 0) || (content.wodData._stats && content.wodData._stats.length > 0)) && (
                                             <div className="flex items-center gap-2 pt-2 border-t border-white/10 mt-1">
                                                 <div className="flex-1">
                                                     <p className="text-[8px] text-gray-500 font-black uppercase tracking-wider">

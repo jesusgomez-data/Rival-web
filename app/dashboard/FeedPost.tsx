@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Trash2, Edit2, Save, Heart, Dumbbell, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Trash2, Edit2, Save, Heart, Dumbbell, ChevronDown, ChevronUp, Plus, CheckCircle2, Instagram } from "lucide-react";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
 import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike, deleteComment } from "./community/actions";
@@ -12,6 +12,7 @@ import { useTheme } from "../ThemeContext";
 import { useStories } from "./stories/StoryContext";
 import PRCard from "./community/PRCard";
 import WodCard from "@/components/community/WodCard";
+import WodCreator from "@/components/training/WodCreator";
 import VideoReelsModal from "./VideoReelsModal";
 import dynamic from 'next/dynamic';
 import ShareableCard from "@/components/ShareableCard";
@@ -35,8 +36,8 @@ interface WorkoutMetrics {
     time?: string;
     elevation?: number;
     avgHeartRate?: number;
-    path?: any;
-    blocks?: any[];
+    path?: unknown;
+    blocks?: Array<{ type?: string; result?: { time?: string; rounds?: number; reps?: number }; title?: string; exercises?: any[] }>;
 }
 
 interface WorkoutDetails {
@@ -207,6 +208,12 @@ interface FeedPostProps {
     isOfficial?: boolean;
     workoutData?: WorkoutDetails;
     hasActiveDuel?: boolean;
+    music_url?: string;
+    music_title?: string;
+    music_artist?: string;
+    isMember?: boolean;
+    context?: 'following' | 'global';
+    isAdminUser?: boolean;
 }
 
 interface Comment {
@@ -240,7 +247,6 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [isPostingComment, setIsPostingComment] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
-    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
     const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
     const [expandedInnerBlocks, setExpandedInnerBlocks] = useState<number[]>([]);
@@ -274,8 +280,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const [editCaption, setEditCaption] = useState(caption || "");
     const [displayCaption, setDisplayCaption] = useState(caption || "");
     const [isDeleting, setIsDeleting] = useState(false);
+    const [editWodData, setEditWodData] = useState<any>(null);
 
-    const emojiPickerRef = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     const commentInputRef = useRef<HTMLInputElement>(null);
 
@@ -303,7 +309,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 setIsLoadingComments(false);
             });
         }
-    }, [showComments, postId]);
+    }, [showComments, postId, commentList.length]);
 
     useEffect(() => {
         setCommentTree(buildTree(commentList));
@@ -311,9 +317,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
-                setShowEmojiPicker(false);
-            }
+            // No action needed for emoji picker if removed
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setShowMenu(false);
             }
@@ -366,7 +370,6 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         setNewComment("");
         setReplyingTo(null);
         setCommentsCount(prev => prev + 1);
-        setShowEmojiPicker(false);
 
         const res = await addComment(postId, optimisticComment.content, parentId || undefined);
         if (res?.error) {
@@ -420,12 +423,20 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     };
 
     const handleUpdate = async () => {
-        const res = await updatePost(postId, editCaption);
+        let mediaUrl;
+        if (mediaType === 'wod' && editWodData) {
+            mediaUrl = JSON.stringify(editWodData);
+        }
+        const res = await updatePost(postId, editCaption, mediaUrl);
         if (res.error) {
             alert(res.error);
         } else {
-            setDisplayCaption(editCaption);
-            setIsEditing(false);
+            if (mediaType === 'wod' && editWodData) {
+                window.location.reload();
+            } else {
+                setDisplayCaption(editCaption);
+                setIsEditing(false);
+            }
         }
     };
 
@@ -555,7 +566,15 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             {showMenu && (
                                 <div className="absolute right-0 top-full mt-2 w-40 bg-brand-gray border border-white/10 rounded-2xl shadow-2xl z-20 overflow-hidden backdrop-blur-xl">
                                     <button
-                                        onClick={() => { setIsEditing(true); setShowMenu(false); }}
+                                        onClick={() => {
+                                            setIsEditing(true);
+                                            setShowMenu(false);
+                                            if (mediaType === 'wod' && image) {
+                                                try {
+                                                    setEditWodData(JSON.parse(image));
+                                                } catch (e) { console.error(e); }
+                                            }
+                                        }}
                                         className="w-full text-left px-5 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 transition-colors"
                                     >
                                         <Edit2 className="w-4 h-4" /> Editar
@@ -578,16 +597,28 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 ((displayCaption && mediaType !== 'class_result') || isEditing) && (
                     <div className="px-4 pb-3">
                         {isEditing ? (
-                            <div className="flex gap-2">
-                                <textarea
-                                    value={editCaption}
-                                    onChange={(e) => setEditCaption(e.target.value)}
-                                    className="w-full bg-black/20 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-brand-red/50"
-                                    rows={2}
-                                />
-                                <div className="flex flex-col gap-1">
-                                    <button onClick={handleUpdate} className="p-2 bg-green-500/10 text-green-500 rounded-lg" title="Guardar"><Save className="w-4 h-4" /></button>
-                                    <button onClick={() => { setIsEditing(false); setEditCaption(displayCaption); }} className="p-2 bg-red-500/10 text-red-500 rounded-lg" title="Cancelar"><X className="w-4 h-4" /></button>
+                            <div className="space-y-4">
+                                {mediaType === 'wod' && (
+                                    <div className="bg-black/20 p-4 rounded-3xl border border-white/5 mb-4">
+                                        <p className="text-[10px] font-black text-brand-red uppercase tracking-widest mb-4 ml-2">Editando Estructura del WOD</p>
+                                        <WodCreator
+                                            initialData={editWodData}
+                                            onUpdate={(data) => setEditWodData(data)}
+                                        />
+                                    </div>
+                                )}
+                                <div className="flex gap-2">
+                                    <textarea
+                                        value={editCaption}
+                                        onChange={(e) => setEditCaption(e.target.value)}
+                                        placeholder="Edita el pie de foto..."
+                                        className="w-full bg-black/20 border border-white/10 rounded-2xl p-4 text-sm text-white focus:outline-none focus:border-brand-red/50 transition-all min-h-[80px]"
+                                        rows={2}
+                                    />
+                                    <div className="flex flex-col gap-2">
+                                        <button onClick={handleUpdate} className="flex-1 px-4 bg-brand-red/10 text-brand-red border border-brand-red/20 rounded-2xl hover:bg-brand-red hover:text-white transition-all flex items-center justify-center" title="Guardar"><Save className="w-5 h-5" /></button>
+                                        <button onClick={() => { setIsEditing(false); setEditCaption(displayCaption); }} className="flex-1 px-4 bg-white/5 text-gray-500 border border-white/10 rounded-2xl hover:bg-white/10 hover:text-white transition-all flex items-center justify-center" title="Cancelar"><X className="w-5 h-5" /></button>
+                                    </div>
                                 </div>
                             </div>
                         ) : (
@@ -630,7 +661,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 if (typeof image === 'string' && image.startsWith('{')) {
                                     prData = JSON.parse(image);
                                 }
-                            } catch (e) { }
+                            } catch { }
 
                             return (
                                 <PRCard
@@ -648,12 +679,12 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 ) : mediaType === 'wod' ? (
                     <div className="px-4 pb-6 mt-2">
                         {(() => {
-                            let wodData: any = null;
+                            let wodData: { blocks: any[] } | null = null;
                             try {
                                 if (typeof image === 'string' && image.startsWith('{')) {
                                     wodData = JSON.parse(image);
                                 }
-                            } catch (e) { }
+                            } catch { }
 
                             if (!wodData) return null;
 
@@ -669,7 +700,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 ) : mediaType === 'class_result' ? (
                     <div className="px-4 pb-6">
                         {(() => {
-                            let blocks: Array<{ type: string, centerName?: string, result?: any, rounds?: number, duration?: number, title?: string, notes?: string, exercises?: any[] }> = [];
+                            let blocks: Array<{ type: string, centerName?: string, result?: { time?: string; rounds?: number; reps?: number }, rounds?: number, duration?: number, title?: string, notes?: string, exercises?: Array<{ name: string }> }> = [];
                             let centerName = "Centro Deportivo";
                             try {
                                 const parsed = JSON.parse(image);
@@ -682,7 +713,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                         return true;
                                     });
                                 }
-                            } catch (e) {
+                            } catch {
                                 blocks = [];
                             }
 
@@ -735,7 +766,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                             CONTRAER <ChevronUp className="w-3 h-3" />
                                         </button>
                                     </div>
-                                    {blocks.map((block: any, idx: number) => {
+                                    {blocks.map((block: { title?: string; value?: string; exercises?: any[] }, idx: number) => {
                                         const title = (block.title || 'Ejercicio').toUpperCase();
                                         const value = block.value || '';
                                         const exercises = block.exercises || [];
@@ -787,7 +818,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
                                                             {exercises.length > 0 && (
                                                                 <div className="grid grid-cols-2 gap-2">
-                                                                    {exercises.map((ex: any, eIdx: number) => (
+                                                                    {exercises.map((ex: { name: string }, eIdx: number) => (
                                                                         <div key={eIdx} className="bg-white/5 rounded-xl px-3 py-2 border border-white/5">
                                                                             <p className="text-[8px] md:text-[9px] text-gray-500 font-black uppercase tracking-wider truncate">{ex.name}</p>
                                                                             <p className={clsx(
@@ -938,7 +969,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                     </div>
 
                                                     <div className="relative z-10 space-y-3">
-                                                        {blocks.map((block: { type: string, title?: string, result?: { time?: string, rounds?: number }, duration?: number, notes?: string, exercises?: any[] }, idx: number) => {
+                                                        {blocks.map((block: { type: string, title?: string, result?: { time?: string, rounds?: number }, duration?: number, notes?: string, exercises?: Array<{ name: string; sets?: any[] }> }, idx: number) => {
                                                             const isInnerExpanded = expandedInnerBlocks.includes(idx + 1000); // Unique ID offset
                                                             const resultStr =
                                                                 block.type === 'fortime' ? (block.result?.time || '--:--') :
@@ -983,7 +1014,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                                         <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-3 mt-2 border-t border-white/5">
                                                                             {block.notes && <p className="text-xs text-gray-400 italic mb-2">&quot;{block.notes}&quot;</p>}
                                                                             <div className="space-y-2">
-                                                                                {block.exercises?.map((ex: { name: string, sets?: any[] }, eIdx: number) => (
+                                                                                {block.exercises?.map((ex: { name: string, sets?: Array<{ weight: number; reps: number; unit?: string; measure?: string }> }, eIdx: number) => (
                                                                                     <div key={eIdx} className="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2 border border-white/5">
                                                                                         <span className={clsx("text-xs font-bold uppercase", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</span>
                                                                                         <span className="text-xs text-brand-red font-mono font-bold">
@@ -1315,7 +1346,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         username={username || user}
                         avatar={avatar}
                         content={{
-                            type: workoutData?.metrics?.type === 'running' ? 'running' : (mediaType as any || 'workout'),
+                            type: workoutData?.metrics?.type === 'running' ? 'running' : (mediaType as 'workout' | 'wod' | 'pr' || 'workout'),
                             title: (workoutData?.title === 'Entrenamiento Híbrido Libre' || workoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (workoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (workoutData?.title || (mediaType === 'running' ? 'RUNNING' : (mediaType === 'wod' ? 'WOD ARENA' : 'ENTRENAMIENTO')))),
                             highlight: highlight || caption,
                             stats: mediaType === 'wod' ? (() => {
@@ -1328,7 +1359,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                         ];
                                     }
                                     return [];
-                                } catch (e) { return [] }
+                                } catch { return [] }
                             })() : workoutData?.metrics?.type === 'running'
                                 ? [
                                     { label: 'DISTANCIA', value: `${(workoutData.metrics.distance || 0) / 1000} KM`, icon: 'distance' },
@@ -1337,19 +1368,19 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     { label: 'DESNIVEL', value: `${workoutData.metrics.elevation || 0}m`, icon: 'elevation' },
                                     { label: 'PULSO MED.', value: `${workoutData.metrics.avgHeartRate || 0}`, icon: 'heart' }
                                 ]
-                                : workoutData?.metrics?.blocks?.map((b: any) => ({
+                                : workoutData?.metrics?.blocks?.map((b: { type?: string; result?: { time?: string; rounds?: number; reps?: number } }) => ({
                                     label: b.type?.toUpperCase(),
-                                    value: b.result?.time || (b.result?.rounds > 0 ? `${b.result.rounds} RDS` : (b.result?.reps > 0 ? `${b.result.reps} REPS` : (b.type === 'other' ? '-' : `0 RDS`)))
+                                    value: b.result?.time || ((b.result?.rounds ?? 0) > 0 ? `${b.result?.rounds} RDS` : ((b.result?.reps ?? 0) > 0 ? `${b.result?.reps} REPS` : (b.type === 'other' ? '-' : `0 RDS`)))
                                 })).slice(0, 4) || (mediaType === 'pr' ? (() => {
                                     try {
                                         const d = JSON.parse(image || '{}');
                                         return [{ label: d.exerciseName?.toUpperCase(), value: `${d.weight}${d.unit}` }];
-                                    } catch (e) { return [] }
+                                    } catch { return [] }
                                 })() : []),
                             image: image,
-                            mapData: (workoutData as any)?.metrics?.path ? 'GPS_PATH_ACTIVE' : undefined,
+                            mapData: (workoutData as { metrics?: { path?: unknown } })?.metrics?.path ? 'GPS_PATH_ACTIVE' : undefined,
                             wodData: mediaType === 'wod' ? (() => {
-                                try { return JSON.parse(image); } catch (e) { return null; }
+                                try { return JSON.parse(image); } catch { return null; }
                             })() : null,
                             attribution
                         }}
@@ -1381,7 +1412,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     title: (workoutData?.sport_type && workoutData.sport_type !== 'fitness') ? workoutData.sport_type.toUpperCase() : (highlight || (mediaType === 'wod' ? 'WOD ARENA' : workoutData?.title) || 'ENTRENAMIENTO'),
                                     date: time,
                                     stats: mediaType === 'pr' ? (() => {
-                                        try { const d = JSON.parse(image || '{}'); return [{ label: "PESO", value: `${d.weight}${d.unit}` }, { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }]; } catch (e) { return [] }
+                                        try { const d = JSON.parse(image || '{}'); return [{ label: "PESO", value: `${d.weight}${d.unit}` }, { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }]; } catch { return [] }
                                     })() : mediaType === 'wod' ? (() => {
                                         try {
                                             const d = JSON.parse(image || '{}');
@@ -1392,14 +1423,14 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                 ];
                                             }
                                             return [{ label: "ESTADO", value: "COMPLETADO" }];
-                                        } catch (e) { return [] }
-                                    })() : workoutData?.metrics?.blocks?.map((b) => ({
+                                        } catch { return [] }
+                                    })() : workoutData?.metrics?.blocks?.map((b: { type?: string; result?: { time?: string; rounds?: number } }) => ({
                                         label: b.type?.toUpperCase(),
                                         value: b.result?.time || `${b.result?.rounds || 0} RDS`
                                     })).slice(0, 3) || [{ label: "DISCIPLINA", value: (workoutData?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "COMPLETADO" }],
                                     image: !isVideo && mediaType !== 'wod' ? image : undefined,
                                     wodData: mediaType === 'wod' ? (() => {
-                                        try { return JSON.parse(image); } catch (e) { return null; }
+                                        try { return JSON.parse(image); } catch { return null; }
                                     })() : null,
                                     attribution
                                 }}

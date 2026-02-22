@@ -3762,7 +3762,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
         return () => clearInterval(t);
     }, [restTimer]);
 
-    const addExercise = async (template: WorkoutExercise) => {
+    const addExercise = async (template: { name: string; video_url?: string }) => {
         const prev = await getExercisePreviousRecord(template.name) || "0kg x 0";
 
         // Auto-detect unit type based on exercise name

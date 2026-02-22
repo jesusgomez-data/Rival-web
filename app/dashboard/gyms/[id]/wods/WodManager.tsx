@@ -8,7 +8,9 @@ import clsx from "clsx";
 import { useTheme } from "../../../../ThemeContext";
 
 type BlockType = 'strength' | 'wod' | 'skill' | 'other';
-type BlockFormat = 'EMOM' | 'AMRAP' | 'FOR TIME' | 'INTERVALS' | 'TABATA' | 'QUALITY' | 'REST' | 'DEATH BY' | 'FREE';
+type BlockFormat = 'EMOM' | 'AMRAP' | 'FOR TIME' | 'INTERVALS' | 'TABATA' | 'QUALITY' | 'REST' | 'DEATH BY' | 'FREE' | 'ROUNDS FOR TIME';
+
+import { BENCHMARKS } from "./benchmarks";
 
 interface WodBlock {
     id: string;
@@ -98,6 +100,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
     const [postAsCenter, setPostAsCenter] = useState(canPostAsCenter);
     const [expandedPosts, setExpandedPosts] = useState<Record<string, boolean>>({});
     const [expandedBlocks, setExpandedBlocks] = useState<Record<string, Record<string, boolean>>>({});
+    const [showBenchmarks, setShowBenchmarks] = useState(false);
 
     // File State: Map blockId -> File[]
     const [blockFiles, setBlockFiles] = useState<Record<string, File[]>>({});
@@ -474,7 +477,52 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
 
                         {/* Section 0: Title */}
                         <div className="space-y-2">
-                            <label className="text-xs font-bold text-brand-red uppercase tracking-widest">WOD Title</label>
+                            <div className="flex items-center justify-between">
+                                <label className="text-xs font-bold text-brand-red uppercase tracking-widest">WOD Title</label>
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowBenchmarks(!showBenchmarks)}
+                                        className="text-[10px] font-black text-white/40 hover:text-brand-red uppercase tracking-wider bg-white/5 px-2.5 py-1 rounded-lg border border-white/5 transition-all flex items-center gap-1.5"
+                                    >
+                                        <Trophy className="w-3 h-3" />
+                                        Cargar Benchmark
+                                    </button>
+
+                                    {showBenchmarks && (
+                                        <div className="absolute right-0 top-full mt-2 w-64 bg-brand-gray border border-white/10 rounded-xl shadow-2xl z-[150] p-1 overflow-hidden backdrop-blur-2xl">
+                                            <div className="p-2 border-b border-white/5 flex items-center justify-between">
+                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Seleccionar Benchmark</span>
+                                                <button onClick={() => setShowBenchmarks(false)}><X className="w-3 h-3 text-gray-600" /></button>
+                                            </div>
+                                            <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                                {BENCHMARKS.map((bm, i) => (
+                                                    <button
+                                                        key={i}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            setTitle(bm.name);
+                                                            if (bm.warmup) setWarmup(bm.warmup);
+                                                            if (bm.summary) setSummary(bm.summary as any);
+                                                            if (bm.blocks) {
+                                                                setBlocks(bm.blocks.map(b => ({
+                                                                    ...b,
+                                                                    id: Math.random().toString(36).substr(2, 9),
+                                                                    exercises: (b as any).exercises || []
+                                                                })) as any);
+                                                            }
+                                                            setShowBenchmarks(false);
+                                                        }}
+                                                        className="w-full text-left px-4 py-3 text-xs font-bold text-gray-300 hover:text-white hover:bg-white/5 border-b border-white/5 last:border-0 transition-colors uppercase italic"
+                                                    >
+                                                        {bm.name}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                             <input
                                 type="text"
                                 value={title}
@@ -518,6 +566,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                     if (newFormat === 'EMOM') newConfig = { frequency: '1 MIN', minutes: 12 };
                                                     else if (newFormat === 'AMRAP') newConfig = { timecap: '20:00' };
                                                     else if (newFormat === 'FOR TIME') newConfig = { timecap: '' };
+                                                    else if (newFormat === 'ROUNDS FOR TIME') newConfig = { rounds: 5, timecap: '20:00' };
                                                     else if (newFormat === 'TABATA') newConfig = { rounds: 8, work: '20S', rest: '10S' };
 
                                                     updateBlock(index, { format: newFormat, config: newConfig });
@@ -527,6 +576,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                 <option value="FREE">Free Style</option>
                                                 <option value="EMOM">EMOM</option>
                                                 <option value="FOR TIME">For Time</option>
+                                                <option value="ROUNDS FOR TIME">Rounds for Time</option>
                                                 <option value="AMRAP">AMRAP</option>
                                                 <option value="INTERVALS">Intervals</option>
                                                 <option value="TABATA">Tabata</option>
@@ -537,13 +587,24 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                             <ChevronDown className="w-3 h-3 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                                         </div>
 
-                                        {(block.format === 'AMRAP' || block.format === 'FOR TIME') && (
-                                            <input
-                                                value={block.config?.timecap || ''}
-                                                onChange={(e) => updateBlock(index, { config: { ...block.config, timecap: e.target.value } })}
-                                                placeholder="Time Cap"
-                                                className="w-24 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-brand-red outline-none placeholder-gray-600 font-bold"
-                                            />
+                                        {(block.format === 'AMRAP' || block.format === 'FOR TIME' || block.format === 'ROUNDS FOR TIME') && (
+                                            <div className="flex gap-2">
+                                                {block.format === 'ROUNDS FOR TIME' && (
+                                                    <input
+                                                        type="number"
+                                                        value={block.config?.rounds || ''}
+                                                        onChange={(e) => updateBlock(index, { config: { ...block.config, rounds: parseInt(e.target.value) || 0 } })}
+                                                        placeholder="Rounds"
+                                                        className="w-16 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-brand-red outline-none placeholder-gray-600 font-bold"
+                                                    />
+                                                )}
+                                                <input
+                                                    value={block.config?.timecap || ''}
+                                                    onChange={(e) => updateBlock(index, { config: { ...block.config, timecap: e.target.value } })}
+                                                    placeholder="Time Cap"
+                                                    className="w-24 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-brand-red outline-none placeholder-gray-600 font-bold"
+                                                />
+                                            </div>
                                         )}
 
                                         {block.format === 'EMOM' && (
@@ -1045,9 +1106,18 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                                     <span className={`w-2 h-2 rounded-full ${block.type === 'wod' ? 'bg-white' : 'bg-gray-500'}`}></span>
                                                                     {(block.title || (block.format && block.format !== 'FREE' ? block.format : (block.type === 'wod' ? 'Workout' : block.type))).toUpperCase()}
 
-                                                                    {block.duration && (
+                                                                    {/* Display Config Info */}
+                                                                    {(block.config?.timecap || block.config?.rounds || block.config?.minutes || block.duration) && (
                                                                         <span className="ml-1 text-brand-red text-[10px] font-black uppercase tracking-widest opacity-80 italic">
-                                                                            {block.duration}
+                                                                            {block.format === 'ROUNDS FOR TIME' ? (
+                                                                                `${block.config?.rounds || '?'} RDS ${block.config?.timecap ? `(CAP: ${block.config.timecap})` : ''}`
+                                                                            ) : block.format === 'EMOM' || block.format === 'DEATH BY' ? (
+                                                                                `${block.config?.minutes || '?'} MINS (${block.config?.frequency || '1 MIN'})`
+                                                                            ) : block.format === 'TABATA' || block.format === 'INTERVALS' ? (
+                                                                                `${block.config?.rounds || '?'} RDS (${block.config?.work || '20S'}/${block.config?.rest || '10S'})`
+                                                                            ) : (block.config?.timecap || block.duration) ? (
+                                                                                `CAP: ${block.config?.timecap || block.duration}`
+                                                                            ) : null}
                                                                         </span>
                                                                     )}
                                                                 </h5>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Send, Image as ImageIcon, X, Smile, Trophy, Activity, Dumbbell } from "lucide-react";
+import { Send, Image as ImageIcon, X, Smile, Trophy, Activity, Dumbbell, Calendar, Clock } from "lucide-react";
 import MentionInput from "@/components/MentionInput";
 import Image from "next/image";
 import MusicPicker from "./MusicPicker";
@@ -50,6 +50,7 @@ export default function CreatePost({
     const [pendingFile, setPendingFile] = useState<File | null>(null);
 
     const [mediaType, setMediaType] = useState<'image' | 'video' | null>(null);
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -94,7 +95,8 @@ export default function CreatePost({
             selectedTrack,
             currentUser,
             preview,
-            wodData
+            wodData,
+            scheduledFor: selectedDate
         });
 
         setContent("");
@@ -142,7 +144,24 @@ export default function CreatePost({
                             </div>
                         )}
                         {postType === 'wod' && (
-                            <div className="animate-in fade-in slide-in-from-top-2 mb-6">
+                            <div className="animate-in fade-in slide-in-from-top-2 mb-6 space-y-4">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 p-4 bg-black/40 border border-white/5 rounded-2xl">
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <div className="p-2 bg-brand-red/10 rounded-lg">
+                                            <Calendar className="w-4 h-4 text-brand-red" />
+                                        </div>
+                                        <span className="text-[10px] font-black text-white uppercase tracking-widest">¿Cuándo lo hiciste?</span>
+                                    </div>
+                                    <input
+                                        type="date"
+                                        value={selectedDate}
+                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        className="bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-white focus:outline-none focus:border-brand-red/50 transition-all cursor-pointer w-full sm:w-auto"
+                                    />
+                                    <p className="text-[9px] font-medium text-gray-500 italic">
+                                        * La fecha en la que se mostrará tu entrenamiento
+                                    </p>
+                                </div>
                                 <WodCreator onUpdate={(data) => setWodData(data)} initialData={wodData} />
                             </div>
                         )}
@@ -200,7 +219,7 @@ export default function CreatePost({
                         setPendingFile(file);
                         setMediaType('video');
                         setPreview(URL.createObjectURL(file));
-                        setDuration(dur);
+                        setDuration(dur.end - dur.start);
                         setIsVideoTrimming(false);
                         setTrimmerVideoUrl(null);
                         setVideoToEdit(null);

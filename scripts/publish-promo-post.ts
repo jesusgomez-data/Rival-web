@@ -42,7 +42,7 @@ async function publishPromoPost() {
     // 1. Render HTML to Image using Puppeteer
     console.log("📸 Rendering HTML design to image...");
     const browser = await puppeteer.launch({
-        headless: "new",
+        headless: true,
         args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
     const page = await browser.newPage();
@@ -85,6 +85,7 @@ async function publishPromoPost() {
             upsert: false
         });
 
+    let finalUrl = '';
     if (uploadError) {
         console.error("❌ Upload failed:", uploadError.message);
         // Fallback: try 'media' bucket if 'posts' failed (common in some setups)
@@ -101,11 +102,11 @@ async function publishPromoPost() {
         }
         // Success in fallback
         const { data: publicUrlData } = supabase.storage.from('media').getPublicUrl(fileName);
-        var finalUrl = publicUrlData.publicUrl;
+        finalUrl = publicUrlData.publicUrl;
     } else {
         // Success in primary
         const { data: publicUrlData } = supabase.storage.from(bucketName).getPublicUrl(fileName);
-        var finalUrl = publicUrlData.publicUrl;
+        finalUrl = publicUrlData.publicUrl;
     }
 
     console.log(`✅ Image uploaded: ${finalUrl}`);

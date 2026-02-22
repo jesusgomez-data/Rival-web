@@ -1,7 +1,12 @@
-import { createClient } from "./utils/supabase/server";
+import { createAdminClient } from '../utils/supabase/admin';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Load env vars
+dotenv.config({ path: path.join(process.cwd(), '.env.local') });
 
 async function addDuelAd() {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const adData = {
         title: "DOMINA LOS DUELOS",

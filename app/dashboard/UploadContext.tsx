@@ -44,6 +44,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
         currentUser: any;
         preview?: string;
         wodData?: any;
+        scheduledFor?: string;
     }) => {
         const id = Math.random().toString(36).substring(7);
         const newTask: UploadTask = {
@@ -110,6 +111,9 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
             }
 
             const formData = new FormData();
+            if (data.scheduledFor) {
+                formData.append("scheduled_for", data.scheduledFor);
+            }
             if (data.selectedTrack) {
                 formData.append("music_url", data.selectedTrack.url);
                 formData.append("music_title", data.selectedTrack.title);

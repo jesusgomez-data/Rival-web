@@ -108,6 +108,9 @@ export async function createPRPost(formData: FormData) {
             backgroundImage: mediaUrl
         })
 
+        const dateStr = formData.get('scheduled_for') as string;
+        const createdAt = dateStr ? new Date(`${dateStr}T${new Date().toISOString().split('T')[1]}`).toISOString() : undefined;
+
         const { error: insertError } = await supabase
             .from('posts')
             .insert({
@@ -115,6 +118,7 @@ export async function createPRPost(formData: FormData) {
                 caption: `¡NUEVO PR! ${exercise}: ${weight}kg`,
                 media_url: prData,
                 media_type: 'pr',
+                created_at: createdAt,
                 music_url: formData.get('music_url') as string || null,
                 music_title: formData.get('music_title') as string || null,
                 music_artist: formData.get('music_artist') as string || null
@@ -150,6 +154,9 @@ export async function createWodPost(formData: FormData) {
             return { error: "WOD data is required" }
         }
 
+        const dateStr = formData.get('scheduled_for') as string;
+        const createdAt = dateStr ? new Date(`${dateStr}T${new Date().toISOString().split('T')[1]}`).toISOString() : undefined;
+
         const { error: insertError } = await supabase
             .from('posts')
             .insert({
@@ -157,6 +164,7 @@ export async function createWodPost(formData: FormData) {
                 caption: content || title || 'ENTRENAMIENTO COMPLETADO',
                 media_url: wodDataJson,
                 media_type: 'wod',
+                created_at: createdAt,
                 music_url: formData.get('music_url') as string || null,
                 music_title: formData.get('music_title') as string || null,
                 music_artist: formData.get('music_artist') as string || null
@@ -458,7 +466,7 @@ export async function deleteComment(commentId: string) {
     return { success: true }
 }
 
-export async function updatePost(postId: string, newCaption: string) {
+export async function updatePost(postId: string, newCaption: string, mediaUrl?: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
@@ -466,15 +474,18 @@ export async function updatePost(postId: string, newCaption: string) {
     const { data: profile } = await supabase.from('profiles').select('is_official').eq('id', user.id).single();
     const isAdmin = profile?.is_official === true;
 
+    const updateData: any = { caption: newCaption };
+    if (mediaUrl) updateData.media_url = mediaUrl;
+
     const { error } = await supabase
         .from('posts')
-        .update({ caption: newCaption })
+        .update(updateData)
         .eq('id', postId)
-        .eq('user_id', isAdmin ? undefined : user.id) // This is tricky for RLS, but if admin, we should maybe use admin client
+        .eq('user_id', isAdmin ? undefined : user.id)
 
     if (isAdmin) {
         const adminSupabase = createAdminClient();
-        const { error: adminError } = await adminSupabase.from('posts').update({ caption: newCaption }).eq('id', postId);
+        const { error: adminError } = await adminSupabase.from('posts').update(updateData).eq('id', postId);
         if (adminError) return { error: adminError.message };
     } else {
         if (error) return { error: error.message }

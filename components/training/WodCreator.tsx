@@ -20,7 +20,9 @@ import { motion, Reorder, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { getExercises, addNewExercise } from "@/app/dashboard/training/actions";
 
-export type WodFormat = 'AMRAP' | 'FOR TIME' | 'EMOM' | 'TABATA' | 'INTERVALS' | 'DEATH BY';
+export type WodFormat = 'AMRAP' | 'FOR TIME' | 'EMOM' | 'TABATA' | 'INTERVALS' | 'DEATH BY' | 'ROUNDS FOR TIME' | '21-15-9';
+
+import { BENCHMARKS } from "./benchmarks";
 
 export interface WodBlock {
     id: string;
@@ -64,7 +66,9 @@ const FORMAT_ICONS: Record<WodFormat, React.ReactNode> = {
     'EMOM': <Repeat className="w-5 h-5" />,
     'TABATA': <Activity className="w-5 h-5" />,
     'INTERVALS': <Activity className="w-5 h-5" />,
-    'DEATH BY': <Target className="w-5 h-5" />
+    'DEATH BY': <Target className="w-5 h-5" />,
+    'ROUNDS FOR TIME': <Repeat className="w-5 h-5" />,
+    '21-15-9': <Zap className="w-5 h-5" />
 };
 
 const FORMAT_DESCRIPTIONS: Record<WodFormat, string> = {
@@ -73,7 +77,9 @@ const FORMAT_DESCRIPTIONS: Record<WodFormat, string> = {
     'EMOM': 'EVERY MINUTE ON THE MINUTE',
     'TABATA': '20s WORK / 10s REST',
     'INTERVALS': 'TRABAJO Y DESCANSO DEFINIDO',
-    'DEATH BY': 'AÑADE REPETICIONES CADA MINUTO'
+    'DEATH BY': 'AÑADE REPETICIONES CADA MINUTO',
+    'ROUNDS FOR TIME': 'REALIZA LAS RONDAS POR TIEMPO',
+    '21-15-9': 'ESQUEMA CLÁSICO DE REPETICIONES'
 };
 
 export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
@@ -101,6 +107,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
     const [activeExercisePath, setActiveExercisePath] = useState<{ bId: string, exId: string } | null>(null);
     const [isSavingNew, setIsSavingNew] = useState(false);
     const [activeUnitPath, setActiveUnitPath] = useState<{ bId: string, exId: string } | null>(null);
+    const [showBenchmarks, setShowBenchmarks] = useState(false);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const inputRefs = useRef<Record<string, HTMLInputElement>>({});
 
@@ -216,6 +223,60 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
     return (
         <div className="space-y-6">
             <div className="relative group">
+                <div className="flex items-center justify-between mb-2">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2">Título del Entrenamiento</label>
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setShowBenchmarks(!showBenchmarks)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-brand-red/10 border border-brand-red/20 rounded-lg text-[10px] font-black text-brand-red uppercase tracking-wider hover:bg-brand-red hover:text-white transition-all group/btn"
+                        >
+                            <Trophy className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
+                            Cargar Benchmark
+                        </button>
+
+                        <AnimatePresence>
+                            {showBenchmarks && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                    className="absolute right-0 top-full mt-2 w-64 bg-brand-gray border border-white/10 rounded-2xl shadow-2xl z-[200] overflow-hidden backdrop-blur-2xl"
+                                >
+                                    <div className="p-3 border-b border-white/5 bg-white/5">
+                                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest pl-1">CROSSFIT BENCHMARKS</p>
+                                    </div>
+                                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                        {BENCHMARKS.map((bm, i) => (
+                                            <button
+                                                key={i}
+                                                type="button"
+                                                onClick={() => {
+                                                    setTitle(bm.name);
+                                                    if (bm.summary) setSummary(bm.summary as any);
+                                                    if (bm.blocks) {
+                                                        const normalizedBlocks = bm.blocks.map(b => ({
+                                                            ...b,
+                                                            id: Math.random().toString(36).substring(7),
+                                                            exercises: b.exercises.map(ex => ({ ...ex, id: Math.random().toString(36).substring(7) }))
+                                                        }));
+                                                        setBlocks(normalizedBlocks as any);
+                                                        updateWod(bm.name, normalizedBlocks as any, bm.summary as any);
+                                                    }
+                                                    setShowBenchmarks(false);
+                                                }}
+                                                className="w-full text-left px-4 py-3 text-xs font-bold text-gray-300 hover:text-white hover:bg-brand-red/10 border-b border-white/5 last:border-0 transition-colors uppercase italic flex items-center justify-between"
+                                            >
+                                                {bm.name}
+                                                <ChevronDown className="w-3 h-3 -rotate-90 opacity-30" />
+                                            </button>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </div>
                 <input
                     type="text"
                     placeholder="TÍTULO DEL WOD (Ej: THE CHIEF, MURPH...)"
@@ -254,7 +315,8 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                         // Clear irrelevant config when format changes
                                         let newConfig: any = {};
                                         if (newFormat === 'AMRAP') newConfig = { timecap: '20:00' };
-                                        else if (newFormat === 'FOR TIME') newConfig = { timecap: '' };
+                                        else if (newFormat === 'FOR TIME' || newFormat === '21-15-9') newConfig = { timecap: '' };
+                                        else if (newFormat === 'ROUNDS FOR TIME') newConfig = { rounds: 5, timecap: '20:00' };
                                         else if (newFormat === 'EMOM' || newFormat === 'DEATH BY') newConfig = { frequency: '1 MIN', minutes: 15 };
                                         else if (newFormat === 'TABATA') newConfig = { rounds: 8, work: '20S', rest: '10S' };
                                         else if (newFormat === 'INTERVALS') newConfig = { rounds: 4, work: '40S', rest: '20S' };
@@ -291,8 +353,14 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                 {block.format === 'AMRAP' && (
                                     <ConfigInput label="TIME CAP" value={block.config.timecap || '20:00'} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} />
                                 )}
-                                {block.format === 'FOR TIME' && (
+                                {(block.format === 'FOR TIME' || block.format === '21-15-9') && (
                                     <ConfigInput label="TIME CAP (OPT)" value={block.config.timecap || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} />
+                                )}
+                                {block.format === 'ROUNDS FOR TIME' && (
+                                    <>
+                                        <ConfigInput label="ROUNDS" value={block.config.rounds === undefined ? '' : block.config.rounds.toString()} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rounds: v === '' ? undefined : (parseInt(v) || 0) } })} />
+                                        <ConfigInput label="TIME CAP" value={block.config.timecap || '20:00'} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} />
+                                    </>
                                 )}
                                 {block.format === 'TABATA' && (
                                     <>
