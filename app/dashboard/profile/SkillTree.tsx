@@ -1,8 +1,7 @@
 'use client';
 
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
-import { motion } from 'framer-motion';
-import { Zap, Target, TrendingUp, ShieldCheck } from 'lucide-react';
+import { Zap, Target, TrendingUp, ShieldCheck, Move } from 'lucide-react';
 
 interface SkillTreeProps {
     stats: {
@@ -76,5 +75,3 @@ function StatItem({ label, value, icon, color }: { label: string, value: number,
         </div>
     );
 }
-
-import { Move } from 'lucide-react';
