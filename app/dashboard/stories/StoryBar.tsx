@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Plus, X, ChevronLeft, ChevronRight, Loader2, Heart, Eye, Users, Trash2, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown, Share2, Trophy, Activity, Volume2, VolumeX } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Heart, Eye, Users, Trash2, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown, Share2, Trophy, Activity, Volume2, VolumeX, Music2 } from 'lucide-react'
 import { createStory, createPRStory, toggleStoryLike, recordStoryView, deleteStory } from './actions'
 import { clsx } from 'clsx'
 import PRCard from '../community/PRCard'
@@ -11,6 +11,7 @@ import { createClient } from '@/utils/supabase/client'
 import VideoEditor from '../VideoEditor'
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import { useUploads } from '../UploadContext'
+import MusicPicker from './MusicPicker'
 
 interface OverlayElement {
     id: string
@@ -97,6 +98,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null)
     const [showFullSummary, setShowFullSummary] = useState(false)
     const [isMuted, setIsMuted] = useState(false)
+    const [showMusicPicker, setShowMusicPicker] = useState(false)
+    const musicAudioRef = useRef<HTMLAudioElement | null>(null)
 
     useEffect(() => {
         // Poll for stories every 30 seconds to catch new ones
@@ -1056,6 +1059,19 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                 <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="p-2 bg-black/40 rounded-full hover:bg-white/10 transition-colors border border-white/5">
                                     <Smile className="w-5 h-5 text-white" />
                                 </button>
+                                {/* Music button */}
+                                <button
+                                    onClick={() => setShowMusicPicker(true)}
+                                    className={clsx(
+                                        "p-2 rounded-full transition-all border",
+                                        selectedTrack
+                                            ? "bg-brand-red border-brand-red text-white shadow-[0_0_12px_rgba(220,38,38,0.5)]"
+                                            : "bg-black/40 border-white/5 text-white hover:bg-white/10"
+                                    )}
+                                    title="Añadir música"
+                                >
+                                    <Music2 className="w-5 h-5" />
+                                </button>
                             </div>
 
                             {/* Canvas Area */}
@@ -1255,7 +1271,35 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
 
                             {/* Bottom Toolbar */}
                             <div className="absolute bottom-0 left-0 right-0 p-6 flex items-center justify-between bg-gradient-to-t from-black/90 via-black/40 to-transparent z-50">
-                                <div className="flex items-center gap-2 max-w-[50%]">
+                                {/* Selected music indicator */}
+                                <div className="flex items-center gap-2 max-w-[55%] min-w-0">
+                                    {selectedTrack ? (
+                                        <button
+                                            onClick={() => setShowMusicPicker(true)}
+                                            className="flex items-center gap-2 bg-black/60 backdrop-blur-xl border border-brand-red/40 px-3 py-2 rounded-full text-left hover:border-brand-red transition-all max-w-full"
+                                        >
+                                            <Music2 className="w-3.5 h-3.5 text-brand-red shrink-0" />
+                                            <div className="flex flex-col min-w-0">
+                                                <span className="text-[9px] text-brand-red font-black uppercase tracking-widest leading-none">Música</span>
+                                                <span className="text-xs text-white font-bold truncate leading-tight">{selectedTrack.title}</span>
+                                            </div>
+                                            {/* animated bars */}
+                                            <div className="flex items-end gap-[2px] h-4 shrink-0 ml-1">
+                                                {[1, 2, 3].map(i => (
+                                                    <div key={i} className="w-[2px] bg-brand-red rounded-full"
+                                                        style={{ animation: 'musicBarSmall 0.8s ease-in-out infinite alternate', animationDelay: `${i * 0.15}s`, height: '100%' }} />
+                                                ))}
+                                            </div>
+                                        </button>
+                                    ) : (
+                                        <button
+                                            onClick={() => setShowMusicPicker(true)}
+                                            className="flex items-center gap-2 bg-black/40 border border-white/10 hover:border-white/30 px-3 py-2 rounded-full transition-all text-gray-400 hover:text-white"
+                                        >
+                                            <Music2 className="w-3.5 h-3.5" />
+                                            <span className="text-[10px] font-bold uppercase tracking-widest">Música</span>
+                                        </button>
+                                    )}
                                 </div>
 
                                 <button
@@ -1272,11 +1316,29 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     )}
                                 </button>
                             </div>
+
+                            {/* Music Picker Modal */}
+                            {showMusicPicker && (
+                                <MusicPicker
+                                    onSelect={(track) => setSelectedTrack(track)}
+                                    onClose={() => setShowMusicPicker(false)}
+                                    selectedTrack={selectedTrack}
+                                />
+                            )}
                         </div>
                     </div>
                 )}
 
             {/* Story Viewer (Updated to show overlays) */}
+            {
+                selectedUserIndex !== null && currentStory && (
+                    <StoryViewerMusicPlayer
+                        musicUrl={currentStory.music_url || null}
+                        isMuted={isMuted}
+                        musicAudioRef={musicAudioRef}
+                    />
+                )
+            }
             {
                 selectedUserIndex !== null && currentStory && (
                     <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4">
@@ -1909,6 +1971,22 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                 </div>
                             </motion.div>
 
+                            {/* Music pill in viewer */}
+                            {currentStory.music_title && !isPressed && (
+                                <div className="absolute top-[5.5rem] left-6 z-50 animate-in fade-in duration-500 delay-300">
+                                    <div className="flex items-center gap-2 bg-black/50 backdrop-blur-xl border border-white/10 px-3 py-1.5 rounded-full">
+                                        <div className="flex items-end gap-[2px] h-3.5">
+                                            {[1, 2, 3].map(i => (
+                                                <div key={i} className="w-[2px] bg-white rounded-full"
+                                                    style={{ animation: isMuted ? 'none' : 'musicBarSmall 0.8s ease-in-out infinite alternate', animationDelay: `${i * 0.15}s`, height: '100%' }} />
+                                            ))}
+                                        </div>
+                                        <span className="text-[10px] font-bold text-white truncate max-w-[120px]">{currentStory.music_title}</span>
+                                        <span className="text-[9px] text-gray-400 truncate max-w-[80px]">· {currentStory.music_artist}</span>
+                                    </div>
+                                </div>
+                            )}
+
                             <AnimatePresence>
                                 {!isPressed && (
                                     <motion.div
@@ -2108,4 +2186,57 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
             }
         </div>
     )
+}
+
+// ─── Music Player for Story Viewer ───────────────────────────────────────────
+// Plays the music_url of a story automatically, respects mute state.
+// Rendered outside the story container so it survives story navigation without
+// reinitializing the audio element unnecessarily.
+
+interface MusicPlayerProps {
+    musicUrl: string | null;
+    isMuted: boolean;
+    musicAudioRef: React.MutableRefObject<HTMLAudioElement | null>;
+}
+
+function StoryViewerMusicPlayer({ musicUrl, isMuted, musicAudioRef }: MusicPlayerProps) {
+    useEffect(() => {
+        // Stop any existing audio
+        if (musicAudioRef.current) {
+            musicAudioRef.current.pause();
+            musicAudioRef.current.src = '';
+            musicAudioRef.current = null;
+        }
+
+        if (!musicUrl) return;
+
+        const audio = new Audio(musicUrl);
+        audio.loop = true;
+        audio.volume = 0.5;
+        audio.muted = isMuted;
+        audio.play().catch(() => { /* autoplay blocked */ });
+        musicAudioRef.current = audio;
+
+        return () => {
+            audio.pause();
+            audio.src = '';
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [musicUrl]);
+
+    // Sync mute state without restarting audio
+    useEffect(() => {
+        if (musicAudioRef.current) {
+            musicAudioRef.current.muted = isMuted;
+        }
+    }, [isMuted, musicAudioRef]);
+
+    return (
+        <style>{`
+            @keyframes musicBarSmall {
+                from { transform: scaleY(0.15); }
+                to   { transform: scaleY(1); }
+            }
+        `}</style>
+    );
 }
