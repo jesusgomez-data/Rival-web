@@ -160,6 +160,7 @@ export default function DashboardHome() {
         activeCenterIds: new Set<string>()
     });
     const [activeTab, setActiveTab] = useState('following');
+    const [refreshKey, setRefreshKey] = useState(0);
 
     useEffect(() => {
         async function loadData() {
@@ -230,11 +231,20 @@ export default function DashboardHome() {
         }
         loadData();
 
+        const handleProfileUpdate = () => {
+            loadData();
+            setRefreshKey(prev => prev + 1);
+        };
+
+        window.addEventListener('profile-updated', handleProfileUpdate);
+
         // Check for first-time visit
         const hasSeenTour = localStorage.getItem("rival_dashboard_tour_seen");
         if (!hasSeenTour) {
             setShowTour(true);
         }
+
+        return () => window.removeEventListener('profile-updated', handleProfileUpdate);
     }, []);
 
     // NEW: Fetch Feed based on activeTab
@@ -277,7 +287,7 @@ export default function DashboardHome() {
             }
         }
         fetchFeed();
-    }, [activeTab]);
+    }, [activeTab, refreshKey]);
 
     // Scroll to post if hash is present
     useEffect(() => {

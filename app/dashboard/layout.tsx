@@ -100,20 +100,30 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         }
         loadProfile();
 
+        const handleProfileUpdate = () => {
+            loadProfile();
+        };
+
+        window.addEventListener('profile-updated', handleProfileUpdate);
+
         if (typeof Notification !== 'undefined' && Notification.permission === "default") {
             Notification.requestPermission();
         }
 
-        return () => { isMounted = false; };
+        return () => {
+            isMounted = false;
+            window.removeEventListener('profile-updated', handleProfileUpdate);
+        };
     }, [supabase]);
 
     useEffect(() => {
+        let channel: any;
         const setupRealtime = async () => {
             const { data: authData } = await supabase.auth.getUser();
             const user = authData?.user;
-            if (!user) return;
+            if (!user || !isMounted) return;
 
-            const channel = supabase
+            channel = supabase
                 .channel('global-chat-notifications')
                 .on(
                     'postgres_changes',
@@ -168,17 +178,28 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         });
                     }
                 )
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'profiles',
+                        filter: `id=eq.${user.id}`
+                    },
+                    (payload) => {
+                        if (isMounted) setProfile(payload.new);
+                    }
+                )
                 .subscribe();
 
-            return () => {
-                isMounted = false;
-                supabase.removeChannel(channel);
-            };
         };
 
         let isMounted = true;
         setupRealtime();
-        return () => { isMounted = false; };
+        return () => {
+            isMounted = false;
+            if (channel) supabase.removeChannel(channel);
+        };
     }, [supabase]);
 
     useEffect(() => {

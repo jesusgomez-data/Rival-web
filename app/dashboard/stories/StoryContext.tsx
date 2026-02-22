@@ -59,6 +59,13 @@ export function StoryProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         refreshStories()
+
+        const handleProfileUpdate = () => {
+            refreshStories();
+        };
+
+        window.addEventListener('profile-updated', handleProfileUpdate);
+        return () => window.removeEventListener('profile-updated', handleProfileUpdate);
     }, [refreshStories])
 
     const openStory = React.useCallback((userId: string) => {

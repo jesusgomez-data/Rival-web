@@ -183,6 +183,7 @@ export default function ProfilePage() {
             } else {
                 // Update local profile state
                 setProfile((prev: any) => ({ ...prev, username: formData.username }));
+                window.dispatchEvent(new CustomEvent('profile-updated'));
                 router.refresh();
             }
         } catch (error) {
@@ -293,6 +294,7 @@ export default function ProfilePage() {
 
             setProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }));
             alert("Foto de perfil actualizada correctamente");
+            window.dispatchEvent(new CustomEvent('profile-updated'));
             router.refresh();
         } catch (error: any) {
             console.error("Error uploading image:", error);
@@ -340,6 +342,7 @@ export default function ProfilePage() {
             setProfile((prev: any) => ({ ...prev, cover_url: publicUrl }));
             setCoverPosition(50);
             alert("Foto de portada actualizada");
+            window.dispatchEvent(new CustomEvent('profile-updated'));
             router.refresh();
         } catch (error: any) {
             console.error("Error uploading cover:", error);
@@ -395,6 +398,26 @@ export default function ProfilePage() {
     };
 
     const handleMouseUp = () => {
+        setIsDragging(false);
+    };
+
+    // Touch events for mobile cover repositioning
+    const handleTouchStart = (e: React.TouchEvent) => {
+        if (!isRepositioning) return;
+        setIsDragging(true);
+        setStartY(e.touches[0].clientY);
+        setStartPos(coverPosition);
+    };
+
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const deltaY = e.touches[0].clientY - startY;
+        const newPos = Math.max(0, Math.min(100, startPos - (deltaY / 2)));
+        setCoverPosition(newPos);
+    };
+
+    const handleTouchEnd = () => {
         setIsDragging(false);
     };
 
@@ -486,6 +509,9 @@ export default function ProfilePage() {
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
                 >
                     {profile?.cover_url ? (
                         <>
@@ -509,14 +535,14 @@ export default function ProfilePage() {
                             {profile?.cover_url && (
                                 <button
                                     onClick={startRepositioning}
-                                    className="bg-black/50 text-white p-2 rounded-xl opacity-0 group-hover/cover:opacity-100 transition-all hover:bg-brand-red backdrop-blur-sm flex items-center gap-2 text-[10px] font-bold uppercase"
+                                    className="bg-black/50 text-white p-2 rounded-xl sm:opacity-0 group-hover/cover:opacity-100 transition-all hover:bg-brand-red backdrop-blur-sm flex items-center gap-2 text-[10px] font-bold uppercase"
                                 >
-                                    <Move className="w-4 h-4" /> Reposicionar
+                                    <Move className="w-4 h-4" /> <span className="hidden sm:inline">Reposicionar</span>
                                 </button>
                             )}
                             <button
                                 onClick={() => fileInputCoverRef.current?.click()}
-                                className="bg-black/50 text-white p-2 rounded-xl opacity-0 group-hover/cover:opacity-100 transition-all hover:bg-brand-red backdrop-blur-sm"
+                                className="bg-black/50 text-white p-2 rounded-xl sm:opacity-0 group-hover/cover:opacity-100 transition-all hover:bg-brand-red backdrop-blur-sm"
                                 disabled={uploadingCover}
                             >
                                 {uploadingCover ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
@@ -524,7 +550,7 @@ export default function ProfilePage() {
                             {profile?.cover_url && (
                                 <button
                                     onClick={handleRemoveCover}
-                                    className="bg-black/50 text-white p-2 rounded-xl opacity-0 group-hover/cover:opacity-100 transition-all hover:bg-brand-red backdrop-blur-sm"
+                                    className="bg-black/50 text-white p-2 rounded-xl sm:opacity-0 group-hover/cover:opacity-100 transition-all hover:bg-brand-red backdrop-blur-sm"
                                     title="Eliminar Portada"
                                 >
                                     <Trash2 className="w-4 h-4" />
@@ -792,8 +818,9 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
-                {/* Right side: Form y Workouts */}
+                {/* Right side: Form, Workouts, Records */}
                 <div className={clsx("lg:col-span-8 space-y-8", mobileTab !== 'settings' && mobileTab !== 'workouts' && mobileTab !== 'intel' && "hidden lg:block")}>
+
                     {/* Intelligence Section */}
                     <div className={clsx("space-y-6", mobileTab !== 'intel' && "hidden lg:block")}>
                         <SkillTree stats={{
