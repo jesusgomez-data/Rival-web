@@ -217,6 +217,44 @@ export default function ProfilePage() {
         }
     };
 
+    const processImage = (file: File, maxSize: number = 1200): Promise<Blob> => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = (event) => {
+                const img = new (window as any).Image();
+                img.src = event.target?.result as string;
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    if (width > height) {
+                        if (width > maxSize) {
+                            height *= maxSize / width;
+                            width = maxSize;
+                        }
+                    } else {
+                        if (height > maxSize) {
+                            width *= maxSize / height;
+                            height = maxSize;
+                        }
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx?.drawImage(img, 0, 0, width, height);
+                    canvas.toBlob((blob) => {
+                        if (blob) resolve(blob);
+                        else reject(new Error("Error al procesar la imagen"));
+                    }, 'image/jpeg', 0.85);
+                };
+                img.onerror = () => reject(new Error("Error al cargar la imagen"));
+            };
+            reader.onerror = () => reject(new Error("Error al leer el archivo"));
+        });
+    };
+
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -226,13 +264,16 @@ export default function ProfilePage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+            const processedBlob = await processImage(file, 1000);
+            const fileName = `${user.id}-${Date.now()}.jpg`;
             const filePath = fileName;
 
             const { error: uploadError } = await supabase.storage
                 .from('avatars')
-                .upload(filePath, file);
+                .upload(filePath, processedBlob, {
+                    contentType: 'image/jpeg',
+                    upsert: true
+                });
 
             if (uploadError) throw uploadError;
 
@@ -242,16 +283,20 @@ export default function ProfilePage() {
 
             const { error: updateError } = await supabase
                 .from('profiles')
-                .update({ avatar_url: publicUrl })
+                .update({
+                    avatar_url: publicUrl,
+                    updated_at: new Date().toISOString()
+                })
                 .eq('id', user.id);
 
             if (updateError) throw updateError;
 
             setProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }));
+            alert("Foto de perfil actualizada correctamente");
             router.refresh();
         } catch (error: any) {
             console.error("Error uploading image:", error);
-            alert("Error al subir la imagen: " + (error.message || error.error_description || "Desconocido"));
+            alert("Error al subir la imagen: " + (error.message || "Por favor intenta con una imagen más pequeña o en otro formato."));
         } finally {
             setUploading(false);
         }
@@ -266,18 +311,35 @@ export default function ProfilePage() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            const fileExt = file.name.split('.').pop();
-            const fileName = `cover_${user.id}-${Math.random()}.${fileExt}`;
+            const processedBlob = await processImage(file, 1600); // Larger for cover
+            const fileName = `cover_${user.id}-${Date.now()}.jpg`;
             const filePath = fileName;
 
-            await supabase.storage.from('avatars').upload(filePath, file);
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, processedBlob, {
+                    contentType: 'image/jpeg',
+                    upsert: true
+                });
+
+            if (uploadError) throw uploadError;
 
             const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
 
-            await supabase.from('profiles').update({ cover_url: publicUrl, cover_position: 50 }).eq('id', user.id);
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({
+                    cover_url: publicUrl,
+                    cover_position: 50,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', user.id);
+
+            if (updateError) throw updateError;
 
             setProfile((prev: any) => ({ ...prev, cover_url: publicUrl }));
             setCoverPosition(50);
+            alert("Foto de portada actualizada");
             router.refresh();
         } catch (error: any) {
             console.error("Error uploading cover:", error);
@@ -370,7 +432,9 @@ export default function ProfilePage() {
         if (hasActiveStory) {
             openStory(profile?.id);
         } else {
-            storyInputRef.current?.click();
+            // En la página de edición de perfil, si no hay historia activa,
+            // priorizamos cambiar la foto de perfil al hacer clic en el avatar
+            fileInputRef.current?.click();
         }
     };
 

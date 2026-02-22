@@ -132,7 +132,7 @@ function ShareButton({
                     { label: data.summary.scoreType || "RESULTADO", value: data.summary.scoreLabel || "-" },
                     { label: "TIEMPO", value: data.summary.totalTime || "--:--" }
                 ] : [];
-                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'wod', data, stats, postId, attribution } }));
+                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'wod', data, url: data.media_url, stats, postId, attribution } }));
             } catch (e) {
                 console.error("Error parsing WOD", e);
             }

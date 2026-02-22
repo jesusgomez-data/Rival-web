@@ -36,6 +36,8 @@ const FORMAT_CONFIG: Partial<Record<WodFormat, { label: string, color: string, i
     'EMOM': { label: 'EMOM', color: 'text-brand-red', icon: Timer },
     'AMRAP': { label: 'AMRAP', color: 'text-brand-orange', icon: Repeat },
     'FOR TIME': { label: 'POR TIEMPO', color: 'text-blue-500', icon: Clock },
+    'ROUNDS FOR TIME': { label: 'POR TIEMPO', color: 'text-blue-500', icon: Clock },
+    '21-15-9': { label: 'POR TIEMPO', color: 'text-blue-500', icon: Clock },
     'INTERVALS': { label: 'INTERVALOS', color: 'text-brand-red', icon: Zap },
     'TABATA': { label: 'TABATA', color: 'text-brand-orange', icon: Zap },
     'DEATH BY': { label: 'DEATH BY', color: 'text-red-600', icon: Trophy }
@@ -135,21 +137,23 @@ export default function WodCard({ data, userName, publishDate }: WodCardProps) {
                                     </div>
 
                                     {/* Format Summary (Config) */}
-                                    <div className="mb-4 flex flex-wrap gap-3">
-                                        {block.format === 'AMRAP' && block.config.timecap && (
-                                            <WodMetric icon={<Clock />} label="TIME CAP" value={block.config.timecap} />
+                                    <div className="mb-4 flex flex-wrap gap-4">
+                                        {block.config.rounds && (
+                                            <WodMetric icon={<Repeat className="w-full h-full" />} label="RONDAS" value={block.config.rounds.toString()} />
                                         )}
-                                        {block.format === 'EMOM' && (
+                                        {block.config.timecap && (
+                                            <WodMetric icon={<Clock className="w-full h-full" />} label="TIME CAP" value={block.config.timecap} />
+                                        )}
+                                        {(block.format === 'EMOM' || block.format === 'DEATH BY') && (
                                             <>
-                                                <WodMetric icon={<Timer />} label="FREQ" value={block.config.frequency || '1 MIN'} />
-                                                <WodMetric icon={<Clock />} label="TOTAL" value={`${block.config.minutes || 15} MIN`} />
+                                                <WodMetric icon={<Timer className="w-full h-full" />} label="FREQ" value={block.config.frequency || '1 MIN'} />
+                                                <WodMetric icon={<Clock className="w-full h-full" />} label="TOTAL" value={`${block.config.minutes || 15} MIN`} />
                                             </>
                                         )}
-                                        {block.format === 'INTERVALS' && (
+                                        {(block.format === 'INTERVALS' || block.format === 'TABATA') && (
                                             <>
-                                                <WodMetric icon={<Repeat />} label="ROUNDS" value={block.config.rounds?.toString() || '8'} />
-                                                <WodMetric icon={<Zap />} label="WORK" value={block.config.work || '40S'} />
-                                                <WodMetric icon={<Clock />} label="REST" value={block.config.rest || '20S'} />
+                                                <WodMetric icon={<Zap className="w-full h-full" />} label="WORK" value={block.config.work || '20S'} />
+                                                <WodMetric icon={<Clock className="w-full h-full" />} label="REST" value={block.config.rest || '10S'} />
                                             </>
                                         )}
                                     </div>

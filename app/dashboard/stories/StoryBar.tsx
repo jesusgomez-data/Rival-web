@@ -134,23 +134,63 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     useEffect(() => {
         const handleShareToStory = async (e: Event) => {
             const customEvent = e as CustomEvent;
-            const { type, url, attribution } = customEvent.detail;
+            const { type, url, attribution, postId, data, stats } = customEvent.detail;
 
-            if ((type === 'image' || type === 'video') && url) {
-                setIsUploading(true);
-                try {
-                    // Fetch the media to use as the main story file
+            setIsUploading(true);
+            try {
+                let file: File | null = null;
+                const isSpecialType = ['workout', 'class_result', 'pr', 'wod'].includes(type);
+
+                if (url) {
+                    // Case 1: Media URL is provided
                     const response = await fetch(url);
                     const blob = await response.blob();
-                    const fileName = type === 'video' ? "shared_story_video.mp4" : "shared_story_image.jpg";
-                    const file = new File([blob], fileName, { type: blob.type });
+                    const fileName = blob.type.startsWith('video/') ? "shared_story_video.mp4" : "shared_story_image.jpg";
+                    file = new File([blob], fileName, { type: blob.type });
+                } else if (isSpecialType && data) {
+                    // Case 2: No direct media, generate background
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 1080;
+                    canvas.height = 1920;
+                    const ctx = canvas.getContext('2d');
+                    if (ctx) {
+                        const gradient = ctx.createRadialGradient(540, 960, 0, 540, 960, 1200);
+                        gradient.addColorStop(0, '#1a1a1a');
+                        gradient.addColorStop(0.5, '#0a0a0a');
+                        gradient.addColorStop(1, '#000000');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(0, 0, 1080, 1920);
 
+                        const glow = ctx.createRadialGradient(1080, 0, 0, 1080, 0, 800);
+                        glow.addColorStop(0, 'rgba(220, 38, 38, 0.08)');
+                        glow.addColorStop(1, 'transparent');
+                        ctx.fillStyle = glow;
+                        ctx.fillRect(0, 0, 1080, 1920);
+
+                        const blob = await new Promise<Blob | null>(resolve => canvas.toBlob(resolve, 'image/png'));
+                        if (blob) {
+                            file = new File([blob], "story_background.png", { type: "image/png" });
+                        }
+                    }
+                }
+
+                if (file) {
                     setupPreview(file);
-
                     const newOverlays: OverlayElement[] = [];
 
-                    // Add "View Post" sticker if postId is present
-                    if (customEvent.detail.postId) {
+                    if (isSpecialType && data) {
+                        const stickerOverlay: OverlayElement = {
+                            id: `sticker-${Date.now()}`,
+                            type: type === 'pr' ? 'pr_sticker' : (type === 'wod' ? 'wod_sticker' : 'workout_sticker'),
+                            content: JSON.stringify(Array.isArray(data) ? { metrics: { blocks: data }, _stats: stats } : { ...data, _stats: stats }),
+                            x: 50,
+                            y: 50,
+                            scale: 1,
+                            rotation: 0,
+                            link: postId ? `/dashboard` : undefined
+                        };
+                        newOverlays.push(stickerOverlay);
+                    } else if (postId) {
                         newOverlays.push({
                             id: `link-${Date.now()}`,
                             type: 'text',
@@ -164,7 +204,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                         });
                     }
 
-                    // Add attribution if present
                     if (attribution) {
                         newOverlays.push({
                             id: `attr-${Date.now()}`,
@@ -175,117 +214,31 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                 id: attribution.id
                             }),
                             x: 50,
-                            y: 75,
+                            y: url ? 75 : 80,
                             scale: 1,
                             rotation: 0,
                             link: `/dashboard/profile/${attribution.username}`
                         });
                     }
 
-                    if (newOverlays.length > 0) {
-                        setTimeout(() => setOverlays(newOverlays), 100);
-                    }
-                } catch (err) {
-                    console.error("Error preparing shared story:", err);
-                    alert(`Error al cargar ${type === 'video' ? 'el video' : 'la imagen'} para la historia.`);
-                } finally {
-                    setIsUploading(false);
-                }
-            } else if (['workout', 'class_result', 'pr', 'wod'].includes(type) && customEvent.detail.data) {
-                const postId = customEvent.detail.postId;
-                // Generate a background
-                const canvas = document.createElement('canvas');
-                canvas.width = 1080;
-                canvas.height = 1920;
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    // Modern dynamic background
-                    const gradient = ctx.createRadialGradient(540, 960, 0, 540, 960, 1200);
-                    gradient.addColorStop(0, '#1a1a1a');
-                    gradient.addColorStop(0.5, '#0a0a0a');
-                    gradient.addColorStop(1, '#000000');
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(0, 0, 1080, 1920);
-
-                    // Add subtle glow at technical areas
-                    const glow = ctx.createRadialGradient(1080, 0, 0, 1080, 0, 800);
-                    glow.addColorStop(0, 'rgba(220, 38, 38, 0.05)');
-                    glow.addColorStop(1, 'transparent');
-                    ctx.fillStyle = glow;
-                    ctx.fillRect(0, 0, 1080, 1920);
-
-                    // Add honeycomb pattern (subtle)
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-                    ctx.lineWidth = 1;
-                    const size = 60;
-                    for (let y = 0; y < 1920 + size; y += size * 1.5) {
-                        for (let x = 0; x < 1080 + size; x += size * Math.sqrt(3)) {
-                            const xOffset = (Math.floor(y / (size * 1.5)) % 2) * (size * Math.sqrt(3) / 2);
-                            ctx.beginPath();
-                            for (let i = 0; i < 6; i++) {
-                                const angle = (i * 60 * Math.PI) / 180;
-                                const px = x + xOffset + size * Math.cos(angle);
-                                const py = y + size * Math.sin(angle);
-                                if (i === 0) ctx.moveTo(px, py);
-                                else ctx.lineTo(px, py);
-                            }
-                            ctx.closePath();
-                            ctx.stroke();
+                    setTimeout(() => {
+                        setOverlays(newOverlays);
+                        if (newOverlays.length > 0 && !attribution) {
+                            const mainOverlay = newOverlays.find(o => o.type.includes('sticker')) || newOverlays[0];
+                            setSelectedOverlayId(mainOverlay.id);
                         }
-                    }
-
-                    canvas.toBlob((blob) => {
-                        if (blob) {
-                            const file = new File([blob], "story_background.png", { type: "image/png" });
-                            setupPreview(file);
-
-                            const data = customEvent.detail.data;
-                            const newOverlays: OverlayElement[] = [];
-
-                            const stickerOverlay: OverlayElement = {
-                                id: `sticker-${Date.now()}`,
-                                type: type === 'pr' ? 'pr_sticker' : (type === 'wod' ? 'wod_sticker' : 'workout_sticker'),
-                                content: JSON.stringify(Array.isArray(data) ? { metrics: { blocks: data }, _stats: customEvent.detail.stats } : { ...data, _stats: customEvent.detail.stats }),
-                                x: 50,
-                                y: 50, // Perfectly centered
-                                scale: 1,
-                                rotation: 0,
-                                link: postId ? `/dashboard` : undefined
-                            };
-                            newOverlays.push(stickerOverlay);
-
-                            // Add attribution if present
-                            if (attribution) {
-                                newOverlays.push({
-                                    id: `attr-${Date.now()}`,
-                                    type: 'attribution',
-                                    content: JSON.stringify({
-                                        username: attribution.username,
-                                        avatar: attribution.avatar,
-                                        id: attribution.id
-                                    }),
-                                    x: 50,
-                                    y: 80,
-                                    scale: 1,
-                                    rotation: 0,
-                                    link: `/dashboard/profile/${attribution.username}`
-                                });
-                            }
-
-                            // Use setTimeout to ensure state update happens after setupPreview's state clear
-                            setTimeout(() => {
-                                setOverlays(newOverlays);
-                                if (!attribution) setSelectedOverlayId(stickerOverlay.id);
-                            }, 100);
-                        }
-                    }, 'image/png');
+                    }, 200);
                 }
+            } catch (err) {
+                console.error("Error preparing shared story:", err);
+            } finally {
+                setIsUploading(false);
             }
         };
 
         window.addEventListener('share-to-story', handleShareToStory);
         return () => window.removeEventListener('share-to-story', handleShareToStory);
-    }, []);
+    }, [currentUser]);
 
     useEffect(() => {
         return () => {
@@ -713,7 +666,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 ) : overlay.type === 'workout_sticker' ? (
                     (() => {
                         try {
-                            const data = JSON.parse(overlay.content);
+                            const data = typeof overlay.content === 'string' ? JSON.parse(overlay.content) : overlay.content;
                             const hasBlocks = data.metrics?.blocks?.length > 0;
                             return (
                                 <div className="bg-black/60 backdrop-blur-3xl border border-white/10 p-5 rounded-[24px] shadow-2xl w-[300px] max-w-[calc(100vw-40px)] relative overflow-hidden group select-none transition-all">
@@ -790,7 +743,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 ) : overlay.type === 'wod_sticker' ? (
                     (() => {
                         try {
-                            const data = JSON.parse(overlay.content);
+                            const data = typeof overlay.content === 'string' ? JSON.parse(overlay.content) : overlay.content;
                             return (
                                 <div className="bg-black/60 backdrop-blur-3xl border border-white/10 p-5 rounded-[24px] shadow-2xl w-[300px] max-w-[calc(100vw-40px)] relative overflow-hidden group select-none transition-all">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
@@ -886,7 +839,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 ) : overlay.type === 'pr_sticker' ? (
                     (() => {
                         try {
-                            const prData = JSON.parse(overlay.content);
+                            const prData = typeof overlay.content === 'string' ? JSON.parse(overlay.content) : overlay.content;
                             return (
                                 <div className="relative group">
                                     <PRCard
@@ -931,7 +884,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 ) : overlay.type === 'attribution' ? (
                     (() => {
                         try {
-                            const attr = JSON.parse(overlay.content);
+                            const attr = typeof overlay.content === 'string' ? JSON.parse(overlay.content) : overlay.content;
                             return (
                                 <div className="relative group">
                                     <div className="bg-black/80 backdrop-blur-2xl border border-white/10 px-4 py-2.5 rounded-full shadow-2xl flex items-center gap-3">
@@ -1701,7 +1654,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                             ) : overlay.type === 'workout_sticker' ? (
                                                 (() => {
                                                     try {
-                                                        const data = JSON.parse(overlay.content);
+                                                        const data = typeof overlay.content === 'string' ? JSON.parse(overlay.content) : overlay.content;
                                                         const hasBlocks = data.metrics?.blocks?.length > 0;
                                                         const isExpanded = expandedWorkoutId === overlay.id;
 
@@ -1806,7 +1759,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                             ) : overlay.type === 'wod_sticker' ? (
                                                 (() => {
                                                     try {
-                                                        const data = JSON.parse(overlay.content);
+                                                        const data = typeof overlay.content === 'string' ? JSON.parse(overlay.content) : overlay.content;
                                                         return (
                                                             <div className="bg-black/60 backdrop-blur-3xl border border-white/10 p-5 rounded-[24px] shadow-2xl w-[300px] max-w-[calc(100vw-40px)] relative overflow-hidden group select-none transition-all">
                                                                 <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
