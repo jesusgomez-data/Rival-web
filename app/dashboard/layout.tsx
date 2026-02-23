@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { getUserProfile } from "./training/actions";
 import { getUnreadMessageCount } from "./messages/actions";
@@ -53,35 +53,35 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const [unreadMessages, setUnreadMessages] = useState(0);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showBottomNav, setShowBottomNav] = useState(true);
-    const [lastScrollY, setLastScrollY] = useState(0);
+    const lastScrollY = useRef(0);
     const { userStories, openStory } = useStories();
-    const supabase = createClient();
+    // useMemo ensures we reuse the singleton client, not create a new one on re-render
+    const supabase = useMemo(() => createClient(), []);
 
     // Hide bottom nav on scroll down, show on scroll up
+    // FIX: use useRef for lastScrollY so the effect is stable (no re-registration on each scroll)
     useEffect(() => {
         const handleScroll = () => {
             const currentScrollY = window.scrollY;
 
             // Only hide/show if scrolled more than 50px
             if (currentScrollY > 50) {
-                if (currentScrollY > lastScrollY) {
-                    // Scrolling down
+                if (currentScrollY > lastScrollY.current) {
                     setShowBottomNav(false);
                 } else {
-                    // Scrolling up
                     setShowBottomNav(true);
                 }
             } else {
-                // At top of page, always show
                 setShowBottomNav(true);
             }
 
-            setLastScrollY(currentScrollY);
+            lastScrollY.current = currentScrollY;
         };
 
         window.addEventListener('scroll', handleScroll, { passive: true });
         return () => window.removeEventListener('scroll', handleScroll);
-    }, [lastScrollY]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // empty deps: register once, never re-register
 
     useEffect(() => {
         let isMounted = true;
@@ -132,25 +132,21 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         schema: 'public',
                         table: 'messages'
                     },
-                    (payload) => {
+                    (payload: { new: Record<string, string> }) => {
                         const newMessage = payload.new;
                         if (newMessage.sender_id !== user.id) {
-                            // VERIFICACIÓN CRÍTICA: ¿Esta conversación me pertenece?
                             supabase
                                 .from('conversation_participants')
                                 .select('id')
                                 .eq('conversation_id', newMessage.conversation_id)
                                 .eq('user_id', user.id)
                                 .maybeSingle()
-                                .then(({ data: isMyConversation }) => {
+                                .then(({ data: isMyConversation }: { data: { id: string } | null }) => {
                                     if (isMyConversation) {
-                                        // Solo si es una conversación en la que participo, juego sonido y refresco
                                         import("@/app/utils/audio").then(m => m.playNotificationSound());
-
                                         getUnreadMessageCount().then(count => {
                                             if (isMounted) setUnreadMessages(count);
                                         });
-
                                         if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
                                             new Notification("Rival: Nuevo Mensaje", {
                                                 body: newMessage.text || "📷 Imagen",
@@ -186,7 +182,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         table: 'profiles',
                         filter: `id=eq.${user.id}`
                     },
-                    (payload) => {
+                    (payload: { new: Record<string, unknown> }) => {
                         if (isMounted) setProfile(payload.new);
                     }
                 )
@@ -224,10 +220,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     }, [pathname]);
 
     // Strict admin whitelist - ONLY these specific emails can access admin panel
-    const ADMIN_EMAILS = ['rival.app.official@gmail.com', 'jesusgomez.s@hotmail.com'];
+    const ADMIN_EMAILS = useMemo(() => ['rival.app.official@gmail.com', 'jesusgomez.s@hotmail.com'], []);
     const isAdmin = userEmail && typeof userEmail === 'string' && ADMIN_EMAILS.includes(userEmail.toLowerCase().trim());
 
-    const navItems = [
+    const navItems = useMemo(() => [
         { name: t.navDashboard.home, href: "/dashboard", icon: Home },
         { name: t.navDashboard.messages, href: "/dashboard/messages", icon: MessageSquarePlus },
         { name: t.navDashboard.onlineCoach, href: "/dashboard/coach", icon: MessageCircle },
@@ -240,7 +236,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         { name: t.navDashboard.analytics, href: "/dashboard/analytics", icon: BarChart2 },
         { name: t.navDashboard.profile, href: "/dashboard/profile", icon: Settings },
         ...(isAdmin === true ? [{ name: "RIVAL COMMAND", href: "/dashboard/admin", icon: Shield }] : []),
-    ];
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    ], [isAdmin, t]);
 
     const hideSidebarDefault = (pathname?.startsWith('/dashboard/gyms/') && pathname.split('/').length > 3) || pathname === '/dashboard/admin';
     const showSidebar = !hideSidebarDefault || isMenuOpen;

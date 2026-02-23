@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Trash2, Edit2, Save, Heart, Dumbbell, ChevronDown, ChevronUp, Plus, CheckCircle2, Instagram } from "lucide-react";
@@ -231,7 +231,7 @@ interface Comment {
     replies?: Comment[];
 }
 
-export default function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId,
+const FeedPost = memo(function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId,
     workoutData, isOfficial, isMember = false, context = 'global', isAdminUser,
     hasActiveDuel = false
 }: FeedPostProps) {
@@ -1441,7 +1441,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             }
         </div >
     );
-}
+});
+
+export default FeedPost;
 
 function LikeButtonWithText({ postId, initialLikes, hasLikedInitial, text }: { postId: string, initialLikes: number, hasLikedInitial: boolean, text: string }) {
     const [likes, setLikes] = useState(initialLikes);

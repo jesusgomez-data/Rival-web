@@ -5,7 +5,7 @@ import { Flame, MoreHorizontal, MessageCircle, Heart, Share2, TrendingUp, Trophy
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import clsx from "clsx";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useLanguage } from "@/app/LanguageContext";
 import LikeButton from "./community/LikeButton";
 import FollowButton from "./community/FollowButton";
@@ -19,6 +19,7 @@ import DashboardTour from "@/components/onboarding/DashboardTour";
 import EssentialsHero from "@/components/onboarding/EssentialsHero";
 import InfoTooltip from "@/components/InfoTooltip";
 import { getMonday } from "@/utils/date";
+import DuelCountdown from "./community/DuelCountdown";
 
 function SuggestedUser({ id, name, username, role, avatar, isFollowing, isOfficial }: { id: string, name: string, username: string, role: string, avatar?: string, isFollowing: boolean, isOfficial?: boolean }) {
     const { t } = useLanguage();
@@ -142,7 +143,8 @@ function CollapsibleCreatePost({ currentUser, language }: { currentUser: any, la
 
 export default function DashboardHome() {
     const { language, t } = useLanguage();
-    const supabase = createClient();
+    // Reuse singleton client — never create more than one per browser session
+    const supabase = useMemo(() => createClient(), []);
     const [loading, setLoading] = useState(true);
     const [showStats, setShowStats] = useState(false);
     const [showTour, setShowTour] = useState(false);
@@ -162,132 +164,125 @@ export default function DashboardHome() {
     const [activeTab, setActiveTab] = useState('following');
     const [refreshKey, setRefreshKey] = useState(0);
 
-    useEffect(() => {
-        async function loadData() {
-            setLoading(true);
-            try {
-                const { data: authData } = await supabase.auth.getUser();
-                const user = authData?.user;
-                if (!user) return;
+    // Memoized fetch for main dashboard data (profile, stats, duels)
+    const loadData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const { data: authData } = await supabase.auth.getUser();
+            const user = authData?.user;
+            if (!user) return;
 
-                const currentWeekStart = getMonday();
+            // All queries run in parallel — zero sequential waiting
+            const [
+                { data: memberships },
+                { data: profileData },
+                { count: workouts },
+                { count: classes },
+                { count: followingCount },
+                { data: myFollows },
+                { data: trending },
+                missionsData,
+                duelsData
+            ] = await Promise.all([
+                supabase.from('members').select('*, organization:center_id(id, name, logo_url, city)').eq('user_id', user.id).in('status', ['active', 'trial']),
+                supabase.from('profiles').select('*').eq('id', user.id).single(),
+                supabase.from('workouts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+                supabase.from('class_results').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+                supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', user.id),
+                supabase.from('follows').select('following_id').eq('follower_id', user.id),
+                supabase.from('profiles')
+                    .select('id, username, full_name, avatar_url, level, is_official')
+                    .neq('id', user.id)
+                    .eq('is_official', false)
+                    .order('xp_points', { ascending: false })
+                    .limit(4),
+                getMissions(),
+                getMyDuels()
+            ]);
 
-                // Fetch todo paralelo para velocidad
-                const [
-                    { data: memberships },
-                    { data: profileData },
-                    { count: workouts },
-                    { count: classes },
-                    { count: followingCount },
-                    { data: myFollows },
-                    { data: trending },
-                    missionsData,
-                    duelsData
-                ] = await Promise.all([
-                    supabase.from('members').select('*, organization:center_id(id, name, logo_url, city)').eq('user_id', user.id).in('status', ['active', 'trial']),
-                    supabase.from('profiles').select('*').eq('id', user.id).single(),
-                    supabase.from('workouts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-                    supabase.from('class_results').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-                    supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', user.id),
-                    supabase.from('follows').select('following_id').eq('follower_id', user.id),
-                    supabase.from('profiles')
-                        .select('id, username, full_name, avatar_url, level, is_official')
-                        .neq('id', user.id)
-                        .eq('is_official', false) // Exclude official accounts from follow recommendations
-                        .order('xp_points', { ascending: false })
-                        .limit(4),
-                    getMissions(),
-                    getMyDuels()
-                ]);
+            const followedIds = new Set(myFollows?.map((f: { following_id: string }) => f.following_id) || []);
 
-                const followedIds = new Set(myFollows?.map(f => f.following_id) || []);
+            const sessionMission = missionsData?.find((m: any) => m.goal_type === 'sessions_count' || m.goal_type === 'workouts');
+            const weeklyProgress = {
+                current: sessionMission?.current_value || 0,
+                goal: sessionMission?.goal_value || 5,
+            };
 
-                // Find the sessions_count mission for the weekly goal widget
-                const sessionMission = missionsData?.find((m: any) => m.goal_type === 'sessions_count' || m.goal_type === 'workouts');
-                const weeklyProgress = {
-                    current: sessionMission?.current_value || 0,
-                    goal: sessionMission?.goal_value || 5,
-                    percentage: Math.min(100, Math.round(((sessionMission?.current_value || 0) / (sessionMission?.goal_value || 5)) * 100))
-                };
-
-                setData((prev: any) => ({
-                    ...prev,
-                    profile: profileData,
-                    workoutCount: (workouts || 0) + (classes || 0),
-                    trendingAthletes: trending?.map(athlete => ({ ...athlete, isFollowing: followedIds.has(athlete.id) })) || [],
-                    rivalsCount: followingCount || 0,
-                    currentUser: user,
-                    missionProgress: weeklyProgress.current, // Use the calculated weeklyProgress
-                    missionGoal: weeklyProgress.goal, // Use the calculated weeklyProgress
-                    duels: duelsData || [],
-                    myGyms: memberships?.map((m: any) => m.organization) || [],
-                    activeCenterIds: new Set(memberships?.filter((m: any) => m.status === 'active').map((m: any) => m.center_id) || [])
-                }));
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setLoading(false);
-            }
+            setData((prev: any) => ({
+                ...prev,
+                profile: profileData,
+                workoutCount: (workouts || 0) + (classes || 0),
+                trendingAthletes: trending?.map((athlete: any) => ({ ...athlete, isFollowing: followedIds.has(athlete.id) })) || [],
+                rivalsCount: followingCount || 0,
+                currentUser: user,
+                missionProgress: weeklyProgress.current,
+                missionGoal: weeklyProgress.goal,
+                duels: duelsData || [],
+                myGyms: memberships?.map((m: any) => m.organization) || [],
+                activeCenterIds: new Set(memberships?.filter((m: any) => m.status === 'active').map((m: any) => m.center_id) || [])
+            }));
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
         }
+    }, [supabase]);
+
+    useEffect(() => {
         loadData();
 
+        // On profile update: reload stats AND refresh the feed
         const handleProfileUpdate = () => {
             loadData();
             setRefreshKey(prev => prev + 1);
         };
-
         window.addEventListener('profile-updated', handleProfileUpdate);
 
-        // Check for first-time visit
         const hasSeenTour = localStorage.getItem("rival_dashboard_tour_seen");
-        if (!hasSeenTour) {
-            setShowTour(true);
-        }
+        if (!hasSeenTour) setShowTour(true);
 
         return () => window.removeEventListener('profile-updated', handleProfileUpdate);
-    }, []);
+    }, [loadData]);
 
-    // NEW: Fetch Feed based on activeTab
-    useEffect(() => {
-        async function fetchFeed() {
-            try {
-                const { data: { user } } = await supabase.auth.getUser();
-                if (!user) return;
+    // Memoized feed fetcher: auth is resolved first, then follows+officials run in parallel
+    const fetchFeed = useCallback(async () => {
+        try {
+            // Step 1: get the authenticated user (required for filtering)
+            const { data: authData } = await supabase.auth.getUser();
+            const user = authData?.user;
+            if (!user) return;
 
-                const { data: myFollows } = await supabase
-                    .from('follows')
-                    .select('following_id')
-                    .eq('follower_id', user.id);
+            // Step 2: fetch follows and official profiles in parallel
+            const [{ data: myFollows }, { data: officialProfiles }] = await Promise.all([
+                supabase.from('follows').select('following_id').eq('follower_id', user.id),
+                supabase.from('profiles').select('id').eq('is_official', true),
+            ]);
 
-                const followedIds = new Set(myFollows?.map(f => f.following_id) || []);
+            const followedIds = new Set(myFollows?.map((f: { following_id: string }) => f.following_id) || []);
+            const officialIds = officialProfiles?.map((p: { id: string }) => p.id) || [];
 
-                // 1. Fetch official accounts IDs
-                const { data: officialProfiles } = await supabase
-                    .from('profiles')
-                    .select('id')
-                    .eq('is_official', true);
+            let query = supabase
+                .from('posts')
+                .select('*, profiles:user_id(*), workouts:workout_id(*, metrics, workout_sets(*)), likes:likes(user_id)')
+                .order('created_at', { ascending: false })
+                .limit(20);
 
-                const officialIds = officialProfiles?.map(p => p.id) || [];
-
-                let query = supabase
-                    .from('posts')
-                    .select('*, profiles:user_id(*), workouts:workout_id(*, metrics, workout_sets(*)), likes:likes(user_id)')
-                    .order('created_at', { ascending: false })
-                    .limit(20);
-
-                if (activeTab === 'following') {
-                    const idsToFetch = Array.from(new Set([...Array.from(followedIds), user.id, ...officialIds]));
-                    query = query.in('user_id', idsToFetch);
-                }
-
-                const { data: posts } = await query;
-                setData((prev: any) => ({ ...prev, feedPosts: posts || [] }));
-            } catch (e) {
-                console.error("Error fetching feed:", e);
+            if (activeTab === 'following') {
+                const idsToFetch = Array.from(new Set([...Array.from(followedIds), user.id, ...officialIds]));
+                query = query.in('user_id', idsToFetch);
             }
+
+            const { data: posts } = await query;
+            setData((prev: any) => ({ ...prev, feedPosts: posts || [] }));
+        } catch (e) {
+            console.error("Error fetching feed:", e);
         }
+    }, [supabase, activeTab]);
+
+    // Trigger feed fetch whenever the tab changes or a refresh is requested
+    useEffect(() => {
         fetchFeed();
-    }, [activeTab, refreshKey]);
+    }, [fetchFeed, refreshKey]);
 
     // Scroll to post if hash is present
     useEffect(() => {
@@ -614,9 +609,7 @@ export default function DashboardHome() {
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-black text-foreground uppercase italic truncate">VS {rival?.full_name || rival?.username}</p>
                                                     <p className="text-xs text-gray-500 uppercase font-bold mt-1">
-                                                        {isPending
-                                                            ? (language === 'es' ? 'Esperando...' : 'Pending...')
-                                                            : (duel.status === 'completed' ? (language === 'es' ? 'Finalizado' : 'Ended') : (language === 'es' ? 'Duelo Activo' : 'Active Duel'))}
+                                                        <DuelCountdown endDate={duel.end_date} status={duel.status} />
                                                     </p>
 
                                                     {/* SCORE DISPLAY */}

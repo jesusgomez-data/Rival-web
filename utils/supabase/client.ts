@@ -1,8 +1,14 @@
 import { createBrowserClient } from '@supabase/ssr'
 
+// Singleton pattern: reuse the same client instance across renders
+// This avoids creating a new WebSocket connection on every re-render
+let clientInstance: ReturnType<typeof createBrowserClient> | null = null;
+
 export function createClient() {
-    return createBrowserClient(
+    if (clientInstance) return clientInstance;
+    clientInstance = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
+    );
+    return clientInstance;
 }

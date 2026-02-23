@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, Outfit, Lexend } from "next/font/google";
+import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./ThemeContext";
 import { LanguageProvider } from "./LanguageContext";
@@ -16,10 +16,6 @@ const outfit = Outfit({
   subsets: ["latin"],
 });
 
-const lexend = Lexend({
-  variable: "--font-lexend",
-  subsets: ["latin"],
-});
 
 export const viewport = {
   width: "device-width",
@@ -69,7 +65,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${outfit.variable} ${lexend.variable} antialiased bg-background text-foreground transition-colors duration-300`}
+        className={`${inter.variable} ${outfit.variable} antialiased bg-background text-foreground transition-colors duration-300`}
         suppressHydrationWarning
       >
         <LanguageProvider>

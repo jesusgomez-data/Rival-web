@@ -2,6 +2,8 @@
 
 import { getMissions, getRecentPRs, getUserProfile, getScheduledWorkouts, getWorkoutHistory, getPublishedResults, deleteScheduledWorkout } from "./actions";
 import { getMyDuels } from "../community/duel-actions";
+import DuelCountdown from "../community/DuelCountdown";
+
 import { type TrainingPlan } from "./types";
 import { useEffect, useState } from "react";
 import Link from "next/link";
@@ -704,7 +706,9 @@ export default function TrainingPage() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-black text-white uppercase italic truncate">VS {rival?.full_name || rival?.username}</p>
-                                                    <p className="text-[10px] text-brand-red font-black uppercase tracking-widest mt-0.5 animate-pulse">EN COMBATE</p>
+                                                    <div className="mt-1">
+                                                        <DuelCountdown endDate={duel.end_date} status={duel.status} />
+                                                    </div>
                                                 </div>
                                             </div>
 
