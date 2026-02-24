@@ -238,23 +238,30 @@ export class VideoProcessor {
      * Uses navigator.share on mobile if available.
      */
     static async downloadBlob(blob: Blob, filename: string) {
+        console.log(`[VideoProcessor] Initiating download/share for ${filename} (${blob.type}, ${blob.size} bytes)`);
+
         // Safe check for navigator.share with files
         try {
             const file = new File([blob], filename, { type: blob.type });
             const canShare = !!navigator.share && (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] }));
 
+            console.log(`[VideoProcessor] navigator.share support: ${!!navigator.share}, canShare: ${canShare}`);
+
             if (canShare) {
+                console.log("[VideoProcessor] Attempting native share...");
                 await navigator.share({
                     files: [file],
                     title: 'Rival Fit',
                     text: 'Mira mi entrenamiento en Rival Fit #RivalFit'
                 });
+                console.log("[VideoProcessor] Native share successful");
                 return;
             }
         } catch (err) {
             if ((err as Error).name !== 'AbortError') {
-                console.error("Share failed, falling back to download", err);
+                console.error("[VideoProcessor] Share failed, falling back to download", err);
             } else {
+                console.log("[VideoProcessor] Share cancelled by user");
                 return; // User cancelled
             }
         }

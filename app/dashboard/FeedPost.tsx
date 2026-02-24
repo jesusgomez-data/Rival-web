@@ -277,6 +277,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const [commentsCount, setCommentsCount] = useState(initialCommentsCount);
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [isPostingComment, setIsPostingComment] = useState(false);
+    const [isDownloadingBrandedGlobal, setIsDownloadingBrandedGlobal] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
 
     const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
