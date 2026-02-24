@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rivalfit Video Outro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --brand-red: #DC2626;
+            --brand-red-dark: #991B1B;
+            --brand-orange: #F97316;
+            --bg-dark: #000000;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background: #111;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            color: white;
+            overflow: hidden;
+        }
+
+        #outro-container {
+            width: 1080px;
+            height: 1080px;
+            background-color: var(--bg-dark);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 50px 100px rgba(0, 0, 0, 0.8);
+            /* Hexagonal Pattern Background */
+            background-image:
+                radial-gradient(circle at 50% 50%, rgba(220, 38, 38, 0.15) 0%, transparent 70%),
+                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='49' viewBox='0 0 28 49'%3E%3Cg fill-rule='evenodd'%3E%3Cg id='hexagons' fill='%23111111' fill-opacity='1' fill-rule='nonzero'%3E%3Cpath d='M13.99 9.25l13 7.5v15l-13 7.5L1 31.75v-15l12.99-7.5zM3 17.18v12.89l11 6.35 11-6.35V17.18L14 10.83l-11 6.35zM0 15l12.98-7.5V0h-2v6.35L0 12.69v2.3zm0 18.5L12.98 41v8h-2v-6.85L0 35.81v-2.31zM28 15l-12.98-7.5V0h2v6.35L28 12.69v2.3zm0 18.5L15.02 41v8h2v-6.85L28 35.81v-2.31z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+
+        /* Static Visual Elements */
+        .energy-beam {
+            position: absolute;
+            width: 2px;
+            height: 100%;
+            background: linear-gradient(to bottom, transparent, var(--brand-red), transparent);
+            opacity: 0.2;
+            transform: skewX(-15deg);
+        }
+
+        .glow-overlay {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+        }
+
+        /* Logo Styling */
+        .logo-wrapper {
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .rival-r {
+            filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.6));
+        }
+
+        .fit-text {
+            fill: white;
+            font-family: 'Inter', sans-serif;
+            font-weight: 900;
+            font-size: 110px;
+            letter-spacing: 4px;
+            text-anchor: middle;
+        }
+
+        /* App URL Styling */
+        .app-url {
+            margin-top: 40px;
+            font-size: 96px;
+            font-weight: 900;
+            color: white;
+            text-transform: lowercase;
+            letter-spacing: -3px;
+            text-shadow: 0 0 40px rgba(220, 38, 38, 0.4);
+        }
+
+        /* Controls */
+        .controls {
+            margin-top: 50px;
+            display: flex;
+            gap: 20px;
+            z-index: 100;
+        }
+
+        .btn {
+            padding: 18px 40px;
+            border-radius: 50px;
+            font-weight: 900;
+            cursor: pointer;
+            border: none;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s;
+            font-size: 18px;
+        }
+
+        .btn-download {
+            background: linear-gradient(45deg, var(--brand-red), var(--brand-orange));
+            color: white;
+            box-shadow: 0 10px 30px rgba(220, 38, 38, 0.4);
+        }
+
+        .btn-download:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(220, 38, 38, 0.6);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="outro-container">
+        <!-- Background FX -->
+        <div class="glow-overlay"></div>
+        <div class="energy-beam" style="left: 20%;"></div>
+        <div class="energy-beam" style="left: 50%;"></div>
+        <div class="energy-beam" style="left: 80%;"></div>
+
+        <!-- Logo Section -->
+        <div class="logo-wrapper">
+            <svg width="450" height="450" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g class="rival-r" transform="translate(38.4, -40) scale(0.85)">
+                    <path
+                        d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z"
+                        fill="#DC2626" />
+                    <path d="M160 100L145 310H220L235 100H160Z" fill="#991B1B" />
+                </g>
+                <text x="256" y="460" class="fit-text">FIT</text>
+            </svg>
+        </div>
+
+        <!-- Text Section -->
+        <h1 class="app-url">Rivalfit.app</h1>
+    </div>
+
+    <div class="controls">
+        <button class="btn btn-download" onclick="downloadOutro()">Descargar PNG de Alta Calidad</button>
+    </div>
+
+    <script>
+        function downloadOutro() {
+            const container = document.getElementById('outro-container');
+
+            // Render at 2x scale for 2160x2160 pixels
+            html2canvas(container, {
+                scale: 2,
+                useCORS: true,
+                backgroundColor: '#000000',
+                logging: false
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'rivalfit-logo-outro.png';
+                link.href = canvas.toDataURL('image/png', 1.0);
+                link.click();
+            });
+        }
+    </script>
+</body>
+
+</html>

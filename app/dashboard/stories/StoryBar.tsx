@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Plus, X, ChevronLeft, ChevronRight, Loader2, Heart, Eye, Users, Trash2, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown, Share2, Trophy, Activity, Volume2, VolumeX, Music2 } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Heart, Eye, Users, Trash2, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown, Share2, Trophy, Activity, Volume2, VolumeX, Music2, Download } from 'lucide-react'
 import { createStory, createPRStory, toggleStoryLike, recordStoryView, deleteStory } from './actions'
 import { clsx } from 'clsx'
 import PRCard from '../community/PRCard'
@@ -12,6 +12,7 @@ import VideoEditor from '../VideoEditor'
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import { useUploads } from '../UploadContext'
 import MusicPicker from './MusicPicker'
+import { VideoProcessor } from './VideoProcessor'
 
 interface OverlayElement {
     id: string
@@ -99,6 +100,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const [showFullSummary, setShowFullSummary] = useState(false)
     const [isMuted, setIsMuted] = useState(false)
     const [showMusicPicker, setShowMusicPicker] = useState(false)
+    const [isDownloadingBranded, setIsDownloadingBranded] = useState(false)
     const musicAudioRef = useRef<HTMLAudioElement | null>(null)
 
     useEffect(() => {
@@ -252,6 +254,27 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     async function loadStories() {
         await refreshStories()
     }
+
+    const handleDownloadStoryBranded = async () => {
+        if (!currentStory) return;
+        setIsDownloadingBranded(true);
+        try {
+            const blob = await VideoProcessor.processMedia(currentStory.media_url, currentStory.media_type);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rivalfit-story-${currentStory.id}.${blob.type.includes('video') ? 'webm' : 'jpg'}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Story download failed", err);
+            alert("No se pudo procesar la descarga de la historia.");
+        } finally {
+            setIsDownloadingBranded(false);
+        }
+    };
 
     const recordView = async (storyId: string) => {
         await recordStoryView(storyId)
@@ -1402,6 +1425,22 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                 {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                                             </button>
 
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDownloadStoryBranded();
+                                                }}
+                                                disabled={isDownloadingBranded}
+                                                className="p-2 bg-black/40 hover:bg-white/10 text-white rounded-full backdrop-blur-md transition-all border border-white/5 disabled:opacity-50"
+                                                title="Descargar"
+                                            >
+                                                {isDownloadingBranded ? (
+                                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                                ) : (
+                                                    <Download className="w-5 h-5" />
+                                                )}
+                                            </button>
+
                                             {isOwner && (
                                                 <button
                                                     onClick={handleDeleteStory}
@@ -1484,7 +1523,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     const isVideo = currentStory.media_type === 'video' || videoExts.includes(ext);
                                     return isVideo;
                                 })() ? (
-                                    <div className="relative w-full h-full overflow-hidden bg-black/40 flex items-center justify-center">
+                                    <div className="relative w-full h-full overflow-hidden bg-black/40 flex items-center justify-center" onContextMenu={(e) => e.preventDefault()}>
                                         <video
                                             ref={storyVideoRef}
                                             src={currentStory.media_url}
@@ -1495,6 +1534,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                 e.currentTarget.muted = isMuted;
                                                 e.currentTarget.volume = 1;
                                             }}
+                                            controlsList="nodownload"
+                                            onContextMenu={(e) => e.preventDefault()}
                                             className="w-full h-full object-contain pointer-events-none"
                                             style={{
                                                 transform: currentStory.metadata?.zoom ? `scale(${currentStory.metadata.zoom}) translate(${(currentStory.metadata.posX - 50) / currentStory.metadata.zoom}%, ${(currentStory.metadata.posY - 50) / currentStory.metadata.zoom}%)` : 'none',

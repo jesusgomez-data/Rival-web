@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Heart, MessageCircle, Share2, Music, User, Trophy, Play, Pause } from 'lucide-react';
+import { X, Heart, MessageCircle, Share2, Music, User, Trophy, Play, Pause, Download } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getReelPosts, toggleLike, getComments, addComment } from './community/actions';
 import Image from 'next/image';
@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { clsx } from 'clsx';
 import { useLanguage } from '../LanguageContext';
 import { Send, Loader2 } from 'lucide-react';
+import { VideoProcessor } from './stories/VideoProcessor';
 import MentionText from '@/components/MentionText';
 import MentionInput from '@/components/MentionInput';
 
@@ -202,6 +203,30 @@ function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: bo
         }
     };
 
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const handleDownloadBranded = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (isProcessing) return;
+        setIsProcessing(true);
+        try {
+            const blob = await VideoProcessor.processMedia(post.media_url, 'video');
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rivalfit-${post.id}.webm`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Download failed", err);
+            alert("No se pudo procesar la descarga.");
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
     const handleLike = async (e: React.MouseEvent) => {
         e.stopPropagation();
         setLiked(!liked);
@@ -218,6 +243,8 @@ function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: bo
                 loop
                 playsInline
                 onClick={handleTap}
+                controlsList="nodownload"
+                onContextMenu={(e) => e.preventDefault()}
             />
 
             <AnimatePresence>
@@ -270,6 +297,14 @@ function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: bo
                     </button>
                     <span className="text-white text-xs font-bold shadow-sm">{post.comments_count || 0}</span>
                 </div>
+
+                <button
+                    onClick={handleDownloadBranded}
+                    disabled={isProcessing}
+                    className="p-3 rounded-full bg-white/10 backdrop-blur-md text-white hover:bg-white/20 transition-colors disabled:opacity-50"
+                >
+                    {isProcessing ? <Loader2 className="w-6 h-6 animate-spin text-brand-red" /> : <Download className="w-6 h-6" />}
+                </button>
 
                 <button
                     onClick={(e) => {

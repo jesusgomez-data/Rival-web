@@ -18,13 +18,51 @@ import VideoEditor from "../../VideoEditor";
 // Helper for real distance calculation (Haversine Formula)
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3; // Earth radius in meters
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+        Math.cos(φ1) * Math.cos(φ2) *
+        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c; // Returns distance in meters
+};
+
+// Helper to parse target strings into initial set metrics
+const initializeSetsFromTarget = (target?: string): any[] => {
+    if (!target) return [{ order: 1, weight: 0, reps: 0, completed: false, unit: 'kg', measure: 'reps' }];
+
+    const lowerTarget = target.toLowerCase();
+
+    // Pattern: 50m, 1000m, 2km
+    const distMatch = lowerTarget.match(/(\d+(?:\.\d+)?)\s*(m|km)/);
+    if (distMatch) {
+        let val = parseFloat(distMatch[1]);
+        if (distMatch[2] === 'km') val *= 1000;
+        return [{ order: 1, weight: val, reps: 0, completed: false, unit: 'm', measure: 'distance' }];
+    }
+
+    // Pattern: 20 reps, 20reps
+    const repsMatch = lowerTarget.match(/(\d+)\s*(reps|repeticiones)/);
+    if (repsMatch) {
+        return [{ order: 1, weight: 0, reps: parseInt(repsMatch[1]), completed: false, unit: 'kg', measure: 'reps' }];
+    }
+
+    // Pattern: 30 cal, 30cal
+    const calMatch = lowerTarget.match(/(\d+)\s*(cal|calorías)/);
+    if (calMatch) {
+        return [{ order: 1, weight: parseInt(calMatch[1]), reps: 0, completed: false, unit: 'cal', measure: 'calories' }];
+    }
+
+    // Pattern: 30 seg, 30s
+    const timeMatch = lowerTarget.match(/(\d+)\s*(seg|s|seconds)/);
+    if (timeMatch) {
+        return [{ order: 1, weight: parseInt(timeMatch[1]), reps: 0, completed: false, unit: 'sec', measure: 'reps' }];
+    }
+
+    // Default fallback
+    return [{ order: 1, weight: 0, reps: 0, completed: false, unit: 'kg', measure: 'reps' }];
 };
 
 export default function SessionPage() {
@@ -477,7 +515,7 @@ function SessionContent() {
                                         completed: false,
                                         unit: s.unit || 'kg',
                                         measure: s.measure || 'reps'
-                                    })) : [{ order: 1, weight: 0, reps: 0, completed: false, unit: 'kg', measure: 'reps' }]
+                                    })) : initializeSetsFromTarget(ex.target)
                                 };
                             })
                         }));
@@ -497,7 +535,7 @@ function SessionContent() {
                                     completed: false,
                                     unit: s.unit || 'kg',
                                     measure: s.measure || 'reps'
-                                })) : [{ order: 1, weight: 0, reps: 0, completed: false, unit: 'kg', measure: 'reps' }]
+                                })) : initializeSetsFromTarget(ex.target)
                             };
                         });
                         setExercises(mapped);
@@ -1961,14 +1999,14 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
                     {
                         title: "BLOCK 1: STRENGTH",
                         type: "other",
-                        exercises: [{ name: "Sled Push", target: "50m Heavy", sets: [] }, { name: "Farmer Carry", target: "100m", sets: [] }]
+                        exercises: [{ name: "Sled Push", target: "50m Heavy", sets: [{ order: 1, weight: 50, reps: 1, unit: 'm', measure: 'distance' }] }, { name: "Farmer Carry", target: "100m", sets: [{ order: 1, weight: 100, reps: 1, unit: 'm', measure: 'distance' }] }]
                     },
                     { title: "3' REST", type: "rest", exercises: [], duration: 3 },
                     {
                         title: "BLOCK 2: ENGINE",
                         type: "emom",
                         duration: 15,
-                        exercises: [{ name: "Run 200m", target: "Sprint", sets: [] }, { name: "Burpees", target: "10 reps", sets: [] }]
+                        exercises: [{ name: "Run 200m", target: "Sprint", sets: [{ order: 1, weight: 200, reps: 1, unit: 'm', measure: 'distance' }] }, { name: "Burpees", target: "10 reps", sets: [{ order: 1, weight: 0, reps: 10, unit: 'kg', measure: 'reps' }] }]
                     }
                 ]
             }
@@ -4739,7 +4777,9 @@ function CoachAiView({
                                                     "border p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all",
                                                     theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-100 border-gray-200"
                                                 )}>
-                                                    <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">Peso</p>
+                                                    <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">
+                                                        {ex.sets[0]?.unit === 'm' ? 'Distancia' : (ex.sets[0]?.unit === 'sec' ? 'Tiempo' : 'Peso')}
+                                                    </p>
                                                     <div className="flex items-end gap-1">
                                                         <input
                                                             type="number"
@@ -4758,7 +4798,7 @@ function CoachAiView({
                                                             }}
                                                             className={clsx("bg-transparent text-lg md:text-xl font-mono font-black w-full outline-none", theme === 'dark' ? "text-white" : "text-black")}
                                                         />
-                                                        <span className="text-[9px] md:text-[10px] font-black text-gray-600 mb-0.5">KG</span>
+                                                        <span className="text-[9px] md:text-[10px] font-black text-gray-600 mb-0.5">{ex.sets[0]?.unit?.toUpperCase() || 'KG'}</span>
                                                     </div>
                                                 </div>
                                                 <div className={clsx(

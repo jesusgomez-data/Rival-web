@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Trash2, Edit2, Save, Heart, Dumbbell, ChevronDown, ChevronUp, Plus, CheckCircle2, Instagram } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Trash2, Edit2, Save, Heart, Dumbbell, ChevronDown, ChevronUp, Plus, CheckCircle2, Instagram, Download, Loader2 } from "lucide-react";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
 import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike, deleteComment } from "./community/actions";
@@ -11,6 +11,7 @@ import { clsx } from "clsx";
 import { useTheme } from "../ThemeContext";
 import { useStories } from "./stories/StoryContext";
 import PRCard from "./community/PRCard";
+import { VideoProcessor } from "./stories/VideoProcessor";
 import WodCard from "@/components/community/WodCard";
 import WodCreator from "@/components/training/WodCreator";
 import VideoReelsModal from "./VideoReelsModal";
@@ -79,6 +80,7 @@ function ShareButton({
     authorUsername?: string
 }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -96,6 +98,28 @@ function ShareButton({
         if (navigator.share) navigator.share({ title: 'RIVAL', url });
         else { navigator.clipboard.writeText(url); alert("Copiado!"); }
         setIsOpen(false);
+    };
+
+    const handleDownloadBranded = async () => {
+        if (!image) return;
+        setIsProcessing(true);
+        try {
+            const blob = await VideoProcessor.processMedia(image, mediaType || (image.includes('.mp4') ? 'video' : 'image'));
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `rivalfit-${postId || 'media'}.${blob.type.includes('video') ? 'webm' : 'jpg'}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error("Download failed", err);
+            alert("No se pudo procesar la descarga.");
+        } finally {
+            setIsProcessing(false);
+            setIsOpen(false);
+        }
     };
 
     const handleShareToStory = () => {
@@ -161,6 +185,19 @@ function ShareButton({
                 <div className="absolute right-0 bottom-full mb-2 w-56 bg-black border border-white/10 rounded-2xl shadow-2xl z-[50] overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
                     <button onClick={handleShareLink} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 transition-colors">
                         <Share2 className="w-4 h-4 text-brand-red" /> Compartir enlace
+                    </button>
+
+                    <button
+                        onClick={handleDownloadBranded}
+                        disabled={isProcessing}
+                        className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5 transition-colors disabled:opacity-50"
+                    >
+                        {isProcessing ? (
+                            <Loader2 className="w-4 h-4 text-brand-red animate-spin" />
+                        ) : (
+                            <Download className="w-4 h-4 text-brand-red" />
+                        )}
+                        {isProcessing ? 'Procesando...' : 'Descargar'}
                     </button>
 
                     <button onClick={handleShareToStory} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5 transition-colors">
@@ -893,6 +930,8 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                                 playsInline
                                                 muted
                                                 preload="auto"
+                                                controlsList="nodownload"
+                                                onContextMenu={(e) => e.preventDefault()}
                                             />
                                             <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
                                         </div>
