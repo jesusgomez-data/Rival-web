@@ -105,14 +105,8 @@ function ShareButton({
         setIsProcessing(true);
         try {
             const blob = await VideoProcessor.processMedia(image, mediaType || (image.includes('.mp4') ? 'video' : 'image'));
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `rivalfit-${postId || 'media'}.${blob.type.includes('video') ? 'webm' : 'jpg'}`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const filename = `rivalfit-${postId || 'media'}.${blob.type.includes('video') ? (blob.type.includes('mp4') ? 'mp4' : 'webm') : 'jpg'}`;
+            await VideoProcessor.downloadBlob(blob, filename);
         } catch (err) {
             console.error("Download failed", err);
             alert("No se pudo procesar la descarga.");
@@ -1272,6 +1266,29 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             authorId={authorId}
                             authorUsername={username || user.toLowerCase().replace(/\s+/g, '')}
                         />
+                        {image && !image.startsWith('{') && !image.startsWith('[') && (
+                            <button
+                                onClick={async (e) => {
+                                    e.stopPropagation();
+                                    const media = mediaType || (image.includes('.mp4') ? 'video' : 'image');
+                                    setIsDownloadingBrandedGlobal(true);
+                                    try {
+                                        const blob = await VideoProcessor.processMedia(image, media);
+                                        const filename = `rivalfit-${postId || 'media'}.${blob.type.includes('video') ? (blob.type.includes('mp4') ? 'mp4' : 'webm') : 'jpg'}`;
+                                        await VideoProcessor.downloadBlob(blob, filename);
+                                    } catch (err) {
+                                        console.error("Quick download failed", err);
+                                    } finally {
+                                        setIsDownloadingBrandedGlobal(false);
+                                    }
+                                }}
+                                disabled={isDownloadingBrandedGlobal}
+                                className="p-3 md:p-4 bg-brand-red/10 hover:bg-brand-red/20 text-brand-red rounded-xl md:rounded-2xl border border-brand-red/20 transition-all flex items-center justify-center min-w-[44px]"
+                                title="Descargar"
+                            >
+                                {isDownloadingBrandedGlobal ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
+                            </button>
+                        )}
                     </>
                 ) : (
                     <div className="flex items-center gap-6 w-full">
@@ -1291,21 +1308,46 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             </div>
                         )}
                         <div className="ml-auto">
-                            <ShareButton
-                                image={image}
-                                workoutData={workoutData}
-                                mediaType={mediaType}
-                                postId={postId}
-                                className="text-gray-400 hover:text-white"
-                                iconClassName="w-6 h-6"
-                                onInstagramShare={() => setShowInstagramCard(true)}
-                                onOpenShareCard={() => setShowShareCard(true)}
-                                isOwner={isOwner}
-                                authorName={user}
-                                authorAvatar={avatar}
-                                authorId={authorId}
-                                authorUsername={username || user.toLowerCase().replace(/\s+/g, '')}
-                            />
+                            <div className="flex items-center gap-4">
+                                {image && !image.startsWith('{') && !image.startsWith('[') && (
+                                    <button
+                                        onClick={async (e) => {
+                                            e.stopPropagation();
+                                            const media = mediaType || (image.includes('.mp4') ? 'video' : 'image');
+                                            setIsDownloadingBrandedGlobal(true);
+                                            try {
+                                                const blob = await VideoProcessor.processMedia(image, media);
+                                                const filename = `rivalfit-${postId || 'media'}.${blob.type.includes('video') ? (blob.type.includes('mp4') ? 'mp4' : 'webm') : 'jpg'}`;
+                                                await VideoProcessor.downloadBlob(blob, filename);
+                                            } catch (err) {
+                                                console.error("Quick download failed", err);
+                                            } finally {
+                                                setIsDownloadingBrandedGlobal(false);
+                                            }
+                                        }}
+                                        disabled={isDownloadingBrandedGlobal}
+                                        className="text-brand-red hover:text-white transition-colors p-1"
+                                        title="Descargar"
+                                    >
+                                        {isDownloadingBrandedGlobal ? <Loader2 className="w-6 h-6 animate-spin" /> : <Download className="w-6 h-6" />}
+                                    </button>
+                                )}
+                                <ShareButton
+                                    image={image}
+                                    workoutData={workoutData}
+                                    mediaType={mediaType}
+                                    postId={postId}
+                                    className="text-gray-400 hover:text-white"
+                                    iconClassName="w-6 h-6"
+                                    onInstagramShare={() => setShowInstagramCard(true)}
+                                    onOpenShareCard={() => setShowShareCard(true)}
+                                    isOwner={isOwner}
+                                    authorName={user}
+                                    authorAvatar={avatar}
+                                    authorId={authorId}
+                                    authorUsername={username || user.toLowerCase().replace(/\s+/g, '')}
+                                />
+                            </div>
                         </div>
                     </div>
                 )}

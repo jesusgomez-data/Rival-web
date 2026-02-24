@@ -113,6 +113,9 @@ export class VideoProcessor {
 
         // Step 2: Set up AudioContext for precise capture
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
         const destination = audioContext.createMediaStreamDestination();
         const source = audioContext.createMediaElementSource(video);
 
@@ -219,15 +222,53 @@ export class VideoProcessor {
 
     private static getSupportedMimeType(): string {
         const types = [
+            'video/mp4', // Prioritize MP4 for mobile compatibility (Safari/iOS)
             'video/webm;codecs=vp9,opus',
             'video/webm;codecs=vp8,opus',
-            'video/webm',
-            'video/mp4'
+            'video/webm'
         ];
         for (const type of types) {
-            if (MediaRecorder.isTypeSupported(type)) return type;
+            if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) return type;
         }
-        return '';
+        return 'video/webm'; // Fallback
+    }
+
+    /**
+     * Helper to download or share a blob.
+     * Uses navigator.share on mobile if available.
+     */
+    static async downloadBlob(blob: Blob, filename: string) {
+        // Safe check for navigator.share with files
+        try {
+            const file = new File([blob], filename, { type: blob.type });
+            const canShare = !!navigator.share && (typeof navigator.canShare === 'function' && navigator.canShare({ files: [file] }));
+
+            if (canShare) {
+                await navigator.share({
+                    files: [file],
+                    title: 'Rival Fit',
+                    text: 'Mira mi entrenamiento en Rival Fit #RivalFit'
+                });
+                return;
+            }
+        } catch (err) {
+            if ((err as Error).name !== 'AbortError') {
+                console.error("Share failed, falling back to download", err);
+            } else {
+                return; // User cancelled
+            }
+        }
+
+        // Fallback to traditional download
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        // Slightly delay revocation to ensure the browser has started the download
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
     }
 
     private static drawWatermarkSync(ctx: CanvasRenderingContext2D, width: number, height: number) {
@@ -329,5 +370,3 @@ export class VideoProcessor {
         requestAnimationFrame(animate);
     }
 }
-/ /   d u m m y   c h a n g e  
- 

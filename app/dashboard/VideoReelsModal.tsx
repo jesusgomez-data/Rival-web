@@ -211,14 +211,8 @@ function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: bo
         setIsProcessing(true);
         try {
             const blob = await VideoProcessor.processMedia(post.media_url, 'video');
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `rivalfit-${post.id}.webm`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const filename = `rivalfit-reel-${post.id}.${blob.type.includes('video') ? (blob.type.includes('mp4') ? 'mp4' : 'webm') : 'jpg'}`;
+            await VideoProcessor.downloadBlob(blob, filename);
         } catch (err) {
             console.error("Download failed", err);
             alert("No se pudo procesar la descarga.");

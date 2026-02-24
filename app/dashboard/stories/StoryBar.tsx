@@ -260,14 +260,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         setIsDownloadingBranded(true);
         try {
             const blob = await VideoProcessor.processMedia(currentStory.media_url, currentStory.media_type);
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `rivalfit-story-${currentStory.id}.${blob.type.includes('video') ? 'webm' : 'jpg'}`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            const filename = `rivalfit-story-${currentStory.id}.${blob.type.includes('video') ? (blob.type.includes('mp4') ? 'mp4' : 'webm') : 'jpg'}`;
+            await VideoProcessor.downloadBlob(blob, filename);
         } catch (err) {
             console.error("Story download failed", err);
             alert("No se pudo procesar la descarga de la historia.");
