@@ -2,7 +2,8 @@
 
 import { useState, useRef } from "react";
 import { Plus, Minus, Trash2, FileText, Image as ImageIcon, X, Video, ChevronDown, Check, Edit2, Search, Clock, Trophy } from "lucide-react";
-import { createWod, updateWod } from "../../wod-actions";
+import { createWod, updateWod, addExerciseToCatalog } from "../../wod-actions";
+import { getExercises } from "../../actions";
 import { deletePost } from "../../feed-actions";
 import clsx from "clsx";
 import { useTheme } from "../../../../ThemeContext";
@@ -111,6 +112,20 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
     // Autocomplete State
     const [searchQuery, setSearchQuery] = useState("");
     const [activeExercisePath, setActiveExercisePath] = useState<{ bIdx: number, eIdx: number } | null>(null);
+    const [catalogExercises, setCatalogExercises] = useState<string[]>([]);
+    const [isSavingExercise, setIsSavingExercise] = useState(false);
+
+    // Initial Load
+    useState(() => {
+        const fetchCatalog = async () => {
+            const exData = await getExercises('cross_training'); // Default for WOD manager
+            if (exData) {
+                const names = exData.map((e: any) => e.name);
+                setCatalogExercises(Array.from(new Set([...COMMON_EXERCISES, ...names])).sort());
+            }
+        };
+        fetchCatalog();
+    });
 
     // Global files (optional, attached to WOD generally? keeping simple for now)
     // We already have "Add Media" at bottom, let's keep that as "Global Attachments"? 
@@ -433,6 +448,30 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
         setBlocks(newBlocks);
     };
 
+    const handleSaveNewExercise = async (name: string, bIdx: number, exIdx: number) => {
+        if (!name.trim()) return;
+        setIsSavingExercise(true);
+        const res = await addExerciseToCatalog(name.toUpperCase());
+        setIsSavingExercise(false);
+
+        if (res.success) {
+            setCatalogExercises(prev => Array.from(new Set([...prev, name.toUpperCase()])).sort());
+            updateExercise(bIdx, exIdx, { name: name.toUpperCase() });
+            setActiveExercisePath(null);
+            setSearchQuery("");
+        } else {
+            alert("Error al guardar ejercicio: " + res.error);
+        }
+    };
+
+    const getEmomRounds = (minutes: number, exercisesCount: number) => {
+        if (!minutes || !exercisesCount) return 0;
+        return minutes; // In a standard EMOM, rounds = total minutes. 
+        // If we want "Sets per exercise", it would be minutes / exercisesCount.
+        // The user says "automatically say how many rounds it is".
+        // Usually if you have 3 exercises in a 12 min EMOM, you do 4 rounds of the circuit.
+    };
+
     // --- FILE LOGIC ---
 
     const handleBlockFileSelect = (blockId: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -608,7 +647,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                         )}
 
                                         {block.format === 'EMOM' && (
-                                            <div className="flex gap-2">
+                                            <div className="flex items-center gap-2">
                                                 <input
                                                     value={block.config?.minutes || ''}
                                                     onChange={(e) => updateBlock(index, { config: { ...block.config, minutes: parseInt(e.target.value) || 0 } })}
@@ -621,6 +660,11 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                     placeholder="Freq"
                                                     className="w-20 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-brand-red outline-none placeholder-gray-600 font-bold"
                                                 />
+                                                {block.config?.minutes && (block.exercises?.length || 0) > 0 && (
+                                                    <div className="px-2 py-1 bg-brand-red/10 rounded-lg border border-brand-red/20 animate-in fade-in duration-500">
+                                                        <p className="text-[10px] font-black text-brand-red uppercase italic leading-none">{block.config.minutes} RONDAS TOTALES</p>
+                                                    </div>
+                                                )}
                                             </div>
                                         )}
                                     </div>
@@ -680,7 +724,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                         {/* Suggestions Dropdown */}
                                                         {activeExercisePath?.bIdx === index && activeExercisePath?.eIdx === exIndex && searchQuery && (
                                                             <div className="absolute left-0 right-0 top-full mt-2 bg-brand-gray border border-white/10 rounded-xl shadow-2xl z-[100] max-h-48 overflow-y-auto overflow-x-hidden backdrop-blur-xl">
-                                                                {COMMON_EXERCISES.filter(ce => ce.toLowerCase().includes(searchQuery.toLowerCase())).map((ce, i) => (
+                                                                {catalogExercises.filter(ce => ce.toLowerCase().includes(searchQuery.toLowerCase())).map((ce, i) => (
                                                                     <button
                                                                         key={i}
                                                                         type="button"
@@ -694,6 +738,17 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                                         {ce}
                                                                     </button>
                                                                 ))}
+                                                                {!catalogExercises.some(ce => ce.toLowerCase() === searchQuery.toLowerCase()) && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleSaveNewExercise(searchQuery, index, exIndex)}
+                                                                        disabled={isSavingExercise}
+                                                                        className="w-full text-left px-4 py-3 text-xs font-black text-brand-red hover:bg-brand-red/10 border-t border-white/10 transition-colors uppercase italic flex items-center justify-between"
+                                                                    >
+                                                                        <span>{isSavingExercise ? 'Guardando...' : `+ Añadir "${searchQuery}" a la librería`}</span>
+                                                                        {!isSavingExercise && <Plus className="w-3 h-3" />}
+                                                                    </button>
+                                                                )}
                                                             </div>
                                                         )}
                                                     </div>

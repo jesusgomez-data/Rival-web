@@ -156,3 +156,21 @@ export async function updateWod(centerId: string, wodId: string, formData: FormD
     revalidatePath(`/gym/${centerId}`);
     return { success: true };
 }
+
+export async function addExerciseToCatalog(name: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Unauthorized' };
+
+    const { data, error } = await supabase
+        .from('exercises_catalog')
+        .insert({
+            name: name,
+            created_by: user.id
+        })
+        .select()
+        .single();
+
+    if (error) return { error: error.message };
+    return { success: true, exercise: data };
+}

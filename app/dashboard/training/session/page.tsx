@@ -469,7 +469,7 @@ function SessionContent() {
                                     ...ex,
                                     video_url: ex.video_url || found?.video_url,
                                     id: ex.id || `plan-ex-${bIdx}-${eIdx}`,
-                                    sets: ex.sets?.map((s: WorkoutSet, i: number) => ({
+                                    sets: (ex.sets && ex.sets.length > 0) ? ex.sets.map((s: WorkoutSet, i: number) => ({
                                         ...s,
                                         order: i + 1,
                                         weight: s.weight || 0,
@@ -477,7 +477,7 @@ function SessionContent() {
                                         completed: false,
                                         unit: s.unit || 'kg',
                                         measure: s.measure || 'reps'
-                                    })) || [{ order: 1, weight: 0, reps: 0, completed: false, unit: 'kg', measure: 'reps' }]
+                                    })) : [{ order: 1, weight: 0, reps: 0, completed: false, unit: 'kg', measure: 'reps' }]
                                 };
                             })
                         }));
@@ -489,7 +489,7 @@ function SessionContent() {
                                 ...ex,
                                 video_url: ex.video_url || found?.video_url,
                                 id: ex.id || `plan-ex-${idx}`,
-                                sets: ex.sets?.map((s: WorkoutSet, i: number) => ({
+                                sets: (ex.sets && ex.sets.length > 0) ? ex.sets.map((s: WorkoutSet, i: number) => ({
                                     ...s,
                                     order: i + 1,
                                     weight: s.weight || 0,
@@ -497,7 +497,7 @@ function SessionContent() {
                                     completed: false,
                                     unit: s.unit || 'kg',
                                     measure: s.measure || 'reps'
-                                })) || [{ order: 1, weight: 0, reps: 0, completed: false, unit: 'kg', measure: 'reps' }]
+                                })) : [{ order: 1, weight: 0, reps: 0, completed: false, unit: 'kg', measure: 'reps' }]
                             };
                         });
                         setExercises(mapped);
@@ -1749,49 +1749,54 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
         endurance: [
             {
                 id: 'c-e-1',
-                title: 'Engine Builder (Conditioning)',
+                title: 'Engine Builder (Acondicionamiento)',
                 sport: 'cross_training',
                 difficulty: 'intermediate',
                 duration_min: 35,
                 is_premium: false,
-                description: 'Focused on aerobic capacity and sustain endurance.',
-                exercises: [],
+                description: 'Enfocado en capacidad aeróbica y resistencia sostenida.',
                 blocks: [
-                    { title: "WARM UP: 1000m ROW", type: "other", exercises: [{ name: "Row", target: "1000m Easy", sets: [] }] },
+                    { title: "CALENTAMIENTO: 1000m REMO", type: "other", exercises: [{ name: "Remo", target: "1000m Suave", sets: [{ order: 1, reps: 0, weight: 1000, unit: 'm' }] }] },
                     {
-                        title: "BLOCK A: AMRAP 20",
+                        title: "BLOQUE A: AMRAP 20",
                         type: "amrap",
                         duration: 20,
                         exercises: [
-                            { name: "Run 400m", target: "Z3 Pace", sets: [] },
-                            { name: "KB Swings", target: "20 reps (24/16kg)", sets: [] },
-                            { name: "Box Jumps", target: "15 reps (24/20\")", sets: [] }
+                            { name: "Carrera 400m", target: "Ritmo Z3", sets: [{ order: 1, reps: 1, weight: 400, unit: 'm' }] },
+                            { name: "KB Swings", target: "20 reps (24/16kg)", sets: [{ order: 1, reps: 20, weight: 24 }] },
+                            { name: "Box Jumps", target: "15 reps (24/20\")", sets: [{ order: 1, reps: 15, weight: 0 }] }
                         ]
+                    },
+                    {
+                        title: "OPCIONES DE ESCALADO",
+                        type: "scaling",
+                        exercises: [{ name: "AV: 24kg / 24\"\nINT: 20kg / 20\"\nESC: 16kg / Step ups", target: "Selecciona tu carga", sets: [] }]
                     }
-                ]
+                ],
+                exercises: []
             },
             {
                 id: 'c-e-2',
-                title: 'Row & Burpee Long',
+                title: 'Remo y Burpees Largo',
                 sport: 'cross_training',
                 difficulty: 'elite',
                 duration_min: 30,
                 is_premium: true,
-                description: 'High intensity metabolic conditioning.',
+                description: 'Acondicionamiento metabólico de alta intensidad.',
                 exercises: [],
                 blocks: [
                     {
-                        title: "FOR TIME SEQUENCE",
+                        title: "SECUENCIA POR TIEMPO",
                         type: "fortime",
                         exercises: [
-                            { name: "Row", target: "2000m", sets: [] },
-                            { name: "Burpees over Row", target: "50 reps", sets: [] }
+                            { name: "Remo", target: "2000m", sets: [{ order: 1, reps: 0, weight: 2000, unit: 'm' }] },
+                            { name: "Burpees sobre Remo", target: "50 reps", sets: [{ order: 1, reps: 50, weight: 0 }] }
                         ]
                     },
                     {
-                        title: "SCALING",
+                        title: "ESCALADO",
                         type: "scaling",
-                        exercises: [{ name: "SB: 2000m\nGO: 1500m\nMO: 1000m", target: "N/A", sets: [] }]
+                        exercises: [{ name: "AV: 2000m\nINT: 1500m\nESC: 1000m", target: "N/A", sets: [] }]
                     }
                 ]
             }
@@ -1799,12 +1804,12 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
         gymnastics: [
             {
                 id: 'c-g-1',
-                title: 'Cindy Advanced',
+                title: 'Cindy Avanzado',
                 sport: 'cross_training',
                 difficulty: 'intermediate',
                 duration_min: 20,
                 is_premium: false,
-                description: 'The classic Cindy with structured blocks.',
+                description: 'El clásico Cindy con bloques estructurados.',
                 exercises: [],
                 blocks: [
                     {
@@ -1812,10 +1817,15 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
                         type: "amrap",
                         duration: 20,
                         exercises: [
-                            { name: 'Pull-ups', target: "5 reps", sets: [] },
-                            { name: 'Push-ups', target: "10 reps", sets: [] },
-                            { name: 'Air Squats', target: "15 reps", sets: [] }
+                            { name: 'Dominadas', target: "5 reps", sets: [{ order: 1, reps: 5, weight: 0 }] },
+                            { name: 'Flexiones', target: "10 reps", sets: [{ order: 1, reps: 10, weight: 0 }] },
+                            { name: 'Sentadillas', target: "15 reps", sets: [{ order: 1, reps: 15, weight: 0 }] }
                         ]
+                    },
+                    {
+                        title: "NIVELES DE ESCALADO",
+                        type: "scaling",
+                        exercises: [{ name: "AV: Dominadas / Flexiones / Sentadillas\nINT: Ring Rows / Flexiones de rodillas / Sentadillas\nESC: Remos asistidos / Flexiones en pared / Sentadillas a cajón", target: "Adapta los movimientos básicos", sets: [] }]
                     }
                 ]
             },
@@ -1830,7 +1840,7 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
                 exercises: [],
                 blocks: [
                     {
-                        title: "EMOM 12'",
+                        title: "BLOQUE A: EMOM 12'",
                         type: "emom",
                         duration: 12,
                         exercises: [
@@ -1838,12 +1848,68 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
                             { name: 'Double Unders', target: "30-50 reps", sets: [] }
                         ]
                     },
-                    { title: "4' REST", type: "rest", exercises: [], duration: 4 },
+                    { title: "4' DESCANSO", type: "rest", exercises: [], duration: 4 },
                     {
-                        title: "FINISHER",
+                        title: "BLOQUE B: AMRAP 5'",
                         type: "amrap",
                         duration: 5,
-                        exercises: [{ name: 'Hollow Rocks', target: "Max Reps", sets: [] }]
+                        exercises: [{ name: 'Hollow Rocks', target: "Máximas Reps", sets: [] }]
+                    },
+                    {
+                        title: "ESCALADO",
+                        type: "scaling",
+                        exercises: [
+                            { name: "AV: Muscle Ups / Double Unders\nINT: Dominadas al pecho / Saltos Simples\nESC: Dominadas asistidas / Saltos Simples", target: "Nivel de habilidad", sets: [] }
+                        ]
+                    }
+                ],
+                exercises: []
+            }
+        ],
+        halterofilia: [
+            {
+                id: 'c-h-1',
+                title: 'Técnica: RIVAL Snatch Path',
+                sport: 'cross_training',
+                difficulty: 'intermediate',
+                duration_min: 45,
+                is_premium: false,
+                description: 'Enfocado en la técnica de Arrancada y fuerza de tracción.',
+                blocks: [
+                    { title: "CALENTAMIENTO: MOVILIDAD", type: "other", exercises: [{ name: "Pasada de hombros", target: "15 reps", sets: [] }, { name: "Sentadilla Overhead", target: "10 reps (palo)", sets: [] }] },
+                    {
+                        title: "BLOQUE A: SNATCH TECHNIQUE",
+                        type: "other",
+                        exercises: [
+                            { name: "3 Snatch Pull + 1 Snatch", target: "5 series (Carga moderada)", sets: [{ order: 1, weight: 40, reps: 4 }] },
+                            { name: "Snatch de fuerza", target: "3 series x 5 reps", sets: [{ order: 1, weight: 30, reps: 5 }] }
+                        ]
+                    },
+                    {
+                        title: "ESCALADO",
+                        type: "scaling",
+                        exercises: [{ name: "AV: 50kg / Snatch\nINT: 40kg / Snatch\nESC: 30kg / Power Snatch", target: "Técnica", sets: [] }]
+                    }
+                ],
+                exercises: []
+            },
+            {
+                id: 'c-h-2',
+                title: 'Potencia: Clean & Jerk Force',
+                sport: 'cross_training',
+                difficulty: 'elite',
+                duration_min: 50,
+                is_premium: true,
+                description: 'Fuerza explosiva en Dos Tiempos y accesorios de empuje.',
+                exercises: [],
+                blocks: [
+                    { title: "WARMUP", type: "other", exercises: [{ name: "Front Squats", target: "3 x 5 (Vacío)", sets: [] }] },
+                    {
+                        title: "BLOQUE A: CLEAN & JERK",
+                        type: "other",
+                        exercises: [
+                            { name: "1 Clean + 2 Jerks", target: "6 series @ 75%", sets: [{ order: 1, weight: 60, reps: 3 }] }
+                        ]
                     }
                 ]
             }
@@ -1861,17 +1927,22 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
                 description: 'Hybrid race simulations.',
                 exercises: [],
                 blocks: [
-                    { title: "RUN 1KM", type: "other", exercises: [{ name: "Run", target: "1km", sets: [] }] },
+                    { title: "RUN 1KM", type: "other", exercises: [{ name: "Run", target: "1km", sets: [{ order: 1, reps: 1, weight: 1000, unit: 'm' }] }] },
                     {
                         title: "STATION 1",
                         type: "fortime",
-                        exercises: [{ name: "Burpees", target: "30 reps", sets: [] }]
+                        exercises: [{ name: "Burpees", target: "30 reps", sets: [{ order: 1, reps: 30, weight: 0 }] }]
                     },
-                    { title: "RUN 1KM", type: "other", exercises: [{ name: "Run", target: "1km", sets: [] }] },
+                    { title: "RUN 1KM", type: "other", exercises: [{ name: "Run", target: "1km", sets: [{ order: 1, reps: 1, weight: 1000, unit: 'm' }] }] },
                     {
                         title: "STATION 2",
                         type: "fortime",
-                        exercises: [{ name: "Air Squats", target: "50 reps", sets: [] }]
+                        exercises: [{ name: "Air Squats", target: "50 reps", sets: [{ order: 1, reps: 50, weight: 0 }] }]
+                    },
+                    {
+                        title: "ESCALADO",
+                        type: "scaling",
+                        exercises: [{ name: "AV: Burpees / Air Squats\nINT: 20 Burpees / 40 Sentadillas\nESC: 15 Burpees / 30 Sentadillas", target: "Ajuste de volumen", sets: [] }]
                     }
                 ]
             }
@@ -1983,7 +2054,7 @@ function SportSelector({ onSelect, onPlanSelect, guidedCount, userTier }: { onSe
             recs = [sportPool[activeFocus][rotationIdx]];
         } else {
             // General Fallback
-            recs = await getAiRecommendation(selectedSport, 'premium');
+            recs = await getAiRecommendation(selectedSport, userTier as any, activeFocus as string);
         }
 
         setRecommendations(recs);
@@ -2208,8 +2279,12 @@ function SportSelector({ onSelect, onPlanSelect, guidedCount, userTier }: { onSe
                                     )}
                                     <h3 className={clsx("text-2xl font-heading font-black italic uppercase mb-2", theme === 'dark' ? "text-white" : "text-black")}>{plan.title}</h3>
                                     <div className="flex gap-4 mb-6">
-                                        <span className={clsx("text-[10px] font-bold uppercase px-2 py-1 rounded", theme === 'dark' ? "text-gray-500 bg-white/5" : "text-gray-600 bg-gray-100")}>{plan.difficulty}</span>
-                                        <span className={clsx("text-[10px] font-bold uppercase px-2 py-1 rounded", theme === 'dark' ? "text-gray-500 bg-white/5" : "text-gray-600 bg-gray-100")}>{plan.duration_min} min</span>
+                                        <span className={clsx("text-[10px] font-bold uppercase px-2 py-1 rounded", theme === 'dark' ? "text-gray-500 bg-white/5" : "text-gray-600 bg-gray-100")}>
+                                            {plan.difficulty === 'intermediate' ? 'Intermedio' :
+                                                plan.difficulty === 'elite' ? 'Élite' :
+                                                    plan.difficulty === 'beginner' ? 'Principiante' : plan.difficulty}
+                                        </span>
+                                        <span className={clsx("text-[10px] font-bold uppercase px-2 py-1 rounded", theme === 'dark' ? "text-gray-500 bg-white/5" : "text-gray-600 bg-gray-100")}>{plan.duration_min} MIN</span>
                                     </div>
                                     <p className={clsx("text-sm mb-8 leading-relaxed", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>{plan.description}</p>
                                     <button onClick={() => startPlan(plan)} className={clsx("w-full py-4 rounded-xl font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg", theme === 'dark' ? "bg-white text-black" : "bg-brand-red text-white")}>
@@ -3796,16 +3871,23 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
 
     const updateSet = (exIdx: number, sIdx: number, field: string, val: string | number) => {
         const copy = [...exercises];
-        const s = copy[exIdx].sets[sIdx];
-        // @ts-expect-error
-        s[field] = val;
+        const ex = copy[exIdx];
+        if (!ex.sets) ex.sets = [{ order: 1, weight: 0, reps: 0 }];
+        const s = ex.sets[sIdx];
+        if (s) {
+            // @ts-expect-error
+            s[field] = val;
+        }
         setExercises(copy);
     }
 
     const toggleSet = (exIdx: number, sIdx: number) => {
         const copy = [...exercises];
-        const becomingCompleted = !copy[exIdx].sets[sIdx].completed;
-        copy[exIdx].sets[sIdx].completed = becomingCompleted;
+        const ex = copy[exIdx];
+        if (!ex.sets || ex.sets.length === 0) ex.sets = [{ order: 1, weight: 0, reps: 0, completed: false }];
+
+        const becomingCompleted = !ex.sets[sIdx].completed;
+        ex.sets[sIdx].completed = becomingCompleted;
         setExercises(copy);
 
         // If completed, trigger rest timer if exercise has one set
@@ -3863,7 +3945,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                     <div className="bg-brand-red/5 p-8 border-b border-inherit text-center">
                         <h3 className="text-[10px] font-black text-brand-red uppercase tracking-[0.4em] mb-1">DÍA DE ENTRENAMIENTO</h3>
                         <h2 className={clsx("text-3xl font-heading font-black italic uppercase italic tracking-tighter", theme === 'dark' ? "text-white" : "text-black")}>
-                            {workoutTitle?.split(':')[1]?.trim() || workoutTitle}
+                            {workoutTitle?.includes(':') ? workoutTitle.split(':')[1]?.trim() : workoutTitle}
                         </h2>
                         <div className="flex items-center justify-center gap-4 mt-4 opacity-60">
                             <div className="flex items-center gap-1.5">
@@ -4435,11 +4517,68 @@ function CoachAiView({
     userName: string;
 }) {
     const { theme } = useTheme();
+    const [selectedLevel, setSelectedLevel] = useState<'AV' | 'INT' | 'ESC'>('AV');
+
     const displayTime = timerMode === 'down' && targetDuration
         ? Math.max(0, (targetDuration * 60) - elapsedSeconds)
         : elapsedSeconds;
 
     const progress = targetDuration ? Math.min(100, (elapsedSeconds / (targetDuration * 60)) * 100) : 0;
+
+    // Scaling Logic: Parse the scaling block to find substitutions
+    const scalingBlock = blocks.find(b => b.type === 'scaling');
+    const scaleMap: Record<string, Record<'INT' | 'ESC' | 'AV', string>> = {};
+
+    if (scalingBlock && scalingBlock.exercises?.[0]?.name) {
+        const text = scalingBlock.exercises[0].name;
+
+        // Extract levels using regex to handle single-line or multi-line formats
+        const extract = (lvl: string) => {
+            // Regex to find {lvl}: then match anything until the next marker (INT:, ESC:) or end of line/string
+            const re = new RegExp(`${lvl}:\\s*(.*?)(?=\\s*(?:INT:|ESC:|$))`, 'is');
+            const match = text.match(re);
+            return match ? match[1].split('/').map(s => s.trim().replace(/^[\n\r]+|[\n\r]+$/g, '')) : [];
+        };
+
+        const levelMovements: Record<'AV' | 'INT' | 'ESC', string[]> = {
+            AV: extract('AV'),
+            INT: extract('INT'),
+            ESC: extract('ESC')
+        };
+
+        // Map AV movement to its scale
+        levelMovements.AV.forEach((mv, idx) => {
+            if (!mv) return;
+            const scales = {
+                AV: mv,
+                INT: levelMovements.INT[idx] || mv,
+                ESC: levelMovements.ESC[idx] || levelMovements.INT[idx] || mv
+            };
+            scaleMap[mv.toLowerCase()] = scales;
+
+            // Helpful mapping for English equivalents common in the app
+            if (mv.toLowerCase() === 'dominadas') scaleMap['pull-ups'] = scales;
+            if (mv.toLowerCase() === 'dominadas') scaleMap['pull ups'] = scales;
+            if (mv.toLowerCase() === 'flexiones') scaleMap['push-ups'] = scales;
+            if (mv.toLowerCase() === 'flexiones') scaleMap['push ups'] = scales;
+            if (mv.toLowerCase() === 'sentadillas') scaleMap['air squats'] = scales;
+            if (mv.toLowerCase() === 'sentadillas') scaleMap['squats'] = scales;
+            if (mv.toLowerCase() === 'burpees') scaleMap['burpees'] = scales;
+        });
+    }
+
+    const getScaledExercise = (exName: string) => {
+        if (!exName || selectedLevel === 'AV') return exName;
+
+        const lowerName = exName.toLowerCase();
+        for (const [key, scales] of Object.entries(scaleMap)) {
+            if (lowerName.includes(key)) {
+                // Return the scaled version, preserving the original case if possible or using the defined scale
+                return scales[selectedLevel];
+            }
+        }
+        return exName;
+    };
 
     return (
         <div className={clsx("min-h-screen flex flex-col pt-12 md:pt-20 pb-40 px-4 max-w-xl mx-auto space-y-8 md:space-y-12 relative", theme === 'dark' ? "bg-black" : "bg-white")}>
@@ -4470,6 +4609,28 @@ function CoachAiView({
                             />
                         </div>
                         <p className="text-right text-[7px] text-gray-500 font-black uppercase tracking-widest">{Math.round(progress)}% Completado</p>
+                    </div>
+                )}
+
+                {/* Level Selector */}
+                {scalingBlock && (
+                    <div className="flex justify-center pt-4">
+                        <div className={clsx("p-1 rounded-2xl border flex gap-1", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200")}>
+                            {(['ESC', 'INT', 'AV'] as const).map((lvl) => (
+                                <button
+                                    key={lvl}
+                                    onClick={() => setSelectedLevel(lvl)}
+                                    className={clsx(
+                                        "px-6 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase font-heading",
+                                        selectedLevel === lvl
+                                            ? "bg-brand-red text-white shadow-glow"
+                                            : "text-gray-500 hover:text-gray-300"
+                                    )}
+                                >
+                                    {lvl === 'ESC' ? 'Escalado' : lvl === 'INT' ? 'Intermedio' : 'Avanzado'}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
@@ -4526,8 +4687,10 @@ function CoachAiView({
                                                     {eIdx + 1}
                                                 </div>
                                                 <div>
-                                                    <h4 className={clsx("text-base md:text-lg font-heading font-black italic uppercase tracking-tight leading-none", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</h4>
-                                                    <p className="text-brand-red text-[8px] md:text-[9px] font-black uppercase tracking-widest mt-1 opacity-70">{ex.target}</p>
+                                                    <h4 className={clsx("text-base md:text-lg font-heading font-black italic uppercase tracking-tight leading-none", theme === 'dark' ? "text-white" : "text-black")}>
+                                                        {getScaledExercise(ex.name)}
+                                                    </h4>
+                                                    {ex.target && <p className="text-brand-red text-[9px] md:text-[10px] font-mono font-black uppercase mt-1.5 opacity-90">{getScaledExercise(ex.target)}</p>}
                                                 </div>
                                             </div>
                                             {ex.video_url && !block.title.includes('REST') && (
@@ -4542,12 +4705,30 @@ function CoachAiView({
 
                                         {/* Support for Scaling content if it is a Scaling Block */}
                                         {block.type === 'scaling' && (
-                                            <div className="mt-4 p-6 bg-brand-red/5 rounded-3xl border border-brand-red/10 text-center">
-                                                <p className="text-[10px] font-black text-brand-red uppercase tracking-[0.3em] mb-4">OPCIONES DE ESCALADO</p>
-                                                <div className="space-y-2 font-mono text-xl font-black italic text-white">
-                                                    {ex.name.split('\n').map((line: string, lIdx: number) => (
-                                                        <p key={lIdx} className="tracking-tighter">{line}</p>
-                                                    ))}
+                                            <div className="mt-2 p-8 bg-brand-red/[0.03] rounded-[32px] border border-brand-red/10 border-dashed relative overflow-hidden group/scaling">
+                                                <div className="absolute top-0 right-0 p-4 opacity-5">
+                                                    <Trophy className="w-12 h-12 text-brand-red" />
+                                                </div>
+                                                <p className="text-[10px] font-black text-brand-red/60 uppercase tracking-[0.4em] mb-6 flex items-center gap-2">
+                                                    <Zap className="w-3 h-3 fill-current" />
+                                                    NIVELES DE ESCALADO (SCALING)
+                                                </p>
+                                                <div className="space-y-4">
+                                                    {ex.name.split('\n').map((line: string, lIdx: number) => {
+                                                        const [level, rest] = line.split(':');
+                                                        return (
+                                                            <div key={lIdx} className={clsx(
+                                                                "flex items-baseline gap-4 transition-opacity",
+                                                                selectedLevel !== level && "opacity-30"
+                                                            )}>
+                                                                <span className="text-brand-red font-heading font-black italic text-sm w-12">{level}</span>
+                                                                <span className="text-white font-mono text-lg font-black tracking-tight">{rest || ''}</span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <div className="mt-6 pt-4 border-t border-brand-red/10">
+                                                    <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest italic">Ajusta el peso y repeticiones en los bloques anteriores según tu elección.</p>
                                                 </div>
                                             </div>
                                         )}
@@ -4566,6 +4747,12 @@ function CoachAiView({
                                                             value={ex.sets[0]?.weight || ''}
                                                             onChange={(e) => {
                                                                 const newBlocks = [...blocks];
+                                                                if (!newBlocks[bIdx].exercises[eIdx].sets) {
+                                                                    newBlocks[bIdx].exercises[eIdx].sets = [{ order: 1, weight: 0, reps: 0 }];
+                                                                }
+                                                                if (!newBlocks[bIdx].exercises[eIdx].sets[0]) {
+                                                                    newBlocks[bIdx].exercises[eIdx].sets[0] = { order: 1, weight: 0, reps: 0 };
+                                                                }
                                                                 newBlocks[bIdx].exercises[eIdx].sets[0].weight = parseFloat(e.target.value) || 0;
                                                                 setBlocks(newBlocks);
                                                             }}
@@ -4579,7 +4766,7 @@ function CoachAiView({
                                                     theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-100 border-gray-200"
                                                 )}>
                                                     <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">
-                                                        {ex.target.toLowerCase().includes('reps') ? 'Reps' : 'Log'}
+                                                        {(ex.target || '').toLowerCase().includes('reps') ? 'Reps' : 'Log'}
                                                     </p>
                                                     <div className="flex items-end gap-1">
                                                         <input
@@ -4588,6 +4775,12 @@ function CoachAiView({
                                                             value={ex.sets[0]?.reps || ''}
                                                             onChange={(e) => {
                                                                 const newBlocks = [...blocks];
+                                                                if (!newBlocks[bIdx].exercises[eIdx].sets) {
+                                                                    newBlocks[bIdx].exercises[eIdx].sets = [{ order: 1, weight: 0, reps: 0 }];
+                                                                }
+                                                                if (!newBlocks[bIdx].exercises[eIdx].sets[0]) {
+                                                                    newBlocks[bIdx].exercises[eIdx].sets[0] = { order: 1, weight: 0, reps: 0 };
+                                                                }
                                                                 newBlocks[bIdx].exercises[eIdx].sets[0].reps = parseInt(e.target.value) || 0;
                                                                 setBlocks(newBlocks);
                                                             }}
