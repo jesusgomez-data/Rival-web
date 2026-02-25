@@ -333,7 +333,7 @@ export default function DashboardHome() {
     }
 
     return (
-        <div className="max-w-full mx-auto space-y-8 pb-12 px-4 lg:px-8">
+        <div className="max-w-full mx-auto space-y-8 pb-12 px-0 sm:px-4 lg:px-8">
             {/* Hero Welcome Banner */}
             <div className="relative min-h-[200px] md:h-64 rounded-[32px] md:rounded-[40px] overflow-hidden border border-white/5 shadow-2xl flex flex-col justify-center dark-section">
                 <Image
@@ -636,7 +636,7 @@ export default function DashboardHome() {
                                                     )}
                                                 </div>
                                             </div>
-                                             {isPending && !isChallenger && (
+                                            {isPending && !isChallenger && (
                                                 <button onClick={async () => { await acceptDuel(duel.id); window.location.reload(); }} className="mt-4 w-full py-3 bg-brand-red text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-glow hover:scale-105 active:scale-95 transition-all">
                                                     {language === 'es' ? 'Aceptar Duelo' : 'Accept Duel'}
                                                 </button>

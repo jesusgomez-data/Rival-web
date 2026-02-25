@@ -124,11 +124,12 @@ function ShareButton({
         }
     };
 
-    const handleShareToStory = () => {
-        const fileExt = image?.split('.').pop()?.toLowerCase() || '';
-        const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'm4v'];
-        const isVideo = image && (videoExtensions.includes(fileExt) || mediaType === 'video');
+    const fileExt = image?.split('.').pop()?.toLowerCase() || '';
+    const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'm4v'];
+    const isVideo = image && (videoExtensions.includes(fileExt) || mediaType === 'video');
+    const isDynamic = image?.startsWith('{') || image?.startsWith('[') || !!workoutData || mediaType === 'class_result' || mediaType === 'pr' || mediaType === 'wod';
 
+    const handleShareToStory = () => {
         const attribution = !isOwner ? {
             username: authorUsername || authorName,
             avatar: authorAvatar,
@@ -189,18 +190,20 @@ function ShareButton({
                         <Share2 className="w-4 h-4 text-brand-red" /> Compartir enlace
                     </button>
 
-                    <button
-                        onClick={handleDownloadBranded}
-                        disabled={isProcessing}
-                        className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5 transition-colors disabled:opacity-50"
-                    >
-                        {isProcessing ? (
-                            <Loader2 className="w-4 h-4 text-brand-red animate-spin" />
-                        ) : (
-                            <Download className="w-4 h-4 text-brand-red" />
-                        )}
-                        {isProcessing ? 'Procesando...' : 'Descargar'}
-                    </button>
+                    {(isVideo || isDynamic) && (
+                        <button
+                            onClick={handleDownloadBranded}
+                            disabled={isProcessing}
+                            className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5 transition-colors disabled:opacity-50"
+                        >
+                            {isProcessing ? (
+                                <Loader2 className="w-4 h-4 text-brand-red animate-spin" />
+                            ) : (
+                                <Download className="w-4 h-4 text-brand-red" />
+                            )}
+                            {isProcessing ? (language === 'es' ? 'Procesando...' : 'Processing...') : (language === 'es' ? 'Descargar' : 'Download')}
+                        </button>
+                    )}
 
                     <button onClick={handleShareToStory} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5 transition-colors">
                         <Plus className="w-4 h-4 text-brand-red" /> {isOwner ? 'Enviar a Mis Historias' : 'Compartir en mi Historia'}
