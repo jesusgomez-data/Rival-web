@@ -20,6 +20,7 @@ import EssentialsHero from "@/components/onboarding/EssentialsHero";
 import InfoTooltip from "@/components/InfoTooltip";
 import { getMonday } from "@/utils/date";
 import DuelCountdown from "./community/DuelCountdown";
+import VictoryShareCard from "./community/VictoryShareCard";
 
 function SuggestedUser({ id, name, username, role, avatar, isFollowing, isOfficial }: { id: string, name: string, username: string, role: string, avatar?: string, isFollowing: boolean, isOfficial?: boolean }) {
     const { t } = useLanguage();
@@ -148,6 +149,7 @@ export default function DashboardHome() {
     const [loading, setLoading] = useState(true);
     const [showStats, setShowStats] = useState(false);
     const [showTour, setShowTour] = useState(false);
+    const [selectedVictoryDuel, setSelectedVictoryDuel] = useState<any>(null);
     const [data, setData] = useState<any>({
         profile: null,
         workoutCount: 0,
@@ -634,9 +636,18 @@ export default function DashboardHome() {
                                                     )}
                                                 </div>
                                             </div>
-                                            {isPending && !isChallenger && (
+                                             {isPending && !isChallenger && (
                                                 <button onClick={async () => { await acceptDuel(duel.id); window.location.reload(); }} className="mt-4 w-full py-3 bg-brand-red text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-glow hover:scale-105 active:scale-95 transition-all">
                                                     {language === 'es' ? 'Aceptar Duelo' : 'Accept Duel'}
+                                                </button>
+                                            )}
+
+                                            {duel.status === 'completed' && (
+                                                <button
+                                                    onClick={() => setSelectedVictoryDuel(duel)}
+                                                    className="mt-4 w-full py-3 bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-brand-red hover:border-brand-red transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <Share2 className="w-3.5 h-3.5" /> {language === 'es' ? 'Compartir Victoria' : 'Share Victory'}
                                                 </button>
                                             )}
                                         </div>
@@ -690,6 +701,23 @@ export default function DashboardHome() {
                     </div>
                 </div>
             </div>
+            {selectedVictoryDuel && (
+                <VictoryShareCard
+                    winner={{
+                        name: selectedVictoryDuel.winner_id === data.currentUser?.id ? (data.profile?.full_name || data.currentUser?.username || "Tú") : (selectedVictoryDuel.challenger_id === selectedVictoryDuel.winner_id ? selectedVictoryDuel.challenger.full_name : selectedVictoryDuel.opponent.full_name),
+                        username: selectedVictoryDuel.winner_id === data.currentUser?.id ? (data.profile?.username || "Tú") : (selectedVictoryDuel.challenger_id === selectedVictoryDuel.winner_id ? selectedVictoryDuel.challenger.username : selectedVictoryDuel.opponent.username),
+                        avatar: selectedVictoryDuel.winner_id === data.currentUser?.id ? (data.profile?.avatar_url || "") : (selectedVictoryDuel.challenger_id === selectedVictoryDuel.winner_id ? selectedVictoryDuel.challenger.avatar_url : selectedVictoryDuel.opponent.avatar_url),
+                        score: selectedVictoryDuel.winner_id === selectedVictoryDuel.challenger_id ? selectedVictoryDuel.challenger_score : selectedVictoryDuel.opponent_score
+                    }}
+                    loser={{
+                        name: selectedVictoryDuel.winner_id !== data.currentUser?.id ? (data.profile?.full_name || data.currentUser?.username || "Tú") : (selectedVictoryDuel.challenger_id !== selectedVictoryDuel.winner_id ? selectedVictoryDuel.challenger.full_name : selectedVictoryDuel.opponent.full_name),
+                        username: selectedVictoryDuel.winner_id !== data.currentUser?.id ? (data.profile?.username || "Tú") : (selectedVictoryDuel.challenger_id !== selectedVictoryDuel.winner_id ? selectedVictoryDuel.challenger.username : selectedVictoryDuel.opponent.username),
+                        avatar: selectedVictoryDuel.winner_id !== data.currentUser?.id ? (data.profile?.avatar_url || "") : (selectedVictoryDuel.challenger_id !== selectedVictoryDuel.winner_id ? selectedVictoryDuel.challenger.avatar_url : selectedVictoryDuel.opponent.avatar_url),
+                        score: selectedVictoryDuel.winner_id !== selectedVictoryDuel.challenger_id ? selectedVictoryDuel.challenger_score : selectedVictoryDuel.opponent_score
+                    }}
+                    onClose={() => setSelectedVictoryDuel(null)}
+                />
+            )}
             {showTour && (
                 <DashboardTour onComplete={() => {
                     setShowTour(false);

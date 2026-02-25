@@ -102,6 +102,14 @@ function ShareButton({
 
     const handleDownloadBranded = async () => {
         if (!image) return;
+        const isDynamic = image.startsWith('{') || image.startsWith('[');
+
+        if (isDynamic) {
+            setIsOpen(false);
+            if (onOpenShareCard) onOpenShareCard();
+            return;
+        }
+
         setIsProcessing(true);
         try {
             const blob = await VideoProcessor.processMedia(image, mediaType || (image.includes('.mp4') ? 'video' : 'image'));
@@ -1267,10 +1275,29 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             authorId={authorId}
                             authorUsername={username || user.toLowerCase().replace(/\s+/g, '')}
                         />
-                        {image && !image.startsWith('{') && !image.startsWith('[') && (
+                        {image && (
                             <button
                                 onClick={async (e) => {
                                     e.stopPropagation();
+                                    const isDynamic = image.startsWith('{') || image.startsWith('[');
+
+                                    if (isDynamic) {
+                                        // If dynamic, open the Elite Card which already has a robust download/share system
+                                        if (setShowShareCard) {
+                                            setShowShareCard(true);
+                                        } else {
+                                            // Fallback if prop not present
+                                            window.dispatchEvent(new CustomEvent('share-to-story', {
+                                                detail: {
+                                                    type: mediaType === 'pr' ? 'pr' : (mediaType === 'wod' ? 'wod' : 'class_result'),
+                                                    data: JSON.parse(image),
+                                                    postId
+                                                }
+                                            }));
+                                        }
+                                        return;
+                                    }
+
                                     const media = mediaType || (image.includes('.mp4') ? 'video' : 'image');
                                     setIsDownloadingBrandedGlobal(true);
                                     try {
@@ -1310,10 +1337,17 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                         )}
                         <div className="ml-auto">
                             <div className="flex items-center gap-4">
-                                {image && !image.startsWith('{') && !image.startsWith('[') && (
+                                {image && (
                                     <button
                                         onClick={async (e) => {
                                             e.stopPropagation();
+                                            const isDynamic = image.startsWith('{') || image.startsWith('[');
+
+                                            if (isDynamic) {
+                                                if (setShowShareCard) setShowShareCard(true);
+                                                return;
+                                            }
+
                                             const media = mediaType || (image.includes('.mp4') ? 'video' : 'image');
                                             setIsDownloadingBrandedGlobal(true);
                                             try {
