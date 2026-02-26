@@ -84,9 +84,14 @@ export class VideoProcessor {
         const video = document.createElement('video');
         video.crossOrigin = "anonymous";
         video.src = videoUrl;
-        video.muted = true; // Use true for initial processing to avoid autoplay blocks
+        video.muted = true;
         video.playsInline = true;
         video.preload = "auto";
+        video.style.position = 'fixed';
+        video.style.top = '-9999px';
+        video.style.left = '-9999px';
+        video.style.opacity = '0';
+        document.body.appendChild(video); // Required by some browsers for stable audio capture
 
         // Step 1: Wait for metadata with timeout
         await new Promise<void>((resolve, reject) => {
@@ -113,39 +118,47 @@ export class VideoProcessor {
         canvas.width = targetWidth;
         canvas.height = targetHeight;
 
-        const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+        const ctx = canvas.getContext('2d', { alpha: false }); // Remove desynchronized for better stability
         if (!ctx) throw new Error("Could not get canvas context");
 
         // Step 2: Set up AudioContext for precise capture
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        if (audioContext.state === 'suspended') {
-            await audioContext.resume();
-        }
+
+        // Ensure destination is created before source
         const destination = audioContext.createMediaStreamDestination();
         const source = audioContext.createMediaElementSource(video);
 
         // Connect to destination stream for recording
         source.connect(destination);
 
-        // Connect to a GainNode with 0 volume to keep it physically silent but "active" for processing
+        // Connect to a GainNode with 0 volume to keep it physically silent during processing but "active"
         const silentGain = audioContext.createGain();
         silentGain.gain.value = 0;
         source.connect(silentGain);
         silentGain.connect(audioContext.destination);
 
+        // Force resume AudioContext
+        if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+        }
+
         // Step 3: Combine Canvas and Audio streams
-        // Use 25fps for better stability across devices
         const canvasStream = canvas.captureStream(25);
-        const combinedStream = new MediaStream([
-            ...canvasStream.getVideoTracks(),
-            ...destination.stream.getAudioTracks()
-        ]);
+
+        // Combine tracks into a new MediaStream
+        const combinedStream = new MediaStream();
+        canvasStream.getVideoTracks().forEach(track => combinedStream.addTrack(track));
+
+        // Get audio tracks from destination
+        const audioTracks = destination.stream.getAudioTracks();
+        console.log(`[VideoProcessor] Audio tracks found: ${audioTracks.length}`);
+        audioTracks.forEach(track => combinedStream.addTrack(track));
 
         const supportedType = this.getSupportedMimeType();
         const chunks: Blob[] = [];
         const recorder = new MediaRecorder(combinedStream, {
             mimeType: supportedType,
-            videoBitsPerSecond: 8000000 // Optimized bitrate (8Mbps) for stability
+            videoBitsPerSecond: 4000000 // Slightly lower for guaranteed stability
         });
 
         recorder.ondataavailable = (e) => {
@@ -199,9 +212,17 @@ export class VideoProcessor {
             };
 
             try {
-                recorder.start();
+                // Ensure everything is ready
+                video.currentTime = 0;
                 video.muted = false;
                 video.volume = 1.0;
+
+                if (audioContext.state === 'suspended') await audioContext.resume();
+
+                // Small delay to let audio tracks "warm up"
+                await new Promise(r => setTimeout(r, 200));
+
+                recorder.start(200); // 200ms blocks
                 await video.play();
                 requestAnimationFrame(drawLoop);
             } catch (err) {
@@ -215,16 +236,18 @@ export class VideoProcessor {
 
     private static getSupportedMimeType(): string {
         const types = [
-            'video/mp4;codecs=avc1', // H.264 for widest compatibility
-            'video/mp4',
-            'video/webm;codecs=vp9,opus',
+            'video/mp4;codecs=avc1,mp4a.40.2',
             'video/webm;codecs=vp8,opus',
-            'video/webm'
+            'video/webm',
+            'video/mp4'
         ];
         for (const type of types) {
-            if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) return type;
+            if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)) {
+                console.log(`[VideoProcessor] Using MimeType: ${type}`);
+                return type;
+            }
         }
-        return 'video/webm';
+        return '';
     }
 
     /**

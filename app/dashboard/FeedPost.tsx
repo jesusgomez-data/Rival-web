@@ -22,7 +22,7 @@ import WodCard from "@/components/community/WodCard";
 
 const InstagramShareCard = dynamic(() => import("./InstagramShareCard"), { ssr: false });
 
-function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5", onInstagramShare, onOpenShareCard, onDownloadVideo, isDownloadingVideo, isVideo }: {
+function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5", onInstagramShare, onOpenShareCard, onDownloadMedia, isDownloadingVideo, isVideo }: {
     image?: string,
     workoutData?: any,
     mediaType?: string,
@@ -31,7 +31,7 @@ function ShareButton({ image, workoutData, mediaType, postId, className, iconCla
     iconClassName?: string,
     onInstagramShare?: () => void,
     onOpenShareCard?: () => void,
-    onDownloadVideo?: () => void,
+    onDownloadMedia?: () => void,
     isDownloadingVideo?: boolean,
     isVideo?: boolean
 }) {
@@ -110,9 +110,9 @@ function ShareButton({ image, workoutData, mediaType, postId, className, iconCla
                             <Trophy className="w-4 h-4" /> Tarjeta Elite
                         </button>
                     )}
-                    {isVideo && onDownloadVideo && (
+                    {isVideo && onDownloadMedia && (
                         <button
-                            onClick={(e) => { e.stopPropagation(); onDownloadVideo(); setIsOpen(false); }}
+                            onClick={(e) => { e.stopPropagation(); onDownloadMedia(); setIsOpen(false); }}
                             disabled={isDownloadingVideo}
                             className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-white bg-brand-red hover:bg-brand-red/90 disabled:bg-gray-800 disabled:text-gray-500 flex items-center justify-between border-t border-white/5 transition-all"
                         >
@@ -395,22 +395,24 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         }
     };
 
-    const handleDownloadVideo = async () => {
+    const handleDownloadMedia = async () => {
         if (!image || isDownloadingVideo) return;
 
         setIsDownloadingVideo(true);
         setDownloadProgress(0);
         try {
-            console.log("[FeedPost] Starting video processing for download:", image);
-            const processedBlob = await VideoProcessor.processMedia(image, 'video', (percent) => {
+            console.log("[FeedPost] Starting media processing for download:", image);
+            const mediaTypeForProcessor = isVideo ? 'video' : 'image';
+            const processedBlob = await VideoProcessor.processMedia(image, mediaTypeForProcessor, (percent) => {
                 setDownloadProgress(Math.floor(percent));
             });
             setDownloadProgress(100);
-            const filename = `rival-fit-${postId || Date.now()}.mp4`;
+            const ext = isVideo ? 'mp4' : 'jpg';
+            const filename = `rival-fit-${postId || Date.now()}.${ext}`;
             await VideoProcessor.downloadBlob(processedBlob, filename);
         } catch (error) {
-            console.error("[FeedPost] Video processing/download failed:", error);
-            alert("No se pudo procesar el video para descargar. Por favor, inténtalo de nuevo.");
+            console.error("[FeedPost] Media processing/download failed:", error);
+            alert("No se pudo procesar el contenido para descargar. Por favor, inténtalo de nuevo.");
         } finally {
             setIsDownloadingVideo(false);
         }
@@ -1053,15 +1055,15 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 Comentar
                             </button>
                         </div>
-                        {isVideo && (
+                        {(isVideo || isImageUrl(image)) && (
                             <button
-                                onClick={(e) => { e.stopPropagation(); handleDownloadVideo(); }}
+                                onClick={(e) => { e.stopPropagation(); handleDownloadMedia(); }}
                                 disabled={isDownloadingVideo}
                                 className={clsx(
                                     "p-3 md:p-4 bg-white/5 hover:bg-white/10 rounded-xl md:rounded-2xl border border-white/5 transition-all active:scale-95 group",
                                     isDownloadingVideo ? "text-brand-red animate-pulse" : "text-gray-400 hover:text-brand-red"
                                 )}
-                                title="Descargar video con branding"
+                                title="Descargar contenido con branding"
                             >
                                 {isDownloadingVideo ? (
                                     <div className="flex flex-col items-center gap-1">
@@ -1080,9 +1082,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             iconClassName="w-5 h-5"
                             onInstagramShare={() => setShowInstagramCard(true)}
                             onOpenShareCard={() => setShowShareCard(true)}
-                            onDownloadVideo={handleDownloadVideo}
+                            onDownloadMedia={handleDownloadMedia}
                             isDownloadingVideo={isDownloadingVideo}
-                            isVideo={isVideo as boolean}
+                            isVideo={(isVideo || isImageUrl(image)) as boolean}
                         />
                     </>
                 ) : (
@@ -1103,15 +1105,15 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             </div>
                         )}
                         <div className="ml-auto flex items-center gap-4">
-                            {isVideo && (
+                            {(isVideo || isImageUrl(image)) && (
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); handleDownloadVideo(); }}
+                                    onClick={(e) => { e.stopPropagation(); handleDownloadMedia(); }}
                                     disabled={isDownloadingVideo}
                                     className={clsx(
                                         "transition-all active:scale-95",
                                         isDownloadingVideo ? "text-brand-red animate-pulse" : "text-gray-400 hover:text-brand-red"
                                     )}
-                                    title="Descargar video con branding"
+                                    title="Descargar contenido con branding"
                                 >
                                     {isDownloadingVideo ? (
                                         <div className="flex flex-col items-center gap-1">
@@ -1130,9 +1132,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 iconClassName="w-6 h-6"
                                 onInstagramShare={() => setShowInstagramCard(true)}
                                 onOpenShareCard={() => setShowShareCard(true)}
-                                onDownloadVideo={handleDownloadVideo}
+                                onDownloadMedia={handleDownloadMedia}
                                 isDownloadingVideo={isDownloadingVideo}
-                                isVideo={isVideo as boolean}
+                                isVideo={(isVideo || isImageUrl(image)) as boolean}
                             />
                         </div>
                     </div>
