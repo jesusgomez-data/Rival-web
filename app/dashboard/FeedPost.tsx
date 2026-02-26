@@ -17,6 +17,7 @@ import dynamic from 'next/dynamic';
 import ShareableCard from "@/components/ShareableCard";
 import MentionText from "@/components/MentionText";
 import MentionInput from "@/components/MentionInput";
+import WodCard from "@/components/community/WodCard";
 
 const InstagramShareCard = dynamic(() => import("./InstagramShareCard"), { ssr: false });
 
@@ -177,20 +178,6 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         );
     };
 
-    const { userStories, openStory } = useStories();
-
-    // Check if the post user has active stories
-    const authorStories = userStories.find(us => us.user.id === authorId);
-    const hasStory = authorStories && authorStories.stories.length > 0;
-    const allSeen = hasStory && authorStories?.stories.every(s => s.has_seen);
-
-    const handleAvatarClick = (e: React.MouseEvent) => {
-        if (hasStory) {
-            e.preventDefault();
-            openStory(authorId || '');
-        }
-    };
-    // Edit/Delete state
     const [showMenu, setShowMenu] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editCaption, setEditCaption] = useState(caption || "");
@@ -213,6 +200,36 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     };
     const isVideo = image && (/\.(mp4|webm|ogg|mov)$/i.test(image) || (mediaType && mediaType === 'video'));
     const isOwner = currentUserId && authorId && currentUserId === authorId;
+    const { userStories, openStory } = useStories();
+
+    // Check if the post user has active stories
+    const authorStories = userStories.find(us => us.user.id === authorId);
+    const hasStory = authorStories && authorStories.stories.length > 0;
+    const allSeen = hasStory && authorStories?.stories.every(s => s.has_seen);
+
+    const handleAvatarClick = (e: React.MouseEvent) => {
+        if (hasStory) {
+            e.preventDefault();
+            openStory(authorId || '');
+        }
+    };
+
+    // Memoize the workout data: use prop if available, otherwise try to parse from "image" (media_url)
+    const resolvedWorkoutData = (() => {
+        if (workoutData) return workoutData;
+        if (!image || isImageUrl(image)) return null;
+        try {
+            const parsed = JSON.parse(image);
+            // Verify it's actually workout data (has blocks or metrics or title)
+            if (parsed && (parsed.blocks || parsed.metrics || parsed.title)) {
+                return parsed;
+            }
+        } catch (e) {
+            return null;
+        }
+        return null;
+    })();
+
 
     useEffect(() => {
         if (showComments && commentList.length === 0) {
@@ -529,7 +546,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             )}
 
             {/* Media Content - RESTRICTED IF OFFICIAL AND NO MEMBER */}
-            {(isOfficial && workoutData && !isMember && username?.toLowerCase() !== 'rivalfit' && username?.toLowerCase() !== 'rival') ? (
+            {(isOfficial && resolvedWorkoutData && !isMember && username?.toLowerCase() !== 'rivalfit' && username?.toLowerCase() !== 'rival') ? (
                 <div className="px-4 pb-6">
                     <div className="bg-muted/10 border border-white/5 border-dashed rounded-[32px] p-8 flex flex-col items-center justify-center text-center gap-4 relative overflow-hidden">
                         <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
@@ -748,7 +765,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         </div>
                     </div>
                 </div>
-            ) : (isImageUrl(image) || workoutData) ? (
+            ) : (isImageUrl(image) || resolvedWorkoutData) ? (
                 <div className="flex flex-col gap-4">
                     {isImageUrl(image) && (
                         <div className="px-2">
@@ -775,140 +792,35 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         </div>
                     )}
 
-                    {workoutData && ((() => {
-                        const w = Array.isArray(workoutData) ? workoutData[0] : workoutData;
+                    {resolvedWorkoutData && ((() => {
+                        const w = Array.isArray(resolvedWorkoutData) ? resolvedWorkoutData[0] : resolvedWorkoutData;
                         if (!w) return null;
 
-                        // CHECK FOR MULTI-BLOCK METRICS
-                        if (w.metrics && w.metrics.blocks && w.metrics.blocks.length > 0) {
-                            const blocks = w.metrics.blocks;
-                            const centerName = w.location_name || 'Gimnasio';
-                            const displayCenterName = centerName && !['Centro Deportivo', 'Gimnasio', 'Gimnasio RIVAL HQ'].includes(centerName) ? ` @ ${centerName}` : '';
-
-                            const summary = `${blocks.length} BLOQUES`;
+                        // CHECK FOR MULTI-BLOCK METRICS (WOD)
+                        if (w.blocks || (w.metrics && w.metrics.blocks && w.metrics.blocks.length > 0)) {
+                            // Normalize data for WodCard if it's in the old metrics.blocks format
+                            const blocks = (w.blocks || w.metrics.blocks).map((b: any) => ({
+                                ...b,
+                                config: b.config || {} // Safety for legacy data
+                            }));
+                            const normalizedWodData = {
+                                title: w.title || (w.sport_type && w.sport_type !== 'Entrenamiento Libre' ? w.sport_type : 'WORKOUT OF THE DAY'),
+                                blocks: blocks,
+                                summary: w.summary || {
+                                    scoreLabel: w.metrics?.score || 'COMPLETADO',
+                                    scoreType: w.metrics?.type || 'WORKOUT',
+                                    totalTime: w.metrics?.duration || w.metrics?.time || '--:--'
+                                },
+                                media_url: image && isImageUrl(image) ? image : null
+                            };
 
                             return (
-                                <div className="w-full">
-                                    {!isExpanded ? (
-                                        <button
-                                            onClick={() => setIsExpanded(true)}
-                                            className={clsx(
-                                                "w-full border rounded-xl md:rounded-2xl p-2 md:p-3 flex items-center justify-between hover:border-brand-red/50 transition-all group shadow-xl relative overflow-hidden",
-                                                theme === 'dark' ? "bg-[#121212] border-white/5 hover:bg-white/[0.04]" : "bg-gray-50 border-gray-100 hover:bg-white shadow-md"
-                                            )}
-                                        >
-                                            <div className="absolute top-0 right-0 w-24 h-24 bg-brand-red/5 blur-3xl -mr-8 -mt-8" />
-                                            <div className="flex items-center gap-2 md:gap-3 relative z-10 w-full overflow-hidden">
-                                                <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 group-hover:scale-110 transition-transform shrink-0">
-                                                    <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                                </div>
-                                                <div className="text-left flex-1 min-w-0">
-                                                    <h4 className={clsx(
-                                                        "text-xs md:text-sm font-heading font-black italic uppercase tracking-tighter group-hover:text-brand-red transition-colors leading-none truncate pr-2",
-                                                        theme === 'dark' ? "text-white" : "text-gray-900"
-                                                    )}>
-                                                        {(!w.sport_type || w.sport_type === 'Entrenamiento Libre') ? 'ENTRENAMIENTO HÍBRIDO' : w.sport_type}
-                                                    </h4>
-                                                    <p className="text-[7px] md:text-[8px] text-brand-red/70 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 truncate">
-                                                        <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red"></span>
-                                                        {summary}{displayCenterName}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="flex bg-white/5 rounded-lg p-1.5 group-hover:bg-brand-red group-hover:text-white transition-all border border-white/5 shrink-0">
-                                                <ChevronDown className="w-3 h-3" />
-                                            </div>
-                                        </button>
-                                    ) : (
-                                        <div className={clsx(
-                                            "border rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden group/card shadow-xl animate-in fade-in slide-in-from-top-4 duration-300",
-                                            theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-md"
-                                        )}>
-                                            {/* Accent Background Glow */}
-                                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
-
-                                            <div className="relative z-10">
-                                                <div className="flex items-center justify-between mb-3 md:mb-4">
-                                                    <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] italic">RESULTADOS POR BLOQUE</p>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
-                                                        className="text-[7px] md:text-[8px] text-brand-red font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
-                                                    >
-                                                        CERRAR <ChevronUp className="w-3 h-3" />
-                                                    </button>
-                                                </div>
-
-                                                <div className="relative z-10 space-y-3">
-                                                    {blocks.map((block: any, idx: number) => {
-                                                        const isInnerExpanded = expandedInnerBlocks.includes(idx + 1000); // Unique ID offset
-                                                        const resultStr =
-                                                            block.type === 'fortime' ? (block.result?.time || '--:--') :
-                                                                block.type === 'rft' ? (`${block.rounds || 0} Rds` + (block.result?.time ? ` - ${block.result.time}` : '')) :
-                                                                    block.type === 'emom' ? `${block.duration || 0}' - ${block.result?.rounds || 0} Rds` :
-                                                                        `${block.result?.rounds || 0} Rds`;
-
-                                                        return (
-                                                            <div key={idx} className={clsx(
-                                                                "border rounded-xl md:rounded-2xl relative overflow-hidden group/card transition-all",
-                                                                theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-sm",
-                                                                isInnerExpanded ? "p-3 md:p-4" : "p-2 md:p-3 hover:bg-white/[0.02] cursor-pointer"
-                                                            )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx + 1000)}>
-                                                                <div className="flex items-center justify-between gap-3">
-                                                                    <div className="min-w-0 flex-1">
-                                                                        <h3 className={clsx(
-                                                                            "text-sm md:text-base font-heading font-black italic uppercase tracking-tighter leading-none truncate pr-2",
-                                                                            theme === 'dark' ? "text-white" : "text-gray-900"
-                                                                        )}>
-                                                                            {(block.title === 'Entrenamiento Libre' || block.title === 'Hybrid' || !block.title) ? (w.sport_type || 'Bloque') : block.title} <span className="text-[9px] text-gray-500 ml-1 not-italic font-bold tracking-widest">({block.type.toUpperCase()})</span>
-                                                                        </h3>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-3">
-                                                                        <div className="text-right shrink-0">
-                                                                            <span className="text-sm md:text-lg font-heading font-black text-brand-red italic tracking-tighter leading-none">
-                                                                                {resultStr}
-                                                                            </span>
-                                                                        </div>
-                                                                        <button
-                                                                            onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx + 1000); }}
-                                                                            className="p-1 hover:bg-white/5 rounded-lg transition-colors"
-                                                                        >
-                                                                            {isInnerExpanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />}
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-
-                                                                {isInnerExpanded && (
-                                                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-3 mt-2 border-t border-white/5">
-                                                                        {block.notes && <p className="text-xs text-gray-400 italic mb-2">"{block.notes}"</p>}
-                                                                        <div className="space-y-2">
-                                                                            {block.exercises?.map((ex: any, eIdx: number) => (
-                                                                                <div key={eIdx} className="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2 border border-white/5">
-                                                                                    <span className={clsx("text-xs font-bold uppercase", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</span>
-                                                                                    <span className="text-xs text-brand-red font-mono font-bold">
-                                                                                        {(() => {
-                                                                                            const s = ex.sets?.[0];
-                                                                                            if (!s) return '';
-                                                                                            // Filter out 'kg' if weight is 0, handle different units
-                                                                                            const w = s.weight > 0 ? `${s.weight}${s.unit || 'kg'}` : '';
-                                                                                            // Handle reps/time/distance
-                                                                                            const r = s.reps > 0 ? `${s.reps}${s.measure === 'reps' ? '' : (s.measure || '')}` : '';
-
-                                                                                            if (w && r) return `${w} x ${r}`;
-                                                                                            return w || r;
-                                                                                        })()}
-                                                                                    </span>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        )
-                                                    })}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
+                                <div className="w-full mt-2">
+                                    <WodCard
+                                        data={normalizedWodData as any}
+                                        userName={username || user}
+                                        publishDate={time}
+                                    />
                                 </div>
                             );
                         }
@@ -1071,7 +983,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
             {/* Actions */}
             <div className="px-4 pb-4 pt-4 flex items-center gap-4 border-t border-white/5 mt-2">
-                {(workoutData || mediaType === 'class_result') ? (
+                {(resolvedWorkoutData || mediaType === 'class_result') ? (
                     <>
                         <div className="flex-1 flex gap-2">
                             <div className="flex-1">
@@ -1086,7 +998,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         </div>
                         <ShareButton
                             image={image}
-                            workoutData={workoutData}
+                            workoutData={resolvedWorkoutData}
                             mediaType={mediaType}
                             postId={postId}
                             className="p-3 md:p-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl md:rounded-2xl border border-white/5 transition-all"
@@ -1115,7 +1027,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         <div className="ml-auto">
                             <ShareButton
                                 image={image}
-                                workoutData={workoutData}
+                                workoutData={resolvedWorkoutData}
                                 mediaType={mediaType}
                                 postId={postId}
                                 className="text-gray-400 hover:text-white"
@@ -1202,18 +1114,18 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         username={username || user}
                         avatar={avatar}
                         content={{
-                            type: (workoutData as any)?.metrics?.type === 'running' ? 'running' : (mediaType as any || 'workout'),
-                            title: (workoutData?.title === 'Entrenamiento Híbrido Libre' || workoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (workoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (workoutData?.title || (mediaType === 'running' ? 'RUNNING' : 'ENTRENAMIENTO'))),
+                            type: (resolvedWorkoutData as any)?.metrics?.type === 'running' ? 'running' : (mediaType as any || 'workout'),
+                            title: (resolvedWorkoutData?.title === 'Entrenamiento Híbrido Libre' || resolvedWorkoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (resolvedWorkoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (resolvedWorkoutData?.title || (mediaType === 'running' ? 'RUNNING' : 'ENTRENAMIENTO'))),
                             highlight: highlight || caption,
-                            stats: (workoutData as any)?.metrics?.type === 'running'
+                            stats: (resolvedWorkoutData as any)?.metrics?.type === 'running'
                                 ? [
-                                    { label: 'DISTANCIA', value: `${(((workoutData as any).metrics.distance || 0) / 1000).toFixed(2)} KM`, icon: 'distance' },
-                                    { label: 'RITMO', value: (workoutData as any).metrics.pace || '0:00', icon: 'pace' },
-                                    { label: 'TIEMPO', value: (workoutData as any).metrics.time || '00:00', icon: 'time' },
-                                    { label: 'DESNIVEL', value: `${(workoutData as any).metrics.elevation || 0}m`, icon: 'elevation' },
-                                    { label: 'PULSO MED.', value: `${(workoutData as any).metrics.avgHeartRate || 0}`, icon: 'heart' }
+                                    { label: 'DISTANCIA', value: `${(((resolvedWorkoutData as any).metrics.distance || 0) / 1000).toFixed(2)} KM`, icon: 'distance' },
+                                    { label: 'RITMO', value: (resolvedWorkoutData as any).metrics.pace || '0:00', icon: 'pace' },
+                                    { label: 'TIEMPO', value: (resolvedWorkoutData as any).metrics.time || '00:00', icon: 'time' },
+                                    { label: 'DESNIVEL', value: `${(resolvedWorkoutData as any).metrics.elevation || 0}m`, icon: 'elevation' },
+                                    { label: 'PULSO MED.', value: `${(resolvedWorkoutData as any).metrics.avgHeartRate || 0}`, icon: 'heart' }
                                 ]
-                                : (workoutData as any)?.metrics?.blocks?.map((b: any) => ({
+                                : (resolvedWorkoutData as any)?.metrics?.blocks?.map((b: any) => ({
                                     label: b.type?.toUpperCase(),
                                     value: b.result?.time || `${b.result?.rounds || b.result?.reps || '-'} ${b.result?.rounds ? 'RDS' : (b.result?.reps ? 'REPS' : '')}`
                                 })).slice(0, 4) || (mediaType === 'pr' ? (() => {
@@ -1223,7 +1135,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     } catch (e) { return [] }
                                 })() : []),
                             image: image,
-                            mapData: (workoutData as any)?.metrics?.path ? 'GPS_PATH_ACTIVE' : undefined
+                            mapData: (resolvedWorkoutData as any)?.metrics?.path ? 'GPS_PATH_ACTIVE' : undefined
                         }}
                         onClose={() => setShowInstagramCard(false)}
                     />
@@ -1250,14 +1162,14 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 }}
                                 data={{
                                     type: mediaType === 'pr' ? 'pr' : mediaType === 'class_result' ? 'medal' : 'workout',
-                                    title: (workoutData?.sport_type && workoutData.sport_type !== 'fitness') ? workoutData.sport_type.toUpperCase() : (highlight || workoutData?.title || 'ENTRENAMIENTO'),
+                                    title: (resolvedWorkoutData?.sport_type && resolvedWorkoutData.sport_type !== 'fitness') ? resolvedWorkoutData.sport_type.toUpperCase() : (highlight || resolvedWorkoutData?.title || 'ENTRENAMIENTO'),
                                     date: time,
                                     stats: mediaType === 'pr' ? (() => {
                                         try { const d = JSON.parse(image); return [{ label: "PESO", value: `${d.weight}${d.unit}` }, { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }]; } catch (e) { return [] }
-                                    })() : (workoutData as any)?.metrics?.blocks?.map((b: any) => ({
+                                    })() : (resolvedWorkoutData as any)?.metrics?.blocks?.map((b: any) => ({
                                         label: b.type?.toUpperCase(),
                                         value: b.result?.time || `${b.result?.rounds || 0} RDS`
-                                    })).slice(0, 3) || [{ label: "DISCIPLINA", value: (workoutData?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "COMPLETADO" }],
+                                    })).slice(0, 3) || [{ label: "DISCIPLINA", value: (resolvedWorkoutData?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "COMPLETADO" }],
                                     image: !isVideo ? image : undefined
                                 }}
                             />

@@ -138,22 +138,22 @@ export default function WodCard({ data, userName, publishDate }: WodCardProps) {
 
                                     {/* Format Summary (Config) */}
                                     <div className="mb-4 flex flex-wrap gap-4">
-                                        {block.config.rounds && (
+                                        {block.config?.rounds && (
                                             <WodMetric icon={<Repeat className="w-full h-full" />} label="RONDAS" value={block.config.rounds.toString()} />
                                         )}
-                                        {block.config.timecap && (
+                                        {block.config?.timecap && (
                                             <WodMetric icon={<Clock className="w-full h-full" />} label="TIME CAP" value={block.config.timecap} />
                                         )}
                                         {(block.format === 'EMOM' || block.format === 'DEATH BY') && (
                                             <>
-                                                <WodMetric icon={<Timer className="w-full h-full" />} label="FREQ" value={block.config.frequency || '1 MIN'} />
-                                                <WodMetric icon={<Clock className="w-full h-full" />} label="TOTAL" value={`${block.config.minutes || 15} MIN`} />
+                                                <WodMetric icon={<Timer className="w-full h-full" />} label="FREQ" value={block.config?.frequency || '1 MIN'} />
+                                                <WodMetric icon={<Clock className="w-full h-full" />} label="TOTAL" value={`${block.config?.minutes || 15} MIN`} />
                                             </>
                                         )}
                                         {(block.format === 'INTERVALS' || block.format === 'TABATA') && (
                                             <>
-                                                <WodMetric icon={<Zap className="w-full h-full" />} label="WORK" value={block.config.work || '20S'} />
-                                                <WodMetric icon={<Clock className="w-full h-full" />} label="REST" value={block.config.rest || '10S'} />
+                                                <WodMetric icon={<Zap className="w-full h-full" />} label="WORK" value={block.config?.work || '20S'} />
+                                                <WodMetric icon={<Clock className="w-full h-full" />} label="REST" value={block.config?.rest || '10S'} />
                                             </>
                                         )}
                                     </div>
