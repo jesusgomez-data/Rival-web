@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2 } from "lucide-react";
+import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
 import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike } from "./community/actions";
@@ -21,7 +22,19 @@ import WodCard from "@/components/community/WodCard";
 
 const InstagramShareCard = dynamic(() => import("./InstagramShareCard"), { ssr: false });
 
-function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5", onInstagramShare, onOpenShareCard }: { image?: string, workoutData?: any, mediaType?: string, postId?: string, className?: string, iconClassName?: string, onInstagramShare?: () => void, onOpenShareCard?: () => void }) {
+function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5", onInstagramShare, onOpenShareCard, onDownloadVideo, isDownloadingVideo, isVideo }: {
+    image?: string,
+    workoutData?: any,
+    mediaType?: string,
+    postId?: string,
+    className?: string,
+    iconClassName?: string,
+    onInstagramShare?: () => void,
+    onOpenShareCard?: () => void,
+    onDownloadVideo?: () => void,
+    isDownloadingVideo?: boolean,
+    isVideo?: boolean
+}) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -95,6 +108,19 @@ function ShareButton({ image, workoutData, mediaType, postId, className, iconCla
                     {onOpenShareCard && (
                         <button onClick={() => { onOpenShareCard(); setIsOpen(false); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red bg-brand-red/5 hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5">
                             <Trophy className="w-4 h-4" /> Tarjeta Elite
+                        </button>
+                    )}
+                    {isVideo && onDownloadVideo && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onDownloadVideo(); setIsOpen(false); }}
+                            disabled={isDownloadingVideo}
+                            className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-white bg-brand-red hover:bg-brand-red/90 disabled:bg-gray-800 disabled:text-gray-500 flex items-center justify-between border-t border-white/5 transition-all"
+                        >
+                            <div className="flex items-center gap-3">
+                                {isDownloadingVideo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                                {isDownloadingVideo ? 'PROCESANDO...' : 'DESCARGAR VIDEO'}
+                            </div>
+                            {isDownloadingVideo && <span className="font-black">{downloadProgress}%</span>}
                         </button>
                     )}
                 </div>
@@ -183,6 +209,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const [editCaption, setEditCaption] = useState(caption || "");
     const [displayCaption, setDisplayCaption] = useState(caption || "");
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isDownloadingVideo, setIsDownloadingVideo] = useState(false);
+    const [downloadProgress, setDownloadProgress] = useState(0);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
 
@@ -198,7 +226,15 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         if (trimmed.startsWith('{') || trimmed.startsWith('[')) return false;
         return true;
     };
-    const isVideo = image && (/\.(mp4|webm|ogg|mov)$/i.test(image) || (mediaType && mediaType === 'video'));
+    // Improved video detection
+    const isVideo = image && (
+        /\.(mp4|webm|ogg|mov)$/i.test(image) ||
+        (mediaType && mediaType === 'video') ||
+        image.includes('/videos/') ||
+        image.includes('video/upload') ||
+        image.includes('.mov?') ||
+        image.includes('.mp4?')
+    );
     const isOwner = currentUserId && authorId && currentUserId === authorId;
     const { userStories, openStory } = useStories();
 
@@ -356,6 +392,27 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             audioRef.current.pause();
         } else {
             audioRef.current.play().catch(console.error);
+        }
+    };
+
+    const handleDownloadVideo = async () => {
+        if (!image || isDownloadingVideo) return;
+
+        setIsDownloadingVideo(true);
+        setDownloadProgress(0);
+        try {
+            console.log("[FeedPost] Starting video processing for download:", image);
+            const processedBlob = await VideoProcessor.processMedia(image, 'video', (percent) => {
+                setDownloadProgress(Math.floor(percent));
+            });
+            setDownloadProgress(100);
+            const filename = `rival-fit-${postId || Date.now()}.mp4`;
+            await VideoProcessor.downloadBlob(processedBlob, filename);
+        } catch (error) {
+            console.error("[FeedPost] Video processing/download failed:", error);
+            alert("No se pudo procesar el video para descargar. Por favor, inténtalo de nuevo.");
+        } finally {
+            setIsDownloadingVideo(false);
         }
     };
 
@@ -996,6 +1053,24 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 Comentar
                             </button>
                         </div>
+                        {isVideo && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); handleDownloadVideo(); }}
+                                disabled={isDownloadingVideo}
+                                className={clsx(
+                                    "p-3 md:p-4 bg-white/5 hover:bg-white/10 rounded-xl md:rounded-2xl border border-white/5 transition-all active:scale-95 group",
+                                    isDownloadingVideo ? "text-brand-red animate-pulse" : "text-gray-400 hover:text-brand-red"
+                                )}
+                                title="Descargar video con branding"
+                            >
+                                {isDownloadingVideo ? (
+                                    <div className="flex flex-col items-center gap-1">
+                                        <Loader2 className="w-5 h-5 animate-spin" />
+                                        <span className="text-[7px] font-black">{downloadProgress}%</span>
+                                    </div>
+                                ) : <Download className="w-5 h-5" />}
+                            </button>
+                        )}
                         <ShareButton
                             image={image}
                             workoutData={resolvedWorkoutData}
@@ -1005,6 +1080,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             iconClassName="w-5 h-5"
                             onInstagramShare={() => setShowInstagramCard(true)}
                             onOpenShareCard={() => setShowShareCard(true)}
+                            onDownloadVideo={handleDownloadVideo}
+                            isDownloadingVideo={isDownloadingVideo}
+                            isVideo={isVideo as boolean}
                         />
                     </>
                 ) : (
@@ -1024,7 +1102,25 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 <DuelButton targetId={authorId as string} postId={postId} type="quick" isRival={true} />
                             </div>
                         )}
-                        <div className="ml-auto">
+                        <div className="ml-auto flex items-center gap-4">
+                            {isVideo && (
+                                <button
+                                    onClick={(e) => { e.stopPropagation(); handleDownloadVideo(); }}
+                                    disabled={isDownloadingVideo}
+                                    className={clsx(
+                                        "transition-all active:scale-95",
+                                        isDownloadingVideo ? "text-brand-red animate-pulse" : "text-gray-400 hover:text-brand-red"
+                                    )}
+                                    title="Descargar video con branding"
+                                >
+                                    {isDownloadingVideo ? (
+                                        <div className="flex flex-col items-center gap-1">
+                                            <Loader2 className="w-6 h-6 animate-spin" />
+                                            <span className="text-[7px] font-black">{downloadProgress}%</span>
+                                        </div>
+                                    ) : <Download className="w-6 h-6" />}
+                                </button>
+                            )}
                             <ShareButton
                                 image={image}
                                 workoutData={resolvedWorkoutData}
@@ -1034,6 +1130,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 iconClassName="w-6 h-6"
                                 onInstagramShare={() => setShowInstagramCard(true)}
                                 onOpenShareCard={() => setShowShareCard(true)}
+                                onDownloadVideo={handleDownloadVideo}
+                                isDownloadingVideo={isDownloadingVideo}
+                                isVideo={isVideo as boolean}
                             />
                         </div>
                     </div>

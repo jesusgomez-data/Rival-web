@@ -1,10 +1,12 @@
 "use client";
 
-import { Trophy, Share2, Download, Instagram, X, Swords, Crown, TrendingUp } from "lucide-react";
+import { Trophy, Share2, Download, Instagram, X, Swords, Crown, TrendingUp, Loader2 } from "lucide-react";
 import Image from "next/image";
 import { clsx } from "clsx";
 import { useRef, useState } from "react";
-import { toBlob } from "html-to-image";
+import { toBlob, toPng } from "html-to-image";
+import { createUserPost } from "./actions";
+import { createStory } from "../stories/actions";
 
 interface VictoryShareCardProps {
     winner: {
@@ -25,24 +27,95 @@ interface VictoryShareCardProps {
 export default function VictoryShareCard({ winner, loser, onClose }: VictoryShareCardProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [isPosting, setIsPosting] = useState(false);
+
+    const generateShareImage = async () => {
+        if (!cardRef.current) return null;
+        try {
+            // Give time for images to load with crossOrigin
+            await new Promise(r => setTimeout(r, 100));
+            return await toPng(cardRef.current, {
+                pixelRatio: 2,
+                quality: 1,
+                cacheBust: true,
+            });
+        } catch (error) {
+            console.error('Error generating image:', error);
+            return null;
+        }
+    };
+
+    const handleRivalPost = async () => {
+        setIsPosting(true);
+        try {
+            const dataUrl = await generateShareImage();
+            if (!dataUrl) throw new Error("No image generated");
+
+            const blob = await (await fetch(dataUrl)).blob();
+            const file = new File([blob], `duel-victory-${Date.now()}.png`, { type: 'image/png' });
+
+            const formData = new FormData();
+            formData.append('media', file);
+            formData.append('content', `¡He ganado un duelo contra ${loser.name}! 👊🔥 #DuelVictory #RivalFit`);
+            formData.append('media_type', 'image');
+
+            const res = await createUserPost(formData);
+            if (res.success) {
+                alert("¡Publicado en el Feed!");
+                onClose();
+            } else {
+                throw new Error(res.error);
+            }
+        } catch (error: any) {
+            alert(`Error al publicar: ${error.message}`);
+        } finally {
+            setIsPosting(false);
+        }
+    };
+
+    const handleRivalStory = async () => {
+        setIsPosting(true);
+        try {
+            const dataUrl = await generateShareImage();
+            if (!dataUrl) throw new Error("No image generated");
+
+            const blob = await (await fetch(dataUrl)).blob();
+            const file = new File([blob], `duel-story-${Date.now()}.png`, { type: 'image/png' });
+
+            const formData = new FormData();
+            formData.append('media', file);
+            formData.append('media_type', 'image');
+            formData.append('metadata', JSON.stringify({
+                type: 'duel_victory',
+                winner: winner.username,
+                loser: loser.username
+            }));
+
+            const res = await createStory(formData);
+            if (res.success) {
+                alert("¡Subido a tus Historias!");
+                onClose();
+            } else {
+                throw new Error(res.error);
+            }
+        } catch (error: any) {
+            alert(`Error al publicar story: ${error.message}`);
+        } finally {
+            setIsPosting(false);
+        }
+    };
 
     const handleDownload = async () => {
         if (!cardRef.current) return;
         setIsGenerating(true);
         try {
-            const blob = await toBlob(cardRef.current, {
-                pixelRatio: 2,
-                quality: 1,
-            });
+            const dataUrl = await generateShareImage();
+            if (!dataUrl) throw new Error('Failed to generate image');
 
-            if (!blob) throw new Error('Failed to generate image');
-
-            const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
+            a.href = dataUrl;
             a.download = `victoria-rival-${winner.username}-${Date.now()}.png`;
             a.click();
-            URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Error downloading victory card:', error);
             alert('Error al descargar la tarjeta.');
@@ -56,13 +129,10 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
         setIsGenerating(true);
 
         try {
-            const blob = await toBlob(cardRef.current, {
-                pixelRatio: 2,
-                quality: 1,
-            });
+            const dataUrl = await generateShareImage();
+            if (!dataUrl) throw new Error('Failed to generate image');
 
-            if (!blob) throw new Error('Failed to generate image');
-
+            const blob = await (await fetch(dataUrl)).blob();
             const file = new File([blob], `victoria-rival-${Date.now()}.png`, { type: 'image/png' });
 
             if (navigator.share && navigator.canShare({ files: [file] })) {
@@ -72,7 +142,10 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
                     text: `¡He ganado un duelo en Rival Fit! 👊 #RivalFit #Victoria`,
                 });
             } else {
-                handleDownload();
+                const a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = `victoria-rival-${Date.now()}.png`;
+                a.click();
                 alert('La tarjeta se ha descargado. ¡Compártela en tus redes!');
             }
         } catch (error) {
@@ -126,7 +199,12 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
                                 <div className="relative mb-4">
                                     <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-brand-red p-1 shadow-[0_0_30px_rgba(220,38,38,0.4)] relative">
                                         <div className="w-full h-full rounded-full overflow-hidden relative bg-gray-900">
-                                            <Image src={winner.avatar} alt={winner.name} fill className="object-cover" />
+                                            <img
+                                                src={winner.avatar || `https://ui-avatars.com/api/?name=${winner.name}`}
+                                                alt={winner.name}
+                                                crossOrigin="anonymous"
+                                                className="w-full h-full object-cover"
+                                            />
                                         </div>
                                         <div className="absolute -top-3 -right-3 bg-yellow-400 p-2 rounded-full shadow-lg transform rotate-12 border-2 border-black">
                                             <Crown className="w-5 h-5 text-black" />
@@ -150,7 +228,12 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
                                 <div className="relative mb-4">
                                     <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-2 border-white/20 p-1">
                                         <div className="w-full h-full rounded-full overflow-hidden relative bg-gray-900">
-                                            <Image src={loser.avatar} alt={loser.name} fill className="object-cover" />
+                                            <img
+                                                src={loser.avatar || `https://ui-avatars.com/api/?name=${loser.name}`}
+                                                alt={loser.name}
+                                                crossOrigin="anonymous"
+                                                className="w-full h-full object-cover"
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -175,22 +258,38 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
                 </div>
 
                 {/* Actions */}
-                <div className="mt-8 flex gap-4">
+                <div className="mt-8 grid grid-cols-2 gap-3">
                     <button
-                        onClick={handleDownload}
-                        disabled={isGenerating}
-                        className="flex-1 bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex items-center justify-center gap-3 text-white font-black uppercase tracking-widest text-xs hover:bg-white/10 transition-all active:scale-95"
+                        onClick={handleRivalPost}
+                        disabled={isGenerating || isPosting}
+                        className="bg-brand-red p-4 rounded-2xl flex items-center justify-center gap-3 text-white font-black uppercase tracking-widest text-[10px] shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
                     >
-                        {isGenerating ? <TrendingUp className="w-5 h-5 animate-pulse" /> : <Download className="w-5 h-5 text-brand-red" />}
-                        Descargar
+                        {isPosting ? <Loader2 className="w-5 h-5 animate-spin" /> : <Share2 className="w-5 h-5" />}
+                        Rival Post
+                    </button>
+                    <button
+                        onClick={handleRivalStory}
+                        disabled={isGenerating || isPosting}
+                        className="bg-brand-blue p-4 rounded-2xl flex items-center justify-center gap-3 text-white font-black uppercase tracking-widest text-[10px] shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
+                    >
+                        {isPosting ? <Loader2 className="w-5 h-5 animate-spin" /> : <TrendingUp className="w-5 h-5" />}
+                        Rival Story
                     </button>
                     <button
                         onClick={handleShare}
-                        disabled={isGenerating}
-                        className="flex-1 bg-brand-red p-4 rounded-2xl flex items-center justify-center gap-3 text-white font-black uppercase tracking-widest text-xs shadow-glow hover:scale-105 active:scale-95 transition-all"
+                        disabled={isGenerating || isPosting}
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 p-4 rounded-2xl flex items-center justify-center gap-3 text-white font-black uppercase tracking-widest text-[10px] shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-50"
                     >
-                        <Share2 className="w-5 h-5" />
-                        Compartir
+                        <Instagram className="w-5 h-5" />
+                        Instagram
+                    </button>
+                    <button
+                        onClick={handleDownload}
+                        disabled={isGenerating || isPosting}
+                        className="bg-white/5 backdrop-blur-md border border-white/10 p-4 rounded-2xl flex items-center justify-center gap-3 text-white font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all active:scale-95 disabled:opacity-50"
+                    >
+                        {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5 text-gray-400" />}
+                        Galería
                     </button>
                 </div>
             </div>

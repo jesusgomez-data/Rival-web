@@ -584,25 +584,33 @@ export async function getWodResults(title: string) {
     // Filter and parse in JS (easier than complex JSON path matching in SQL for this schema)
     const results = posts.filter(post => {
         try {
-            const wodData = JSON.parse(post.media_url || '{}');
-            return wodData.title === title || (wodData.title?.toUpperCase() === title?.toUpperCase());
+            const wodDataRaw = JSON.parse(post.media_url || '{}');
+            const w = Array.isArray(wodDataRaw) ? wodDataRaw[0] : wodDataRaw;
+            // Title normalization matching FeedPost.tsx logic
+            const normalizedTitle = w.title || (w.sport_type && w.sport_type !== 'Entrenamiento Libre' ? w.sport_type : 'WORKOUT OF THE DAY');
+            return normalizedTitle.toString().toUpperCase() === title.toString().toUpperCase();
         } catch (e) {
             return false;
         }
     }).map(post => {
-        const wodData = JSON.parse(post.media_url);
-        return {
-            id: post.id,
-            userId: post.user_id,
-            username: (post as any).profiles?.username,
-            fullName: (post as any).profiles?.full_name,
-            avatarUrl: (post as any).profiles?.avatar_url,
-            score: wodData.summary?.scoreLabel || '-',
-            time: wodData.summary?.totalTime || '--:--',
-            scoreType: wodData.summary?.scoreType || 'REPS',
-            createdAt: post.created_at
-        };
-    });
+        try {
+            const wodDataRaw = JSON.parse(post.media_url || '{}');
+            const w = Array.isArray(wodDataRaw) ? wodDataRaw[0] : wodDataRaw;
+            return {
+                id: post.id,
+                userId: post.user_id,
+                username: (post as any).profiles?.username,
+                fullName: (post as any).profiles?.full_name,
+                avatarUrl: (post as any).profiles?.avatar_url,
+                score: w.summary?.scoreLabel || w.metrics?.score || '-',
+                time: w.summary?.totalTime || w.metrics?.duration || w.metrics?.time || '--:--',
+                scoreType: (w.summary?.scoreType || w.metrics?.type || 'REPS').toUpperCase(),
+                createdAt: post.created_at
+            };
+        } catch (e) {
+            return null;
+        }
+    }).filter(Boolean) as any[];
 
     // Sort results based on scoreType
     return results.sort((a, b) => {

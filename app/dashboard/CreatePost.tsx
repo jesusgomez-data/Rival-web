@@ -6,18 +6,22 @@ import { Send, Image as ImageIcon, Loader2, X, Smile } from "lucide-react";
 import { createUserPost, createPRPost } from "./community/actions";
 import MentionInput from "@/components/MentionInput";
 import { createClient } from "@/utils/supabase/client";
-import { Trophy, Activity, AlertCircle } from "lucide-react";
+import { Trophy, Activity, AlertCircle, Dumbbell } from "lucide-react";
 import Image from "next/image";
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import MusicPicker from "./MusicPicker";
 import { MusicTrack } from "./music-data";
+import WodCreator, { WodBlock, WodSummary } from "@/components/training/WodCreator";
 
 export default function CreatePost({ currentUser, onSuccess, initialPostType, initialData }: { currentUser: any, onSuccess?: () => void, initialPostType?: 'standard' | 'pr' | 'wod', initialData?: any }) {
     const [content, setContent] = useState(initialData?.caption || initialData?.content || "");
     const [isPosting, setIsPosting] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-    const [postType, setPostType] = useState<'standard' | 'pr'>((initialPostType === 'pr' ? 'pr' : 'standard'));
+    const [postType, setPostType] = useState<'standard' | 'pr' | 'wod'>(initialPostType || 'standard');
+    const [wodData, setWodData] = useState<{ title: string, blocks: WodBlock[], summary: WodSummary } | null>(
+        initialPostType === 'wod' && initialData ? initialData : null
+    );
     const [exercise, setExercise] = useState("");
     const [weight, setWeight] = useState("");
     const [sport, setSport] = useState("Cross Training");
@@ -55,6 +59,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
 
         if (postType === 'standard' && !content.trim() && !file) return;
         if (postType === 'pr' && (!exercise || !weight)) return;
+        if (postType === 'wod' && !wodData) return;
 
         setIsPosting(true);
         setUploadProgress(10);
@@ -93,18 +98,12 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
             } catch (error) {
                 console.error("Direct upload failed:", error);
 
-                // If direct upload fails, we check size. Server actions have ~4.5MB limit on Vercel
-                // Match the limit with next.config.ts (200MB), though Vercel might still block > 4.5MB on Serverless.
-                // But we should try if direct upload fails.
                 if (file.size > 200 * 1024 * 1024) {
-                    alert("Error al subir el archivo directamente y es demasiado grande (>200MB) para el modo de respaldo. Por favor, asegúrate de tener buena conexión o intenta con un archivo más pequeño.");
+                    alert("Error al subir el archivo directamente y es demasiado grande (>200MB).");
                     setIsPosting(false);
                     setUploadProgress(0);
                     return;
                 }
-
-                alert("Error al subir el archivo directamente. Intentando vía servidor (modo de respaldo)...");
-                // Fallback will happen as mediaUrl remains null and file remains in formData
             }
         }
 
@@ -117,6 +116,15 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                 if (mediaUrl) formData.append("media_url", mediaUrl);
                 else if (file) formData.append("media", file);
                 res = await createPRPost(formData);
+            } else if (postType === 'wod' && wodData) {
+                const finalWodData = {
+                    ...wodData,
+                    media_url: mediaUrl || (wodData as any).media_url || null
+                };
+                formData.append("content", content || `¡He compartido un WOD: ${wodData.title}!`);
+                formData.append("media_url", JSON.stringify(finalWodData));
+                formData.append("media_type", "wod");
+                res = await createUserPost(formData);
             } else {
                 formData.append("content", content);
                 if (mediaUrl) {
@@ -139,6 +147,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                 setPreview(null);
                 setDuration(null);
                 setPendingFile(null);
+                setWodData(null);
                 setShowEmojiPicker(false);
                 setPostType('standard');
                 setSelectedTrack(null);
@@ -345,6 +354,14 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                     <Trophy className="w-3.5 h-3.5" />
                     Nuevo PR
                 </button>
+                <button
+                    type="button"
+                    onClick={() => setPostType('wod')}
+                    className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border ${postType === 'wod' ? 'bg-brand-blue/10 border-brand-blue/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+                >
+                    <Dumbbell className="w-3.5 h-3.5" />
+                    WOD
+                </button>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
@@ -372,6 +389,23 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                     placeholder="¿Qué estás entrenando hoy?"
                                     className="w-full bg-transparent text-white placeholder:text-gray-500 text-sm md:text-lg resize-none focus:outline-none min-h-[80px] md:min-h-[100px]"
                                 />
+                            ) : postType === 'wod' ? (
+                                <div className="space-y-6">
+                                    <MentionInput
+                                        as="textarea"
+                                        value={content}
+                                        onChange={setContent}
+                                        placeholder="Comenta algo sobre este WOD..."
+                                        className="w-full bg-transparent text-white placeholder:text-gray-500 text-sm md:text-lg resize-none focus:outline-none min-h-[60px]"
+                                    />
+
+                                    <div className="border-t border-white/5 pt-6">
+                                        <WodCreator
+                                            onUpdate={(data) => setWodData(data)}
+                                            initialData={wodData || undefined}
+                                        />
+                                    </div>
+                                </div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
@@ -547,7 +581,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                             {/* Submit Button */}
                             <button
                                 type="submit"
-                                disabled={isPosting || (postType === 'standard' && !content.trim() && !preview) || (postType === 'pr' && (!exercise || !weight))}
+                                disabled={isPosting || (postType === 'standard' && !content.trim() && !preview) || (postType === 'pr' && (!exercise || !weight)) || (postType === 'wod' && !wodData?.title)}
                                 className="bg-brand-red text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-glow-sm hover:shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed flex items-center gap-3 ml-auto"
                             >
                                 {isPosting ? (

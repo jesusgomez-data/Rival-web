@@ -20,7 +20,7 @@ import { motion, Reorder, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { getExercises, addNewExercise } from "@/app/dashboard/training/actions";
 
-export type WodFormat = 'AMRAP' | 'FOR TIME' | 'EMOM' | 'TABATA' | 'INTERVALS' | 'DEATH BY' | 'ROUNDS FOR TIME' | '21-15-9';
+export type WodFormat = 'AMRAP' | 'FOR TIME' | 'EMOM' | 'TABATA' | 'INTERVALS' | 'DEATH BY' | 'ROUNDS FOR TIME' | '21-15-9' | 'FUERZA' | 'LIBRE';
 
 import { BENCHMARKS } from "./benchmarks";
 
@@ -68,7 +68,9 @@ const FORMAT_ICONS: Record<WodFormat, React.ReactNode> = {
     'INTERVALS': <Activity className="w-5 h-5" />,
     'DEATH BY': <Target className="w-5 h-5" />,
     'ROUNDS FOR TIME': <Repeat className="w-5 h-5" />,
-    '21-15-9': <Zap className="w-5 h-5" />
+    '21-15-9': <Zap className="w-5 h-5" />,
+    'FUERZA': <Dumbbell className="w-5 h-5" />,
+    'LIBRE': <Activity className="w-5 h-5" />
 };
 
 const FORMAT_DESCRIPTIONS: Record<WodFormat, string> = {
@@ -79,7 +81,9 @@ const FORMAT_DESCRIPTIONS: Record<WodFormat, string> = {
     'INTERVALS': 'TRABAJO Y DESCANSO DEFINIDO',
     'DEATH BY': 'AÑADE REPETICIONES CADA MINUTO',
     'ROUNDS FOR TIME': 'REALIZA LAS RONDAS POR TIEMPO',
-    '21-15-9': 'ESQUEMA CLÁSICO DE REPETICIONES'
+    '21-15-9': 'ESQUEMA CLÁSICO DE REPETICIONES',
+    'FUERZA': 'TRABAJO DE FUERZA Y POWERLIFTING',
+    'LIBRE': 'ENTRENAMIENTO SIN FORMATO DEFINIDO'
 };
 
 export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
@@ -320,6 +324,8 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                         else if (newFormat === 'EMOM' || newFormat === 'DEATH BY') newConfig = { frequency: '1 MIN', minutes: 15 };
                                         else if (newFormat === 'TABATA') newConfig = { rounds: 8, work: '20S', rest: '10S' };
                                         else if (newFormat === 'INTERVALS') newConfig = { rounds: 4, work: '40S', rest: '20S' };
+                                        else if (newFormat === 'FUERZA') newConfig = { rounds: 5 };
+                                        else if (newFormat === 'LIBRE') newConfig = {};
                                         updateBlock(block.id, { format: newFormat, config: newConfig });
                                     }}
                                 >
@@ -375,6 +381,15 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                         <ConfigInput label="WORK" value={block.config.work || '40S'} onChange={(v) => updateBlock(block.id, { config: { ...block.config, work: v } })} />
                                         <ConfigInput label="REST" value={block.config.rest || '20S'} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rest: v } })} />
                                     </>
+                                )}
+                                {block.format === 'FUERZA' && (
+                                    <>
+                                        <ConfigInput label="SETS" value={block.config.rounds === undefined ? '' : block.config.rounds.toString()} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rounds: v === '' ? undefined : (parseInt(v) || 0) } })} />
+                                        <ConfigInput label="DESCANSOS" value={block.config.rest || '2:00'} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rest: v } })} />
+                                    </>
+                                )}
+                                {block.format === 'LIBRE' && (
+                                    <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest py-2 px-4 italic opacity-50">Formato libre - Añade ejercicios y detalles sin restricciones</p>
                                 )}
                             </div>
                         </div>
