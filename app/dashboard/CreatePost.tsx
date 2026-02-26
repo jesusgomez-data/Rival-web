@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Image as ImageIcon, Loader2, X, Smile } from "lucide-react";
-import { createUserPost, createPRPost } from "./community/actions";
+import { createUserPost, createPRPost, updatePost } from "./community/actions";
 import MentionInput from "@/components/MentionInput";
 import { createClient } from "@/utils/supabase/client";
 import { Trophy, Activity, AlertCircle, Dumbbell } from "lucide-react";
@@ -13,7 +13,7 @@ import MusicPicker from "./MusicPicker";
 import { MusicTrack } from "./music-data";
 import WodCreator, { WodBlock, WodSummary } from "@/components/training/WodCreator";
 
-export default function CreatePost({ currentUser, onSuccess, initialPostType, initialData }: { currentUser: any, onSuccess?: () => void, initialPostType?: 'standard' | 'pr' | 'wod', initialData?: any }) {
+export default function CreatePost({ currentUser, onSuccess, initialPostType, initialData, editingPostId }: { currentUser: any, onSuccess?: () => void, initialPostType?: 'standard' | 'pr' | 'wod', initialData?: any, editingPostId?: string }) {
     const [content, setContent] = useState(initialData?.caption || initialData?.content || "");
     const [isPosting, setIsPosting] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
@@ -121,10 +121,16 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                     ...wodData,
                     media_url: mediaUrl || (wodData as any).media_url || null
                 };
-                formData.append("content", content || `¡He compartido un WOD: ${wodData.title}!`);
-                formData.append("media_url", JSON.stringify(finalWodData));
-                formData.append("media_type", "wod");
-                res = await createUserPost(formData);
+                const finalCaption = content || `¡He compartido un WOD: ${wodData.title}!`;
+
+                if (editingPostId) {
+                    res = await updatePost(editingPostId, finalCaption, JSON.stringify(finalWodData));
+                } else {
+                    formData.append("content", finalCaption);
+                    formData.append("media_url", JSON.stringify(finalWodData));
+                    formData.append("media_type", "wod");
+                    res = await createUserPost(formData);
+                }
             } else {
                 formData.append("content", content);
                 if (mediaUrl) {

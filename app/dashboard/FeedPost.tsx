@@ -22,7 +22,7 @@ import WodCard from "@/components/community/WodCard";
 
 const InstagramShareCard = dynamic(() => import("./InstagramShareCard"), { ssr: false });
 
-function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5", onInstagramShare, onOpenShareCard, onDownloadMedia, isDownloadingVideo, isVideo }: {
+function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5", onInstagramShare, onOpenShareCard, onDownloadMedia, isDownloadingVideo, downloadProgress, isVideo }: {
     image?: string,
     workoutData?: any,
     mediaType?: string,
@@ -33,6 +33,7 @@ function ShareButton({ image, workoutData, mediaType, postId, className, iconCla
     onOpenShareCard?: () => void,
     onDownloadMedia?: () => void,
     isDownloadingVideo?: boolean,
+    downloadProgress?: number,
     isVideo?: boolean
 }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -545,7 +546,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
                 <div className="flex items-center gap-4">
                     <p className="hidden sm:block text-[10px] text-gray-500 font-bold uppercase tracking-widest">{time}</p>
-                    {isOwner && (
+                    {(isOwner || isAdminUser) && (
                         <div className="relative" ref={menuRef}>
                             <button
                                 onClick={() => setShowMenu(!showMenu)}
@@ -559,8 +560,27 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                         onClick={() => { setIsEditing(true); setShowMenu(false); }}
                                         className="w-full text-left px-5 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 transition-colors"
                                     >
-                                        <Edit2 className="w-4 h-4" /> Editar
+                                        <Edit2 className="w-4 h-4" /> {mediaType === 'wod' ? 'Editar Pie' : 'Editar'}
                                     </button>
+                                    {mediaType === 'wod' && (
+                                        <button
+                                            onClick={() => {
+                                                let wodData;
+                                                try { wodData = JSON.parse(image); } catch (e) { }
+                                                window.dispatchEvent(new CustomEvent('edit-wod', {
+                                                    detail: {
+                                                        postId,
+                                                        content: displayCaption,
+                                                        wodData
+                                                    }
+                                                }));
+                                                setShowMenu(false);
+                                            }}
+                                            className="w-full text-left px-5 py-3 text-sm text-brand-red bg-brand-red/5 hover:bg-brand-red/10 flex items-center gap-3 transition-colors border-t border-white/5"
+                                        >
+                                            <Dumbbell className="w-4 h-4" /> Editar Entrenamiento
+                                        </button>
+                                    )}
                                     <button
                                         onClick={() => { handleDelete(); setShowMenu(false); }}
                                         className="w-full text-left px-5 py-3 text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-3 transition-colors"
@@ -1134,6 +1154,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 onOpenShareCard={() => setShowShareCard(true)}
                                 onDownloadMedia={handleDownloadMedia}
                                 isDownloadingVideo={isDownloadingVideo}
+                                downloadProgress={downloadProgress}
                                 isVideo={(isVideo || isImageUrl(image)) as boolean}
                             />
                         </div>

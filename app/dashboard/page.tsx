@@ -72,15 +72,27 @@ function StatCard({ label, value, subtext, icon }: { label: string, value: strin
 function CollapsibleCreatePost({ currentUser, language }: { currentUser: any, language: string }) {
     const [isOpen, setIsOpen] = useState(false);
     const [repostData, setRepostData] = useState<any>(null);
-
+    const [editMode, setEditMode] = useState<{ id: string } | null>(null);
     useEffect(() => {
         const handleRepost = (e: any) => {
             setRepostData(e.detail);
+            setEditMode(null);
+            setIsOpen(true);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+        const handleEdit = (e: any) => {
+            const { postId, content, wodData } = e.detail;
+            setRepostData({ ...wodData, caption: content });
+            setEditMode({ id: postId });
             setIsOpen(true);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
         window.addEventListener('repost-wod', handleRepost as any);
-        return () => window.removeEventListener('repost-wod', handleRepost as any);
+        window.addEventListener('edit-wod', handleEdit as any);
+        return () => {
+            window.removeEventListener('repost-wod', handleRepost as any);
+            window.removeEventListener('edit-wod', handleEdit as any);
+        };
     }, []);
 
     return (
@@ -114,7 +126,7 @@ function CollapsibleCreatePost({ currentUser, language }: { currentUser: any, la
                     <div className="flex justify-between items-center mb-8 relative z-10 border-b border-white/5 pb-5">
                         <div className="flex items-center gap-2">
                             <Plus className="w-3.5 h-3.5 text-brand-red" />
-                            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground italic">{repostData ? 'REPOSTEAR WOD' : 'Nueva Publicación'}</h2>
+                            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground italic">{editMode ? 'EDITAR ENTRENAMIENTO' : repostData ? 'REPOSTEAR WOD' : 'Nueva Publicación'}</h2>
                         </div>
                         <button
                             onClick={() => {
@@ -132,9 +144,11 @@ function CollapsibleCreatePost({ currentUser, language }: { currentUser: any, la
                         onSuccess={() => {
                             setIsOpen(false);
                             setRepostData(null);
+                            setEditMode(null);
                         }}
                         initialPostType={repostData ? 'wod' : 'standard'}
                         initialData={repostData}
+                        editingPostId={editMode?.id}
                     />
                 </div>
             )}

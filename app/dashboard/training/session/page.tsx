@@ -2963,78 +2963,78 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
 
                     {/* Type Selector and Inputs - Hidden if guided and already configured */}
                     {!isGuided && (
-                        <>
-                            <div className={clsx("grid grid-cols-3 gap-2 p-1.5 rounded-2xl", theme === 'dark' ? "bg-black/20" : "bg-gray-100")}>
-                                {['fortime', 'amrap', 'emom'].map(t => (
-                                    <button
-                                        key={t}
-                                        onClick={() => updateBlock(activeBlockIndex, 'type', t)}
-                                        className={clsx(
-                                            "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                            blocks[activeBlockIndex].type === t
-                                                ? (theme === 'dark' ? "bg-white/10 text-white shadow-lg" : "bg-white text-black shadow-md")
-                                                : "text-gray-500 hover:text-black dark:hover:text-white"
-                                        )}
-                                    >
-                                        {t === 'fortime' ? 'For Time' : t.toUpperCase()}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className={clsx("p-4 rounded-2xl text-center", theme === 'dark' ? "bg-white/5" : "bg-gray-50")}>
-                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2">
-                                        {blocks[activeBlockIndex].type === 'fortime' ? 'Time Cap (min)' :
-                                            blocks[activeBlockIndex].type === 'amrap' ? 'Tiempo (min)' : 'Duración (min)'}
-                                    </p>
-                                    <input
-                                        type="number"
-                                        value={blocks[activeBlockIndex].duration || ''}
-                                        onChange={(e) => updateBlock(activeBlockIndex, 'duration', parseFloat(e.target.value))}
-                                        placeholder="0"
-                                        className={clsx("bg-transparent text-3xl font-mono font-black text-center w-full outline-none", theme === 'dark' ? "text-white" : "text-black")}
-                                    />
-                                </div>
-
-                                <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-2xl text-center">
-                                    <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest mb-2">
-                                        Resultado
-                                    </p>
-                                    {blocks[activeBlockIndex].type === 'fortime' ? (
-                                        <input
-                                            type="text"
-                                            placeholder="00:00"
-                                            value={blocks[activeBlockIndex].result?.time || ''}
-                                            onChange={(e) => {
-                                                const res = { ...blocks[activeBlockIndex].result, time: e.target.value };
-                                                updateBlock(activeBlockIndex, 'result', res);
-                                            }}
-                                            className={clsx("bg-transparent text-3xl font-mono font-black text-center w-full outline-none", theme === 'dark' ? "text-white placeholder-white/20" : "text-black placeholder-gray-300")}
-                                        />
-                                    ) : (
-                                        <div className="flex justify-center items-center gap-2">
-                                            <button onClick={() => {
-                                                const r = (blocks[activeBlockIndex].result?.rounds || 0) > 0 ? (blocks[activeBlockIndex].result?.rounds || 0) - 1 : 0;
-                                                const res = { ...blocks[activeBlockIndex].result, rounds: r };
-                                                updateBlock(activeBlockIndex, 'result', res);
-                                            }} className={clsx("w-8 h-8 rounded-full font-bold transition-colors", theme === 'dark' ? "bg-white/5 text-gray-400 hover:bg-white/10" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>-</button>
-                                            <span className={clsx("text-3xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>
-                                                {blocks[activeBlockIndex].result?.rounds || 0}
-                                            </span>
-                                            <button onClick={() => {
-                                                const r = (blocks[activeBlockIndex].result?.rounds || 0) + 1;
-                                                const res = { ...blocks[activeBlockIndex].result, rounds: r };
-                                                updateBlock(activeBlockIndex, 'result', res);
-                                            }} className="w-8 h-8 rounded-full bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/20">+</button>
-                                        </div>
+                        <div className={clsx("grid grid-cols-3 gap-2 p-1.5 rounded-2xl", theme === 'dark' ? "bg-black/20" : "bg-gray-100")}>
+                            {['fortime', 'amrap', 'emom'].map(t => (
+                                <button
+                                    key={t}
+                                    onClick={() => updateBlock(activeBlockIndex, 'type', t)}
+                                    className={clsx(
+                                        "py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                        blocks[activeBlockIndex].type === t
+                                            ? (theme === 'dark' ? "bg-white/10 text-white shadow-lg" : "bg-white text-black shadow-md")
+                                            : "text-gray-500 hover:text-black dark:hover:text-white"
                                     )}
-                                    <p className="text-[9px] text-orange-500/60 font-bold uppercase mt-1">
-                                        {blocks[activeBlockIndex].type === 'fortime' ? 'Tiempo Final' : 'Rondas'}
-                                    </p>
-                                </div>
-                            </div>
-                        </>
+                                >
+                                    {t === 'fortime' ? 'For Time' : t.toUpperCase()}
+                                </button>
+                            ))}
+                        </div>
                     )}
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className={clsx("p-4 rounded-2xl text-center", theme === 'dark' ? "bg-white/5" : "bg-gray-50")}>
+                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2">
+                                {blocks[activeBlockIndex].type === 'fortime' ? 'Time Cap (min)' :
+                                    blocks[activeBlockIndex].type === 'amrap' ? 'Tiempo (min)' : 'Duración (min)'}
+                            </p>
+                            <input
+                                type="number"
+                                value={blocks[activeBlockIndex].duration || ''}
+                                onChange={(e) => updateBlock(activeBlockIndex, 'duration', parseFloat(e.target.value))}
+                                placeholder="0"
+                                disabled={isGuided}
+                                className={clsx("bg-transparent text-3xl font-mono font-black text-center w-full outline-none transition-opacity", theme === 'dark' ? "text-white" : "text-black", isGuided && "opacity-50")}
+                            />
+                        </div>
+
+                        <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-2xl text-center">
+                            <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest mb-2">
+                                Resultado
+                            </p>
+                            {blocks[activeBlockIndex].type === 'fortime' ? (
+                                <input
+                                    type="text"
+                                    placeholder="00:00"
+                                    value={blocks[activeBlockIndex].result?.time || ''}
+                                    onChange={(e) => {
+                                        const res = { ...blocks[activeBlockIndex].result, time: e.target.value };
+                                        updateBlock(activeBlockIndex, 'result', res);
+                                    }}
+                                    className={clsx("bg-transparent text-3xl font-mono font-black text-center w-full outline-none", theme === 'dark' ? "text-white placeholder-white/20" : "text-black placeholder-gray-300")}
+                                />
+                            ) : (
+                                <div className="flex justify-center items-center gap-2">
+                                    <button onClick={() => {
+                                        const r = (blocks[activeBlockIndex].result?.rounds || 0) > 0 ? (blocks[activeBlockIndex].result?.rounds || 0) - 1 : 0;
+                                        const res = { ...blocks[activeBlockIndex].result, rounds: r };
+                                        updateBlock(activeBlockIndex, 'result', res);
+                                    }} className={clsx("w-8 h-8 rounded-full font-bold transition-colors", theme === 'dark' ? "bg-white/5 text-gray-400 hover:bg-white/10" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>-</button>
+                                    <span className={clsx("text-3xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>
+                                        {blocks[activeBlockIndex].result?.rounds || 0}
+                                    </span>
+                                    <button onClick={() => {
+                                        const r = (blocks[activeBlockIndex].result?.rounds || 0) + 1;
+                                        const res = { ...blocks[activeBlockIndex].result, rounds: r };
+                                        updateBlock(activeBlockIndex, 'result', res);
+                                    }} className="w-8 h-8 rounded-full bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/20">+</button>
+                                </div>
+                            )}
+                            <p className="text-[9px] text-orange-500/60 font-bold uppercase mt-1">
+                                {blocks[activeBlockIndex].type === 'fortime' ? 'Tiempo Final' : 'Rondas'}
+                            </p>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div className={clsx("border rounded-[32px] p-6", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100")}>

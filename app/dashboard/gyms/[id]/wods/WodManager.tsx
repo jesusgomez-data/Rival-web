@@ -1102,7 +1102,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center gap-2 transition-opacity">
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); handleEdit(post); }}
                                                 className="p-2 bg-black/50 rounded-full text-gray-400 hover:text-white transition-colors"
