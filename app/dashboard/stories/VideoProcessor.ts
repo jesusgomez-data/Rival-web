@@ -81,17 +81,30 @@ export class VideoProcessor {
     }
 
     private static async processVideo(videoUrl: string, onProgress?: (percent: number) => void): Promise<Blob> {
+        console.log("[VideoProcessor] Pre-fetching video for CORS bypass...");
+        let finalUrl = videoUrl;
+        let isLocalBlob = false;
+
+        try {
+            const res = await fetch(videoUrl);
+            const blob = await res.blob();
+            finalUrl = URL.createObjectURL(blob);
+            isLocalBlob = true;
+        } catch (e) {
+            console.warn("[VideoProcessor] Pre-fetch failed, attempting direct capture...", e);
+        }
+
         const video = document.createElement('video');
         video.crossOrigin = "anonymous";
-        video.src = videoUrl;
+        video.src = finalUrl;
         video.muted = true;
         video.playsInline = true;
         video.preload = "auto";
         video.style.position = 'fixed';
         video.style.top = '-9999px';
         video.style.left = '-9999px';
-        video.style.opacity = '0';
-        document.body.appendChild(video); // Required by some browsers for stable audio capture
+        video.style.visibility = 'hidden';
+        document.body.appendChild(video);
 
         // Step 1: Wait for metadata with timeout
         await new Promise<void>((resolve, reject) => {
@@ -111,14 +124,14 @@ export class VideoProcessor {
         });
 
         const canvas = document.createElement('canvas');
-        // Optimization: Cap at 720p (1280px wide) for processing stability on mobile
+        // Optimization: Cap at 720p for processing stability
         const MAX_WIDTH = 1280;
         const targetWidth = video.videoWidth > MAX_WIDTH ? MAX_WIDTH : video.videoWidth;
         const targetHeight = (video.videoHeight / video.videoWidth) * targetWidth;
         canvas.width = targetWidth;
         canvas.height = targetHeight;
 
-        const ctx = canvas.getContext('2d', { alpha: false }); // Remove desynchronized for better stability
+        const ctx = canvas.getContext('2d', { alpha: false });
         if (!ctx) throw new Error("Could not get canvas context");
 
         // Step 2: Set up AudioContext for precise capture
@@ -184,6 +197,7 @@ export class VideoProcessor {
                 resolve(blob);
                 video.remove();
                 audioContext.close();
+                if (isLocalBlob) URL.revokeObjectURL(finalUrl);
             };
 
             const drawLoop = () => {
