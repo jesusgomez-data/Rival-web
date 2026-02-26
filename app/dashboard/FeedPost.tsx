@@ -203,6 +203,14 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const menuRef = useRef<HTMLDivElement>(null);
     const commentInputRef = useRef<HTMLInputElement>(null);
 
+    // Guard: only treat image as a drawable URL if it's not JSON data
+    const isImageUrl = (src: string | undefined | null): boolean => {
+        if (!src) return false;
+        const trimmed = src.trim();
+        // JSON data starts with { or [ — not a valid image URL
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) return false;
+        return true;
+    };
     const isVideo = image && (/\.(mp4|webm|ogg|mov)$/i.test(image) || (mediaType && mediaType === 'video'));
     const isOwner = currentUserId && authorId && currentUserId === authorId;
 
@@ -740,9 +748,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         </div>
                     </div>
                 </div>
-            ) : (image || workoutData) ? (
+            ) : (isImageUrl(image) || workoutData) ? (
                 <div className="flex flex-col gap-4">
-                    {image && (
+                    {isImageUrl(image) && (
                         <div className="px-2">
                             <div className="relative aspect-video bg-black cursor-pointer group shadow-2xl overflow-hidden rounded-xl" onClick={() => setIsLightboxOpen(true)}>
                                 {isVideo ? (
