@@ -52,9 +52,21 @@ export default function B2BShareCard({ onClose, isAdmin }: B2BShareCardProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-[300] bg-black/95 flex flex-col items-center justify-start overflow-y-auto p-4 md:p-8 backdrop-blur-2xl animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[1000] bg-black/95 flex flex-col items-center justify-start overflow-y-auto p-4 md:p-8 backdrop-blur-2xl animate-in fade-in duration-300">
+            {/* Mobile Fixed Download Button */}
+            <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[1010] w-[calc(100%-3rem)]">
+                <button
+                    onClick={handleDownload}
+                    disabled={isGenerating || !isAdmin}
+                    className="w-full bg-white text-black py-4 rounded-2xl font-black italic uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(255,255,255,0.1)] flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 transition-all border border-black/10"
+                >
+                    <Download className="w-5 h-5" />
+                    {!isAdmin ? "Acceso Restringido" : (isGenerating ? "Generando..." : "Descargar")}
+                </button>
+            </div>
+
             {/* Header Editor */}
-            <div className="w-full max-w-2xl flex justify-between items-center mb-6">
+            <div className="w-full max-w-2xl flex justify-between items-center mb-6 shrink-0">
                 <div className="flex flex-col">
                     <h2 className="text-white font-black italic uppercase text-lg leading-none tracking-tight">Management Ad Editor</h2>
                     <p className="text-brand-red text-[9px] font-black uppercase tracking-[0.4em] mt-1">BRAND IDENTITY v4.0</p>
@@ -226,8 +238,8 @@ export default function B2BShareCard({ onClose, isAdmin }: B2BShareCardProps) {
                     </div>
                 </div>
 
-                {/* Editor Footer */}
-                <div className="w-full bg-white/5 border border-white/10 p-8 rounded-[40px] backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-8 mt-10 lg:mt-0 shadow-2xl">
+                {/* Editor Footer (Desktop & Tablet) */}
+                <div className="hidden md:flex w-full bg-white/5 border border-white/10 p-8 rounded-[40px] backdrop-blur-xl flex-col md:flex-row items-center justify-between gap-8 mt-10 lg:mt-0 shadow-2xl">
                     <div className="flex items-center gap-6">
                         <div className="w-16 h-16 bg-brand-red rounded-2xl flex items-center justify-center text-white shadow-glow">
                             <Activity className="w-8 h-8" />
