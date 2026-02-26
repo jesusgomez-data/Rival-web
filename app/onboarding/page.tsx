@@ -25,6 +25,7 @@ const sports = [
     { id: "boxing", name: "Boxeo / MMA", icon: <Zap className="w-8 h-8" />, desc: "Combate y cardio explosivo" },
     { id: "bodybuilding", name: "Culturismo", icon: <Flame className="w-8 h-8" />, desc: "Estética y volumen" },
     { id: "hybrid", name: "Hybrid / Running", icon: <Mountain className="w-8 h-8" />, desc: "Resistencia extrema" },
+    { id: "ocr", name: "OCR", icon: <Sword className="w-8 h-8" />, desc: "Carreras de obstáculos" },
     { id: "other", name: "Otro", icon: <Target className="w-8 h-8" />, desc: "Cualquier otra disciplina" },
 ];
 

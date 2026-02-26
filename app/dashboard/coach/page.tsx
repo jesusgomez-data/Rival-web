@@ -21,6 +21,7 @@ interface Workout {
     duration: string;
     intensity: string;
     sportType?: string;
+    description?: string; // Full formatted WOD description
     exercises: WorkoutExercise[];
 }
 
@@ -224,7 +225,7 @@ export default function CoachPage() {
                                     )}
 
                                     {msg.workout && profile?.subscription_tier !== 'free' && (
-                                        <div className="bg-black border border-brand-red/30 rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(220,38,38,0.1)] w-80">
+                                        <div className="bg-black border border-brand-red/30 rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(220,38,38,0.1)] max-w-md">
                                             <div className="bg-brand-red/10 p-4 border-b border-brand-red/10 flex justify-between items-center">
                                                 <div className="flex items-center gap-2">
                                                     <Dumbbell className="w-4 h-4 text-brand-red" />
@@ -232,22 +233,34 @@ export default function CoachPage() {
                                                 </div>
                                                 <span className="text-xs bg-brand-red text-white px-2 py-0.5 rounded font-bold uppercase">{msg.workout.duration}</span>
                                             </div>
-                                            <div className="p-4 space-y-3">
-                                                {msg.workout.exercises.map((ex: any, idx: number) => (
-                                                    <div key={idx} className="flex justify-between items-start text-xs border-b border-white/5 pb-2 last:border-0 last:pb-0">
-                                                        <span className="text-gray-300 font-bold flex-1 pr-4">{ex.name}</span>
-                                                        <div className="text-right shrink-0">
-                                                            <span className="text-brand-red font-mono font-black">
-                                                                {ex.sets && ex.sets !== "---" && ex.sets !== "1" ? (
-                                                                    `${ex.sets} x ${ex.reps}`
-                                                                ) : (
-                                                                    ex.reps
-                                                                )}
-                                                            </span>
+
+                                            {/* Full WOD Description with Formatting */}
+                                            {(msg.workout as any).description ? (
+                                                <div className="p-4 bg-black/40">
+                                                    <pre className="text-xs text-gray-200 font-mono leading-relaxed whitespace-pre-wrap font-bold">
+                                                        {(msg.workout as any).description}
+                                                    </pre>
+                                                </div>
+                                            ) : (
+                                                /* Fallback to exercise list if no description */
+                                                <div className="p-4 space-y-3">
+                                                    {msg.workout.exercises.map((ex: any, idx: number) => (
+                                                        <div key={idx} className="flex justify-between items-start text-xs border-b border-white/5 pb-2 last:border-0 last:pb-0">
+                                                            <span className="text-gray-300 font-bold flex-1 pr-4">{ex.name}</span>
+                                                            <div className="text-right shrink-0">
+                                                                <span className="text-brand-red font-mono font-black">
+                                                                    {ex.sets && ex.sets !== "---" && ex.sets !== "1" ? (
+                                                                        `${ex.sets} x ${ex.reps}`
+                                                                    ) : (
+                                                                        ex.reps
+                                                                    )}
+                                                                </span>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                ))}
-                                            </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
                                             <div className="p-3 bg-white/5 border-t border-white/5 grid grid-cols-2 gap-2">
                                                 <button
                                                     onClick={() => msg.workout && startTraining(msg.workout)}

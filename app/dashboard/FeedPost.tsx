@@ -797,7 +797,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                         "text-xs md:text-sm font-heading font-black italic uppercase tracking-tighter group-hover:text-brand-red transition-colors leading-none truncate pr-2",
                                                         theme === 'dark' ? "text-white" : "text-gray-900"
                                                     )}>
-                                                        {(!w.sport_type || w.sport_type === 'Entrenamiento Libre') ? 'HYBRID' : w.sport_type}
+                                                        {(!w.sport_type || w.sport_type === 'Entrenamiento Libre') ? 'ENTRENAMIENTO HÍBRIDO' : w.sport_type}
                                                     </h4>
                                                     <p className="text-[7px] md:text-[8px] text-brand-red/70 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 truncate">
                                                         <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red"></span>
@@ -951,7 +951,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                     "text-xs md:text-sm font-heading font-black italic uppercase tracking-tighter group-hover:text-brand-red transition-colors leading-none truncate pr-2",
                                                     theme === 'dark' ? "text-white" : "text-gray-900"
                                                 )}>
-                                                    {(!w.sport_type || w.sport_type === 'Entrenamiento Libre') ? (summary || 'ENTRENAMIENTO') : w.sport_type}
+                                                    {(!w.sport_type || w.sport_type === 'Entrenamiento Libre') ? (summary || 'ENTRENAMIENTO HÍBRIDO') : w.sport_type}
                                                 </h4>
                                                 <p className="text-[7px] md:text-[8px] text-brand-red/70 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 truncate">
                                                     <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red"></span>
@@ -1193,7 +1193,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         avatar={avatar}
                         content={{
                             type: (workoutData as any)?.metrics?.type === 'running' ? 'running' : (mediaType as any || 'workout'),
-                            title: (workoutData?.title === 'Entrenamiento Híbrido Libre' || workoutData?.title === 'Simulación de Carrera Híbrida' || !workoutData?.title) ? (mediaType === 'running' ? 'RUNNING' : 'HYBRID') : workoutData.title,
+                            title: (workoutData?.title === 'Entrenamiento Híbrido Libre' || workoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (workoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (workoutData?.title || (mediaType === 'running' ? 'RUNNING' : 'ENTRENAMIENTO'))),
                             highlight: highlight || caption,
                             stats: (workoutData as any)?.metrics?.type === 'running'
                                 ? [
@@ -1240,14 +1240,14 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 }}
                                 data={{
                                     type: mediaType === 'pr' ? 'pr' : mediaType === 'class_result' ? 'medal' : 'workout',
-                                    title: highlight || workoutData?.title || 'ESFUERZO RIVAL',
+                                    title: (workoutData?.sport_type && workoutData.sport_type !== 'fitness') ? workoutData.sport_type.toUpperCase() : (highlight || workoutData?.title || 'ENTRENAMIENTO'),
                                     date: time,
                                     stats: mediaType === 'pr' ? (() => {
                                         try { const d = JSON.parse(image); return [{ label: "PESO", value: `${d.weight}${d.unit}` }, { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }]; } catch (e) { return [] }
                                     })() : (workoutData as any)?.metrics?.blocks?.map((b: any) => ({
                                         label: b.type?.toUpperCase(),
                                         value: b.result?.time || `${b.result?.rounds || 0} RDS`
-                                    })).slice(0, 3) || [{ label: "ESTADO", value: "COMPLETADO" }],
+                                    })).slice(0, 3) || [{ label: "DISCIPLINA", value: (workoutData?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "COMPLETADO" }],
                                     image: !isVideo ? image : undefined
                                 }}
                             />

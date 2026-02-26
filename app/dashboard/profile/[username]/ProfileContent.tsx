@@ -479,46 +479,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             </div>
 
                             {/* Gear Card */}
-                            {gear.length > 0 && (
-                                <div className="bg-black/60 border border-white/5 rounded-[40px] p-8 relative overflow-hidden group animate-fade-in">
-                                    <div className="absolute top-0 right-0 p-8 opacity-5">
-                                        <Dumbbell className="w-16 h-16 text-brand-red" />
-                                    </div>
-                                    <div className="relative z-10">
-                                        <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
-                                            <Dumbbell className="w-4 h-4 text-brand-red" /> Equipamiento Activo
-                                        </h3>
-                                        <div className="space-y-4">
-                                            {gear.map((item: any) => (
-                                                <div key={item.id} className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5 hover:bg-white/10 transition-colors group/item">
-                                                    <div className="w-12 h-12 bg-black/40 rounded-xl overflow-hidden relative shrink-0 border border-white/10">
-                                                        {item.image_url ? (
-                                                            <Image src={item.image_url} alt={item.name} fill className="object-cover" />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center text-brand-red grayscale opacity-50 group-hover/item:grayscale-0 group-hover/item:opacity-100 transition-all">
-                                                                <Activity className="w-6 h-6" />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className="text-[8px] text-brand-red font-black uppercase tracking-widest leading-none mb-1">{item.category}</p>
-                                                        <h4 className="text-sm font-black text-white italic truncate leading-none mb-1">{item.brand} {item.model}</h4>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="h-1 flex-1 bg-white/5 rounded-full overflow-hidden">
-                                                                <div className="h-full bg-brand-red/50 w-3/4 rounded-full" />
-                                                            </div>
-                                                            <span className="text-[8px] font-black text-gray-500 uppercase shrink-0">Vitalidad 75%</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <button className="w-full mt-6 py-4 bg-white/5 hover:bg-white/10 rounded-2xl border border-white/5 text-[10px] font-black text-white uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 group">
-                                            Ver todo el equipo <ChevronRight className="w-4 h-4 text-brand-red group-hover:translate-x-1 transition-transform" />
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
+
 
                             {/* Featured RMs Card */}
                             {profile.featured_rms && profile.featured_rms.length > 0 && (

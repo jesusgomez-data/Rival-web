@@ -282,11 +282,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         const file = e.target.files?.[0]
         if (!file) return
 
-        if (file.size > 200 * 1024 * 1024) { // Pushed to 200MB for high quality videos
-            alert('El archivo es demasiado grande. El límite es 200MB para videos de alta calidad.')
-            return
-        }
-
+        // No file size limit - all videos accepted, will be trimmed if needed
         if (file.type.startsWith('video/')) {
             const video = document.createElement('video');
             video.preload = 'metadata';
@@ -297,6 +293,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 setVideoDuration(duration);
 
                 if (duration > 30) {
+                    // Auto-open trimmer for videos longer than 30s
                     setTrimStart(0);
                     setTrimmerVideoUrl(URL.createObjectURL(file));
                     setIsVideoTrimming(true);
@@ -1056,7 +1053,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
 
                         <div className="mb-8">
                             <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">Recortar Video</h3>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Límite de 30 segundos alcanzado</p>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Tu video dura {Math.round(videoDuration)}s - Recorta a máximo 30s</p>
                         </div>
 
                         <div className="relative aspect-[9/16] bg-black rounded-3xl overflow-hidden border border-white/10 mb-8">

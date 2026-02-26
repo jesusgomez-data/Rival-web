@@ -27,6 +27,7 @@ interface ShareableCardProps {
 export default function ShareableCard({ user, data }: ShareableCardProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [isSharing, setIsSharing] = useState(false);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     const handleShare = async () => {
         if (navigator.share) {
@@ -37,6 +38,34 @@ export default function ShareableCard({ user, data }: ShareableCardProps) {
                     url: window.location.origin
                 });
             } catch (e) { console.error(e); }
+        }
+    };
+
+    const handleDownload = async () => {
+        if (!cardRef.current) return;
+        setIsDownloading(true);
+        try {
+            const { toPng } = await import('html-to-image');
+
+            // Generate PNG
+            const dataUrl = await toPng(cardRef.current, {
+                cacheBust: true,
+                pixelRatio: 2,
+                quality: 1.0,
+                backgroundColor: '#050505',
+            });
+
+            // Create download link
+            const link = document.createElement('a');
+            link.download = `rival-fit-${user.username}-${Date.now()}.png`;
+            link.href = dataUrl;
+            link.click();
+
+        } catch (err) {
+            console.error('Download failed:', err);
+            alert('Error al descargar la tarjeta. Intenta nuevamente.');
+        } finally {
+            setIsDownloading(false);
         }
     };
 
@@ -80,7 +109,7 @@ export default function ShareableCard({ user, data }: ShareableCardProps) {
                             />
                         </div>
                         <div className="min-w-0">
-                            <h4 className="text-white font-black text-[10px] sm:text-xs uppercase italic tracking-wider truncate">{user.name}</h4>
+                            <h4 className="text-white font-black text-[10px] sm:text-xs uppercase italic tracking-wider truncate max-w-[100px]">{user.name}</h4>
                             <p className="text-[8px] sm:text-[9px] font-black text-brand-red uppercase tracking-[0.2em] leading-none">Soldado Lvl {user.level}</p>
                         </div>
                     </div>
@@ -112,10 +141,10 @@ export default function ShareableCard({ user, data }: ShareableCardProps) {
                 <div className="grid grid-cols-3 gap-4 mb-8">
                     {data.stats.map((stat, i) => (
                         <div key={i} className="bg-black/40 backdrop-blur-xl p-4 rounded-3xl border border-white/5 text-center group/stat hover:border-brand-red/30 transition-colors">
-                            <p className="text-2xl font-heading font-black text-white italic leading-none mb-1 group-hover/stat:text-brand-red transition-colors">
+                            <h3 className="text-lg sm:text-2xl font-heading font-black text-white italic leading-none mb-1 group-hover/stat:text-brand-red transition-colors truncate">
                                 {stat.value}
-                            </p>
-                            <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">{stat.label}</p>
+                            </h3>
+                            <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest truncate">{stat.label}</p>
                         </div>
                     ))}
                 </div>
@@ -130,16 +159,25 @@ export default function ShareableCard({ user, data }: ShareableCardProps) {
                         <button
                             onClick={handleShare}
                             className="p-3 bg-white/5 hover:bg-white text-gray-400 hover:text-black rounded-2xl border border-white/10 transition-all active:scale-95"
-                            title="Compartir"
+                            title="Compartir enlace"
                         >
                             <Share2 className="w-4 h-4" />
                         </button>
                         <button
-                            className="p-3 bg-brand-red text-white rounded-2xl shadow-glow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
-                            title="Descargar"
+                            onClick={handleDownload}
+                            disabled={isDownloading}
+                            className={clsx(
+                                "py-3 px-5 bg-brand-red text-white rounded-2xl shadow-glow-sm hover:scale-105 active:scale-95 transition-all flex items-center gap-2",
+                                isDownloading && "opacity-70 cursor-wait"
+                            )}
+                            title="Descargar imagen"
                         >
-                            <Download className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Guardar</span>
+                            {isDownloading ? (
+                                <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <Download className="w-4 h-4" />
+                            )}
+                            <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">GUARDAR</span>
                         </button>
                     </div>
                 </div>

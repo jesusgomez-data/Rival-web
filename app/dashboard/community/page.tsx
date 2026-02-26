@@ -77,6 +77,7 @@ export default function CommunityPage({
                         .select('*')
                         .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
                         .neq('id', user.id)
+                        .neq('username', 'rivalfit') // Exclude official account from search
                         .limit(50);
 
                     searchResults = (profiles || []).sort((a, b) => {
@@ -89,6 +90,14 @@ export default function CommunityPage({
                     }).slice(0, 10);
                 }
 
+                // Fetch official accounts to include their posts in "Following" feed automatically
+                const { data: officialAccounts } = await supabase
+                    .from('profiles')
+                    .select('id')
+                    .eq('is_official', true);
+
+                const officialIds = officialAccounts?.map(acc => acc.id) || [];
+
                 // Fetch Posts based on tab or query
                 let postsQuery = supabase
                     .from('posts')
@@ -100,8 +109,19 @@ export default function CommunityPage({
                     `)
                     .order('created_at', { ascending: false });
 
-                if (activeTab === 'following' && followedIds.size > 0 && !query) {
-                    postsQuery = postsQuery.in('user_id', Array.from(followedIds));
+                if (activeTab === 'following' && !query) {
+                    // Include followed users AND official accounts
+                    const idsToFetch = [...Array.from(followedIds), ...officialIds];
+
+                    if (idsToFetch.length > 0) {
+                        postsQuery = postsQuery.in('user_id', idsToFetch);
+                    } else {
+                        // User follows no one and there are no official accounts (unlikely layout but possible)
+                        // Should technically return nothing or just official if any. 
+                        // If empty list passed to .in(), it might error or return all. 
+                        // Safest is to pass a dummy ID if empty, but here we likely have officials.
+                        postsQuery = postsQuery.in('user_id', ['00000000-0000-0000-0000-000000000000']); // Return nothing
+                    }
                 }
 
                 const { data: posts } = await postsQuery.limit(query ? 100 : 20);

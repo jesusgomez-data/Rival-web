@@ -94,8 +94,10 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                 console.error("Direct upload failed:", error);
 
                 // If direct upload fails, we check size. Server actions have ~4.5MB limit on Vercel
-                if (file.size > 4.5 * 1024 * 1024) {
-                    alert("Error al subir el archivo directamente y es demasiado grande (>4.5MB) para el modo de respaldo. Por favor, asegúrate de tener buena conexión o intenta con un archivo más pequeño.");
+                // Match the limit with next.config.ts (200MB), though Vercel might still block > 4.5MB on Serverless.
+                // But we should try if direct upload fails.
+                if (file.size > 200 * 1024 * 1024) {
+                    alert("Error al subir el archivo directamente y es demasiado grande (>200MB) para el modo de respaldo. Por favor, asegúrate de tener buena conexión o intenta con un archivo más pequeño.");
                     setIsPosting(false);
                     setUploadProgress(0);
                     return;
@@ -155,14 +157,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // Increase limit to 200MB for posts too
-            if (file.size > 200 * 1024 * 1024) {
-                alert("El archivo es demasiado grande (máximo 200MB).");
-                if (fileInputRef.current) fileInputRef.current.value = "";
-                setPreview(null);
-                return;
-            }
-
+            // No file size limit - all videos accepted, will be trimmed if needed
             if (file.type.startsWith('video/')) {
                 const docVideo = document.createElement('video');
                 docVideo.preload = 'metadata';
@@ -173,6 +168,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
                     window.URL.revokeObjectURL(docVideo.src);
 
                     if (dur > 60) {
+                        // Auto-open trimmer for videos longer than 1 minute
                         setTrimStart(0);
                         setPendingFile(file);
                         setTrimmerVideoUrl(URL.createObjectURL(file));
@@ -583,7 +579,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
 
                         <div className="mb-6 md:mb-8 text-center px-4">
                             <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tighter">Recortar Video</h3>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Máximo 60 segundos</p>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Tu video dura {Math.round(videoDuration)}s - Recorta a máximo 60s</p>
                         </div>
 
                         <div className="relative aspect-square bg-black rounded-3xl overflow-hidden border border-white/10 mb-6 md:mb-8 shadow-inner">

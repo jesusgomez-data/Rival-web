@@ -45,11 +45,11 @@ export default function LeaderboardClient({ initialData, currentUser, followedId
     return (
         <div className="space-y-8 animate-fade-in">
             {/* Tabs */}
-            <div className="flex bg-brand-gray/50 p-1.5 rounded-2xl border border-white/5 w-fit mx-auto sm:mx-0 overflow-x-auto no-scrollbar max-w-full">
+            <div className="flex bg-brand-gray/50 p-1 rounded-2xl border border-white/5 w-full sm:w-fit mx-auto sm:mx-0 overflow-x-auto no-scrollbar max-w-full">
                 <button
                     onClick={() => setCategory('xp')}
                     className={clsx(
-                        "flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0",
+                        "flex items-center gap-1.5 px-3 sm:px-6 py-2 sm:py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0",
                         category === 'xp' ? "bg-brand-red text-white shadow-glow-sm" : "text-gray-500 hover:text-white"
                     )}
                 >
@@ -58,7 +58,7 @@ export default function LeaderboardClient({ initialData, currentUser, followedId
                 <button
                     onClick={() => setCategory('combat')}
                     className={clsx(
-                        "flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0",
+                        "flex items-center gap-1.5 px-3 sm:px-6 py-2 sm:py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0",
                         category === 'combat' ? "bg-brand-red text-white shadow-glow-sm" : "text-gray-500 hover:text-white"
                     )}
                 >
@@ -67,11 +67,11 @@ export default function LeaderboardClient({ initialData, currentUser, followedId
                 <button
                     onClick={() => setCategory('social')}
                     className={clsx(
-                        "flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0",
+                        "flex items-center gap-1.5 px-3 sm:px-6 py-2 sm:py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest transition-all shrink-0",
                         category === 'social' ? "bg-brand-red text-white shadow-glow-sm" : "text-gray-500 hover:text-white"
                     )}
                 >
-                    <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Influencers
+                    <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> Embajadores
                 </button>
             </div>
 
@@ -87,20 +87,20 @@ export default function LeaderboardClient({ initialData, currentUser, followedId
                             <div
                                 key={athlete.id}
                                 className={clsx(
-                                    "group flex items-center p-4 sm:p-6 transition-all hover:bg-white/5",
+                                    "group flex items-center gap-1 sm:gap-0 p-2 sm:p-6 transition-all hover:bg-white/5",
                                     index === 0 && "bg-brand-red/5"
                                 )}
                             >
                                 {/* Rank Number */}
-                                <div className="w-10 sm:w-16 flex justify-center shrink-0">
-                                    {index === 0 ? <Medal className="w-5 h-5 sm:w-8 sm:h-8 text-yellow-500 drop-shadow-glow" /> :
-                                        index === 1 ? <Medal className="w-4 h-4 sm:w-7 sm:h-7 text-gray-400" /> :
-                                            index === 2 ? <Medal className="w-4 h-4 sm:w-7 sm:h-7 text-orange-500" /> :
-                                                <span className="text-sm sm:text-xl font-heading font-black text-gray-600">#{index + 1}</span>}
+                                <div className="w-5 sm:w-16 flex justify-center shrink-0">
+                                    {index === 0 ? <Medal className="w-3.5 h-3.5 sm:w-8 sm:h-8 text-yellow-500 drop-shadow-glow" /> :
+                                        index === 1 ? <Medal className="w-3 h-3 sm:w-7 sm:h-7 text-gray-400" /> :
+                                            index === 2 ? <Medal className="w-3 h-3 sm:w-7 sm:h-7 text-orange-500" /> :
+                                                <span className="text-[9px] sm:text-xl font-heading font-black text-gray-600">#{index + 1}</span>}
                                 </div>
 
                                 {/* Avatar */}
-                                <div className="w-9 h-9 sm:w-14 sm:h-14 rounded-lg sm:rounded-2xl bg-black border border-white/10 overflow-hidden relative mr-3 sm:mr-6 group-hover:border-brand-red/50 transition-colors shrink-0">
+                                <div className="w-7 h-7 sm:w-14 sm:h-14 rounded-lg sm:rounded-2xl bg-black border border-white/10 overflow-hidden relative mr-1.5 sm:mr-6 group-hover:border-brand-red/50 transition-colors shrink-0">
                                     <Image
                                         src={athlete.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(athlete.full_name || 'U')}&background=random`}
                                         alt={athlete.full_name}
@@ -115,32 +115,32 @@ export default function LeaderboardClient({ initialData, currentUser, followedId
                                 </div>
 
                                 {/* User Details */}
-                                <div className="flex-1 min-w-0 mr-3">
+                                <div className="flex-1 min-w-0 mr-1 sm:mr-3">
                                     <Link href={`/dashboard/profile/${athlete.username}`} className="block">
-                                        <div className="flex items-center gap-1.5 sm:gap-2">
-                                            <h3 className="font-heading font-black text-white italic uppercase tracking-tight text-xs sm:text-lg group-hover:text-brand-red transition-colors truncate">
+                                        <div className="flex items-center gap-1 sm:gap-2">
+                                            <h3 className="font-heading font-black text-white italic uppercase tracking-tight text-[11px] sm:text-lg group-hover:text-brand-red transition-colors truncate">
                                                 {athlete.full_name}
                                             </h3>
-                                            {athlete.level >= 10 && <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500 fill-yellow-500 shrink-0" />}
+                                            {athlete.level >= 10 && <Star className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-yellow-500 fill-yellow-500 shrink-0" />}
                                         </div>
-                                        <p className="text-[7px] sm:text-[10px] text-gray-500 font-black uppercase tracking-widest leading-none mt-0.5 sm:mt-1">
+                                        <p className="text-[7px] sm:text-[10px] text-gray-500 font-black uppercase tracking-wider sm:tracking-widest leading-none mt-0.5 sm:mt-1 truncate">
                                             @{athlete.username} <span className="hidden sm:inline">• SOLDADO LVL {athlete.level}</span>
                                         </p>
                                     </Link>
                                 </div>
 
                                 {/* Stat Display */}
-                                <div className="text-right mr-3 sm:mr-10">
-                                    <p className="text-sm sm:text-2xl font-heading font-black text-white italic tracking-tighter leading-none mb-0.5 sm:mb-1">
+                                <div className="text-right mr-1 sm:mr-10 flex-shrink-0">
+                                    <p className="text-xs sm:text-2xl font-heading font-black text-white italic tracking-tighter leading-none mb-0.5 sm:mb-1">
                                         {getStatValue(athlete)}
                                     </p>
-                                    <p className="text-[6px] sm:text-[9px] text-gray-500 font-black uppercase tracking-widest">
+                                    <p className="text-[6px] sm:text-[9px] text-gray-500 font-black uppercase tracking-wider sm:tracking-widest">
                                         {getStatUnit()}
                                     </p>
                                 </div>
 
                                 {/* Action */}
-                                <div className="shrink-0 scale-90 sm:scale-100">
+                                <div className="shrink-0 scale-[0.7] sm:scale-100">
                                     {athlete.id !== currentUser?.id && (
                                         <FollowButton
                                             targetId={athlete.id}

@@ -11,7 +11,7 @@ interface InstagramShareCardProps {
     avatar: string;
     username: string;
     content: {
-        type: 'workout' | 'pr' | 'image' | 'class_result' | 'running';
+        type: 'workout' | 'pr' | 'image' | 'class_result' | 'running' | 'challenge';
         title?: string;
         highlight?: string;
         stats?: Array<{ label: string, value: string, icon?: string }>;
@@ -147,7 +147,7 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                             <div className="relative z-10 space-y-4">
                                 <div className="space-y-1">
                                     <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] italic">
-                                        {content.type === 'pr' ? 'NUEVO RÉCORD' : 'ACTIVIDAD COMPLETADA'}
+                                        {content.type === 'pr' ? 'NUEVO RÉCORD' : (content.type === 'challenge' ? 'DESAFÍO COMPLETADO' : 'ACTIVIDAD COMPLETADA')}
                                     </p>
                                     <h3 className="text-white font-black text-2xl italic uppercase tracking-tight leading-none">
                                         {content.title || 'Entrenamiento'}
