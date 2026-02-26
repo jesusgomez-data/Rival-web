@@ -1,21 +1,13 @@
 "use client";
 
 import { getMissions, getRecentPRs, getUserProfile, getScheduledWorkouts, getWorkoutHistory, getPublishedResults, deleteScheduledWorkout } from "./actions";
-import { getMyDuels } from "../community/duel-actions";
-import DuelCountdown from "../community/DuelCountdown";
-
 import { type TrainingPlan } from "./types";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy, X, Sparkles, Plus, Swords } from "lucide-react";
+import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy, X } from "lucide-react";
 import Image from "next/image";
-import CreatePost from "../CreatePost";
-import InfoTooltip from "@/components/InfoTooltip";
 
 export default function TrainingPage() {
-    const router = useRouter();
     const [missions, setMissions] = useState<any[]>([]);
     const [prs, setPrs] = useState<any[]>([]);
     const [profile, setProfile] = useState<any>(null);
@@ -24,35 +16,24 @@ export default function TrainingPage() {
     const [publishedResults, setPublishedResults] = useState<any[]>([]);
     const [isWodExpanded, setIsWodExpanded] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [showUploadModal, setShowUploadModal] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-    const [duels, setDuels] = useState<any[]>([]);
 
     useEffect(() => {
         async function fetchData() {
-            try {
-                const [missionsData, prsData, profileData, scheduledData, workoutsData, publishedData, duelsData] = await Promise.all([
-                    getMissions(),
-                    getRecentPRs(),
-                    getUserProfile(),
-                    getScheduledWorkouts(),
-                    getWorkoutHistory(30),
-                    getPublishedResults(1),
-                    getMyDuels()
-                ]);
-                setMissions(missionsData || []);
-                setPrs(prsData || []);
-                setProfile(profileData);
-                setScheduled(scheduledData || []);
-                setWorkouts(workoutsData || []);
-                setPublishedResults(publishedData || []);
-                setDuels(duelsData || []);
-            } catch (err: any) {
-                console.error("Error loading training data:", err);
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
-            }
+            const [missionsData, prsData, profileData, scheduledData, workoutsData, publishedData] = await Promise.all([
+                getMissions(),
+                getRecentPRs(),
+                getUserProfile(),
+                getScheduledWorkouts(),
+                getWorkoutHistory(30),
+                getPublishedResults(1)
+            ]);
+            setMissions(missionsData);
+            setPrs(prsData);
+            setProfile(profileData);
+            setScheduled(scheduledData);
+            setWorkouts(workoutsData);
+            setPublishedResults(publishedData);
+            setIsLoading(false);
         }
         fetchData();
     }, []);
@@ -110,26 +91,11 @@ export default function TrainingPage() {
                 title: "WOD Híbrido: RIVAL 500",
                 description: "Reto metabólico combinando remo y ejercicios de peso corporal.",
                 sport: 'hybrid', difficulty: 'intermediate', duration_min: 35, is_premium: false,
-                exercises: [],
-                blocks: [
-                    {
-                        title: "STRENGTH PORTION",
-                        type: "other",
-                        exercises: [
-                            { name: "Deadlift", target: "3 series x 8 reps @ 70%", sets: [] }
-                        ]
-                    },
-                    { title: "4' REST", type: "rest", exercises: [], duration: 4 },
-                    {
-                        title: "RIVAL 500 (METCON)",
-                        type: "amrap",
-                        duration: 15,
-                        exercises: [
-                            { name: "Row 500m", target: "Max Effort", sets: [] },
-                            { name: "Burpees", target: "50 reps", sets: [] },
-                            { name: "Kettlebell Swings", target: "50 reps", sets: [] }
-                        ]
-                    }
+                exercises: [
+                    { id: 'ih1', name: "Row 500m", target: "Max Effort", sets: [] },
+                    { id: 'ih2', name: "Burpees", target: "50 reps", sets: [] },
+                    { id: 'ih3', name: "Kettlebell Swings", target: "50 reps", sets: [] },
+                    { id: 'ih4', name: "Row 500m", target: "Finish strong", sets: [] }
                 ]
             }
         ],
@@ -151,31 +117,11 @@ export default function TrainingPage() {
                 title: "Hyrox Simulation: Elite",
                 description: "Entrenamiento de volumen Hyrox para atletas avanzados.",
                 sport: 'hybrid', difficulty: 'elite', duration_min: 80, is_premium: true,
-                exercises: [],
-                blocks: [
-                    {
-                        title: "BLOCK A: AEROBIC POWER",
-                        type: "fortime",
-                        exercises: [
-                            { name: "Run 1km", target: "@ Race Pace", sets: [] },
-                            { name: "Sled Push 50m", target: "Extremely Heavy", sets: [] }
-                        ]
-                    },
-                    { title: "2' REST", type: "rest", exercises: [], duration: 2 },
-                    {
-                        title: "BLOCK B: CAPACITY",
-                        type: "amrap",
-                        duration: 20,
-                        exercises: [
-                            { name: "Run 1km", target: "Moderate", sets: [] },
-                            { name: "Burpee Broad Jumps", target: "80 meters", sets: [] }
-                        ]
-                    },
-                    {
-                        title: "SCALING OPTIONS",
-                        type: "scaling",
-                        exercises: [{ name: "SB: 100% Load\nGO: 80% Load\nMO: 60% Load", target: "N/A", sets: [] }]
-                    }
+                exercises: [
+                    { id: 'eh1', name: "Run 1km", target: "4:00 pace", sets: [] },
+                    { id: 'eh2', name: "Sled Push 50m", target: "Heavy", sets: [] },
+                    { id: 'eh3', name: "Run 1km", target: "4:15 pace", sets: [] },
+                    { id: 'eh4', name: "Burpee Broad Jumps", target: "80 meters", sets: [] }
                 ]
             }
         ]
@@ -236,76 +182,21 @@ export default function TrainingPage() {
                         </div>
                         <h1 className="text-4xl md:text-5xl font-heading font-black !text-white glow-text">CENTRO DE ENTRENAMIENTO</h1>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        <Link href="/dashboard/training/session" className="bg-white text-black px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-brand-red hover:text-white transition-all transform hover:-translate-y-1 shadow-2xl flex-1 whitespace-nowrap">
-                            <Play className="w-5 h-5 fill-current" /> INICIAR SESIÓN
-                        </Link>
-                        <button
-                            onClick={() => setShowUploadModal(true)}
-                            className="bg-black/40 backdrop-blur-md border border-white/10 text-white px-8 py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-white/10 transition-all transform hover:-translate-y-1 shadow-2xl flex-1 whitespace-nowrap"
-                        >
-                            <Plus className="w-5 h-5" /> SUBIR WOD
-                        </button>
-                    </div>
+                    <Link href="/dashboard/training/session" className="bg-white text-black px-8 py-4 rounded-xl font-bold flex items-center gap-2 hover:bg-brand-red hover:text-white transition-all transform hover:-translate-y-1 shadow-2xl">
+                        <Play className="w-5 h-5 fill-current" /> INICIAR SESIÓN
+                    </Link>
                 </div>
-
-                {/* Upload Modal Overlay */}
-                {showUploadModal && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
-                            onClick={() => setShowUploadModal(false)}
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            className="relative w-full max-w-2xl bg-[#0a0a0a] border border-white/10 rounded-[40px] shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
-                        >
-                            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-2xl bg-brand-red/10 flex items-center justify-center text-brand-red shadow-glow-sm">
-                                        <Dumbbell className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-lg font-black italic uppercase tracking-tighter text-white">Nuevo Reporte WOD</h2>
-                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest text-[#666]">Sección Cross Training</p>
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => setShowUploadModal(false)}
-                                    className="w-10 h-10 rounded-full hover:bg-white/5 flex items-center justify-center text-gray-500 hover:text-white transition-colors"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                            <div className="flex-1 overflow-y-auto p-2">
-                                <CreatePost
-                                    currentUser={profile}
-                                    initialPostType="wod"
-                                    onSuccess={() => setShowUploadModal(false)}
-                                />
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
             </div>
 
             {/* Main Content Grid */}
             <div className="grid lg:grid-cols-12 gap-8">
                 {/* Left Column (Main Focus) */}
                 <div className="lg:col-span-8 space-y-8">
-
                     {/* Week Calendar */}
                     <div className="bg-brand-gray/50 border border-border/10 rounded-3xl p-6 backdrop-blur-sm">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="font-heading font-bold text-foreground flex items-center gap-2">
                                 <Calendar className="w-5 h-5 text-brand-red" /> Semana Actual
-                                <InfoTooltip
-                                    title="Calendario"
-                                    content="Visualiza tu consistencia semanal. Los días en rojo indican combate completado. Pulsa un día para ver sus detalles."
-                                />
                             </h3>
                             <Link href="/dashboard/training/logs" className="text-xs font-bold text-gray-500 hover:text-white transition-colors flex items-center gap-1">
                                 VER REGISTROS <ChevronRight className="w-4 h-4" />
@@ -318,14 +209,9 @@ export default function TrainingPage() {
                                     className={`
                                             flex flex-col items-center p-4 rounded-2xl border transition-all cursor-pointer relative group
                                             ${d.status === 'active' ? 'bg-brand-red border-brand-red text-white shadow-[0_0_20px_rgba(220,38,38,0.3)] scale-105' :
-                                            d.status === 'done' ? 'bg-white/5 border-green-500/20 text-gray-400 opacity-60 hover:opacity-100 hover:scale-105' :
+                                            d.status === 'done' ? 'bg-white/5 border-green-500/20 text-gray-400 opacity-60' :
                                                 'bg-white/5 border-white/5 text-gray-600 hover:border-white/20'}
                                         `}
-                                    onClick={() => {
-                                        if (d.status === 'done' || d.status === 'active') {
-                                            router.push(`/dashboard/training/logs?date=${d.fullDate}`);
-                                        }
-                                    }}
                                 >
                                     <span className="text-[10px] font-bold uppercase mb-1 tracking-tighter">{d.day}</span>
                                     <span className={`text-xl font-heading font-black ${d.status === 'done' ? 'text-green-500' : ''}`}>{d.date}</span>
@@ -355,10 +241,6 @@ export default function TrainingPage() {
                                 <div className="flex items-center justify-between mb-6">
                                     <h3 className="font-heading font-bold text-foreground flex items-center gap-2">
                                         <Calendar className="w-5 h-5 text-blue-400" /> Entrenamientos Programados
-                                        <InfoTooltip
-                                            title="Programación"
-                                            content="Aquí aparecen las sesiones que has planeado tú o tu coach para fechas específicas."
-                                        />
                                     </h3>
                                     <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded font-bold uppercase tracking-widest">
                                         {scheduled.length} Pendiente{scheduled.length !== 1 ? 's' : ''}
@@ -475,14 +357,7 @@ export default function TrainingPage() {
                                 <span className="bg-brand-red/20 text-brand-red px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 border border-brand-red/20">
                                     <Zap className="w-3 h-3 fill-current" /> RECOMENDADO POR EL COACH
                                 </span>
-                                <h2 className="text-xl font-heading font-bold !text-white uppercase tracking-wider">
-                                    {activeRoutine.title}
-                                    <InfoTooltip
-                                        title="Sugerencia IA"
-                                        content="Rutina calculada según tu nivel y racha actual para optimizar tu progresión."
-                                        className="ml-2"
-                                    />
-                                </h2>
+                                <h2 className="text-xl font-heading font-bold !text-white uppercase tracking-wider">{activeRoutine.title}</h2>
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 bg-black/40 p-6 rounded-2xl border border-white/5">
@@ -499,29 +374,10 @@ export default function TrainingPage() {
                                     </h3>
                                     <span className="text-[10px] font-black text-brand-red uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">Pulsa para empezar →</span>
                                 </div>
-                                <div className="grid gap-4">
-                                    {activeRoutine.blocks && activeRoutine.blocks.length > 0 ? (
-                                        activeRoutine.blocks.filter((b: any) => b.type !== 'scaling').map((block: any, bIdx: number) => (
-                                            <div key={bIdx} className="bg-white/5 border border-white/5 p-4 rounded-2xl space-y-3">
-                                                <div className="flex items-center justify-between">
-                                                    <p className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic">{block.title}</p>
-                                                    <span className="text-[8px] font-black text-brand-red bg-brand-red/10 px-2 py-0.5 rounded uppercase border border-brand-red/20">{block.type}</span>
-                                                </div>
-                                                <div className="space-y-1.5">
-                                                    {block.exercises.map((ex: any, idx: number) => (
-                                                        <div key={idx} className="flex justify-between items-center text-[11px]">
-                                                            <span className="text-gray-400 font-bold uppercase tracking-tight">{ex.name}</span>
-                                                            <span className="text-white font-mono font-black italic">{ex.target}</span>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))
-                                    ) : (
-                                        activeRoutine.exercises.map((ex: any, idx: number) => (
-                                            <WorkoutItem key={idx} name={ex.name} sets={ex.target} note={ex.note} />
-                                        ))
-                                    )}
+                                <div className="grid gap-3">
+                                    {activeRoutine.exercises.map((ex: any, idx: number) => (
+                                        <WorkoutItem key={idx} name={ex.name} sets={ex.target} note={ex.note} />
+                                    ))}
                                 </div>
                             </div>
                         </div>
@@ -570,8 +426,7 @@ export default function TrainingPage() {
                                                     <WorkoutItem
                                                         key={`${sIdx}-${eIdx}`}
                                                         name={ex.name || 'Ejercicio'}
-                                                        sets={section.type === 'weight' ? `${ex.sets || '?'}x${ex.reps || '?'} • ${ex.value || '0'}kg` :
-                                                            (typeof section.value === 'object' ? JSON.stringify(section.value) : (section.value || 'Completado'))}
+                                                        sets={section.type === 'weight' ? `${ex.sets || '?'}x${ex.reps || '?'} • ${ex.value || '0'}kg` : section.value || 'Completado'}
                                                         note={section.title || section.type}
                                                     />
                                                 ))
@@ -652,10 +507,6 @@ export default function TrainingPage() {
                         />
                         <h3 className="font-heading font-bold text-foreground mb-6 flex items-center gap-2">
                             <Target className="w-5 h-5 text-brand-red" /> Control de Misiones
-                            <InfoTooltip
-                                title="Objetivos"
-                                content="Completa estos retos para ganar XP extra y subir de nivel más rápido."
-                            />
                         </h3>
                         <div className="space-y-6">
                             {isLoading ? (
@@ -677,72 +528,10 @@ export default function TrainingPage() {
                         </div>
                     </div>
 
-                    {/* Active Duels Widget */}
-                    {duels.filter(d => d.status === 'active').length > 0 && (
-                        <div className="bg-black/60 border border-brand-red/30 rounded-[40px] p-8 relative overflow-hidden group shadow-glow-sm">
-                            <div className="absolute top-0 right-0 p-8 text-brand-red/5 group-hover:text-brand-red/10 transition-all pointer-events-none">
-                                <Swords className="w-32 h-32 rotate-12" />
-                            </div>
-                            <h3 className="font-heading font-black text-white italic tracking-wider mb-8 flex items-center gap-3">
-                                <Trophy className="w-5 h-5 text-brand-red" /> DUELOS ACTIVOS
-                                <InfoTooltip
-                                    title="La Arena"
-                                    content="Tus combates 1 VS 1 en tiempo real. Se puntúa por volumen de peso y duración de cardio."
-                                />
-                            </h3>
-
-                            <div className="space-y-6">
-                                {duels.filter(d => d.status === 'active').map((duel) => {
-                                    const isChallenger = duel.challenger_id === profile?.id;
-                                    const rival = isChallenger ? duel.opponent : duel.challenger;
-                                    const myScore = isChallenger ? duel.challenger_score : duel.opponent_score;
-                                    const rivalScore = isChallenger ? duel.opponent_score : duel.challenger_score;
-
-                                    return (
-                                        <div key={duel.id} className="bg-white/5 border border-white/10 rounded-3xl p-5 hover:bg-white/10 transition-all">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden relative">
-                                                    <Image src={rival?.avatar_url || `https://ui-avatars.com/api/?name=${rival?.username}`} alt="Rival" fill className="object-cover" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-black text-white uppercase italic truncate">VS {rival?.full_name || rival?.username}</p>
-                                                    <div className="mt-1">
-                                                        <DuelCountdown endDate={duel.end_date} status={duel.status} />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-4 bg-black/40 rounded-2xl p-4 border border-white/5">
-                                                <div className="text-center">
-                                                    <p className="text-[8px] font-black text-gray-500 uppercase mb-1">TÚ</p>
-                                                    <p className={`text-2xl font-black italic ${myScore >= rivalScore ? 'text-brand-red' : 'text-white'}`}>{myScore}</p>
-                                                </div>
-                                                <div className="text-center border-l border-white/5">
-                                                    <p className="text-[8px] font-black text-gray-500 uppercase mb-1">RIVAL</p>
-                                                    <p className={`text-2xl font-black italic ${rivalScore > myScore ? 'text-brand-red' : 'text-white'}`}>{rivalScore}</p>
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-4 relative z-20">
-                                                <Link href="/dashboard#duels-section" className="w-full py-2 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-[10px] font-black uppercase tracking-widest text-center block transition-all cursor-pointer">
-                                                    Ver Detalles en Arena
-                                                </Link>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-
                     {/* Personal Best Widget */}
                     <div className="bg-gradient-to-br from-yellow-600/20 to-brand-gray border border-white/10 rounded-3xl p-6">
                         <h3 className="font-heading font-bold !text-white mb-4 flex items-center gap-2">
                             <Award className="w-5 h-5 text-yellow-500" /> Trofeos Recientes
-                            <InfoTooltip
-                                title="Hitos"
-                                content="Tus Records Personales (PR) más recientes detectados en tus sesiones."
-                            />
                         </h3>
                         <div className="space-y-4">
                             {isLoading ? (

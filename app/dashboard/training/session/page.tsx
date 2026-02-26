@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, Minus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap, Share2, Camera, Award, AlertTriangle, ChevronRight, Youtube, Video, Lock, Wind, Heart, TrendingUp, Download, Watch, Triangle, PlayCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, Minus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap, Share2, Camera, Award, AlertTriangle, ChevronRight, Youtube, Video, Lock, Wind, Heart, TrendingUp, Download } from "lucide-react";
 import Image from "next/image";
 import { useState, useEffect, Suspense, useMemo, useRef } from "react";
 import { saveWorkout, getExercises, getExercisePreviousRecord, getWorkoutDetails, uploadWorkoutMedia, getUserProfile, getGuidedWorkoutsCount } from "../actions";
@@ -13,56 +13,17 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { clsx } from "clsx";
 import { useTheme } from "../../../ThemeContext";
 import PRCelebrationModal from "./PRCelebrationModal";
-import VideoEditor from "../../VideoEditor";
 
 // Helper for real distance calculation (Haversine Formula)
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371e3; // Earth radius in meters
-    const φ1 = lat1 * Math.PI / 180;
-    const φ2 = lat2 * Math.PI / 180;
-    const Δφ = (lat2 - lat1) * Math.PI / 180;
-    const Δλ = (lon2 - lon1) * Math.PI / 180;
-    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-        Math.cos(φ1) * Math.cos(φ2) *
-        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c; // Returns distance in meters
-};
-
-// Helper to parse target strings into initial set metrics
-const initializeSetsFromTarget = (target?: string): any[] => {
-    if (!target) return [{ order: 1, weight: 0, reps: 0, completed: false, unit: 'kg', measure: 'reps' }];
-
-    const lowerTarget = target.toLowerCase();
-
-    // Pattern: 50m, 1000m, 2km
-    const distMatch = lowerTarget.match(/(\d+(?:\.\d+)?)\s*(m|km)/);
-    if (distMatch) {
-        let val = parseFloat(distMatch[1]);
-        if (distMatch[2] === 'km') val *= 1000;
-        return [{ order: 1, weight: val, reps: 0, completed: false, unit: 'm', measure: 'distance' }];
-    }
-
-    // Pattern: 20 reps, 20reps
-    const repsMatch = lowerTarget.match(/(\d+)\s*(reps|repeticiones)/);
-    if (repsMatch) {
-        return [{ order: 1, weight: 0, reps: parseInt(repsMatch[1]), completed: false, unit: 'kg', measure: 'reps' }];
-    }
-
-    // Pattern: 30 cal, 30cal
-    const calMatch = lowerTarget.match(/(\d+)\s*(cal|calorías)/);
-    if (calMatch) {
-        return [{ order: 1, weight: parseInt(calMatch[1]), reps: 0, completed: false, unit: 'cal', measure: 'calories' }];
-    }
-
-    // Pattern: 30 seg, 30s
-    const timeMatch = lowerTarget.match(/(\d+)\s*(seg|s|seconds)/);
-    if (timeMatch) {
-        return [{ order: 1, weight: parseInt(timeMatch[1]), reps: 0, completed: false, unit: 'sec', measure: 'reps' }];
-    }
-
-    // Default fallback
-    return [{ order: 1, weight: 0, reps: 0, completed: false, unit: 'kg', measure: 'reps' }];
 };
 
 export default function SessionPage() {
@@ -128,10 +89,15 @@ function SessionContent() {
     const [prAchievements, setPrAchievements] = useState<any[]>([]);
     const [userName, setUserName] = useState<string>("Atleta");
 
-    // Video Editor State
+    // Video Trimming State
     const [isVideoTrimming, setIsVideoTrimming] = useState(false);
     const [trimmerVideoUrl, setTrimmerVideoUrl] = useState<string | null>(null);
-    const [videoToEdit, setVideoToEdit] = useState<File | null>(null);
+    const [trimStart, setTrimStart] = useState(0);
+    const [isTrimmingLoading, setIsTrimmingLoading] = useState(false);
+    const [videoDuration, setVideoDuration] = useState(0);
+    const [pendingFile, setPendingFile] = useState<File | null>(null);
+    const [trimProgress, setTrimProgress] = useState(0);
+    const trimmerVideoRef = useRef<HTMLVideoElement>(null);
 
     // Running Specific State
     const [runPath, setRunPath] = useState<{ lat: number, lon: number }[]>([]);
@@ -207,37 +173,151 @@ function SessionContent() {
         const file = e.target.files?.[0];
         if (!file) return;
 
+        // Video Duration Check & Trimming Trigger
         if (file.type.startsWith('video/')) {
-            // Check duration before opening editor
-            const video = document.createElement('video');
-            video.preload = 'metadata';
-            video.onloadedmetadata = () => {
-                window.URL.revokeObjectURL(video.src);
-                const duration = video.duration;
+            const docVideo = document.createElement('video');
+            docVideo.preload = 'metadata';
+            docVideo.onloadedmetadata = () => {
+                const dur = docVideo.duration;
+                setVideoDuration(dur);
+                window.URL.revokeObjectURL(docVideo.src);
 
-                if (duration <= 65) {
-                    // Short video: Upload directly (Bypass Editor)
-                    startUpload(file);
-                } else {
-                    // Long video: Ask user
-                    const confirmUpload = window.confirm(`Tu video dura ${Math.round(duration)}s (Límite sugerido: 60s). \n\n¿Quieres recortarlo para mejor calidad o subirlo completo igualmente? \n\nACEPTAR = Recortar (Editor)\nCANCELAR = Subir Completo`);
-
-                    if (confirmUpload) {
-                        setVideoToEdit(file);
-                        setTrimmerVideoUrl(URL.createObjectURL(file));
-                        setIsVideoTrimming(true);
-                    } else {
-                        startUpload(file);
-                    }
+                if (dur > 60) {
+                    setTrimStart(0);
+                    setPendingFile(file);
+                    setTrimmerVideoUrl(URL.createObjectURL(file));
+                    setIsVideoTrimming(true);
+                    return;
                 }
+                // If < 60s, proceed to upload
+                startUpload(file);
             };
-            video.src = URL.createObjectURL(file);
+            docVideo.onerror = () => {
+                alert("Error al procesar el video.");
+            };
+            docVideo.src = URL.createObjectURL(file);
             return;
         }
 
         startUpload(file);
     };
 
+    const processTrimming = async () => {
+        if (!trimmerVideoRef.current || !trimmerVideoUrl) return;
+
+        setIsTrimmingLoading(true);
+        setTrimProgress(0);
+        const video = trimmerVideoRef.current;
+
+        try {
+            const captureStream = (video as any).captureStream || (video as any).mozCaptureStream;
+
+            if (!captureStream) {
+                alert("Tu navegador no soporta el recorte de video directo. Por favor, intenta subir un video de menos de 1 minuto.");
+                setIsTrimmingLoading(false);
+                setIsVideoTrimming(false);
+                setTrimmerVideoUrl(null);
+                return;
+            }
+
+            const stream = captureStream.call(video);
+            const supportedTypes = ['video/mp4', 'video/webm', 'video/x-matroska', 'video/ogg'];
+            let mimeType = '';
+            for (const type of supportedTypes) {
+                if (MediaRecorder.isTypeSupported(type)) {
+                    mimeType = type;
+                    break;
+                }
+            }
+
+            if (!mimeType) {
+                alert("Formato de video no compatible para recorte en este navegador.");
+                setIsTrimmingLoading(false);
+                return;
+            }
+
+            const recorder = new MediaRecorder(stream, { mimeType });
+            const chunks: Blob[] = [];
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunks.push(e.data);
+            };
+
+            let safetyTimeout: any;
+            let progressInterval: any;
+
+            recorder.onstop = () => {
+                if (safetyTimeout) clearTimeout(safetyTimeout);
+                if (progressInterval) clearInterval(progressInterval);
+
+                if (chunks.length === 0) {
+                    alert("Error: No se capturaron datos del video. Por favor, intenta de nuevo y asegúrate de que el video se reproduce correctamente.");
+                    setIsTrimmingLoading(false);
+                    return;
+                }
+
+                const blob = new Blob(chunks, { type: mimeType });
+                const extension = mimeType.split('/')[1]?.split(';')[0] || 'webm';
+                const fileName = pendingFile ? pendingFile.name.replace(/\.[^/.]+$/, "") : "trimmed_video";
+                const trimmedFile = new File([blob], `${fileName}_trimmed.${extension}`, { type: mimeType });
+
+                startUpload(trimmedFile);
+
+                setIsVideoTrimming(false);
+                setTrimmerVideoUrl(null);
+                setIsTrimmingLoading(false);
+                setTrimProgress(0);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+            };
+
+            const recordingDuration = Math.min(60, (video.duration - trimStart));
+
+            const startRecording = () => {
+                video.onseeked = null;
+                video.play().then(() => {
+                    recorder.start();
+
+                    const startTime = Date.now();
+                    progressInterval = setInterval(() => {
+                        const elapsed = (Date.now() - startTime) / 1000;
+                        const percent = Math.min(99, (elapsed / recordingDuration) * 100);
+                        setTrimProgress(percent);
+                    }, 500);
+
+                    safetyTimeout = setTimeout(() => {
+                        if (recorder.state === 'recording') {
+                            recorder.stop();
+                            video.pause();
+                        }
+                    }, (recordingDuration + 1) * 1000);
+
+                    video.onended = () => {
+                        if (recorder.state === 'recording') {
+                            recorder.stop();
+                        }
+                    };
+                }).catch(err => {
+                    console.error("Play failed during trimming:", err);
+                    alert("No se pudo iniciar la captura del video. Intenta presionar 'Play' manualmente si es necesario.");
+                    setIsTrimmingLoading(false);
+                });
+            };
+
+            // Prepare for seek
+            video.muted = true;
+            video.currentTime = trimStart;
+
+            // Check if seek is needed
+            if (Math.abs(video.currentTime - trimStart) < 0.1) {
+                startRecording();
+            } else {
+                video.onseeked = startRecording;
+            }
+
+        } catch (err) {
+            console.error("Trimming error:", err);
+            setIsTrimmingLoading(false);
+        }
+    };
 
     const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
 
@@ -496,38 +576,13 @@ function SessionContent() {
 
                     if (plan.duration_min) setTargetDuration(plan.duration_min);
 
-                    if (plan.blocks && plan.blocks.length > 0) {
-                        // Support multi-block plans
-                        const enrichedBlocks = plan.blocks.map((block: WorkoutBlock, bIdx: number) => ({
-                            ...block,
-                            id: block.id || `plan-block-${bIdx}`,
-                            exercises: block.exercises.map((ex: WorkoutExercise, eIdx: number) => {
-                                const found = catalogMap.get(ex.name.toLowerCase());
-                                return {
-                                    ...ex,
-                                    video_url: ex.video_url || found?.video_url,
-                                    id: ex.id || `plan-ex-${bIdx}-${eIdx}`,
-                                    sets: (ex.sets && ex.sets.length > 0) ? ex.sets.map((s: WorkoutSet, i: number) => ({
-                                        ...s,
-                                        order: i + 1,
-                                        weight: s.weight || 0,
-                                        reps: s.reps || 0,
-                                        completed: false,
-                                        unit: s.unit || 'kg',
-                                        measure: s.measure || 'reps'
-                                    })) : initializeSetsFromTarget(ex.target)
-                                };
-                            })
-                        }));
-                        setBlocks(enrichedBlocks);
-                    } else if (plan.exercises) {
-                        const mapped = plan.exercises.map((ex: WorkoutExercise, idx: number) => {
+                    if (plan.sport === 'gym' && plan.exercises) {
+                        const mapped = plan.exercises.map((ex: WorkoutExercise) => {
                             const found = catalogMap.get(ex.name.toLowerCase());
                             return {
                                 ...ex,
                                 video_url: ex.video_url || found?.video_url,
-                                id: ex.id || `plan-ex-${idx}`,
-                                sets: (ex.sets && ex.sets.length > 0) ? ex.sets.map((s: WorkoutSet, i: number) => ({
+                                sets: ex.sets.map((s: WorkoutSet, i: number) => ({
                                     ...s,
                                     order: i + 1,
                                     weight: s.weight || 0,
@@ -535,12 +590,33 @@ function SessionContent() {
                                     completed: false,
                                     unit: s.unit || 'kg',
                                     measure: s.measure || 'reps'
-                                })) : initializeSetsFromTarget(ex.target)
+                                }))
+                            };
+                        });
+                        setExercises(mapped);
+                        setBlocks([{ id: 'main', title: plan.title, exercises: mapped, type: 'other' }]);
+                    } else if (plan.exercises) {
+                        // For other modes that might have exercises (Cross Training blocks)
+                        const mapped = plan.exercises.map((ex: WorkoutExercise, idx: number) => {
+                            const found = catalogMap.get(ex.name.toLowerCase());
+                            return {
+                                ...ex,
+                                video_url: ex.video_url || found?.video_url,
+                                id: ex.id || `plan-${idx}`,
+                                sets: ex.sets?.map((s: WorkoutSet, i: number) => ({
+                                    ...s,
+                                    order: i + 1,
+                                    weight: s.weight || 0,
+                                    reps: s.reps || 0,
+                                    completed: false,
+                                    unit: s.unit || 'kg',
+                                    measure: s.measure || 'reps'
+                                })) || [{ order: 1, weight: 0, reps: 0, completed: false, unit: 'kg', measure: 'reps' }]
                             };
                         });
                         setExercises(mapped);
 
-                        // Fallback to single block for Cross Training / OCR
+                        // Create a block for Cross Training / OCR
                         const titleUpper = plan.title.toUpperCase();
                         let format: any = 'fortime';
                         if (titleUpper.includes('AMRAP')) format = 'amrap';
@@ -937,15 +1013,7 @@ function SessionContent() {
                     }}
                     onPlanSelect={(plan) => {
                         setIsGuided(true);
-                        // Pre-calculate sets if not present
-                        const planWithSets = {
-                            ...plan,
-                            exercises: plan.exercises?.map(ex => ({
-                                ...ex,
-                                sets: ex.sets || [{ order: 1, weight: 0, reps: 10, completed: false }]
-                            }))
-                        };
-                        setPreStartPlan(planWithSets);
+                        setPreStartPlan(plan);
                     }}
                 />
 
@@ -1079,7 +1147,7 @@ function SessionContent() {
                                         }}
                                         className="flex-[2] py-5 rounded-2xl bg-white text-black text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-white/10 flex items-center justify-center gap-2"
                                     >
-                                        EMPEZAR ENTRENAMIENTO <ChevronRight className="w-5 h-5" />
+                                        Ponerle Empezar <ChevronRight className="w-5 h-5" />
                                     </button>
                                 </div>
                             </div>
@@ -1108,11 +1176,8 @@ function SessionContent() {
                             'bg-brand-red/10 border-brand-red/20';
 
     const isAiCoach = searchParams.get('mode') === 'ai-coach';
-    const isRecommendation = searchParams.get('mode') === 'recommendation';
-    const isProfessionalGuided = (isGuided || isAiCoach || isRecommendation || !!wodId) &&
-        (sportMode === 'cross_training' || sportMode === 'hybrid' || sportMode === 'ocr');
 
-    if (isProfessionalGuided && sportMode) {
+    if (isAiCoach && sportMode) {
         const displayTime = timerMode === 'down' && targetDuration
             ? Math.max(0, (targetDuration * 60) - elapsedSeconds)
             : elapsedSeconds;
@@ -1159,11 +1224,10 @@ function SessionContent() {
                         isSaving={isSaving}
                         imageUrl={imageUrl}
                         setImageUrl={setImageUrl}
-                        mediaType={mediaType}
                         isUploading={isUploading}
                         onImageUpload={handleImageUpload}
                         fileInputRef={fileInputRef}
-                        workoutTitle={workoutTitle || "Sesión de Entrenamiento"}
+                        workoutTitle={workoutTitle}
                         rpe={rpe}
                         setRpe={setRpe}
                     />
@@ -1310,8 +1374,6 @@ function SessionContent() {
                         mode={sportMode}
                         workoutTitle={workoutTitle}
                         setWorkoutTitle={setWorkoutTitle}
-                        isGuided={isGuided}
-                        onFinish={() => setShowFinishModal(true)}
                     />
                 )}
                 {sportMode === 'running' && (
@@ -1659,50 +1721,81 @@ function SessionContent() {
                     </div>
                 </div>
             )}
+            {/* Video Trimmer Modal */}
+            {
+                isVideoTrimming && trimmerVideoUrl && (
+                    <div className="fixed inset-0 z-[500] bg-black/98 flex items-center justify-center p-4 backdrop-blur-xl overflow-y-auto">
+                        <div className="bg-[#111] border border-white/10 w-full max-w-md rounded-[40px] p-6 md:p-10 shadow-2xl relative my-auto">
+                            <button
+                                onClick={() => { setIsVideoTrimming(false); setTrimmerVideoUrl(null); }}
+                                className="absolute top-6 right-6 text-gray-400 hover:text-white bg-white/5 p-2 rounded-full transition-colors"
+                            >
+                                <X className="w-5 h-5 md:w-6 md:h-6" />
+                            </button>
 
-            {/* Video Editor Component */}
-            {isVideoTrimming && trimmerVideoUrl && videoToEdit && (
-                <VideoEditor
-                    videoSrc={trimmerVideoUrl}
-                    videoFile={videoToEdit}
-                    onCancel={() => {
-                        setIsVideoTrimming(false);
-                        setTrimmerVideoUrl(null);
-                        setVideoToEdit(null);
-                        if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                    onSave={(file, duration) => {
-                        startUpload(file);
-                        setIsVideoTrimming(false);
-                        setTrimmerVideoUrl(null);
-                        setVideoToEdit(null);
-                    }}
-                />
-            )}
+                            <div className="mb-6 md:mb-8 text-center px-4">
+                                <h3 className="text-xl md:text-2xl font-black text-white italic uppercase tracking-tighter">Recortar Video</h3>
+                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Tu video dura {Math.round(videoDuration)}s - Recorta a máximo 60s</p>
+                            </div>
 
-            <SyncWatchModal isOpen={showSyncModal} onClose={() => setShowSyncModal(false)} />
+                            <div className="relative aspect-square bg-black rounded-3xl overflow-hidden border border-white/10 mb-6 md:mb-8 shadow-inner">
+                                <video
+                                    ref={trimmerVideoRef}
+                                    src={trimmerVideoUrl}
+                                    className="w-full h-full object-contain"
+                                    loop
+                                    muted
+                                    playsInline
+                                />
+                            </div>
 
-            {showFinishModal && (
-                <FinishModal
-                    onConfirm={handleFinish}
-                    onCancel={() => setShowFinishModal(false)}
-                    shareToArena={shareToArena}
-                    setShareToArena={setShareToArena}
-                    shareToStory={shareToStory}
-                    setShareToStory={setShareToStory}
-                    isSaving={isSaving}
-                    imageUrl={imageUrl}
-                    setImageUrl={setImageUrl}
-                    mediaType={mediaType}
-                    isUploading={isUploading}
-                    onImageUpload={handleImageUpload}
-                    fileInputRef={fileInputRef}
-                    workoutTitle={workoutTitle || "Sesión de Entrenamiento"}
-                    rpe={rpe}
-                    setRpe={setRpe}
-                />
-            )}
+                            <div className="space-y-6">
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-end px-1">
+                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em]">Punto de inicio</label>
+                                        <span className="text-xl font-black text-brand-red italic tracking-tighter">{Math.floor(trimStart)}s</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max={Math.max(0, videoDuration - 60)}
+                                        step="0.5"
+                                        value={trimStart}
+                                        onChange={(e) => {
+                                            const val = parseFloat(e.target.value);
+                                            setTrimStart(val);
+                                            if (trimmerVideoRef.current) trimmerVideoRef.current.currentTime = val;
+                                        }}
+                                        className="w-full accent-brand-red h-1.5 bg-white/10 rounded-full appearance-none cursor-pointer"
+                                    />
+                                    <div className="flex justify-between text-[8px] font-bold text-gray-600 uppercase tracking-widest px-1">
+                                        <span>Inicio</span>
+                                        <span>Fin - 60s</span>
+                                    </div>
+                                </div>
 
+                                <button
+                                    onClick={processTrimming}
+                                    disabled={isTrimmingLoading}
+                                    className="w-full bg-brand-red text-white py-4 md:py-5 rounded-2xl font-black uppercase tracking-widest text-xs md:text-sm shadow-glow transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 relative overflow-hidden"
+                                >
+                                    {isTrimmingLoading ? (
+                                        <>
+                                            <div className="absolute inset-0 bg-white/10" style={{ width: `${trimProgress}%`, transition: 'width 0.3s ease' }} />
+                                            <div className="flex items-center gap-3 relative z-10">
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                                Procesando {Math.round(trimProgress)}%
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <><Activity className="w-4 h-4 md:w-5 md:h-5" /> Confirmar Recorte</>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
         </div >
     );
 }
@@ -1710,60 +1803,19 @@ function SessionContent() {
 const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
     gym: {
         upper: [
-            {
-                id: 'gym-upper-1',
-                title: 'Día 1: Enfoque Superior',
-                sport: 'gym',
-                difficulty: 'intermediate',
-                duration_min: 55,
-                is_premium: false,
-                description: 'Enfoque en pecho, espalda y hombros con carga progresiva.',
-                exercises: [
-                    { name: 'Press de Banca', target: '4 series x 8-10 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=rT7DgCr-3pg', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }, { order: 4, reps: 10, weight: 0, completed: false }] },
-                    { name: 'Dominadas (o Lat Pulldown)', target: '3 series x 8-12 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=eGo4IYlbE5g', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }] },
-                    { name: 'Press Militar (Mancuernas)', target: '3 series x 10 reps', note: '60', video_url: 'https://www.youtube.com/watch?v=2yjwxtZ4f6s', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }] },
-                    { name: 'Remo con Barra', target: '3 series x 10 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=6PkaVn-r_Sg', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }] },
-                    { name: 'Elevaciones Laterales', target: '3 series x 15 reps', note: '45', video_url: 'https://www.youtube.com/watch?v=PzsOxWzOkYI', sets: [{ order: 1, reps: 15, weight: 0, completed: false }, { order: 2, reps: 15, weight: 0, completed: false }, { order: 3, reps: 15, weight: 0, completed: false }] }
-                ]
-            }
+            { id: 'g-u-1', title: 'Torso Fuerza', sport: 'gym', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Tracciones y empujes pesados.', exercises: [{ name: 'Bench Press', sets: [{ reps: 8, weight: 60 }] }] },
+            { id: 'g-u-2', title: 'Upper Body Pump', sport: 'gym', difficulty: 'beginner', duration_min: 35, is_premium: false, description: 'Congestión muscular rápida.', exercises: [{ name: 'Push Ups', sets: [{ reps: 15 }] }] },
+            { id: 'g-u-3', title: 'Hombros de Acero', sport: 'gym', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Enfoque en deltoides y trapecio.', exercises: [{ name: 'Military Press', sets: [{ reps: 6 }] }] }
         ],
         lower: [
-            {
-                id: 'gym-lower-1',
-                title: 'Tren Inferior: Potencia de Piernas',
-                sport: 'gym',
-                difficulty: 'intermediate',
-                duration_min: 60,
-                is_premium: false,
-                description: 'Sentadilla y básicos para construir una base sólida de piernas.',
-                exercises: [
-                    { name: 'Sentadilla con Barra', target: '4 series x 10 reps', note: '120', video_url: 'https://www.youtube.com/watch?v=MVMh0HiJCXQ', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }, { order: 4, reps: 10, weight: 0, completed: false }] },
-                    { name: 'Peso Muerto Rumano', target: '4 series x 10 reps', note: '120', video_url: 'https://www.youtube.com/watch?v=JCXUYuzwNrM', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }, { order: 4, reps: 10, weight: 0, completed: false }] },
-                    { name: 'Prensa de Piernas', target: '3 series x 12 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=IZxyjW7MPJQ', sets: [{ order: 1, reps: 12, weight: 0, completed: false }, { order: 2, reps: 12, weight: 0, completed: false }, { order: 3, reps: 12, weight: 0, completed: false }] },
-                    { name: 'Curl Femoral', target: '3 series x 12 reps', note: '60', video_url: 'https://www.youtube.com/watch?v=OrxowZ4GTts', sets: [{ order: 1, reps: 12, weight: 0, completed: false }, { order: 2, reps: 12, weight: 0, completed: false }, { order: 3, reps: 12, weight: 0, completed: false }] },
-                    { name: 'Extensiones de Cuádriceps', target: '3 series x 15 reps', note: '60', video_url: 'https://www.youtube.com/watch?v=YyvSfVjQeL0', sets: [{ order: 1, reps: 15, weight: 0, completed: false }, { order: 2, reps: 15, weight: 0, completed: false }, { order: 3, reps: 15, weight: 0, completed: false }] },
-                    { name: 'Elevación de Talones', target: '4 series x 15 reps', note: '60', video_url: 'https://www.youtube.com/watch?v=YMmgqO8Jo-k', sets: [{ order: 1, reps: 15, weight: 0, completed: false }, { order: 2, reps: 15, weight: 0, completed: false }, { order: 3, reps: 15, weight: 0, completed: false }, { order: 4, reps: 15, weight: 0, completed: false }] }
-                ]
-            }
+            { id: 'g-l-1', title: 'Pierna Potencia', sport: 'gym', difficulty: 'elite', duration_min: 60, is_premium: false, description: 'Sentadillas y peso muerto.', exercises: [{ name: 'Squat', sets: [{ reps: 5 }] }] },
+            { id: 'g-l-2', title: 'Glúteo & Isquios', sport: 'gym', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Aislamiento de cadena posterior.', exercises: [{ name: 'Hip Thrust', sets: [{ reps: 10 }] }] },
+            { id: 'g-l-3', title: 'Cuádriceps Blast', sport: 'gym', difficulty: 'intermediate', duration_min: 40, is_premium: true, description: 'Volumen alto en cuádriceps.', exercises: [{ name: 'Leg Press', sets: [{ reps: 12 }] }] }
         ],
         full: [
-            {
-                id: 'gym-full-1',
-                title: 'Full Body: Fuerza General',
-                sport: 'gym',
-                difficulty: 'intermediate',
-                duration_min: 50,
-                is_premium: false,
-                description: 'Cuerpo completo en una sola sesión para máxima eficiencia.',
-                exercises: [
-                    { name: 'Sentadilla Goblet', target: '3 series x 12 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=MVMh0HiJCXQ', sets: [{ order: 1, reps: 12, weight: 0, completed: false }, { order: 2, reps: 12, weight: 0, completed: false }, { order: 3, reps: 12, weight: 0, completed: false }] },
-                    { name: 'Press de Banca', target: '3 series x 10 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=rT7DgCr-3pg', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }] },
-                    { name: 'Remo con Mancuerna', target: '3 series x 12 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=pYcpY20QaE8', sets: [{ order: 1, reps: 12, weight: 0, completed: false }, { order: 2, reps: 12, weight: 0, completed: false }, { order: 3, reps: 12, weight: 0, completed: false }] },
-                    { name: 'Hip Thrust Mancuerna', target: '3 series x 12 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=SEdqd1n0cvg', sets: [{ order: 1, reps: 12, weight: 0, completed: false }, { order: 2, reps: 12, weight: 0, completed: false }, { order: 3, reps: 12, weight: 0, completed: false }] },
-                    { name: 'Press de Hombros', target: '3 series x 12 reps', note: '75', video_url: 'https://www.youtube.com/watch?v=qEwKCR5JCog', sets: [{ order: 1, reps: 12, weight: 0, completed: false }, { order: 2, reps: 12, weight: 0, completed: false }, { order: 3, reps: 12, weight: 0, completed: false }] },
-                    { name: 'Plancha Abdominal', target: '3 series x 45 seg', note: '60', video_url: 'https://www.youtube.com/watch?v=Xyd_fa5zoEU', sets: [{ order: 1, reps: 45, weight: 0, completed: false }, { order: 2, reps: 45, weight: 0, completed: false }, { order: 3, reps: 45, weight: 0, completed: false }] }
-                ]
-            }
+            { id: 'g-f-1', title: 'Full Body Classics', sport: 'gym', difficulty: 'beginner', duration_min: 45, is_premium: false, description: 'Cuerpo completo balanceado.', exercises: [{ name: 'Goblet Squat', sets: [{ reps: 12 }] }] },
+            { id: 'g-f-2', title: 'Athlete Metabolic', sport: 'gym', difficulty: 'intermediate', duration_min: 50, is_premium: false, description: 'Entrenamiento funcional híbrido.', exercises: [{ name: 'Cleans', sets: [{ reps: 8 }] }] },
+            { id: 'g-f-3', title: 'Total Body Strength', sport: 'gym', difficulty: 'elite', duration_min: 55, is_premium: true, description: 'Fuerza absoluta multiarticular.', exercises: [{ name: 'Front Squat', sets: [{ reps: 5 }] }] }
         ]
     },
     running: {
@@ -1785,231 +1837,36 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
     },
     cross_training: {
         endurance: [
-            {
-                id: 'c-e-1',
-                title: 'Engine Builder (Acondicionamiento)',
-                sport: 'cross_training',
-                difficulty: 'intermediate',
-                duration_min: 35,
-                is_premium: false,
-                description: 'Enfocado en capacidad aeróbica y resistencia sostenida.',
-                blocks: [
-                    { title: "CALENTAMIENTO: 1000m REMO", type: "other", exercises: [{ name: "Remo", target: "1000m Suave", sets: [{ order: 1, reps: 0, weight: 1000, unit: 'm' }] }] },
-                    {
-                        title: "BLOQUE A: AMRAP 20",
-                        type: "amrap",
-                        duration: 20,
-                        exercises: [
-                            { name: "Carrera 400m", target: "Ritmo Z3", sets: [{ order: 1, reps: 1, weight: 400, unit: 'm' }] },
-                            { name: "KB Swings", target: "20 reps (24/16kg)", sets: [{ order: 1, reps: 20, weight: 24 }] },
-                            { name: "Box Jumps", target: "15 reps (24/20\")", sets: [{ order: 1, reps: 15, weight: 0 }] }
-                        ]
-                    },
-                    {
-                        title: "OPCIONES DE ESCALADO",
-                        type: "scaling",
-                        exercises: [{ name: "AV: 24kg / 24\"\nINT: 20kg / 20\"\nESC: 16kg / Step ups", target: "Selecciona tu carga", sets: [] }]
-                    }
-                ],
-                exercises: []
-            },
-            {
-                id: 'c-e-2',
-                title: 'Remo y Burpees Largo',
-                sport: 'cross_training',
-                difficulty: 'elite',
-                duration_min: 30,
-                is_premium: true,
-                description: 'Acondicionamiento metabólico de alta intensidad.',
-                exercises: [],
-                blocks: [
-                    {
-                        title: "SECUENCIA POR TIEMPO",
-                        type: "fortime",
-                        exercises: [
-                            { name: "Remo", target: "2000m", sets: [{ order: 1, reps: 0, weight: 2000, unit: 'm' }] },
-                            { name: "Burpees sobre Remo", target: "50 reps", sets: [{ order: 1, reps: 50, weight: 0 }] }
-                        ]
-                    },
-                    {
-                        title: "ESCALADO",
-                        type: "scaling",
-                        exercises: [{ name: "AV: 2000m\nINT: 1500m\nESC: 1000m", target: "N/A", sets: [] }]
-                    }
-                ]
-            }
+            { id: 'c-e-1', title: 'Engine Builder (AMRAP 20)', sport: 'cross_training', difficulty: 'intermediate', duration_min: 20, is_premium: false, description: 'AMRAP 20: 400m Run, 20 KB Swings, 15 Box Jumps.', exercises: [{ name: 'Run 400m', sets: [{ reps: 1 }] }, { name: 'KB Swings', sets: [{ reps: 20 }] }, { name: 'Box Jumps', sets: [{ reps: 15 }] }] },
+            { id: 'c-e-2', title: 'Row & Burpee Long (For Time)', sport: 'cross_training', difficulty: 'elite', duration_min: 30, is_premium: true, description: 'For Time: 2000m Row + 50 Burpees over Row.', exercises: [{ name: 'Row', sets: [{ reps: 1, weight: 2000 }] }, { name: 'Burpees over Row', sets: [{ reps: 50 }] }] },
+            { id: 'c-e-3', title: 'Turbo EMOM (40 min)', sport: 'cross_training', difficulty: 'elite', duration_min: 40, is_premium: true, description: 'EMOM 40: Min 1: 15 Cal Row, Min 2: 15 Cal Ski, Min 3: 15 Cal Bike, Min 4: Rest.', exercises: [{ name: 'Row Cal', sets: [{ reps: 15 }] }, { name: 'Ski Cal', sets: [{ reps: 15 }] }, { name: 'Bike Cal', sets: [{ reps: 15 }] }] }
         ],
         gymnastics: [
-            {
-                id: 'c-g-1',
-                title: 'Cindy Avanzado',
-                sport: 'cross_training',
-                difficulty: 'intermediate',
-                duration_min: 20,
-                is_premium: false,
-                description: 'El clásico Cindy con bloques estructurados.',
-                exercises: [],
-                blocks: [
-                    {
-                        title: "AMRAP 20: CINDY",
-                        type: "amrap",
-                        duration: 20,
-                        exercises: [
-                            { name: 'Dominadas', target: "5 reps", sets: [{ order: 1, reps: 5, weight: 0 }] },
-                            { name: 'Flexiones', target: "10 reps", sets: [{ order: 1, reps: 10, weight: 0 }] },
-                            { name: 'Sentadillas', target: "15 reps", sets: [{ order: 1, reps: 15, weight: 0 }] }
-                        ]
-                    },
-                    {
-                        title: "NIVELES DE ESCALADO",
-                        type: "scaling",
-                        exercises: [{ name: "AV: Dominadas / Flexiones / Sentadillas\nINT: Ring Rows / Flexiones de rodillas / Sentadillas\nESC: Remos asistidos / Flexiones en pared / Sentadillas a cajón", target: "Adapta los movimientos básicos", sets: [] }]
-                    }
-                ]
-            },
-            {
-                id: 'c-g-3',
-                title: 'Muscle Up Flow',
-                sport: 'cross_training',
-                difficulty: 'elite',
-                duration_min: 20,
-                is_premium: true,
-                description: 'Elite gymnastics flow for power and skill.',
-                exercises: [],
-                blocks: [
-                    {
-                        title: "BLOQUE A: EMOM 12'",
-                        type: "emom",
-                        duration: 12,
-                        exercises: [
-                            { name: 'Muscle Ups', target: "3-5 reps (RIR 2)", sets: [] },
-                            { name: 'Double Unders', target: "30-50 reps", sets: [] }
-                        ]
-                    },
-                    { title: "4' DESCANSO", type: "rest", exercises: [], duration: 4 },
-                    {
-                        title: "BLOQUE B: AMRAP 5'",
-                        type: "amrap",
-                        duration: 5,
-                        exercises: [{ name: 'Hollow Rocks', target: "Máximas Reps", sets: [] }]
-                    },
-                    {
-                        title: "ESCALADO",
-                        type: "scaling",
-                        exercises: [
-                            { name: "AV: Muscle Ups / Double Unders\nINT: Dominadas al pecho / Saltos Simples\nESC: Dominadas asistidas / Saltos Simples", target: "Nivel de habilidad", sets: [] }
-                        ]
-                    }
-                ],
-                exercises: []
-            }
+            { id: 'c-g-1', title: 'Cindy (AMRAP 20)', sport: 'cross_training', difficulty: 'intermediate', duration_min: 20, is_premium: false, description: 'Clásico: 5 Pull-ups, 10 Push-ups, 15 Air Squats.', exercises: [{ name: 'Pull-ups', sets: [{ reps: 5 }] }, { name: 'Push-ups', sets: [{ reps: 10 }] }, { name: 'Air Squats', sets: [{ reps: 15 }] }] },
+            { id: 'c-g-2', title: 'Strict Skill EMOM', sport: 'cross_training', difficulty: 'elite', duration_min: 15, is_premium: false, description: 'EMOM 12: Min 1: 5 HSPU, Min 2: 8 C2B, Min 3: 10 Pistol Squats.', exercises: [{ name: 'HSPU', sets: [{ reps: 5 }] }, { name: 'C2B Pull-ups', sets: [{ reps: 8 }] }, { name: 'Pistol Squats', sets: [{ reps: 10 }] }] },
+            { id: 'c-g-3', title: 'Muscle Up Flow', sport: 'cross_training', difficulty: 'elite', duration_min: 20, is_premium: true, description: '3 Rounds: 10 Muscle Ups + 30 Double Unders + 20 Hollow Rocks.', exercises: [{ name: 'Muscle Ups', sets: [{ reps: 10 }] }, { name: 'Double Unders', sets: [{ reps: 30 }] }, { name: 'Hollow Rocks', sets: [{ reps: 20 }] }] }
         ],
         halterofilia: [
-            {
-                id: 'c-h-1',
-                title: 'Técnica: RIVAL Snatch Path',
-                sport: 'cross_training',
-                difficulty: 'intermediate',
-                duration_min: 45,
-                is_premium: false,
-                description: 'Enfocado en la técnica de Arrancada y fuerza de tracción.',
-                blocks: [
-                    { title: "CALENTAMIENTO: MOVILIDAD", type: "other", exercises: [{ name: "Pasada de hombros", target: "15 reps", sets: [] }, { name: "Sentadilla Overhead", target: "10 reps (palo)", sets: [] }] },
-                    {
-                        title: "BLOQUE A: SNATCH TECHNIQUE",
-                        type: "other",
-                        exercises: [
-                            { name: "3 Snatch Pull + 1 Snatch", target: "5 series (Carga moderada)", sets: [{ order: 1, weight: 40, reps: 4 }] },
-                            { name: "Snatch de fuerza", target: "3 series x 5 reps", sets: [{ order: 1, weight: 30, reps: 5 }] }
-                        ]
-                    },
-                    {
-                        title: "ESCALADO",
-                        type: "scaling",
-                        exercises: [{ name: "AV: 50kg / Snatch\nINT: 40kg / Snatch\nESC: 30kg / Power Snatch", target: "Técnica", sets: [] }]
-                    }
-                ],
-                exercises: []
-            },
-            {
-                id: 'c-h-2',
-                title: 'Potencia: Clean & Jerk Force',
-                sport: 'cross_training',
-                difficulty: 'elite',
-                duration_min: 50,
-                is_premium: true,
-                description: 'Fuerza explosiva en Dos Tiempos y accesorios de empuje.',
-                exercises: [],
-                blocks: [
-                    { title: "WARMUP", type: "other", exercises: [{ name: "Front Squats", target: "3 x 5 (Vacío)", sets: [] }] },
-                    {
-                        title: "BLOQUE A: CLEAN & JERK",
-                        type: "other",
-                        exercises: [
-                            { name: "1 Clean + 2 Jerks", target: "6 series @ 75%", sets: [{ order: 1, weight: 60, reps: 3 }] }
-                        ]
-                    }
-                ]
-            }
+            { id: 'c-h-1', title: 'Grace (For Time)', sport: 'cross_training', difficulty: 'intermediate', duration_min: 10, is_premium: false, description: 'CrossFit Hero: 30 Clean & Jerks (60/40kg) por tiempo.', exercises: [{ name: 'Clean & Jerk', sets: [{ reps: 30, weight: 60 }] }] },
+            { id: 'c-h-2', title: 'Snatch Technique & Strength', sport: 'cross_training', difficulty: 'elite', duration_min: 30, is_premium: false, description: '5 sets of: 2 Power Snatch + 1 Squat Snatch + 2 Overhead Squat.', exercises: [{ name: 'Snatch Complex', sets: [{ reps: 5 }] }] },
+            { id: 'c-h-3', title: 'Hero WOD: DT', sport: 'cross_training', difficulty: 'elite', duration_min: 20, is_premium: true, description: '5 Rounds: 12 Deadlifts, 9 Hang Power Cleans, 6 Push Jerks (70/45kg).', exercises: [{ name: 'Deadlift', sets: [{ reps: 12, weight: 70 }] }, { name: 'Hang Power Clean', sets: [{ reps: 9, weight: 70 }] }, { name: 'Push Jerk', sets: [{ reps: 6, weight: 70 }] }] }
         ]
     },
     hybrid: {
         'run-focus': [
-            {
-                id: 'h-r-1',
-                title: 'RIVAL Race Simulation',
-                sport: 'hybrid',
-                difficulty: 'intermediate',
-                duration_min: 50,
-                is_premium: false,
-                description: 'Hybrid race simulations.',
-                exercises: [],
-                blocks: [
-                    { title: "RUN 1KM", type: "other", exercises: [{ name: "Run", target: "1km", sets: [{ order: 1, reps: 1, weight: 1000, unit: 'm' }] }] },
-                    {
-                        title: "STATION 1",
-                        type: "fortime",
-                        exercises: [{ name: "Burpees", target: "30 reps", sets: [{ order: 1, reps: 30, weight: 0 }] }]
-                    },
-                    { title: "RUN 1KM", type: "other", exercises: [{ name: "Run", target: "1km", sets: [{ order: 1, reps: 1, weight: 1000, unit: 'm' }] }] },
-                    {
-                        title: "STATION 2",
-                        type: "fortime",
-                        exercises: [{ name: "Air Squats", target: "50 reps", sets: [{ order: 1, reps: 50, weight: 0 }] }]
-                    },
-                    {
-                        title: "ESCALADO",
-                        type: "scaling",
-                        exercises: [{ name: "AV: Burpees / Air Squats\nINT: 20 Burpees / 40 Sentadillas\nESC: 15 Burpees / 30 Sentadillas", target: "Ajuste de volumen", sets: [] }]
-                    }
-                ]
-            }
+            { id: 'h-r-1', title: 'Interv. Híbridos', sport: 'hybrid', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Carrera intercalada con ejercicios funcionales de alta repetición.', exercises: [{ name: 'Run 1km', sets: [{ reps: 1 }] }, { name: 'Burpees', sets: [{ reps: 30 }] }, { name: 'Run 1km', sets: [{ reps: 1 }] }, { name: 'Air Squats', sets: [{ reps: 50 }] }] },
+            { id: 'h-r-2', title: 'RIVAL Race Pace', sport: 'hybrid', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Ritmo de competición. Burpees, zancadas y carrera rápida.', exercises: [{ name: 'Run 2km', sets: [{ reps: 1 }] }, { name: 'Burpees', sets: [{ reps: 80 }] }, { name: 'Lunges', sets: [{ reps: 100 }] }] },
+            { id: 'h-r-3', title: 'Tempo Híbrido', sport: 'hybrid', difficulty: 'intermediate', duration_min: 40, is_premium: false, description: 'Zonas de potencia sostenida en remo y carrera.', exercises: [{ name: 'Row 500m', sets: [{ reps: 4 }] }, { name: 'Run 1km', sets: [{ reps: 3 }] }] }
         ],
         'strength-focus': [
-            {
-                id: 'h-s-1',
-                title: 'Hybrid Power Burner',
-                sport: 'hybrid',
-                difficulty: 'elite',
-                duration_min: 60,
-                is_premium: true,
-                description: 'Heavy carries and sled work combined with high intensity intervals.',
-                exercises: [],
-                blocks: [
-                    {
-                        title: "BLOCK 1: STRENGTH",
-                        type: "other",
-                        exercises: [{ name: "Sled Push", target: "50m Heavy", sets: [{ order: 1, weight: 50, reps: 1, unit: 'm', measure: 'distance' }] }, { name: "Farmer Carry", target: "100m", sets: [{ order: 1, weight: 100, reps: 1, unit: 'm', measure: 'distance' }] }]
-                    },
-                    { title: "3' REST", type: "rest", exercises: [], duration: 3 },
-                    {
-                        title: "BLOCK 2: ENGINE",
-                        type: "emom",
-                        duration: 15,
-                        exercises: [{ name: "Run 200m", target: "Sprint", sets: [{ order: 1, weight: 200, reps: 1, unit: 'm', measure: 'distance' }] }, { name: "Burpees", target: "10 reps", sets: [{ order: 1, weight: 0, reps: 10, unit: 'kg', measure: 'reps' }] }]
-                    }
-                ]
-            }
+            { id: 'h-s-1', title: 'Strongman Cardio', sport: 'hybrid', difficulty: 'elite', duration_min: 55, is_premium: false, description: 'Sleds, Farmer Carries y empuje de potencia.', exercises: [{ name: 'Sled Push 50m', sets: [{ reps: 4 }] }, { name: 'Farmer Carry 100m', sets: [{ reps: 4 }] }, { name: 'Run 400m', sets: [{ reps: 4 }] }] },
+            { id: 'h-s-2', title: 'Burpee Broad Jump Flow', sport: 'hybrid', difficulty: 'intermediate', duration_min: 40, is_premium: false, description: 'Saltos de longitud combinados con resistencia muscular.', exercises: [{ name: 'Burpee Broad Jumps', sets: [{ reps: 100 }] }, { name: 'Run 800m', sets: [{ reps: 2 }] }] },
+            { id: 'h-s-3', title: 'Sandbag Carry Blast', sport: 'hybrid', difficulty: 'elite', duration_min: 45, is_premium: true, description: 'Cargas inestables para estabilidad central y potencia.', exercises: [{ name: 'Sandbag Carry 200m', sets: [{ reps: 3 }] }, { name: 'Sandbag Lunges', sets: [{ reps: 50 }] }, { name: 'Run 1km', sets: [{ reps: 1 }] }] }
+        ],
+        race: [
+            { id: 'h-ra-1', title: 'HYROX Full Sim', sport: 'hybrid', difficulty: 'elite', duration_min: 75, is_premium: true, description: 'Simulación completa: Ski Erg, Sleds y Burpee Broad Jumps.', exercises: [{ name: 'Ski Erg 1000m', sets: [{ reps: 1 }] }, { name: 'Sled Push 50m', sets: [{ reps: 2 }] }, { name: 'Sled Pull 50m', sets: [{ reps: 2 }] }, { name: 'Burpee Broad Jumps 80m', sets: [{ reps: 1 }] }] },
+            { id: 'h-ra-2', title: 'Deka Strong Prep', sport: 'hybrid', difficulty: 'intermediate', duration_min: 30, is_premium: false, description: 'Estaciones de alta intensidad para Deka Fit/Strong.', exercises: [{ name: 'Lunges', sets: [{ reps: 100 }] }, { name: 'Row 500m', sets: [{ reps: 1 }] }, { name: 'Box Jumps', sets: [{ reps: 30 }] }] },
+            { id: 'h-ra-3', title: 'Hybrid Power Trail', sport: 'hybrid', difficulty: 'elite', duration_min: 60, is_premium: true, description: 'Carrera por montaña combinada con ejercicios funcionales pesados.', exercises: [{ name: 'Mountain Run 2km', sets: [{ reps: 1 }] }, { name: 'Step Ups', sets: [{ reps: 50 }] }, { name: 'Sandbag Carry', sets: [{ reps: 1 }] }] }
         ]
     },
     ocr: {
@@ -2031,14 +1888,19 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
     },
     calisthenics: {
         upper: [
-            { id: 'c-u-1', title: 'Handstand mastery & Push', sport: 'calisthenics', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Control de pino y fuerza de empuje básica.', exercises: [{ name: 'Handstand Hold', target: '4 series x 30 seg', note: '60', video_url: 'https://www.youtube.com/watch?v=3uIpsm5L-iU', sets: [{ order: 1, reps: 30, weight: 0, completed: false }, { order: 2, reps: 30, weight: 0, completed: false }, { order: 3, reps: 30, weight: 0, completed: false }, { order: 4, reps: 30, weight: 0, completed: false }] }, { name: 'Pike Push Ups', target: '3 series x 8-10 reps', note: '90', video_url: 'https://www.youtube.com/watch?v=npP9Z6vW4sc', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }] }] },
-            { id: 'c-u-2', title: 'Planche Path - Static Force', sport: 'calisthenics', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Fuerza isométrica de empuje para Planche.', exercises: [{ name: 'Planche Lean', target: '5 series x 15 seg', note: '60', video_url: 'https://www.youtube.com/watch?v=LlvX7zYg3U0', sets: [{ order: 1, reps: 15, weight: 0, completed: false }, { order: 2, reps: 15, weight: 0, completed: false }, { order: 3, reps: 15, weight: 0, completed: false }, { order: 4, reps: 15, weight: 0, completed: false }, { order: 5, reps: 15, weight: 0, completed: false }] }] }
+            { id: 'c-u-1', title: 'Handstand Mastery', sport: 'calisthenics', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Control de pino.', exercises: [{ name: 'Handstand Hold', sets: [{ reps: 3 }] }] },
+            { id: 'c-u-2', title: 'Planche Progress', sport: 'calisthenics', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Fuerza de empuje.', exercises: [{ name: 'Planche Lean', sets: [{ reps: 5 }] }] },
+            { id: 'c-u-3', title: 'Dips & Push Ups', sport: 'calisthenics', difficulty: 'beginner', duration_min: 35, is_premium: false, description: 'Base de empuje.', exercises: [{ name: 'Dips', sets: [{ reps: 15 }] }] }
         ],
         lower: [
-            { id: 'c-l-1', title: 'Pistol Foundation', sport: 'calisthenics', difficulty: 'intermediate', duration_min: 40, is_premium: false, description: 'Sentadilla a una pierna y movilidad.', exercises: [{ name: 'Pistol Squat', target: '4 series x 5 reps/lado', note: '90', video_url: 'https://www.youtube.com/watch?v=mD9iKInN0U0', sets: [{ order: 1, reps: 10, weight: 0, completed: false }, { order: 2, reps: 10, weight: 0, completed: false }, { order: 3, reps: 10, weight: 0, completed: false }, { order: 4, reps: 10, weight: 0, completed: false }] }] }
+            { id: 'c-l-1', title: 'Pistol Foundation', sport: 'calisthenics', difficulty: 'intermediate', duration_min: 40, is_premium: false, description: 'Sentadilla a una pierna.', exercises: [{ name: 'Pistol Squat', sets: [{ reps: 5 }] }] },
+            { id: 'c-l-2', title: 'Explosive Body', sport: 'calisthenics', difficulty: 'elite', duration_min: 35, is_premium: true, description: 'Saltos de potencia.', exercises: [{ name: 'Box Jumps', sets: [{ reps: 12 }] }] },
+            { id: 'c-l-3', title: 'Bodyweight Legs', sport: 'calisthenics', difficulty: 'beginner', duration_min: 45, is_premium: false, description: 'Zancadas y saltos.', exercises: [{ name: 'Lunges', sets: [{ reps: 40 }] }] }
         ],
         pull: [
-            { id: 'c-p-1', title: 'Muscle Up Explosive Path', sport: 'calisthenics', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Tracción explosiva para el Muscle Up.', exercises: [{ name: 'High Pull Ups', target: '5 series x 5 reps', note: '120', video_url: 'https://www.youtube.com/watch?v=ykKpxuI1Snc', sets: [{ order: 1, reps: 5, weight: 0, completed: false }, { order: 2, reps: 5, weight: 0, completed: false }, { order: 3, reps: 5, weight: 0, completed: false }, { order: 4, reps: 5, weight: 0, completed: false }, { order: 5, reps: 5, weight: 0, completed: false }] }] }
+            { id: 'c-p-1', title: 'Muscle Up Prep', sport: 'calisthenics', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Tracción explosiva.', exercises: [{ name: 'Muscle Ups', sets: [{ reps: 5 }] }] },
+            { id: 'c-p-2', title: 'Front Lever Path', sport: 'calisthenics', difficulty: 'elite', duration_min: 45, is_premium: false, description: 'Fuerza isométrica.', exercises: [{ name: 'Tuck Lever', sets: [{ reps: 3 }] }] },
+            { id: 'c-p-3', title: 'Back Lever Basics', sport: 'calisthenics', difficulty: 'intermediate', duration_min: 40, is_premium: false, description: 'Control de suspensión.', exercises: [{ name: 'Skin the Cat', sets: [{ reps: 5 }] }] }
         ]
     },
     other: {
@@ -2092,7 +1954,7 @@ function SportSelector({ onSelect, onPlanSelect, guidedCount, userTier }: { onSe
             recs = [sportPool[activeFocus][rotationIdx]];
         } else {
             // General Fallback
-            recs = await getAiRecommendation(selectedSport, userTier as any, activeFocus as string);
+            recs = await getAiRecommendation(selectedSport, 'premium');
         }
 
         setRecommendations(recs);
@@ -2227,22 +2089,7 @@ function SportSelector({ onSelect, onPlanSelect, guidedCount, userTier }: { onSe
                         return currentOptions.map((opt: { id: string, title: string, desc: string, icon: React.ReactNode }) => (
                             <button
                                 key={opt.id}
-                                onClick={() => {
-                                    if (selectedSport === 'gym' || selectedSport === 'calisthenics') {
-                                        // Directly start for Gym/Cali to avoid extra steps
-                                        const rotationIdx = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % (WORKOUT_POOL[selectedSport as string]?.[opt.id]?.length || 1);
-                                        const plan = WORKOUT_POOL[selectedSport as string]?.[opt.id]?.[rotationIdx];
-                                        if (plan) {
-                                            startPlan(plan);
-                                        } else {
-                                            setSelectedFocus(opt.id);
-                                            fetchRecommendations(opt.id);
-                                        }
-                                    } else {
-                                        setSelectedFocus(opt.id);
-                                        fetchRecommendations(opt.id);
-                                    }
-                                }}
+                                onClick={() => { setSelectedFocus(opt.id); fetchRecommendations(opt.id); }}
                                 className={clsx(
                                     "w-full p-6 rounded-3xl bg-card border border-border hover:bg-muted transition-all text-left flex items-center justify-between group",
                                     selectedSport === 'running' ? "hover:border-blue-500" :
@@ -2317,12 +2164,8 @@ function SportSelector({ onSelect, onPlanSelect, guidedCount, userTier }: { onSe
                                     )}
                                     <h3 className={clsx("text-2xl font-heading font-black italic uppercase mb-2", theme === 'dark' ? "text-white" : "text-black")}>{plan.title}</h3>
                                     <div className="flex gap-4 mb-6">
-                                        <span className={clsx("text-[10px] font-bold uppercase px-2 py-1 rounded", theme === 'dark' ? "text-gray-500 bg-white/5" : "text-gray-600 bg-gray-100")}>
-                                            {plan.difficulty === 'intermediate' ? 'Intermedio' :
-                                                plan.difficulty === 'elite' ? 'Élite' :
-                                                    plan.difficulty === 'beginner' ? 'Principiante' : plan.difficulty}
-                                        </span>
-                                        <span className={clsx("text-[10px] font-bold uppercase px-2 py-1 rounded", theme === 'dark' ? "text-gray-500 bg-white/5" : "text-gray-600 bg-gray-100")}>{plan.duration_min} MIN</span>
+                                        <span className={clsx("text-[10px] font-bold uppercase px-2 py-1 rounded", theme === 'dark' ? "text-gray-500 bg-white/5" : "text-gray-600 bg-gray-100")}>{plan.difficulty}</span>
+                                        <span className={clsx("text-[10px] font-bold uppercase px-2 py-1 rounded", theme === 'dark' ? "text-gray-500 bg-white/5" : "text-gray-600 bg-gray-100")}>{plan.duration_min} min</span>
                                     </div>
                                     <p className={clsx("text-sm mb-8 leading-relaxed", theme === 'dark' ? "text-gray-400" : "text-gray-600")}>{plan.description}</p>
                                     <button onClick={() => startPlan(plan)} className={clsx("w-full py-4 rounded-xl font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg", theme === 'dark' ? "bg-white text-black" : "bg-brand-red text-white")}>
@@ -2673,63 +2516,47 @@ function RunningView({
 
 function SyncWatchModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
     const { theme } = useTheme();
-    const [connectingProvider, setConnectingProvider] = useState<string | null>(null);
-
-    const providers = [
-        { id: 'apple', name: 'Apple Health', icon: <Heart className="w-5 h-5 text-red-500" />, color: 'bg-red-500/10' },
-        { id: 'garmin', name: 'Garmin Connect', icon: <Watch className="w-5 h-5 text-blue-500" />, color: 'bg-blue-500/10' },
-        { id: 'strava', name: 'Strava', icon: <Triangle className="w-5 h-5 text-orange-500" />, color: 'bg-orange-500/10' },
-        { id: 'google', name: 'Google Fit', icon: <Activity className="w-5 h-5 text-green-500" />, color: 'bg-green-500/10' },
-    ];
-
-    const handleSyncClick = async (providerName: string) => {
-        setConnectingProvider(providerName);
-        await new Promise(r => setTimeout(r, 1500));
-        alert(`Próximamente: Estamos trabajando en la integración oficial con ${providerName} para que puedas sincronizar tus datos reales de forma directa.`);
-        setConnectingProvider(null);
-        onClose();
-    };
-
     return (
         <div className={clsx("fixed inset-0 z-[400] flex items-center justify-center p-4 transition-all duration-300", isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none")}>
-            <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={onClose} />
-            <div className={clsx("relative w-full max-w-sm rounded-[40px] border p-8 space-y-6 animate-in zoom-in-95 duration-300 overflow-hidden",
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
+            <div className={clsx("relative w-full max-w-sm rounded-[40px] border p-8 space-y-8 animate-in zoom-in-95 duration-300",
                 theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white shadow-2xl"
             )}>
-                <div className="text-center relative z-10">
-                    <h3 className="text-2xl font-heading font-black italic uppercase text-white mb-2">Sync <span className="text-brand-red">Reloj</span>_</h3>
-                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">Importa datos de carrera automáticamente</p>
+                <div className="text-center">
+                    <h3 className="text-2xl font-heading font-black italic uppercase text-white mb-2">Sync <span className="text-brand-red">Reloj</span></h3>
+                    <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Importa tus datos de carrera automáticamente</p>
                 </div>
 
-                <div className="space-y-3 relative z-10">
-                    {providers.map((provider) => (
-                        <button
-                            key={provider.id}
-                            disabled={!!connectingProvider}
-                            onClick={() => handleSyncClick(provider.name)}
-                            className={clsx(
-                                "w-full p-4 rounded-2xl border transition-all flex items-center justify-between group",
-                                connectingProvider === provider.name
-                                    ? "bg-white/10 border-white/20 scale-[0.98]"
-                                    : "bg-white/5 border-white/5 hover:border-white/20 hover:bg-white/10 active:scale-95"
-                            )}
-                        >
-                            <div className="flex items-center gap-4">
-                                <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center", provider.color)}>
-                                    {provider.icon}
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-xs font-black uppercase tracking-widest text-white">{provider.name}</p>
-                                    <p className="text-[9px] text-gray-500 font-bold uppercase">Click para vincular</p>
-                                </div>
-                            </div>
-                            {connectingProvider === provider.name ? (
-                                <RefreshCw className="w-4 h-4 text-white animate-spin" />
-                            ) : (
-                                <ChevronRight className="w-4 h-4 text-gray-700 group-hover:text-white transition-colors" />
-                            )}
-                        </button>
-                    ))}
+                <div className="space-y-3">
+                    <button
+                        className="w-full p-6 rounded-3xl bg-orange-600/10 border border-orange-600/20 hover:bg-orange-600 hover:border-orange-600 transition-all flex items-center justify-between group"
+                        onClick={() => { alert('Conectando con Strava...'); onClose(); }}
+                    >
+                        <div className="flex items-center gap-4 text-orange-600 group-hover:text-white transition-colors">
+                            <span className="font-black italic text-xl">STRAVA</span>
+                        </div>
+                        <Plus className="w-5 h-5 text-orange-600 group-hover:text-white" />
+                    </button>
+
+                    <button
+                        className="w-full p-6 rounded-3xl bg-blue-600/10 border border-blue-600/20 hover:bg-blue-600 hover:border-blue-600 transition-all flex items-center justify-between group"
+                        onClick={() => { alert('Conectando con Garmin...'); onClose(); }}
+                    >
+                        <div className="flex items-center gap-4 text-blue-600 group-hover:text-white transition-colors">
+                            <span className="font-black italic text-xl uppercase">Garmin Connect</span>
+                        </div>
+                        <Plus className="w-5 h-5 text-blue-600 group-hover:text-white" />
+                    </button>
+
+                    <button
+                        className="w-full p-6 rounded-3xl bg-white/5 border border-white/10 hover:bg-white hover:text-black transition-all flex items-center justify-between group"
+                        onClick={() => { alert('Abre la App Rival en tu Apple Watch para sincronizar.'); onClose(); }}
+                    >
+                        <div className="flex items-center gap-4 text-white group-hover:text-black transition-colors">
+                            <span className="font-black italic text-xl uppercase">Apple Watch</span>
+                        </div>
+                        <Activity className="w-5 h-5 text-white group-hover:text-black" />
+                    </button>
 
                     <div className="relative py-4 flex items-center gap-4">
                         <div className="flex-1 h-px bg-white/10" />
@@ -2738,25 +2565,15 @@ function SyncWatchModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => v
                     </div>
 
                     <button
-                        className="w-full p-4 rounded-2xl bg-gray-900/50 border border-white/5 hover:bg-gray-800 transition-colors flex items-center justify-center gap-3 group"
-                        onClick={() => alert('Próximamente: Podrás subir archivos .GPX o .FIT directamente.')}
+                        className="w-full p-4 rounded-2xl bg-gray-900 border border-white/5 hover:bg-gray-800 transition-colors flex items-center justify-center gap-3"
+                        onClick={() => alert('Selecciona archivo .GPX o .FIT')}
                     >
-                        <Download className="w-4 h-4 text-gray-600 group-hover:text-white transition-colors" />
+                        <Download className="w-4 h-4 text-gray-500" />
                         <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none">Importar GPX / FIT</span>
                     </button>
                 </div>
 
-                <button
-                    onClick={onClose}
-                    className="w-full text-center text-gray-600 hover:text-white transition-colors text-[10px] font-black uppercase tracking-[0.3em] relative z-10"
-                >
-                    Cancelar
-                </button>
-
-                {/* Decoration */}
-                <div className="absolute -bottom-12 -right-12 p-12 opacity-5 -rotate-12 pointer-events-none">
-                    <Watch className="w-40 h-40 text-brand-red" />
-                </div>
+                <button onClick={onClose} className="w-full text-center text-gray-600 hover:text-white transition-colors text-[10px] font-black uppercase tracking-[0.3em]">Cancelar</button>
             </div>
         </div>
     )
@@ -3419,16 +3236,14 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
 }) {
     const { theme } = useTheme();
     const searchParams = useSearchParams();
-    const [hybridMode, setHybridMode] = useState<'race' | 'pft' | 'any'>(
-        (searchParams.get('mode') === 'ai-coach' || blocks.length > 0) ? 'any' : 'race'
-    );
-    const [initialized, setInitialized] = useState(blocks.length > 0 || exercises.length > 0);
+    const [hybridMode, setHybridMode] = useState<'race' | 'pft' | 'any'>(searchParams.get('mode') === 'ai-coach' ? 'any' : 'race');
+    const [initialized, setInitialized] = useState(false);
     const [viewingVideo, setViewingVideo] = useState<string | null>(null);
     const [activeBlockIndex, setActiveBlockIndex] = useState(0);
 
     // Initialize first block for 'any' mode if empty
     useEffect(() => {
-        if (hybridMode === 'any' && blocks.length === 0 && !initialized) {
+        if (hybridMode === 'any' && blocks.length === 0) {
             setBlocks([{
                 id: Math.random().toString(36).substr(2, 9),
                 type: 'fortime',
@@ -3437,7 +3252,7 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
                 result: { time: '', rounds: 0 }
             }]);
         }
-    }, [hybridMode, blocks.length, initialized]);
+    }, [hybridMode, blocks.length]);
 
     const addBlock = () => {
         const newBlock = {
@@ -3507,13 +3322,13 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
         { name: 'Wall Balls', target: '30 reps' }
     ];
 
-    // Initialize exercises based on mode if empty and not using blocks
+    // Initialize exercises based on mode
     useEffect(() => {
-        if (!initialized && exercises.length === 0 && blocks.length === 0) {
+        if (!initialized && exercises.length === 0) {
             loadTemplate(hybridMode);
             setInitialized(true);
         }
-    }, [hybridMode, initialized, exercises.length, blocks.length]);
+    }, [hybridMode, initialized]);
 
     const loadTemplate = (mode: string) => {
         let template = [];
@@ -3821,21 +3636,18 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
     )
 }
 
-function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorkoutTitle, isGuided, onFinish }: {
+function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorkoutTitle }: {
     exercises: WorkoutExercise[];
     setExercises: (ex: WorkoutExercise[]) => void;
     mode?: string;
     workoutTitle?: string;
     setWorkoutTitle?: (t: string) => void;
-    isGuided?: boolean;
-    onFinish?: () => void;
 }) {
     const { theme } = useTheme();
     const [showAddModal, setShowAddModal] = useState(false);
     const [catalog, setCatalog] = useState<WorkoutExercise[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
     const [viewingVideo, setViewingVideo] = useState<string | null>(null);
-    const [restTimer, setRestTimer] = useState<{ seconds: number; exerciseIndex: number } | null>(null);
 
     // Update title based on muscle focus if possible
     useEffect(() => {
@@ -3848,7 +3660,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                 else if (unique.length > 1) setWorkoutTitle(`Rutina de ${unique.slice(0, 2).join(" & ")}`);
             }
         }
-    }, [exercises, setWorkoutTitle, workoutTitle]);
+    }, [exercises.length]);
 
     // Load catalog only when modal opens
     useEffect(() => {
@@ -3862,20 +3674,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
         return catalog.filter(ex => ex.name.toLowerCase().includes(searchQuery.toLowerCase()));
     }, [catalog, searchQuery]);
 
-    // Timer effect for rest
-    useEffect(() => {
-        if (!restTimer) return;
-        const t = setInterval(() => {
-            setRestTimer(prev => {
-                if (!prev) return null;
-                if (prev.seconds <= 1) return null;
-                return { ...prev, seconds: prev.seconds - 1 };
-            });
-        }, 1000);
-        return () => clearInterval(t);
-    }, [restTimer]);
-
-    const addExercise = async (template: { name: string; video_url?: string }) => {
+    const addExercise = async (template: any) => {
         const prev = await getExercisePreviousRecord(template.name) || "0kg x 0";
 
         // Auto-detect unit type based on exercise name
@@ -3894,63 +3693,47 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
             defaultMeasure = 'reps';
         }
 
-        const newEx: WorkoutExercise = {
+        const newEx = {
             id: Math.random().toString(36).substr(2, 9),
             name: template.name,
-            target: mode === 'gym' ? "4 sets x 10-12 reps" : "-",
+            target: mode === 'gym' ? "3 series x 8-12 reps" : "-",
             prev: prev,
             sets: [{ order: 1, weight: 0, reps: 0, completed: false, unit: defaultUnit, measure: defaultMeasure }],
-            video_url: template.video_url,
-            note: "60" // Default 60s rest
+            video_url: template.video_url
         };
         setExercises([...exercises, newEx]);
         setShowAddModal(false);
     };
 
-    const updateSet = (exIdx: number, sIdx: number, field: string, val: string | number) => {
+    const updateSet = (widthIndex: number, setIndex: number, field: string, val: any) => {
         const copy = [...exercises];
-        const ex = copy[exIdx];
-        if (!ex.sets) ex.sets = [{ order: 1, weight: 0, reps: 0 }];
-        const s = ex.sets[sIdx];
-        if (s) {
-            // @ts-expect-error
-            s[field] = val;
-        }
+        const s = copy[widthIndex].sets[setIndex];
+        // @ts-ignore
+        s[field] = val;
         setExercises(copy);
     }
 
     const toggleSet = (exIdx: number, sIdx: number) => {
         const copy = [...exercises];
-        const ex = copy[exIdx];
-        if (!ex.sets || ex.sets.length === 0) ex.sets = [{ order: 1, weight: 0, reps: 0, completed: false }];
-
-        const becomingCompleted = !ex.sets[sIdx].completed;
-        ex.sets[sIdx].completed = becomingCompleted;
+        copy[exIdx].sets[sIdx].completed = !copy[exIdx].sets[sIdx].completed;
         setExercises(copy);
-
-        // If completed, trigger rest timer if exercise has one set
-        if (becomingCompleted) {
-            const rest = parseInt(copy[exIdx].note || "0");
-            if (rest > 0) {
-                setRestTimer({ seconds: rest, exerciseIndex: exIdx });
-            }
-        }
     }
 
     const addSet = (exIdx: number) => {
         const copy = [...exercises];
-        const last = copy[exIdx].sets[copy[exIdx].sets.length - 1] || { weight: 0, reps: 0, unit: 'kg', measure: 'reps' };
+        const prev = copy[exIdx].sets[copy[exIdx].sets.length - 1] || { weight: 0, reps: 0 };
         copy[exIdx].sets.push({
             order: copy[exIdx].sets.length + 1,
-            weight: last.weight,
-            reps: last.reps,
+            weight: prev.weight,
+            reps: prev.reps,
             completed: false,
-            unit: last.unit || 'kg',
-            measure: last.measure || 'reps'
+            unit: prev.unit || 'kg',
+            measure: prev.measure || 'reps'
         });
         setExercises(copy);
     }
 
+    // Simple remove set handler
     const removeSet = (exIdx: number) => {
         const copy = [...exercises];
         if (copy[exIdx].sets.length > 0) {
@@ -3959,267 +3742,102 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
         }
     }
 
-    if (isGuided) {
-        return (
-            <div className="space-y-8 animate-in fade-in duration-500 max-w-2xl mx-auto px-1">
-                {viewingVideo && <VideoModal url={viewingVideo} onClose={() => setViewingVideo(null)} />}
-
-                {restTimer && (
-                    <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[300] bg-brand-red text-white px-8 py-4 rounded-[32px] shadow-glow flex items-center gap-4 animate-in slide-in-from-top-10 duration-500">
-                        <div className="flex flex-col">
-                            <span className="text-[8px] font-black uppercase tracking-widest opacity-70 text-white/80">Protocolo de Descanso</span>
-                            <span className="text-2xl font-mono font-black">{Math.floor(restTimer.seconds / 60)}:{(restTimer.seconds % 60).toString().padStart(2, '0')}</span>
-                        </div>
-                        <button onClick={() => setRestTimer(null)} className="p-2 bg-black/20 rounded-full hover:bg-black/40"><X className="w-4 h-4" /></button>
-                    </div>
-                )}
-
-                {/* Protocol Table Inspired by Image */}
-                <div className={clsx(
-                    "rounded-[40px] border overflow-hidden shadow-2xl relative",
-                    theme === 'dark' ? "bg-[#0c0c0c] border-white/5" : "bg-white border-gray-100"
-                )}>
-                    {/* Header: DIA X - ENFOQUE */}
-                    <div className="bg-brand-red/5 p-8 border-b border-inherit text-center">
-                        <h3 className="text-[10px] font-black text-brand-red uppercase tracking-[0.4em] mb-1">DÍA DE ENTRENAMIENTO</h3>
-                        <h2 className={clsx("text-3xl font-heading font-black italic uppercase italic tracking-tighter", theme === 'dark' ? "text-white" : "text-black")}>
-                            {workoutTitle?.includes(':') ? workoutTitle.split(':')[1]?.trim() : workoutTitle}
-                        </h2>
-                        <div className="flex items-center justify-center gap-4 mt-4 opacity-60">
-                            <div className="flex items-center gap-1.5">
-                                <Clock className="w-3 h-3 text-orange-500" />
-                                <span className="text-[9px] font-black uppercase tracking-widest">Sugerido: 45-60 MIN</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Table Column Headers */}
-                    <div className={clsx(
-                        "grid grid-cols-12 border-b bg-muted/10 opacity-50",
-                        theme === 'dark' ? "border-white/5" : "border-gray-100"
-                    )}>
-                        <div className="col-span-8 p-4 text-[9px] font-black uppercase tracking-widest border-r border-inherit pl-8">EJERCICIO</div>
-                        <div className="col-span-4 p-4 text-[9px] font-black uppercase tracking-widest text-center">SERIES / REPS</div>
-                    </div>
-
-                    {exercises.map((ex, idx) => (
-                        <div key={ex.id || idx} className={clsx(
-                            "grid grid-cols-12 border-b last:border-0 hover:bg-white/[0.01] transition-colors relative group",
-                            theme === 'dark' ? "border-white/5" : "border-gray-100"
-                        )}>
-                            {/* Exercise Cell */}
-                            <div className="col-span-8 p-6 md:p-8 border-r border-inherit pl-8">
-                                <div className="flex items-center gap-3">
-                                    <h4 className={clsx("text-lg md:text-xl font-heading font-black italic uppercase leading-none tracking-tight", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</h4>
-                                    {ex.video_url && (
-                                        <button
-                                            onClick={() => setViewingVideo(ex.video_url || null)}
-                                            className="p-1.5 bg-brand-red/10 text-brand-red rounded-full hover:bg-brand-red hover:text-white transition-all shadow-sm"
-                                        >
-                                            <PlayCircle className="w-4 h-4 fill-current" />
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="flex items-center gap-4 mt-2 opacity-50">
-                                    <div className="flex items-center gap-1">
-                                        <Clock className="w-2.5 h-2.5" />
-                                        <span className="text-[8px] font-bold uppercase tracking-widest">Rest: {ex.note || '60'}s</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Trophy className="w-2.5 h-2.5" />
-                                        <span className="text-[8px] font-bold uppercase tracking-widest">{ex.target || '-'}</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Series Cell */}
-                            <div className="col-span-4 p-6 md:p-8 flex flex-col items-center justify-center gap-2">
-                                <div className="text-center">
-                                    <p className="text-2xl md:text-3xl font-heading font-black italic text-brand-red leading-none">{ex.sets.length}</p>
-                                    <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest mt-1">SERIES</p>
-                                </div>
-
-                                {/* Status Toggle (Optional but helpful to track progress) */}
-                                <button
-                                    onClick={() => toggleSet(idx, 0)}
-                                    className={clsx(
-                                        "px-4 py-1.5 rounded-full text-[7px] font-black uppercase tracking-widest transition-all",
-                                        ex.sets[0]?.completed
-                                            ? "bg-green-500 text-white"
-                                            : "bg-white/5 text-gray-500 border border-white/5 hover:border-brand-red/30"
-                                    )}
-                                >
-                                    {ex.sets[0]?.completed ? '✓ LISTO' : 'MARCAR'}
-                                </button>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-
-                {onFinish && (
-                    <div className="pt-12 pb-20 flex flex-col items-center gap-6">
-                        <div className="text-center space-y-2">
-                            <p className="text-[9px] text-gray-500 font-black uppercase tracking-[0.4em]">Fin del Protocolo</p>
-                            <h3 className="text-2xl font-heading font-black italic text-white uppercase italic tracking-tight translate-y-2">Misión Cumplida</h3>
-                        </div>
-                        <button
-                            onClick={onFinish}
-                            className="w-full max-w-sm py-8 rounded-[40px] bg-brand-red text-white font-heading font-black italic uppercase text-2xl shadow-glow-lg hover:scale-[1.05] active:scale-95 transition-all group overflow-hidden relative pr-12 pl-20"
-                        >
-                            <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                            <div className="absolute left-6 top-1/2 -translate-y-1/2 w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                                <Trophy className="w-6 h-6 text-brand-red fill-current" />
-                            </div>
-                            <div className="relative z-10 flex flex-col items-center leading-none">
-                                <span className="text-lg opacity-80 mb-1">FINALIZAR</span>
-                                <span className="text-3xl tracking-tighter">ENTRENAMIENTO</span>
-                            </div>
-                        </button>
-                        <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest text-center max-w-[280px] leading-relaxed">
-                            Al finalizar podrás compartir tu victoria con la comunidad y registrar tu racha.
-                        </p>
-                    </div>
-                )}
-            </div>
-        );
-    }
-
     return (
         <div className="space-y-8 animate-in slide-in-from-bottom-10 fade-in duration-500">
             {viewingVideo && <VideoModal url={viewingVideo} onClose={() => setViewingVideo(null)} />}
-
-            {restTimer && (
-                <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[300] bg-brand-red text-white px-8 py-4 rounded-[32px] shadow-2xl flex items-center gap-4 animate-in slide-in-from-top-10 duration-500">
-                    <div className="flex flex-col">
-                        <span className="text-[8px] font-black uppercase tracking-widest opacity-70">En Descanso</span>
-                        <span className="text-2xl font-mono font-black">{Math.floor(restTimer.seconds / 60)}:{(restTimer.seconds % 60).toString().padStart(2, '0')}</span>
-                    </div>
-                    <button onClick={() => setRestTimer(null)} className="p-2 bg-black/20 rounded-full hover:bg-black/40"><X className="w-4 h-4" /></button>
-                </div>
-            )}
-
             {exercises.map((ex: WorkoutExercise, i: number) => (
-                <div key={ex.id || i} className={clsx(
-                    "border rounded-[40px] overflow-hidden shadow-xl transition-all relative group",
+                <div key={ex.id} className={clsx(
+                    "border rounded-[32px] overflow-hidden shadow-sm transition-all",
                     theme === 'dark' ? "bg-[#111] border-white/5" : "bg-white border-gray-100"
                 )}>
-                    {/* Header: Title and Tools */}
                     <div className={clsx(
-                        "p-8 border-b transition-colors",
-                        theme === 'dark' ? "border-white/5 bg-white/[0.02] group-hover:bg-white/[0.04]" : "border-gray-100 bg-gray-50/50"
+                        "p-6 border-b flex justify-between items-start",
+                        theme === 'dark' ? "border-white/5 bg-white/[0.02]" : "border-gray-100 bg-gray-50/50"
                     )}>
-                        <div className="flex justify-between items-start mb-4">
-                            <div className="flex-1 space-y-2">
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        value={ex.name}
-                                        onChange={(e) => {
-                                            const copy = [...exercises];
-                                            copy[i].name = e.target.value;
-                                            setExercises(copy);
-                                        }}
-                                        className={clsx("bg-transparent text-2xl font-heading font-black italic uppercase outline-none w-full tracking-tighter", theme === 'dark' ? "text-white" : "text-black")}
-                                        placeholder="NOMBRE DEL EJERCICIO"
-                                    />
-                                    {ex.video_url && (
-                                        <button onClick={() => setViewingVideo(ex.video_url || null)} className="p-2 bg-brand-red/10 text-brand-red rounded-full hover:bg-brand-red hover:text-white transition-all shadow-sm">
-                                            <Youtube className="w-4 h-4 fill-current" />
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="flex flex-wrap gap-3">
-                                    <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-xl border border-white/5">
-                                        <Trophy className="w-3 h-3 text-brand-red" />
-                                        <input
-                                            value={ex.target || ''}
-                                            onChange={(e) => {
-                                                const copy = [...exercises];
-                                                copy[i].target = e.target.value;
-                                                setExercises(copy);
-                                            }}
-                                            placeholder="Ej: 4x12 RPE 8"
-                                            className="bg-transparent text-[9px] font-black uppercase tracking-widest text-gray-400 outline-none w-24"
-                                        />
-                                    </div>
-                                    <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-xl border border-white/5">
-                                        <Clock className="w-3 h-3 text-orange-500" />
-                                        <input
-                                            type="number"
-                                            value={ex.note || ''}
-                                            onChange={(e) => {
-                                                const copy = [...exercises];
-                                                copy[i].note = e.target.value;
-                                                setExercises(copy);
-                                            }}
-                                            placeholder="Descanso (s)"
-                                            className="bg-transparent text-[9px] font-black uppercase tracking-widest text-gray-400 outline-none w-16"
-                                        />
-                                        <span className="text-[7px] text-gray-600 font-black">SEG</span>
-                                    </div>
-                                </div>
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    value={ex.name}
+                                    onChange={(e) => {
+                                        const copy = [...exercises];
+                                        copy[i].name = e.target.value;
+                                        setExercises(copy);
+                                    }}
+                                    className={clsx("bg-transparent text-xl font-heading font-black italic uppercase outline-none w-full", theme === 'dark' ? "text-white placeholder-white/20" : "text-black placeholder-gray-300")}
+                                />
+                                {ex.video_url && (
+                                    <button
+                                        onClick={() => setViewingVideo(ex.video_url || null)}
+                                        className="group flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-red-600 rounded-full text-gray-400 hover:text-white transition-all shrink-0 border border-white/10 hover:border-red-600 shadow-sm"
+                                    >
+                                        <Youtube className="w-4 h-4 fill-current" />
+                                        <span className="text-[8px] font-black uppercase tracking-widest hidden sm:block">Video</span>
+                                    </button>
+                                )}
                             </div>
-                            <button onClick={() => {
-                                const copy = exercises.filter((_, idx) => idx !== i);
-                                setExercises(copy);
-                            }} className="p-2 text-gray-600 hover:text-red-500 transition-colors opacity-40 hover:opacity-100">
-                                <Trash2 className="w-5 h-5" />
-                            </button>
+                            <div className="flex items-center gap-4 mt-1">
+                                {ex.target && ex.target !== "-" && (
+                                    <p className="text-[10px] text-brand-red font-black uppercase tracking-[0.2em]">{ex.target}</p>
+                                )}
+                                {ex.prev && <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded">PR: {ex.prev}</p>}
+                            </div>
                         </div>
+                        <button onClick={() => {
+                            const copy = exercises.filter((_: any, idx: number) => idx !== i);
+                            setExercises(copy);
+                        }} className="p-2 text-gray-600 hover:text-red-500 transition-colors opacity-40 hover:opacity-100"><Trash2 className="w-5 h-5" /></button>
                     </div>
-
-                    {/* Sets Grid */}
-                    <div className="p-6 space-y-3">
-                        <div className="grid grid-cols-12 px-4 mb-2">
-                            <span className="col-span-1 text-[8px] font-black text-gray-600 uppercase">#</span>
-                            <span className="col-span-4 text-[8px] font-black text-gray-600 uppercase text-center">Peso / Unit</span>
-                            <span className="col-span-4 text-[8px] font-black text-gray-600 uppercase text-center">Reps / Med</span>
-                            <span className="col-span-3"></span>
-                        </div>
-
+                    <div className="p-4 space-y-2">
                         {ex.sets.map((set: any, j: number) => (
                             <div key={j} className={clsx(
-                                "grid grid-cols-12 gap-3 p-2 rounded-[28px] items-center transition-all duration-300 border",
-                                set.completed
-                                    ? "bg-brand-red border-brand-red shadow-glow-sm"
-                                    : "bg-white/5 border-white/5 hover:border-white/20"
+                                "grid grid-cols-12 gap-2 p-3 rounded-[24px] items-center transition-all duration-300 relative",
+                                set.completed ? "bg-green-500/10 border border-green-500/30" : "bg-white/5 border border-white/5 hover:bg-white/[0.08]"
                             )}>
-                                <div className={clsx("col-span-1 text-center font-mono text-xs font-black", set.completed ? "text-white" : "text-gray-600")}>
-                                    {j + 1}
+                                {/* Float Index */}
+                                <div className="absolute top-2 left-3 font-black text-[8px] opacity-30 pointer-events-none">
+                                    #{j + 1}
                                 </div>
 
-                                {/* Weight */}
                                 <div className={clsx(
-                                    "col-span-4 flex items-center rounded-2xl px-3 border transition-all h-14",
-                                    set.completed ? "bg-black/20 border-white/20" : "bg-black/40 border-white/5"
+                                    "col-span-4 flex items-center rounded-2xl px-2 border transition-all",
+                                    theme === 'dark' ? "bg-black/40 border-white/5 focus-within:border-brand-red/50" : "bg-gray-100 border-gray-200 focus-within:border-brand-red/30"
                                 )}>
-                                    <input
-                                        type="number"
-                                        className={clsx("w-full bg-transparent text-center font-black outline-none text-xl", set.completed ? "text-white" : "text-white")}
-                                        value={set.weight || ''}
-                                        onChange={(e) => updateSet(i, j, 'weight', parseFloat(e.target.value) || 0)}
-                                    />
-                                    <span className={clsx("text-[8px] font-black uppercase", set.completed ? "text-white/60" : "text-gray-600")}>{set.unit || 'kg'}</span>
+                                    <input type="number" placeholder="0" className={clsx("w-full bg-transparent text-center font-black py-4 outline-none text-xl", theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-400")}
+                                        value={set.weight === 0 ? '0' : (set.weight || '')} onChange={(e) => updateSet(i, j, 'weight', e.target.value === '' ? null : parseFloat(e.target.value))} />
+                                    <select
+                                        value={set.unit || 'kg'}
+                                        onChange={(e) => updateSet(i, j, 'unit', e.target.value)}
+                                        className={clsx("bg-transparent text-[8px] font-black uppercase outline-none border-none cursor-pointer", theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-black")}
+                                    >
+                                        <option value="kg">KG</option>
+                                        <option value="lb">LB</option>
+                                        <option value="bw">BW</option>
+                                        <option value="sec">SEC</option>
+                                        <option value="m">M</option>
+                                    </select>
                                 </div>
-
-                                {/* Reps */}
                                 <div className={clsx(
-                                    "col-span-4 flex items-center rounded-2xl px-3 border transition-all h-14",
-                                    set.completed ? "bg-black/20 border-white/20" : "bg-black/40 border-white/5"
+                                    "col-span-4 flex items-center rounded-2xl px-2 border transition-all",
+                                    theme === 'dark' ? "bg-black/40 border-white/5 focus-within:border-brand-red/50" : "bg-gray-100 border-gray-200 focus-within:border-brand-red/30"
                                 )}>
-                                    <input
-                                        type="number"
-                                        className={clsx("w-full bg-transparent text-center font-black outline-none text-xl", set.completed ? "text-white" : "text-white")}
-                                        value={set.reps || ''}
-                                        onChange={(e) => updateSet(i, j, 'reps', parseFloat(e.target.value) || 0)}
-                                    />
-                                    <span className={clsx("text-[8px] font-black uppercase", set.completed ? "text-white/60" : "text-gray-600")}>{set.measure || 'reps'}</span>
+                                    <input type="number" placeholder="0" className={clsx("w-full bg-transparent text-center font-black py-4 outline-none text-xl", theme === 'dark' ? "text-white placeholder-white/10" : "text-black placeholder-gray-400")}
+                                        value={set.reps === 0 ? '0' : (set.reps || '')} onChange={(e) => updateSet(i, j, 'reps', e.target.value === '' ? null : parseFloat(e.target.value))} />
+                                    <select
+                                        value={set.measure || 'reps'}
+                                        onChange={(e) => updateSet(i, j, 'measure', e.target.value)}
+                                        className={clsx("bg-transparent text-[8px] font-black uppercase outline-none border-none cursor-pointer", theme === 'dark' ? "text-gray-500 hover:text-white" : "text-gray-400 hover:text-black")}
+                                    >
+                                        <option value="reps">REPS</option>
+                                        <option value="sec">SEC</option>
+                                        <option value="min">MIN</option>
+                                        <option value="cal">CAL</option>
+                                        <option value="m">M</option>
+                                    </select>
                                 </div>
-
-                                {/* Action */}
-                                <div className="col-span-3 flex justify-center">
+                                <div className="col-span-4 flex justify-center">
                                     <button onClick={() => toggleSet(i, j)} className={clsx(
-                                        "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-lg",
-                                        set.completed ? "bg-white text-brand-red scale-110" : "bg-white/10 text-gray-500 hover:bg-white/20"
+                                        "w-11 h-11 rounded-2xl flex items-center justify-center transition-all transform active:scale-90",
+                                        set.completed ? "bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)]" : "bg-white/10 text-gray-500 hover:bg-white/20 hover:text-white"
                                     )}>
                                         <CheckCircle className={clsx("w-6 h-6", set.completed ? "fill-current" : "stroke-current")} />
                                     </button>
@@ -4227,18 +3845,16 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                             </div>
                         ))}
                     </div>
-
-                    {/* Footer: Add/Remove Series */}
-                    <div className={clsx("p-4 flex gap-2 border-t", theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-100/50 border-gray-100")}>
-                        <button onClick={() => removeSet(i)} className="flex-1 py-4 bg-white/5 rounded-2xl text-[9px] font-black text-gray-500 uppercase tracking-widest hover:text-red-500 hover:bg-white/10 transition-all">Eliminar Serie</button>
-                        <button onClick={() => addSet(i)} className="flex-1 py-4 bg-brand-red/10 border border-brand-red/20 rounded-2xl text-[9px] font-black text-brand-red uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all">+ Añadir Serie</button>
+                    <div className={clsx("p-2 flex border-t", theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-50/50 border-gray-100")}>
+                        <button onClick={() => removeSet(i)} className="flex-1 py-3 text-[10px] font-black text-gray-500 uppercase tracking-widest hover:text-red-500 transition-colors">- Serie</button>
+                        <div className={clsx("w-px my-2", theme === 'dark' ? "bg-white/5" : "bg-gray-200")}></div>
+                        <button onClick={() => addSet(i)} className="flex-1 py-3 text-[10px] font-black text-brand-red uppercase tracking-widest hover:bg-brand-red/10 transition-colors">+ Serie</button>
                     </div>
                 </div>
             ))}
 
-            <button onClick={() => setShowAddModal(true)} className="w-full py-10 border-2 border-dashed border-white/10 rounded-[40px] text-gray-500 font-black uppercase tracking-[0.3em] hover:border-brand-red/50 hover:text-white hover:bg-white/5 transition-all flex flex-col items-center gap-3">
-                <Plus className="w-8 h-8" />
-                <span>Diseñar Siguiente Movimiento</span>
+            <button onClick={() => setShowAddModal(true)} className="w-full py-6 border-2 border-dashed border-white/10 rounded-[32px] text-gray-500 font-black uppercase tracking-[0.2em] hover:border-brand-red/50 hover:text-white hover:bg-white/5 transition-all">
+                + Añadir Ejercicio
             </button>
 
             {/* Add Modal */}
@@ -4261,7 +3877,7 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                                 className="w-full text-left p-6 bg-brand-red/10 rounded-2xl border border-brand-red/30 hover:bg-brand-red/20 transition-all group"
                             >
                                 <div className="flex items-center justify-between mb-2">
-                                    <h4 className="text-white font-bold uppercase text-lg">Cargar &quot;{searchQuery}&quot;</h4>
+                                    <h4 className="text-white font-bold uppercase text-lg">Cargar "{searchQuery}"</h4>
                                     <Plus className="w-6 h-6 text-brand-red" />
                                 </div>
                                 <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Crear ejercicio personalizado ahora.</p>
@@ -4289,22 +3905,6 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
                     </div>
                 </div>
             )}
-            {exercises.length > 0 && isGuided && onFinish && (
-                <div className="pt-8 pb-12 flex flex-col items-center gap-4">
-                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.3em]">¿Has terminado tu rutina guiada?</p>
-                    <button
-                        onClick={onFinish}
-                        className="w-full max-w-sm py-6 rounded-[32px] bg-brand-red text-white font-heading font-black italic uppercase text-lg shadow-glow hover:scale-[1.02] active:scale-95 transition-all group overflow-hidden relative"
-                    >
-                        <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="relative z-10 flex items-center justify-center gap-3">
-                            <CheckCircle className="w-6 h-6" />
-                            <span>Finalizar & Publicar</span>
-                        </div>
-                    </button>
-                    <p className="text-[9px] text-gray-600 font-bold uppercase tracking-widest max-w-[280px] text-center">Al finalizar podrás añadir una foto/video y compartir tus resultados con la comunidad.</p>
-                </div>
-            )}
         </div>
     )
 }
@@ -4319,7 +3919,6 @@ function FinishModal({
     isSaving,
     imageUrl,
     setImageUrl,
-    mediaType,
     isUploading,
     onImageUpload,
     fileInputRef,
@@ -4336,7 +3935,6 @@ function FinishModal({
     isSaving: boolean;
     imageUrl: string | null;
     setImageUrl: (url: string | null) => void;
-    mediaType: 'image' | 'video';
     isUploading: boolean;
     onImageUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
     fileInputRef: React.RefObject<HTMLInputElement | null>;
@@ -4360,7 +3958,7 @@ function FinishModal({
     };
 
     return (
-        <div className={clsx("fixed inset-0 z-[300] backdrop-blur-xl flex items-center justify-center p-4", theme === 'dark' ? "bg-black/95" : "bg-white/90")}>
+        <div className={clsx("fixed inset-0 z-[200] backdrop-blur-xl flex items-center justify-center p-4", theme === 'dark' ? "bg-black/95" : "bg-white/90")}>
             <div className={clsx(
                 "w-full max-w-md rounded-[40px] border overflow-hidden shadow-2xl animate-in zoom-in-95 duration-300",
                 theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-100"
@@ -4379,14 +3977,10 @@ function FinishModal({
                     <div className="relative group">
                         {imageUrl ? (
                             <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10">
-                                {mediaType === 'image' ? (
-                                    <img src={imageUrl} alt="Workout" className="w-full h-full object-cover" />
-                                ) : (
-                                    <video src={imageUrl} className="w-full h-full object-cover" controls playsInline />
-                                )}
+                                <img src={imageUrl} alt="Workout" className="w-full h-full object-cover" />
                                 <button
                                     onClick={() => setImageUrl(null)}
-                                    className="absolute top-2 right-2 p-2 bg-black/60 rounded-full text-white hover:bg-brand-red transition-colors z-10"
+                                    className="absolute top-2 right-2 p-2 bg-black/60 rounded-full text-white hover:bg-brand-red transition-colors"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -4555,68 +4149,11 @@ function CoachAiView({
     userName: string;
 }) {
     const { theme } = useTheme();
-    const [selectedLevel, setSelectedLevel] = useState<'AV' | 'INT' | 'ESC'>('AV');
-
     const displayTime = timerMode === 'down' && targetDuration
         ? Math.max(0, (targetDuration * 60) - elapsedSeconds)
         : elapsedSeconds;
 
     const progress = targetDuration ? Math.min(100, (elapsedSeconds / (targetDuration * 60)) * 100) : 0;
-
-    // Scaling Logic: Parse the scaling block to find substitutions
-    const scalingBlock = blocks.find(b => b.type === 'scaling');
-    const scaleMap: Record<string, Record<'INT' | 'ESC' | 'AV', string>> = {};
-
-    if (scalingBlock && scalingBlock.exercises?.[0]?.name) {
-        const text = scalingBlock.exercises[0].name;
-
-        // Extract levels using regex to handle single-line or multi-line formats
-        const extract = (lvl: string) => {
-            // Regex to find {lvl}: then match anything until the next marker (INT:, ESC:) or end of line/string
-            const re = new RegExp(`${lvl}:\\s*(.*?)(?=\\s*(?:INT:|ESC:|$))`, 'is');
-            const match = text.match(re);
-            return match ? match[1].split('/').map(s => s.trim().replace(/^[\n\r]+|[\n\r]+$/g, '')) : [];
-        };
-
-        const levelMovements: Record<'AV' | 'INT' | 'ESC', string[]> = {
-            AV: extract('AV'),
-            INT: extract('INT'),
-            ESC: extract('ESC')
-        };
-
-        // Map AV movement to its scale
-        levelMovements.AV.forEach((mv, idx) => {
-            if (!mv) return;
-            const scales = {
-                AV: mv,
-                INT: levelMovements.INT[idx] || mv,
-                ESC: levelMovements.ESC[idx] || levelMovements.INT[idx] || mv
-            };
-            scaleMap[mv.toLowerCase()] = scales;
-
-            // Helpful mapping for English equivalents common in the app
-            if (mv.toLowerCase() === 'dominadas') scaleMap['pull-ups'] = scales;
-            if (mv.toLowerCase() === 'dominadas') scaleMap['pull ups'] = scales;
-            if (mv.toLowerCase() === 'flexiones') scaleMap['push-ups'] = scales;
-            if (mv.toLowerCase() === 'flexiones') scaleMap['push ups'] = scales;
-            if (mv.toLowerCase() === 'sentadillas') scaleMap['air squats'] = scales;
-            if (mv.toLowerCase() === 'sentadillas') scaleMap['squats'] = scales;
-            if (mv.toLowerCase() === 'burpees') scaleMap['burpees'] = scales;
-        });
-    }
-
-    const getScaledExercise = (exName: string) => {
-        if (!exName || selectedLevel === 'AV') return exName;
-
-        const lowerName = exName.toLowerCase();
-        for (const [key, scales] of Object.entries(scaleMap)) {
-            if (lowerName.includes(key)) {
-                // Return the scaled version, preserving the original case if possible or using the defined scale
-                return scales[selectedLevel];
-            }
-        }
-        return exName;
-    };
 
     return (
         <div className={clsx("min-h-screen flex flex-col pt-12 md:pt-20 pb-40 px-4 max-w-xl mx-auto space-y-8 md:space-y-12 relative", theme === 'dark' ? "bg-black" : "bg-white")}>
@@ -4649,28 +4186,6 @@ function CoachAiView({
                         <p className="text-right text-[7px] text-gray-500 font-black uppercase tracking-widest">{Math.round(progress)}% Completado</p>
                     </div>
                 )}
-
-                {/* Level Selector */}
-                {scalingBlock && (
-                    <div className="flex justify-center pt-4">
-                        <div className={clsx("p-1 rounded-2xl border flex gap-1", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-100 border-gray-200")}>
-                            {(['ESC', 'INT', 'AV'] as const).map((lvl) => (
-                                <button
-                                    key={lvl}
-                                    onClick={() => setSelectedLevel(lvl)}
-                                    className={clsx(
-                                        "px-6 py-2 rounded-xl text-[10px] font-black tracking-widest transition-all uppercase font-heading",
-                                        selectedLevel === lvl
-                                            ? "bg-brand-red text-white shadow-glow"
-                                            : "text-gray-500 hover:text-gray-300"
-                                    )}
-                                >
-                                    {lvl === 'ESC' ? 'Escalado' : lvl === 'INT' ? 'Intermedio' : 'Avanzado'}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
 
             {/* Blocks List */}
@@ -4699,141 +4214,81 @@ function CoachAiView({
 
                         {/* Exercises in Block */}
                         <div className="space-y-3 md:space-y-4">
-                            {block.type === 'rest' ? (
-                                <div className="py-12 flex flex-col items-center justify-center space-y-4 bg-brand-red/5 rounded-[32px] border border-brand-red/10">
-                                    <div className="w-20 h-20 rounded-full bg-brand-red/20 flex items-center justify-center text-brand-red animate-pulse border-4 border-brand-red/20">
-                                        <Timer className="w-10 h-10" />
+                            {block.exercises.map((ex: any, eIdx: number) => (
+                                <div key={ex.id || eIdx} className={clsx(
+                                    "border rounded-[28px] md:rounded-[32px] p-5 md:p-6 space-y-4 shadow-xl relative overflow-hidden group hover:border-brand-red/30 transition-all duration-500",
+                                    theme === 'dark' ? "bg-[#111] border-white/5" : "bg-white border-gray-100"
+                                )}>
+                                    <div className="absolute top-0 right-0 p-6 opacity-0 md:group-hover:opacity-5 transition-opacity pointer-events-none">
+                                        <Activity className="w-16 h-16 text-brand-red" />
                                     </div>
-                                    <div className="text-center">
-                                        <h4 className="text-3xl font-heading font-black italic text-white uppercase tracking-tighter">{block.title || 'REST'}</h4>
-                                        <p className="text-brand-red/60 font-black uppercase tracking-[0.3em] text-[10px] mt-2">RECUPERACIÓN ACTIVA</p>
+
+                                    <div className="flex items-center justify-between relative z-10">
+                                        <div className="flex items-center gap-3 md:gap-4">
+                                            <div className={clsx("w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center font-heading font-black italic text-xs md:text-sm text-brand-red border", theme === 'dark' ? "bg-white/5 border-white/5" : "bg-gray-50 border-gray-100")}>
+                                                {eIdx + 1}
+                                            </div>
+                                            <div>
+                                                <h4 className={clsx("text-base md:text-lg font-heading font-black italic uppercase tracking-tight leading-none", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</h4>
+                                                <p className="text-brand-red text-[8px] md:text-[9px] font-black uppercase tracking-widest mt-1 opacity-70">{ex.target}</p>
+                                            </div>
+                                        </div>
+                                        {ex.video_url && (
+                                            <button
+                                                onClick={() => setViewingVideo(ex.video_url)}
+                                                className="p-2 bg-white/5 hover:bg-red-600 rounded-xl text-gray-400 hover:text-white transition-all border border-white/10 hover:border-red-600"
+                                            >
+                                                <Youtube className="w-4 h-4 fill-current" />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-2 md:gap-3 relative z-10">
+                                        <div className={clsx(
+                                            "border p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all",
+                                            theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-100 border-gray-200"
+                                        )}>
+                                            <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">Peso</p>
+                                            <div className="flex items-end gap-1">
+                                                <input
+                                                    type="number"
+                                                    placeholder="0"
+                                                    value={ex.sets[0]?.weight || ''}
+                                                    onChange={(e) => {
+                                                        const newBlocks = [...blocks];
+                                                        newBlocks[bIdx].exercises[eIdx].sets[0].weight = parseFloat(e.target.value) || 0;
+                                                        setBlocks(newBlocks);
+                                                    }}
+                                                    className={clsx("bg-transparent text-lg md:text-xl font-mono font-black w-full outline-none", theme === 'dark' ? "text-white" : "text-black")}
+                                                />
+                                                <span className="text-[9px] md:text-[10px] font-black text-gray-600 mb-0.5">KG</span>
+                                            </div>
+                                        </div>
+                                        <div className={clsx(
+                                            "border p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all",
+                                            theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-100 border-gray-200"
+                                        )}>
+                                            <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">
+                                                {ex.target.toLowerCase().includes('reps') ? 'Reps' : 'Log'}
+                                            </p>
+                                            <div className="flex items-end gap-1">
+                                                <input
+                                                    type="number"
+                                                    placeholder="0"
+                                                    value={ex.sets[0]?.reps || ''}
+                                                    onChange={(e) => {
+                                                        const newBlocks = [...blocks];
+                                                        newBlocks[bIdx].exercises[eIdx].sets[0].reps = parseInt(e.target.value) || 0;
+                                                        setBlocks(newBlocks);
+                                                    }}
+                                                    className={clsx("bg-transparent text-lg md:text-xl font-mono font-black w-full outline-none", theme === 'dark' ? "text-white" : "text-black")}
+                                                />
+                                                <span className="text-[9px] md:text-[10px] font-black text-gray-600 mb-0.5 uppercase">VAL</span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                            ) : (
-                                block.exercises.map((ex: any, eIdx: number) => (
-                                    <div key={ex.id || eIdx} className={clsx(
-                                        "border rounded-[28px] md:rounded-[32px] p-5 md:p-6 space-y-4 shadow-xl relative overflow-hidden group hover:border-brand-red/30 transition-all duration-500",
-                                        theme === 'dark' ? "bg-[#111] border-white/5" : "bg-white border-gray-100"
-                                    )}>
-                                        <div className="absolute top-0 right-0 p-6 opacity-0 md:group-hover:opacity-5 transition-opacity pointer-events-none">
-                                            <Activity className="w-16 h-16 text-brand-red" />
-                                        </div>
-
-                                        <div className="flex items-center justify-between relative z-10">
-                                            <div className="flex items-center gap-3 md:gap-4">
-                                                <div className={clsx("w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center font-heading font-black italic text-xs md:text-sm text-brand-red border", theme === 'dark' ? "bg-white/5 border-white/5" : "bg-gray-50 border-gray-100")}>
-                                                    {eIdx + 1}
-                                                </div>
-                                                <div>
-                                                    <h4 className={clsx("text-base md:text-lg font-heading font-black italic uppercase tracking-tight leading-none", theme === 'dark' ? "text-white" : "text-black")}>
-                                                        {getScaledExercise(ex.name)}
-                                                    </h4>
-                                                    {ex.target && <p className="text-brand-red text-[9px] md:text-[10px] font-mono font-black uppercase mt-1.5 opacity-90">{getScaledExercise(ex.target)}</p>}
-                                                </div>
-                                            </div>
-                                            {ex.video_url && !block.title.includes('REST') && (
-                                                <button
-                                                    onClick={() => setViewingVideo(ex.video_url)}
-                                                    className="p-2 bg-white/5 hover:bg-red-600 rounded-xl text-gray-400 hover:text-white transition-all border border-white/10 hover:border-red-600"
-                                                >
-                                                    <Youtube className="w-4 h-4 fill-current" />
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {/* Support for Scaling content if it is a Scaling Block */}
-                                        {block.type === 'scaling' && (
-                                            <div className="mt-2 p-8 bg-brand-red/[0.03] rounded-[32px] border border-brand-red/10 border-dashed relative overflow-hidden group/scaling">
-                                                <div className="absolute top-0 right-0 p-4 opacity-5">
-                                                    <Trophy className="w-12 h-12 text-brand-red" />
-                                                </div>
-                                                <p className="text-[10px] font-black text-brand-red/60 uppercase tracking-[0.4em] mb-6 flex items-center gap-2">
-                                                    <Zap className="w-3 h-3 fill-current" />
-                                                    NIVELES DE ESCALADO (SCALING)
-                                                </p>
-                                                <div className="space-y-4">
-                                                    {ex.name.split('\n').map((line: string, lIdx: number) => {
-                                                        const [level, rest] = line.split(':');
-                                                        return (
-                                                            <div key={lIdx} className={clsx(
-                                                                "flex items-baseline gap-4 transition-opacity",
-                                                                selectedLevel !== level && "opacity-30"
-                                                            )}>
-                                                                <span className="text-brand-red font-heading font-black italic text-sm w-12">{level}</span>
-                                                                <span className="text-white font-mono text-lg font-black tracking-tight">{rest || ''}</span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                                <div className="mt-6 pt-4 border-t border-brand-red/10">
-                                                    <p className="text-[8px] text-gray-600 font-bold uppercase tracking-widest italic">Ajusta el peso y repeticiones en los bloques anteriores según tu elección.</p>
-                                                </div>
-                                            </div>
-                                        )}
-
-                                        {block.type !== 'scaling' && !block.title.includes('REST') && (
-                                            <div className="grid grid-cols-2 gap-2 md:gap-3 relative z-10">
-                                                <div className={clsx(
-                                                    "border p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all",
-                                                    theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-100 border-gray-200"
-                                                )}>
-                                                    <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">
-                                                        {ex.sets[0]?.unit === 'm' ? 'Distancia' : (ex.sets[0]?.unit === 'sec' ? 'Tiempo' : 'Peso')}
-                                                    </p>
-                                                    <div className="flex items-end gap-1">
-                                                        <input
-                                                            type="number"
-                                                            placeholder="0"
-                                                            value={ex.sets[0]?.weight || ''}
-                                                            onChange={(e) => {
-                                                                const newBlocks = [...blocks];
-                                                                if (!newBlocks[bIdx].exercises[eIdx].sets) {
-                                                                    newBlocks[bIdx].exercises[eIdx].sets = [{ order: 1, weight: 0, reps: 0 }];
-                                                                }
-                                                                if (!newBlocks[bIdx].exercises[eIdx].sets[0]) {
-                                                                    newBlocks[bIdx].exercises[eIdx].sets[0] = { order: 1, weight: 0, reps: 0 };
-                                                                }
-                                                                newBlocks[bIdx].exercises[eIdx].sets[0].weight = parseFloat(e.target.value) || 0;
-                                                                setBlocks(newBlocks);
-                                                            }}
-                                                            className={clsx("bg-transparent text-lg md:text-xl font-mono font-black w-full outline-none", theme === 'dark' ? "text-white" : "text-black")}
-                                                        />
-                                                        <span className="text-[9px] md:text-[10px] font-black text-gray-600 mb-0.5">{ex.sets[0]?.unit?.toUpperCase() || 'KG'}</span>
-                                                    </div>
-                                                </div>
-                                                <div className={clsx(
-                                                    "border p-2.5 md:p-3 rounded-xl md:rounded-2xl focus-within:border-brand-red/50 transition-all",
-                                                    theme === 'dark' ? "bg-black/40 border-white/5" : "bg-gray-100 border-gray-200"
-                                                )}>
-                                                    <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-widest mb-1">
-                                                        {(ex.target || '').toLowerCase().includes('reps') ? 'Reps' : 'Log'}
-                                                    </p>
-                                                    <div className="flex items-end gap-1">
-                                                        <input
-                                                            type="number"
-                                                            placeholder="0"
-                                                            value={ex.sets[0]?.reps || ''}
-                                                            onChange={(e) => {
-                                                                const newBlocks = [...blocks];
-                                                                if (!newBlocks[bIdx].exercises[eIdx].sets) {
-                                                                    newBlocks[bIdx].exercises[eIdx].sets = [{ order: 1, weight: 0, reps: 0 }];
-                                                                }
-                                                                if (!newBlocks[bIdx].exercises[eIdx].sets[0]) {
-                                                                    newBlocks[bIdx].exercises[eIdx].sets[0] = { order: 1, weight: 0, reps: 0 };
-                                                                }
-                                                                newBlocks[bIdx].exercises[eIdx].sets[0].reps = parseInt(e.target.value) || 0;
-                                                                setBlocks(newBlocks);
-                                                            }}
-                                                            className={clsx("bg-transparent text-lg md:text-xl font-mono font-black w-full outline-none", theme === 'dark' ? "text-white" : "text-black")}
-                                                        />
-                                                        <span className="text-[9px] md:text-[10px] font-black text-gray-600 mb-0.5 uppercase">VAL</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))
-                            )}
+                            ))}
                         </div>
                     </div>
                 ))}

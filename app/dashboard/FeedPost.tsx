@@ -1,19 +1,17 @@
 "use client";
 
-import { useState, useRef, useEffect, memo } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Trash2, Edit2, Save, Heart, Dumbbell, ChevronDown, ChevronUp, Plus, CheckCircle2, Instagram, Download, Loader2 } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords } from "lucide-react";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
-import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike, deleteComment } from "./community/actions";
+import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike } from "./community/actions";
+import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import { clsx } from "clsx";
 import { useTheme } from "../ThemeContext";
 import { useStories } from "./stories/StoryContext";
 import PRCard from "./community/PRCard";
-import { VideoProcessor } from "./stories/VideoProcessor";
-import WodCard from "@/components/community/WodCard";
-import WodCreator from "@/components/training/WodCreator";
 import VideoReelsModal from "./VideoReelsModal";
 import dynamic from 'next/dynamic';
 import ShareableCard from "@/components/ShareableCard";
@@ -22,65 +20,8 @@ import MentionInput from "@/components/MentionInput";
 
 const InstagramShareCard = dynamic(() => import("./InstagramShareCard"), { ssr: false });
 
-interface WorkoutSet {
-    exercise_name?: string;
-    weight_kg?: number;
-    reps?: number;
-    unit?: string;
-    measure?: string;
-}
-
-interface WorkoutMetrics {
-    type?: string;
-    distance?: number;
-    pace?: string;
-    time?: string;
-    elevation?: number;
-    avgHeartRate?: number;
-    path?: unknown;
-    blocks?: Array<{ type?: string; result?: { time?: string; rounds?: number; reps?: number }; title?: string; exercises?: any[] }>;
-}
-
-interface WorkoutDetails {
-    title: string;
-    total_volume_kg?: number;
-    location_name?: string;
-    metrics?: WorkoutMetrics;
-    sport_type?: string;
-    workout_sets?: WorkoutSet[];
-}
-
-function ShareButton({
-    image,
-    workoutData,
-    mediaType,
-    postId,
-    className,
-    iconClassName = "w-5 h-5",
-    onInstagramShare,
-    onOpenShareCard,
-    isOwner,
-    authorName,
-    authorAvatar,
-    authorId,
-    authorUsername
-}: {
-    image?: string,
-    workoutData?: WorkoutDetails,
-    mediaType?: string,
-    postId?: string,
-    className?: string,
-    iconClassName?: string,
-    onInstagramShare?: () => void,
-    onOpenShareCard?: () => void,
-    isOwner: boolean,
-    authorName?: string,
-    authorAvatar?: string,
-    authorId?: string,
-    authorUsername?: string
-}) {
+function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5", onInstagramShare, onOpenShareCard }: { image?: string, workoutData?: any, mediaType?: string, postId?: string, className?: string, iconClassName?: string, onInstagramShare?: () => void, onOpenShareCard?: () => void }) {
     const [isOpen, setIsOpen] = useState(false);
-    const [isProcessing, setIsProcessing] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -100,75 +41,27 @@ function ShareButton({
         setIsOpen(false);
     };
 
-    const handleDownloadBranded = async () => {
-        if (!image) return;
-        const isDynamic = image.startsWith('{') || image.startsWith('[');
-
-        if (isDynamic) {
-            setIsOpen(false);
-            if (onOpenShareCard) onOpenShareCard();
-            return;
-        }
-
-        setIsProcessing(true);
-        try {
-            const blob = await VideoProcessor.processMedia(image, mediaType || (image.includes('.mp4') ? 'video' : 'image'));
-            const filename = `rivalfit-${postId || 'media'}.${blob.type.includes('video') ? (blob.type.includes('mp4') ? 'mp4' : 'webm') : 'jpg'}`;
-            await VideoProcessor.downloadBlob(blob, filename);
-        } catch (err) {
-            console.error("Download failed", err);
-            alert("No se pudo procesar la descarga.");
-        } finally {
-            setIsProcessing(false);
-            setIsOpen(false);
-        }
-    };
-
-    const fileExt = image?.split('.').pop()?.toLowerCase() || '';
-    const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'm4v'];
-    const isVideo = image && (videoExtensions.includes(fileExt) || mediaType === 'video');
-    const isDynamic = image?.startsWith('{') || image?.startsWith('[') || !!workoutData || mediaType === 'class_result' || mediaType === 'pr' || mediaType === 'wod';
-
     const handleShareToStory = () => {
-        const attribution = !isOwner ? {
-            username: authorUsername || authorName,
-            avatar: authorAvatar,
-            id: authorId
-        } : undefined;
-
         if (workoutData) {
-            window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'workout', data: workoutData, postId, attribution } }));
+            window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'workout', data: workoutData, postId } }));
         } else if (mediaType === 'class_result' && image) {
             try {
                 const data = JSON.parse(image);
-                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'class_result', data, postId, attribution } }));
+                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'class_result', data, postId } }));
             } catch (e) {
                 console.error("Error parsing class result", e);
             }
         } else if (mediaType === 'pr' && image) {
             try {
                 const data = JSON.parse(image);
-                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'pr', data, postId, attribution } }));
+                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'pr', data, postId } }));
             } catch (e) {
                 console.error("Error parsing PR", e);
             }
-        } else if (mediaType === 'wod' && image) {
-            try {
-                const data = JSON.parse(image);
-                const stats = data.summary ? [
-                    { label: data.summary.scoreType || "RESULTADO", value: data.summary.scoreLabel || "-" },
-                    { label: "TIEMPO", value: data.summary.totalTime || "--:--" }
-                ] : [];
-                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'wod', data, url: data.media_url, stats, postId, attribution } }));
-            } catch (e) {
-                console.error("Error parsing WOD", e);
-            }
-        } else if (isVideo) {
-            window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'video', url: image, postId, attribution } }));
         } else {
             const isImageUrl = image && !image.startsWith('{') && !image.startsWith('[');
             if (isImageUrl) {
-                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'image', url: image, postId, attribution } }));
+                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'image', url: image, postId } }));
             } else {
                 alert("Este contenido no se puede convertir a historia automáticamente.");
             }
@@ -186,43 +79,22 @@ function ShareButton({
             </button>
             {isOpen && (
                 <div className="absolute right-0 bottom-full mb-2 w-56 bg-black border border-white/10 rounded-2xl shadow-2xl z-[50] overflow-hidden backdrop-blur-xl animate-in fade-in zoom-in-95 duration-200">
-                    <button onClick={handleShareLink} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 transition-colors">
-                        <Share2 className="w-4 h-4 text-brand-red" /> Compartir enlace
+                    <button onClick={handleShareLink} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3">
+                        <Share2 className="w-4 h-4" /> Compartir enlace
                     </button>
-
-                    {(isVideo || isDynamic) && (
-                        <button
-                            onClick={handleDownloadBranded}
-                            disabled={isProcessing}
-                            className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5 transition-colors disabled:opacity-50"
-                        >
-                            {isProcessing ? (
-                                <Loader2 className="w-4 h-4 text-brand-red animate-spin" />
-                            ) : (
-                                <Download className="w-4 h-4 text-brand-red" />
-                            )}
-                            {isProcessing ? (language === 'es' ? 'Procesando...' : 'Processing...') : (language === 'es' ? 'Descargar' : 'Download')}
+                    <button onClick={handleShareToStory} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5">
+                        <Plus className="w-4 h-4" /> Enviar a Mis Historias
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onInstagramShare?.(); setIsOpen(false); }}
+                        className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5"
+                    >
+                        <Instagram className="w-4 h-4" /> Instagram Story
+                    </button>
+                    {onOpenShareCard && (
+                        <button onClick={() => { onOpenShareCard(); setIsOpen(false); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red bg-brand-red/5 hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5">
+                            <Trophy className="w-4 h-4" /> Tarjeta Elite
                         </button>
-                    )}
-
-                    <button onClick={handleShareToStory} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5 transition-colors">
-                        <Plus className="w-4 h-4 text-brand-red" /> {isOwner ? 'Enviar a Mis Historias' : 'Compartir en mi Historia'}
-                    </button>
-
-                    {isOwner && (
-                        <>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onInstagramShare?.(); setIsOpen(false); }}
-                                className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5 transition-colors"
-                            >
-                                <Instagram className="w-4 h-4 text-brand-red" /> Instagram Story
-                            </button>
-                            {onOpenShareCard && (
-                                <button onClick={() => { onOpenShareCard(); setIsOpen(false); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red bg-brand-red/5 hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5 transition-colors">
-                                    <Trophy className="w-4 h-4" /> Tarjeta Elite
-                                </button>
-                            )}
-                        </>
                     )}
                 </div>
             )}
@@ -248,14 +120,19 @@ interface FeedPostProps {
     authorId?: string;
     centerName?: string;
     isOfficial?: boolean;
-    workoutData?: WorkoutDetails;
-    hasActiveDuel?: boolean;
-    music_url?: string;
-    music_title?: string;
-    music_artist?: string;
+    workoutData?: {
+        title: string;
+        total_volume_kg?: number;
+        workout_sets?: any[];
+        location_name?: string;
+        sport_type?: string;
+        metrics?: any;
+    };
+    music_url?: string | null;
+    music_title?: string | null;
+    music_artist?: string | null;
     isMember?: boolean;
     context?: 'following' | 'global';
-    isAdminUser?: boolean;
 }
 
 interface Comment {
@@ -263,7 +140,6 @@ interface Comment {
     content: string;
     created_at: string;
     parent_id: string | null;
-    user_id: string;
     user: {
         username: string;
         avatar_url: string | null;
@@ -273,9 +149,8 @@ interface Comment {
     replies?: Comment[];
 }
 
-const FeedPost = memo(function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId,
-    workoutData, isOfficial, isMember = false, context = 'global', isAdminUser,
-    hasActiveDuel = false
+export default function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId, centerName,
+    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global'
 }: FeedPostProps) {
     const { theme } = useTheme();
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -288,7 +163,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const [commentsCount, setCommentsCount] = useState(initialCommentsCount);
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [isPostingComment, setIsPostingComment] = useState(false);
-    const [isDownloadingBrandedGlobal, setIsDownloadingBrandedGlobal] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
 
     const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
@@ -310,10 +185,6 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const handleAvatarClick = (e: React.MouseEvent) => {
         if (hasStory) {
             e.preventDefault();
-            // Unlock audio session for mobile browsers
-            const tempAudio = new Audio();
-            tempAudio.play().then(() => tempAudio.pause()).catch(() => { });
-
             openStory(authorId || '');
         }
     };
@@ -323,24 +194,15 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const [editCaption, setEditCaption] = useState(caption || "");
     const [displayCaption, setDisplayCaption] = useState(caption || "");
     const [isDeleting, setIsDeleting] = useState(false);
-    const [editWodData, setEditWodData] = useState<any>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+    const [isPlaying, setIsPlaying] = useState(false);
 
+    const emojiPickerRef = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     const commentInputRef = useRef<HTMLInputElement>(null);
 
-    const fileExt = image?.split('.').pop()?.toLowerCase() || '';
-    const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'm4v'];
-    const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic'];
-    const isActuallyVideo = (videoExtensions.includes(fileExt) || mediaType === 'video') && !imageExtensions.includes(fileExt);
-    const isVideo = image && isActuallyVideo;
-    const isOwner = !!(currentUserId && authorId && currentUserId === authorId);
-    const canEdit = !!(isOwner || isAdminUser);
-
-    const attribution = !isOwner ? {
-        username: username || user,
-        avatar: avatar,
-        id: authorId
-    } : undefined;
+    const isVideo = image && (/\.(mp4|webm|ogg|mov)$/i.test(image) || (mediaType && mediaType === 'video'));
+    const isOwner = currentUserId && authorId && currentUserId === authorId;
 
     useEffect(() => {
         if (showComments && commentList.length === 0) {
@@ -352,7 +214,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                 setIsLoadingComments(false);
             });
         }
-    }, [showComments, postId, commentList.length]);
+    }, [showComments, postId]);
 
     useEffect(() => {
         setCommentTree(buildTree(commentList));
@@ -360,7 +222,9 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            // No action needed for emoji picker if removed
+            if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+                setShowEmojiPicker(false);
+            }
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setShowMenu(false);
             }
@@ -402,7 +266,6 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
             content: newComment,
             created_at: new Date().toISOString(),
             parent_id: parentId,
-            user_id: currentUserId || "",
             user: { username: "Tú", avatar_url: null },
             likes_count: 0,
             has_liked: false,
@@ -413,6 +276,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
         setNewComment("");
         setReplyingTo(null);
         setCommentsCount(prev => prev + 1);
+        setShowEmojiPicker(false);
 
         const res = await addComment(postId, optimisticComment.content, parentId || undefined);
         if (res?.error) {
@@ -437,24 +301,6 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
         await toggleCommentLike(commentId);
     };
 
-    const handleDeleteComment = async (commentId: string) => {
-        if (!confirm("¿Eliminar este comentario?")) return;
-
-        // Optimistic update
-        setCommentList(prev => prev.filter(c => c.id !== commentId));
-        setCommentsCount(prev => Math.max(0, prev - 1));
-
-        const res = await deleteComment(commentId);
-        if (res.error) {
-            alert(res.error);
-            // Revert on error (re-fetch is safest)
-            getComments(postId).then(data => {
-                setCommentList(data || []);
-                setCommentsCount(data?.length || 0);
-            });
-        }
-    };
-
     const handleDelete = async () => {
         if (!confirm("¿Estás seguro de que quieres eliminar esta publicación?")) return;
         setIsDeleting(true);
@@ -466,20 +312,23 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     };
 
     const handleUpdate = async () => {
-        let mediaUrl;
-        if (mediaType === 'wod' && editWodData) {
-            mediaUrl = JSON.stringify(editWodData);
-        }
-        const res = await updatePost(postId, editCaption, mediaUrl);
+        const res = await updatePost(postId, editCaption);
         if (res.error) {
             alert(res.error);
         } else {
-            if (mediaType === 'wod' && editWodData) {
-                window.location.reload();
-            } else {
-                setDisplayCaption(editCaption);
-                setIsEditing(false);
-            }
+            setDisplayCaption(editCaption);
+            setIsEditing(false);
+        }
+    };
+
+    const toggleMusic = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!audioRef.current) return;
+
+        if (isPlaying) {
+            audioRef.current.pause();
+        } else {
+            audioRef.current.play().catch(console.error);
         }
     };
 
@@ -513,15 +362,6 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             <Heart className={clsx("w-3 h-3", comment.has_liked && "fill-current")} />
                             {comment.likes_count > 0 && comment.likes_count}
                         </button>
-
-                        {(currentUserId === comment.user_id || isAdminUser) && (
-                            <button
-                                onClick={() => handleDeleteComment(comment.id)}
-                                className="text-gray-500 hover:text-brand-red transition-colors"
-                            >
-                                <Trash2 className="w-3 h-3" />
-                            </button>
-                        )}
                     </div>
                 </div>
                 <div className="flex items-center gap-4 text-[10px] text-gray-600 mt-1 ml-2 font-bold">
@@ -593,12 +433,33 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             {action.includes('PR') || highlight?.includes('PR') ? 'NUEVO PR • ' : ''}
                             {time.toUpperCase()}
                         </p>
+                        {music_url && (
+                            <div className="flex items-center gap-2 mt-1">
+                                <button
+                                    onClick={toggleMusic}
+                                    className="flex items-center gap-1.5 bg-black/40 hover:bg-black/60 px-2 py-0.5 rounded-full border border-white/10 transition-colors group"
+                                >
+                                    <Music className={clsx("w-3 h-3 text-brand-red", isPlaying && "animate-bounce")} />
+                                    <span className="text-[9px] font-bold text-gray-300 uppercase tracking-widest max-w-[120px] truncate">
+                                        {music_title} • {music_artist}
+                                    </span>
+                                </button>
+                                <audio
+                                    ref={audioRef}
+                                    src={music_url}
+                                    loop
+                                    className="hidden"
+                                    onPlay={() => setIsPlaying(true)}
+                                    onPause={() => setIsPlaying(false)}
+                                />
+                            </div>
+                        )}
                     </div>
                 </Link>
 
                 <div className="flex items-center gap-4">
                     <p className="hidden sm:block text-[10px] text-gray-500 font-bold uppercase tracking-widest">{time}</p>
-                    {canEdit && (
+                    {isOwner && (
                         <div className="relative" ref={menuRef}>
                             <button
                                 onClick={() => setShowMenu(!showMenu)}
@@ -609,15 +470,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             {showMenu && (
                                 <div className="absolute right-0 top-full mt-2 w-40 bg-brand-gray border border-white/10 rounded-2xl shadow-2xl z-20 overflow-hidden backdrop-blur-xl">
                                     <button
-                                        onClick={() => {
-                                            setIsEditing(true);
-                                            setShowMenu(false);
-                                            if (mediaType === 'wod' && image) {
-                                                try {
-                                                    setEditWodData(JSON.parse(image));
-                                                } catch (e) { console.error(e); }
-                                            }
-                                        }}
+                                        onClick={() => { setIsEditing(true); setShowMenu(false); }}
                                         className="w-full text-left px-5 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 transition-colors"
                                     >
                                         <Edit2 className="w-4 h-4" /> Editar
@@ -633,491 +486,296 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                         </div>
                     )}
                 </div>
-            </div >
+            </div>
 
             {/* Caption - Only show if not a class_result (unless editing) */}
-            {
-                ((displayCaption && mediaType !== 'class_result') || isEditing) && (
-                    <div className="px-4 pb-3">
-                        {isEditing ? (
-                            <div className="space-y-4">
-                                {mediaType === 'wod' && (
-                                    <div className="bg-black/20 p-4 rounded-3xl border border-white/5 mb-4">
-                                        <p className="text-[10px] font-black text-brand-red uppercase tracking-widest mb-4 ml-2">Editando Estructura del WOD</p>
-                                        <WodCreator
-                                            initialData={editWodData}
-                                            onUpdate={(data) => setEditWodData(data)}
-                                        />
-                                    </div>
-                                )}
-                                <div className="flex gap-2">
-                                    <textarea
-                                        value={editCaption}
-                                        onChange={(e) => setEditCaption(e.target.value)}
-                                        placeholder="Edita el pie de foto..."
-                                        className="w-full bg-black/20 border border-white/10 rounded-2xl p-4 text-sm text-white focus:outline-none focus:border-brand-red/50 transition-all min-h-[80px]"
-                                        rows={2}
-                                    />
-                                    <div className="flex flex-col gap-2">
-                                        <button onClick={handleUpdate} className="flex-1 px-4 bg-brand-red/10 text-brand-red border border-brand-red/20 rounded-2xl hover:bg-brand-red hover:text-white transition-all flex items-center justify-center" title="Guardar"><Save className="w-5 h-5" /></button>
-                                        <button onClick={() => { setIsEditing(false); setEditCaption(displayCaption); }} className="flex-1 px-4 bg-white/5 text-gray-500 border border-white/10 rounded-2xl hover:bg-white/10 hover:text-white transition-all flex items-center justify-center" title="Cancelar"><X className="w-5 h-5" /></button>
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <MentionText
-                                text={displayCaption}
-                                className={clsx(
-                                    "text-sm sm:text-base whitespace-pre-wrap font-accent font-medium tracking-tight leading-relaxed",
-                                    theme === 'dark' ? "text-gray-100" : "text-black",
-                                    (isOfficial && workoutData && !isMember && username?.toLowerCase() !== 'rivalfit' && username?.toLowerCase() !== 'rival') && "blur-[2px] select-none pointer-events-none opacity-50"
-                                )}
-                                mentionClassName="font-black"
+            {((displayCaption && mediaType !== 'class_result') || isEditing) && (
+                <div className="px-4 pb-3">
+                    {isEditing ? (
+                        <div className="flex gap-2">
+                            <textarea
+                                value={editCaption}
+                                onChange={(e) => setEditCaption(e.target.value)}
+                                className="w-full bg-black/20 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-brand-red/50"
+                                rows={2}
                             />
-                        )}
-                    </div>
-                )
-            }
+                            <div className="flex flex-col gap-1">
+                                <button onClick={handleUpdate} className="p-2 bg-green-500/10 text-green-500 rounded-lg" title="Guardar"><Save className="w-4 h-4" /></button>
+                                <button onClick={() => { setIsEditing(false); setEditCaption(displayCaption); }} className="p-2 bg-red-500/10 text-red-500 rounded-lg" title="Cancelar"><X className="w-4 h-4" /></button>
+                            </div>
+                        </div>
+                    ) : (
+                        <MentionText
+                            text={displayCaption}
+                            className={clsx(
+                                "text-sm sm:text-base whitespace-pre-wrap font-accent font-medium tracking-tight leading-relaxed",
+                                theme === 'dark' ? "text-gray-100" : "text-black",
+                                (isOfficial && workoutData && !isMember && username?.toLowerCase() !== 'rivalfit' && username?.toLowerCase() !== 'rival') && "blur-[2px] select-none pointer-events-none opacity-50"
+                            )}
+                            mentionClassName="font-black"
+                        />
+                    )}
+                </div>
+            )}
 
             {/* Media Content - RESTRICTED IF OFFICIAL AND NO MEMBER */}
-            {
-                (isOfficial && workoutData && !isMember && username?.toLowerCase() !== 'rivalfit' && username?.toLowerCase() !== 'rival') ? (
-                    <div className="px-4 pb-6">
-                        <div className="bg-muted/10 border border-white/5 border-dashed rounded-[32px] p-8 flex flex-col items-center justify-center text-center gap-4 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
-                            <div className="w-16 h-16 rounded-full bg-brand-red/10 flex items-center justify-center mb-1 shadow-glow border border-brand-red/20 relative z-10">
-                                <Dumbbell className="w-8 h-8 text-brand-red" />
-                            </div>
-                            <div className="relative z-10">
-                                <h3 className="font-heading font-black italic uppercase text-lg text-white mb-2 leading-none">Entrenamiento Exclusivo</h3>
-                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-[250px] mx-auto">
-                                    Este entrenamiento es solo para atletas de este centro. ¡Inscríbete para verlo!
-                                </p>
-                            </div>
+            {(isOfficial && workoutData && !isMember && username?.toLowerCase() !== 'rivalfit' && username?.toLowerCase() !== 'rival') ? (
+                <div className="px-4 pb-6">
+                    <div className="bg-muted/10 border border-white/5 border-dashed rounded-[32px] p-8 flex flex-col items-center justify-center text-center gap-4 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
+                        <div className="w-16 h-16 rounded-full bg-brand-red/10 flex items-center justify-center mb-1 shadow-glow border border-brand-red/20 relative z-10">
+                            <Dumbbell className="w-8 h-8 text-brand-red" />
+                        </div>
+                        <div className="relative z-10">
+                            <h3 className="font-heading font-black italic uppercase text-lg text-white mb-2 leading-none">Entrenamiento Exclusivo</h3>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-[250px] mx-auto">
+                                Este entrenamiento es solo para atletas de este centro. ¡Inscríbete para verlo!
+                            </p>
                         </div>
                     </div>
-                ) : mediaType === 'pr' ? (
-                    <div className="px-4 pb-6 mt-2">
-                        {(() => {
-                            let prData: { sport?: string, exerciseName?: string, weight?: string, unit?: string, backgroundImage?: string } = {};
-                            try {
-                                if (typeof image === 'string' && image.startsWith('{')) {
-                                    prData = JSON.parse(image);
-                                }
-                            } catch { }
-
-                            return (
-                                <PRCard
-                                    userName={user}
-                                    avatarUrl={avatar}
-                                    sport={prData.sport || "Cross Training"}
-                                    exerciseName={prData.exerciseName || "Ejercicio"}
-                                    weight={prData.weight || "0"}
-                                    unit={prData.unit || "kg"}
-                                    backgroundImage={prData.backgroundImage || (/\.(jpg|jpeg|png|webp|gif)$/i.test(image) ? image : undefined)}
-                                />
-                            );
-                        })()}
-                    </div>
-                ) : mediaType === 'wod' ? (
-                    <div className="px-4 pb-6 mt-2">
-                        {(() => {
-                            let wodData: { blocks: any[] } | null = null;
-                            try {
-                                if (typeof image === 'string' && image.startsWith('{')) {
-                                    wodData = JSON.parse(image);
-                                }
-                            } catch { }
-
-                            if (!wodData) return null;
-
-                            return (
-                                <WodCard
-                                    data={wodData}
-                                    userName={user}
-                                    publishDate={time}
-                                />
-                            );
-                        })()}
-                    </div>
-                ) : mediaType === 'class_result' ? (
-                    <div className="px-4 pb-6">
-                        {(() => {
-                            let blocks: Array<{ type: string, centerName?: string, result?: { time?: string; rounds?: number; reps?: number }, rounds?: number, duration?: number, title?: string, notes?: string, exercises?: Array<{ name: string }> }> = [];
-                            let centerName = "Centro Deportivo";
-                            try {
-                                const parsed = JSON.parse(image);
-                                if (Array.isArray(parsed)) {
-                                    blocks = parsed.filter(b => {
-                                        if (b.type === 'metadata') {
-                                            if (b.centerName) centerName = b.centerName;
-                                            return false;
-                                        }
-                                        return true;
-                                    });
-                                }
-                            } catch {
-                                blocks = [];
+                </div>
+            ) : mediaType === 'pr' ? (
+                <div className="px-4 pb-6 mt-2">
+                    {(() => {
+                        let prData: any = {};
+                        try {
+                            if (typeof image === 'string' && image.startsWith('{')) {
+                                prData = JSON.parse(image);
                             }
+                        } catch (e) { }
 
-                            const summary = blocks.length > 1 ? `${blocks.length} EJERCICIOS` : (blocks[0]?.title || 'EJERCICIO');
-                            const displayCenterName = centerName && !['Centro Deportivo', 'Gimnasio'].includes(centerName) ? ` @ ${centerName}` : '';
-
-                            if (!isExpanded) {
-                                return (
-                                    <button
-                                        onClick={() => setIsExpanded(true)}
-                                        className={clsx(
-                                            "w-full border rounded-[18px] md:rounded-[24px] p-3 md:p-4 flex items-center justify-between hover:border-brand-red/50 transition-all group shadow-2xl relative overflow-hidden",
-                                            theme === 'dark' ? "bg-[#121212] border-white/5 hover:bg-white/[0.04]" : "bg-gray-50 border-gray-100 hover:bg-white shadow-md"
-                                        )}
-                                    >
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
-                                        <div className="flex items-center gap-3 md:gap-4 relative z-10 w-full overflow-hidden">
-                                            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 group-hover:scale-110 transition-transform shrink-0">
-                                                <Dumbbell className="w-4 h-4 md:w-5 md:h-5" />
-                                            </div>
-                                            <div className="text-left flex-1 min-w-0">
-                                                <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] mb-0.5 italic">RESUMEN</p>
-                                                <h4 className={clsx(
-                                                    "text-sm md:text-lg font-accent font-bold uppercase tracking-tight group-hover:text-brand-red transition-colors leading-none truncate pr-2",
-                                                    theme === 'dark' ? "text-white" : "text-gray-900"
-                                                )}>
-                                                    ENTRENAMIENTO DEL DÍA
-                                                </h4>
-                                                <p className="text-[8px] md:text-[9px] text-brand-red/70 font-bold uppercase tracking-widest mt-1 flex items-center gap-2 truncate">
-                                                    <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red animate-pulse"></span>
-                                                    {summary}{displayCenterName}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="hidden sm:flex bg-white/5 rounded-xl p-2.5 group-hover:bg-brand-red group-hover:text-white transition-all border border-white/5 shrink-0">
-                                            <ChevronDown className="w-4 h-4" />
-                                        </div>
-                                    </button>
-                                );
+                        return (
+                            <PRCard
+                                userName={user}
+                                avatarUrl={avatar}
+                                sport={prData.sport || "Cross Training"}
+                                exerciseName={prData.exerciseName || "Ejercicio"}
+                                weight={prData.weight || "0"}
+                                unit={prData.unit || "kg"}
+                                backgroundImage={prData.backgroundImage || (/\.(jpg|jpeg|png|webp|gif)$/i.test(image) ? image : undefined)}
+                            />
+                        );
+                    })()}
+                </div>
+            ) : mediaType === 'class_result' ? (
+                <div className="px-4 pb-6">
+                    {(() => {
+                        let blocks: any[] = [];
+                        let centerName = "Centro Deportivo";
+                        try {
+                            const parsed = JSON.parse(image);
+                            if (Array.isArray(parsed)) {
+                                blocks = parsed.filter(b => {
+                                    if (b.type === 'metadata') {
+                                        if (b.centerName) centerName = b.centerName;
+                                        return false;
+                                    }
+                                    return true;
+                                });
                             }
+                        } catch (e) {
+                            blocks = [];
+                        }
 
+                        const summary = blocks.length > 1 ? `${blocks.length} EJERCICIOS` : (blocks[0]?.title || 'EJERCICIO');
+                        const displayCenterName = centerName && !['Centro Deportivo', 'Gimnasio'].includes(centerName) ? ` @ ${centerName}` : '';
+
+                        if (!isExpanded) {
                             return (
-                                <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
-                                    <div className="flex items-center justify-between px-2 mb-2">
-                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">ENTRENAMIENTO COMPLETO</p>
-                                        <button
-                                            onClick={() => setIsExpanded(false)}
-                                            className="text-[10px] text-brand-red font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
-                                        >
-                                            CONTRAER <ChevronUp className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                    {blocks.map((block: { title?: string; value?: string; exercises?: any[] }, idx: number) => {
-                                        const title = (block.title || 'Ejercicio').toUpperCase();
-                                        const value = block.value || '';
-                                        const exercises = block.exercises || [];
-
-                                        const valMatch = value.match(/^([0-9.]+)\s*(.*)$/);
-                                        const valNum = valMatch ? valMatch[1] : value;
-                                        const valUnit = valMatch ? valMatch[2] : '';
-
-                                        const isInnerExpanded = expandedInnerBlocks.includes(idx);
-
-                                        return (
-
-                                            <div key={idx} className={clsx(
-                                                "border rounded-xl md:rounded-2xl relative overflow-hidden group/card transition-all",
-                                                theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-sm",
-                                                isInnerExpanded ? "p-3 md:p-4" : "p-2 md:p-3 hover:bg-white/[0.02] cursor-pointer"
-                                            )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx)}>
-                                                <div className="relative z-10 space-y-1 md:space-y-2">
-                                                    <div className="flex items-center justify-between gap-3">
-                                                        <div className="min-w-0 flex-1">
-                                                            <h3 className={clsx(
-                                                                "text-sm md:text-lg font-accent font-semibold tracking-tighter leading-none truncate pr-2",
-                                                                theme === 'dark' ? "text-white" : "text-gray-900"
-                                                            )}>
-                                                                {title}
-                                                            </h3>
-                                                        </div>
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="text-right shrink-0">
-                                                                <span className="text-xl md:text-3xl font-accent font-bold text-brand-red tracking-tighter leading-none">
-                                                                    {valNum}
-                                                                </span>
-                                                                {valUnit && <span className="text-[9px] md:text-xs font-black text-brand-red ml-1 uppercase">{valUnit}</span>}
-                                                            </div>
-                                                            <button
-                                                                onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx); }}
-                                                                className="p-1 hover:bg-white/5 rounded-lg transition-colors"
-                                                            >
-                                                                {isInnerExpanded ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-                                                            </button>
-                                                        </div>
-                                                    </div>
-
-                                                    {isInnerExpanded && (
-                                                        <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-2">
-                                                            <div className="w-full h-1 md:h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                                                <div className="bg-brand-red h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(220,38,38,0.5)]" style={{ width: '75%' }}></div>
-                                                            </div>
-
-                                                            {exercises.length > 0 && (
-                                                                <div className="grid grid-cols-2 gap-2">
-                                                                    {exercises.map((ex: { name: string }, eIdx: number) => (
-                                                                        <div key={eIdx} className="bg-white/5 rounded-xl px-3 py-2 border border-white/5">
-                                                                            <p className="text-[8px] md:text-[9px] text-gray-500 font-black uppercase tracking-wider truncate">{ex.name}</p>
-                                                                            <p className={clsx(
-                                                                                "text-[10px] md:text-xs font-bold",
-                                                                                theme === 'dark' ? "text-white" : "text-black"
-                                                                            )}>{ex.value} {ex.reps ? `x ${ex.reps}` : ''}</p>
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-
-                                    })}
-
-                                    {displayCaption && displayCaption.includes('📝 COMENTARIO:') && (
-                                        <div className="mt-2 p-6 bg-brand-red/5 border border-brand-red/10 rounded-[24px] relative overflow-hidden group shadow-lg">
-                                            <div className="absolute top-0 right-0 p-6 opacity-5">
-                                                <MessageCircle className="w-16 h-16 text-brand-red" />
-                                            </div>
-                                            <p className="text-brand-red font-accent font-semibold text-sm md:text-base relative z-10 leading-relaxed border-l-4 border-brand-red pl-6 py-2">
-                                                {displayCaption.split('📝 COMENTARIO:')[1].trim()}
+                                <button
+                                    onClick={() => setIsExpanded(true)}
+                                    className={clsx(
+                                        "w-full border rounded-[18px] md:rounded-[24px] p-3 md:p-4 flex items-center justify-between hover:border-brand-red/50 transition-all group shadow-2xl relative overflow-hidden",
+                                        theme === 'dark' ? "bg-[#121212] border-white/5 hover:bg-white/[0.04]" : "bg-gray-50 border-gray-100 hover:bg-white shadow-md"
+                                    )}
+                                >
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
+                                    <div className="flex items-center gap-3 md:gap-4 relative z-10 w-full overflow-hidden">
+                                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 group-hover:scale-110 transition-transform shrink-0">
+                                            <Dumbbell className="w-4 h-4 md:w-5 md:h-5" />
+                                        </div>
+                                        <div className="text-left flex-1 min-w-0">
+                                            <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] mb-0.5 italic">RESUMEN</p>
+                                            <h4 className={clsx(
+                                                "text-sm md:text-lg font-accent font-bold uppercase tracking-tight group-hover:text-brand-red transition-colors leading-none truncate pr-2",
+                                                theme === 'dark' ? "text-white" : "text-gray-900"
+                                            )}>
+                                                ENTRENAMIENTO DEL DÍA
+                                            </h4>
+                                            <p className="text-[8px] md:text-[9px] text-brand-red/70 font-bold uppercase tracking-widest mt-1 flex items-center gap-2 truncate">
+                                                <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red animate-pulse"></span>
+                                                {summary}{displayCenterName}
                                             </p>
                                         </div>
-                                    )}
-                                </div>
+                                    </div>
+                                    <div className="hidden sm:flex bg-white/5 rounded-xl p-2.5 group-hover:bg-brand-red group-hover:text-white transition-all border border-white/5 shrink-0">
+                                        <ChevronDown className="w-4 h-4" />
+                                    </div>
+                                </button>
                             );
-                        })()}
-                    </div>
-                ) : mediaType === 'membership_activation' ? (
-                    <div className="px-4 pb-6">
-                        <div className={clsx(
-                            "rounded-[28px] p-6 md:p-8 flex flex-col items-center justify-center text-center gap-4 relative overflow-hidden border shadow-xl shadow-brand-red/10",
-                            theme === 'dark' ? "bg-black/40 border-brand-red/30" : "bg-white border-brand-red/20 shadow-lg"
-                        )}>
-                            {/* Animated background elements */}
-                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10 animate-pulse" />
-                            <div className="absolute bottom-0 left-0 w-32 h-32 bg-brand-red/5 blur-2xl -ml-10 -mb-10 animate-pulse" />
+                        }
 
-                            <div className="w-20 h-20 rounded-full bg-brand-red/10 flex items-center justify-center mb-1 shadow-glow border border-brand-red/20 relative z-10 animate-in zoom-in duration-500">
-                                <CheckCircle2 className="w-10 h-10 text-brand-red" />
-                            </div>
-                            <div className="relative z-10 space-y-2">
-                                <h3 className="font-heading font-black italic uppercase text-xl md:text-2xl text-white tracking-tighter leading-none">¡MEMBRESÍA ACTIVADA!</h3>
-                                <p className="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-[0.2em] max-w-[300px] mx-auto leading-relaxed">
-                                    {caption || `¡Ha comenzado una nueva etapa de entrenamiento!`}
-                                </p>
-                            </div>
-
-                            <div className="relative z-10 flex items-center gap-2 mt-2">
-                                <span className="h-px w-8 bg-brand-red/30" />
-                                <Trophy className="w-4 h-4 text-brand-red" />
-                                <span className="h-px w-8 bg-brand-red/30" />
-                            </div>
-                        </div>
-                    </div>
-                ) : (image || workoutData) ? (
-                    <div className="flex flex-col gap-4">
-                        {image && (
-                            <div className="px-2">
-                                <div className="relative aspect-video bg-black cursor-pointer group shadow-2xl overflow-hidden rounded-xl" onClick={() => setIsLightboxOpen(true)}>
-                                    {isVideo ? (
-                                        <div className="relative w-full h-full">
-                                            <video
-                                                src={image}
-                                                className="w-full h-full object-cover"
-                                                autoPlay
-                                                loop
-                                                playsInline
-                                                muted
-                                                preload="auto"
-                                                controlsList="nodownload"
-                                                onContextMenu={(e) => e.preventDefault()}
-                                            />
-                                            <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
-                                        </div>
-                                    ) : (
-                                        <div className="relative w-full h-full">
-                                            <Image src={image} alt="Post content" fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
-                                        </div>
-                                    )}
+                        return (
+                            <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
+                                <div className="flex items-center justify-between px-2 mb-2">
+                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">ENTRENAMIENTO COMPLETO</p>
+                                    <button
+                                        onClick={() => setIsExpanded(false)}
+                                        className="text-[10px] text-brand-red font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
+                                    >
+                                        CONTRAER <ChevronUp className="w-3 h-3" />
+                                    </button>
                                 </div>
-                            </div>
-                        )}
+                                {blocks.map((block: any, idx: number) => {
+                                    const title = (block.title || 'Ejercicio').toUpperCase();
+                                    const value = block.value || '';
+                                    const exercises = block.exercises || [];
 
-                        {workoutData && ((() => {
-                            const w = Array.isArray(workoutData) ? workoutData[0] : workoutData;
-                            if (!w) return null;
+                                    const valMatch = value.match(/^([0-9.]+)\s*(.*)$/);
+                                    const valNum = valMatch ? valMatch[1] : value;
+                                    const valUnit = valMatch ? valMatch[2] : '';
 
-                            // CHECK FOR MULTI-BLOCK METRICS
-                            if (w.metrics && w.metrics.blocks && w.metrics.blocks.length > 0) {
-                                const blocks = w.metrics.blocks;
-                                const centerName = w.location_name || 'Gimnasio';
-                                const displayCenterName = centerName && !['Centro Deportivo', 'Gimnasio', 'Gimnasio RIVAL HQ'].includes(centerName) ? ` @ ${centerName}` : '';
+                                    const isInnerExpanded = expandedInnerBlocks.includes(idx);
 
-                                const summary = `${blocks.length} BLOQUES`;
+                                    return (
 
-                                return (
-                                    <div className="w-full">
-                                        {!isExpanded ? (
-                                            <button
-                                                onClick={() => setIsExpanded(true)}
-                                                className={clsx(
-                                                    "w-full border rounded-xl md:rounded-2xl p-2 md:p-3 flex items-center justify-between hover:border-brand-red/50 transition-all group shadow-xl relative overflow-hidden",
-                                                    theme === 'dark' ? "bg-[#121212] border-white/5 hover:bg-white/[0.04]" : "bg-gray-50 border-gray-100 hover:bg-white shadow-md"
-                                                )}
-                                            >
-                                                <div className="absolute top-0 right-0 w-24 h-24 bg-brand-red/5 blur-3xl -mr-8 -mt-8" />
-                                                <div className="flex items-center gap-2 md:gap-3 relative z-10 w-full overflow-hidden">
-                                                    <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 group-hover:scale-110 transition-transform shrink-0">
-                                                        <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                                                    </div>
-                                                    <div className="text-left flex-1 min-w-0">
-                                                        <h4 className={clsx(
-                                                            "text-xs md:text-sm font-heading font-black italic uppercase tracking-tighter group-hover:text-brand-red transition-colors leading-none truncate pr-2",
+                                        <div key={idx} className={clsx(
+                                            "border rounded-xl md:rounded-2xl relative overflow-hidden group/card transition-all",
+                                            theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-sm",
+                                            isInnerExpanded ? "p-3 md:p-4" : "p-2 md:p-3 hover:bg-white/[0.02] cursor-pointer"
+                                        )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx)}>
+                                            <div className="relative z-10 space-y-1 md:space-y-2">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <div className="min-w-0 flex-1">
+                                                        <h3 className={clsx(
+                                                            "text-sm md:text-lg font-accent font-semibold tracking-tighter leading-none truncate pr-2",
                                                             theme === 'dark' ? "text-white" : "text-gray-900"
                                                         )}>
-                                                            {(!w.sport_type || w.sport_type === 'Entrenamiento Libre') ? 'ENTRENAMIENTO HÍBRIDO' : w.sport_type}
-                                                        </h4>
-                                                        <p className="text-[7px] md:text-[8px] text-brand-red/70 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 truncate">
-                                                            <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red"></span>
-                                                            {summary}{displayCenterName}
-                                                        </p>
+                                                            {title}
+                                                        </h3>
                                                     </div>
-                                                </div>
-                                                <div className="flex bg-white/5 rounded-lg p-1.5 group-hover:bg-brand-red group-hover:text-white transition-all border border-white/5 shrink-0">
-                                                    <ChevronDown className="w-3 h-3" />
-                                                </div>
-                                            </button>
-                                        ) : (
-                                            <div className={clsx(
-                                                "border rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden group/card shadow-xl animate-in fade-in slide-in-from-top-4 duration-300",
-                                                theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-md"
-                                            )}>
-                                                {/* Accent Background Glow */}
-                                                <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
-
-                                                <div className="relative z-10">
-                                                    <div className="flex items-center justify-between mb-3 md:mb-4">
-                                                        <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] italic">RESULTADOS POR BLOQUE</p>
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="text-right shrink-0">
+                                                            <span className="text-xl md:text-3xl font-accent font-bold text-brand-red tracking-tighter leading-none">
+                                                                {valNum}
+                                                            </span>
+                                                            {valUnit && <span className="text-[9px] md:text-xs font-black text-brand-red ml-1 uppercase">{valUnit}</span>}
+                                                        </div>
                                                         <button
-                                                            onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
-                                                            className="text-[7px] md:text-[8px] text-brand-red font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
+                                                            onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx); }}
+                                                            className="p-1 hover:bg-white/5 rounded-lg transition-colors"
                                                         >
-                                                            CERRAR <ChevronUp className="w-3 h-3" />
+                                                            {isInnerExpanded ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                                                         </button>
                                                     </div>
-
-                                                    <div className="relative z-10 space-y-3">
-                                                        {blocks.map((block: { type: string, title?: string, result?: { time?: string, rounds?: number }, duration?: number, notes?: string, exercises?: Array<{ name: string; sets?: any[] }> }, idx: number) => {
-                                                            const isInnerExpanded = expandedInnerBlocks.includes(idx + 1000); // Unique ID offset
-                                                            const resultStr =
-                                                                block.type === 'fortime' ? (block.result?.time || '--:--') :
-                                                                    block.type === 'rft' ? (`${block.result?.rounds || 0} Rds` + (block.result?.time ? ` - ${block.result.time}` : '')) :
-                                                                        block.type === 'emom' ? `${block.duration || 0}' - ${block.result?.rounds || 0} Rds` :
-                                                                            block.type === 'amrap' ? `${block.result?.rounds || 0} Rds` :
-                                                                                (block.result?.rounds && block.result.rounds > 0) ? `${block.result.rounds} Rds` :
-                                                                                    (block.result?.time && block.result.time !== '00:00' && block.result.time !== '') ? block.result.time :
-                                                                                        '';
-
-                                                            return (
-                                                                <div key={idx} className={clsx(
-                                                                    "border rounded-xl md:rounded-2xl relative overflow-hidden group/card transition-all",
-                                                                    theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-sm",
-                                                                    isInnerExpanded ? "p-3 md:p-4" : "p-2 md:p-3 hover:bg-white/[0.02] cursor-pointer"
-                                                                )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx + 1000)}>
-                                                                    <div className="flex items-center justify-between gap-3">
-                                                                        <div className="min-w-0 flex-1">
-                                                                            <h3 className={clsx(
-                                                                                "text-sm md:text-base font-heading font-black italic uppercase tracking-tighter leading-none truncate pr-2",
-                                                                                theme === 'dark' ? "text-white" : "text-gray-900"
-                                                                            )}>
-                                                                                {(block.title === 'Entrenamiento Libre' || block.title === 'Hybrid' || !block.title) ? (w.sport_type || 'Bloque') : block.title} {block.type !== 'other' && <span className="text-[9px] text-gray-500 ml-1 not-italic font-bold tracking-widest">({block.type.toUpperCase()})</span>}
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div className="flex items-center gap-3">
-                                                                            <div className="text-right shrink-0">
-                                                                                <span className="text-sm md:text-lg font-heading font-black text-brand-red italic tracking-tighter leading-none">
-                                                                                    {resultStr}
-                                                                                </span>
-                                                                            </div>
-                                                                            <button
-                                                                                onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx + 1000); }}
-                                                                                className="p-1 hover:bg-white/5 rounded-lg transition-colors"
-                                                                            >
-                                                                                {isInnerExpanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />}
-                                                                            </button>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {isInnerExpanded && (
-                                                                        <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-3 mt-2 border-t border-white/5">
-                                                                            {block.notes && <p className="text-xs text-gray-400 italic mb-2">&quot;{block.notes}&quot;</p>}
-                                                                            <div className="space-y-2">
-                                                                                {block.exercises?.map((ex: { name: string, sets?: Array<{ weight: number; reps: number; unit?: string; measure?: string }> }, eIdx: number) => (
-                                                                                    <div key={eIdx} className="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2 border border-white/5">
-                                                                                        <span className={clsx("text-xs font-bold uppercase", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</span>
-                                                                                        <span className="text-xs text-brand-red font-mono font-bold">
-                                                                                            {(() => {
-                                                                                                const s = ex.sets?.[0];
-                                                                                                if (!s) return '';
-                                                                                                // Filter out 'kg' if weight is 0, handle different units
-                                                                                                const w = s.weight > 0 ? `${s.weight}${s.unit || 'kg'}` : '';
-                                                                                                // Handle reps/time/distance
-                                                                                                const r = s.reps > 0 ? `${s.reps}${s.measure === 'reps' ? '' : (s.measure || '')}` : '';
-
-                                                                                                if (w && r) return `${w} x ${r}`;
-                                                                                                return w || r;
-                                                                                            })()}
-                                                                                        </span>
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            )
-                                                        })}
-                                                    </div>
                                                 </div>
+
+                                                {isInnerExpanded && (
+                                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-2">
+                                                        <div className="w-full h-1 md:h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                                            <div className="bg-brand-red h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(220,38,38,0.5)]" style={{ width: '75%' }}></div>
+                                                        </div>
+
+                                                        {exercises.length > 0 && (
+                                                            <div className="grid grid-cols-2 gap-2">
+                                                                {exercises.map((ex: any, eIdx: number) => (
+                                                                    <div key={eIdx} className="bg-white/5 rounded-xl px-3 py-2 border border-white/5">
+                                                                        <p className="text-[8px] md:text-[9px] text-gray-500 font-black uppercase tracking-wider truncate">{ex.name}</p>
+                                                                        <p className={clsx(
+                                                                            "text-[10px] md:text-xs font-bold",
+                                                                            theme === 'dark' ? "text-white" : "text-black"
+                                                                        )}>{ex.value} {ex.reps ? `x ${ex.reps}` : ''}</p>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
+                                        </div>
+                                    );
+
+                                })}
+
+                                {displayCaption && displayCaption.includes('📝 COMENTARIO:') && (
+                                    <div className="mt-2 p-6 bg-brand-red/5 border border-brand-red/10 rounded-[24px] relative overflow-hidden group shadow-lg">
+                                        <div className="absolute top-0 right-0 p-6 opacity-5">
+                                            <MessageCircle className="w-16 h-16 text-brand-red" />
+                                        </div>
+                                        <p className="text-brand-red font-accent font-semibold text-sm md:text-base relative z-10 leading-relaxed border-l-4 border-brand-red pl-6 py-2">
+                                            {displayCaption.split('📝 COMENTARIO:')[1].trim()}
+                                        </p>
                                     </div>
-                                );
-                            }
+                                )}
+                            </div>
+                        );
+                    })()}
+                </div>
+            ) : mediaType === 'membership_activation' ? (
+                <div className="px-4 pb-6">
+                    <div className={clsx(
+                        "rounded-[28px] p-6 md:p-8 flex flex-col items-center justify-center text-center gap-4 relative overflow-hidden border shadow-xl shadow-brand-red/10",
+                        theme === 'dark' ? "bg-black/40 border-brand-red/30" : "bg-white border-brand-red/20 shadow-lg"
+                    )}>
+                        {/* Animated background elements */}
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10 animate-pulse" />
+                        <div className="absolute bottom-0 left-0 w-32 h-32 bg-brand-red/5 blur-2xl -ml-10 -mb-10 animate-pulse" />
 
-                            const sets = w.workout_sets || [];
+                        <div className="w-20 h-20 rounded-full bg-brand-red/10 flex items-center justify-center mb-1 shadow-glow border border-brand-red/20 relative z-10 animate-in zoom-in duration-500">
+                            <CheckCircle2 className="w-10 h-10 text-brand-red" />
+                        </div>
+                        <div className="relative z-10 space-y-2">
+                            <h3 className="font-heading font-black italic uppercase text-xl md:text-2xl text-white tracking-tighter leading-none">¡MEMBRESÍA ACTIVADA!</h3>
+                            <p className="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-[0.2em] max-w-[300px] mx-auto leading-relaxed">
+                                {caption || `¡Ha comenzado una nueva etapa de entrenamiento!`}
+                            </p>
+                        </div>
+
+                        <div className="relative z-10 flex items-center gap-2 mt-2">
+                            <span className="h-px w-8 bg-brand-red/30" />
+                            <Trophy className="w-4 h-4 text-brand-red" />
+                            <span className="h-px w-8 bg-brand-red/30" />
+                        </div>
+                    </div>
+                </div>
+            ) : (image || workoutData) ? (
+                <div className="flex flex-col gap-4">
+                    {image && (
+                        <div className="px-2">
+                            <div className="relative aspect-video bg-black cursor-pointer group shadow-2xl overflow-hidden rounded-xl" onClick={() => setIsLightboxOpen(true)}>
+                                {isVideo ? (
+                                    <div className="relative w-full h-full">
+                                        <video
+                                            src={image}
+                                            className="w-full h-full object-cover"
+                                            autoPlay
+                                            loop
+                                            playsInline
+                                            muted
+                                            preload="auto"
+                                        />
+                                        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                                    </div>
+                                ) : (
+                                    <div className="relative w-full h-full">
+                                        <Image src={image} alt="Post content" fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {workoutData && ((() => {
+                        const w = Array.isArray(workoutData) ? workoutData[0] : workoutData;
+                        if (!w) return null;
+
+                        // CHECK FOR MULTI-BLOCK METRICS
+                        if (w.metrics && w.metrics.blocks && w.metrics.blocks.length > 0) {
+                            const blocks = w.metrics.blocks;
                             const centerName = w.location_name || 'Gimnasio';
-
-                            // Group by exercise name
-                            const grouped: { [key: string]: { name: string, maxWeight: number, totalReps: number, allSets: WorkoutSet[] } } = {};
-                            sets.forEach((s: WorkoutSet) => {
-                                const name = s.exercise_name || 'Ejercicio';
-                                if (!grouped[name]) {
-                                    grouped[name] = {
-                                        name: name,
-                                        maxWeight: 0,
-                                        totalReps: 0,
-                                        allSets: []
-                                    };
-                                }
-                                grouped[name].allSets.push(s);
-                                if ((s.weight_kg ?? 0) > (grouped[name].maxWeight ?? 0)) {
-                                    grouped[name].maxWeight = s.weight_kg ?? 0;
-                                }
-                                grouped[name].totalReps += (s.reps ?? 0);
-                            });
-
-                            const exercises = Object.values(grouped);
-                            if (exercises.length === 0 && !image) return null;
-
-                            const summary = exercises.length > 1 ? `${exercises.length} EJERCICIOS` : (exercises[0]?.name || 'ENTRENAMIENTO');
                             const displayCenterName = centerName && !['Centro Deportivo', 'Gimnasio', 'Gimnasio RIVAL HQ'].includes(centerName) ? ` @ ${centerName}` : '';
+
+                            const summary = `${blocks.length} BLOQUES`;
 
                             return (
                                 <div className="w-full">
@@ -1139,11 +797,11 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                                         "text-xs md:text-sm font-heading font-black italic uppercase tracking-tighter group-hover:text-brand-red transition-colors leading-none truncate pr-2",
                                                         theme === 'dark' ? "text-white" : "text-gray-900"
                                                     )}>
-                                                        {(!w.sport_type || w.sport_type === 'Entrenamiento Libre') ? (summary || 'ENTRENAMIENTO HÍBRIDO') : w.sport_type}
+                                                        {(!w.sport_type || w.sport_type === 'Entrenamiento Libre') ? 'ENTRENAMIENTO HÍBRIDO' : w.sport_type}
                                                     </h4>
                                                     <p className="text-[7px] md:text-[8px] text-brand-red/70 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 truncate">
                                                         <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red"></span>
-                                                        {displayCenterName || 'ENTRENAMIENTO'}
+                                                        {summary}{displayCenterName}
                                                     </p>
                                                 </div>
                                             </div>
@@ -1161,7 +819,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
 
                                             <div className="relative z-10">
                                                 <div className="flex items-center justify-between mb-3 md:mb-4">
-                                                    <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] italic">RESULTADOS</p>
+                                                    <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] italic">RESULTADOS POR BLOQUE</p>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
                                                         className="text-[7px] md:text-[8px] text-brand-red font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
@@ -1170,71 +828,72 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                                     </button>
                                                 </div>
 
-                                                <div className="relative z-10 space-y-4 md:space-y-6">
-                                                    {exercises.map((ex, idx) => {
-                                                        const isInnerExpanded = expandedInnerBlocks.includes(idx + 100); // Offset for personal workouts
+                                                <div className="relative z-10 space-y-3">
+                                                    {blocks.map((block: any, idx: number) => {
+                                                        const isInnerExpanded = expandedInnerBlocks.includes(idx + 1000); // Unique ID offset
+                                                        const resultStr =
+                                                            block.type === 'fortime' ? (block.result?.time || '--:--') :
+                                                                block.type === 'rft' ? (`${block.rounds || 0} Rds` + (block.result?.time ? ` - ${block.result.time}` : '')) :
+                                                                    block.type === 'emom' ? `${block.duration || 0}' - ${block.result?.rounds || 0} Rds` :
+                                                                        `${block.result?.rounds || 0} Rds`;
 
                                                         return (
                                                             <div key={idx} className={clsx(
                                                                 "border rounded-xl md:rounded-2xl relative overflow-hidden group/card transition-all",
                                                                 theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-sm",
                                                                 isInnerExpanded ? "p-3 md:p-4" : "p-2 md:p-3 hover:bg-white/[0.02] cursor-pointer"
-                                                            )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx + 100)}>
-                                                                <div className="relative z-10 space-y-1 md:space-y-2">
-                                                                    <div className="flex items-start justify-between gap-3">
-                                                                        <div className="min-w-0 flex-1">
-                                                                            <h3 className={clsx(
-                                                                                "text-sm md:text-lg font-heading font-black italic uppercase tracking-tighter leading-tight pr-2",
-                                                                                theme === 'dark' ? "text-white" : "text-gray-900"
-                                                                            )}>
-                                                                                {ex.name}
-                                                                            </h3>
+                                                            )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx + 1000)}>
+                                                                <div className="flex items-center justify-between gap-3">
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <h3 className={clsx(
+                                                                            "text-sm md:text-base font-heading font-black italic uppercase tracking-tighter leading-none truncate pr-2",
+                                                                            theme === 'dark' ? "text-white" : "text-gray-900"
+                                                                        )}>
+                                                                            {(block.title === 'Entrenamiento Libre' || block.title === 'Hybrid' || !block.title) ? (w.sport_type || 'Bloque') : block.title} <span className="text-[9px] text-gray-500 ml-1 not-italic font-bold tracking-widest">({block.type.toUpperCase()})</span>
+                                                                        </h3>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="text-right shrink-0">
+                                                                            <span className="text-sm md:text-lg font-heading font-black text-brand-red italic tracking-tighter leading-none">
+                                                                                {resultStr}
+                                                                            </span>
                                                                         </div>
-                                                                        <div className="flex items-center gap-2">
-                                                                            {ex.maxWeight > 0 && (
-                                                                                <div className="text-right shrink-0">
-                                                                                    <span className="text-sm md:text-xl font-heading font-black text-brand-red italic tracking-tighter leading-none">
-                                                                                        {ex.maxWeight}
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx + 1000); }}
+                                                                            className="p-1 hover:bg-white/5 rounded-lg transition-colors"
+                                                                        >
+                                                                            {isInnerExpanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+
+                                                                {isInnerExpanded && (
+                                                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-3 mt-2 border-t border-white/5">
+                                                                        {block.notes && <p className="text-xs text-gray-400 italic mb-2">"{block.notes}"</p>}
+                                                                        <div className="space-y-2">
+                                                                            {block.exercises?.map((ex: any, eIdx: number) => (
+                                                                                <div key={eIdx} className="flex justify-between items-center bg-white/5 rounded-lg px-3 py-2 border border-white/5">
+                                                                                    <span className={clsx("text-xs font-bold uppercase", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</span>
+                                                                                    <span className="text-xs text-brand-red font-mono font-bold">
+                                                                                        {(() => {
+                                                                                            const s = ex.sets?.[0];
+                                                                                            if (!s) return '';
+                                                                                            // Filter out 'kg' if weight is 0, handle different units
+                                                                                            const w = s.weight > 0 ? `${s.weight}${s.unit || 'kg'}` : '';
+                                                                                            // Handle reps/time/distance
+                                                                                            const r = s.reps > 0 ? `${s.reps}${s.measure === 'reps' ? '' : (s.measure || '')}` : '';
+
+                                                                                            if (w && r) return `${w} x ${r}`;
+                                                                                            return w || r;
+                                                                                        })()}
                                                                                     </span>
-                                                                                    <span className="text-[7px] md:text-[9px] font-black text-brand-red ml-0.5 uppercase">KG</span>
                                                                                 </div>
-                                                                            )}
-                                                                            <button
-                                                                                onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx + 100); }}
-                                                                                className="p-1 hover:bg-white/5 rounded-lg transition-colors"
-                                                                            >
-                                                                                {isInnerExpanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />}
-                                                                            </button>
+                                                                            ))}
                                                                         </div>
                                                                     </div>
-
-                                                                    {isInnerExpanded && (
-                                                                        <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-2">
-                                                                            <div className="w-full h-1 md:h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                                                                <div className="bg-brand-red h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(220,38,38,0.5)]" style={{ width: '85%' }}></div>
-                                                                            </div>
-
-                                                                            <div className="space-y-2 mt-4">
-                                                                                {ex.allSets.map((set: WorkoutSet, sIdx: number) => (
-                                                                                    <div key={sIdx} className="flex justify-between items-center bg-white/5 rounded-xl px-4 py-2.5 border border-white/5 group/set hover:border-brand-red/30 transition-colors">
-                                                                                        <div className="flex items-center gap-2">
-                                                                                            <span className="text-[9px] font-black text-brand-red uppercase tracking-widest bg-brand-red/10 px-2 py-0.5 rounded border border-brand-red/10 group-hover/set:bg-brand-red group-hover/set:text-white transition-colors">SET {sIdx + 1}</span>
-                                                                                        </div>
-                                                                                        <p className={clsx(
-                                                                                            "text-xs md:text-sm font-bold tracking-tight",
-                                                                                            theme === 'dark' ? "text-white" : "text-black"
-                                                                                        )}>
-                                                                                            {(set.weight_kg ?? 0) > 0 && <span className="text-brand-red mr-1">{set.weight_kg}KG</span>}
-                                                                                            <span className="opacity-60">x</span> {(set.reps ?? 0) > 0 ? (set.reps! > 500 ? `${set.reps} M/CAL` : `${set.reps} REPS`) : "COMPLETADO"}
-                                                                                        </p>
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
+                                                                )}
                                                             </div>
-                                                        );
+                                                        )
                                                     })}
                                                 </div>
                                             </div>
@@ -1242,11 +901,163 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                     )}
                                 </div>
                             );
-                        })()
-                        )}
-                    </div>
-                ) : null
-            }
+                        }
+
+                        const sets = w.workout_sets || [];
+                        const centerName = w.location_name || 'Gimnasio';
+
+                        // Group by exercise name
+                        const grouped: { [key: string]: any } = {};
+                        sets.forEach((s: any) => {
+                            const name = s.exercise_name || 'Ejercicio';
+                            if (!grouped[name]) {
+                                grouped[name] = {
+                                    name: name,
+                                    maxWeight: 0,
+                                    totalReps: 0,
+                                    allSets: []
+                                };
+                            }
+                            grouped[name].allSets.push(s);
+                            if ((s.weight_kg || 0) > (grouped[name].maxWeight || 0)) {
+                                grouped[name].maxWeight = s.weight_kg;
+                            }
+                            grouped[name].totalReps += (s.reps || 0);
+                        });
+
+                        const exercises = Object.values(grouped);
+                        if (exercises.length === 0 && !image) return null;
+
+                        const summary = exercises.length > 1 ? `${exercises.length} EJERCICIOS` : (exercises[0]?.name || 'ENTRENAMIENTO');
+                        const displayCenterName = centerName && !['Centro Deportivo', 'Gimnasio', 'Gimnasio RIVAL HQ'].includes(centerName) ? ` @ ${centerName}` : '';
+
+                        return (
+                            <div className="w-full">
+                                {!isExpanded ? (
+                                    <button
+                                        onClick={() => setIsExpanded(true)}
+                                        className={clsx(
+                                            "w-full border rounded-xl md:rounded-2xl p-2 md:p-3 flex items-center justify-between hover:border-brand-red/50 transition-all group shadow-xl relative overflow-hidden",
+                                            theme === 'dark' ? "bg-[#121212] border-white/5 hover:bg-white/[0.04]" : "bg-gray-50 border-gray-100 hover:bg-white shadow-md"
+                                        )}
+                                    >
+                                        <div className="absolute top-0 right-0 w-24 h-24 bg-brand-red/5 blur-3xl -mr-8 -mt-8" />
+                                        <div className="flex items-center gap-2 md:gap-3 relative z-10 w-full overflow-hidden">
+                                            <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 group-hover:scale-110 transition-transform shrink-0">
+                                                <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                            </div>
+                                            <div className="text-left flex-1 min-w-0">
+                                                <h4 className={clsx(
+                                                    "text-xs md:text-sm font-heading font-black italic uppercase tracking-tighter group-hover:text-brand-red transition-colors leading-none truncate pr-2",
+                                                    theme === 'dark' ? "text-white" : "text-gray-900"
+                                                )}>
+                                                    {(!w.sport_type || w.sport_type === 'Entrenamiento Libre') ? (summary || 'ENTRENAMIENTO HÍBRIDO') : w.sport_type}
+                                                </h4>
+                                                <p className="text-[7px] md:text-[8px] text-brand-red/70 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 truncate">
+                                                    <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red"></span>
+                                                    {displayCenterName || 'ENTRENAMIENTO'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex bg-white/5 rounded-lg p-1.5 group-hover:bg-brand-red group-hover:text-white transition-all border border-white/5 shrink-0">
+                                            <ChevronDown className="w-3 h-3" />
+                                        </div>
+                                    </button>
+                                ) : (
+                                    <div className={clsx(
+                                        "border rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden group/card shadow-xl animate-in fade-in slide-in-from-top-4 duration-300",
+                                        theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-md"
+                                    )}>
+                                        {/* Accent Background Glow */}
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
+
+                                        <div className="relative z-10">
+                                            <div className="flex items-center justify-between mb-3 md:mb-4">
+                                                <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] italic">RESULTADOS</p>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
+                                                    className="text-[7px] md:text-[8px] text-brand-red font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
+                                                >
+                                                    CERRAR <ChevronUp className="w-3 h-3" />
+                                                </button>
+                                            </div>
+
+                                            <div className="relative z-10 space-y-4 md:space-y-6">
+                                                {exercises.map((ex: any, idx) => {
+                                                    const isInnerExpanded = expandedInnerBlocks.includes(idx + 100); // Offset for personal workouts
+
+                                                    return (
+                                                        <div key={idx} className={clsx(
+                                                            "border rounded-xl md:rounded-2xl relative overflow-hidden group/card transition-all",
+                                                            theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-sm",
+                                                            isInnerExpanded ? "p-3 md:p-4" : "p-2 md:p-3 hover:bg-white/[0.02] cursor-pointer"
+                                                        )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx + 100)}>
+                                                            <div className="relative z-10 space-y-1 md:space-y-2">
+                                                                <div className="flex items-start justify-between gap-3">
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <h3 className={clsx(
+                                                                            "text-sm md:text-lg font-heading font-black italic uppercase tracking-tighter leading-tight pr-2",
+                                                                            theme === 'dark' ? "text-white" : "text-gray-900"
+                                                                        )}>
+                                                                            {ex.name}
+                                                                        </h3>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        {ex.maxWeight > 0 && (
+                                                                            <div className="text-right shrink-0">
+                                                                                <span className="text-sm md:text-xl font-heading font-black text-brand-red italic tracking-tighter leading-none">
+                                                                                    {ex.maxWeight}
+                                                                                </span>
+                                                                                <span className="text-[7px] md:text-[9px] font-black text-brand-red ml-0.5 uppercase">KG</span>
+                                                                            </div>
+                                                                        )}
+                                                                        <button
+                                                                            onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx + 100); }}
+                                                                            className="p-1 hover:bg-white/5 rounded-lg transition-colors"
+                                                                        >
+                                                                            {isInnerExpanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+
+                                                                {isInnerExpanded && (
+                                                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-2">
+                                                                        <div className="w-full h-1 md:h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                                                            <div className="bg-brand-red h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(220,38,38,0.5)]" style={{ width: '85%' }}></div>
+                                                                        </div>
+
+                                                                        <div className="space-y-2 mt-4">
+                                                                            {ex.allSets.map((set: any, sIdx: number) => (
+                                                                                <div key={sIdx} className="flex justify-between items-center bg-white/5 rounded-xl px-4 py-2.5 border border-white/5 group/set hover:border-brand-red/30 transition-colors">
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <span className="text-[9px] font-black text-brand-red uppercase tracking-widest bg-brand-red/10 px-2 py-0.5 rounded border border-brand-red/10 group-hover/set:bg-brand-red group-hover/set:text-white transition-colors">SET {sIdx + 1}</span>
+                                                                                    </div>
+                                                                                    <p className={clsx(
+                                                                                        "text-xs md:text-sm font-bold tracking-tight",
+                                                                                        theme === 'dark' ? "text-white" : "text-black"
+                                                                                    )}>
+                                                                                        {set.weight_kg > 0 && <span className="text-brand-red mr-1">{set.weight_kg}KG</span>}
+                                                                                        <span className="opacity-60">x</span> {set.reps > 0 ? (set.reps > 500 ? `${set.reps} M/CAL` : `${set.reps} REPS`) : "COMPLETADO"}
+                                                                                    </p>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        );
+                    })()
+                    )}
+                </div>
+            ) : null}
 
             {/* Actions */}
             <div className="px-4 pb-4 pt-4 flex items-center gap-4 border-t border-white/5 mt-2">
@@ -1271,55 +1082,8 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             className="p-3 md:p-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl md:rounded-2xl border border-white/5 transition-all"
                             iconClassName="w-5 h-5"
                             onInstagramShare={() => setShowInstagramCard(true)}
-                            {...(setShowShareCard && { onOpenShareCard: () => setShowShareCard(true) })}
-                            isOwner={!!isOwner}
-                            authorName={user}
-                            authorAvatar={avatar}
-                            authorId={authorId}
-                            authorUsername={username || user.toLowerCase().replace(/\s+/g, '')}
+                            onOpenShareCard={() => setShowShareCard(true)}
                         />
-                        {image && (
-                            <button
-                                onClick={async (e) => {
-                                    e.stopPropagation();
-                                    const isDynamic = image.startsWith('{') || image.startsWith('[');
-
-                                    if (isDynamic) {
-                                        // If dynamic, open the Elite Card which already has a robust download/share system
-                                        if (setShowShareCard) {
-                                            setShowShareCard(true);
-                                        } else {
-                                            // Fallback if prop not present
-                                            window.dispatchEvent(new CustomEvent('share-to-story', {
-                                                detail: {
-                                                    type: mediaType === 'pr' ? 'pr' : (mediaType === 'wod' ? 'wod' : 'class_result'),
-                                                    data: JSON.parse(image),
-                                                    postId
-                                                }
-                                            }));
-                                        }
-                                        return;
-                                    }
-
-                                    const media = mediaType || (image.includes('.mp4') ? 'video' : 'image');
-                                    setIsDownloadingBrandedGlobal(true);
-                                    try {
-                                        const blob = await VideoProcessor.processMedia(image, media);
-                                        const filename = `rivalfit-${postId || 'media'}.${blob.type.includes('video') ? (blob.type.includes('mp4') ? 'mp4' : 'webm') : 'jpg'}`;
-                                        await VideoProcessor.downloadBlob(blob, filename);
-                                    } catch (err) {
-                                        console.error("Quick download failed", err);
-                                    } finally {
-                                        setIsDownloadingBrandedGlobal(false);
-                                    }
-                                }}
-                                disabled={isDownloadingBrandedGlobal}
-                                className="p-3 md:p-4 bg-brand-red/10 hover:bg-brand-red/20 text-brand-red rounded-xl md:rounded-2xl border border-brand-red/20 transition-all flex items-center justify-center min-w-[44px]"
-                                title="Descargar"
-                            >
-                                {isDownloadingBrandedGlobal ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-                            </button>
-                        )}
                     </>
                 ) : (
                     <div className="flex items-center gap-6 w-full">
@@ -1335,57 +1099,20 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                         {/* Quick Duel Button */}
                         {authorId && postId && authorId !== currentUserId && !isOfficial && (
                             <div className="scale-75 origin-left h-auto -my-2">
-                                <DuelButton targetId={authorId as string} postId={postId} type="quick" isRival={true} hasActiveDuel={hasActiveDuel} />
+                                <DuelButton targetId={authorId as string} postId={postId} type="quick" isRival={true} />
                             </div>
                         )}
                         <div className="ml-auto">
-                            <div className="flex items-center gap-4">
-                                {image && (
-                                    <button
-                                        onClick={async (e) => {
-                                            e.stopPropagation();
-                                            const isDynamic = image.startsWith('{') || image.startsWith('[');
-
-                                            if (isDynamic) {
-                                                if (setShowShareCard) setShowShareCard(true);
-                                                return;
-                                            }
-
-                                            const media = mediaType || (image.includes('.mp4') ? 'video' : 'image');
-                                            setIsDownloadingBrandedGlobal(true);
-                                            try {
-                                                const blob = await VideoProcessor.processMedia(image, media);
-                                                const filename = `rivalfit-${postId || 'media'}.${blob.type.includes('video') ? (blob.type.includes('mp4') ? 'mp4' : 'webm') : 'jpg'}`;
-                                                await VideoProcessor.downloadBlob(blob, filename);
-                                            } catch (err) {
-                                                console.error("Quick download failed", err);
-                                            } finally {
-                                                setIsDownloadingBrandedGlobal(false);
-                                            }
-                                        }}
-                                        disabled={isDownloadingBrandedGlobal}
-                                        className="text-brand-red hover:text-white transition-colors p-1"
-                                        title="Descargar"
-                                    >
-                                        {isDownloadingBrandedGlobal ? <Loader2 className="w-6 h-6 animate-spin" /> : <Download className="w-6 h-6" />}
-                                    </button>
-                                )}
-                                <ShareButton
-                                    image={image}
-                                    workoutData={workoutData}
-                                    mediaType={mediaType}
-                                    postId={postId}
-                                    className="text-gray-400 hover:text-white"
-                                    iconClassName="w-6 h-6"
-                                    onInstagramShare={() => setShowInstagramCard(true)}
-                                    onOpenShareCard={() => setShowShareCard(true)}
-                                    isOwner={isOwner}
-                                    authorName={user}
-                                    authorAvatar={avatar}
-                                    authorId={authorId}
-                                    authorUsername={username || user.toLowerCase().replace(/\s+/g, '')}
-                                />
-                            </div>
+                            <ShareButton
+                                image={image}
+                                workoutData={workoutData}
+                                mediaType={mediaType}
+                                postId={postId}
+                                className="text-gray-400 hover:text-white"
+                                iconClassName="w-6 h-6"
+                                onInstagramShare={() => setShowInstagramCard(true)}
+                                onOpenShareCard={() => setShowShareCard(true)}
+                            />
                         </div>
                     </div>
                 )}
@@ -1465,43 +1192,28 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                         username={username || user}
                         avatar={avatar}
                         content={{
-                            type: workoutData?.metrics?.type === 'running' ? 'running' : (mediaType as 'workout' | 'wod' | 'pr' || 'workout'),
-                            title: (workoutData?.title === 'Entrenamiento Híbrido Libre' || workoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (workoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (workoutData?.title || (mediaType === 'running' ? 'RUNNING' : (mediaType === 'wod' ? 'WOD ARENA' : 'ENTRENAMIENTO')))),
+                            type: (workoutData as any)?.metrics?.type === 'running' ? 'running' : (mediaType as any || 'workout'),
+                            title: (workoutData?.title === 'Entrenamiento Híbrido Libre' || workoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (workoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (workoutData?.title || (mediaType === 'running' ? 'RUNNING' : 'ENTRENAMIENTO'))),
                             highlight: highlight || caption,
-                            stats: mediaType === 'wod' ? (() => {
-                                try {
-                                    const d = JSON.parse(image || '{}');
-                                    if (d.summary) {
-                                        return [
-                                            { label: d.summary.scoreType || "RESULTADO", value: d.summary.scoreLabel || "-" },
-                                            { label: "TIEMPO", value: d.summary.totalTime || "--:--" }
-                                        ];
-                                    }
-                                    return [];
-                                } catch { return [] }
-                            })() : workoutData?.metrics?.type === 'running'
+                            stats: (workoutData as any)?.metrics?.type === 'running'
                                 ? [
-                                    { label: 'DISTANCIA', value: `${(workoutData.metrics.distance || 0) / 1000} KM`, icon: 'distance' },
-                                    { label: 'RITMO', value: workoutData.metrics.pace || '0:00', icon: 'pace' },
-                                    { label: 'TIEMPO', value: workoutData.metrics.time || '00:00', icon: 'time' },
-                                    { label: 'DESNIVEL', value: `${workoutData.metrics.elevation || 0}m`, icon: 'elevation' },
-                                    { label: 'PULSO MED.', value: `${workoutData.metrics.avgHeartRate || 0}`, icon: 'heart' }
+                                    { label: 'DISTANCIA', value: `${(((workoutData as any).metrics.distance || 0) / 1000).toFixed(2)} KM`, icon: 'distance' },
+                                    { label: 'RITMO', value: (workoutData as any).metrics.pace || '0:00', icon: 'pace' },
+                                    { label: 'TIEMPO', value: (workoutData as any).metrics.time || '00:00', icon: 'time' },
+                                    { label: 'DESNIVEL', value: `${(workoutData as any).metrics.elevation || 0}m`, icon: 'elevation' },
+                                    { label: 'PULSO MED.', value: `${(workoutData as any).metrics.avgHeartRate || 0}`, icon: 'heart' }
                                 ]
-                                : workoutData?.metrics?.blocks?.map((b: { type?: string; result?: { time?: string; rounds?: number; reps?: number } }) => ({
+                                : (workoutData as any)?.metrics?.blocks?.map((b: any) => ({
                                     label: b.type?.toUpperCase(),
-                                    value: b.result?.time || ((b.result?.rounds ?? 0) > 0 ? `${b.result?.rounds} RDS` : ((b.result?.reps ?? 0) > 0 ? `${b.result?.reps} REPS` : (b.type === 'other' ? '-' : `0 RDS`)))
+                                    value: b.result?.time || `${b.result?.rounds || b.result?.reps || '-'} ${b.result?.rounds ? 'RDS' : (b.result?.reps ? 'REPS' : '')}`
                                 })).slice(0, 4) || (mediaType === 'pr' ? (() => {
                                     try {
-                                        const d = JSON.parse(image || '{}');
+                                        const d = JSON.parse(image);
                                         return [{ label: d.exerciseName?.toUpperCase(), value: `${d.weight}${d.unit}` }];
-                                    } catch { return [] }
+                                    } catch (e) { return [] }
                                 })() : []),
                             image: image,
-                            mapData: (workoutData as { metrics?: { path?: unknown } })?.metrics?.path ? 'GPS_PATH_ACTIVE' : undefined,
-                            wodData: mediaType === 'wod' ? (() => {
-                                try { return JSON.parse(image); } catch { return null; }
-                            })() : null,
-                            attribution
+                            mapData: (workoutData as any)?.metrics?.path ? 'GPS_PATH_ACTIVE' : undefined
                         }}
                         onClose={() => setShowInstagramCard(false)}
                     />
@@ -1527,31 +1239,16 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                     rank: "ELITE"
                                 }}
                                 data={{
-                                    type: mediaType === 'pr' ? 'pr' : mediaType === 'wod' ? 'wod' : mediaType === 'class_result' ? 'medal' : 'workout',
-                                    title: (workoutData?.sport_type && workoutData.sport_type !== 'fitness') ? workoutData.sport_type.toUpperCase() : (highlight || (mediaType === 'wod' ? 'WOD ARENA' : workoutData?.title) || 'ENTRENAMIENTO'),
+                                    type: mediaType === 'pr' ? 'pr' : mediaType === 'class_result' ? 'medal' : 'workout',
+                                    title: (workoutData?.sport_type && workoutData.sport_type !== 'fitness') ? workoutData.sport_type.toUpperCase() : (highlight || workoutData?.title || 'ENTRENAMIENTO'),
                                     date: time,
                                     stats: mediaType === 'pr' ? (() => {
-                                        try { const d = JSON.parse(image || '{}'); return [{ label: "PESO", value: `${d.weight}${d.unit}` }, { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }]; } catch { return [] }
-                                    })() : mediaType === 'wod' ? (() => {
-                                        try {
-                                            const d = JSON.parse(image || '{}');
-                                            if (d.summary) {
-                                                return [
-                                                    { label: d.summary.scoreType || "RESULTADO", value: d.summary.scoreLabel || "-" },
-                                                    { label: "TIEMPO", value: d.summary.totalTime || "--:--" }
-                                                ];
-                                            }
-                                            return [{ label: "ESTADO", value: "COMPLETADO" }];
-                                        } catch { return [] }
-                                    })() : workoutData?.metrics?.blocks?.map((b: { type?: string; result?: { time?: string; rounds?: number } }) => ({
+                                        try { const d = JSON.parse(image); return [{ label: "PESO", value: `${d.weight}${d.unit}` }, { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }]; } catch (e) { return [] }
+                                    })() : (workoutData as any)?.metrics?.blocks?.map((b: any) => ({
                                         label: b.type?.toUpperCase(),
                                         value: b.result?.time || `${b.result?.rounds || 0} RDS`
                                     })).slice(0, 3) || [{ label: "DISCIPLINA", value: (workoutData?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "COMPLETADO" }],
-                                    image: !isVideo && mediaType !== 'wod' ? image : undefined,
-                                    wodData: mediaType === 'wod' ? (() => {
-                                        try { return JSON.parse(image); } catch { return null; }
-                                    })() : null,
-                                    attribution
+                                    image: !isVideo ? image : undefined
                                 }}
                             />
                         </div>
@@ -1560,9 +1257,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
             }
         </div >
     );
-});
-
-export default FeedPost;
+}
 
 function LikeButtonWithText({ postId, initialLikes, hasLikedInitial, text }: { postId: string, initialLikes: number, hasLikedInitial: boolean, text: string }) {
     const [likes, setLikes] = useState(initialLikes);

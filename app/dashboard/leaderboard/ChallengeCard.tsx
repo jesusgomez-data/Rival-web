@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Award, Loader2, CheckCircle2, Target, Clock } from "lucide-react";
+import { Award, Loader2, CheckCircle2 } from "lucide-react";
 import { joinChallenge } from "./ranking-actions";
 import { clsx } from "clsx";
 import Link from "next/link";
@@ -10,11 +10,9 @@ interface ChallengeCardProps {
     challenge: any;
     userId: string | undefined;
     isParticipatingInitial: boolean;
-    isAdmin?: boolean;
-    onEdit?: (challenge: any) => void;
 }
 
-export default function ChallengeCard({ challenge, userId, isParticipatingInitial, isAdmin, onEdit }: ChallengeCardProps) {
+export default function ChallengeCard({ challenge, userId, isParticipatingInitial }: ChallengeCardProps) {
     const [loading, setLoading] = useState(false);
     const [isJoined, setIsJoined] = useState(isParticipatingInitial);
 
@@ -42,31 +40,13 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
             <div className="bg-brand-gray/30 border border-white/5 p-5 sm:p-6 rounded-[28px] sm:rounded-[32px] backdrop-blur-md relative overflow-hidden group-hover:border-brand-red/30 transition-all h-full flex flex-col justify-between">
                 <div>
                     <div className="flex items-start justify-between mb-3 sm:mb-4 relative z-10">
-                        <div className="flex gap-3">
-                            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-black/40 rounded-xl flex items-center justify-center border border-white/10 text-brand-red">
-                                <Award className="w-5 h-5" />
-                            </div>
-                            {isAdmin && (
-                                <button
-                                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); onEdit?.(challenge); }}
-                                    className="w-9 h-9 sm:w-10 sm:h-10 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center border border-white/10 text-gray-400 hover:text-white transition-all"
-                                >
-                                    <Target className="w-4 h-4" />
-                                </button>
-                            )}
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-black/40 rounded-xl flex items-center justify-center border border-white/10 text-brand-red">
+                            <Award className="w-5 h-5" />
                         </div>
-                        <div className="flex flex-col items-end gap-1.5">
+                        <div className="text-right">
                             <span className="text-[10px] font-black text-brand-red bg-brand-red/10 px-2 py-0.5 rounded border border-brand-red/20 uppercase tracking-widest">
                                 +{challenge.xp_reward} XP
                             </span>
-                            {challenge.end_date && (
-                                <div className="flex items-center gap-1 text-[9px] font-black text-gray-400 uppercase tracking-widest bg-white/5 px-2 py-0.5 rounded border border-white/5">
-                                    <Clock className="w-2.5 h-2.5" />
-                                    {new Date(challenge.end_date) > new Date()
-                                        ? `${Math.ceil((new Date(challenge.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} días`
-                                        : "Finalizado"}
-                                </div>
-                            )}
                         </div>
                     </div>
                     <h4 className="text-base sm:text-lg font-black text-white italic uppercase tracking-tight mb-2 group-hover:text-brand-red transition-colors">{challenge.title}</h4>

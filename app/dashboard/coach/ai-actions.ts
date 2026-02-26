@@ -1,63 +1,97 @@
-"use server";
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createClient } from "@/utils/supabase/server";
 
-interface CoachProfile {
-    level: string;
-    main_sport: string;
-    full_name?: string;
-    recent_activity_score?: number;
-    experience_years?: number;
-    injuries?: string;
-}
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
-export async function generateCoachResponse(
-    userMessage: string,
-    userProfile: CoachProfile,
-    history: { role: 'user' | 'assistant', content: string }[] = []
-) {
-    const API_KEY = process.env.GEMINI_API_KEY;
-
-    if (!API_KEY) {
-        console.error("GEMINI_API_KEY is missing");
-        return getFallbackResponse("Error de configuración.", userProfile);
+export async function generateCoachResponse(userMessage: string, userProfile: any, chatHistory: any[] = []) {
+    if (!process.env.GEMINI_API_KEY) {
+        console.error("GEMINI_API_KEY no configurada");
+        return {
+            replyText: "Soldado, el cuartel de IA está saturado. Intentalo de nuevo en unos minutos.",
+            workout: null
+        };
     }
 
-    const genAI = new GoogleGenerativeAI(API_KEY);
     const { level, main_sport, full_name } = userProfile;
-
-    // Convert history to Gemini format (limiting to last 5 messages for token safety)
-    const chatHistory = history.slice(-5).map(msg => ({
-        role: msg.role === 'user' ? 'user' : 'model',
-        parts: [{ text: msg.content }]
-    }));
 
     const systemPrompt = `Eres RIVAL HEAD COACH, un mentor de élite mundial experto en alto rendimiento y CrossFit.
     
     PERFIL DEL ATLETA:
-    - Nombre: ${full_name || 'Atleta'}
+    - Nombre: ${full_name || 'Rival'}
     - Disciplina: ${main_sport}
     - Nivel: ${level}
 
-    REGLAS DE RESPUESTA:
-    1. Sé directivo, motivador y profesional.
-    2. Si el usuario pide un entrenamiento, genera uno en formato JSON.
-    3. Si el usuario solo charla, responde como coach pero mantén el JSON con workout: null.
-    4. Usa SIEMPRE este formato JSON exacto:
+    REGLAS CRÍTICAS PARA GENERAR WODS:
+    1. Usa SIEMPRE formato profesional: EMOM, AMRAP, FOR TIME, TABATA
+    2. OBLIGATORIO incluir niveles de peso al final: Escalado/Intermedio/Avanzado (Rx)
+    3. Especifica descansos con formato: "4' REST", "2' REST"
+    4. Usa abreviaciones estándar de CrossFit
+    5. Incluye notas con asterisco (*) cuando sea necesario
+    6. IMPORTANTE: Usa saltos de línea (\n) para separar secciones
+
+    EJEMPLO EXACTO DEL FORMATO REQUERIDO:
+    "EMOM 12'
+    1' 3 PUSH PRESS RIR 2
+    1' 10 TTB OR PRACTICE THE MOVEMENT
+
+    4' REST
+
+    AMRAP 13'
+    15 STOH
+    20 REVERSE SIT UPS
+
+    * EVERY 3' 10 BURPEES, START WITH BURPEES
+
+    2' REST
+
+    FOR TIME (3')
+    15 PUSH PRESS
+    30 SIT UPS
+    15 BURPEES
+
+    PESOS:
+    Push Press - Escalado: 20/15kg | Intermedio: 30/20kg | Avanzado (Rx): 43/30kg
+    STOH - Escalado: 15/10kg | Intermedio: 25/15kg | Avanzado (Rx): 35/25kg"
+
+    ABREVIACIONES ESTÁNDAR:
+    - STOH = Shoulder to Overhead
+    - TTB = Toes to Bar
+    - C2B = Chest to Bar
+    - HSPU = Handstand Push Up
+    - DU = Double Unders
+    - WBS = Wall Ball Shots
+    - RIR = Reps In Reserve
+    - AMRAP = As Many Rounds As Possible
+    - EMOM = Every Minute On the Minute
+
+    FORMATO JSON OBLIGATORIO:
     {
-      "replyText": "Tu respuesta motivadora",
-       "workout": {
-         "title": "NOMBRE",
-         "duration": "X min",
-         "intensity": "${level}",
-         "sportType": "Cross Training",
-         "description": "Detalle completo con saltos de línea",
-         "exercises": [
-           { "name": "Ej", "sets": "4", "reps": "12" }
-         ]
-       }
+      "replyText": "Mensaje motivador breve del coach (máximo 2 líneas)",
+      "workout": {
+        "title": "NOMBRE DEL WOD EN MAYÚSCULAS",
+        "duration": "Tiempo total estimado (ej: 35 min)",
+        "intensity": "${level}",
+        "sportType": "Cross Training",
+        "description": "AQUÍ VA EL WOD COMPLETO CON FORMATO PROFESIONAL\n\nEMOM X'\nEjercicio 1\nEjercicio 2\n\nX' REST\n\nAMRAP Y'\nEjercicio 3\nEjercicio 4\n\nPESOS:\nEjercicio - Escalado: X/Ykg | Intermedio: X/Ykg | Avanzado (Rx): X/Ykg",
+        "exercises": [
+          {
+            "name": "Nombre del ejercicio",
+            "sets": "EMOM 12' o AMRAP o número",
+            "reps": "Repeticiones",
+            "weight_scaled": "20/15kg",
+            "weight_intermediate": "30/20kg",
+            "weight_rx": "43/30kg"
+          }
+        ]
+      }
     }
-    Si no hay entreno, workout: null.`;
+
+    REGLAS ADICIONALES:
+    - Si no hay entreno, workout: null
+    - La descripción DEBE tener saltos de línea (\n) para formato limpio
+    - SIEMPRE incluir sección de PESOS al final
+    - Usar formato Hombre/Mujer para pesos (ej: 43/30kg)
+    - Ser específico con tiempos y descansos`;
 
     const modelsToTry = [
         { name: "gemini-1.5-flash", timeout: 8000 },
@@ -72,12 +106,10 @@ export async function generateCoachResponse(
             const model = genAI.getGenerativeModel({
                 model: modelCfg.name,
                 generationConfig: { responseMimeType: "application/json" },
-                systemInstruction: systemPrompt // Correct way in latest SDK
+                systemInstruction: systemPrompt
             });
 
             const chat = model.startChat({ history: chatHistory });
-
-            // Manual timeout for robustness
             const resultPromise = chat.sendMessage(userMessage);
             const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), modelCfg.timeout));
 
@@ -89,68 +121,18 @@ export async function generateCoachResponse(
             try {
                 return JSON.parse(text);
             } catch (parseError) {
-                const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
-                return JSON.parse(cleanJson);
+                console.error(`Error parsing JSON from ${modelCfg.name}:`, text);
+                throw parseError;
             }
         } catch (error: any) {
-            console.error(`[COACH AI] Fallo en ${modelCfg.name}:`, error.message);
+            console.error(`Error con modelo ${modelCfg.name}:`, error.message);
             lastError = error.message;
-            if (error.message === "Timeout") continue;
-            if (error.message.includes("429")) {
-                await new Promise(r => setTimeout(r, 1000)); // Esperar un poco antes de rotar
-                continue;
-            }
-            break;
+            continue;
         }
     }
 
-    return getFallbackResponse(lastError, userProfile, userMessage);
-}
-
-function getFallbackResponse(error: string, profile: CoachProfile, originalMessage?: string) {
-    const isQuota = error.includes("429") || error.includes("quota");
-    const msg = originalMessage?.toLowerCase() || "";
-
-    let fallbackWorkout: any = {
-        title: "PROTOCOLO DE BASE RIVAL",
-        duration: "30 min",
-        intensity: profile.level,
-        sportType: profile.main_sport,
-        description: "Enfoque en fuerza y capacidad aeróbica base.",
-        exercises: [
-            { name: "Sentadillas", sets: "4", reps: "15" },
-            { name: "Flexiones", sets: "4", reps: "12" },
-            { name: "Plancha", sets: "3", reps: "45s" }
-        ]
-    };
-
-    if (msg.includes("pierna") || msg.includes("leg")) {
-        fallbackWorkout.title = "INFERNO DE PIERNAS";
-        fallbackWorkout.exercises = [
-            { name: "Sentadilla Goblet", sets: "4", reps: "12" },
-            { name: "Zancadas", sets: "3", reps: "12/lado" },
-            { name: "Wall Sit", sets: "3", reps: "1 min" }
-        ];
-    } else if (msg.includes("correr") || msg.includes("run")) {
-        fallbackWorkout.title = "UMBRAL DE CARRERA";
-        fallbackWorkout.exercises = [
-            { name: "Carrera Continua Z2", sets: "1", reps: "20 min" },
-            { name: "Sprints 100m", sets: "5", reps: "Max vel" }
-        ];
-    } else if (msg.includes("crossfit") || msg.includes("wod") || msg.includes("entreno")) {
-        fallbackWorkout.title = "EMERGENCE WOD";
-        fallbackWorkout.description = "AMRAP 10 MIN:\n10 Burpees\n15 Kettlebell Swings\n20 Air Squats";
-        fallbackWorkout.exercises = [
-            { name: "Burpees", sets: "AMRAP 10'", reps: "---" },
-            { name: "KB Swings", sets: "---", reps: "15" },
-            { name: "Air Squats", sets: "---", reps: "20" }
-        ];
-    }
-
     return {
-        replyText: isQuota
-            ? "Atleta, la red está saturada por alta demanda. He activado el Protocolo de Contingencia para que no pierdas el día de combate."
-            : "Interferencia detectada. Activando protocolo de entrenamiento manual optimizado para tu rango de combate.",
-        workout: fallbackWorkout
+        replyText: "Lo siento, la central de mando tiene interferencias. Intentalo de nuevo en unos segundos.",
+        workout: null
     };
 }

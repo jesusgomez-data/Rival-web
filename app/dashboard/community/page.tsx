@@ -93,6 +93,14 @@ export default function CommunityPage({
                     }).slice(0, 10);
                 }
 
+                // Fetch official accounts to include their posts in "Following" feed automatically
+                const { data: officialAccounts } = await supabase
+                    .from('profiles')
+                    .select('id')
+                    .eq('is_official', true);
+
+                const officialIds = officialAccounts?.map(acc => acc.id) || [];
+
                 // Fetch Posts based on tab or query
                 // Fetch Posts based on tab or query
                 let postsQuery = supabase

@@ -16,17 +16,11 @@ interface ShareableCardProps {
         rank: string;
     };
     data: {
-        type: 'pr' | 'workout' | 'medal' | 'wod';
+        type: 'pr' | 'workout' | 'medal';
         title: string;
         date: string;
         stats: { label: string; value: string }[];
         image?: string;
-        wodData?: any;
-        attribution?: {
-            username: string;
-            avatar: string;
-            id?: string;
-        };
     };
 }
 
@@ -87,7 +81,7 @@ export default function ShareableCard({ user, data }: ShareableCardProps) {
                         src={data.image}
                         alt="Achievement"
                         fill
-                        className="object-cover opacity-20 grayscale group-hover/card:grayscale-0 group-hover/card:scale-105 transition-all duration-1000"
+                        className="object-cover opacity-30 grayscale group-hover/card:grayscale-0 group-hover/card:scale-105 transition-all duration-1000"
                     />
                 ) : (
                     <div className="absolute inset-0 bg-gradient-to-br from-brand-red/20 via-black to-black" />
@@ -99,14 +93,6 @@ export default function ShareableCard({ user, data }: ShareableCardProps) {
                 {/* Gradients */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
                 <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-black to-transparent" />
-
-                {/* Elite Decorative Glows */}
-                {user.rank === 'ELITE' && (
-                    <>
-                        <div className="absolute -top-20 -right-20 w-80 h-80 bg-brand-red/10 blur-[100px] animate-pulse rounded-full" />
-                        <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-brand-red/10 blur-[100px] animate-pulse delay-700 rounded-full" />
-                    </>
-                )}
             </div>
 
             {/* Content Overlay */}
@@ -115,15 +101,14 @@ export default function ShareableCard({ user, data }: ShareableCardProps) {
                 <div className="flex items-center justify-between mb-6 sm:mb-8">
                     <div className="flex items-center gap-3 sm:gap-4 bg-white/5 backdrop-blur-md p-1.5 sm:p-2 pr-4 sm:pr-6 rounded-full border border-white/10">
                         <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full overflow-hidden border-2 border-brand-red relative shrink-0 shadow-glow-sm">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
+                            <Image
                                 src={user.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=random`}
                                 alt={user.name}
-                                className="w-full h-full object-cover"
-                                crossOrigin="anonymous"
+                                fill
+                                className="object-cover"
                             />
                         </div>
-                        <div className="min-w-0 text-left">
+                        <div className="min-w-0">
                             <h4 className="text-white font-black text-[10px] sm:text-xs uppercase italic tracking-wider truncate max-w-[100px]">{user.name}</h4>
                             <p className="text-[8px] sm:text-[9px] font-black text-brand-red uppercase tracking-[0.2em] leading-none">Soldado Lvl {user.level}</p>
                         </div>
@@ -138,113 +123,31 @@ export default function ShareableCard({ user, data }: ShareableCardProps) {
                 <div className="flex justify-center mb-4 sm:mb-6">
                     <div className="bg-brand-red px-4 sm:px-6 py-1 sm:py-1.5 rounded-full shadow-glow selection:text-white">
                         <span className="text-[8px] sm:text-[10px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-2 italic">
-                            {data.type === 'pr' ? <Trophy className="w-3 h-3" /> : (data.type === 'wod' ? <Dumbbell className="w-3 h-3" /> : <Activity className="w-3 h-3" />)}
-                            {data.type === 'pr' ? 'NUEVO RÉCORD PERSONAL' : (data.type === 'wod' ? 'WOD COMPLETADO' : (data.type === 'medal' ? 'DESAFÍO SUPERADO' : 'MISIÓN COMPLETADA'))}
+                            {data.type === 'pr' ? <Trophy className="w-3 h-3" /> : data.type === 'medal' ? <Award className="w-3 h-3" /> : <Activity className="w-3 h-3" />}
+                            {data.type === 'pr' ? 'NUEVO RÉCORD PERSONAL' : data.type === 'medal' ? 'DESAFÍO SUPERADO' : 'MISIÓN COMPLETADA'}
                         </span>
                     </div>
                 </div>
 
                 {/* Main achievement area */}
                 <div className="flex-1 flex flex-col items-center justify-center text-center space-y-3 sm:space-y-4">
-                    <h2 className="text-3xl sm:text-5xl font-heading font-black text-white italic uppercase tracking-tighter leading-none drop-shadow-[0_0_20px_rgba(0,0,0,1)] line-clamp-2">
+                    <h2 className="text-4xl sm:text-6xl font-heading font-black text-white italic uppercase tracking-tighter leading-none drop-shadow-[0_0_20px_rgba(0,0,0,1)] line-clamp-3">
                         {data.title}
                     </h2>
-
-                    {data.type === 'wod' && data.wodData && (
-                        <div className="w-full max-w-[300px] bg-white/5 border border-white/10 rounded-[32px] p-4 sm:p-6 backdrop-blur-xl space-y-3">
-                            {data.wodData.blocks?.slice(0, 1).map((block: any, bi: number) => (
-                                <div key={bi} className="space-y-2">
-                                    <div className="flex justify-between items-center text-[8px] sm:text-[10px] font-black text-brand-red uppercase italic tracking-widest border-b border-white/5 pb-2">
-                                        <span>{block.format || 'METCON'}</span>
-                                        <span className="text-gray-500">
-                                            {block.format === 'EMOM' || block.format === 'DEATH BY' ? (
-                                                `${block.config?.minutes || 15} MINS`
-                                            ) : (block.format === 'TABATA' || block.format === 'INTERVALS') ? (
-                                                `${block.config?.rounds || 8} RDS`
-                                            ) : block.config?.timecap ? (
-                                                `CAP: ${block.config.timecap}`
-                                            ) : null}
-                                        </span>
-                                    </div>
-                                    <div className="space-y-1">
-                                        {block.exercises?.slice(0, 3).map((ex: any, ei: number) => (
-                                            <div key={ei} className="space-y-1">
-                                                <div className="flex justify-between text-[9px] sm:text-[11px] font-bold">
-                                                    <span className="text-gray-400 uppercase truncate pr-4 text-left">{ex.name}</span>
-                                                    <span className="text-white shrink-0">{ex.reps} {ex.detail && `(${ex.detail})`}</span>
-                                                </div>
-                                                {ex.showRounds && ex.roundDetails && ex.roundDetails.length > 0 && (
-                                                    <div className="grid grid-cols-6 gap-1 pt-1 pb-1">
-                                                        {ex.roundDetails.map((rd: string, ri: number) => rd && (
-                                                            <div key={ri} className="bg-white/10 rounded-lg py-1 text-[8px] text-center font-black text-brand-red border border-white/5">
-                                                                {rd}
-                                                                <span className="block text-[5px] text-gray-500 font-bold -mt-1 uppercase tracking-tighter">R{ri + 1}</span>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                        {(block.exercises?.length > 3) && (
-                                            <p className="text-[7px] text-gray-500 font-bold uppercase mt-1">+ {block.exercises.length - 3} EJERCICIOS</p>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                            <div className="pt-2 border-t border-white/5 flex justify-between items-end">
-                                <div className="text-left">
-                                    <p className="text-[6px] text-gray-500 font-black uppercase tracking-widest mb-0.5">
-                                        {data.wodData.summary?.scoreType || data.stats?.[0]?.label || 'Resultado Final'}
-                                    </p>
-                                    <p className="text-[14px] font-black text-brand-red italic leading-none">
-                                        {data.wodData.summary?.scoreLabel || data.stats?.[0]?.value || '-'}
-                                    </p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-[6px] text-gray-500 font-black uppercase tracking-widest mb-0.5">
-                                        {data.stats?.[1]?.label || 'Tiempo'}
-                                    </p>
-                                    <p className="text-[10px] font-black text-white italic leading-none">
-                                        {data.wodData.summary?.totalTime || data.stats?.[1]?.value || '--:--'}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {!data.wodData && <div className="w-12 sm:w-20 h-1 bg-brand-red/30 rounded-full" />}
+                    <div className="w-12 sm:w-20 h-1 bg-brand-red/30 rounded-full" />
                 </div>
 
-                {/* Stats Grid - Hidden for WOD as it has its own info box */}
-                {!data.wodData && (
-                    <div className="grid grid-cols-3 gap-4 mb-8">
-                        {data.stats.map((stat, i) => (
-                            <div key={i} className="bg-black/40 backdrop-blur-xl p-4 rounded-3xl border border-white/5 text-center group/stat hover:border-brand-red/30 transition-colors">
-                                <h3 className="text-lg sm:text-2xl font-heading font-black text-white italic leading-none mb-1 group-hover/stat:text-brand-red transition-colors truncate">
-                                    {stat.value}
-                                </h3>
-                                <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest truncate">{stat.label}</p>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                {data.attribution && (
-                    <div className="mb-6 flex justify-center">
-                        <div className="bg-white/5 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/10 flex items-center gap-2 group/attr">
-                            <span className="text-[7px] text-gray-500 font-black uppercase tracking-[0.2em]">Compartido de</span>
-                            <div className="w-5 h-5 rounded-full overflow-hidden border border-brand-red/30">
-                                <img
-                                    src={data.attribution.avatar}
-                                    alt={data.attribution.username}
-                                    className="w-full h-full object-cover"
-                                    crossOrigin="anonymous"
-                                />
-                            </div>
-                            <span className="text-[10px] text-white font-black italic uppercase tracking-tighter">@{data.attribution.username}</span>
+                {/* Stats Grid */}
+                <div className="grid grid-cols-3 gap-4 mb-8">
+                    {data.stats.map((stat, i) => (
+                        <div key={i} className="bg-black/40 backdrop-blur-xl p-4 rounded-3xl border border-white/5 text-center group/stat hover:border-brand-red/30 transition-colors">
+                            <h3 className="text-lg sm:text-2xl font-heading font-black text-white italic leading-none mb-1 group-hover/stat:text-brand-red transition-colors truncate">
+                                {stat.value}
+                            </h3>
+                            <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest truncate">{stat.label}</p>
                         </div>
-                    </div>
-                )}
+                    ))}
+                </div>
 
                 {/* Bottom Bar */}
                 <div className="flex items-center justify-between pt-6 border-t border-white/5">
@@ -282,11 +185,7 @@ export default function ShareableCard({ user, data }: ShareableCardProps) {
 
             {/* Decorative Overlay for Elite Rank */}
             {user.rank === 'ELITE' && (
-                <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-                    <div className="absolute top-0 right-0 w-40 h-40 bg-brand-red/5 blur-[50px] rotate-45 translate-x-1/2 -translate-y-1/2" />
-                    <div className="absolute bottom-0 left-0 w-40 h-40 bg-brand-red/5 blur-[50px] -rotate-45 -translate-x-1/2 translate-y-1/2" />
-                    <Shield className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] text-brand-red/[0.02] -z-10" />
-                </div>
+                <div className="absolute -top-10 -left-10 w-40 h-40 bg-brand-red/10 blur-[60px] rounded-full" />
             )}
             <div className="absolute bottom-0 right-0 w-60 h-60 bg-brand-red/5 blur-[80px] rounded-full pointer-events-none" />
         </div>
