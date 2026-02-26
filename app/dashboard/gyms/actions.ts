@@ -2,8 +2,13 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { isUserAdmin } from "@/utils/admin";
 
 export type Role = 'owner' | 'head_coach' | 'coach' | 'athlete';
+
+export async function checkIsAdmin() {
+    return await isUserAdmin();
+}
 
 export async function getUserOrganizations() {
     const supabase = await createClient();

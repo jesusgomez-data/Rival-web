@@ -3,10 +3,11 @@
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Plus, Building2, MapPin, Users, User, ArrowRight, ArrowLeft, Loader2, Sun, Moon, Search, Check, Rocket, Zap, Shield, Globe, Instagram, Phone, Trash2, LogOut } from "lucide-react";
+import { Plus, Building2, MapPin, Users, User, ArrowRight, ArrowLeft, Loader2, Sun, Moon, Search, Check, Rocket, Zap, Shield, Globe, Instagram, Phone, Trash2, LogOut, Megaphone } from "lucide-react";
 import clsx from "clsx";
 import { useTheme } from "../../ThemeContext";
-import { getUserOrganizations, createOrganization, searchOrganizations, deleteOrganization, leaveOrganization, getNearbyOrganizations } from "./actions";
+import { getUserOrganizations, createOrganization, searchOrganizations, deleteOrganization, leaveOrganization, getNearbyOrganizations, checkIsAdmin } from "./actions";
+import B2BShareCard from "./B2BShareCard";
 
 export default function CenterListPage() {
     return (
@@ -26,7 +27,9 @@ function CenterListPageContent() {
     const [step, setStep] = useState(1);
     const [selectedPlan, setSelectedPlan] = useState('free');
     const [showCreate, setShowCreate] = useState(false);
+    const [showMarketing, setShowMarketing] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
     const { theme } = useTheme();
     const searchParams = useSearchParams();
     const filterType = searchParams.get('type');
@@ -120,8 +123,12 @@ function CenterListPageContent() {
     }, [searchTerm]);
 
     async function loadOrgs() {
-        const data = await getUserOrganizations();
+        const [data, adminStatus] = await Promise.all([
+            getUserOrganizations(),
+            checkIsAdmin()
+        ]);
         setOrgs(data);
+        setIsAdmin(adminStatus);
         setLoading(false);
     }
 
@@ -264,6 +271,16 @@ function CenterListPageContent() {
                             )}
                         </div>
 
+                        {isAdmin && (
+                            <button
+                                onClick={() => setShowMarketing(true)}
+                                className="bg-white/5 hover:bg-white/10 text-white p-3 rounded-xl border border-white/10 transition-all active:scale-95"
+                                title="Generar Post de Marketing"
+                            >
+                                <Megaphone className="w-5 h-5 text-brand-red" />
+                            </button>
+                        )}
+
                         <button
                             onClick={() => { setShowCreate(true); setStep(1); }}
                             className="bg-brand-red hover:bg-red-600 text-white px-6 py-3 rounded-xl font-bold uppercase tracking-wider flex items-center gap-2 transition-all shadow-glow whitespace-nowrap"
@@ -272,6 +289,8 @@ function CenterListPageContent() {
                         </button>
                     </div>
                 </div>
+
+                {showMarketing && isAdmin && <B2BShareCard onClose={() => setShowMarketing(false)} isAdmin={isAdmin} />}
 
                 {showCreate && (
                     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-center justify-center p-4">

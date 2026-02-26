@@ -31,13 +31,23 @@ export default function SkillTree({ stats }: SkillTreeProps) {
                 <div className="text-[10px] font-mono text-gray-500 uppercase">Versión 2.5</div>
             </div>
 
-            <div className="h-[250px] w-full">
+            <div className="h-[280px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                    <RadarChart cx="50%" cy="50%" outerRadius="80%" data={data}>
+                    <RadarChart
+                        cx="50%"
+                        cy="50%"
+                        outerRadius="65%"
+                        data={data}
+                        margin={{ top: 10, right: 40, bottom: 10, left: 40 }}
+                    >
                         <PolarGrid stroke="#333" />
                         <PolarAngleAxis
                             dataKey="subject"
-                            tick={{ fill: '#888', fontSize: 10, fontWeight: 900 }}
+                            tick={{
+                                fill: '#888',
+                                fontSize: 9,
+                                fontWeight: 900,
+                            }}
                         />
                         <Radar
                             name="Atleta"
