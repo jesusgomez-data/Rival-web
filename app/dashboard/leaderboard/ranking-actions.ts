@@ -128,3 +128,49 @@ export async function updateChallengeProgress(challengeId: string, progress: num
     if (error) return { error: error.message };
     return { success: true, completed: isCompleted };
 }
+
+export async function createChallenge(data: any) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "No auth" };
+
+    const { error } = await supabase
+        .from('community_challenges')
+        .insert({
+            ...data,
+            created_by: user.id,
+            is_active: true
+        });
+
+    if (error) return { error: error.message };
+    return { success: true };
+}
+
+export async function updateChallenge(id: string, data: any) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "No auth" };
+
+    const { error } = await supabase
+        .from('community_challenges')
+        .update(data)
+        .eq('id', id);
+
+    if (error) return { error: error.message };
+    return { success: true };
+}
+
+export async function deleteChallenge(id: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "No auth" };
+
+    const { error } = await supabase
+        .from('community_challenges')
+        .delete()
+        .eq('id', id);
+
+    if (error) return { error: error.message };
+    return { success: true };
+}
+

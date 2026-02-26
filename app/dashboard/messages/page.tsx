@@ -136,7 +136,7 @@ function MessagesContent() {
                 event: 'INSERT',
                 schema: 'public',
                 table: 'messages'
-            }, async (payload) => {
+            }, async (payload: any) => {
                 const newMessage = payload.new
                 // Solo sonar si el mensaje pertenece a una conversación del usuario
                 // y no es un mensaje enviado por él mismo
@@ -163,7 +163,7 @@ function MessagesContent() {
                 schema: 'public',
                 table: 'messages',
                 filter: `conversation_id=eq.${activeConversationId}`
-            }, (payload) => {
+            }, (payload: any) => {
                 const newMessage = payload.new
 
                 // Si el chat está activo y el mensaje es de la otra persona, marcar como leído
@@ -206,7 +206,7 @@ function MessagesContent() {
                 schema: 'public',
                 table: 'messages',
                 filter: `conversation_id=eq.${activeConversationId}`
-            }, (payload) => {
+            }, (payload: any) => {
                 setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m))
             })
             .on('postgres_changes', {
@@ -214,7 +214,7 @@ function MessagesContent() {
                 schema: 'public',
                 table: 'messages',
                 filter: `conversation_id=eq.${activeConversationId}`
-            }, (payload) => {
+            }, (payload: any) => {
                 // Nota: DELETE payload.old o payload.new depende de la réplica, usualmente old.id
                 const deletedId = payload.old?.id
                 if (deletedId) {
@@ -226,7 +226,7 @@ function MessagesContent() {
                 schema: 'public',
                 table: 'conversation_participants',
                 filter: `conversation_id=eq.${activeConversationId}`
-            }, (payload) => {
+            }, (payload: any) => {
                 // Si la otra persona ha leído, actualizamos su timestamp
                 if (payload.new.user_id !== currentUserId) {
                     setOtherParticipantLastRead(payload.new.last_read_at)

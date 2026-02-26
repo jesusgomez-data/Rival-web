@@ -610,3 +610,24 @@ export async function leaveOrganization(centerId: string) {
     revalidatePath('/dashboard/gyms');
     return { success: true };
 }
+
+export async function getExercises(sportType?: string) {
+    const supabase = await createClient();
+
+    let query = supabase
+        .from('exercises')
+        .select('id, name, sport_type, category')
+        .order('name', { ascending: true });
+
+    if (sportType) {
+        query = query.eq('sport_type', sportType);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+        console.error('Error fetching exercises:', error);
+        return [];
+    }
+    return data || [];
+}
+

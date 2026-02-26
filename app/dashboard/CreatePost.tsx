@@ -12,12 +12,12 @@ import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import MusicPicker from "./MusicPicker";
 import { MusicTrack } from "./music-data";
 
-export default function CreatePost({ currentUser, onSuccess }: { currentUser: any, onSuccess?: () => void }) {
-    const [content, setContent] = useState("");
+export default function CreatePost({ currentUser, onSuccess, initialPostType, initialData }: { currentUser: any, onSuccess?: () => void, initialPostType?: 'standard' | 'pr' | 'wod', initialData?: any }) {
+    const [content, setContent] = useState(initialData?.caption || initialData?.content || "");
     const [isPosting, setIsPosting] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-    const [postType, setPostType] = useState<'standard' | 'pr'>('standard');
+    const [postType, setPostType] = useState<'standard' | 'pr'>((initialPostType === 'pr' ? 'pr' : 'standard'));
     const [exercise, setExercise] = useState("");
     const [weight, setWeight] = useState("");
     const [sport, setSport] = useState("Cross Training");
@@ -322,7 +322,7 @@ export default function CreatePost({ currentUser, onSuccess }: { currentUser: an
     };
 
     const onEmojiClick = (emojiData: EmojiClickData) => {
-        setContent(prev => prev + emojiData.emoji);
+        setContent((prev: string) => prev + emojiData.emoji);
     };
 
     return (

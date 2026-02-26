@@ -59,7 +59,7 @@ export default function NotificationBell() {
                         schema: 'public',
                         table: 'notifications',
                     },
-                    (payload) => {
+                    (payload: any) => {
                         console.log(`[NotificationBell] ¡Nueva señal detectada en el radar!`, payload);
                         if (payload.new.user_id === user.id) {
                             // Instant sound first, then load data
@@ -68,7 +68,7 @@ export default function NotificationBell() {
                         }
                     }
                 )
-                .subscribe((status) => {
+                .subscribe((status: string) => {
                     console.log(`[NotificationBell] Estado de la conexión (${user.id}):`, status);
                     if (status === 'CHANNEL_ERROR') {
                         console.error("[NotificationBell] Error crítico en el canal de señales. Intentando reconectar...");

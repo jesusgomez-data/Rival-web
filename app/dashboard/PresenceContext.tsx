@@ -34,21 +34,21 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
                     const users = new Set(Object.keys(newState))
                     setOnlineUsers(users)
                 })
-                .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+                .on('presence', { event: 'join' }, ({ key, newPresences }: { key: string, newPresences: any[] }) => {
                     setOnlineUsers(prev => {
                         const newSet = new Set(prev)
                         newSet.add(key)
                         return newSet
                     })
                 })
-                .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+                .on('presence', { event: 'leave' }, ({ key, leftPresences }: { key: string, leftPresences: any[] }) => {
                     setOnlineUsers(prev => {
                         const newSet = new Set(prev)
                         newSet.delete(key)
                         return newSet
                     })
                 })
-                .subscribe(async (status) => {
+                .subscribe(async (status: string) => {
                     if (status === 'SUBSCRIBED') {
                         await presenceChannel.track({
                             user_id: user.id,

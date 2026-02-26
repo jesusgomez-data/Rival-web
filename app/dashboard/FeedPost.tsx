@@ -133,6 +133,8 @@ interface FeedPostProps {
     music_artist?: string | null;
     isMember?: boolean;
     context?: 'following' | 'global';
+    isAdminUser?: boolean;
+    hasActiveDuel?: boolean;
 }
 
 interface Comment {
@@ -150,7 +152,7 @@ interface Comment {
 }
 
 export default function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId, centerName,
-    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global'
+    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global', isAdminUser, hasActiveDuel
 }: FeedPostProps) {
     const { theme } = useTheme();
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);

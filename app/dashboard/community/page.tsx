@@ -67,8 +67,8 @@ export default function CommunityPage({
                     getMyDuels()
                 ]);
 
-                const followedIds = new Set(myFollows?.map(f => f.following_id) || []);
-                const officialIds = officialAccounts?.map(acc => acc.id) || [];
+                const followedIds = new Set(myFollows?.map((f: any) => f.following_id) || []);
+                const officialIds = officialAccounts?.map((acc: any) => acc.id) || [];
                 const activeDuelUserIds = new Set(duelsData?.filter((d: any) => d.status === 'active' || d.status === 'pending').map((d: any) => d.challenger_id === user.id ? d.opponent_id : d.challenger_id));
 
                 let searchResults: any[] = [];
@@ -83,7 +83,7 @@ export default function CommunityPage({
                         .neq('username', 'rivalfit') // Exclude official account from search
                         .limit(50);
 
-                    searchResults = (profiles || []).sort((a, b) => {
+                    searchResults = (profiles || []).sort((a: any, b: any) => {
                         const q = query.toLowerCase();
                         const aStarts = (a.full_name || '').toLowerCase().startsWith(q) || (a.username || '').toLowerCase().startsWith(q);
                         const bStarts = (b.full_name || '').toLowerCase().startsWith(q) || (b.username || '').toLowerCase().startsWith(q);
@@ -93,13 +93,7 @@ export default function CommunityPage({
                     }).slice(0, 10);
                 }
 
-                // Fetch official accounts to include their posts in "Following" feed automatically
-                const { data: officialAccounts } = await supabase
-                    .from('profiles')
-                    .select('id')
-                    .eq('is_official', true);
-
-                const officialIds = officialAccounts?.map(acc => acc.id) || [];
+                // officialIds is already declared above from the Promise.all result
 
                 // Fetch Posts based on tab or query
                 // Fetch Posts based on tab or query

@@ -10,9 +10,11 @@ interface ChallengeCardProps {
     challenge: any;
     userId: string | undefined;
     isParticipatingInitial: boolean;
+    isAdmin?: boolean;
+    onEdit?: (challenge: any) => void;
 }
 
-export default function ChallengeCard({ challenge, userId, isParticipatingInitial }: ChallengeCardProps) {
+export default function ChallengeCard({ challenge, userId, isParticipatingInitial, isAdmin, onEdit }: ChallengeCardProps) {
     const [loading, setLoading] = useState(false);
     const [isJoined, setIsJoined] = useState(isParticipatingInitial);
 
