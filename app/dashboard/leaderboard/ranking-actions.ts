@@ -16,45 +16,99 @@ export async function getRankings(category: 'xp' | 'combat' | 'social') {
     }
 
     if (category === 'combat') {
-        // Complex query: Join profiles with a count of duels where they are the winner
-        // Since we can't easily do complex group by joins in a single simple supabase call without RPC, 
-        // we'll use raw SQL or a view. For now, let's try a clever select.
+        // Safe aggregation method avoiding complex PostgREST join errors
+        const { data: duels, error: duelsError } = await supabase
+            .from('duels')
+            .select('winner_id')
+            .eq('status', 'completed')
+            .not('winner_id', 'is', null);
 
-        const { data, error } = await supabase
-            .from('profiles')
-            .select(`
-                id, username, full_name, avatar_url, level,
-                duels_won:duels!winner_id(count)
-            `)
-            .neq('username', 'rivalfit') // Exclude official account from rankings
-            .order('duels_won', { ascending: false }) // Note: This might not work directly on a count alias in PostgREST
-            .limit(20);
+        if (duelsError) console.error("Error fetching duels for combat ranking:", duelsError);
+        if (!duels || duels.length === 0) return [];
 
-        // If the ordering above fails (PostgREST limitation), we sort in JS
-        const sorted = (data || []).sort((a: any, b: any) => {
-            const winsA = a.duels_won?.[0]?.count || 0;
-            const winsB = b.duels_won?.[0]?.count || 0;
-            return winsB - winsA;
+        // Count wins per user
+        const winCounts: Record<string, number> = {};
+        duels.forEach((d: any) => {
+            if (d.winner_id) {
+                winCounts[d.winner_id] = (winCounts[d.winner_id] || 0) + 1;
+            }
         });
+
+        const topWinnerIds = Object.entries(winCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 20)
+            .map(([id]) => id);
+
+        if (topWinnerIds.length === 0) return [];
+
+        const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, username, full_name, avatar_url, level, is_official')
+            .in('id', topWinnerIds)
+            .neq('username', 'rivalfit');
+
+        if (profilesError) console.error("Error fetching profiles for combat ranking:", profilesError);
+
+        const sorted = topWinnerIds
+            .map(id => {
+                const profile = profiles?.find((p: any) => p.id === id);
+                if (profile) {
+                    return {
+                        ...profile,
+                        duels_won: [{ count: winCounts[id] }]
+                    };
+                }
+                return null;
+            })
+            .filter(Boolean);
 
         return sorted;
     }
 
     if (category === 'social') {
-        const { data } = await supabase
-            .from('profiles')
-            .select(`
-                id, username, full_name, avatar_url, level,
-                followers:follows!following_id(count)
-            `)
-            .neq('username', 'rivalfit') // Exclude official account from rankings
-            .limit(100); // Fetch a bunch to sort
+        // Safe aggregation method avoiding complex PostgREST join errors
+        const { data: follows, error: followsError } = await supabase
+            .from('follows')
+            .select('following_id');
 
-        const sorted = (data || []).sort((a: any, b: any) => {
-            const fA = a.followers?.[0]?.count || 0;
-            const fB = b.followers?.[0]?.count || 0;
-            return fB - fA;
-        }).slice(0, 20);
+        if (followsError) console.error("Error fetching follows for social ranking:", followsError);
+        if (!follows || follows.length === 0) return [];
+
+        // Count followers per user
+        const followerCounts: Record<string, number> = {};
+        follows.forEach((f: any) => {
+            if (f.following_id) {
+                followerCounts[f.following_id] = (followerCounts[f.following_id] || 0) + 1;
+            }
+        });
+
+        const topFollowedIds = Object.entries(followerCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 20)
+            .map(([id]) => id);
+
+        if (topFollowedIds.length === 0) return [];
+
+        const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, username, full_name, avatar_url, level, is_official')
+            .in('id', topFollowedIds)
+            .neq('username', 'rivalfit');
+
+        if (profilesError) console.error("Error fetching profiles for social ranking:", profilesError);
+
+        const sorted = topFollowedIds
+            .map(id => {
+                const profile = profiles?.find((p: any) => p.id === id);
+                if (profile) {
+                    return {
+                        ...profile,
+                        followers: [{ count: followerCounts[id] }]
+                    };
+                }
+                return null;
+            })
+            .filter(Boolean);
 
         return sorted;
     }

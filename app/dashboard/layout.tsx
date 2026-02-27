@@ -239,14 +239,16 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     ], [isAdmin, t]);
 
-    const hideSidebarDefault = (pathname?.startsWith('/dashboard/gyms/') && pathname.split('/').length > 3) || pathname === '/dashboard/admin';
-    const showSidebar = !hideSidebarDefault || isMenuOpen;
+    const isBusinessCenterRoute = pathname?.startsWith('/dashboard/gyms/') && pathname.split('/').length > 3;
+    const hideSidebarDefault = pathname === '/dashboard/admin'; // Give admin its toggle, but not business centers
+    const showSidebar = !isBusinessCenterRoute && (!hideSidebarDefault || isMenuOpen);
+    const showMobileNav = !isBusinessCenterRoute && (!hideSidebarDefault || isMenuOpen);
 
     return (
         <div className="min-h-screen bg-background flex font-sans text-foreground selection:bg-brand-red selection:text-white transition-colors duration-300">
             <AnalyticsTracker />
-            {/* Sidebar Toggle Button (Floating) */}
-            {hideSidebarDefault && (
+            {/* Sidebar Toggle Button (Floating) - Only for Admin, not for business centers */}
+            {hideSidebarDefault && !isBusinessCenterRoute && (
                 <button
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
                     className={clsx(
@@ -360,58 +362,60 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
             <main className={clsx("flex-1 min-h-screen relative bg-background w-full overflow-x-hidden transition-all duration-300", showSidebar && "lg:ml-64")}>
                 {/* Mobile Header Bar */}
-                <div className="lg:hidden h-20 border-b border-border flex items-center justify-between px-6 sticky top-0 bg-background/95 backdrop-blur-xl z-[200]">
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2">
-                            <Image src="/logo.svg" alt="Rival Logo" width={28} height={28} className="w-7 h-7" />
-                            <span className="font-heading font-bold text-xl text-white uppercase italic tracking-tighter">RIVAL</span>
-                        </div>
-
-                        {/* Icons moved next to logo */}
-                        <div className="flex items-center gap-1 ml-1 border-l border-white/10 pl-2">
-                            <ThemeToggle className="bg-transparent border-none p-1.5" />
-                            <NotificationBell />
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                        <button onClick={() => setShowMobileSearch(!showMobileSearch)} className="p-2.5 text-gray-400 hover:text-white transition-colors">
-                            {showMobileSearch ? <X className="w-6 h-6" /> : <SearchIcon className="w-6 h-6" />}
-                        </button>
-
-                        <button
-                            onClick={() => {
-                                setIsMenuOpen(!isMenuOpen);
-                                setShowMobileSearch(false);
-                            }}
-                            className="p-2.5 text-gray-400 hover:text-white transition-colors"
-                        >
-                            {isMenuOpen ? <X className="w-6 h-6 text-brand-red" /> : <Menu className="w-6 h-6" />}
-                        </button>
-
-                        <Link href="/dashboard/profile" className="ml-2 relative shrink-0">
-                            <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/10">
-                                {profile?.avatar_url ? (
-                                    <Image src={profile.avatar_url} alt="Profile" fill className="object-cover rounded-full" />
-                                ) : (
-                                    <div className="w-full h-full bg-gray-800 flex items-center justify-center rounded-full">
-                                        <User className="w-4 h-4 text-gray-400" />
-                                    </div>
-                                )}
+                {showMobileNav && (
+                    <div className="lg:hidden h-20 border-b border-border flex items-center justify-between px-6 sticky top-0 bg-background/95 backdrop-blur-xl z-[200]">
+                        <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                                <Image src="/logo.svg" alt="Rival Logo" width={28} height={28} className="w-7 h-7" />
+                                <span className="font-heading font-bold text-xl text-white uppercase italic tracking-tighter">RIVAL</span>
                             </div>
-                        </Link>
+
+                            {/* Icons moved next to logo */}
+                            <div className="flex items-center gap-1 ml-1 border-l border-white/10 pl-2">
+                                <ThemeToggle className="bg-transparent border-none p-1.5" />
+                                <NotificationBell />
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-1">
+                            <button onClick={() => setShowMobileSearch(!showMobileSearch)} className="p-2.5 text-gray-400 hover:text-white transition-colors">
+                                {showMobileSearch ? <X className="w-6 h-6" /> : <SearchIcon className="w-6 h-6" />}
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    setIsMenuOpen(!isMenuOpen);
+                                    setShowMobileSearch(false);
+                                }}
+                                className="p-2.5 text-gray-400 hover:text-white transition-colors"
+                            >
+                                {isMenuOpen ? <X className="w-6 h-6 text-brand-red" /> : <Menu className="w-6 h-6" />}
+                            </button>
+
+                            <Link href="/dashboard/profile" className="ml-2 relative shrink-0">
+                                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/10">
+                                    {profile?.avatar_url ? (
+                                        <Image src={profile.avatar_url} alt="Profile" fill className="object-cover rounded-full" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gray-800 flex items-center justify-center rounded-full">
+                                            <User className="w-4 h-4 text-gray-400" />
+                                        </div>
+                                    )}
+                                </div>
+                            </Link>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Mobile Search Overlay */}
-                {showMobileSearch && (
+                {showMobileSearch && showMobileNav && (
                     <div className="lg:hidden px-6 pb-6 pt-2 bg-background/95 backdrop-blur-xl border-b border-border sticky top-20 z-[190] animate-in slide-in-from-top-2 fade-in">
                         <GlobalSearch />
                     </div>
                 )}
 
                 {/* Mobile Menu Overlay */}
-                {isMenuOpen && (
+                {isMenuOpen && showMobileNav && (
                     <div className="fixed inset-0 top-20 bg-background z-[999] lg:hidden overflow-y-auto pb-32 animate-in fade-in slide-in-from-right-4 duration-300">
                         <div className="p-6 space-y-8">
                             {/* Profile Summary Removed by User Request */}
@@ -465,8 +469,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 )}
 
                 {/* Main Content Area */}
-                <div className={clsx("mx-auto transition-all duration-300", hideSidebarDefault && !isMenuOpen ? "h-full p-0 max-w-none" : "px-0 pt-6 pb-32 lg:p-8 max-w-7xl")}>
-                    {(!hideSidebarDefault || isMenuOpen) && (
+                <div className={clsx("mx-auto transition-all duration-300",
+                    (hideSidebarDefault || isBusinessCenterRoute) && !isMenuOpen ? "h-full p-0 max-w-none" : "px-0 pt-6 pb-32 lg:p-8 max-w-7xl"
+                )}>
+                    {showMobileNav && (
                         <header className="hidden lg:flex items-center justify-between mb-8">
                             <div className="flex-1 max-w-xl">
                                 <GlobalSearch />
@@ -491,7 +497,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             </main>
 
             {/* Mobile Bottom Navigation */}
-            {(!hideSidebarDefault || isMenuOpen) && (
+            {showMobileNav && (
                 <nav className={clsx(
                     "lg:hidden fixed bottom-4 left-4 right-4 bg-background/90 backdrop-blur-2xl border border-border py-3 px-6 z-[100] rounded-[2rem] shadow-2xl safe-area-inset-bottom transition-transform duration-300",
                     showBottomNav ? "translate-y-0" : "translate-y-32"
