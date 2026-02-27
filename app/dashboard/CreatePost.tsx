@@ -12,8 +12,11 @@ import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import MusicPicker from "./MusicPicker";
 import { MusicTrack } from "./music-data";
 import WodCreator, { WodBlock, WodSummary } from "@/components/training/WodCreator";
+import { useLanguage } from "@/app/LanguageContext";
+import clsx from "clsx";
 
 export default function CreatePost({ currentUser, onSuccess, initialPostType, initialData, editingPostId }: { currentUser: any, onSuccess?: () => void, initialPostType?: 'standard' | 'pr' | 'wod', initialData?: any, editingPostId?: string }) {
+    const { language } = useLanguage();
     const [content, setContent] = useState(initialData?.caption || initialData?.content || "");
     const [isPosting, setIsPosting] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
@@ -26,6 +29,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const [weight, setWeight] = useState("");
     const [sport, setSport] = useState("Cross Training");
     const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
+    const [scheduledFor, setScheduledFor] = useState<string>(initialData?.date || new Date().toISOString().split('T')[0]);
     const [duration, setDuration] = useState<number | null>(null);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isVideoTrimming, setIsVideoTrimming] = useState(false);
@@ -124,11 +128,12 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                 const finalCaption = content || `¡He compartido un WOD: ${wodData.title}!`;
 
                 if (editingPostId) {
-                    res = await updatePost(editingPostId, finalCaption, JSON.stringify(finalWodData));
+                    res = await updatePost(editingPostId, finalCaption, JSON.stringify(finalWodData), scheduledFor);
                 } else {
                     formData.append("content", finalCaption);
                     formData.append("media_url", JSON.stringify(finalWodData));
                     formData.append("media_type", "wod");
+                    if (scheduledFor) formData.append("scheduled_for", scheduledFor);
                     res = await createUserPost(formData);
                 }
             } else {
@@ -347,26 +352,35 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                 <button
                     type="button"
                     onClick={() => setPostType('standard')}
-                    className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border ${postType === 'standard' ? 'bg-white/10 border-white/20 text-white shadow-inner' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+                    className={clsx(
+                        "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                        postType === 'standard' ? "bg-white/10 border-white/20 text-white shadow-inner" : "border-transparent text-gray-500 hover:text-gray-300"
+                    )}
                 >
                     <Activity className="w-3.5 h-3.5 text-brand-red" />
-                    Actualización
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setPostType('pr')}
-                    className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border ${postType === 'pr' ? 'bg-brand-red/10 border-brand-red/30 text-brand-red shadow-[0_0_15px_rgba(220,38,38,0.1)]' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
-                >
-                    <Trophy className="w-3.5 h-3.5" />
-                    Nuevo PR
+                    {language === 'es' ? 'ACTUALIZACIÓN' : 'UPDATE'}
                 </button>
                 <button
                     type="button"
                     onClick={() => setPostType('wod')}
-                    className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 border ${postType === 'wod' ? 'bg-brand-blue/10 border-brand-blue/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]' : 'border-transparent text-gray-500 hover:text-gray-300'}`}
+                    className={clsx(
+                        "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                        postType === 'wod' ? "bg-brand-blue/10 border-brand-blue/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]" : "border-transparent text-gray-500 hover:text-gray-300"
+                    )}
                 >
                     <Dumbbell className="w-3.5 h-3.5" />
-                    WOD
+                    {language === 'es' ? 'ENTRENAMIENTO' : 'WORKOUT'}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setPostType('pr')}
+                    className={clsx(
+                        "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                        postType === 'pr' ? "bg-brand-red/10 border-brand-red/30 text-brand-red shadow-[0_0_15px_rgba(220,38,38,0.1)]" : "border-transparent text-gray-500 hover:text-gray-300"
+                    )}
+                >
+                    <Trophy className="w-3.5 h-3.5" />
+                    PR
                 </button>
             </div>
 
@@ -407,8 +421,11 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
 
                                     <div className="border-t border-white/5 pt-6">
                                         <WodCreator
-                                            onUpdate={(data) => setWodData(data)}
-                                            initialData={wodData || undefined}
+                                            onUpdate={(data) => {
+                                                setWodData(data);
+                                                if (data.date) setScheduledFor(data.date);
+                                            }}
+                                            initialData={wodData ? { ...wodData, date: scheduledFor } : undefined}
                                         />
                                     </div>
                                 </div>

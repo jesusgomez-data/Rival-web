@@ -14,6 +14,7 @@ import MusicPicker from '../MusicPicker'
 import { MusicTrack } from '../music-data'
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
 import { createClient } from '@/utils/supabase/client'
+import RouteMap from '@/components/training/RouteMap'
 
 interface Story {
     id: string
@@ -172,72 +173,62 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 } finally {
                     setIsUploading(false);
                 }
-            } else if (['workout', 'class_result', 'pr'].includes(type) && customEvent.detail.data) {
+            } else if (['workout', 'workout_sticker', 'class_result', 'pr'].includes(type)) {
+                const data = customEvent.detail.data || customEvent.detail.content;
+                const backgroundImage = customEvent.detail.backgroundImage;
                 const postId = customEvent.detail.postId;
-                // Generate a background
-                const canvas = document.createElement('canvas');
-                canvas.width = 1080;
-                canvas.height = 1920;
-                const ctx = canvas.getContext('2d');
-                if (ctx) {
-                    // Modern dynamic background
-                    const gradient = ctx.createRadialGradient(540, 960, 0, 540, 960, 1200);
-                    gradient.addColorStop(0, '#1a1a1a');
-                    gradient.addColorStop(0.5, '#0a0a0a');
-                    gradient.addColorStop(1, '#000000');
-                    ctx.fillStyle = gradient;
-                    ctx.fillRect(0, 0, 1080, 1920);
 
-                    // Add subtle glow at technical areas
-                    const glow = ctx.createRadialGradient(1080, 0, 0, 1080, 0, 800);
-                    glow.addColorStop(0, 'rgba(220, 38, 38, 0.05)');
-                    glow.addColorStop(1, 'transparent');
-                    ctx.fillStyle = glow;
-                    ctx.fillRect(0, 0, 1080, 1920);
+                setIsUploading(true);
+                try {
+                    let file: File | null = null;
+                    if (backgroundImage) {
+                        const response = await fetch(backgroundImage);
+                        const blob = await response.blob();
+                        file = new File([blob], "shared_background.jpg", { type: blob.type });
+                    }
 
-                    // Add honeycomb pattern (subtle)
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
-                    ctx.lineWidth = 1;
-                    const size = 60;
-                    for (let y = 0; y < 1920 + size; y += size * 1.5) {
-                        for (let x = 0; x < 1080 + size; x += size * Math.sqrt(3)) {
-                            const xOffset = (Math.floor(y / (size * 1.5)) % 2) * (size * Math.sqrt(3) / 2);
-                            ctx.beginPath();
-                            for (let i = 0; i < 6; i++) {
-                                const angle = (i * 60 * Math.PI) / 180;
-                                const px = x + xOffset + size * Math.cos(angle);
-                                const py = y + size * Math.sin(angle);
-                                if (i === 0) ctx.moveTo(px, py);
-                                else ctx.lineTo(px, py);
-                            }
-                            ctx.closePath();
-                            ctx.stroke();
+                    if (file) {
+                        setupPreview(file);
+                    } else {
+                        // Generate a background canvas if no image
+                        const canvas = document.createElement('canvas');
+                        canvas.width = 1080;
+                        canvas.height = 1920;
+                        const ctx = canvas.getContext('2d');
+                        if (ctx) {
+                            const gradient = ctx.createRadialGradient(540, 960, 0, 540, 960, 1200);
+                            gradient.addColorStop(0, '#101010');
+                            gradient.addColorStop(1, '#000000');
+                            ctx.fillStyle = gradient;
+                            ctx.fillRect(0, 0, 1080, 1920);
+
+                            const blob = await new Promise<Blob>((resolve) => canvas.toBlob((b) => resolve(b!), 'image/jpeg', 0.9));
+                            const genFile = new File([blob], "shared_bg.jpg", { type: 'image/jpeg' });
+                            setupPreview(genFile);
                         }
                     }
 
-                    canvas.toBlob((blob) => {
-                        if (blob) {
-                            const file = new File([blob], "story_background.png", { type: "image/png" });
-                            setupPreview(file);
+                    // Add the sticker
+                    const stickerOverlay: OverlayElement = {
+                        id: Date.now().toString(),
+                        type: type === 'pr' ? 'pr_sticker' : 'workout_sticker',
+                        content: typeof data === 'string' ? data : JSON.stringify(data),
+                        x: 50,
+                        y: 45,
+                        scale: 1,
+                        rotation: 0,
+                        link: postId ? `/dashboard` : undefined
+                    };
 
-                            const data = customEvent.detail.data;
-                            const newOverlay: OverlayElement = {
-                                id: Date.now().toString(),
-                                type: type === 'pr' ? 'pr_sticker' : 'workout_sticker',
-                                content: JSON.stringify(data),
-                                x: 50,
-                                y: 50, // Perfectly centered
-                                scale: 1,
-                                rotation: 0,
-                                link: postId ? `/dashboard` : undefined
-                            };
-                            // Use setTimeout to ensure state update happens after setupPreview's state clear
-                            setTimeout(() => {
-                                setOverlays([newOverlay]);
-                                setSelectedOverlayId(newOverlay.id);
-                            }, 100);
-                        }
-                    }, 'image/png');
+                    setTimeout(() => {
+                        setOverlays([stickerOverlay]);
+                        setSelectedOverlayId(stickerOverlay.id);
+                    }, 200);
+
+                } catch (err) {
+                    console.error("Error sharing to story:", err);
+                } finally {
+                    setIsUploading(false);
                 }
             }
         };
@@ -880,6 +871,20 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                         +{data.exercises.length - 4} ejercicios más
                                                     </div>
                                                 )}
+                                            </div>
+                                        ) : data.metrics?.path && data.metrics.path.length > 1 ? (
+                                            <div className="bg-black/40 p-3 rounded-2xl border border-white/10 flex flex-col items-center">
+                                                <RouteMap path={data.metrics.path} className="w-24 h-24 mb-3" color="#DC2626" />
+                                                <div className="grid grid-cols-2 gap-4 w-full text-center">
+                                                    <div>
+                                                        <p className="text-white font-black italic text-[10px]">{(data.metrics.distance / 1000).toFixed(2)} km</p>
+                                                        <p className="text-[6px] text-gray-500 font-black uppercase tracking-widest leading-none">Distancia</p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-white font-black italic text-[10px]">{data.metrics.pace}</p>
+                                                        <p className="text-[6px] text-gray-500 font-black uppercase tracking-widest leading-none">Ritmo</p>
+                                                    </div>
+                                                </div>
                                             </div>
                                         ) : (
                                             <div className="bg-white/5 p-3 rounded-xl border border-white/5 text-center">

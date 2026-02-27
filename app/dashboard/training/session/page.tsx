@@ -1,7 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, CheckCircle, Clock, Save, Loader2, List, Plus, Minus, X, Trash2, Edit2, Search, Trophy, MapPin, Timer, Play, Pause, Activity, RefreshCw, Zap, Share2, Camera, Award, AlertTriangle, ChevronRight, Youtube, Video, Lock, Wind, Heart, TrendingUp, Download } from "lucide-react";
+import {
+    Trophy, Activity, Camera, X, CheckCircle, Loader2, Zap, Clock, MapPin, Youtube,
+    Play, Pause, Save, ChevronRight, ChevronLeft, Map as MapIcon,
+    ArrowLeft, List, Plus, Minus, Trash2, Edit2, Search, Timer,
+    RefreshCw, Share2, Award, AlertTriangle, Video, Lock as LockIcon,
+    Wind, Heart, TrendingUp, Download, Eye
+} from 'lucide-react';
+import RouteMap from '@/components/training/RouteMap';
+import RunShareCard from '@/components/training/RunShareCard';
 import Image from "next/image";
 import { useState, useEffect, Suspense, useMemo, useRef } from "react";
 import { saveWorkout, getExercises, getExercisePreviousRecord, getWorkoutDetails, uploadWorkoutMedia, getUserProfile, getGuidedWorkoutsCount } from "../actions";
@@ -107,6 +115,9 @@ function SessionContent() {
     const [currentZone, setCurrentZone] = useState(1);
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [instantSpeed, setInstantSpeed] = useState(0); // km/h
+    const [showShareCard, setShowShareCard] = useState(false);
+    const wakeLockRef = useRef<any>(null);
+    const runDistanceRef = useRef<number>(0);
 
     useEffect(() => {
         const fetchLimits = async () => {
@@ -324,6 +335,36 @@ function SessionContent() {
     // Running State
     const [runDistance, setRunDistance] = useState<number>(0); // Meters
 
+    // Wake Lock Logic
+    useEffect(() => {
+        const requestWakeLock = async () => {
+            if ('wakeLock' in navigator && gpsStatus === 'tracking') {
+                try {
+                    wakeLockRef.current = await (navigator as any).wakeLock.request('screen');
+                    console.log('Wake Lock is active');
+                } catch (err: any) {
+                    console.error(`${err.name}, ${err.message}`);
+                }
+            }
+        };
+
+        if (gpsStatus === 'tracking' && !isPaused) {
+            requestWakeLock();
+        } else {
+            if (wakeLockRef.current) {
+                wakeLockRef.current.release().then(() => {
+                    wakeLockRef.current = null;
+                });
+            }
+        }
+
+        return () => {
+            if (wakeLockRef.current) {
+                wakeLockRef.current.release();
+            }
+        };
+    }, [gpsStatus, isPaused]);
+
     // Real-time GPS Tracking Logic
     useEffect(() => {
         let watchId: number;
@@ -335,7 +376,7 @@ function SessionContent() {
                     // Transition from searching to tracking only if accuracy is acceptable (< 30m)
                     if (gpsStatus === 'searching' && accuracy < 30) {
                         setGpsStatus('tracking');
-                        // In a real app we might play a sound here
+                        if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
                     }
 
                     // Strict accuracy and noise filtering - skip points with > 40m error
@@ -358,7 +399,7 @@ function SessionContent() {
                         const now = Date.now();
                         const timeDiff = (now - lastPaceCalcTimeRef.current) / 1000; // seconds
                         if (timeDiff >= 3) {
-                            const distDiff = runDistance - lastPaceCalcDistRef.current;
+                            const distDiff = runDistanceRef.current - lastPaceCalcDistRef.current;
                             if (distDiff > 2) {
                                 const mPerSec = distDiff / timeDiff;
                                 const kmh = mPerSec * 3.6;
@@ -376,7 +417,7 @@ function SessionContent() {
                                 setInstantSpeed(0);
                             }
                             lastPaceCalcTimeRef.current = now;
-                            lastPaceCalcDistRef.current = runDistance;
+                            lastPaceCalcDistRef.current = runDistanceRef.current;
                         }
                     }
 
@@ -391,7 +432,8 @@ function SessionContent() {
                         // Only accumulate distance/path if NOT PAUSED and valid movement
                         // Filter out jitter (d < 2m) and high-speed anomalies (d > 30m roughly 100km/h)
                         if (!isPaused && gpsStatus === 'tracking' && d > 2 && d < 30) {
-                            setRunDistance(prev => prev + d);
+                            runDistanceRef.current += d;
+                            setRunDistance(runDistanceRef.current);
                             setRunPath(prev => [...prev, { lat: latitude, lon: longitude }]);
 
                             // Altitude Logic with filter
@@ -412,9 +454,15 @@ function SessionContent() {
                 },
                 (err) => {
                     console.error("GPS Tracker Error:", err);
-                    if (err.code === 1) setGpsStatus('idle');
+                    if (err.code === 1) {
+                        setGpsStatus('idle');
+                        alert("Acceso a GPS denegado. Por favor, habilita los permisos de ubicación.");
+                    } else if (err.code === 3) {
+                        // Timeout - keep searching
+                        console.warn("GPS timeout, retrying...");
+                    }
                 },
-                { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+                { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
             );
         } else {
             lastPosRef.current = null;
@@ -423,7 +471,12 @@ function SessionContent() {
         return () => {
             if (watchId) navigator.geolocation.clearWatch(watchId);
         };
-    }, [gpsStatus, isPaused, runDistance]);
+    }, [gpsStatus, isPaused]);
+
+    const updateDistanceManual = (d: number) => {
+        runDistanceRef.current += d;
+        setRunDistance(runDistanceRef.current);
+    }
 
     // Cross Training/Hybrid State
     type BlockType = 'fortime' | 'amrap' | 'emom' | 'tabata' | 'other';
@@ -950,7 +1003,7 @@ function SessionContent() {
 
                     <div className="relative z-10">
                         <div className="w-20 h-20 bg-brand-red/10 rounded-3xl flex items-center justify-center text-brand-red border border-brand-red/20 shadow-glow mx-auto mb-8">
-                            <Lock className="w-10 h-10" />
+                            <LockIcon className="w-10 h-10" />
                         </div>
 
                         <h2 className="text-3xl font-heading font-black italic text-white uppercase mb-4 leading-tight">
@@ -1230,8 +1283,29 @@ function SessionContent() {
                         workoutTitle={workoutTitle}
                         rpe={rpe}
                         setRpe={setRpe}
+                        distance={runDistance}
+                        time={elapsedSeconds}
+                        pace={instantPace}
+                        elevation={elevationGain}
+                        runPath={runPath}
+                        onOpenShare={() => setShowShareCard(true)}
                     />
                 )}
+
+                {showShareCard && (
+                    <RunShareCard
+                        imageUrl={imageUrl}
+                        distance={runDistance}
+                        time={elapsedSeconds}
+                        pace={instantPace}
+                        elevation={elevationGain}
+                        path={runPath}
+                        date={new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        userName={userName}
+                        onClose={() => setShowShareCard(false)}
+                    />
+                )}
+
             </div>
         );
     }
@@ -1379,7 +1453,7 @@ function SessionContent() {
                 {sportMode === 'running' && (
                     <RunningView
                         distance={runDistance}
-                        setDistance={setRunDistance}
+                        setDistance={updateDistanceManual}
                         time={elapsedSeconds}
                         workoutTitle={workoutTitle}
                         setWorkoutTitle={setWorkoutTitle}
@@ -1403,7 +1477,7 @@ function SessionContent() {
                         blocks={blocks}
                         setBlocks={setBlocks}
                         distance={runDistance}
-                        setDistance={setRunDistance}
+                        setDistance={updateDistanceManual}
                         isOCR={sportMode === 'ocr'}
                         isGuided={searchParams.get('mode') === 'recommendation' || searchParams.get('mode') === 'ai-coach' || !!wodId}
                         workoutTitle={workoutTitle}
@@ -2314,7 +2388,7 @@ function RunningView({
     openSync
 }: {
     distance: number,
-    setDistance: React.Dispatch<React.SetStateAction<number>>,
+    setDistance: (d: number) => void,
     time: number,
     workoutTitle?: string,
     setWorkoutTitle?: (t: string) => void,
@@ -2501,7 +2575,7 @@ function RunningView({
                     </div>
                     <div className="flex justify-center flex-wrap gap-2">
                         {[400, 800, 1000, 5000].map(d => (
-                            <button key={d} onClick={() => setDistance(prev => prev + d)} className="px-5 py-2.5 rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black text-gray-400 hover:bg-white/10 hover:text-white transition-all">
+                            <button key={d} onClick={() => setDistance(d)} className="px-5 py-2.5 rounded-2xl bg-white/5 border border-white/5 text-[10px] font-black text-gray-400 hover:bg-white/10 hover:text-white transition-all">
                                 + {d >= 1000 ? `${d / 1000}km` : `${d}m`}
                             </button>
                         ))}
@@ -3909,6 +3983,8 @@ function GymView({ exercises, setExercises, mode = 'gym', workoutTitle, setWorko
     )
 }
 
+// --- Sharing Components ---
+
 function FinishModal({
     onConfirm,
     onCancel,
@@ -3924,7 +4000,13 @@ function FinishModal({
     fileInputRef,
     workoutTitle,
     rpe,
-    setRpe
+    setRpe,
+    // New props for stats
+    distance = 0,
+    time = 0,
+    pace = "0:00",
+    elevation = 0,
+    runPath = []
 }: {
     onConfirm: () => void;
     onCancel: () => void;
@@ -3941,7 +4023,14 @@ function FinishModal({
     workoutTitle: string;
     rpe: number;
     setRpe: (r: number) => void;
+    distance?: number;
+    time?: number;
+    pace?: string;
+    elevation?: number;
+    runPath?: { lat: number; lon: number }[];
+    onOpenShare?: () => void;
 }) {
+
     const { theme } = useTheme();
     const rpeLabels: Record<number, string> = {
         0: 'Sin definir',
@@ -3973,14 +4062,57 @@ function FinishModal({
                         <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">Misión Completada, Atleta.</p>
                     </div>
 
-                    {/* Image Upload Area */}
+                    {/* Image Upload Area / Strava Style Preview */}
                     <div className="relative group">
                         {imageUrl ? (
-                            <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10">
-                                <img src={imageUrl} alt="Workout" className="w-full h-full object-cover" />
+                            <div className="relative aspect-[9/16] bg-black rounded-3xl overflow-hidden border border-white/10 group/card shadow-2xl">
+                                <img src={imageUrl} alt="Workout" className="w-full h-full object-cover opacity-80" />
+
+                                {/* Strava-style Overlay */}
+                                <div className="absolute inset-0 flex flex-col items-center justify-between py-12 px-6 bg-gradient-to-t from-black/60 via-transparent to-black/40 pointer-events-none">
+                                    <div className="text-center">
+                                        <h4 className="text-white font-heading font-black italic text-xl uppercase tracking-tighter">RIVAL <span className="text-brand-red">FIT</span></h4>
+                                        <p className="text-[10px] text-white/60 font-black uppercase tracking-[0.2em]">{new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                                    </div>
+
+                                    <div className="space-y-4 text-center">
+                                        <div className="space-y-0">
+                                            <p className="text-6xl font-heading font-black text-white italic tracking-tighter">{(distance / 1000).toFixed(2)}</p>
+                                            <p className="text-xs font-black text-white/60 uppercase tracking-widest">Kilómetros</p>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-8">
+                                            <div>
+                                                <p className="text-xl font-heading font-black text-white italic">{Math.floor(time / 60)}:{String(time % 60).padStart(2, '0')}</p>
+                                                <p className="text-[8px] font-black text-white/40 uppercase tracking-widest">Tiempo</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xl font-heading font-black text-white italic">{pace}</p>
+                                                <p className="text-[8px] font-black text-white/40 uppercase tracking-widest">Ritmo /km</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full px-8">
+                                        <RouteMap path={runPath} className="w-32 h-32 mx-auto filter drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]" color="white" />
+                                    </div>
+
+                                    {/* Action to customize/share */}
+                                    <div className="absolute bottom-6 left-0 right-0 px-8">
+                                        <button
+                                            onClick={onOpenShare}
+                                            className="w-full py-3 bg-white/20 backdrop-blur-md border border-white/20 rounded-2xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/30 transition-all flex items-center justify-center gap-2 pointer-events-auto"
+                                        >
+                                            <Eye className="w-3.5 h-3.5" />
+                                            Ver Tarjeta Full
+                                        </button>
+                                    </div>
+                                </div>
+
+
                                 <button
                                     onClick={() => setImageUrl(null)}
-                                    className="absolute top-2 right-2 p-2 bg-black/60 rounded-full text-white hover:bg-brand-red transition-colors"
+                                    className="absolute top-4 right-4 p-2 bg-black/60 backdrop-blur-md rounded-full text-white hover:bg-brand-red transition-all pointer-events-auto"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -3999,7 +4131,8 @@ function FinishModal({
                                 ) : (
                                     <>
                                         <Camera className="w-8 h-8 text-gray-400 group-hover:text-brand-red transition-colors" />
-                                        <div className={clsx("text-[10px] font-black uppercase tracking-widest transition-colors", theme === 'dark' ? "text-gray-500 group-hover:text-white" : "text-gray-400 group-hover:text-black")}>Añadir Foto del WOD</div>
+                                        <div className={clsx("text-[10px] font-black uppercase tracking-widest transition-colors", theme === 'dark' ? "text-gray-500 group-hover:text-white" : "text-gray-400 group-hover:text-black")}>Añadir Foto y Crear Mapa</div>
+                                        <p className="text-[8px] text-gray-600 font-bold uppercase">Sube una foto para generar tu tarjeta de carrera</p>
                                     </>
                                 )}
                             </button>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { Plus, Minus, Trash2, FileText, Image as ImageIcon, X, Video, ChevronDown, Check, Edit2, Search, Clock, Trophy } from "lucide-react";
+import { Plus, Minus, Trash2, FileText, Image as ImageIcon, X, Video, ChevronDown, Check, Edit2, Search, Clock, Trophy, Calendar } from "lucide-react";
 import { createWod, updateWod, addExerciseToCatalog } from "../../wod-actions";
 import { getExercises } from "../../actions";
 import { deletePost } from "../../feed-actions";
@@ -998,12 +998,18 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                         <div className="border-t border-white/10 pt-4">
                             <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Programar Publicación</label>
                             <div className="grid grid-cols-2 gap-3 mb-4">
-                                <input
-                                    type="date"
-                                    value={date}
-                                    onChange={(e) => setDate(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white outline-none focus:border-brand-red text-sm"
-                                />
+                                <div className="relative group/date">
+                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none group-hover/date:text-brand-red transition-colors" />
+                                    <input
+                                        type="date"
+                                        value={date}
+                                        onChange={(e) => setDate(e.target.value)}
+                                        onClick={(e) => {
+                                            try { (e.target as any).showPicker(); } catch (err) { }
+                                        }}
+                                        className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-white outline-none focus:border-brand-red text-sm cursor-pointer"
+                                    />
+                                </div>
                                 <div className="relative">
                                     <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
                                     <input

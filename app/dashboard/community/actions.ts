@@ -226,6 +226,9 @@ export async function createUserPost(formData: FormData) {
             mediaType = isVideo ? 'video' : 'image'
         }
 
+        const dateStr = formData.get('scheduled_for') as string;
+        const createdAt = dateStr ? new Date(`${dateStr}T${new Date().toISOString().split('T')[1]}`).toISOString() : undefined;
+
         const { error: insertError } = await supabase
             .from('posts')
             .insert({
@@ -233,6 +236,7 @@ export async function createUserPost(formData: FormData) {
                 caption: content,
                 media_url: mediaUrl,
                 media_type: mediaType,
+                created_at: createdAt,
                 music_url: formData.get('music_url') as string || null,
                 music_title: formData.get('music_title') as string || null,
                 music_artist: formData.get('music_artist') as string || null
@@ -466,7 +470,7 @@ export async function deleteComment(commentId: string) {
     return { success: true }
 }
 
-export async function updatePost(postId: string, newCaption: string, mediaUrl?: string) {
+export async function updatePost(postId: string, newCaption: string, mediaUrl?: string, scheduledFor?: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
@@ -476,6 +480,9 @@ export async function updatePost(postId: string, newCaption: string, mediaUrl?: 
 
     const updateData: any = { caption: newCaption };
     if (mediaUrl) updateData.media_url = mediaUrl;
+    if (scheduledFor) {
+        updateData.created_at = new Date(`${scheduledFor}T${new Date().toISOString().split('T')[1]}`).toISOString();
+    }
 
     const { error } = await supabase
         .from('posts')

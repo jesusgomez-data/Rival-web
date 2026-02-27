@@ -16,6 +16,8 @@ import PRCard from "./community/PRCard";
 import VideoReelsModal from "./VideoReelsModal";
 import dynamic from 'next/dynamic';
 import ShareableCard from "@/components/ShareableCard";
+import RunShareCard from "@/components/training/RunShareCard";
+import RouteMap from "@/components/training/RouteMap";
 import MentionText from "@/components/MentionText";
 import MentionInput from "@/components/MentionInput";
 import WodCard from "@/components/community/WodCard";
@@ -906,6 +908,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
                         const sets = w.workout_sets || [];
                         const centerName = w.location_name || 'Gimnasio';
+                        const isRun = w.metrics?.type === 'running' || w.sport_type?.toLowerCase() === 'running' || (w.metrics?.path && w.metrics.path.length > 0);
 
                         // Group by exercise name
                         const grouped: { [key: string]: any } = {};
@@ -945,22 +948,29 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                         <div className="absolute top-0 right-0 w-24 h-24 bg-brand-red/5 blur-3xl -mr-8 -mt-8" />
                                         <div className="flex items-center gap-2 md:gap-3 relative z-10 w-full overflow-hidden">
                                             <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 group-hover:scale-110 transition-transform shrink-0">
-                                                <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                                                {isRun ? <Activity className="w-3.5 h-3.5 md:w-4 md:h-4" /> : <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />}
                                             </div>
                                             <div className="text-left flex-1 min-w-0">
                                                 <h4 className={clsx(
                                                     "text-xs md:text-sm font-heading font-black italic uppercase tracking-tighter group-hover:text-brand-red transition-colors leading-none truncate pr-2",
                                                     theme === 'dark' ? "text-white" : "text-gray-900"
                                                 )}>
-                                                    {(!w.sport_type || w.sport_type === 'Entrenamiento Libre') ? (summary || 'ENTRENAMIENTO HÍBRIDO') : w.sport_type}
+                                                    {isRun ? "CARRERA COMPLETADA" : ((!w.sport_type || w.sport_type === 'Entrenamiento Libre') ? (summary || 'ENTRENAMIENTO HÍBRIDO') : w.sport_type)}
                                                 </h4>
-                                                <p className="text-[7px] md:text-[8px] text-brand-red/70 font-bold uppercase tracking-widest mt-0.5 flex items-center gap-1.5 truncate">
-                                                    <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red"></span>
-                                                    {displayCenterName || 'ENTRENAMIENTO'}
-                                                </p>
+                                                <div className="flex items-center gap-2 mt-0.5">
+                                                    <p className="text-[7px] md:text-[8px] text-brand-red/70 font-bold uppercase tracking-widest flex items-center gap-1.5 truncate">
+                                                        <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red"></span>
+                                                        {isRun ? `${(w.metrics?.distance / 1000).toFixed(2)} KM • ${w.metrics?.pace || '0:00'}/KM` : (displayCenterName || 'ENTRENAMIENTO')}
+                                                    </p>
+                                                </div>
                                             </div>
+                                            {isRun && w.metrics?.path && (
+                                                <div className="shrink-0 w-10 h-10 bg-black/40 rounded-lg p-1 border border-white/10 group-hover:border-brand-red/50 transition-colors">
+                                                    <RouteMap path={w.metrics.path} className="w-full h-full" color="#DC2626" />
+                                                </div>
+                                            )}
                                         </div>
-                                        <div className="flex bg-white/5 rounded-lg p-1.5 group-hover:bg-brand-red group-hover:text-white transition-all border border-white/5 shrink-0">
+                                        <div className="flex bg-white/5 rounded-lg p-1.5 group-hover:bg-brand-red group-hover:text-white transition-all border border-white/5 shrink-0 ml-2">
                                             <ChevronDown className="w-3 h-3" />
                                         </div>
                                     </button>
@@ -1265,38 +1275,52 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             }
             {
                 showShareCard && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
-                        <div className="relative w-full max-w-lg animate-in zoom-in-95 duration-500">
-                            <button
-                                onClick={() => setShowShareCard(false)}
-                                className="fixed top-6 right-6 z-[110] bg-black/50 backdrop-blur-md p-3 rounded-full text-white hover:text-brand-red transition-all active:scale-95 flex items-center gap-2 border border-white/10"
-                            >
-                                <X className="w-5 h-5" />
-                                <span className="text-[10px] font-black uppercase tracking-widest mr-1 hidden sm:inline">Cerrar</span>
-                            </button>
-                            <ShareableCard
-                                user={{
-                                    name: user,
-                                    username: username || user,
-                                    avatar: avatar,
-                                    level: 12, // For now static or add to props if available
-                                    rank: "ELITE"
-                                }}
-                                data={{
-                                    type: mediaType === 'pr' ? 'pr' : mediaType === 'class_result' ? 'medal' : 'workout',
-                                    title: (resolvedWorkoutData?.sport_type && resolvedWorkoutData.sport_type !== 'fitness') ? resolvedWorkoutData.sport_type.toUpperCase() : (highlight || resolvedWorkoutData?.title || 'ENTRENAMIENTO'),
-                                    date: time,
-                                    stats: mediaType === 'pr' ? (() => {
-                                        try { const d = JSON.parse(image); return [{ label: "PESO", value: `${d.weight}${d.unit}` }, { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }]; } catch (e) { return [] }
-                                    })() : (resolvedWorkoutData as any)?.metrics?.blocks?.map((b: any) => ({
-                                        label: b.type?.toUpperCase(),
-                                        value: b.result?.time || `${b.result?.rounds || 0} RDS`
-                                    })).slice(0, 3) || [{ label: "DISCIPLINA", value: (resolvedWorkoutData?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "COMPLETADO" }],
-                                    image: !isVideo ? image : undefined
-                                }}
-                            />
+                    resolvedWorkoutData?.metrics?.path || resolvedWorkoutData?.metrics?.type === 'running' ? (
+                        <RunShareCard
+                            imageUrl={image && isImageUrl(image) ? image : null}
+                            distance={resolvedWorkoutData.metrics.distance || 0}
+                            time={resolvedWorkoutData.duration || 0}
+                            pace={resolvedWorkoutData.metrics.pace || "0:00"}
+                            elevation={resolvedWorkoutData.metrics.elevation || 0}
+                            path={resolvedWorkoutData.metrics.path || []}
+                            date={time}
+                            userName={user}
+                            onClose={() => setShowShareCard(false)}
+                        />
+                    ) : (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
+                            <div className="relative w-full max-w-lg animate-in zoom-in-95 duration-500">
+                                <button
+                                    onClick={() => setShowShareCard(false)}
+                                    className="fixed top-6 right-6 z-[110] bg-black/50 backdrop-blur-md p-3 rounded-full text-white hover:text-brand-red transition-all active:scale-95 flex items-center gap-2 border border-white/10"
+                                >
+                                    <X className="w-5 h-5" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest mr-1 hidden sm:inline">Cerrar</span>
+                                </button>
+                                <ShareableCard
+                                    user={{
+                                        name: user,
+                                        username: username || user,
+                                        avatar: avatar,
+                                        level: 12,
+                                        rank: "ELITE"
+                                    }}
+                                    data={{
+                                        type: mediaType === 'pr' ? 'pr' : mediaType === 'class_result' ? 'medal' : 'workout',
+                                        title: (resolvedWorkoutData?.sport_type && resolvedWorkoutData.sport_type !== 'fitness') ? resolvedWorkoutData.sport_type.toUpperCase() : (highlight || resolvedWorkoutData?.title || 'ENTRENAMIENTO'),
+                                        date: time,
+                                        stats: mediaType === 'pr' ? (() => {
+                                            try { const d = JSON.parse(image); return [{ label: "PESO", value: `${d.weight}${d.unit}` }, { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }]; } catch (e) { return [] }
+                                        })() : (resolvedWorkoutData as any)?.metrics?.blocks?.map((b: any) => ({
+                                            label: b.type?.toUpperCase(),
+                                            value: b.result?.time || `${b.result?.rounds || 0} RDS`
+                                        })).slice(0, 3) || [{ label: "DISCIPLINA", value: (resolvedWorkoutData?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "COMPLETADO" }],
+                                        image: !isVideo ? image : undefined
+                                    }}
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )
                 )
             }
         </div >

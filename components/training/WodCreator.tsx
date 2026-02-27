@@ -14,7 +14,8 @@ import {
     Repeat,
     Target,
     RefreshCw,
-    Trophy
+    Trophy,
+    Calendar
 } from "lucide-react";
 import { motion, Reorder, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -56,8 +57,8 @@ export interface WodSummary {
 }
 
 interface WodCreatorProps {
-    onUpdate: (wodData: { title: string, blocks: WodBlock[], summary: WodSummary }) => void;
-    initialData?: { title: string, blocks: WodBlock[], summary: WodSummary };
+    onUpdate: (wodData: { title: string, date: string, blocks: WodBlock[], summary: WodSummary }) => void;
+    initialData?: { title: string, date: string, blocks: WodBlock[], summary: WodSummary };
 }
 
 const FORMAT_ICONS: Record<WodFormat, React.ReactNode> = {
@@ -100,6 +101,8 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
         }
     ]);
 
+    const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
+
     const [summary, setSummary] = useState<WodSummary>(initialData?.summary || {
         totalTime: '60:00',
         scoreType: 'REPS',
@@ -133,8 +136,8 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const updateWod = (newTitle: string, newBlocks: WodBlock[], newSummary: WodSummary = summary) => {
-        onUpdate({ title: newTitle, blocks: newBlocks, summary: newSummary });
+    const updateWod = (newTitle: string, newBlocks: WodBlock[], newSummary: WodSummary = summary, newDate: string = date) => {
+        onUpdate({ title: newTitle, date: newDate, blocks: newBlocks, summary: newSummary });
     };
 
     const addBlock = () => {
@@ -147,19 +150,19 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
         };
         const updated = [...blocks, newBlock];
         setBlocks(updated);
-        updateWod(title, updated, summary);
+        updateWod(title, updated, summary, date);
     };
 
     const removeBlock = (id: string) => {
         const updated = blocks.filter(b => b.id !== id);
         setBlocks(updated);
-        updateWod(title, updated, summary);
+        updateWod(title, updated, summary, date);
     };
 
     const updateBlock = (id: string, updates: Partial<WodBlock>) => {
         const updated = blocks.map(b => b.id === id ? { ...b, ...updates } : b);
         setBlocks(updated);
-        updateWod(title, updated, summary);
+        updateWod(title, updated, summary, date);
     };
 
     const addExercise = (blockId: string) => {
@@ -173,7 +176,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
             return b;
         });
         setBlocks(updated);
-        updateWod(title, updated, summary);
+        updateWod(title, updated, summary, date);
     };
 
     const removeExercise = (blockId: string, exId: string) => {
@@ -187,7 +190,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
             return b;
         });
         setBlocks(updated);
-        updateWod(title, updated, summary);
+        updateWod(title, updated, summary, date);
     };
 
     const COMMON_UNITS = ['REPS', 'KG', 'LBS', 'SEC', 'MIN', 'M', 'KM', 'CAL', '%', 'MAX'];
@@ -203,13 +206,13 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
             return b;
         });
         setBlocks(updated);
-        updateWod(title, updated, summary);
+        updateWod(title, updated, summary, date);
     };
 
     const updateSummary = (updates: Partial<WodSummary>) => {
         const newSummary = { ...summary, ...updates };
         setSummary(newSummary);
-        updateWod(title, blocks, newSummary);
+        updateWod(title, blocks, newSummary, date);
     };
 
     const handleSaveNewExercise = async (blockId: string, exId: string, name: string) => {
@@ -288,10 +291,29 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                     onChange={(e) => {
                         const val = e.target.value.toUpperCase();
                         setTitle(val);
-                        updateWod(val, blocks, summary);
+                        updateWod(val, blocks, summary, date);
                     }}
                     className="w-full bg-black/40 border border-white/10 rounded-2xl px-6 py-4 text-sm font-black italic tracking-tighter text-white placeholder:text-gray-700 focus:outline-none focus:border-brand-red/50 transition-all uppercase"
                 />
+            </div>
+
+            <div className="space-y-2">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2">Fecha del Entrenamiento</label>
+                <div className="relative group/date">
+                    <Calendar className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-red transition-transform group-hover/date:scale-110 pointer-events-none" />
+                    <input
+                        type="date"
+                        value={date}
+                        onChange={(e) => {
+                            setDate(e.target.value);
+                            updateWod(title, blocks, summary, e.target.value);
+                        }}
+                        onClick={(e) => {
+                            try { (e.target as any).showPicker(); } catch (err) { }
+                        }}
+                        className="w-full bg-black/40 border border-white/10 rounded-2xl pl-14 pr-6 py-4 text-sm font-black text-white focus:outline-none focus:border-brand-red/50 transition-all cursor-pointer"
+                    />
+                </div>
             </div>
 
             <div className="space-y-4">
