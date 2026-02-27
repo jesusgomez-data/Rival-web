@@ -346,14 +346,14 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     };
 
     return (
-        <div className="bg-brand-gray/30 border border-white/10 rounded-[28px] p-4 md:p-6 backdrop-blur-md mb-8 relative z-10 w-full">
+        <div className="bg-brand-gray/30 border border-white/10 rounded-[24px] md:rounded-[28px] p-3 md:p-6 backdrop-blur-md mb-8 relative z-10 w-full overflow-hidden">
             {/* Post Type Selector */}
-            <div className="flex gap-2 mb-4 md:mb-6">
+            <div className="flex gap-2 mb-4 md:mb-6 overflow-x-auto no-scrollbar pb-2">
                 <button
                     type="button"
                     onClick={() => setPostType('standard')}
                     className={clsx(
-                        "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                        "flex items-center gap-1.5 px-3 md:px-6 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider md:tracking-widest transition-all whitespace-nowrap shrink-0",
                         postType === 'standard' ? "bg-white/10 border-white/20 text-white shadow-inner" : "border-transparent text-gray-500 hover:text-gray-300"
                     )}
                 >
@@ -362,25 +362,25 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                 </button>
                 <button
                     type="button"
-                    onClick={() => setPostType('wod')}
-                    className={clsx(
-                        "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
-                        postType === 'wod' ? "bg-brand-blue/10 border-brand-blue/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]" : "border-transparent text-gray-500 hover:text-gray-300"
-                    )}
-                >
-                    <Dumbbell className="w-3.5 h-3.5" />
-                    {language === 'es' ? 'ENTRENAMIENTO' : 'WORKOUT'}
-                </button>
-                <button
-                    type="button"
                     onClick={() => setPostType('pr')}
                     className={clsx(
-                        "flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
+                        "flex items-center gap-1.5 px-3 md:px-6 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider md:tracking-widest transition-all whitespace-nowrap shrink-0",
                         postType === 'pr' ? "bg-brand-red/10 border-brand-red/30 text-brand-red shadow-[0_0_15px_rgba(220,38,38,0.1)]" : "border-transparent text-gray-500 hover:text-gray-300"
                     )}
                 >
                     <Trophy className="w-3.5 h-3.5" />
-                    PR
+                    {language === 'es' ? 'NUEVO PR' : 'NEW PR'}
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setPostType('wod')}
+                    className={clsx(
+                        "flex items-center gap-1.5 px-3 md:px-6 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider md:tracking-widest transition-all whitespace-nowrap shrink-0",
+                        postType === 'wod' ? "bg-brand-blue/10 border-brand-blue/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]" : "border-transparent text-gray-500 hover:text-gray-300"
+                    )}
+                >
+                    <Dumbbell className="w-3.5 h-3.5" />
+                    {language === 'es' ? 'WOD' : 'WORKOUT'}
                 </button>
             </div>
 

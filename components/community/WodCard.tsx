@@ -203,7 +203,7 @@ export default function WodCard({ data, userName, publishDate }: WodCardProps) {
                             <div>
                                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">PUNTUACIÓN FINAL</p>
                                 <h4 className="text-xl font-heading font-black italic uppercase tracking-tighter text-white">
-                                    {data.summary.scoreLabel || 'PENDIENTE'}
+                                    {data.summary.scoreType === 'NONE' ? 'COMPLETADO' : (data.summary.scoreLabel || 'PENDIENTE')}
                                 </h4>
                             </div>
                         </div>

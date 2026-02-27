@@ -485,9 +485,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         <div
             id={`post-${postId}`}
             className={clsx(
-                "md:border md:rounded-2xl overflow-hidden transition-colors mb-6",
-                "border-y md:border-x-0 border-transparent", // Mobile: only vertical borders if any
-                theme === 'dark' ? "bg-brand-gray md:border-white/5 border-b-white/5" : "bg-white md:border-gray-200 border-b-gray-200 shadow-sm"
+                "md:border md:rounded-2xl overflow-hidden transition-all mb-4 md:mb-6",
+                "rounded-none md:rounded-2xl", // Flush on mobile, rounded on desktop
+                theme === 'dark' ? "bg-brand-gray md:border-white/5 border-y-white/5" : "bg-white md:border-gray-200 border-y-gray-200 shadow-sm"
             )}
         >
             {/* Header */}

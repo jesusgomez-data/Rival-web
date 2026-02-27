@@ -119,21 +119,23 @@ function CollapsibleCreatePost({ currentUser, language }: { currentUser: any, la
                     </div>
                 </button>
             ) : (
-                <div className="animate-in fade-in slide-in-from-top-4 duration-500 bg-brand-gray/20 border border-white/5 rounded-[32px] px-2 py-4 md:px-4 md:py-6 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-xl relative overflow-hidden">
+                <div className="animate-in fade-in slide-in-from-top-4 duration-500 bg-brand-gray/20 border border-white/5 rounded-[28px] md:rounded-[32px] px-1.5 py-4 md:px-4 md:py-6 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-xl relative overflow-hidden">
                     {/* Decorative element */}
                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
 
-                    <div className="flex justify-between items-center mb-8 relative z-10 border-b border-white/5 pb-5">
+                    <div className="flex justify-between items-center mb-6 relative z-10 border-b border-white/5 pb-4 px-2">
                         <div className="flex items-center gap-2">
-                            <Plus className="w-3.5 h-3.5 text-brand-red" />
-                            <h2 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground italic">{editMode ? 'EDITAR ENTRENAMIENTO' : repostData ? 'REPOSTEAR WOD' : 'Nueva Publicación'}</h2>
+                            <Plus className="w-3.5 h-3.5 text-brand-red animate-pulse" />
+                            <h2 className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.2em] md:tracking-[0.3em] text-foreground italic truncate max-w-[150px] sm:max-w-none">
+                                {editMode ? 'EDITAR WOD' : repostData ? 'REPOSTEAR WOD' : 'Nueva Publicación'}
+                            </h2>
                         </div>
                         <button
                             onClick={() => {
                                 setIsOpen(false);
                                 setRepostData(null);
                             }}
-                            className="text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all flex items-center gap-2 group bg-white/5 px-3 py-1.5 rounded-full border border-white/5 hover:border-white/20 shadow-sm"
+                            className="text-[9px] md:text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white transition-all flex items-center gap-1.5 group bg-white/5 px-2.5 py-1.5 rounded-full border border-white/5 hover:border-white/20 shadow-sm shrink-0"
                         >
                             {language === 'es' ? 'Cancelar' : 'Cancel'} <X className="w-3.5 h-3.5 group-hover:rotate-90 transition-transform" />
                         </button>
@@ -535,7 +537,7 @@ export default function DashboardHome() {
                                     const activeDuelUserIds = new Set(data.duels.filter((d: any) => d.status === 'active' || d.status === 'pending').map((d: any) => d.challenger_id === data.currentUser?.id ? d.opponent_id : d.challenger_id));
 
                                     return data.feedPosts.map((post: any) => (
-                                        <div key={post.id} id={`post-${post.id}`} className="scroll-mt-24 transition-all duration-300 rounded-3xl">
+                                        <div key={post.id} id={`post-${post.id}`} className="scroll-mt-24 transition-all duration-300">
                                             <FeedPost
                                                 postId={post.id}
                                                 username={post.profiles?.username}

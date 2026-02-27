@@ -52,7 +52,7 @@ export interface ExerciseEntry {
 
 export interface WodSummary {
     totalTime: string;
-    scoreType: 'TIME' | 'REPS' | 'WEIGHT' | 'ROUNDS' | 'CALORIES' | 'OTHER';
+    scoreType: 'TIME' | 'REPS' | 'WEIGHT' | 'ROUNDS' | 'CALORIES' | 'OTHER' | 'NONE';
     scoreLabel: string;
 }
 
@@ -230,16 +230,16 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
     return (
         <div className="space-y-6">
             <div className="relative group">
-                <div className="flex items-center justify-between mb-2">
-                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2">Título del Entrenamiento</label>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
+                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2">Título del WOD</label>
                     <div className="relative">
                         <button
                             type="button"
                             onClick={() => setShowBenchmarks(!showBenchmarks)}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-brand-red/10 border border-brand-red/20 rounded-lg text-[10px] font-black text-brand-red uppercase tracking-wider hover:bg-brand-red hover:text-white transition-all group/btn"
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-1.5 bg-brand-red/10 border border-brand-red/20 rounded-lg text-[10px] font-black text-brand-red uppercase tracking-wider hover:bg-brand-red hover:text-white transition-all group/btn"
                         >
                             <Trophy className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
-                            Cargar Benchmark
+                            Benchmark
                         </button>
 
                         <AnimatePresence>
@@ -298,7 +298,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
             </div>
 
             <div className="space-y-2">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2">Fecha del Entrenamiento</label>
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2">Fecha del WOD</label>
                 <div className="relative group/date">
                     <Calendar className="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-red transition-transform group-hover/date:scale-110 pointer-events-none" />
                     <input
@@ -320,8 +320,8 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                 {blocks.map((block, idx) => (
                     <div key={block.id} className="bg-brand-gray/50 border border-white/10 rounded-[24px]">
                         {/* Block Header */}
-                        <div className="p-4 bg-white/5 border-b border-white/5 flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-3 flex-1">
+                        <div className="p-4 bg-white/5 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 flex-1 w-full">
                                 <div className="p-2 bg-brand-red/10 border border-brand-red/20 rounded-lg text-brand-red">
                                     {FORMAT_ICONS[block.format]}
                                 </div>
@@ -330,37 +330,42 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                     value={block.title}
                                     onChange={(e) => updateBlock(block.id, { title: e.target.value.toUpperCase() })}
                                 />
+                                <button type="button" onClick={() => removeBlock(block.id)} className="sm:hidden text-gray-600 hover:text-brand-red transition-colors">
+                                    <Trash2 className="w-5 h-5" />
+                                </button>
                             </div>
 
-                            <div className="flex flex-col">
-                                <select
-                                    className="bg-black/40 border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest text-brand-red px-3 py-1.5 outline-none focus:border-brand-red/50 transition-all cursor-pointer"
-                                    value={block.format}
-                                    onChange={(e) => {
-                                        const newFormat = e.target.value as WodFormat;
-                                        // Clear irrelevant config when format changes
-                                        let newConfig: any = {};
-                                        if (newFormat === 'AMRAP') newConfig = { timecap: '20:00' };
-                                        else if (newFormat === 'FOR TIME' || newFormat === '21-15-9') newConfig = { timecap: '' };
-                                        else if (newFormat === 'ROUNDS FOR TIME') newConfig = { rounds: 5, timecap: '20:00' };
-                                        else if (newFormat === 'EMOM' || newFormat === 'DEATH BY') newConfig = { frequency: '1 MIN', minutes: 15 };
-                                        else if (newFormat === 'TABATA') newConfig = { rounds: 8, work: '20S', rest: '10S' };
-                                        else if (newFormat === 'INTERVALS') newConfig = { rounds: 4, work: '40S', rest: '20S' };
-                                        else if (newFormat === 'FUERZA') newConfig = { rounds: 5 };
-                                        else if (newFormat === 'LIBRE') newConfig = {};
-                                        updateBlock(block.id, { format: newFormat, config: newConfig });
-                                    }}
-                                >
-                                    {Object.keys(FORMAT_ICONS).map(f => (
-                                        <option key={f} value={f}>{f}</option>
-                                    ))}
-                                </select>
-                                <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest mt-1 text-center">{FORMAT_DESCRIPTIONS[block.format]}</span>
-                            </div>
+                            <div className="flex items-center gap-4 w-full sm:w-auto">
+                                <div className="flex flex-col flex-1 sm:flex-none">
+                                    <select
+                                        className="bg-black/40 border-white/10 rounded-lg text-[10px] font-black uppercase tracking-widest text-brand-red px-3 py-1.5 outline-none focus:border-brand-red/50 transition-all cursor-pointer w-full sm:w-auto"
+                                        value={block.format}
+                                        onChange={(e) => {
+                                            const newFormat = e.target.value as WodFormat;
+                                            // Clear irrelevant config when format changes
+                                            let newConfig: any = {};
+                                            if (newFormat === 'AMRAP') newConfig = { timecap: '20:00' };
+                                            else if (newFormat === 'FOR TIME' || newFormat === '21-15-9') newConfig = { timecap: '' };
+                                            else if (newFormat === 'ROUNDS FOR TIME') newConfig = { rounds: 5, timecap: '20:00' };
+                                            else if (newFormat === 'EMOM' || newFormat === 'DEATH BY') newConfig = { frequency: '1 MIN', minutes: 15 };
+                                            else if (newFormat === 'TABATA') newConfig = { rounds: 8, work: '20S', rest: '10S' };
+                                            else if (newFormat === 'INTERVALS') newConfig = { rounds: 4, work: '40S', rest: '20S' };
+                                            else if (newFormat === 'FUERZA') newConfig = { rounds: 5 };
+                                            else if (newFormat === 'LIBRE') newConfig = {};
+                                            updateBlock(block.id, { format: newFormat, config: newConfig });
+                                        }}
+                                    >
+                                        {Object.keys(FORMAT_ICONS).map(f => (
+                                            <option key={f} value={f}>{f}</option>
+                                        ))}
+                                    </select>
+                                    <span className="text-[7px] font-bold text-gray-500 uppercase tracking-widest mt-1 text-center">{FORMAT_DESCRIPTIONS[block.format]}</span>
+                                </div>
 
-                            <button type="button" onClick={() => removeBlock(block.id)} className="text-gray-600 hover:text-brand-red transition-colors">
-                                <Trash2 className="w-4 h-4" />
-                            </button>
+                                <button type="button" onClick={() => removeBlock(block.id)} className="hidden sm:block text-gray-600 hover:text-brand-red transition-colors shrink-0">
+                                    <Trash2 className="w-4 h-4" />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Block Config */}
@@ -678,6 +683,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                             <option value="WEIGHT">PESO (KG/LBS)</option>
                             <option value="ROUNDS">RONDAS</option>
                             <option value="CALORIES">CALORÍAS</option>
+                            <option value="NONE">SIN RESULTADO (ACCESORIO)</option>
                             <option value="OTHER">OTROS</option>
                         </select>
                     </div>
