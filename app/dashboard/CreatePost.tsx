@@ -31,6 +31,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
     const [scheduledFor, setScheduledFor] = useState<string>(initialData?.date || new Date().toISOString().split('T')[0]);
     const [duration, setDuration] = useState<number | null>(null);
+    const [showWodFooter, setShowWodFooter] = useState(true);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [isVideoTrimming, setIsVideoTrimming] = useState(false);
     const [trimmerVideoUrl, setTrimmerVideoUrl] = useState<string | null>(null);
@@ -125,7 +126,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                     ...wodData,
                     media_url: mediaUrl || (wodData as any).media_url || null
                 };
-                const finalCaption = content || `¡He compartido un WOD: ${wodData.title}!`;
+                const finalCaption = showWodFooter && content.trim() ? content.trim() : '';
 
                 if (editingPostId) {
                     res = await updatePost(editingPostId, finalCaption, JSON.stringify(finalWodData), scheduledFor);
@@ -411,13 +412,39 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                 />
                             ) : postType === 'wod' ? (
                                 <div className="space-y-6">
-                                    <MentionInput
-                                        as="textarea"
-                                        value={content}
-                                        onChange={setContent}
-                                        placeholder="Comenta algo sobre este WOD..."
-                                        className="w-full bg-transparent text-white placeholder:text-gray-500 text-sm md:text-lg resize-none focus:outline-none min-h-[60px]"
-                                    />
+                                    {/* Footer Toggle */}
+                                    <div className="flex items-center justify-between p-3 bg-white/[0.03] border border-white/5 rounded-2xl">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Descripción / Pie de página</span>
+                                            <span className="text-[9px] text-gray-600 font-medium mt-0.5">{showWodFooter ? 'Se mostrará texto bajo el WOD' : 'Sin descripción • WOD limpio'}</span>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowWodFooter(prev => !prev)}
+                                            className={clsx(
+                                                "relative w-12 h-6 rounded-full transition-all duration-300 focus:outline-none border",
+                                                showWodFooter
+                                                    ? "bg-brand-red border-brand-red shadow-[0_0_10px_rgba(220,38,38,0.4)]"
+                                                    : "bg-white/5 border-white/10"
+                                            )}
+                                        >
+                                            <span className={clsx(
+                                                "absolute top-0.5 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-300",
+                                                showWodFooter ? "left-6" : "left-0.5"
+                                            )} />
+                                        </button>
+                                    </div>
+
+                                    {/* Caption Textarea - Only if footer enabled */}
+                                    {showWodFooter && (
+                                        <MentionInput
+                                            as="textarea"
+                                            value={content}
+                                            onChange={setContent}
+                                            placeholder="Escribe una descripción o motivación para este WOD..."
+                                            className="w-full bg-transparent text-white placeholder:text-gray-500 text-sm md:text-lg resize-none focus:outline-none min-h-[60px]"
+                                        />
+                                    )}
 
                                     <div className="border-t border-white/5 pt-6">
                                         <WodCreator

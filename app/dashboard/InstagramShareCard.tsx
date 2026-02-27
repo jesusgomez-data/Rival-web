@@ -11,7 +11,7 @@ interface InstagramShareCardProps {
     avatar: string;
     username: string;
     content: {
-        type: 'workout' | 'pr' | 'image' | 'class_result' | 'running' | 'challenge';
+        type: 'workout' | 'pr' | 'image' | 'class_result' | 'running' | 'challenge' | 'wod';
         title?: string;
         highlight?: string;
         stats?: Array<{ label: string, value: string, icon?: string }>;
@@ -147,7 +147,7 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                             <div className="relative z-10 space-y-4">
                                 <div className="space-y-1">
                                     <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.2em] italic">
-                                        {content.type === 'pr' ? 'NUEVO RÉCORD' : (content.type === 'challenge' ? 'DESAFÍO COMPLETADO' : 'ACTIVIDAD COMPLETADA')}
+                                        {content.type === 'pr' ? 'NUEVO RÉCORD' : content.type === 'wod' ? 'WOD · CROSS TRAINING' : (content.type === 'challenge' ? 'DESAFÍO COMPLETADO' : 'ACTIVIDAD COMPLETADA')}
                                     </p>
                                     <h3 className="text-white font-black text-2xl italic uppercase tracking-tight leading-none">
                                         {content.title || 'Entrenamiento'}
@@ -162,12 +162,14 @@ export default function InstagramShareCard({ user, avatar, username, content, on
 
                                 {content.stats && content.stats.length > 0 && (
                                     <div className={clsx(
-                                        "grid gap-4 pt-2",
-                                        content.type === 'running' ? "grid-cols-3" : "grid-cols-2"
+                                        "grid gap-3 pt-2",
+                                        content.type === 'running' ? "grid-cols-3" :
+                                            content.stats.length <= 2 ? "grid-cols-2" :
+                                                content.stats.length >= 3 ? "grid-cols-2" : "grid-cols-2"
                                     )}>
                                         {content.stats.map((stat, i) => (
-                                            <div key={i} className="flex flex-col">
-                                                <span className="text-gray-500 text-[8px] font-black uppercase tracking-widest leading-none mb-1 flex items-center gap-1">
+                                            <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-3 flex flex-col gap-1">
+                                                <span className="text-gray-500 text-[8px] font-black uppercase tracking-widest leading-none flex items-center gap-1">
                                                     {stat.icon === 'distance' && <MapPin className="w-2 h-2" />}
                                                     {stat.icon === 'pace' && <Wind className="w-2 h-2" />}
                                                     {stat.icon === 'time' && <Zap className="w-2 h-2" />}
@@ -177,7 +179,7 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                                                 </span>
                                                 <span className={clsx(
                                                     "text-white font-black italic leading-none",
-                                                    content.type === 'running' ? "text-lg" : "text-xl"
+                                                    content.type === 'running' ? "text-lg" : "text-base"
                                                 )}>{stat.value}</span>
                                             </div>
                                         ))}

@@ -1246,7 +1246,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         username={username || user}
                         avatar={avatar}
                         content={{
-                            type: (resolvedWorkoutData as any)?.metrics?.type === 'running' ? 'running' : (mediaType as any || 'workout'),
+                            type: (resolvedWorkoutData as any)?.metrics?.type === 'running' ? 'running' : (mediaType === 'pr' ? 'pr' : (resolvedWorkoutData ? 'wod' : (mediaType as any || 'workout'))),
                             title: (resolvedWorkoutData?.title === 'Entrenamiento Híbrido Libre' || resolvedWorkoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (resolvedWorkoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (resolvedWorkoutData?.title || (mediaType === 'running' ? 'RUNNING' : 'ENTRENAMIENTO'))),
                             highlight: highlight || caption,
                             stats: (resolvedWorkoutData as any)?.metrics?.type === 'running'
@@ -1257,16 +1257,24 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     { label: 'DESNIVEL', value: `${(resolvedWorkoutData as any).metrics.elevation || 0}m`, icon: 'elevation' },
                                     { label: 'PULSO MED.', value: `${(resolvedWorkoutData as any).metrics.avgHeartRate || 0}`, icon: 'heart' }
                                 ]
-                                : (resolvedWorkoutData as any)?.metrics?.blocks?.map((b: any) => ({
-                                    label: b.type?.toUpperCase(),
-                                    value: b.result?.time || `${b.result?.rounds || b.result?.reps || '-'} ${b.result?.rounds ? 'RDS' : (b.result?.reps ? 'REPS' : '')}`
-                                })).slice(0, 4) || (mediaType === 'pr' ? (() => {
-                                    try {
-                                        const d = JSON.parse(image);
-                                        return [{ label: d.exerciseName?.toUpperCase(), value: `${d.weight}${d.unit}` }];
-                                    } catch (e) { return [] }
-                                })() : []),
-                            image: image,
+                                : (() => {
+                                    // Support both new WOD format (blocks) and old format (metrics.blocks)
+                                    const wodBlocks = (resolvedWorkoutData as any)?.blocks || (resolvedWorkoutData as any)?.metrics?.blocks;
+                                    if (wodBlocks && wodBlocks.length > 0) {
+                                        return wodBlocks.slice(0, 4).map((b: any) => ({
+                                            label: (b.title && b.title !== 'METCON' && !b.title.startsWith('BLOCK') ? b.title : (b.format || b.type || 'BLOQUE')).toUpperCase(),
+                                            value: b.exercises?.length ? `${b.exercises.length} EJERC.` : (b.result?.time || `${b.result?.rounds || b.result?.reps || '-'} ${b.result?.rounds ? 'RDS' : 'REPS'}`)
+                                        }));
+                                    }
+                                    if (mediaType === 'pr') {
+                                        try {
+                                            const d = JSON.parse(image);
+                                            return [{ label: d.exerciseName?.toUpperCase(), value: `${d.weight}${d.unit}` }];
+                                        } catch (e) { return []; }
+                                    }
+                                    return [];
+                                })(),
+                            image: isImageUrl(image) ? image : undefined,
                             mapData: (resolvedWorkoutData as any)?.metrics?.path ? 'GPS_PATH_ACTIVE' : undefined
                         }}
                         onClose={() => setShowInstagramCard(false)}

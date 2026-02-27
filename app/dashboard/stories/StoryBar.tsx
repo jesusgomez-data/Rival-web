@@ -823,36 +823,54 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                     (() => {
                         try {
                             const data = JSON.parse(overlay.content);
-                            const hasBlocks = data.metrics?.blocks?.length > 0;
+                            // Support both new WOD format (data.blocks) and old format (data.metrics.blocks)
+                            const wodBlocks = data.blocks || data.metrics?.blocks || [];
+                            const hasWodBlocks = wodBlocks.length > 0;
+
                             return (
                                 <div className="bg-black/60 backdrop-blur-3xl border border-white/10 p-5 rounded-[24px] shadow-2xl w-[300px] max-w-[calc(100vw-40px)] relative overflow-hidden group select-none transition-all">
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
                                     <div className="flex items-center gap-4 mb-4 relative z-10">
                                         <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
-                                            <Trophy className="w-5 h-5 text-brand-red" />
+                                            <Dumbbell className="w-5 h-5 text-brand-red" />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em] mb-0.5">Entrenamiento</p>
-                                            <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || data.name || 'Sesión'}</h4>
+                                            <p className="text-[9px] text-brand-red font-black uppercase tracking-[0.2em] mb-0.5">WOD · CROSS TRAINING</p>
+                                            <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || 'WORKOUT OF THE DAY'}</h4>
+                                            {data.summary?.totalTime && data.summary.totalTime !== '--:--' && (
+                                                <p className="text-[9px] text-white/40 font-bold mt-0.5">{data.blocks?.length || 0} bloques · {data.summary.totalTime}</p>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="space-y-2 relative z-10">
-                                        {hasBlocks ? (
+                                        {hasWodBlocks ? (
                                             <div className="space-y-1.5">
-                                                {data.metrics.blocks.slice(0, 4).map((block: any, idx: number) => (
-                                                    <div key={idx} className="flex justify-between items-center bg-white/5 p-2 rounded-xl border border-white/5">
-                                                        <div className="flex flex-col min-w-0">
-                                                            <span className="text-[9px] font-black text-white uppercase tracking-tight truncate">{block.title || block.type || 'BLOQUE'}</span>
-                                                            <span className="text-[7px] text-brand-red/70 font-bold uppercase tracking-widest leading-none">{block.type}</span>
+                                                {wodBlocks.slice(0, 3).map((block: any, idx: number) => (
+                                                    <div key={idx} className="bg-white/[0.04] border border-white/5 p-2.5 rounded-xl">
+                                                        <div className="flex items-center justify-between mb-1.5">
+                                                            <span className="text-[8px] font-black text-brand-red uppercase tracking-widest">{block.format || block.type || 'LIBRE'}</span>
+                                                            {block.title && block.title !== 'METCON' && !block.title.startsWith('BLOCK') && (
+                                                                <span className="text-[7px] font-bold text-gray-500 uppercase tracking-wider">{block.title}</span>
+                                                            )}
                                                         </div>
-                                                        <span className="text-brand-red font-black text-xs italic tracking-tighter shrink-0 ml-2">
-                                                            {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : (block.result?.weight ? `${block.result.weight}${block.result?.unit || ''}` : '-')))}
-                                                        </span>
+                                                        <div className="space-y-1">
+                                                            {(block.exercises || []).slice(0, 3).map((ex: any, eIdx: number) => (
+                                                                <div key={eIdx} className="flex items-center justify-between">
+                                                                    <span className="text-[9px] font-bold text-white/80 uppercase tracking-tight truncate flex-1 pr-2">{ex.name}</span>
+                                                                    <span className="text-[9px] font-black text-brand-red shrink-0">
+                                                                        {ex.reps && ex.reps}{ex.detail ? ` · ${ex.detail}${ex.unit || ''}` : ''}
+                                                                    </span>
+                                                                </div>
+                                                            ))}
+                                                            {(block.exercises || []).length > 3 && (
+                                                                <p className="text-[7px] text-gray-600 font-bold uppercase tracking-widest">+{block.exercises.length - 3} más</p>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 ))}
-                                                {data.metrics.blocks.length > 4 && (
-                                                    <div className="text-[8px] text-center text-brand-red/70 font-black uppercase tracking-[0.2em] pt-1">
-                                                        +{data.metrics.blocks.length - 4} bloques más
+                                                {wodBlocks.length > 3 && (
+                                                    <div className="text-[8px] text-center text-brand-red/60 font-black uppercase tracking-[0.2em] pt-1">
+                                                        +{wodBlocks.length - 3} bloques más
                                                     </div>
                                                 )}
                                             </div>
@@ -866,11 +884,6 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                         </span>
                                                     </div>
                                                 ))}
-                                                {data.exercises.length > 4 && (
-                                                    <div className="text-[8px] text-center text-brand-red/70 font-black uppercase tracking-[0.2em] pt-1">
-                                                        +{data.exercises.length - 4} ejercicios más
-                                                    </div>
-                                                )}
                                             </div>
                                         ) : data.metrics?.path && data.metrics.path.length > 1 ? (
                                             <div className="bg-black/40 p-3 rounded-2xl border border-white/10 flex flex-col items-center">
@@ -957,7 +970,9 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                     </div>
                 ) : (
                     <div className="relative group">
-                        <Image src={overlay.content} width={64} height={64} alt="sticker" className="drop-shadow-lg" />
+                        {overlay.content && !overlay.content.startsWith('{') && !overlay.content.startsWith('[') && (
+                            <Image src={overlay.content} width={64} height={64} alt="sticker" className="drop-shadow-lg" />
+                        )}
                         {previewUrl && (
                             <button
                                 onClick={(e) => removeOverlay(overlay.id, e)}

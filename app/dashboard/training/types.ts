@@ -31,6 +31,7 @@ export interface WorkoutBlock {
     result?: {
         time?: string;
         rounds?: number;
+        noResult?: boolean;
     };
     rounds?: number;
     notes?: string;

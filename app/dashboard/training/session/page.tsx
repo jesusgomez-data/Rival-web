@@ -6,7 +6,7 @@ import {
     Play, Pause, Save, ChevronRight, ChevronLeft, Map as MapIcon,
     ArrowLeft, List, Plus, Minus, Trash2, Edit2, Search, Timer,
     RefreshCw, Share2, Award, AlertTriangle, Video, Lock as LockIcon,
-    Wind, Heart, TrendingUp, Download, Eye
+    Wind, Heart, TrendingUp, Download, Eye, Ban
 } from 'lucide-react';
 import RouteMap from '@/components/training/RouteMap';
 import RunShareCard from '@/components/training/RunShareCard';
@@ -374,14 +374,14 @@ function SessionContent() {
                 (pos) => {
                     const { latitude, longitude, accuracy, speed, altitude, altitudeAccuracy } = pos.coords;
 
-                    // Transition from searching to tracking only if accuracy is acceptable (< 30m)
-                    if (gpsStatus === 'searching' && accuracy < 30) {
+                    // Relaxed transition to tracking: < 60m is enough to start, but we prefer better
+                    if (gpsStatus === 'searching' && accuracy < 60) {
                         setGpsStatus('tracking');
                         if ('vibrate' in navigator) navigator.vibrate([100, 50, 100]);
                     }
 
-                    // Strict accuracy and noise filtering - skip points with > 40m error
-                    if (accuracy > 40) return;
+                    // Increased tolerance: allow points up to 50m accuracy to be processed
+                    if (accuracy > 50) return;
 
                     setGpsAccuracy(accuracy);
 
@@ -433,20 +433,20 @@ function SessionContent() {
                         );
 
                         // Only accumulate distance/path if NOT PAUSED and valid movement
-                        // Filter out jitter (d < 5m) and low accuracy
-                        // High filter for stationary drift: if accuracy is low (e.g. 15m), and d is small (e.g. 7m), could be noise
-                        const isMoving = speed !== null ? speed > 0.5 : d > 8; // stricter threshold if speed is unknown
+                        // Filter out jitter (d < 3m) and low accuracy
+                        // Relaxed filters to ensure it works even with average signal
+                        const isMoving = speed !== null ? speed > 0.4 : d > 5;
 
-                        if (!isPaused && gpsStatus === 'tracking' && d > 5 && d < 30 && isMoving && accuracy < 20) {
+                        if (!isPaused && gpsStatus === 'tracking' && d > 3 && d < 40 && isMoving && accuracy < 35) {
                             runDistanceRef.current += d;
                             setRunDistance(runDistanceRef.current);
                             setRunPath(prev => [...prev, { lat: latitude, lon: longitude }]);
 
-                            // Altitude Logic with filter - only use real measurements
-                            if (altitude !== null && accuracy < 10 && (!altitudeAccuracy || altitudeAccuracy < 10)) {
+                            // Altitude Logic
+                            if (altitude !== null && accuracy < 25) {
                                 if (lastPosRef.current.alt !== undefined && lastPosRef.current.alt !== null) {
                                     const diff = altitude - lastPosRef.current.alt;
-                                    if (diff > 0.5 && diff < 10) {
+                                    if (diff > 0.4 && diff < 15) {
                                         setElevationGain(prev => prev + diff);
                                     }
                                 }
@@ -474,7 +474,7 @@ function SessionContent() {
         return () => {
             if (watchId) navigator.geolocation.clearWatch(watchId);
         };
-    }, [gpsStatus, isPaused]);
+    }, [gpsStatus]); // Only restart if GPS status changes, NOT on pause/resume
 
     const updateDistanceManual = (d: number) => {
         runDistanceRef.current += d;
@@ -1551,7 +1551,12 @@ function SessionContent() {
                                             </span>
                                         </div>
                                         <div className="grid grid-cols-2 gap-2 text-center">
-                                            {(block.type === 'fortime' || block.type === 'rft') ? (
+                                            {block.result?.noResult ? (
+                                                <div className="bg-black/20 p-2 rounded-lg flex flex-col items-center justify-center">
+                                                    <p className="text-[9px] text-gray-500 font-bold uppercase mb-1">Resultado</p>
+                                                    <span className="text-gray-600 font-mono font-black text-[10px] uppercase">N/A</span>
+                                                </div>
+                                            ) : (block.type === 'fortime' || block.type === 'rft') ? (
                                                 <div className="bg-black/20 p-2 rounded-lg flex flex-col items-center">
                                                     <p className="text-[9px] text-gray-500 font-bold uppercase mb-1">Tiempo</p>
                                                     <input
@@ -1860,19 +1865,82 @@ function SessionContent() {
 const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
     gym: {
         upper: [
-            { id: 'g-u-1', title: 'Torso Fuerza', sport: 'gym', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Tracciones y empujes pesados.', exercises: [{ name: 'Bench Press', sets: [{ reps: 8, weight: 60 }] }] },
-            { id: 'g-u-2', title: 'Upper Body Pump', sport: 'gym', difficulty: 'beginner', duration_min: 35, is_premium: false, description: 'Congestión muscular rápida.', exercises: [{ name: 'Push Ups', sets: [{ reps: 15 }] }] },
-            { id: 'g-u-3', title: 'Hombros de Acero', sport: 'gym', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Enfoque en deltoides y trapecio.', exercises: [{ name: 'Military Press', sets: [{ reps: 6 }] }] }
+            {
+                id: 'g-u-1', title: 'Torso Fuerza', sport: 'gym', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Tracciones y empujes pesados para fuerza base.', exercises: [
+                    { name: 'Bench Press', sets: [{ order: 1, reps: 6, weight: 60, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 6, weight: 60, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 6, weight: 60, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Pull Ups', sets: [{ order: 1, reps: 8, weight: 0, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 8, weight: 0, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 8, weight: 0, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Barbell Row', sets: [{ order: 1, reps: 10, weight: 40, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 10, weight: 40, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Lateral Raises', sets: [{ order: 1, reps: 15, weight: 8, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 15, weight: 8, completed: false, unit: 'kg', measure: 'reps' }] }
+                ]
+            },
+            {
+                id: 'g-u-2', title: 'Upper Body Pump', sport: 'gym', difficulty: 'beginner', duration_min: 35, is_premium: false, description: 'Congestión muscular rápida con alto volumen.', exercises: [
+                    { name: 'Push Ups', sets: [{ order: 1, reps: 15, weight: 0, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 15, weight: 0, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 15, weight: 0, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Dips', sets: [{ order: 1, reps: 12, weight: 0, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 12, weight: 0, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Bicep Curls', sets: [{ order: 1, reps: 15, weight: 10, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 15, weight: 10, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Tricep Extension', sets: [{ order: 1, reps: 15, weight: 12, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 15, weight: 12, completed: false, unit: 'kg', measure: 'reps' }] }
+                ]
+            },
+            {
+                id: 'g-u-3', title: 'Hombros de Acero', sport: 'gym', difficulty: 'elite', duration_min: 50, is_premium: true, description: 'Enfoque en deltoides y trapecio para unos hombros potentes.', exercises: [
+                    { name: 'Military Press', sets: [{ order: 1, reps: 6, weight: 40, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 6, weight: 40, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 6, weight: 40, completed: false, unit: 'kg', measure: 'reps' }, { order: 4, reps: 6, weight: 40, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Face Pulls', sets: [{ order: 1, reps: 15, weight: 20, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 15, weight: 20, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 15, weight: 20, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Pike Pushups', sets: [{ order: 1, reps: 10, weight: 0, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 10, weight: 0, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Front Raises', sets: [{ order: 1, reps: 12, weight: 10, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 12, weight: 10, completed: false, unit: 'kg', measure: 'reps' }] }
+                ]
+            }
         ],
         lower: [
-            { id: 'g-l-1', title: 'Pierna Potencia', sport: 'gym', difficulty: 'elite', duration_min: 60, is_premium: false, description: 'Sentadillas y peso muerto.', exercises: [{ name: 'Squat', sets: [{ reps: 5 }] }] },
-            { id: 'g-l-2', title: 'Glúteo & Isquios', sport: 'gym', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Aislamiento de cadena posterior.', exercises: [{ name: 'Hip Thrust', sets: [{ reps: 10 }] }] },
-            { id: 'g-l-3', title: 'Cuádriceps Blast', sport: 'gym', difficulty: 'intermediate', duration_min: 40, is_premium: true, description: 'Volumen alto en cuádriceps.', exercises: [{ name: 'Leg Press', sets: [{ reps: 12 }] }] }
+            {
+                id: 'g-l-1', title: 'Pierna Potencia', sport: 'gym', difficulty: 'elite', duration_min: 60, is_premium: false, description: 'Sentadillas y peso muerto para fuerza explosiva.', exercises: [
+                    { name: 'Squat', sets: [{ order: 1, reps: 5, weight: 80, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 5, weight: 80, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 5, weight: 80, completed: false, unit: 'kg', measure: 'reps' }, { order: 4, reps: 5, weight: 80, completed: false, unit: 'kg', measure: 'reps' }, { order: 5, reps: 5, weight: 80, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Deadlift', sets: [{ order: 1, reps: 5, weight: 100, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 5, weight: 100, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 5, weight: 100, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Walking Lunges', sets: [{ order: 1, reps: 20, weight: 16, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 20, weight: 16, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Calf Raises', sets: [{ order: 1, reps: 15, weight: 40, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 15, weight: 40, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 15, weight: 40, completed: false, unit: 'kg', measure: 'reps' }] }
+                ]
+            },
+            {
+                id: 'g-l-2', title: 'Glúteo & Isquios', sport: 'gym', difficulty: 'intermediate', duration_min: 45, is_premium: false, description: 'Aislamiento de cadena posterior para estabilidad y estética.', exercises: [
+                    { name: 'Hip Thrust', sets: [{ order: 1, reps: 10, weight: 60, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 10, weight: 60, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 10, weight: 60, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Romanian Deadlift', sets: [{ order: 1, reps: 10, weight: 50, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 10, weight: 50, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 10, weight: 50, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Hamstring Curl', sets: [{ order: 1, reps: 12, weight: 30, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 12, weight: 30, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Glute Bridge', sets: [{ order: 1, reps: 15, weight: 0, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 15, weight: 0, completed: false, unit: 'kg', measure: 'reps' }] }
+                ]
+            },
+            {
+                id: 'g-l-3', title: 'Cuádriceps Blast', sport: 'gym', difficulty: 'intermediate', duration_min: 40, is_premium: true, description: 'Volumen alto enfocado en el desarrollo de los cuádriceps.', exercises: [
+                    { name: 'Leg Press', sets: [{ order: 1, reps: 12, weight: 120, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 12, weight: 120, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 12, weight: 120, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Leg Extension', sets: [{ order: 1, reps: 15, weight: 40, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 15, weight: 40, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 15, weight: 40, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Bulgarian Split Squat', sets: [{ order: 1, reps: 10, weight: 12, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 10, weight: 12, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Step Ups', sets: [{ order: 1, reps: 12, weight: 0, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 12, weight: 0, completed: false, unit: 'kg', measure: 'reps' }] }
+                ]
+            }
         ],
         full: [
-            { id: 'g-f-1', title: 'Full Body Classics', sport: 'gym', difficulty: 'beginner', duration_min: 45, is_premium: false, description: 'Cuerpo completo balanceado.', exercises: [{ name: 'Goblet Squat', sets: [{ reps: 12 }] }] },
-            { id: 'g-f-2', title: 'Athlete Metabolic', sport: 'gym', difficulty: 'intermediate', duration_min: 50, is_premium: false, description: 'Entrenamiento funcional híbrido.', exercises: [{ name: 'Cleans', sets: [{ reps: 8 }] }] },
-            { id: 'g-f-3', title: 'Total Body Strength', sport: 'gym', difficulty: 'elite', duration_min: 55, is_premium: true, description: 'Fuerza absoluta multiarticular.', exercises: [{ name: 'Front Squat', sets: [{ reps: 5 }] }] }
+            {
+                id: 'g-f-1', title: 'Full Body Classics', sport: 'gym', difficulty: 'beginner', duration_min: 45, is_premium: false, description: 'Cuerpo completo balanceado con ejercicios fundamentales.', exercises: [
+                    { name: 'Goblet Squat', sets: [{ order: 1, reps: 12, weight: 16, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 12, weight: 16, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 12, weight: 16, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Push Ups', sets: [{ order: 1, reps: 15, weight: 0, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 15, weight: 0, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 15, weight: 0, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Inverted Row', sets: [{ order: 1, reps: 12, weight: 0, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 12, weight: 0, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 12, weight: 0, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Plank', sets: [{ order: 1, reps: 60, weight: 0, completed: false, unit: 'sec', measure: 'reps' }, { order: 2, reps: 60, weight: 0, completed: false, unit: 'sec', measure: 'reps' }] }
+                ]
+            },
+            {
+                id: 'g-f-2', title: 'Athlete Metabolic', sport: 'gym', difficulty: 'intermediate', duration_min: 50, is_premium: false, description: 'Entrenamiento funcional híbrido para potencia y resistencia.', exercises: [
+                    { name: 'Cleans', sets: [{ order: 1, reps: 8, weight: 40, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 8, weight: 40, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 8, weight: 40, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Thrusters', sets: [{ order: 1, reps: 12, weight: 30, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 12, weight: 30, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 12, weight: 30, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Kettlebell Swings', sets: [{ order: 1, reps: 20, weight: 16, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 20, weight: 16, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 20, weight: 16, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Burpees', sets: [{ order: 1, reps: 15, weight: 0, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 15, weight: 0, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 15, weight: 0, completed: false, unit: 'kg', measure: 'reps' }] }
+                ]
+            },
+            {
+                id: 'g-f-3', title: 'Total Body Strength', sport: 'gym', difficulty: 'elite', duration_min: 55, is_premium: true, description: 'Fuerza absoluta multiarticular de alta intensidad.', exercises: [
+                    { name: 'Front Squat', sets: [{ order: 1, reps: 5, weight: 60, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 5, weight: 60, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 5, weight: 60, completed: false, unit: 'kg', measure: 'reps' }, { order: 4, reps: 5, weight: 60, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Weighted Pullups', sets: [{ order: 1, reps: 5, weight: 10, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 5, weight: 10, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 5, weight: 10, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Overhead Press', sets: [{ order: 1, reps: 5, weight: 45, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 5, weight: 45, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 5, weight: 45, completed: false, unit: 'kg', measure: 'reps' }] },
+                    { name: 'Deadlift', sets: [{ order: 1, reps: 5, weight: 100, completed: false, unit: 'kg', measure: 'reps' }, { order: 2, reps: 5, weight: 100, completed: false, unit: 'kg', measure: 'reps' }, { order: 3, reps: 5, weight: 100, completed: false, unit: 'kg', measure: 'reps' }] }
+                ]
+            }
         ]
     },
     running: {
@@ -2424,17 +2492,22 @@ function RunningView({
                             {gpsStatus === 'searching' ? 'Enlazando GPS...' :
                                 gpsStatus === 'tracking' ? 'GPS Conectado' : 'Conectar GPS'}
                         </span>
-                        {gpsStatus === 'tracking' && accuracy !== null && (
-                            <div className="flex gap-0.5 mt-1">
-                                {[1, 2, 3, 4].map(bar => (
-                                    <div
-                                        key={bar}
-                                        className={clsx(
-                                            "w-1 h-2 rounded-full",
-                                            accuracy < (50 - bar * 10) ? "bg-white" : "bg-white/20"
-                                        )}
-                                    />
-                                ))}
+                        {(gpsStatus === 'tracking' || gpsStatus === 'searching') && accuracy !== null && (
+                            <div className="flex flex-col items-center gap-1 mt-1">
+                                <div className="flex gap-0.5">
+                                    {[1, 2, 3, 4].map(bar => (
+                                        <div
+                                            key={bar}
+                                            className={clsx(
+                                                "w-1 h-2 rounded-full",
+                                                accuracy < (100 - bar * 20) ? (accuracy < 30 ? "bg-white" : "bg-white/50") : "bg-white/10"
+                                            )}
+                                        />
+                                    ))}
+                                </div>
+                                {gpsStatus === 'searching' && accuracy > 60 && (
+                                    <span className="text-[6px] font-bold text-white/40 uppercase">Señal Débil ({Math.round(accuracy)}m)</span>
+                                )}
                             </div>
                         )}
                     </div>
@@ -2781,7 +2854,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
         setActiveBlockIndex(Math.max(0, index - 1));
     };
 
-    const updateBlock = (index: number, field: string, value: any) => {
+    const updateBlock = (index: number, field: string, value: any, noTitleUpdate?: boolean) => {
         const newBlocks = [...blocks];
         newBlocks[index] = { ...newBlocks[index], [field]: value };
 
@@ -2941,7 +3014,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
             <div className="space-y-6">
 
                 {/* Block Type & Settings */}
-                <div className="bg-[#111] border border-white/10 p-6 rounded-[32px] space-y-6 relative overflow-hidden">
+                <div className="bg-[#111] border border-white/10 p-4 sm:p-6 rounded-[32px] space-y-4 sm:space-y-6 relative overflow-hidden">
                     <div className="flex justify-between items-center border-b border-white/5 pb-4">
                         <input
                             value={blocks[activeBlockIndex].title}
@@ -3031,47 +3104,70 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
                             />
                         </div>
 
-                        <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-2xl text-center">
+                        <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-2xl text-center relative">
+                            <button
+                                onClick={() => {
+                                    const res = { ...blocks[activeBlockIndex].result, noResult: !blocks[activeBlockIndex].result?.noResult };
+                                    updateBlock(activeBlockIndex, 'result', res, true); // true for no title update
+                                }}
+                                className={clsx(
+                                    "absolute -top-1 -right-1 px-2 py-1 rounded-lg text-[7px] font-black uppercase tracking-tighter transition-all z-10",
+                                    blocks[activeBlockIndex].result?.noResult
+                                        ? "bg-orange-600 text-white shadow-glow"
+                                        : (theme === 'dark' ? "bg-white/10 text-gray-500" : "bg-gray-200 text-gray-600")
+                                )}
+                            >
+                                {blocks[activeBlockIndex].result?.noResult ? "Con Resultado" : "Sin Resultado"}
+                            </button>
                             <p className="text-[10px] text-orange-500 font-black uppercase tracking-widest mb-2">
                                 Resultado
                             </p>
-                            {blocks[activeBlockIndex].type === 'fortime' ? (
-                                <input
-                                    type="text"
-                                    placeholder="00:00"
-                                    value={blocks[activeBlockIndex].result?.time || ''}
-                                    onChange={(e) => {
-                                        const res = { ...blocks[activeBlockIndex].result, time: e.target.value };
-                                        updateBlock(activeBlockIndex, 'result', res);
-                                    }}
-                                    className={clsx("bg-transparent text-3xl font-mono font-black text-center w-full outline-none", theme === 'dark' ? "text-white placeholder-white/20" : "text-black placeholder-gray-300")}
-                                />
-                            ) : (
-                                <div className="flex justify-center items-center gap-2">
-                                    <button onClick={() => {
-                                        const r = (blocks[activeBlockIndex].result?.rounds || 0) > 0 ? (blocks[activeBlockIndex].result?.rounds || 0) - 1 : 0;
-                                        const res = { ...blocks[activeBlockIndex].result, rounds: r };
-                                        updateBlock(activeBlockIndex, 'result', res);
-                                    }} className={clsx("w-8 h-8 rounded-full font-bold transition-colors", theme === 'dark' ? "bg-white/5 text-gray-400 hover:bg-white/10" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>-</button>
-                                    <span className={clsx("text-3xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>
-                                        {blocks[activeBlockIndex].result?.rounds || 0}
-                                    </span>
-                                    <button onClick={() => {
-                                        const r = (blocks[activeBlockIndex].result?.rounds || 0) + 1;
-                                        const res = { ...blocks[activeBlockIndex].result, rounds: r };
-                                        updateBlock(activeBlockIndex, 'result', res);
-                                    }} className="w-8 h-8 rounded-full bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/20">+</button>
+                            {blocks[activeBlockIndex].result?.noResult ? (
+                                <div className="flex flex-col items-center justify-center py-2">
+                                    <Ban className="w-6 h-6 text-orange-500/30 mb-1" />
+                                    <p className="text-[10px] text-orange-500/50 font-black uppercase tracking-tighter">No Aplica</p>
                                 </div>
+                            ) : (
+                                blocks[activeBlockIndex].type === 'fortime' ? (
+                                    <input
+                                        type="text"
+                                        placeholder="00:00"
+                                        value={blocks[activeBlockIndex].result?.time || ''}
+                                        onChange={(e) => {
+                                            const res = { ...blocks[activeBlockIndex].result, time: e.target.value };
+                                            updateBlock(activeBlockIndex, 'result', res);
+                                        }}
+                                        className={clsx("bg-transparent text-3xl font-mono font-black text-center w-full outline-none", theme === 'dark' ? "text-white placeholder-white/20" : "text-black placeholder-gray-300")}
+                                    />
+                                ) : (
+                                    <div className="flex justify-center items-center gap-2">
+                                        <button onClick={() => {
+                                            const r = (blocks[activeBlockIndex].result?.rounds || 0) > 0 ? (blocks[activeBlockIndex].result?.rounds || 0) - 1 : 0;
+                                            const res = { ...blocks[activeBlockIndex].result, rounds: r };
+                                            updateBlock(activeBlockIndex, 'result', res);
+                                        }} className={clsx("w-8 h-8 rounded-full font-bold transition-colors", theme === 'dark' ? "bg-white/5 text-gray-400 hover:bg-white/10" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>-</button>
+                                        <span className={clsx("text-3xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>
+                                            {blocks[activeBlockIndex].result?.rounds || 0}
+                                        </span>
+                                        <button onClick={() => {
+                                            const r = (blocks[activeBlockIndex].result?.rounds || 0) + 1;
+                                            const res = { ...blocks[activeBlockIndex].result, rounds: r };
+                                            updateBlock(activeBlockIndex, 'result', res);
+                                        }} className="w-8 h-8 rounded-full bg-orange-600 text-white font-bold shadow-lg shadow-orange-500/20">+</button>
+                                    </div>
+                                )
                             )}
-                            <p className="text-[9px] text-orange-500/60 font-bold uppercase mt-1">
-                                {blocks[activeBlockIndex].type === 'fortime' ? 'Tiempo Final' : 'Rondas'}
-                            </p>
+                            {!blocks[activeBlockIndex].result?.noResult && (
+                                <p className="text-[9px] text-orange-500/60 font-bold uppercase mt-1">
+                                    {blocks[activeBlockIndex].type === 'fortime' ? 'Tiempo Final' : 'Rondas'}
+                                </p>
+                            )}
                         </div>
                     </div>
 
                 </div>
 
-                <div className={clsx("border rounded-[32px] p-6", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100")}>
+                <div className={clsx("border rounded-[32px] p-4 sm:p-6", theme === 'dark' ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-100")}>
                     <h3 className={clsx("font-black uppercase tracking-widest text-sm mb-4 flex items-center gap-2", theme === 'dark' ? "text-white" : "text-black")}>
                         <CheckCircle className="w-4 h-4 text-orange-500" /> Notas del Bloque
                     </h3>
@@ -3094,7 +3190,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
 
                     {blocks[activeBlockIndex].exercises.map((ex: any, i: number) => (
                         <div key={ex.id || i} className={clsx(
-                            "border rounded-3xl p-6 relative overflow-hidden group shadow-md",
+                            "border rounded-3xl p-4 sm:p-6 relative overflow-hidden group shadow-md",
                             theme === 'dark' ? "bg-[#111] border-white/5" : "bg-white border-gray-100"
                         )}>
                             <div className="flex items-center justify-between mb-4">
@@ -3307,7 +3403,7 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
         setActiveBlockIndex(Math.max(0, index - 1));
     };
 
-    const updateBlock = (index: number, field: string, value: any) => {
+    const updateBlock = (index: number, field: string, value: any, noTitleUpdate?: boolean) => {
         const newBlocks = [...blocks];
         newBlocks[index] = { ...newBlocks[index], [field]: value };
 
@@ -3450,9 +3546,9 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
                     </div>
 
                     {blocks[activeBlockIndex] && (
-                        <div className="space-y-6">
+                        <div className="space-y-4 sm:space-y-6">
                             {/* Format & Settings for Active Block */}
-                            <div className={clsx("p-6 rounded-[32px] border space-y-6", theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-100 shadow-sm")}>
+                            <div className={clsx("p-4 sm:p-6 rounded-[32px] border space-y-4 sm:space-y-6", theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-100 shadow-sm")}>
                                 <div className="flex justify-between items-center border-b border-white/5 pb-4">
                                     <input
                                         value={blocks[activeBlockIndex].title}
@@ -3531,7 +3627,7 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-3 sm:gap-4">
                                     <div className={clsx("p-4 rounded-2xl text-center", theme === 'dark' ? "bg-white/5" : "bg-gray-50")}>
                                         <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2">
                                             {blocks[activeBlockIndex].type === 'fortime' ? 'Time Cap (min)' :
@@ -3546,41 +3642,64 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
                                         />
                                     </div>
 
-                                    <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-2xl text-center">
+                                    <div className="bg-yellow-500/10 border border-yellow-500/20 p-4 rounded-2xl text-center relative">
+                                        <button
+                                            onClick={() => {
+                                                const res = { ...blocks[activeBlockIndex].result, noResult: !blocks[activeBlockIndex].result?.noResult };
+                                                updateBlock(activeBlockIndex, 'result', res);
+                                            }}
+                                            className={clsx(
+                                                "absolute -top-1 -right-1 px-2 py-1 rounded-lg text-[7px] font-black uppercase tracking-tighter transition-all z-10",
+                                                blocks[activeBlockIndex].result?.noResult
+                                                    ? "bg-yellow-600 text-black shadow-glow shadow-yellow-500/20"
+                                                    : (theme === 'dark' ? "bg-white/10 text-gray-500" : "bg-gray-200 text-gray-600")
+                                            )}
+                                        >
+                                            {blocks[activeBlockIndex].result?.noResult ? "Con Resultado" : "Sin Resultado"}
+                                        </button>
                                         <p className="text-[10px] text-yellow-500 font-black uppercase tracking-widest mb-2">
                                             Resultado
                                         </p>
-                                        {blocks[activeBlockIndex].type === 'fortime' || blocks[activeBlockIndex].type === 'rft' ? (
-                                            <input
-                                                type="text"
-                                                placeholder="00:00"
-                                                value={blocks[activeBlockIndex].result?.time || ''}
-                                                onChange={(e) => {
-                                                    const res = { ...blocks[activeBlockIndex].result, time: e.target.value };
-                                                    updateBlock(activeBlockIndex, 'result', res);
-                                                }}
-                                                className={clsx("bg-transparent text-3xl font-mono font-black text-center w-full outline-none", theme === 'dark' ? "text-white placeholder-white/20" : "text-black placeholder-gray-300")}
-                                            />
-                                        ) : (
-                                            <div className="flex justify-center items-center gap-2">
-                                                <button onClick={() => {
-                                                    const r = (blocks[activeBlockIndex].result?.rounds || 0) > 0 ? (blocks[activeBlockIndex].result?.rounds || 0) - 1 : 0;
-                                                    const res = { ...blocks[activeBlockIndex].result, rounds: r };
-                                                    updateBlock(activeBlockIndex, 'result', res);
-                                                }} className={clsx("w-8 h-8 rounded-full font-bold transition-colors", theme === 'dark' ? "bg-white/5 text-gray-400 hover:bg-white/10" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>-</button>
-                                                <span className={clsx("text-3xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>
-                                                    {blocks[activeBlockIndex].result?.rounds || 0}
-                                                </span>
-                                                <button onClick={() => {
-                                                    const r = (blocks[activeBlockIndex].result?.rounds || 0) + 1;
-                                                    const res = { ...blocks[activeBlockIndex].result, rounds: r };
-                                                    updateBlock(activeBlockIndex, 'result', res);
-                                                }} className="w-8 h-8 rounded-full bg-yellow-500 text-black font-bold shadow-lg shadow-yellow-500/20">+</button>
+                                        {blocks[activeBlockIndex].result?.noResult ? (
+                                            <div className="flex flex-col items-center justify-center py-2">
+                                                <Ban className="w-6 h-6 text-yellow-500/30 mb-1" />
+                                                <p className="text-[10px] text-yellow-500/50 font-black uppercase tracking-tighter">No Aplica</p>
                                             </div>
+                                        ) : (
+                                            blocks[activeBlockIndex].type === 'fortime' || blocks[activeBlockIndex].type === 'rft' ? (
+                                                <input
+                                                    type="text"
+                                                    placeholder="00:00"
+                                                    value={blocks[activeBlockIndex].result?.time || ''}
+                                                    onChange={(e) => {
+                                                        const res = { ...blocks[activeBlockIndex].result, time: e.target.value };
+                                                        updateBlock(activeBlockIndex, 'result', res);
+                                                    }}
+                                                    className={clsx("bg-transparent text-3xl font-mono font-black text-center w-full outline-none", theme === 'dark' ? "text-white placeholder-white/20" : "text-black placeholder-gray-300")}
+                                                />
+                                            ) : (
+                                                <div className="flex justify-center items-center gap-2">
+                                                    <button onClick={() => {
+                                                        const r = (blocks[activeBlockIndex].result?.rounds || 0) > 0 ? (blocks[activeBlockIndex].result?.rounds || 0) - 1 : 0;
+                                                        const res = { ...blocks[activeBlockIndex].result, rounds: r };
+                                                        updateBlock(activeBlockIndex, 'result', res);
+                                                    }} className={clsx("w-8 h-8 rounded-full font-bold transition-colors", theme === 'dark' ? "bg-white/5 text-gray-400 hover:bg-white/10" : "bg-gray-100 text-gray-600 hover:bg-gray-200")}>-</button>
+                                                    <span className={clsx("text-3xl font-mono font-black", theme === 'dark' ? "text-white" : "text-black")}>
+                                                        {blocks[activeBlockIndex].result?.rounds || 0}
+                                                    </span>
+                                                    <button onClick={() => {
+                                                        const r = (blocks[activeBlockIndex].result?.rounds || 0) + 1;
+                                                        const res = { ...blocks[activeBlockIndex].result, rounds: r };
+                                                        updateBlock(activeBlockIndex, 'result', res);
+                                                    }} className="w-8 h-8 rounded-full bg-yellow-500 text-black font-bold shadow-lg shadow-yellow-500/20">+</button>
+                                                </div>
+                                            )
                                         )}
-                                        <p className="text-[9px] text-yellow-500/60 font-bold uppercase mt-1">
-                                            {blocks[activeBlockIndex].type === 'fortime' || blocks[activeBlockIndex].type === 'rft' ? 'Tiempo Final' : 'Rondas'}
-                                        </p>
+                                        {!blocks[activeBlockIndex].result?.noResult && (
+                                            <p className="text-[9px] text-yellow-500/60 font-bold uppercase mt-1">
+                                                {blocks[activeBlockIndex].type === 'fortime' || blocks[activeBlockIndex].type === 'rft' ? 'Tiempo Final' : 'Rondas'}
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 

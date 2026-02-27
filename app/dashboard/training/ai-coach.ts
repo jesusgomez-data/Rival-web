@@ -38,15 +38,18 @@ export async function getAiRecommendation(sport: string, userTier: 'free' | 'pre
         recommendations.push({
             id: 'gym-push-max',
             title: 'Fuerza: Empuje Vertical y Horizontal',
-            description: 'Enfoque en básicos de empuje con carga progresiva.',
+            description: 'Enfoque en básicos de empuje con carga progresiva para desarrollo de fuerza absoluta.',
             sport: 'gym',
             difficulty: 'intermediate',
             duration_min: 65,
             is_premium: false,
             exercises: [
                 { name: 'Press de Banca', target: '4 series x 6 reps (RPE 8)', prev: '80kg', video_url: 'https://www.youtube.com/watch?v=rT7DgCr-3pg', sets: [{ order: 1, reps: 6, weight: 70 }, { order: 2, reps: 6, weight: 70 }, { order: 3, reps: 6, weight: 70 }, { order: 4, reps: 6, weight: 70 }] },
-                { name: 'Press Militar', target: '3 series x 8 reps', prev: '50kg', video_url: 'https://www.youtube.com/watch?v=2yjwxtZ4f6s', sets: [{ order: 1, reps: 8, weight: 40 }, { order: 2, reps: 8, weight: 40 }, { order: 3, reps: 8, weight: 40 }] },
-                { name: 'Press Inclinado', target: '3 series x 12 reps', prev: '20kg', video_url: 'https://www.youtube.com/watch?v=8iPEnn-ltC8', sets: [{ order: 1, reps: 12, weight: 18 }, { order: 2, reps: 12, weight: 18 }, { order: 3, reps: 12, weight: 18 }] }
+                { name: 'Press Militar', target: '3 series x 8 reps', prev: '50kg', video_url: 'https://www.youtube.com/watch?v=2yjwXTZQDDI', sets: [{ order: 1, reps: 8, weight: 40 }, { order: 2, reps: 8, weight: 40 }, { order: 3, reps: 8, weight: 40 }] },
+                { name: 'Press Inclinado con Mancuernas', target: '3 series x 12 reps', prev: '20kg', video_url: 'https://www.youtube.com/watch?v=8iPEnn-ltC8', sets: [{ order: 1, reps: 12, weight: 22 }, { order: 2, reps: 12, weight: 22 }, { order: 3, reps: 12, weight: 22 }] },
+                { name: 'Fondos en Paralelas (Dips)', target: '3 series x al fallo técnico', prev: 'BW', video_url: 'https://www.youtube.com/watch?v=2z8JmcrW-As', sets: [{ order: 1, reps: 12, weight: 0 }, { order: 2, reps: 10, weight: 0 }, { order: 3, reps: 8, weight: 0 }] },
+                { name: 'Extensiones de Tríceps en Polea', target: '3 series x 15 reps', prev: '25kg', video_url: 'https://www.youtube.com/watch?v=-zLyUAo1gMw', sets: [{ order: 1, reps: 15, weight: 20 }, { order: 2, reps: 15, weight: 20 }, { order: 3, reps: 15, weight: 20 }] },
+                { name: 'Elevaciones Laterales', target: '4 series x 15 reps (PUMP)', prev: '10kg', video_url: 'https://www.youtube.com/watch?v=PzsMitRdI_8', sets: [{ order: 1, reps: 15, weight: 8 }, { order: 2, reps: 15, weight: 8 }, { order: 3, reps: 15, weight: 8 }, { order: 4, reps: 15, weight: 8 }] }
             ]
         });
     } else if (sport === 'hybrid') {
