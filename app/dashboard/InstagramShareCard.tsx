@@ -1,5 +1,6 @@
 'use client';
 
+import WodCard from "./community/WodCard";
 import React, { useRef, useState, useEffect } from 'react';
 import { toBlob } from 'html-to-image';
 import { Trophy, Flame, Dumbbell, Instagram, Download, Share2, MapPin, Zap, Wind, TrendingUp, Heart, X } from 'lucide-react';
@@ -19,6 +20,7 @@ interface InstagramShareCardProps {
         mapData?: string; // Base64 or URL for the path preview
     };
     onClose: () => void;
+    workoutData?: any;
 }
 
 export default function InstagramShareCard({ user, avatar, username, content, onClose }: InstagramShareCardProps) {
