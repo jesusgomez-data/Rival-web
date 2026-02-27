@@ -116,6 +116,7 @@ function SessionContent() {
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [instantSpeed, setInstantSpeed] = useState(0); // km/h
     const [showShareCard, setShowShareCard] = useState(false);
+    const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
     const wakeLockRef = useRef<any>(null);
     const runDistanceRef = useRef<number>(0);
 
@@ -382,11 +383,13 @@ function SessionContent() {
                     // Strict accuracy and noise filtering - skip points with > 40m error
                     if (accuracy > 40) return;
 
+                    setGpsAccuracy(accuracy);
+
                     // Update Instant Pace/Speed
                     if (speed !== null && speed >= 0) {
                         const kmh = speed * 3.6;
                         setInstantSpeed(kmh);
-                        if (kmh > 1.2) { // Only calculate pace if moving significantly
+                        if (kmh > 1.8) { // Only calculate pace if moving > 1.8km/h
                             const minPerKm = 60 / kmh;
                             const pMin = Math.floor(minPerKm);
                             const pSec = Math.floor((minPerKm - pMin) * 60);
@@ -404,7 +407,7 @@ function SessionContent() {
                                 const mPerSec = distDiff / timeDiff;
                                 const kmh = mPerSec * 3.6;
                                 setInstantSpeed(kmh);
-                                if (kmh > 1.2) {
+                                if (kmh > 1.8) {
                                     const minPerKm = 60 / kmh;
                                     const pMin = Math.floor(minPerKm);
                                     const pSec = Math.floor((minPerKm - pMin) * 60);
@@ -430,23 +433,23 @@ function SessionContent() {
                         );
 
                         // Only accumulate distance/path if NOT PAUSED and valid movement
-                        // Filter out jitter (d < 2m) and high-speed anomalies (d > 30m roughly 100km/h)
-                        if (!isPaused && gpsStatus === 'tracking' && d > 2 && d < 30) {
+                        // Filter out jitter (d < 5m) and low accuracy
+                        // High filter for stationary drift: if accuracy is low (e.g. 15m), and d is small (e.g. 7m), could be noise
+                        const isMoving = speed !== null ? speed > 0.5 : d > 8; // stricter threshold if speed is unknown
+
+                        if (!isPaused && gpsStatus === 'tracking' && d > 5 && d < 30 && isMoving && accuracy < 20) {
                             runDistanceRef.current += d;
                             setRunDistance(runDistanceRef.current);
                             setRunPath(prev => [...prev, { lat: latitude, lon: longitude }]);
 
-                            // Altitude Logic with filter
-                            if (altitude !== null && (!altitudeAccuracy || altitudeAccuracy < 25)) {
+                            // Altitude Logic with filter - only use real measurements
+                            if (altitude !== null && accuracy < 10 && (!altitudeAccuracy || altitudeAccuracy < 10)) {
                                 if (lastPosRef.current.alt !== undefined && lastPosRef.current.alt !== null) {
                                     const diff = altitude - lastPosRef.current.alt;
-                                    if (diff > 0.4 && diff < 15) {
+                                    if (diff > 0.5 && diff < 10) {
                                         setElevationGain(prev => prev + diff);
                                     }
                                 }
-                            } else if (speed && speed > 1) {
-                                // Subtle random gain simulation for devices without altitude data
-                                if (Math.random() > 0.96) setElevationGain(prev => prev + 1);
                             }
                         }
                     }
@@ -694,34 +697,16 @@ function SessionContent() {
 
     const hrSamplesRef = useRef<number[]>([]);
 
-    // Heart Rate & Zone Simulation (only in Running Mode when tracking)
+    // Heart Rate & Zone (Simplified - only displays if updated via sync/sensor in future)
+    // Removed simulation to avoid user confusion
     useEffect(() => {
         if (sportMode !== 'running' || gpsStatus !== 'tracking' || isPaused) {
             setHeartRate(0);
             return;
         }
 
-        const hrInterval = setInterval(() => {
-            setHeartRate(prev => {
-                const base = prev === 0 ? 120 : prev;
-                const change = Math.random() > 0.5 ? 2 : -2;
-                const next = Math.max(110, Math.min(175, base + change));
-
-                // Calculate Zone (simple model)
-                if (next < 130) setCurrentZone(1);
-                else if (next < 145) setCurrentZone(2);
-                else if (next < 160) setCurrentZone(3);
-                else if (next < 170) setCurrentZone(4);
-                else setCurrentZone(5);
-
-                // Collect sample
-                hrSamplesRef.current.push(next);
-
-                return next;
-            });
-        }, 2000);
-
-        return () => clearInterval(hrInterval);
+        // Keep at 0 for now as real sensors are not yet implemented for direct web access
+        // This avoids confusing "ghost" data
     }, [sportMode, gpsStatus, isPaused]);
 
 
@@ -1459,10 +1444,7 @@ function SessionContent() {
                         setWorkoutTitle={setWorkoutTitle}
                         isPaused={isPaused}
                         toggleTimer={toggleTimer}
-                        handleFinish={() => {
-                            setIsPaused(true);
-                            setShowFinishModal(true);
-                        }}
+                        handleFinish={handleFinish}
                         gpsStatus={gpsStatus}
                         setGpsStatus={setGpsStatus}
                         heartRate={heartRate}
@@ -1470,6 +1452,7 @@ function SessionContent() {
                         currentZone={currentZone}
                         elevationGain={elevationGain}
                         openSync={() => setShowSyncModal(true)}
+                        accuracy={gpsAccuracy}
                     />
                 )}
                 {(sportMode === 'cross_training' || sportMode === 'ocr') && (
@@ -2385,7 +2368,8 @@ function RunningView({
     instantPace,
     currentZone,
     elevationGain,
-    openSync
+    openSync,
+    accuracy
 }: {
     distance: number,
     setDistance: (d: number) => void,
@@ -2401,7 +2385,8 @@ function RunningView({
     instantPace: string,
     currentZone: number,
     elevationGain: number,
-    openSync: () => void
+    openSync: () => void,
+    accuracy: number | null
 }) {
     const { theme } = useTheme();
     const [view, setView] = useState<'stats' | 'zones'>('stats');
@@ -2439,6 +2424,19 @@ function RunningView({
                             {gpsStatus === 'searching' ? 'Enlazando GPS...' :
                                 gpsStatus === 'tracking' ? 'GPS Conectado' : 'Conectar GPS'}
                         </span>
+                        {gpsStatus === 'tracking' && accuracy !== null && (
+                            <div className="flex gap-0.5 mt-1">
+                                {[1, 2, 3, 4].map(bar => (
+                                    <div
+                                        key={bar}
+                                        className={clsx(
+                                            "w-1 h-2 rounded-full",
+                                            accuracy < (50 - bar * 10) ? "bg-white" : "bg-white/20"
+                                        )}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </button>
 
@@ -2500,69 +2498,31 @@ function RunningView({
                 </div>
             </div>
 
-            {/* Health & Terrain Grid */}
-            <div className="grid grid-cols-2 gap-4">
-                <div
-                    onClick={() => setView(view === 'stats' ? 'zones' : 'stats')}
-                    className={clsx(
-                        "relative overflow-hidden p-6 rounded-[32px] border transition-all active:scale-[0.98] group",
-                        theme === 'dark' ? "bg-black border-white/5 hover:border-red-500/20" : "bg-white border-gray-100 shadow-lg"
-                    )}
-                >
-                    <div className="flex justify-between items-start mb-6">
-                        <p className="text-gray-500 text-[8px] font-black uppercase tracking-widest">Ritmo Cardíaco</p>
-                        <Heart className={clsx("w-4 h-4 transition-all duration-300", heartRate > 0 ? "text-red-500 fill-red-500 animate-pulse scale-110" : "text-gray-700")} />
-                    </div>
-                    <div className="flex items-baseline gap-1.5">
-                        <span className="text-3xl md:text-4xl font-mono font-black text-white">{heartRate || "--"}</span>
-                        <span className="text-[10px] font-black text-gray-500 uppercase">bpm</span>
-                    </div>
-                    {heartRate > 0 && (
-                        <div className="mt-4 inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-white/5 border border-white/5">
-                            <div className={clsx("w-1.5 h-1.5 rounded-full", zones[currentZone - 1].color)} />
-                            <span className="text-[8px] font-black text-white uppercase tracking-wider">Zona {currentZone}</span>
-                        </div>
-                    )}
-                </div>
-
+            {/* Terrain Data */}
+            <div className="grid grid-cols-1 gap-4">
                 <div className={clsx(
                     "relative overflow-hidden p-6 rounded-[32px] border transition-all",
                     theme === 'dark' ? "bg-black border-white/5 hover:border-emerald-500/20" : "bg-white border-gray-100 shadow-lg"
                 )}>
                     <div className="flex justify-between items-start mb-6">
-                        <p className="text-gray-500 text-[8px] font-black uppercase tracking-widest">Elevación</p>
+                        <p className="text-gray-500 text-[8px] font-black uppercase tracking-widest">Elevación Ganada</p>
                         <TrendingUp className="w-4 h-4 text-emerald-500" />
                     </div>
                     <div className="flex items-baseline gap-1.5">
-                        <span className="text-3xl md:text-4xl font-mono font-black text-white">{elevationGain.toFixed(1)}</span>
+                        <span className="text-4xl font-mono font-black text-white">{elevationGain.toFixed(1)}</span>
                         <span className="text-[10px] font-black text-gray-500 uppercase">metros</span>
                     </div>
                 </div>
             </div>
 
-            {/* Distribution View */}
+            {/* Distribution View - Hidden for now as it depends on HR */}
             {view === 'zones' && (
                 <div className="p-8 rounded-[32px] bg-[#111] border border-white/10 space-y-6 animate-in slide-in-from-top-4">
                     <div className="flex items-center justify-between">
                         <h4 className="text-[10px] font-black text-brand-red uppercase tracking-[0.3em] italic">Zonas de Intensidad</h4>
                         <button onClick={() => setView('stats')} className="p-2 -mr-2 text-gray-500 hover:text-white transition-colors"><X className="w-4 h-4" /></button>
                     </div>
-                    <div className="space-y-4">
-                        {zones.map((z) => (
-                            <div key={z.n} className="space-y-1.5">
-                                <div className="flex justify-between items-end px-1">
-                                    <span className="text-[8px] font-black text-gray-500 uppercase">Z{z.n} - {z.label}</span>
-                                    <span className="text-[8px] font-mono text-gray-600">{z.range} bpm</span>
-                                </div>
-                                <div className="h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                    <div
-                                        style={{ width: currentZone === z.n ? '100%' : '15%' }}
-                                        className={clsx("h-full transition-all duration-1000", z.color, currentZone === z.n && "shadow-[0_0_10px_rgba(255,255,255,0.2)]")}
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase text-center py-4">Conecta un sensor cardiaco para ver el desglose</p>
                 </div>
             )}
 
@@ -4006,7 +3966,8 @@ function FinishModal({
     time = 0,
     pace = "0:00",
     elevation = 0,
-    runPath = []
+    runPath = [],
+    onOpenShare
 }: {
     onConfirm: () => void;
     onCancel: () => void;
@@ -4118,24 +4079,41 @@ function FinishModal({
                                 </button>
                             </div>
                         ) : (
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                disabled={isUploading}
-                                className={clsx(
-                                    "w-full aspect-video rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all group",
-                                    theme === 'dark' ? "border-white/10 bg-white/5 hover:border-brand-red/50 hover:bg-white/10" : "border-gray-200 bg-gray-50 hover:border-brand-red/30 hover:bg-gray-100"
+                            <div className="space-y-4">
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
+                                    disabled={isUploading}
+                                    className={clsx(
+                                        "w-full aspect-video rounded-3xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all group overflow-hidden relative",
+                                        theme === 'dark' ? "border-white/10 bg-white/5 hover:border-brand-red/50 hover:bg-white/10" : "border-gray-200 bg-gray-50 hover:border-brand-red/30 hover:bg-gray-100"
+                                    )}
+                                >
+                                    {isUploading ? (
+                                        <Loader2 className="w-8 h-8 animate-spin text-brand-red" />
+                                    ) : (
+                                        <>
+                                            {runPath.length > 0 && (
+                                                <div className="absolute inset-0 opacity-20 group-hover:opacity-40 transition-opacity">
+                                                    <RouteMap path={runPath} className="w-full h-full p-8" />
+                                                </div>
+                                            )}
+                                            <Camera className="w-8 h-8 text-gray-400 group-hover:text-brand-red transition-colors relative z-10" />
+                                            <div className={clsx("text-[10px] font-black uppercase tracking-widest transition-colors relative z-10", theme === 'dark' ? "text-gray-500 group-hover:text-white" : "text-gray-400 group-hover:text-black")}>Añadir Foto y Crear Mapa</div>
+                                            <p className="text-[8px] text-gray-600 font-bold uppercase relative z-10">Sube una foto para generar tu tarjeta de carrera</p>
+                                        </>
+                                    )}
+                                </button>
+
+                                {distance > 0 && (
+                                    <button
+                                        onClick={onOpenShare}
+                                        className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <MapIcon className="w-4 h-4" />
+                                        Generar Tarjeta con Mapa
+                                    </button>
                                 )}
-                            >
-                                {isUploading ? (
-                                    <Loader2 className="w-8 h-8 animate-spin text-brand-red" />
-                                ) : (
-                                    <>
-                                        <Camera className="w-8 h-8 text-gray-400 group-hover:text-brand-red transition-colors" />
-                                        <div className={clsx("text-[10px] font-black uppercase tracking-widest transition-colors", theme === 'dark' ? "text-gray-500 group-hover:text-white" : "text-gray-400 group-hover:text-black")}>Añadir Foto y Crear Mapa</div>
-                                        <p className="text-[8px] text-gray-600 font-bold uppercase">Sube una foto para generar tu tarjeta de carrera</p>
-                                    </>
-                                )}
-                            </button>
+                            </div>
                         )}
                         <input
                             type="file"
