@@ -20,7 +20,7 @@ export async function getCenterProducts(id: string, isCenterId: boolean = false)
 
     const { data, error } = await query.order('created_at', { ascending: false });
 
-    if (error) return [];
+    if (error || !data) return [];
     return data;
 }
 

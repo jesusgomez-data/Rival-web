@@ -34,7 +34,7 @@ export default async function PublicCenterPage({ params }: { params: { id: strin
         .eq('organization_id', id)
         .eq('role', 'coach');
 
-    const coaches = coachesData?.map((c: any) => c.profiles) || [];
+    const coaches = coachesData?.map((c: any) => c.profiles).filter(Boolean) || [];
 
     const { data: { user } } = await supabase.auth.getUser();
 

@@ -603,7 +603,20 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
 
                                 <div className={`flex flex-wrap items-center gap-4 text-sm pt-2 ${textMuted}`}>
                                     {org.city && <span className={`flex items-center gap-1.5 transition-colors cursor-pointer ${theme === 'dark' ? 'hover:text-white' : 'hover:text-black'}`}><MapPin className="w-4 h-4 text-brand-red" /> {org.city}, {org.country}</span>}
-                                    {org.website && <a href={org.website} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-brand-red transition-colors"><Globe className="w-4 h-4" /> {new URL(org.website).hostname}</a>}
+                                    {org.website && (
+                                        <a
+                                            href={org.website.startsWith('http') ? org.website : (org.website.startsWith('@') ? `https://instagram.com/${org.website.substring(1)}` : `https://${org.website}`)}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1.5 hover:text-brand-red transition-colors"
+                                        >
+                                            <Globe className="w-4 h-4" />
+                                            {(() => {
+                                                try { return new URL(org.website).hostname; }
+                                                catch { return org.website; }
+                                            })()}
+                                        </a>
+                                    )}
                                 </div>
 
                                 {/* Head Coach Display */}

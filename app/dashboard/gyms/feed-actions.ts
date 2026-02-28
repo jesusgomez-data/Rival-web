@@ -38,12 +38,12 @@ export async function getCenterPosts(id: string, allowFuture: boolean = false, i
         .order('scheduled_for', { ascending: false, nullsFirst: false })
         .order('created_at', { ascending: false });
 
-    if (error) return [];
+    if (error || !data) return [];
 
     return data.map((post: any) => ({
         ...post,
         is_liked: user ? post.likes.some((l: any) => l.user_id === user.id) : false,
-        likes_count: post.likes ? post.likes.length : 0, 
+        likes_count: post.likes ? post.likes.length : 0,
         comments_count: post.comments_count?.[0]?.count || 0,
         likes: undefined
     }));
