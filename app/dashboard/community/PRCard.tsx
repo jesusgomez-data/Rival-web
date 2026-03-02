@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Trophy, Dumbbell, MessageCircle } from "lucide-react";
 import { clsx } from "clsx";
 import { useTheme } from "../../ThemeContext";
+import { isImageUrl, cn } from "@/lib/utils";
 
 interface PRCardProps {
     userName: string;
@@ -35,7 +36,7 @@ export default function PRCard({
             isStory ? "w-full h-full" : "w-full aspect-square md:aspect-video rounded-[32px] border border-white/5 bg-black"
         )}>
             {/* Background Image with Overlay */}
-            {backgroundImage ? (
+            {backgroundImage && isImageUrl(backgroundImage) ? (
                 <Image
                     src={backgroundImage}
                     alt="PR Background"
@@ -65,12 +66,18 @@ export default function PRCard({
                 <div className="flex items-center gap-4 mb-6 md:mb-8 animate-in slide-in-from-left-4 duration-500">
                     <div className="w-12 h-12 md:w-16 md:h-16 rounded-full p-0.5 bg-gradient-to-tr from-brand-red to-orange-500 shrink-0">
                         <div className="w-full h-full rounded-full overflow-hidden relative border-2 border-black bg-gray-800">
-                            <Image
-                                src={avatarUrl || `https://ui-avatars.com/api/?name=${userName}&background=random`}
-                                alt={userName}
-                                fill
-                                className="object-cover"
-                            />
+                            {avatarUrl && isImageUrl(avatarUrl) ? (
+                                <Image
+                                    src={avatarUrl}
+                                    alt={userName}
+                                    fill
+                                    className="object-cover"
+                                />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-500 bg-black uppercase">
+                                    {userName?.substring(0, 2) || "?"}
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div>

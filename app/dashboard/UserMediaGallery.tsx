@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { getUserMedia } from "./community/actions";
 import { Play, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { isImageUrl } from "@/lib/utils";
 
 export default function UserMediaGallery({ userId, limit }: { userId: string, limit?: number }) {
     const [mediaItems, setMediaItems] = useState<any[]>([]);
@@ -15,7 +16,7 @@ export default function UserMediaGallery({ userId, limit }: { userId: string, li
             getUserMedia(userId).then((data) => {
                 // Filter out class_result or JSON strings immediately
                 const validMedia = (data || []).filter((item: any) => {
-                    const isJson = item.media_url?.startsWith('[') || item.media_url?.startsWith('{');
+                    const isJson = !isImageUrl(item.media_url);
                     return item.media_type !== 'class_result' && !isJson;
                 });
                 setMediaItems(validMedia);

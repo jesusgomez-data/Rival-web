@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { WodBlock, WodFormat, WodSummary, ExerciseEntry } from "../training/WodCreator";
-import { cn } from "@/lib/utils";
+import { cn, isImageUrl } from "@/lib/utils";
 import { getWodResults } from "@/app/dashboard/community/actions";
 import Link from "next/link";
 import Image from "next/image";
@@ -304,7 +304,7 @@ export default function WodCard({ data, userName, publishDate }: WodCardProps) {
                                                 </div>
                                                 <Link href={`/dashboard/profile/${res.username}`} className="flex items-center gap-3 flex-1 min-w-0">
                                                     <div className="w-10 h-10 rounded-full border border-white/10 bg-black overflow-hidden relative group-hover:border-brand-red/50 transition-colors">
-                                                        {res.avatarUrl ? (
+                                                        {res.avatarUrl && isImageUrl(res.avatarUrl) ? (
                                                             <Image src={res.avatarUrl} alt={res.username} fill className="object-cover" />
                                                         ) : (
                                                             <div className="w-full h-full flex items-center justify-center text-[10px] bg-gray-800 font-black text-gray-500 italic">

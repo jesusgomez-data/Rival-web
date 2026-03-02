@@ -15,6 +15,7 @@ import { MusicTrack } from '../music-data'
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
 import { createClient } from '@/utils/supabase/client'
 import RouteMap from '@/components/training/RouteMap'
+import { isImageUrl } from '@/lib/utils'
 
 interface Story {
     id: string
@@ -970,7 +971,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                     </div>
                 ) : (
                     <div className="relative group">
-                        {overlay.content && !overlay.content.startsWith('{') && !overlay.content.startsWith('[') && (
+                        {overlay.content && isImageUrl(overlay.content) && (
                             <Image src={overlay.content} width={64} height={64} alt="sticker" className="drop-shadow-lg" />
                         )}
                         {previewUrl && (

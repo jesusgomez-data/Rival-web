@@ -3,11 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import CenterDemo from "./CenterDemo";
 
 import {
   ArrowRight, Check, Zap, BarChart3, Users,
-  Shield, MessageSquare, Star, Flame, Trophy
+  Shield, MessageSquare, Star, Flame, Trophy,
+  Sun, Moon
 } from "lucide-react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
@@ -115,7 +118,7 @@ export default function ForCenters() {
             <Link href="/" className="text-brand-red hover:text-red-400 transition-colors font-bold">Para Atletas</Link>
           </div>
           <div className="flex items-center gap-4">
-
+            <ThemeToggle />
             <Link href="/center-owner/login" className="bg-brand-red hover:bg-brand-accent text-white px-5 py-2.5 rounded-full font-bold text-sm transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(220,38,38,0.4)]">
               Acceso Centro
             </Link>
@@ -125,12 +128,11 @@ export default function ForCenters() {
 
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden flex items-center min-h-[90vh]">
-        <div className="absolute inset-0 bg-white dark:hidden z-0" />
         <div className="absolute inset-0 z-0 hidden dark:block">
           <video autoPlay loop muted playsInline className="w-full h-full object-cover grayscale opacity-40">
             <source src="https://assets.mixkit.co/videos/preview/mixkit-man-working-out-in-the-gym-around-other-people-41151-large.mp4" type="video/mp4" />
           </video>
-          <div className="absolute inset-0 bg-black/60" />
+          <div className="absolute inset-0 bg-black/80" />
           <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
         </div>
 
@@ -144,7 +146,7 @@ export default function ForCenters() {
               DOMINA <br />
               <span className="text-brand-red">TU MERCADO.</span>
             </h1>
-            <p className="text-muted-foreground text-lg lg:text-xl mb-8 leading-relaxed max-w-lg mx-auto lg:mx-0">
+            <p className="text-muted-foreground dark:text-gray-300 text-lg lg:text-xl mb-8 leading-relaxed max-w-lg mx-auto lg:mx-0">
               La plataforma de gestión para centros que no se conforman. Atrae leads de la red social <span className="text-foreground font-bold">Rival</span> y automatiza tu éxito.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
@@ -175,6 +177,22 @@ export default function ForCenters() {
               <Flame className="w-10 h-10 text-brand-red" />
             </div>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Interactive Demo Section */}
+      <section className="py-20 bg-background relative border-t border-border overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-brand-red/5 to-transparent pointer-events-none" />
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl lg:text-4xl font-heading font-bold mb-4 text-foreground">
+              Así es <span className="text-brand-red">RIVAL CENTERS</span>
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+              Explora una demostración interactiva de cómo tu centro gestionará clases, atletas y leads en tiempo real.
+            </p>
+          </div>
+          <CenterDemo />
         </div>
       </section>
 

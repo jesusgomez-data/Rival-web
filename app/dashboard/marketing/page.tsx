@@ -33,6 +33,26 @@ const POST_TEMPLATES = [
         description: 'Conecta con atletas de todo el mundo y escala posiciones.',
         accent: '#DC2626',
         bg: 'bg-black'
+    },
+    {
+        id: 'metrics_premium',
+        title: 'Métricas de Élite',
+        headline: 'ANÁLISIS. DE. DATOS.',
+        subheadline: 'PERFORMANCE TRACKING',
+        description: 'Visualiza cada detalle de tu entrenamiento con precisión milimétrica.',
+        accent: '#DC2626',
+        bg: 'bg-black',
+        image: '/marketing/premium_bg.png'
+    },
+    {
+        id: 'management_pro',
+        title: 'Gestión Total',
+        headline: 'TU BOX. BAJO CONTROL.',
+        subheadline: 'ADMIN SOLUTIONS',
+        description: 'Automatiza cobros, agenda y tienda. La herramienta definitiva para dueños de centros.',
+        accent: '#DC2626',
+        bg: 'bg-black',
+        image: '/marketing/management_bg.png'
     }
 ];
 
@@ -110,56 +130,151 @@ export default function MarketingStudio() {
                             )}
                         >
                             {/* Decorative Background Elements */}
-                            <div className="absolute top-0 right-0 w-full h-full opacity-20 pointer-events-none">
-                                <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-brand-red/20 rounded-full blur-[120px]" />
-                                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-brand-red/10 rounded-full blur-[100px]" />
-                            </div>
+                            {currentPost.image ? (
+                                <div className="absolute inset-0 z-0">
+                                    <img
+                                        src={currentPost.image}
+                                        alt="Background"
+                                        className="w-full h-full object-cover filter brightness-[0.4] scale-110"
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/60" />
+                                </div>
+                            ) : (
+                                <div className="absolute top-0 right-0 w-full h-full opacity-20 pointer-events-none z-0">
+                                    <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-brand-red/20 rounded-full blur-[120px]" />
+                                    <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-brand-red/10 rounded-full blur-[100px]" />
+                                </div>
+                            )}
 
                             {/* Grid overlay for a tech look */}
                             <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
 
                             {/* Official Logo */}
-                            <div className="relative z-10 mb-12 flex flex-col items-center">
+                            <div className="relative z-20 mb-12 flex flex-col items-center">
                                 <img
                                     src="/logo_transparent.svg"
                                     alt="Rival Fit Official Logo"
-                                    className="w-32 h-32 object-contain filter drop-shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                                    className="w-24 h-24 object-contain filter drop-shadow-[0_0_20px_rgba(220,38,38,0.3)]"
                                 />
                                 <div className="mt-2 text-center">
-                                    <span className="text-xl font-black tracking-[0.2em] text-white italic uppercase">RIVAL</span>
+                                    <span className="text-lg font-black tracking-[0.2em] text-white italic uppercase">RIVAL FIT</span>
                                 </div>
                             </div>
 
                             {/* Content based on template */}
-                            <div className="relative z-10 text-center space-y-6 max-w-[80%]">
-                                <h3 className="text-5xl font-black italic uppercase leading-[0.85] tracking-tighter text-white">
-                                    {currentPost.headline.split('.').map((part, i) => (
-                                        <span key={i} className="block last:text-brand-red">
-                                            {part}{i < currentPost.headline.split('.').length - 1 ? '.' : ''}
-                                        </span>
-                                    ))}
-                                </h3>
+                            {currentPost.id === 'metrics_premium' ? (
+                                <div className="relative z-20 w-full px-8 space-y-8">
+                                    {/* Simulated Metric Card */}
+                                    <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-[32px] p-8 shadow-2xl transform rotate-1 scale-105">
+                                        <div className="flex justify-between items-start mb-6">
+                                            <div>
+                                                <p className="text-[10px] font-black text-brand-red uppercase tracking-[0.2em] mb-1">Métrica Destacada</p>
+                                                <h4 className="text-2xl font-black text-white italic uppercase tracking-tight">Split Time #3</h4>
+                                            </div>
+                                            <Flame className="w-6 h-6 text-brand-red" />
+                                        </div>
 
-                                <div className="inline-block px-4 py-1 border border-brand-red/30 bg-brand-red/10 rounded-lg">
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-red italic">
-                                        {currentPost.subheadline}
+                                        <div className="flex items-baseline gap-3 mb-6">
+                                            <span className="text-6xl font-black text-white italic tracking-tighter">04:21</span>
+                                            <span className="text-xl font-bold text-brand-red italic">-12s</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4 pt-6 border-t border-white/5">
+                                            <div>
+                                                <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Ritmo Medio</p>
+                                                <p className="text-sm font-bold text-white uppercase tracking-tight">3:52 min/km</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Frecuencia HR</p>
+                                                <p className="text-sm font-bold text-white uppercase tracking-tight">174 BPM</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="text-center space-y-4 pt-8">
+                                        <h3 className="text-4xl font-black italic uppercase leading-none tracking-tighter text-white">
+                                            CADA SEGUNDO <span className="text-brand-red">CUENTA.</span>
+                                        </h3>
+                                        <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">
+                                            {currentPost.description}
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : currentPost.id === 'management_pro' ? (
+                                <div className="relative z-20 w-full px-8 space-y-8">
+                                    {/* Simulated Management Dashboard Snippet */}
+                                    <div className="bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[32px] p-8 shadow-2xl">
+                                        <div className="flex items-center justify-between mb-8">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-full bg-brand-red flex items-center justify-center">
+                                                    <Trophy className="w-5 h-5 text-white" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-xs font-black text-white uppercase italic tracking-tighter">Rival Center Pro</p>
+                                                    <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest">Panel de Control</p>
+                                                </div>
+                                            </div>
+                                            <span className="text-[10px] font-black text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full border border-green-500/20">LIVE</span>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center bg-black/40 p-4 rounded-xl border border-white/5">
+                                                <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Recaudación Mensual</span>
+                                                <span className="text-xl font-black text-white italic">€12,450.00</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="bg-black/40 p-4 rounded-xl border border-white/5">
+                                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Nuevos Atletas</span>
+                                                    <span className="text-lg font-black text-brand-red">+48</span>
+                                                </div>
+                                                <div className="bg-black/40 p-4 rounded-xl border border-white/5">
+                                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block mb-1">Ocupación Box</span>
+                                                    <span className="text-lg font-black text-white italic">86%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="text-center space-y-4">
+                                        <h3 className="text-4xl font-black italic uppercase leading-none tracking-tighter text-white">
+                                            CONTROL <span className="text-brand-red">TOTAL.</span>
+                                        </h3>
+                                        <p className="text-gray-400 text-xs font-bold uppercase tracking-widest text-balance">
+                                            {currentPost.description}
+                                        </p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="relative z-20 text-center space-y-6 max-w-[80%]">
+                                    <h3 className="text-5xl font-black italic uppercase leading-[0.85] tracking-tighter text-white">
+                                        {currentPost.headline.split('.').map((part, i) => (
+                                            <span key={i} className="block last:text-brand-red">
+                                                {part}{i < currentPost.headline.split('.').length - 1 ? '.' : ''}
+                                            </span>
+                                        ))}
+                                    </h3>
+
+                                    <div className="inline-block px-4 py-1 border border-brand-red/30 bg-brand-red/10 rounded-lg">
+                                        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-red italic">
+                                            {currentPost.subheadline}
+                                        </p>
+                                    </div>
+
+                                    <p className="text-gray-400 text-sm font-medium leading-relaxed uppercase tracking-wide">
+                                        {currentPost.description}
                                     </p>
                                 </div>
-
-                                <p className="text-gray-400 text-sm font-medium leading-relaxed uppercase tracking-wide">
-                                    {currentPost.description}
-                                </p>
-                            </div>
+                            )}
 
                             {/* Footer */}
-                            <div className="absolute bottom-10 left-0 w-full px-12 flex justify-between items-center opacity-60">
+                            <div className="absolute bottom-10 left-0 w-full px-12 flex justify-between items-center z-20 opacity-60">
                                 <span className="text-[8px] font-black tracking-[0.5em] text-gray-500 uppercase">JOIN THE ARENA</span>
                                 <span className="text-[8px] font-black tracking-[0.2em] text-white uppercase italic">RIVALFIT.APP</span>
                             </div>
 
                             {/* Corner Accents */}
-                            <div className="absolute top-6 left-6 w-8 h-8 border-t-2 border-l-2 border-brand-red/30 rounded-tl-xl" />
-                            <div className="absolute bottom-6 right-6 w-8 h-8 border-b-2 border-r-2 border-brand-red/30 rounded-br-xl" />
+                            <div className="absolute top-6 left-6 w-8 h-8 border-t-2 border-l-2 border-brand-red/30 rounded-tl-xl z-20" />
+                            <div className="absolute bottom-6 right-6 w-8 h-8 border-b-2 border-r-2 border-brand-red/30 rounded-br-xl z-20" />
                         </div>
                     </div>
 

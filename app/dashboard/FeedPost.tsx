@@ -11,7 +11,7 @@ import { addComment, getComments, deletePost, updatePost, toggleCommentLike, tog
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import { clsx } from "clsx";
 import { useTheme } from "../ThemeContext";
-import { useStories } from "./stories/StoryContext";
+import { isImageUrl } from "@/lib/utils"; import { useStories } from "./stories/StoryContext";
 import PRCard from "./community/PRCard";
 import VideoReelsModal from "./VideoReelsModal";
 import dynamic from 'next/dynamic';
@@ -221,14 +221,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const menuRef = useRef<HTMLDivElement>(null);
     const commentInputRef = useRef<HTMLInputElement>(null);
 
-    // Guard: only treat image as a drawable URL if it's not JSON data
-    const isImageUrl = (src: string | undefined | null): boolean => {
-        if (!src) return false;
-        const trimmed = src.trim();
-        // JSON data starts with { or [ — not a valid image URL
-        if (trimmed.startsWith('{') || trimmed.startsWith('[')) return false;
-        return true;
-    };
+
     // Improved video detection
     const isVideo = image && (
         /\.(mp4|webm|ogg|mov)$/i.test(image) ||
@@ -427,10 +420,12 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         <div className={clsx("flex gap-3", depth > 0 && "mt-3")}>
             <div className="flex flex-col items-center">
                 <div className="w-8 h-8 rounded-full bg-gray-700 overflow-hidden shrink-0">
-                    {comment.user?.avatar_url ? (
+                    {comment.user?.avatar_url && isImageUrl(comment.user.avatar_url) ? (
                         <Image src={comment.user.avatar_url} alt={comment.user.username} width={32} height={32} className="object-cover w-full h-full" />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-400">?</div>
+                        <div className="w-full h-full flex items-center justify-center text-[10px] bg-brand-red/10 font-bold text-gray-400 capitalize whitespace-nowrap overflow-hidden">
+                            {comment.user?.username?.substring(0, 2) || "?"}
+                        </div>
                     )}
                 </div>
                 {comment.replies && comment.replies.length > 0 && (
@@ -505,7 +500,13 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                     )}
                 >
                     <div className="w-full h-full rounded-full overflow-hidden relative bg-gray-800 border-2 border-black">
-                        <Image src={avatar} alt={user} fill className="object-cover" />
+                        {avatar && isImageUrl(avatar) ? (
+                            <Image src={avatar} alt={user} fill className="object-cover" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase">
+                                {user?.substring(0, 2) || "?"}
+                            </div>
+                        )}
                     </div>
                 </div>
                 <Link href={`/dashboard/profile/${username || user.toLowerCase().replace(/\s+/g, '')}`} className="flex-1 group">
@@ -866,7 +867,15 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     </div>
                                 ) : (
                                     <div className="relative w-full h-full">
-                                        <Image src={image} alt="Post content" fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
+                                        {isImageUrl(image) && (
+                                            <Image
+                                                src={image}
+                                                alt="Post content"
+                                                fill
+                                                className="object-cover group-hover:scale-110 transition-transform duration-700"
+                                                unoptimized={image.startsWith('data:')}
+                                            />
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -1323,7 +1332,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                             label: b.type?.toUpperCase(),
                                             value: b.result?.time || `${b.result?.rounds || 0} RDS`
                                         })).slice(0, 3) || [{ label: "DISCIPLINA", value: (resolvedWorkoutData?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "COMPLETADO" }],
-                                        image: !isVideo ? image : undefined
+                                        image: (!isVideo && isImageUrl(image)) ? image : undefined
                                     }}
                                 />
                             </div>

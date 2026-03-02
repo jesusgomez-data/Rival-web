@@ -185,6 +185,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
     const isTrial = memberStatus?.status === 'trial';
     const hasAccess = isMember; // STRICT: Trial users cannot see WODs or Feed content
     const canSubscribe = memberStatus?.status !== 'active';
+    const isTrainer = org.center_type === 'personal_trainer';
 
     // ... (Handlers remain the same, ensure they use isMember or isTrial as needed)
 
@@ -598,7 +599,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
 
                                 {/* Bio */}
                                 <p className={`text-sm md:text-base leading-relaxed max-w-2xl font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
-                                    {org.bio || org.description || "Centro de entrenamiento dedicado a forjar fitness de élite. Únete a nuestra comunidad y libera tu potencial."}
+                                    {org.bio || org.description || (isTrainer ? "Entrenador dedicado a maximizar tu rendimiento." : "Centro de entrenamiento dedicado a forjar fitness de élite. Únete a nuestra comunidad y libera tu potencial.")}
                                 </p>
 
                                 <div className={`flex flex-wrap items-center gap-4 text-sm pt-2 ${textMuted}`}>
@@ -674,7 +675,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                             onClick={() => setActiveTab('schedule')}
                                             className={`h-10 md:h-12 px-4 md:px-8 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg border ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}
                                         >
-                                            Prueba Gratis
+                                            {isTrainer ? "Agendar una clase" : "Prueba Gratis"}
                                         </button>
                                     )}
                                     {isMember && (
@@ -713,18 +714,22 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                         >
                             <Grid className="w-4 h-4" /> Feed
                         </button>
-                        <button
-                            onClick={() => setActiveTab('wods')}
-                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[10px] md:text-xs font-black uppercase tracking-widest ${activeTab === 'wods' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
-                        >
-                            <Dumbbell className="w-3.5 h-3.5 md:w-4 md:h-4" /> WODs
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('store')}
-                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[9px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'store' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
-                        >
-                            <ShoppingBag className="w-3.5 h-3.5 md:w-4 md:h-4" /> Tienda
-                        </button>
+                        {!isTrainer && (
+                            <button
+                                onClick={() => setActiveTab('wods')}
+                                className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[10px] md:text-xs font-black uppercase tracking-widest ${activeTab === 'wods' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                            >
+                                <Dumbbell className="w-3.5 h-3.5 md:w-4 md:h-4" /> WODs
+                            </button>
+                        )}
+                        {!isTrainer && (
+                            <button
+                                onClick={() => setActiveTab('store')}
+                                className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[9px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'store' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                            >
+                                <ShoppingBag className="w-3.5 h-3.5 md:w-4 md:h-4" /> Tienda
+                            </button>
+                        )}
                         <button
                             onClick={() => setActiveTab('memberships')}
                             className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[9px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'memberships' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
@@ -1283,7 +1288,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                                         {bookingClassId === cls.id ? '...' :
                                                             cls.is_enrolled ? 'Inscrito ✓' :
                                                                 cls.enrolled_count >= cls.max_capacity ? 'Completo' :
-                                                                    isMember ? 'Reservar Plaza' : 'Prueba Gratis'}
+                                                                    isMember ? 'Reservar Plaza' : (isTrainer ? 'Agendar' : 'Prueba Gratis')}
                                                     </button>
 
                                                     {/* Result/Attendees Actions */}
