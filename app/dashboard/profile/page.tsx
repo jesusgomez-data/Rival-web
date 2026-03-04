@@ -20,6 +20,8 @@ import { Plus, Brain } from "lucide-react";
 import { clsx } from "clsx";
 import SkillTree from "./SkillTree";
 import HealthHub from "./HealthHub";
+import AthleteCard from "@/components/AthleteCard";
+import { getAthleteCardStats } from "../wellness-actions";
 
 export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null);
@@ -54,6 +56,7 @@ export default function ProfilePage() {
 
     // New state for upcoming trial reminder
     const [upcomingTrial, setUpcomingTrial] = useState<any>(null);
+    const [athleteStats, setAthleteStats] = useState<any>(null);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     const fileInputCoverRef = useRef<HTMLInputElement>(null);
@@ -114,6 +117,8 @@ export default function ProfilePage() {
             }
             setLoading(false);
         }
+        // Load athlete card stats (non-blocking)
+        getAthleteCardStats().then(setAthleteStats);
         loadProfile();
     }, []);
 
@@ -756,6 +761,31 @@ export default function ProfilePage() {
             <div className="pt-2 lg:pt-8 flex flex-col lg:grid lg:grid-cols-12 gap-8">
                 {/* Left side: Stats & Info */}
                 <div className="lg:col-span-4 space-y-6">
+                    {/* Athlete Card — uses real stats from DB */}
+                    {profile && (
+                        <AthleteCard
+                            profile={{
+                                full_name: athleteStats?.full_name || profile.full_name || 'Athlete',
+                                username: athleteStats?.username || profile.username || 'user',
+                                avatar_url: athleteStats?.avatar_url || profile.avatar_url,
+                                level: athleteStats?.level || profile.level,
+                                xp: athleteStats?.xp_points || profile.xp_points,
+                                sport: athleteStats?.main_sport || profile.main_sport || 'crossfit',
+                                // Real stats accumulated per workout in training/actions.ts
+                                power_stat: athleteStats?.power_stat ?? 0,
+                                endurance_stat: athleteStats?.endurance_stat ?? 0,
+                                agility_stat: athleteStats?.agility_stat ?? 0,
+                                consistency_stat: athleteStats?.consistency_stat ?? 0,
+                            }}
+                            stats={{
+                                totalWorkouts: athleteStats?.totalWorkouts ?? workouts.length,
+                                totalVolume: athleteStats?.totalVolume ?? 0,
+                                streak: athleteStats?.streak ?? 0,
+                                prCount: athleteStats?.prCount ?? 0,
+                                wins: combatStats.wins,
+                            }}
+                        />
+                    )}
                     <div className={clsx(mobileTab !== 'gallery' && "hidden lg:block")}>
                         {profile?.id && <UserMediaGallery userId={profile.id} />}
                     </div>

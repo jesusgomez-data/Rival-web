@@ -49,7 +49,6 @@ export default function Home() {
           <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
             <a href="#features" className="hover:text-brand-red transition-colors">{t.nav.features}</a>
             <a href="#stats" className="hover:text-brand-red transition-colors">{t.nav.whyRival}</a>
-            <a href="#pricing" className="hover:text-brand-red transition-colors">{t.nav.pricing}</a>
             <Link href="/for-centers" className="text-red-600 hover:text-red-400 transition-colors font-bold">{t.nav.forCenters}</Link>
           </div>
           <div className="flex items-center gap-4">
@@ -360,19 +359,69 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Sección de Precios */}
+        {/* Sección - 100% Gratis para Siempre */}
         <section id="pricing" className="py-32 border-t border-border bg-background">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center mb-12 sm:mb-16">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold mb-4 sm:mb-6 text-foreground">Precios <span className="text-brand-red">claros y simples</span></h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg px-4 sm:px-0">Empieza gratis. Mejora cuando quieras. No se requiere tarjeta de crédito.</p>
+          <div className="max-w-5xl mx-auto px-6">
+            <motion.div
+              whileInView={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, y: 30 }}
+              transition={{ duration: 0.6 }}
+              className="text-center mb-16"
+            >
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-xs font-bold mb-8 uppercase tracking-widest">
+                <Zap className="w-3 h-3 fill-brand-red" /> Sin tarjeta. Sin trucos. Sin límites.
+              </div>
+              <h2 className="text-3xl sm:text-5xl lg:text-6xl font-heading font-black mb-6 text-foreground tracking-tighter">Todo <span className="text-brand-red">100% Gratis</span></h2>
+              <p className="text-muted-foreground max-w-2xl mx-auto text-lg leading-relaxed">
+                Rival es una red social de atletas. Aquí todo el mundo compite en igualdad de condiciones.
+                No hay paywalls, no hay ventajas de pago, no hay membresías. Solo rendimiento real.
+              </p>
+            </motion.div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+              {[
+                { icon: <Users className="w-6 h-6" />, title: "Red Social Real", desc: "Feed, stories, comentarios, duelos. Conecta con atletas que te entienden, sin fricciones." },
+                { icon: <Dumbbell className="w-6 h-6" />, title: "Registro Elite", desc: "WODs, Fuerza, Running, Calistenia. Herramientas profesionales para todo tipo de atleta." },
+                { icon: <Trophy className="w-6 h-6" />, title: "Rankings Globales", desc: "Compite en los leaderboards mundiales. Tu posición depende de tu sudor, no de tu wallet." },
+                { icon: <Zap className="w-6 h-6" />, title: "Duelos 1vs1", desc: "Desafía a cualquier atleta. Sin límites de duelos activos. La batalla es plana." },
+                { icon: <BarChart3 className="w-6 h-6" />, title: "Analytics Completo", desc: "Gráficas de volumen, distribución muscular, fatiga, PRs. Todo visible desde el día 1." },
+                { icon: <Activity className="w-6 h-6" />, title: "Coach IA", desc: "Programación personalizada con inteligencia artificial. Para todos, no solo para premium." },
+              ].map((f, i) => (
+                <motion.div
+                  key={i}
+                  whileHover={{ translateY: -6 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0, y: 20 }}
+                  transition={{ duration: 0.4, delay: i * 0.1 }}
+                  className="p-6 rounded-2xl border border-border bg-card hover:border-brand-red/30 transition-all group"
+                >
+                  <div className="text-brand-red mb-4 group-hover:scale-110 transition-transform">{f.icon}</div>
+                  <h3 className="font-bold text-lg mb-2 text-foreground">{f.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
+                </motion.div>
+              ))}
             </div>
 
-            <div className="grid md:grid-cols-3 gap-6">
-              <PricingCard name="Atleta" price="Gratis" description="Perfecto para comenzar" features={["Registro ilimitado", "Acceso a comunidad", "Analíticas básicas", "Rankings"]} cta="Empieza gratis" ctaHref="/signup" />
-              <PricingCard name="Premium" price="$4.99" period="por mes" description="Oferta de Lanzamiento" features={["Todo lo de Atleta", "Coaching de Élite", "Analíticas avanzadas", "Duelos ilimitados", "Sin anuncios"]} cta="Mejorar ahora" ctaHref="/signup" featured />
-              <PricingCard name="Élite" price="$9.99" period="por mes" description="Oferta de Lanzamiento" features={["Todo lo de Premium", "Sesiones 1-a-1", "Acceso global a gimnasios", "Soporte prioritario", "Programas personalizados"]} cta="Obtener Élite" ctaHref="/signup" />
-            </div>
+            <motion.div
+              whileInView={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, scale: 0.97 }}
+              transition={{ duration: 0.5 }}
+              className="bg-gradient-to-br from-brand-red/10 via-card to-card border border-brand-red/20 rounded-3xl p-10 text-center relative overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(220,38,38,0.08)_0%,transparent_70%)]" />
+              <div className="relative z-10">
+                <div className="text-6xl mb-4">🔥</div>
+                <h3 className="text-3xl font-heading font-black text-foreground mb-3 tracking-tighter">Únete. Entrena. Domina.</h3>
+                <p className="text-muted-foreground text-lg mb-8 max-w-xl mx-auto">
+                  Más de 850K atletas ya compiten en Rival. Sin comisiones, sin membresías.
+                  El único precio que pagamos es el de entrenar duro.
+                </p>
+                <Link href="/signup" className="bg-brand-red hover:bg-brand-accent text-white px-10 py-4 rounded-full font-bold text-lg transition-all shadow-[0_0_30px_rgba(220,38,38,0.4)] transform hover:scale-105 inline-flex items-center gap-2">
+                  Crear cuenta gratis <ArrowRight className="w-5 h-5" />
+                </Link>
+                <p className="mt-4 text-xs text-muted-foreground">Sin tarjeta de crédito · Cancela cuando quieras (aunque no tendrás que hacerlo)</p>
+              </div>
+            </motion.div>
           </div>
         </section>
 
@@ -532,7 +581,6 @@ export default function Home() {
           </div>
           <div className="text-sm flex gap-6 text-muted-foreground">
             <a href="#features" className="hover:text-brand-red transition-colors">Características</a>
-            <a href="#pricing" className="hover:text-brand-red transition-colors">Precios</a>
             <Link href="/legal/terms" className="hover:text-brand-red transition-colors">Términos</Link>
             <Link href="/legal/privacy" className="hover:text-brand-red transition-colors">Privacidad</Link>
           </div>

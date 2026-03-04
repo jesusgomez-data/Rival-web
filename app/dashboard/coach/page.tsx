@@ -241,20 +241,7 @@ export default function CoachPage() {
                                         {msg.content}
                                     </div>
 
-                                    {msg.role === 'assistant' && profile?.subscription_tier === 'free' && msg.id !== '1' && (
-                                        <div className="mt-4 p-6 bg-gradient-to-br from-brand-red/20 to-black border border-brand-red/30 rounded-2xl">
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <Bot className="w-5 h-5 text-brand-red" />
-                                                <span className="font-bold text-white uppercase italic text-xs">Acceso Restringido</span>
-                                            </div>
-                                            <p className="text-xs text-gray-400 mb-4">La asesoría táctica avanzada está reservada para atletas <span className="text-brand-red font-bold">Premium</span> y <span className="text-brand-red font-bold">Élite</span>.</p>
-                                            <Link href="/dashboard/settings/billing" className="block text-center bg-brand-red py-2 rounded-lg text-white font-black text-[10px] uppercase tracking-widest hover:bg-red-600 transition-all">
-                                                Mejorar Plan
-                                            </Link>
-                                        </div>
-                                    )}
-
-                                    {msg.workout && profile?.subscription_tier !== 'free' && (
+                                    {msg.workout && (
                                         <div className="bg-black border border-brand-red/30 rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(220,38,38,0.1)] max-w-md">
                                             <div className="bg-brand-red/10 p-4 border-b border-brand-red/10 flex justify-between items-center">
                                                 <div className="flex items-center gap-2">
@@ -363,18 +350,6 @@ export default function CoachPage() {
                 </>
             ) : (
                 <div className="flex-1 overflow-y-auto p-8 space-y-10 bg-black/40 relative">
-                    {profile?.subscription_tier === 'free' && (
-                        <div className="absolute inset-0 z-10 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center p-8 text-center">
-                            <div className="w-20 h-20 rounded-3xl bg-brand-red/10 flex items-center justify-center mb-6 border border-brand-red/20">
-                                <Trophy className="w-10 h-10 text-brand-red" />
-                            </div>
-                            <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter mb-2">Desbloquea tu Potencial</h3>
-                            <p className="text-sm text-gray-400 max-w-sm mb-8">El análisis avanzado está reservado para atletas Premium.</p>
-                            <Link href="/dashboard/settings/billing" className="bg-brand-red text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] shadow-glow hover:bg-red-600 transition-all">
-                                Mejorar Plan Ahora
-                            </Link>
-                        </div>
-                    )}
                     <div className="grid md:grid-cols-2 gap-8">
                         <div className="bg-brand-gray/40 border border-white/5 p-6 rounded-3xl relative overflow-hidden group">
                             <div className="absolute top-0 right-0 p-4 text-brand-red/5 group-hover:text-brand-red/10 transition-colors">

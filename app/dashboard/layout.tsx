@@ -26,7 +26,9 @@ import {
     Shield,
     ChevronRight,
     ChevronLeft,
-    Flag
+    Flag,
+    Zap,
+    Activity
 } from "lucide-react";
 import clsx from "clsx";
 import { useRouter, usePathname } from "next/navigation";
@@ -228,6 +230,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         { name: t.navDashboard.messages, href: "/dashboard/messages", icon: MessageSquarePlus },
         { name: t.navDashboard.onlineCoach, href: "/dashboard/coach", icon: MessageCircle },
         { name: t.navDashboard.training, href: "/dashboard/training", icon: Dumbbell },
+        { name: "Nutrición", href: "/dashboard/nutrition", icon: Zap },
+        { name: "Body Stats", href: "/dashboard/body-stats", icon: Activity },
         { name: t.navDashboard.affiliateGym, href: "/dashboard/gyms", icon: Building2 },
         { name: "Entrenadores", href: "/dashboard/gyms?type=personal_trainer", icon: User },
         { name: t.navDashboard.community, href: "/dashboard/community", icon: Users },
@@ -343,14 +347,6 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 leading-none mb-1">
                                     <p className="text-xs font-bold text-foreground truncate">{profile?.full_name || 'Atleta'}</p>
-                                    {profile?.subscription_tier && profile?.subscription_tier !== 'free' && (
-                                        <span className={clsx(
-                                            "px-1.5 py-0.5 rounded text-[7px] font-black uppercase tracking-tighter shrink-0",
-                                            profile.subscription_tier === 'premium' ? "bg-brand-red text-white" : "bg-yellow-500 text-black shadow-[0_0_10px_rgba(234,179,8,0.3)]"
-                                        )}>
-                                            {profile.subscription_tier}
-                                        </span>
-                                    )}
                                 </div>
                                 <p className="text-[9px] text-gray-400 truncate font-black uppercase tracking-widest leading-none">{profile?.level ? `Soldado Lvl ${profile.level}` : 'Recluta'}</p>
                             </div>

@@ -21,6 +21,8 @@ import InfoTooltip from "@/components/InfoTooltip";
 import { getMonday } from "@/utils/date";
 import DuelCountdown from "./community/DuelCountdown";
 import VictoryShareCard from "./community/VictoryShareCard";
+import DailyCheckinWidget from "@/components/wellness/DailyCheckinWidget";
+import { getTodayCheckin } from "./wellness-actions";
 
 function SuggestedUser({ id, name, username, role, avatar, isFollowing, isOfficial }: { id: string, name: string, username: string, role: string, avatar?: string, isFollowing: boolean, isOfficial?: boolean }) {
     const { t } = useLanguage();
@@ -165,6 +167,7 @@ export default function DashboardHome() {
     const [loading, setLoading] = useState(true);
     const [showStats, setShowStats] = useState(false);
     const [showTour, setShowTour] = useState(false);
+    const [todayCheckin, setTodayCheckin] = useState<any>(undefined);
     const [selectedVictoryDuel, setSelectedVictoryDuel] = useState<any>(null);
     const [data, setData] = useState<any>({
         profile: null,
@@ -244,6 +247,8 @@ export default function DashboardHome() {
         } finally {
             setLoading(false);
         }
+        // load checkin separately (non-blocking)
+        getTodayCheckin().then(setTodayCheckin);
     }, [supabase]);
 
     useEffect(() => {
@@ -375,6 +380,25 @@ export default function DashboardHome() {
                             <>You have logged <span className="text-white font-bold">{data.workoutCount} sessions</span> and are following <span className="text-white font-bold">{data.rivalsCount} rivals</span>. {t.dashboard.statsTime}</>
                         )}
                     </p>
+                </div>
+            </div>
+
+            {/* Daily Check-in + Quick Access */}
+            <div className="grid sm:grid-cols-3 gap-4">
+                <div className="sm:col-span-2">
+                    {todayCheckin !== undefined && (
+                        <DailyCheckinWidget existingCheckin={todayCheckin} onComplete={() => getTodayCheckin().then(setTodayCheckin)} />
+                    )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-1 gap-3">
+                    <Link href="/dashboard/nutrition" className="group bg-black/40 border border-white/5 rounded-[1.5rem] p-4 hover:border-green-500/30 transition-all flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-500 group-hover:bg-green-500/20 transition-all">🥗</div>
+                        <div><p className="text-white font-black text-xs uppercase tracking-widest">Nutrición</p><p className="text-[10px] text-gray-600">Macros del día</p></div>
+                    </Link>
+                    <Link href="/dashboard/body-stats" className="group bg-black/40 border border-white/5 rounded-[1.5rem] p-4 hover:border-blue-500/30 transition-all flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/20 transition-all">⚖️</div>
+                        <div><p className="text-white font-black text-xs uppercase tracking-widest">Body Stats</p><p className="text-[10px] text-gray-600">Peso y medidas</p></div>
+                    </Link>
                 </div>
             </div>
 

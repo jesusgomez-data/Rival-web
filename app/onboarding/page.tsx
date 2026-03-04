@@ -367,7 +367,7 @@ export default function OnboardingPage() {
                                         className="w-full p-4 rounded-2xl border border-border bg-card text-foreground outline-none focus:border-brand-red focus:ring-1 focus:ring-brand-red transition-all placeholder:text-muted-foreground"
                                     />
                                     <p className="text-xs text-muted-foreground">
-                                        Te ayudará a gestionar tu membresía en el gimnasio
+                                        Te ayudará a conectar con tu box o gimnasio en la comunidad
                                     </p>
                                 </div>
                             </div>
