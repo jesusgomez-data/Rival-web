@@ -285,49 +285,82 @@ export async function getAthleteCardStats() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
 
-    // Run all queries in parallel
+    // Fetch everything we need in parallel
+    const workoutIdsRes = await supabase
+        .from('workouts')
+        .select('id')
+        .eq('user_id', user.id)
+
+    const workoutIds = workoutIdsRes.data?.map((w: any) => w.id) || []
+
     const [
         { data: profile },
         { data: workouts },
         { data: classResults },
-        { count: prCount },
+        { data: sets },
     ] = await Promise.all([
-        // Real skill stats stored on profile (updated every workout save)
         supabase
             .from('profiles')
-            .select('power_stat, endurance_stat, agility_stat, consistency_stat, xp_points, level, main_sport, full_name, username, avatar_url')
+            .select('xp_points, level, main_sport, full_name, username, avatar_url')
             .eq('id', user.id)
             .single(),
 
-        // All workouts for streak + volume + PR count
+        // Full workout data for volume, weights, sport type, dates
         supabase
             .from('workouts')
-            .select('created_at, total_volume_kg, is_pr')
+            .select('created_at, total_volume_kg, max_weight_kg, sport_type, is_pr')
             .eq('user_id', user.id)
             .order('created_at', { ascending: false }),
 
-        // Class results for streak
+        // Class sessions for streak + consistency
         supabase
             .from('class_results')
             .select('date_performed')
             .eq('user_id', user.id)
             .order('date_performed', { ascending: false }),
 
-        // Count actual PR sets
-        supabase
-            .from('workout_sets')
-            .select('id', { count: 'exact', head: true })
-            .eq('is_pr', true)
-            .in(
-                'workout_id',
-                (await supabase.from('workouts').select('id').eq('user_id', user.id)).data?.map((w: any) => w.id) || []
-            ),
+        // All sets to get max weight EVER and PR count
+        workoutIds.length > 0
+            ? supabase
+                .from('workout_sets')
+                .select('weight_kg, is_pr')
+                .in('workout_id', workoutIds)
+            : Promise.resolve({ data: [] }),
     ])
 
-    // ── Calculate streak ─────────────────────────────────────────────────────
+    const allWorkouts = workouts || []
+    const allSets = sets || []
+    const allClassResults = classResults || []
+
+    // ── Raw metrics from real data ────────────────────────────────────────────
+
+    // Total sessions = workouts + classes
+    const totalWorkouts = allWorkouts.length
+    const totalClasses = allClassResults.length
+    const totalSessions = totalWorkouts + totalClasses
+
+    // Peak weight ever lifted (across all sets)
+    const peakWeightKg = allSets.reduce((max: number, s: any) =>
+        Math.max(max, s.weight_kg || 0), 0)
+
+    // Total volume lifted (in kg, lifetime)
+    const totalVolumeKg = allWorkouts.reduce((sum: number, w: any) =>
+        sum + (w.total_volume_kg || 0), 0)
+
+    // PR count (sets marked as PR)
+    const realPRCount = allSets.filter((s: any) => s.is_pr).length
+    // Fallback: count workouts with is_pr flag
+    const prCount = realPRCount > 0 ? realPRCount : allWorkouts.filter((w: any) => w.is_pr).length
+
+    // Workout variety by sport type
+    const sportTypes = new Set(allWorkouts.map((w: any) => (w.sport_type || '').toLowerCase()).filter(Boolean))
+    const isFunctional = [...sportTypes].some(s => s.includes('cross') || s.includes('funct') || s.includes('hiit'))
+    const sportVariety = sportTypes.size
+
+    // ── Streak ───────────────────────────────────────────────────────────────
     const allDates = [
-        ...((workouts || []).map((w: any) => new Date(w.created_at).toISOString().split('T')[0])),
-        ...((classResults || []).map((c: any) => new Date(c.date_performed).toISOString().split('T')[0])),
+        ...allWorkouts.map((w: any) => new Date(w.created_at).toISOString().split('T')[0]),
+        ...allClassResults.map((c: any) => new Date(c.date_performed).toISOString().split('T')[0]),
     ]
     const uniqueDates = Array.from(new Set(allDates)).sort((a, b) => b.localeCompare(a))
     const today = new Date().toISOString().split('T')[0]
@@ -344,27 +377,35 @@ export async function getAthleteCardStats() {
         }
     }
 
-    // ── Total volume (kg lifted lifetime) ────────────────────────────────────
-    const totalVolume = (workouts || []).reduce((sum: number, w: any) => sum + (w.total_volume_kg || 0), 0)
-    const totalWorkouts = workouts?.length || 0
+    // ── Normalize to 0-99 scale ───────────────────────────────────────────────
+    // Targets represent "elite" thresholds:
+    //   Constancia: 99 sessions = max
+    //   Potencia:   200kg peak weight = max
+    //   Resistencia: 100,000kg (100 tons) total volume = max
+    //   Agilidad:   50 PRs + sport multiplier = max
 
-    // ── Real stats from profile (set by training/actions.ts on each save) ────
-    const power = profile?.power_stat || 0
-    const endurance = profile?.endurance_stat || 0
-    const agility = profile?.agility_stat || 0
-    const consistency = profile?.consistency_stat || 0
+    const normalize = (value: number, target: number) =>
+        Math.min(Math.round((value / target) * 99), 99)
+
+    const consistencyStat = normalize(totalSessions, 99)     // 15 sessions → ~15
+    const powerStat = normalize(peakWeightKg, 200)     // 100kg PR → 49, 150kg → 74
+    const enduranceStat = normalize(totalVolumeKg, 100000) // 20000kg total → 19
+    const agilityStat = Math.min(
+        normalize(prCount, 50) + (isFunctional ? 10 : 0) + Math.min(sportVariety * 3, 10),
+        99
+    ) // 37 PRs → 73 + 10 (crossfit) = 83
 
     return {
-        // Stats for bars (already scaled by training/actions.ts, up to ~990)
-        power_stat: power,
-        endurance_stat: endurance,
-        agility_stat: agility,
-        consistency_stat: consistency,
-        // Card meta
-        totalWorkouts,
-        totalVolume: Math.round(totalVolume),
+        // Stats normalized 0-99 (used directly by StatBar without /10)
+        power_stat: powerStat,
+        endurance_stat: enduranceStat,
+        agility_stat: agilityStat,
+        consistency_stat: consistencyStat,
+        // Raw for card footer
+        totalWorkouts: totalSessions,
+        totalVolume: Math.round(totalVolumeKg),
         streak,
-        prCount: prCount || (workouts || []).filter((w: any) => w.is_pr).length,
+        prCount,
         // Profile info
         xp_points: profile?.xp_points || 0,
         level: profile?.level,

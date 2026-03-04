@@ -39,15 +39,15 @@ const SPORT_COLORS: Record<string, { from: string; to: string; accent: string }>
 };
 
 function StatBar({ label, value, color }: { label: string; value: number; color: string }) {
-    const normalized = Math.min(Math.round(value / 10), 99);
+    const clamped = Math.min(Math.max(Math.round(value), 0), 99);
     return (
         <div className="flex items-center gap-2">
             <span className="text-[9px] font-black text-white/60 uppercase w-14 shrink-0">{label}</span>
             <div className="flex-1 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                <motion.div initial={{ width: 0 }} animate={{ width: `${normalized}%` }} transition={{ duration: 1.2, ease: "easeOut" }}
+                <motion.div initial={{ width: 0 }} animate={{ width: `${clamped}%` }} transition={{ duration: 1.2, ease: "easeOut" }}
                     className="h-full rounded-full" style={{ backgroundColor: color }} />
             </div>
-            <span className="text-[10px] font-black text-white w-6 text-right">{Math.min(normalized, 99)}</span>
+            <span className="text-[10px] font-black text-white w-6 text-right">{clamped}</span>
         </div>
     );
 }
