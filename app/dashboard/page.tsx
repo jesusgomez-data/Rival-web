@@ -23,6 +23,7 @@ import DuelCountdown from "./community/DuelCountdown";
 import VictoryShareCard from "./community/VictoryShareCard";
 import DailyCheckinWidget from "@/components/wellness/DailyCheckinWidget";
 import { getTodayCheckin } from "./wellness-actions";
+import WODGeneratorUI from "@/components/WODGeneratorUI";
 
 function SuggestedUser({ id, name, username, role, avatar, isFollowing, isOfficial }: { id: string, name: string, username: string, role: string, avatar?: string, isFollowing: boolean, isOfficial?: boolean }) {
     const { t } = useLanguage();
@@ -587,6 +588,8 @@ export default function DashboardHome() {
                                                 context={activeTab as 'following' | 'global'}
                                                 isAdminUser={data.profile?.is_official}
                                                 hasActiveDuel={activeDuelUserIds.has(post.user_id)}
+                                                post_type={post.post_type}
+                                                wod_data={post.wod_data}
                                             />
                                         </div>
                                     ));
@@ -764,6 +767,15 @@ export default function DashboardHome() {
                     localStorage.setItem("rival_dashboard_tour_seen", "true");
                 }} />
             )}
+
+            {/* WOD Generator AI - Botón Flotante */}
+            <WODGeneratorUI
+                onWODGenerated={(wod) => {
+                    console.log("✅ WOD generado exitosamente:", wod.title);
+                    // El usuario ahora puede revisar el WOD y decidir si publicarlo
+                    // El reload ocurre automáticamente después de publicar
+                }}
+            />
         </div>
     );
 }

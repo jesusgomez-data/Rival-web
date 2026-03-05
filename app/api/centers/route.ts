@@ -1,8 +1,24 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { rateLimiters, getClientIdentifier, setRateLimitHeaders } from '@/lib/rate-limit'
 
 export async function POST(request: NextRequest) {
   try {
+    // 🚦 RATE LIMITING: Prevenir spam de creación de centros
+    const identifier = getClientIdentifier(request);
+    const rateLimit = await rateLimiters.centersPost.limit(identifier);
+
+    if (!rateLimit.success) {
+      const headers = setRateLimitHeaders(new Headers(), rateLimit);
+      return NextResponse.json(
+        {
+          error: 'Too many requests. Please try again later.',
+          retryAfter: Math.ceil((rateLimit.reset - Date.now()) / 1000),
+        },
+        { status: 429, headers }
+      );
+    }
+
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -66,7 +82,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 4. Create Head Coach Role
+    // 4. Create Primary Center (Default location)
+    const { data: center, error: centerError } = await supabase
+      .from('centers')
+      .insert({
+        organization_id: organization.id,
+        name: centerName, // Primary center name usually matches org name initially
+        center_type: centerType,
+        country: country,
+        city: city,
+        status: 'active',
+        plan: plan || 'free',
+        email: email
+      })
+      .select()
+      .single()
+
+    if (centerError) {
+      console.error('Primary center creation error:', centerError)
+      // We don't block the whole process if this fails, but it's bad.
+      // However, usually RLS might be the cause if not handled.
+    }
+
+    // 5. Create Head Coach Role (Linked to Organization)
     const { error: roleError } = await supabase
       .from('center_roles')
       .insert({
@@ -108,6 +146,21 @@ export async function POST(request: NextRequest) {
 // GET /api/centers - List public centers
 export async function GET(request: NextRequest) {
   try {
+    // 🚦 RATE LIMITING: Proteger endpoint de consulta
+    const identifier = getClientIdentifier(request);
+    const rateLimit = await rateLimiters.centersGet.limit(identifier);
+
+    if (!rateLimit.success) {
+      const headers = setRateLimitHeaders(new Headers(), rateLimit);
+      return NextResponse.json(
+        {
+          error: 'Too many requests. Please slow down.',
+          retryAfter: Math.ceil((rateLimit.reset - Date.now()) / 1000),
+        },
+        { status: 429, headers }
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams
     const type = searchParams.get('type')
     const city = searchParams.get('city')

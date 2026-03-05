@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2 } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2 } from "lucide-react";
 import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
@@ -18,6 +18,9 @@ import dynamic from 'next/dynamic';
 import ShareableCard from "@/components/ShareableCard";
 import RunShareCard from "@/components/training/RunShareCard";
 import RouteMap from "@/components/training/RouteMap";
+import WODPostDisplay from "@/components/WODPostDisplay";
+import WODTrackerModal from "@/components/WODTrackerModal";
+import WODLeaderboardModal from "@/components/WODLeaderboardModal";
 import MentionText from "@/components/MentionText";
 import MentionInput from "@/components/MentionInput";
 import WodCard from "@/components/community/WodCard";
@@ -165,6 +168,8 @@ interface FeedPostProps {
     context?: 'following' | 'global';
     isAdminUser?: boolean;
     hasActiveDuel?: boolean;
+    post_type?: string; // Tipo de post: 'standard', 'wod', etc.
+    wod_data?: any; // Datos del WOD generado (JSON)
 }
 
 interface Comment {
@@ -182,7 +187,7 @@ interface Comment {
 }
 
 export default function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId, centerName,
-    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global', isAdminUser, hasActiveDuel
+    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global', isAdminUser, hasActiveDuel, post_type, wod_data
 }: FeedPostProps) {
     const { theme } = useTheme();
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -216,6 +221,10 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const [downloadProgress, setDownloadProgress] = useState(0);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
+
+    // Estados para modales de WOD
+    const [showWODTracker, setShowWODTracker] = useState(false);
+    const [showWODLeaderboard, setShowWODLeaderboard] = useState(false);
 
     const emojiPickerRef = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -597,9 +606,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 </div>
             </div>
 
-            {/* Caption - Only show if not a class_result (unless editing) */}
-            {((displayCaption && mediaType !== 'class_result') || isEditing) && (
-                <div className="px-4 pb-3">
+            {/* Caption or WOD Display - Only show if not a class_result (unless editing) */}
+            {((displayCaption && mediaType !== 'class_result') || isEditing || (post_type === 'wod' && wod_data)) && (
+                <div className={post_type === 'wod' && wod_data && !isEditing ? "px-4 pb-3" : "px-4 pb-3"}>
                     {isEditing ? (
                         <div className="flex gap-2">
                             <textarea
@@ -613,7 +622,11 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 <button onClick={() => { setIsEditing(false); setEditCaption(displayCaption); }} className="p-2 bg-red-500/10 text-red-500 rounded-lg" title="Cancelar"><X className="w-4 h-4" /></button>
                             </div>
                         </div>
+                    ) : post_type === 'wod' && wod_data ? (
+                        // Renderizar WOD con diseño especial
+                        <WODPostDisplay wod={wod_data} compact={false} />
                     ) : (
+                        // Renderizar caption normal
                         <MentionText
                             text={displayCaption}
                             className={clsx(
@@ -624,6 +637,53 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             mentionClassName="font-black"
                         />
                     )}
+                </div>
+            )}
+
+            {/* WOD Action Buttons - Hacer WOD y Ver Ranking */}
+            {post_type === 'wod' && wod_data && (
+                <div className="px-4 pb-4 space-y-3">
+                    {/* Badge de cuántas personas lo completaron */}
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                        <Trophy className="w-4 h-4 text-brand-red" />
+                        <span>
+                            <span className="font-bold text-white">0 atletas</span> han completado este WOD
+                        </span>
+                    </div>
+
+                    {/* Botones de acción */}
+                    <div className="flex gap-3">
+                        <button
+                            className="flex-1 bg-gradient-to-r from-brand-red to-orange-600 hover:from-brand-accent hover:to-orange-700 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-brand-red/50"
+                            onClick={() => setShowWODTracker(true)}
+                        >
+                            <Dumbbell className="w-5 h-5" />
+                            Hacer este WOD
+                        </button>
+                        <button
+                            className="px-6 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
+                            onClick={() => setShowWODLeaderboard(true)}
+                        >
+                            <Trophy className="w-5 h-5" />
+                            Ranking
+                        </button>
+                    </div>
+
+                    {/* Modales */}
+                    <WODTrackerModal
+                        wodPostId={postId}
+                        wodTitle={wod_data?.title || "WOD"}
+                        wodType="rounds"
+                        isOpen={showWODTracker}
+                        onClose={() => setShowWODTracker(false)}
+                        onSuccess={() => window.location.reload()}
+                    />
+                    <WODLeaderboardModal
+                        wodPostId={postId}
+                        wodTitle={wod_data?.title || "WOD"}
+                        isOpen={showWODLeaderboard}
+                        onClose={() => setShowWODLeaderboard(false)}
+                    />
                 </div>
             )}
 
@@ -850,8 +910,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             ) : (isImageUrl(image) || resolvedWorkoutData) ? (
                 <div className="flex flex-col gap-4">
                     {isImageUrl(image) && (
-                        <div className="px-2">
-                            <div className="relative aspect-video bg-black cursor-pointer group shadow-2xl overflow-hidden rounded-xl" onClick={() => setIsLightboxOpen(true)}>
+                        <div className={isVideo ? "" : "px-2"}>
+                            <div className={`relative bg-black cursor-pointer group shadow-2xl overflow-hidden ${isVideo ? "aspect-[9/16] max-h-[85vh]" : "aspect-video rounded-xl"}`} onClick={() => setIsLightboxOpen(true)}>
                                 {isVideo ? (
                                     <div className="relative w-full h-full">
                                         <video
@@ -863,7 +923,13 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                             muted
                                             preload="auto"
                                         />
-                                        <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors" />
+                                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20 pointer-events-none" />
+                                        {/* Play/Pause Indicator */}
+                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                            <div className="bg-black/50 backdrop-blur-sm p-4 rounded-full">
+                                                <Play className="w-8 h-8 text-white" fill="white" />
+                                            </div>
+                                        </div>
                                     </div>
                                 ) : (
                                     <div className="relative w-full h-full">

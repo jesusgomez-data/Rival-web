@@ -1,0 +1,133 @@
+{
+  "landing": {
+    "hero": {
+      "title": "DOMINA",
+      "titleHighlight": "TU MERCADO.",
+      "subtitle": "La plataforma de gestión para centros que no se conforman. Atrae leads de la red social Rival y automatiza tu éxito.",
+      "ctaPrimary": "Empezar Gratis",
+      "ctaSecondary": "Ver Funciones"
+    },
+    "stats": {
+      "centers": "Centros en EU",
+      "conversion": "Conv. Trials",
+      "members": "Miembros Activos"
+    },
+    "features": {
+      "title": "Todo lo que",
+      "titleHighlight": "necesitas",
+      "subtitle": "Herramientas diseñadas para centros deportivos que buscan la excelencia operativa.",
+      "management": {
+        "title": "Gestión Simple",
+        "description": "Crea tu perfil en 5 minutos. Gestiona clases, miembros y horarios sin complicaciones."
+      },
+      "leads": {
+        "title": "Atrae Leads",
+        "description": "Tu perfil visible en la red social. Usuarios descubren tu centro y solicitan clases prueba automáticamente."
+      },
+      "analytics": {
+        "title": "Analytics Avanzado",
+        "description": "Retención, churn prediction, ocupación de clases. Toma decisiones basadas en datos."
+      },
+      "chat": {
+        "title": "Chat Integrado",
+        "description": "Comunícate con tus coaches y miembros en una sola plataforma. Sin apps externas."
+      },
+      "payments": {
+        "title": "Pagos Seguros",
+        "description": "Stripe integrado. Tus miembros pagan directamente en la app. Liquidaciones semanales a tu cuenta."
+      },
+      "store": {
+        "title": "Tienda Incluida",
+        "description": "Vende merchandising, suplementos, clases extras. Los ingresos van directamente a tu centro."
+      }
+    },
+    "pricing": {
+      "title": "Planes de",
+      "titleHighlight": "Crecimiento",
+      "subtitle": "Sin costes ocultos. Sin complicaciones. Cancela cuando quieras.",
+      "billing": "Facturación automática los días 1 de cada mes",
+      "free": {
+        "name": "FREE",
+        "description": "Ideal para empezar",
+        "cta": "Empezar Gratis",
+        "features": [
+          "Perfil público",
+          "Hasta 10 clases/semana",
+          "Check-in manual",
+          "Hasta 50 miembros",
+          "Chat básico"
+        ]
+      },
+      "starter": {
+        "name": "STARTER",
+        "description": "Oferta de Lanzamiento: Primeros 50 centros",
+        "cta": "Prueba Gratis",
+        "features": [
+          "Todo de Free",
+          "Clases ilimitadas",
+          "Sistema de pruebas",
+          "Tienda básica",
+          "Google Calendar sync",
+          "Notificaciones push"
+        ]
+      },
+      "pro": {
+        "name": "PRO",
+        "description": "Oferta de Lanzamiento: Primeros 50 centros",
+        "cta": "Hablar con Ventas",
+        "features": [
+          "Todo de Starter",
+          "WOD Generator",
+          "Churn Prediction",
+          "Benchmarking Competitivo",
+          "Tienda avanzada",
+          "Reportes automáticos"
+        ]
+      },
+      "popular": "Más Popular"
+    },
+    "testimonials": {
+      "title": "Voces de la",
+      "titleHighlight": "Industria",
+      "quote": "Con Rival ganamos 25 miembros nuevos en el primer mes. El sistema de pruebas es increíble.",
+      "author": "Juan García",
+      "role": "Head Coach, Box Madrid Elite"
+    },
+    "footer": {
+      "title": "RIVAL CENTERS",
+      "copyright": "© {year} Rival Inc. Soluciones para Centros Deportivos."
+    }
+  },
+  "signup": {
+    "title": "Crea tu Centro",
+    "subtitle": "Únete a {count}+ centros que ya usan Rival",
+    "steps": {
+      "email": "Email Corporativo",
+      "type": "Tipo de Centro",
+      "location": "Ubicación",
+      "plan": "Plan"
+    },
+    "buttons": {
+      "next": "Siguiente",
+      "back": "Atrás",
+      "finish": "Finalizar Registro"
+    },
+    "centerTypes": {
+      "crossfit": "CrossFit Box",
+      "gym": "Gym Convencional",
+      "running": "Club de Running",
+      "yoga": "Estudio Yoga/Pilates",
+      "padel": "Pista Pádel/Tenis",
+      "dance": "Estudio de Danza",
+      "other": "Otro"
+    }
+  },
+  "common": {
+    "perMonth": "/mes",
+    "free": "Gratis",
+    "currency": "€",
+    "loading": "Cargando...",
+    "error": "Error",
+    "success": "Éxito"
+  }
+}

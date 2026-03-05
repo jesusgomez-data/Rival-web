@@ -1,6 +1,6 @@
 'use client';
 
-import WodCard from "./community/WodCard";
+import WodCard from "@/components/community/WodCard";
 import React, { useRef, useState, useEffect } from 'react';
 import { toBlob } from 'html-to-image';
 import { Trophy, Flame, Dumbbell, Instagram, Download, Share2, MapPin, Zap, Wind, TrendingUp, Heart, X } from 'lucide-react';

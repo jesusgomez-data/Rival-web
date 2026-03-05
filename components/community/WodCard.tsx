@@ -18,6 +18,8 @@ import { cn, isImageUrl } from "@/lib/utils";
 import { getWodResults } from "@/app/dashboard/community/actions";
 import Link from "next/link";
 import Image from "next/image";
+import WODLeaderboardModal from "@/components/WODLeaderboardModal";
+import WODTrackerModal from "@/components/WODTrackerModal";
 
 interface WodData {
     title: string;
@@ -30,6 +32,7 @@ interface WodCardProps {
     data: WodData;
     userName: string;
     publishDate?: string;
+    postId?: string;
 }
 
 const FORMAT_CONFIG: Partial<Record<WodFormat, { label: string, color: string, icon: any }>> = {
@@ -45,29 +48,10 @@ const FORMAT_CONFIG: Partial<Record<WodFormat, { label: string, color: string, i
 
 const DEFAULT_CONFIG = { label: 'WOD', color: 'text-green-500', icon: Target };
 
-export default function WodCard({ data, userName, publishDate }: WodCardProps) {
+export default function WodCard({ data, userName, publishDate, postId }: WodCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
-    const [showRanking, setShowRanking] = useState(false);
-    const [results, setResults] = useState<any[]>([]);
-    const [isLoadingResults, setIsLoadingResults] = useState(false);
-
-    useEffect(() => {
-        if (showRanking) {
-            handleFetchResults();
-        }
-    }, [showRanking]);
-
-    const handleFetchResults = async () => {
-        setIsLoadingResults(true);
-        try {
-            const dataResults = await getWodResults(data.title);
-            setResults(dataResults);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setIsLoadingResults(false);
-        }
-    };
+    const [showWODLeaderboard, setShowWODLeaderboard] = useState(false);
+    const [showWODTracker, setShowWODTracker] = useState(false);
 
     if (!data.blocks || data.blocks.length === 0) return null;
 
@@ -224,16 +208,26 @@ export default function WodCard({ data, userName, publishDate }: WodCardProps) {
                             <div className="flex flex-col gap-2">
                                 <button
                                     onClick={() => {
-                                        window.dispatchEvent(new CustomEvent('repost-wod', { detail: data }));
+                                        if (postId) {
+                                            setShowWODTracker(true);
+                                        } else {
+                                            window.dispatchEvent(new CustomEvent('repost-wod', { detail: data }));
+                                        }
                                     }}
-                                    className="bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl px-6 py-4 flex items-center gap-2 transition-all active:scale-95 group/repost"
+                                    className="bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl px-6 py-4 flex items-center justify-center gap-2 transition-all active:scale-95 group/repost"
                                 >
-                                    <Repeat className="w-4 h-4 text-brand-red group-hover/repost:rotate-180 transition-transform duration-500" />
-                                    <span className="text-[8px] font-black text-gray-300 uppercase tracking-widest whitespace-nowrap">REPOSTEAR WOD</span>
+                                    {postId ? <Dumbbell className="w-4 h-4 text-brand-red transition-transform duration-500" /> : <Repeat className="w-4 h-4 text-brand-red group-hover/repost:rotate-180 transition-transform duration-500" />}
+                                    <span className="text-[8px] font-black text-gray-300 uppercase tracking-widest whitespace-nowrap">{postId ? "HACER ESTE WOD" : "REPOSTEAR WOD"}</span>
                                 </button>
 
                                 <button
-                                    onClick={() => setShowRanking(true)}
+                                    onClick={() => {
+                                        if (postId) {
+                                            setShowWODLeaderboard(true);
+                                        } else {
+                                            alert("La funcionalidad de ranking requiere un ID de publicación válido.");
+                                        }
+                                    }}
                                     className="bg-brand-red/10 hover:bg-brand-red/20 border border-brand-red/20 rounded-2xl px-6 py-3 flex items-center justify-center gap-2 transition-all active:scale-95 group/ranking"
                                 >
                                     <Trophy className="w-3.5 h-3.5 text-brand-red animate-bounce" />
@@ -255,94 +249,25 @@ export default function WodCard({ data, userName, publishDate }: WodCardProps) {
                 </button>
             )}
 
-            {/* Ranking Modal */}
-            <AnimatePresence>
-                {showRanking && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setShowRanking(false)}
-                            className="absolute inset-0 bg-black/80 backdrop-blur-md"
-                        />
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="w-full max-w-lg bg-[#0A0A0A] border border-white/10 rounded-[32px] overflow-hidden shadow-2xl relative z-10"
-                        >
-                            {/* Modal Header */}
-                            <div className="p-6 bg-gradient-to-br from-brand-red/20 to-transparent border-b border-white/5 flex items-center justify-between">
-                                <div>
-                                    <p className="text-[8px] text-brand-red font-black uppercase tracking-[0.3em] mb-1">TABLA DE RESULTADOS</p>
-                                    <h3 className="text-xl font-heading font-black italic uppercase tracking-tighter text-white truncate max-w-[250px]">
-                                        {data.title}
-                                    </h3>
-                                </div>
-                                <button
-                                    onClick={() => setShowRanking(false)}
-                                    className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-gray-400 hover:text-white transition-colors"
-                                >
-                                    <ChevronDown className="w-5 h-5 rotate-180" />
-                                </button>
-                            </div>
-
-                            {/* Modal Content */}
-                            <div className="p-4 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                                {isLoadingResults ? (
-                                    <div className="py-20 flex flex-col items-center justify-center gap-4">
-                                        <div className="w-8 h-8 border-2 border-brand-red border-t-transparent rounded-full animate-spin" />
-                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Calculando posiciones...</p>
-                                    </div>
-                                ) : results.length > 0 ? (
-                                    <div className="space-y-2">
-                                        {results.map((res, index) => (
-                                            <div key={res.id} className="flex items-center gap-4 bg-white/[0.03] border border-white/5 p-3 rounded-2xl hover:bg-white/[0.05] transition-all group">
-                                                <div className="w-6 text-center font-heading font-black italic text-brand-red text-lg">
-                                                    #{index + 1}
-                                                </div>
-                                                <Link href={`/dashboard/profile/${res.username}`} className="flex items-center gap-3 flex-1 min-w-0">
-                                                    <div className="w-10 h-10 rounded-full border border-white/10 bg-black overflow-hidden relative group-hover:border-brand-red/50 transition-colors">
-                                                        {res.avatarUrl && isImageUrl(res.avatarUrl) ? (
-                                                            <Image src={res.avatarUrl} alt={res.username} fill className="object-cover" />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center text-[10px] bg-gray-800 font-black text-gray-500 italic">
-                                                                {res.username?.substring(0, 2).toUpperCase()}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="min-w-0">
-                                                        <h4 className="text-xs font-black text-white uppercase tracking-tight truncate">{res.fullName || res.username}</h4>
-                                                        <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">@{res.username}</p>
-                                                    </div>
-                                                </Link>
-                                                <div className="text-right">
-                                                    <p className="text-sm font-heading font-black italic text-brand-red leading-none">{res.score}</p>
-                                                    <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">{res.time}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div className="py-20 text-center space-y-3">
-                                        <Trophy className="w-12 h-12 text-gray-800 mx-auto" />
-                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">No hay resultados publicados para este WOD todavía.</p>
-                                        <p className="text-[8px] text-brand-red font-black uppercase tracking-[0.2em]">¡SÉ EL PRIMERO EN REPOSTEAR!</p>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Modal Footer */}
-                            <div className="p-4 bg-white/5 border-t border-white/5">
-                                <p className="text-[8px] text-gray-600 text-center font-bold uppercase tracking-widest px-10">
-                                    Los resultados se basan en los reposts públicos realizados en la comunidad.
-                                </p>
-                            </div>
-                        </motion.div>
-                    </div>
-                )}
-            </AnimatePresence>
+            {/* Modals for Tracking and Leaderboard */}
+            {postId && (
+                <>
+                    <WODTrackerModal
+                        wodPostId={postId}
+                        wodTitle={data.title || "WOD"}
+                        wodType={data.summary?.scoreType?.toUpperCase() === 'TIME' ? 'time' : 'rounds'}
+                        isOpen={showWODTracker}
+                        onClose={() => setShowWODTracker(false)}
+                        onSuccess={() => window.location.reload()}
+                    />
+                    <WODLeaderboardModal
+                        wodPostId={postId}
+                        wodTitle={data.title || "WOD"}
+                        isOpen={showWODLeaderboard}
+                        onClose={() => setShowWODLeaderboard(false)}
+                    />
+                </>
+            )}
         </div>
     );
 }

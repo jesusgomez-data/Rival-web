@@ -1,0 +1,133 @@
+{
+  "landing": {
+    "hero": {
+      "title": "DOMINATE",
+      "titleHighlight": "YOUR MARKET.",
+      "subtitle": "The management platform for fitness centers that don't settle. Attract leads from the Rival social network and automate your success.",
+      "ctaPrimary": "Start Free",
+      "ctaSecondary": "View Features"
+    },
+    "stats": {
+      "centers": "Centers in EU",
+      "conversion": "Trial Conv.",
+      "members": "Active Members"
+    },
+    "features": {
+      "title": "Everything you",
+      "titleHighlight": "need",
+      "subtitle": "Tools designed for sports centers seeking operational excellence.",
+      "management": {
+        "title": "Simple Management",
+        "description": "Create your profile in 5 minutes. Manage classes, members, and schedules without complications."
+      },
+      "leads": {
+        "title": "Attract Leads",
+        "description": "Your profile visible on the social network. Users discover your center and automatically request trial classes."
+      },
+      "analytics": {
+        "title": "Advanced Analytics",
+        "description": "Retention, churn prediction, class occupancy. Make data-driven decisions."
+      },
+      "chat": {
+        "title": "Integrated Chat",
+        "description": "Communicate with your coaches and members on one platform. No external apps."
+      },
+      "payments": {
+        "title": "Secure Payments",
+        "description": "Stripe integrated. Your members pay directly in the app. Weekly payouts to your account."
+      },
+      "store": {
+        "title": "Store Included",
+        "description": "Sell merchandise, supplements, extra classes. Revenue goes directly to your center."
+      }
+    },
+    "pricing": {
+      "title": "Growth",
+      "titleHighlight": "Plans",
+      "subtitle": "No hidden costs. No complications. Cancel anytime.",
+      "billing": "Automatic billing on the 1st of each month",
+      "free": {
+        "name": "FREE",
+        "description": "Perfect to start",
+        "cta": "Start Free",
+        "features": [
+          "Public profile",
+          "Up to 10 classes/week",
+          "Manual check-in",
+          "Up to 50 members",
+          "Basic chat"
+        ]
+      },
+      "starter": {
+        "name": "STARTER",
+        "description": "Launch Offer: First 50 centers",
+        "cta": "Try Free",
+        "features": [
+          "Everything in Free",
+          "Unlimited classes",
+          "Trial system",
+          "Basic store",
+          "Google Calendar sync",
+          "Push notifications"
+        ]
+      },
+      "pro": {
+        "name": "PRO",
+        "description": "Launch Offer: First 50 centers",
+        "cta": "Talk to Sales",
+        "features": [
+          "Everything in Starter",
+          "WOD Generator",
+          "Churn Prediction",
+          "Competitive Benchmarking",
+          "Advanced store",
+          "Automated reports"
+        ]
+      },
+      "popular": "Most Popular"
+    },
+    "testimonials": {
+      "title": "Industry",
+      "titleHighlight": "Voices",
+      "quote": "With Rival we gained 25 new members in the first month. The trial system is incredible.",
+      "author": "Juan García",
+      "role": "Head Coach, Box Madrid Elite"
+    },
+    "footer": {
+      "title": "RIVAL CENTERS",
+      "copyright": "© {year} Rival Inc. Solutions for Sports Centers."
+    }
+  },
+  "signup": {
+    "title": "Create Your Center",
+    "subtitle": "Join {count}+ centers already using Rival",
+    "steps": {
+      "email": "Business Email",
+      "type": "Center Type",
+      "location": "Location",
+      "plan": "Plan"
+    },
+    "buttons": {
+      "next": "Next",
+      "back": "Back",
+      "finish": "Complete Registration"
+    },
+    "centerTypes": {
+      "crossfit": "CrossFit Box",
+      "gym": "Traditional Gym",
+      "running": "Running Club",
+      "yoga": "Yoga/Pilates Studio",
+      "padel": "Padel/Tennis Court",
+      "dance": "Dance Studio",
+      "other": "Other"
+    }
+  },
+  "common": {
+    "perMonth": "/month",
+    "free": "Free",
+    "currency": "$",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  }
+}

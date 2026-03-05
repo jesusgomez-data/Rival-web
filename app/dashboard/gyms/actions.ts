@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { isUserAdmin } from "@/utils/admin";
 
@@ -54,15 +55,17 @@ export async function getUserOrganizations() {
         user_role: org.owner_id === user.id ? 'owner' : (org.user_role || 'member')
     }));
 
-    // 3. Fetch Real Member Counts from 'members' table
+    // 3. Fetch Real Member Counts
+    // members.center_id FK points to organizations.id in this schema
     const orgIds = orgsWithRoles.map(o => o.id);
     if (orgIds.length > 0) {
-        const { data: counts, error: countError } = await supabase
+        const { data: counts } = await supabase
             .from('members')
             .select('center_id')
-            .in('center_id', orgIds);
+            .in('center_id', orgIds)
+            .eq('status', 'active');
 
-        if (!countError && counts) {
+        if (counts) {
             const countMap = counts.reduce((acc: any, curr: any) => {
                 acc[curr.center_id] = (acc[curr.center_id] || 0) + 1;
                 return acc;
@@ -556,15 +559,25 @@ export async function getNearbyOrganizations(lat: number, lng: number) {
 
 export async function deleteCenter(orgId: string, centerId: string) {
     const supabase = await createClient();
+    const admin = createAdminClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: "No autenticado" };
 
-    // Delete the center
-    const { error } = await supabase
-        .from('centers')
-        .delete()
-        .eq('id', centerId)
-        .eq('organization_id', orgId);
+    // Verify ownership
+    const { data: org } = await admin.from('organizations').select('owner_id').eq('id', orgId).single();
+    if (!org || org.owner_id !== user.id) return { error: "Sin permisos para eliminar esta sede" };
+
+    // Clean up child records first (FK constraints)
+    const { data: centerClasses } = await admin.from('classes').select('id').eq('center_id', centerId);
+    if (centerClasses?.length) {
+        await admin.from('class_enrollments').delete().in('class_id', centerClasses.map(c => c.id));
+    }
+    await admin.from('classes').delete().eq('center_id', centerId);
+    await admin.from('members').delete().eq('center_id', centerId);
+    await admin.from('center_products').delete().eq('center_id', centerId);
+
+    // Delete the center itself
+    const { error } = await admin.from('centers').delete().eq('id', centerId).eq('organization_id', orgId);
 
     if (error) return { error: error.message };
 
@@ -572,17 +585,33 @@ export async function deleteCenter(orgId: string, centerId: string) {
     return { success: true };
 }
 
-export async function deleteOrganization(centerId: string) {
+export async function deleteOrganization(orgId: string) {
     const supabase = await createClient();
+    const admin = createAdminClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: "No autenticado" };
 
-    // RLS handles permission (must be owner)
-    const { error } = await supabase
-        .from('organizations')
-        .delete()
-        .eq('id', centerId);
+    // Verify ownership
+    const { data: org } = await admin.from('organizations').select('owner_id').eq('id', orgId).single();
+    if (!org || org.owner_id !== user.id) return { error: "Sin permisos" };
 
+    // Cascade delete all child data
+    const { data: centers } = await admin.from('centers').select('id').eq('organization_id', orgId);
+    for (const center of centers || []) {
+        const { data: classes } = await admin.from('classes').select('id').eq('center_id', center.id);
+        if (classes?.length) {
+            await admin.from('class_enrollments').delete().in('class_id', classes.map(c => c.id));
+        }
+        await admin.from('classes').delete().eq('center_id', center.id);
+        await admin.from('members').delete().eq('center_id', center.id);
+        await admin.from('center_products').delete().eq('center_id', center.id);
+    }
+    await admin.from('centers').delete().eq('organization_id', orgId);
+    await admin.from('center_roles').delete().eq('organization_id', orgId);
+    await admin.from('trial_requests').delete().eq('organization_id', orgId);
+    await admin.from('memberships').delete().eq('organization_id', orgId);
+
+    const { error } = await admin.from('organizations').delete().eq('id', orgId);
     if (error) return { error: error.message };
 
     revalidatePath('/dashboard/gyms');

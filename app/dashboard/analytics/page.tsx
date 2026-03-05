@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
+import AthleteCard from "@/components/AthleteCard";
 
 interface PR {
     created_at: string;
@@ -104,27 +105,43 @@ export default function AnalyticsPage() {
     return (
         <div className="space-y-10 pb-20">
             {/* Header section */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-                <div>
+            <div className="flex flex-col md:flex-row md:items-start justify-between gap-10">
+                <div className="flex-1">
                     <h1 className="text-4xl font-heading font-black text-white glow-text mb-2 tracking-tighter uppercase italic">Radar de Rendimiento</h1>
-                    <p className="text-gray-500 max-w-md">Datos biográficos y de fuerza detallados, extraídos de tus misiones recientes.</p>
-                </div>
-                <div className="flex gap-4">
-                    <div className="bg-brand-gray border border-white/5 p-4 rounded-2xl">
-                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Estado Semanal</p>
-                        <div className="flex items-center gap-2">
-                            <Zap className={clsx("w-4 h-4", (weeklyStats?.fatigue || 0) > 80 ? "text-brand-red" : "text-green-500")} />
-                            <span className="text-xl font-heading font-black text-white">{weeklyStats ? 100 - weeklyStats.fatigue : 0}%</span>
+                    <p className="text-gray-500 max-w-md mb-8">Datos biográficos y de fuerza detallados, extraídos de tus misiones recientes.</p>
+
+                    <div className="flex gap-4">
+                        <div className="bg-brand-gray border border-white/5 p-4 rounded-2xl flex-1 md:flex-none">
+                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Estado Semanal</p>
+                            <div className="flex items-center gap-2">
+                                <Zap className={clsx("w-4 h-4", (weeklyStats?.fatigue || 0) > 80 ? "text-brand-red" : "text-green-500")} />
+                                <span className="text-xl font-heading font-black text-white">{weeklyStats ? 100 - weeklyStats.fatigue : 0}%</span>
+                            </div>
+                        </div>
+                        <div className="bg-brand-gray border border-white/5 p-4 rounded-2xl flex-1 md:flex-none">
+                            <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Consistencia</p>
+                            <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-brand-red" />
+                                <span className="text-xl font-heading font-black text-white">{stats?.weeklyFreq[3] || 0}x <span className="text-[10px] text-gray-500">Sem</span></span>
+                            </div>
                         </div>
                     </div>
-                    <div className="bg-brand-gray border border-white/5 p-4 rounded-2xl">
-                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Consistencia</p>
-                        <div className="flex items-center gap-2">
-                            <Calendar className="w-4 h-4 text-brand-red" />
-                            <span className="text-xl font-heading font-black text-white">{stats?.weeklyFreq[3] || 0}x <span className="text-[10px] text-gray-500">Sem</span></span>
-                        </div>
-                    </div>
                 </div>
+
+                {profile && (
+                    <div className="shrink-0 flex justify-center">
+                        <AthleteCard
+                            profile={profile}
+                            stats={{
+                                totalWorkouts: stats?.weeklyFreq.reduce((a, b) => a + b, 0) || 0,
+                                totalVolume: Math.round(Object.values(stats?.muscleGroups || {}).reduce((a, b) => a + (b as number), 0)),
+                                streak: stats?.streak || 0,
+                                prCount: stats?.prHistory.length || 0,
+                                percentile: stats?.percentile || 0
+                            }}
+                        />
+                    </div>
+                )}
             </div>
 
             {/* Quick Stats Grid */}

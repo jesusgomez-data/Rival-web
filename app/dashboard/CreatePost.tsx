@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Image as ImageIcon, Loader2, X, Smile } from "lucide-react";
-import { createUserPost, createPRPost, updatePost } from "./community/actions";
+import { createUserPost, createPRPost, updatePost, createWodPost } from "./community/actions";
 import MentionInput from "@/components/MentionInput";
 import { createClient } from "@/utils/supabase/client";
 import { Trophy, Activity, AlertCircle, Dumbbell } from "lucide-react";
@@ -132,10 +132,10 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                     res = await updatePost(editingPostId, finalCaption, JSON.stringify(finalWodData), scheduledFor);
                 } else {
                     formData.append("content", finalCaption);
-                    formData.append("media_url", JSON.stringify(finalWodData));
+                    formData.append("wod_data", JSON.stringify(finalWodData));
                     formData.append("media_type", "wod");
                     if (scheduledFor) formData.append("scheduled_for", scheduledFor);
-                    res = await createUserPost(formData);
+                    res = await createWodPost(formData);
                 }
             } else {
                 formData.append("content", content);

@@ -21,6 +21,8 @@ export async function getCenterMembers(id: string, isCenterId: boolean = false) 
     if (!user) return [];
 
     // 1. Fetch Members & Requests
+    // Note: members.center_id FK points to organizations table in this schema.
+    // So when isCenterId=false, the orgId IS the center_id to query by.
     let memberQuery = admin.from('members').select('*');
     let requestQuery = admin.from('trial_requests').select('*').eq('status', 'pending');
 
@@ -28,16 +30,15 @@ export async function getCenterMembers(id: string, isCenterId: boolean = false) 
         memberQuery = memberQuery.eq('center_id', id);
         requestQuery = requestQuery.eq('center_id', id);
     } else {
-        // Fallback: assume the ID is the primary center_id for now as most centers are single-location
-        // If we had org_id on members table we would use it, but it seems we don't.
         memberQuery = memberQuery.eq('center_id', id);
-        requestQuery = requestQuery.eq('center_id', id);
+        requestQuery = requestQuery.eq('organization_id', id);
     }
 
     const [{ data: rawMembers }, { data: rawRequests }] = await Promise.all([
         memberQuery.order('created_at', { ascending: false }),
         requestQuery
     ]);
+
 
     // 2. Collect User IDs
     const userIds = new Set<string>();

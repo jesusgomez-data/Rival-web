@@ -185,6 +185,7 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                             <WodCard
                                 data={wodData}
                                 userName={post.post_as_center && post.organization ? post.organization.name : (post.author?.full_name || "Coach")}
+                                postId={post.id}
                             />
                             <div className="pt-4">
                                 <Link

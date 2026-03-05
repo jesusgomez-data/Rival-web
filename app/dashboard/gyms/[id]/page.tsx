@@ -289,7 +289,7 @@ export default function CenterDashboardHome() {
                 )}>
                     <StatCard
                         title="Miembros Activos"
-                        value={loading ? '-' : currentMonth.members}
+                        value={loading ? '-' : (metrics?.totalActive ?? currentMonth.members)}
                         subtext={`${memberGrowth}% vs mes anterior`}
                         trend={Number(memberGrowth) >= 0 ? 'up' : 'down'}
                         icon={Users}

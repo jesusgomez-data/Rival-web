@@ -53,6 +53,33 @@ const POST_TEMPLATES = [
         accent: '#DC2626',
         bg: 'bg-black',
         image: '/marketing/management_bg.png'
+    },
+    {
+        id: 'athlete_card',
+        title: 'Athlete Card',
+        headline: '¿CUÁL ES TU RATING?',
+        subheadline: 'ATHLETE CARD — RIVAL FIT',
+        description: 'Tu progreso hecho tarjeta. Descárgala. Compártela. Domina.',
+        accent: '#EF4444',
+        bg: 'bg-black'
+    },
+    {
+        id: 'nutrition',
+        title: 'Nutrition Tracker',
+        headline: 'COME. BIEN. RINDE. MÁS.',
+        subheadline: 'MACRO TRACKER GRATIS',
+        description: 'Controla proteínas, carbos y grasas en segundos. Todo en la misma app.',
+        accent: '#22C55E',
+        bg: 'bg-[#030d06]'
+    },
+    {
+        id: 'recovery',
+        title: 'Recovery Score',
+        headline: '¿LISTO PARA ENTRENAR?',
+        subheadline: 'DAILY CHECK-IN',
+        description: 'Tu cuerpo habla. Escúchalo. Score de recuperación diario basado en sueño, energía y dolor muscular.',
+        accent: '#8B5CF6',
+        bg: 'bg-[#05030d]'
     }
 ];
 
@@ -242,6 +269,111 @@ export default function MarketingStudio() {
                                         <p className="text-gray-400 text-xs font-bold uppercase tracking-widest text-balance">
                                             {currentPost.description}
                                         </p>
+                                    </div>
+                                </div>
+                            ) : currentPost.id === 'athlete_card' ? (
+                                <div className="relative z-20 w-full px-6 space-y-5">
+                                    {/* Mock Athlete Card */}
+                                    <div className="mx-auto w-48 bg-gradient-to-b from-[#7f1d1d] to-[#1a0505] rounded-3xl p-4 border border-red-900/50 shadow-[0_0_40px_rgba(220,38,38,0.3)] transform -rotate-1">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div>
+                                                <div className="text-4xl font-black text-yellow-400 leading-none">78</div>
+                                                <div className="text-[8px] font-black text-yellow-600 tracking-widest">GOLD</div>
+                                            </div>
+                                            <div className="text-[8px] text-white/50 font-black uppercase tracking-wider">CROSSFIT</div>
+                                        </div>
+                                        <div className="w-14 h-14 rounded-full bg-red-900/50 border-2 border-red-500 mx-auto mb-2 flex items-center justify-center text-2xl">🏋️</div>
+                                        <div className="text-center mb-3">
+                                            <p className="text-white font-black text-[10px] uppercase">TU NOMBRE</p>
+                                            <p className="text-white/40 text-[7px]">@rivalfit</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            {[['POTENCIA', '74'], ['RESISTENCIA', '61'], ['AGILIDAD', '83'], ['CONSTANCIA', '58']].map(([l, v]) => (
+                                                <div key={l} className="flex items-center gap-1">
+                                                    <span className="text-[6px] text-white/50 w-12">{l}</span>
+                                                    <div className="flex-1 h-1 bg-white/10 rounded-full"><div className="h-full bg-red-500 rounded-full" style={{ width: `${v}%` }} /></div>
+                                                    <span className="text-[7px] text-white font-black">{v}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex justify-between mt-3 pt-2 border-t border-white/10">
+                                            {[['24', 'WKT'], ['3', 'RACHA'], ['37', 'PRs']].map(([v, l]) => (
+                                                <div key={l} className="text-center"><p className="text-white font-black text-[10px]">{v}</p><p className="text-white/30 text-[6px] font-black">{l}</p></div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="text-center space-y-2">
+                                        <h3 className="text-3xl font-black italic uppercase leading-none tracking-tighter text-white">
+                                            TU CARD. <span style={{ color: currentPost.accent }}>TU LEGADO.</span>
+                                        </h3>
+                                        <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">{currentPost.description}</p>
+                                    </div>
+                                </div>
+                            ) : currentPost.id === 'nutrition' ? (
+                                <div className="relative z-20 w-full px-6 space-y-5">
+                                    {/* Mock Nutrition UI */}
+                                    <div className="bg-black/60 border border-green-900/40 rounded-3xl p-5 shadow-[0_0_30px_rgba(34,197,94,0.1)]">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <div>
+                                                <p className="text-[8px] font-black text-green-500 uppercase tracking-widest">Hoy · Martes</p>
+                                                <p className="text-xl font-black text-white">1.840 <span className="text-sm text-gray-500">/ 2.200 kcal</span></p>
+                                            </div>
+                                            <div className="w-12 h-12 rounded-full border-4 border-green-500/60 flex items-center justify-center">
+                                                <span className="text-xs font-black text-green-400">84%</span>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 mb-4">
+                                            {[['🥩', 'Prot', '164g', '175g', '#EF4444'], ['🌾', 'Carbs', '210g', '240g', '#F59E0B'], ['🥑', 'Grasa', '58g', '70g', '#3B82F6']].map(([e, n, a, t, c]) => (
+                                                <div key={n} className="bg-white/5 rounded-xl p-2 text-center">
+                                                    <div className="text-lg mb-1">{e}</div>
+                                                    <p className="text-[7px] text-gray-500 font-black uppercase">{n}</p>
+                                                    <p className="text-[10px] font-black text-white">{a}</p>
+                                                    <p className="text-[7px] text-gray-600">{t}</p>
+                                                    <div className="h-1 bg-white/10 rounded-full mt-1"><div className="h-full rounded-full" style={{ width: `${Math.round(parseInt(a) / parseInt(t) * 100)}%`, backgroundColor: c }} /></div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-[8px] text-gray-600 font-black uppercase tracking-widest">💧 Agua: 1.8 / 2.5 L</p>
+                                            <div className="flex gap-1">{[...Array(7)].map((_, i) => (<div key={i} className={`w-4 h-4 rounded-full ${i < 5 ? 'bg-blue-500' : 'bg-white/10'}`} />))}</div>
+                                        </div>
+                                    </div>
+                                    <div className="text-center space-y-1">
+                                        <h3 className="text-3xl font-black italic uppercase leading-none tracking-tighter text-white">
+                                            COME PARA <span style={{ color: currentPost.accent }}>GANAR.</span>
+                                        </h3>
+                                        <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">{currentPost.description}</p>
+                                    </div>
+                                </div>
+                            ) : currentPost.id === 'recovery' ? (
+                                <div className="relative z-20 w-full px-6 space-y-5">
+                                    {/* Mock Recovery Score UI */}
+                                    <div className="bg-black/60 border border-purple-900/40 rounded-3xl p-5 shadow-[0_0_30px_rgba(139,92,246,0.15)]">
+                                        <p className="text-[8px] font-black text-purple-400 uppercase tracking-widest mb-3">Daily Check-in · Hoy</p>
+                                        {/* Score ring */}
+                                        <div className="flex items-center gap-5 mb-4">
+                                            <div className="w-20 h-20 rounded-full border-4 border-purple-500 flex flex-col items-center justify-center shrink-0" style={{ boxShadow: '0 0 20px rgba(139,92,246,0.4)' }}>
+                                                <span className="text-2xl font-black text-white">82</span>
+                                                <span className="text-[7px] text-purple-400 font-black uppercase">Score</span>
+                                            </div>
+                                            <div className="space-y-1.5 flex-1">
+                                                {[['⚡ Energía', '8/10'], ['😴 Sueño', '7.5h'], ['💪 Dolor', 'Bajo'], ['🧠 Motivación', 'Alta']].map(([l, v]) => (
+                                                    <div key={l} className="flex justify-between">
+                                                        <span className="text-[8px] text-gray-500">{l}</span>
+                                                        <span className="text-[8px] font-black text-white">{v}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div className="bg-purple-500/10 border border-purple-500/20 rounded-xl p-3 text-center">
+                                            <p className="text-[9px] font-black text-purple-300 uppercase tracking-widest">✅ Listo para entrenar fuerte</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-center space-y-1">
+                                        <h3 className="text-3xl font-black italic uppercase leading-none tracking-tighter text-white">
+                                            ENTRENA <span style={{ color: currentPost.accent }}>INTELIGENTE.</span>
+                                        </h3>
+                                        <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest">{currentPost.description}</p>
                                     </div>
                                 </div>
                             ) : (

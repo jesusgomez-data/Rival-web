@@ -255,3 +255,13 @@ body {
 nextjs-portal {
   display: none !important;
 }
+
+/* Ocultar scrollbar para VideoFeed estilo Instagram/TikTok */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
