@@ -67,6 +67,7 @@ export interface GeneratedWOD {
   caloriesBurn: number; // estimación
   blocks: WODBlock[];
   tips: string[];
+  source?: string; // Para diagnóstico
   scalingOptions?: {
     beginner?: string;
     intermediate?: string;
@@ -165,11 +166,8 @@ export class WODGenerator {
         const text = data.choices?.[0]?.message?.content;
         console.log("⚡ Groq Response Raw:", text);
 
-        if (!text) {
-          throw new Error("Groq returned empty response");
-        }
-
-        return JSON.parse(text);
+        const wod = JSON.parse(text);
+        return { ...wod, source: "groq" };
       } catch (error) {
         console.error("❌ Groq failed, falling back to Gemini/Manual", error);
       }
@@ -188,8 +186,8 @@ export class WODGenerator {
         let text = response.text();
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) text = jsonMatch[0];
-        
-        return JSON.parse(text);
+        const wod = JSON.parse(text);
+        return { ...wod, source: "gemini" };
       } catch (error) {
         console.error("❌ Gemini failed too", error);
       }
@@ -235,7 +233,8 @@ Responde SOLO el JSON.
     const selected = shuffled.slice(0, 4);
 
     return {
-      title: "WOD " + request.workoutType.toUpperCase() + " (Fallback)",
+      source: "fallback",
+      title: "WOD " + request.workoutType.toUpperCase() + " (" + (Math.floor(Math.random() * 999)) + ")",
       subtitle: isAmrap ? `AMRAP ${request.duration} min` : "5 Rounds For Time",
       difficulty: request.fitnessLevel,
       estimatedDuration: request.duration,
