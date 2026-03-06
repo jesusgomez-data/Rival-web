@@ -157,7 +157,18 @@ export class WODGenerator {
         });
 
         const data = await response.json();
-        const text = data.choices[0].message.content;
+        
+        if (data.error) {
+          throw new Error(`Groq API Error: ${data.error.message || JSON.stringify(data.error)}`);
+        }
+
+        const text = data.choices?.[0]?.message?.content;
+        console.log("⚡ Groq Response Raw:", text);
+
+        if (!text) {
+          throw new Error("Groq returned empty response");
+        }
+
         return JSON.parse(text);
       } catch (error) {
         console.error("❌ Groq failed, falling back to Gemini/Manual", error);

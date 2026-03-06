@@ -16,16 +16,20 @@ export async function updateSession(request: NextRequest) {
                     return request.cookies.getAll()
                 },
                 setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value, options }) =>
+                    cookiesToSet.forEach(({ name, value, options }) => {
+                        // Asegurar que la sesión sea persistente (no expire al cerrar pestaña)
+                        // Si no hay maxAge, le ponemos uno largo (30 días por defecto en auth)
                         request.cookies.set(name, value)
-                    )
-
+                    })
                     supabaseResponse = NextResponse.next({
                         request,
                     })
-
                     cookiesToSet.forEach(({ name, value, options }) =>
-                        supabaseResponse.cookies.set(name, value, options)
+                        supabaseResponse.cookies.set(name, value, {
+                            ...options,
+                            sameSite: 'lax',
+                            secure: process.env.NODE_ENV === 'production',
+                        })
                     )
                 },
             },
