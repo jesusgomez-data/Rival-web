@@ -29,6 +29,8 @@ interface DailyStat {
     max_weight_kg: number;
     effort_rpe: number;
     created_at: string;
+    session_type?: 'gym' | 'class_result' | 'wod_completion';
+    title?: string;
 }
 
 interface WeeklyStats {
@@ -84,14 +86,16 @@ export default function AnalyticsPage() {
         const map = new Map<string, DailyStat>();
 
         weeklyStats.daily.forEach(stat => {
-            const date = new Date(stat.created_at).toLocaleDateString();
+            if (!stat.created_at) return;
+            // Use ISO Date part (YYYY-MM-DD) for robust grouping
+            const date = new Date(stat.created_at).toISOString().split('T')[0];
             const existing = map.get(date);
 
             if (!existing) {
                 map.set(date, stat);
             } else {
                 // Keep the session with the highest max weight for that day
-                if (stat.max_weight_kg > existing.max_weight_kg) {
+                if ((stat.max_weight_kg || 0) > (existing.max_weight_kg || 0)) {
                     map.set(date, stat);
                 }
             }
@@ -190,7 +194,7 @@ export default function AnalyticsPage() {
                             Protocolo de Fuerza
                         </h3>
 
-                        {aggregatedStats.length > 0 && Math.max(...(aggregatedStats.map(x => x.max_weight_kg) || [0])) > 0 ? (
+                        {aggregatedStats.length > 0 ? (
                             <div className="flex items-end gap-4 h-64 px-4">
                                 {aggregatedStats.map((s, i) => {
                                     const maxInChart = Math.max(...(aggregatedStats.map(x => x.max_weight_kg) || [1]), 1);
@@ -199,19 +203,28 @@ export default function AnalyticsPage() {
                                     return (
                                         <div key={i} className="flex-1 flex flex-col items-center gap-4 group/bar relative h-full justify-end">
                                             {/* Tooltip */}
-                                            <div className="absolute -top-12 bg-white text-black text-[10px] font-black px-3 py-1.5 rounded-lg opacity-0 group-hover/bar:opacity-100 transition-all transform translate-y-2 group-hover/bar:translate-y-0 whitespace-nowrap z-20 shadow-xl">
-                                                {s.max_weight_kg} KG MÁX
-                                                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45" />
-                                            </div>
+                                             <div className="absolute -top-12 bg-white text-black text-[10px] font-black px-3 py-1.5 rounded-lg opacity-0 group-hover/bar:opacity-100 transition-all transform translate-y-2 group-hover/bar:translate-y-0 whitespace-nowrap z-20 shadow-xl border border-black/10">
+                                                 <div className="flex flex-col gap-0.5">
+                                                     <span className="text-brand-red uppercase text-[8px] tracking-widest">{s.session_type === 'wod_completion' ? 'WOD' : 'GYM'}</span>
+                                                     <span className="uppercase">{s.title || 'SESIÓN'}</span>
+                                                     <span className="text-gray-500">{s.max_weight_kg > 0 ? `${Math.round(s.max_weight_kg)} KG` : 'COMPLETADO'}</span>
+                                                 </div>
+                                                 <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rotate-45" />
+                                             </div>
 
-                                            <div
-                                                className="w-full bg-gradient-to-t from-brand-red/20 to-brand-red border-x border-t border-brand-red/40 rounded-t-2xl transition-all duration-700 ease-out group-hover/bar:shadow-[0_0_30px_rgba(220,38,38,0.4)] group-hover/bar:from-brand-red/40 group-hover/bar:to-brand-red relative"
-                                                style={{ height: `${Math.max(heightPercent, 2)}%` }}
-                                            >
-                                                {heightPercent > 0 && (
-                                                    <div className="absolute top-0 left-0 right-0 h-1 bg-white/40 rounded-t-2xl" />
-                                                )}
-                                            </div>
+                                             <div
+                                                 className={clsx(
+                                                     "w-full border-x border-t transition-all duration-700 ease-out group-hover/bar:shadow-[0_0_30px_rgba(220,38,38,0.4)] relative rounded-t-2xl",
+                                                     s.session_type === 'wod_completion'
+                                                         ? "bg-gradient-to-t from-blue-500/20 to-blue-500 border-blue-500/40 group-hover/bar:from-blue-500/40 group-hover/bar:to-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.2)]"
+                                                         : "bg-gradient-to-t from-brand-red/20 to-brand-red border-brand-red/40 group-hover/bar:from-brand-red/40 group-hover/bar:to-brand-red"
+                                                 )}
+                                                 style={{ height: `${Math.max(heightPercent, 2)}%` }}
+                                             >
+                                                 {heightPercent > 0 && (
+                                                     <div className="absolute top-0 left-0 right-0 h-1 bg-white/40 rounded-t-2xl" />
+                                                 )}
+                                             </div>
 
                                             <div className="text-[9px] text-gray-500 font-black uppercase tracking-[0.2em] group-hover/bar:text-white transition-colors">
                                                 {new Date(s.created_at).toLocaleDateString('es-ES', { weekday: 'short' })}

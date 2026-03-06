@@ -845,20 +845,88 @@ export async function getPerformanceStats() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { daily: [], fatigue: 0 }
 
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    thirtyDaysAgo.setHours(0, 0, 0, 0)
 
-    const { data: stats } = await supabase
+    // 1. Fetch Independent Workouts
+    const { data: workouts } = await supabase
         .from('workouts')
         .select('created_at, total_volume_kg, max_weight_kg, effort_rpe')
         .eq('user_id', user.id)
-        .gte('created_at', sevenDaysAgo.toISOString())
+        .gte('created_at', thirtyDaysAgo.toISOString())
         .order('created_at', { ascending: true })
 
-    const statsData = stats || []
+    // 2. Fetch Class Results (WODs)
+    const { data: classResults } = await supabase
+        .from('class_results')
+        .select('date_performed, data')
+        .eq('user_id', user.id)
+        .gte('date_performed', thirtyDaysAgo.toISOString())
+        .order('date_performed', { ascending: true })
+
+    // 3. Fetch WOD Completions (New System) - Simplified query to avoid join issues
+    const { data: wodCompletions } = await supabase
+        .from('wod_completions')
+        .select('completed_at, weight_kg, completion_type, score, effort_rpe, original_wod_post_id')
+        .eq('user_id', user.id)
+        .gte('completed_at', thirtyDaysAgo.toISOString())
+        .order('completed_at', { ascending: true })
+
+    // 4. Map and Unify stats
+    const statsData: any[] = [
+        ...(workouts || []).map(w => ({
+            created_at: w.created_at,
+            total_volume_kg: Number(w.total_volume_kg) || 0,
+            max_weight_kg: Math.max(Number(w.max_weight_kg) || 0, 5), // Min 5 for visibility
+            effort_rpe: Number(w.effort_rpe) || 0,
+            session_type: 'gym',
+            title: 'Entrenamiento'
+        }))
+    ];
+
+    classResults?.forEach(c => {
+        let maxW = 0;
+        if (c.data && Array.isArray(c.data)) {
+            c.data.forEach((block: any) => {
+                if (block.type === 'weight' && block.exercises) {
+                    block.exercises.forEach((ex: any) => {
+                        const val = parseFloat(ex.value) || 0;
+                        if (val > maxW) maxW = val;
+                    });
+                }
+            });
+        }
+        statsData.push({
+            created_at: c.date_performed,
+            total_volume_kg: 0,
+            max_weight_kg: Math.max(maxW, 10), // WODs usually have some weight or intensity
+            effort_rpe: 8,
+            session_type: 'class_result',
+            title: 'WOD Centro'
+        });
+    });
+
+    wodCompletions?.forEach(wc => {
+        const weight = Number(wc.weight_kg) || 0;
+        // Non-weight WODs get a simulated weight based on score or default
+        const visualWeight = weight > 0 ? weight : (wc.completion_type === 'score' ? (Number(wc.score) / 5) : 15);
+        
+        statsData.push({
+            created_at: wc.completed_at,
+            total_volume_kg: 0,
+            max_weight_kg: visualWeight,
+            effort_rpe: wc.effort_rpe || 9,
+            session_type: 'wod_completion',
+            title: 'WOD Completado'
+        });
+    });
+
+    // 5. Sort aggregated data
+    statsData.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
 
     // Calculate Fatigue Score (Simplified Heuristic)
-    let fatigueScore = 15 // base reduced from 20
+    let fatigueScore = 15 
     const now = new Date()
     const fortyEightHoursAgo = new Date(now.getTime() - (48 * 60 * 60 * 1000))
 
@@ -867,11 +935,10 @@ export async function getPerformanceStats() {
         ? recentSessions.reduce((acc: number, s: any) => acc + (s.effort_rpe || 0), 0) / recentSessions.length
         : 0
 
-    fatigueScore += statsData.length * 5 // reduced from 8 to allow higher frequency
-    if (avgRpe > 7.5) fatigueScore += 20 // adjusted threshold
-    if (statsData.length > 7) fatigueScore += 15 // adjusted threshold
+    fatigueScore += statsData.length * 5 
+    if (avgRpe > 7.5) fatigueScore += 20 
+    if (statsData.length > 7) fatigueScore += 15 
 
-    // Efficiency/Consistency Bonus: doing workouts can represent fitness
     const consistencyBonus = Math.min(statsData.length * 2, 20);
     fatigueScore = Math.max(fatigueScore - consistencyBonus, 10);
 
@@ -931,39 +998,71 @@ export async function getDetailedAnalytics() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
 
-    // 1. Muscle Group Distribution
-    const { data: muscleStats } = await supabase
-        .from('workout_sets')
-        .select(`
-            exercise_name,
-            weight_kg,
-            reps,
-            workouts!inner(user_id)
-        `)
-        .eq('workouts.user_id', user.id)
-
-    // We need to fetch catalog to map exercise -> muscle_group
-    const { data: catalog } = await supabase.from('exercises_catalog').select('name, muscle_group')
-
-    const muscleGroups: Record<string, number> = {}
-    muscleStats?.forEach(set => {
-        const exercise = catalog?.find(c => c.name === set.exercise_name)
-        const group = exercise?.muscle_group || 'Other'
-        const volume = (set.weight_kg || 0) * (set.reps || 0)
-        muscleGroups[group] = (muscleGroups[group] || 0) + volume
-    })
-
-    // 2. PR History (Last 28 days)
+    // 0. Base dates
     const fourWeeksAgo = new Date()
     fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28)
 
+    // 1. Muscle Group Distribution (Fetch both independent sets and class results)
+    const { data: muscleStats } = await supabase
+        .from('workout_sets')
+        .select(`exercise_name, weight_kg, reps, workouts!inner(user_id)`)
+        .eq('workouts.user_id', user.id)
+
+    const { data: classResults } = await supabase
+        .from('class_results')
+        .select(`data, date_performed`)
+        .eq('user_id', user.id)
+
+    const { data: wodCompletions } = await supabase
+        .from('wod_completions')
+        .select(`weight_kg, completion_type, score, completed_at, notes`)
+        .eq('user_id', user.id)
+
+    const { data: catalog } = await supabase.from('exercises_catalog').select('name, muscle_group')
+
+    const muscleGroups: Record<string, number> = {}
+    
+    // Process independent sets
+    muscleStats?.forEach(set => {
+        const exercise = catalog?.find(c => c.name === set.exercise_name)
+        const group = exercise?.muscle_group || 'Other'
+        const volume = (Number(set.weight_kg) || 0) * (Number(set.reps) || 0)
+        muscleGroups[group] = (muscleGroups[group] || 0) + volume
+    })
+
+    // Process class results for volume
+    classResults?.forEach(c => {
+        if (c.data && Array.isArray(c.data)) {
+            c.data.forEach((block: any) => {
+                if (block.type === 'weight' && block.exercises) {
+                    block.exercises.forEach((ex: any) => {
+                        const weight = parseFloat(ex.value) || 0;
+                        const reps = parseInt(ex.reps) || 1;
+                        const catalogEx = catalog?.find(cat => cat.name.toLowerCase() === ex.name?.toLowerCase());
+                        const group = catalogEx?.muscle_group || 'Other';
+                        muscleGroups[group] = (muscleGroups[group] || 0) + (weight * reps);
+                    });
+                } else if (block.wod_weight) {
+                    const weight = parseFloat(block.wod_weight) || 0;
+                    const group = 'Other'; 
+                    muscleGroups[group] = (muscleGroups[group] || 0) + weight;
+                }
+            });
+        }
+    })
+
+    // Process wod completions for volume
+    wodCompletions?.forEach(wc => {
+        const weight = Number(wc.weight_kg) || 0;
+        if (weight > 0) {
+            muscleGroups['Other'] = (muscleGroups['Other'] || 0) + weight;
+        }
+    });
+
+    // 2. PR History (Unified - Last 28 days)
     const { data: rawPrHistory } = await supabase
         .from('workout_sets')
-        .select(`
-            exercise_name,
-            weight_kg,
-            workouts!inner(user_id, created_at)
-        `)
+        .select(`exercise_name, weight_kg, workouts!inner(user_id, created_at)`)
         .eq('workouts.user_id', user.id)
         .eq('is_pr', true)
         .gte('workouts.created_at', fourWeeksAgo.toISOString())
@@ -975,88 +1074,87 @@ export async function getDetailedAnalytics() {
         created_at: pr.workouts.created_at
     })) || []
 
-    // 3. Weekly Frequency (Last 4 weeks - Unified)
+    // Add potential class records
+    classResults?.filter(c => new Date(c.date_performed) >= fourWeeksAgo).forEach(c => {
+        if (c.data && Array.isArray(c.data)) {
+            c.data.forEach((block: any) => {
+                if (block.type === 'weight' && block.exercises) {
+                    block.exercises.forEach((ex: any) => {
+                        const val = parseFloat(ex.value) || 0;
+                        if (val > 0) {
+                            prHistory.push({
+                                exercise_name: ex.name || 'Ejercicio',
+                                weight_kg: val,
+                                created_at: c.date_performed
+                            });
+                        }
+                    });
+                } else if (block.wod_weight) {
+                    const val = parseFloat(block.wod_weight) || 0;
+                    if (val > 0) {
+                        prHistory.push({
+                            exercise_name: 'WOD Weight',
+                            weight_kg: val,
+                            created_at: c.date_performed
+                        });
+                    }
+                }
+            });
+        }
+    });
 
-    // Independent Workouts
+    // Add potential WOD system records
+    wodCompletions?.filter(wc => new Date(wc.completed_at) >= fourWeeksAgo).forEach(wc => {
+        const weight = Number(wc.weight_kg) || 0;
+        if (weight > 0) {
+            prHistory.push({
+                exercise_name: 'WOD PR',
+                weight_kg: weight,
+                created_at: wc.completed_at
+            });
+        }
+    });
+
+    // 3. Weekly Frequency (Unified)
     const { data: independentFreq } = await supabase
         .from('workouts')
         .select('created_at')
         .eq('user_id', user.id)
         .gte('created_at', fourWeeksAgo.toISOString())
 
-    // Class Results
-    const { data: classFreq } = await supabase
-        .from('class_results')
-        .select('date_performed')
-        .eq('user_id', user.id)
-        .gte('date_performed', fourWeeksAgo.toISOString())
-
     const weeklyFreq = [0, 0, 0, 0] // [W-3, W-2, W-1, CurrentW]
     const now = new Date()
 
-    // Process Independent
     independentFreq?.forEach(w => {
         const date = new Date(w.created_at)
         const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 3600 * 24))
         const weekIndex = 3 - Math.floor(diffDays / 7)
-        if (weekIndex >= 0 && weekIndex < 4) {
-            weeklyFreq[weekIndex]++
-        }
+        if (weekIndex >= 0 && weekIndex < 4) weeklyFreq[weekIndex]++
     })
 
-    // Process Classes
-    classFreq?.forEach(c => {
+    classResults?.filter(c => new Date(c.date_performed) >= fourWeeksAgo).forEach(c => {
         const date = new Date(c.date_performed)
         const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 3600 * 24))
         const weekIndex = 3 - Math.floor(diffDays / 7)
-        if (weekIndex >= 0 && weekIndex < 4) {
-            weeklyFreq[weekIndex]++
-        }
+        if (weekIndex >= 0 && weekIndex < 4) weeklyFreq[weekIndex]++
     })
 
-    // 4. Current Streak Calculation (Unified)
-    const { data: wDates } = await supabase.from('workouts').select('created_at').eq('user_id', user.id);
-    const { data: cDates } = await supabase.from('class_results').select('date_performed').eq('user_id', user.id);
+    wodCompletions?.filter(wc => new Date(wc.completed_at) >= fourWeeksAgo).forEach(wc => {
+        const date = new Date(wc.completed_at)
+        const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 3600 * 24))
+        const weekIndex = 3 - Math.floor(diffDays / 7)
+        if (weekIndex >= 0 && weekIndex < 4) weeklyFreq[weekIndex]++
+    })
 
-    const allDates = [
-        ...(wDates || []).map(w => w.created_at),
-        ...(cDates || []).map(c => c.date_performed)
-    ];
-
-    let streak = 0;
-    if (allDates.length > 0) {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const uniqueDates = Array.from(new Set(allDates.map(d => {
-            const date = new Date(d);
-            date.setHours(0, 0, 0, 0);
-            return date.getTime();
-        }))).sort((a, b) => b - a);
-
-        let lastDate = new Date(uniqueDates[0]);
-        const diffFromToday = (today.getTime() - lastDate.getTime()) / (1000 * 3600 * 24);
-
-        if (diffFromToday <= 1) { // If latest workout was today or yesterday
-            streak = 1;
-            for (let i = 1; i < uniqueDates.length; i++) {
-                const currentDate = new Date(uniqueDates[i]);
-                const diff = (new Date(uniqueDates[i - 1]).getTime() - currentDate.getTime()) / (1000 * 3600 * 24);
-                if (diff === 1) {
-                    streak++;
-                } else {
-                    break;
-                }
-            }
-        }
-    }
+    // 4. Current Streak Calculation (Unified - reused logic or call helper)
+    const streak = await calculateWorkoutStreak(supabase, user.id);
 
     return {
         muscleGroups,
-        prHistory: prHistory || [],
+        prHistory: prHistory.sort((a,b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10),
         weeklyFreq,
         streak,
-        percentile: 85 // Mocked for now, could be calculated based on global leaderboard
+        percentile: 85
     }
 }
 

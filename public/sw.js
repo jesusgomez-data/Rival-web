@@ -33,8 +33,8 @@ self.addEventListener('notificationclick', function (event) {
             const urlToOpen = event.notification.data.url;
 
             // Check if there is already a window open
-            for (var i = 0; i < windowClients.length; i++) {
-                var client = windowClients[i];
+            for (let i = 0; i < windowClients.length; i++) {
+                let client = windowClients[i];
                 // If so, focus it and navigate
                 if ('focus' in client) {
                     return client.navigate(urlToOpen).then(c => c.focus());
@@ -48,7 +48,31 @@ self.addEventListener('notificationclick', function (event) {
     );
 });
 
+const CACHE_NAME = 'rivalfit-static-v1';
+const STATIC_ASSETS = ['/', '/favicon.ico', '/manifest.json', '/logo.svg'];
+
 self.addEventListener('fetch', (event) => {
-    // Pass-through strategy - do not cache anything yet to avoid issues
-    // But strictly required for PWA installability criteria
+    const { request } = event;
+    const url = new URL(request.url);
+
+    // Only cache same-origin GET requests for static assets
+    if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+
+    // Network-first for API routes
+    if (url.pathname.startsWith('/api/')) return;
+
+    // Stale-while-revalidate for static assets
+    if (STATIC_ASSETS.includes(url.pathname) || url.pathname.match(/\.(svg|png|jpg|ico|webp|avif|woff2?)$/)) {
+        event.respondWith(
+            caches.open(CACHE_NAME).then(cache =>
+                cache.match(request).then(cached => {
+                    const networkFetch = fetch(request).then(response => {
+                        if (response.ok) cache.put(request, response.clone());
+                        return response;
+                    });
+                    return cached || networkFetch;
+                })
+            )
+        );
+    }
 });

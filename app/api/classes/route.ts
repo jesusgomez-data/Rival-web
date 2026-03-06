@@ -32,6 +32,23 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
 
+    if (!body.centerId) {
+      return NextResponse.json({ error: 'centerId is required' }, { status: 400 })
+    }
+
+    // Verify user has a management role in the center
+    const { data: membership } = await supabase
+      .from('org_members')
+      .select('role')
+      .eq('organization_id', body.centerId)
+      .eq('user_id', user.id)
+      .in('role', ['owner', 'coach', 'admin'])
+      .single()
+
+    if (!membership) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     const { data: newClass, error } = await supabase
       .from('classes')
       .insert({
@@ -49,7 +66,7 @@ export async function POST(request: NextRequest) {
       .select()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 400 })
+      return NextResponse.json({ error: 'Failed to create class' }, { status: 400 })
     }
 
     return NextResponse.json(newClass[0], { status: 201 })

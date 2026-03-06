@@ -1,17 +1,19 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/utils/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
-
-// GET /api/centers/[centerId] - Get specific center
+// GET /api/centers/[centerId] - Get specific center (requires authentication)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ centerId: string }> }
 ) {
   try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { centerId } = await params
 
     const { data, error } = await supabase
@@ -20,11 +22,9 @@ export async function GET(
         `
         id,
         name,
-        email,
         center_type,
         city,
         country,
-        address,
         bio,
         logo_url,
         cover_photo_url,
@@ -32,7 +32,6 @@ export async function GET(
         plan,
         member_count,
         followers_count,
-        monthly_revenue,
         created_at,
         updated_at
       `

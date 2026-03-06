@@ -3,7 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
-import { isUserAdmin } from "@/utils/admin";
+import { isUserAdmin, ADMIN_EMAILS } from "@/utils/admin";
 import { createNotification } from "../notifications-actions";
 
 export async function createSupportTicket(subject: string, message: string, category: string = 'technical') {
@@ -39,12 +39,11 @@ export async function createSupportTicket(subject: string, message: string, cate
     if (messageError) return { error: "Ticket creado pero falló el mensaje inicial: " + messageError.message };
 
     // Notify Admins
-    const adminEmails = ['rival.app.official@gmail.com', 'jesusgomez.s@hotmail.com'];
     const adminSupabase = createAdminClient();
     const { data: adminUsers } = await adminSupabase
         .from('profiles')
         .select('id, email')
-        .in('email', adminEmails);
+        .in('email', ADMIN_EMAILS);
 
     if (adminUsers && adminUsers.length > 0) {
         console.log(`[SUPPORT] Notifying ${adminUsers.length} admins`);
@@ -61,7 +60,7 @@ export async function createSupportTicket(subject: string, message: string, cate
             }
         }
     } else {
-        console.warn("[SUPPORT] No admin users found for emails:", adminEmails);
+        console.warn("[SUPPORT] No admin users found for emails:", ADMIN_EMAILS);
     }
 
     revalidatePath('/dashboard/admin');

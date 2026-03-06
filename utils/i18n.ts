@@ -240,7 +240,7 @@ export const translations = {
             welcome: 'Welcome,',
             warrior: 'Warrior',
             statsSessions: 'sessions',
-            statsRivals: 'rivales',
+            statsRivals: 'rivals',
             statsTime: 'It\'s time to dominate.',
             liveStatus: 'LIVE STATUS',
             myGyms: 'Your Gyms',

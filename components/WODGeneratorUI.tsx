@@ -6,6 +6,7 @@
  */
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Dumbbell,
@@ -25,6 +26,7 @@ interface WODGeneratorUIProps {
 }
 
 export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
@@ -153,14 +155,14 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
         throw new Error(data.error || "Error publicando WOD");
       }
 
-      // Cerrar modal y recargar feed
+      // Cerrar modal y refrescar feed
       setIsOpen(false);
       setGeneratedWOD(null);
       setShowResults(false);
       setCreatorTimeMin("");
       setCreatorTimeSec("");
       setCreatorRounds("");
-      window.location.reload(); 
+      router.refresh();
     } catch (error: any) {
       alert(error.message);
     } finally {

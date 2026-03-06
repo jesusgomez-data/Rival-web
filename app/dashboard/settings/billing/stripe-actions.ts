@@ -1,6 +1,6 @@
 'use server'
 
-import { stripe } from "@/utils/stripe/config";
+import { stripe, STRIPE_PRICES } from "@/utils/stripe/config";
 import { createClient } from "@/utils/supabase/server";
 import { redirect } from "next/navigation";
 
@@ -173,12 +173,8 @@ export async function verifyStripeSubscription() {
         const priceId = sub.items.data[0].price.id;
 
         let tier = 'free';
-        // Updated Price IDs to match .env.local
-        const premiumPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || 'price_1SzepeCuIXDNtJ7AFKkDXv4H';
-        const elitePrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE || 'price_1SzeqjCuIXDNtJ7ApOSdRJre';
-
-        if (priceId === premiumPrice) tier = 'premium';
-        if (priceId === elitePrice) tier = 'elite';
+        if (priceId === STRIPE_PRICES.athlete.premium) tier = 'premium';
+        if (priceId === STRIPE_PRICES.athlete.elite) tier = 'elite';
 
         // Update DB
         const { error } = await supabase

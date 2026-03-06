@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { stripe } from "@/utils/stripe/config";
+import { stripe, STRIPE_PRICES } from "@/utils/stripe/config";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { createNotification } from "@/app/dashboard/notifications-actions";
 import { sendWelcomeEmail } from "@/app/dashboard/gyms/email-actions";
@@ -136,12 +136,9 @@ export async function POST(req: Request) {
                     console.log(`Membership payment completed for user ${userId}, center ${centerId}`);
                 } else if (organizationId) {
                     // CENTER UPGRADE
-                    const starterPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 'price_1SzerFCuIXDNtJ7A4vqazU9O';
-                    const proPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 'price_1SzernCuIXDNtJ7AWHGJMqLi';
-
                     let planName = 'free';
-                    if (priceId === starterPrice) planName = 'starter';
-                    if (priceId === proPrice) planName = 'pro';
+                    if (priceId === STRIPE_PRICES.center.starter) planName = 'starter';
+                    if (priceId === STRIPE_PRICES.center.pro) planName = 'pro';
 
                     const { error } = await supabase
                         .from("organizations")
@@ -152,13 +149,9 @@ export async function POST(req: Request) {
                     else console.log(`Organization ${organizationId} upgraded to ${planName}`);
                 } else {
                     // ATHLETE UPGRADE
-                    // Add fallbacks to match stripe-actions.ts
-                    const premiumPrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_PREMIUM || 'price_1SzepeCuIXDNtJ7AFKkDXv4H';
-                    const elitePrice = process.env.NEXT_PUBLIC_STRIPE_PRICE_ELITE || 'price_1SzeqjCuIXDNtJ7ApOSdRJre';
-
                     let tier = 'free';
-                    if (priceId === premiumPrice) tier = 'premium';
-                    if (priceId === elitePrice) tier = 'elite';
+                    if (priceId === STRIPE_PRICES.athlete.premium) tier = 'premium';
+                    if (priceId === STRIPE_PRICES.athlete.elite) tier = 'elite';
 
                     const { error } = await supabase
                         .from("profiles")
@@ -174,8 +167,6 @@ export async function POST(req: Request) {
 
         case "customer.subscription.deleted": {
             const subscription = event.data.object as Stripe.Subscription;
-            // Handle cancellation -> Downgrade to 'free'
-            // We need to find the user by Stripe Customer ID
             const { data: profile } = await supabase
                 .from("profiles")
                 .select("id")
@@ -188,6 +179,42 @@ export async function POST(req: Request) {
                     .update({ subscription_tier: "free" })
                     .eq("id", profile.id);
                 console.log(`User ${profile.id} downgraded due to cancellation`);
+            }
+            break;
+        }
+
+        case "customer.subscription.updated": {
+            const subscription = event.data.object as Stripe.Subscription;
+            const priceId = subscription.items.data[0]?.price?.id;
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("id")
+                .eq("stripe_customer_id", subscription.customer)
+                .single();
+
+            if (profile && priceId) {
+                let tier = 'free';
+                if (priceId === STRIPE_PRICES.athlete.premium) tier = 'premium';
+                if (priceId === STRIPE_PRICES.athlete.elite) tier = 'elite';
+                await supabase
+                    .from("profiles")
+                    .update({ subscription_tier: tier })
+                    .eq("id", profile.id);
+                console.log(`User ${profile.id} subscription updated to ${tier}`);
+            }
+            break;
+        }
+
+        case "invoice.payment_failed": {
+            const invoice = event.data.object as Stripe.Invoice;
+            const { data: profile } = await supabase
+                .from("profiles")
+                .select("id")
+                .eq("stripe_customer_id", invoice.customer)
+                .single();
+
+            if (profile) {
+                console.warn(`Payment failed for user ${profile.id}, invoice ${invoice.id}`);
             }
             break;
         }

@@ -3,7 +3,6 @@ import { createClient } from "@/utils/supabase/server";
 export const ADMIN_EMAILS = [
     'rival.app.official@gmail.com',
     'jesusgomez.s@hotmail.com',
-    'rubenblcs@gmail.com',
 ];
 
 export async function isUserAdmin() {

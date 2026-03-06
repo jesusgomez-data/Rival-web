@@ -6,6 +6,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createAdminClient } from '@supabase/supabase-js';
+import { ADMIN_EMAILS } from '@/utils/admin';
+import { rateLimiters, getClientIdentifier, setRateLimitHeaders } from '@/lib/rate-limit';
 
 const supabaseAdmin = createAdminClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -294,7 +296,18 @@ REGLAS:
 
 export async function POST(request: NextRequest) {
   try {
-    // 1. Verificar autenticación admin
+    // 1. Rate limiting (20 llamadas/hora por IP)
+    const identifier = getClientIdentifier(request);
+    const rateLimit = await rateLimiters.aiAgent.limit(identifier);
+    if (!rateLimit.success) {
+      const headers = setRateLimitHeaders(new Headers(), rateLimit);
+      return NextResponse.json(
+        { error: 'Demasiadas solicitudes. Inténtalo más tarde.' },
+        { status: 429, headers }
+      );
+    }
+
+    // 2. Verificar autenticación admin
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();
 
@@ -302,8 +315,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
     }
 
-    const adminEmails = ['rival.app.official@gmail.com', 'jesusgomez.s@hotmail.com', 'rubenblcs@gmail.com'];
-    if (!adminEmails.includes(user.email?.toLowerCase().trim() || '')) {
+    if (!ADMIN_EMAILS.includes(user.email?.toLowerCase().trim() || '')) {
       return NextResponse.json({ error: 'Acceso denegado' }, { status: 403 });
     }
 

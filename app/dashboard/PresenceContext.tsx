@@ -62,10 +62,14 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
             }
         }
 
-        const cleanupPromise = setupPresence()
+        let cleanup: (() => void) | undefined;
+
+        setupPresence().then(fn => {
+            cleanup = fn;
+        });
 
         return () => {
-            cleanupPromise.then(cleanup => cleanup && cleanup())
+            cleanup?.();
         }
     }, [])
 

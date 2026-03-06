@@ -55,6 +55,12 @@ export const RATE_LIMITS = {
     requests: 5,
     window: '5 m',
   },
+
+  // AI Agent chat (Gemini — costoso)
+  'api-ai-agent': {
+    requests: 20,
+    window: '1 h',
+  },
 } as const;
 
 // ============================================
@@ -172,6 +178,7 @@ export const rateLimiters = {
   trialRequests: createRateLimiter('api-trial-requests'),
   products: createRateLimiter('api-products'),
   checkout: createRateLimiter('api-checkout'),
+  aiAgent: createRateLimiter('api-ai-agent'),
 };
 
 // ============================================

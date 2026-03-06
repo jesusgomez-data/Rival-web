@@ -23,16 +23,18 @@ export default function DashboardError({
                 </h2>
                 <div className="bg-black/50 rounded-xl p-4 mb-6 font-mono text-sm overflow-auto max-h-96">
                     <p className="text-red-400 font-bold text-base mb-2">
-                        {error.message || "Error desconocido"}
+                        {process.env.NODE_ENV === 'production'
+                            ? "Ha ocurrido un error inesperado."
+                            : error.message || "Error desconocido"}
                     </p>
-                    {error.stack && (
+                    {process.env.NODE_ENV !== 'production' && error.stack && (
                         <pre className="text-gray-400 text-xs whitespace-pre-wrap">
                             {error.stack}
                         </pre>
                     )}
                     {error.digest && (
                         <p className="text-gray-500 text-xs mt-4">
-                            Digest: {error.digest}
+                            Ref: {error.digest}
                         </p>
                     )}
                 </div>

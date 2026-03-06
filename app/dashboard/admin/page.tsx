@@ -124,7 +124,7 @@ export default function AdminDashboard() {
                 const supabase = createClient();
                 const { data: { user } } = await supabase.auth.getUser();
 
-                const adminEmails = ['rival.app.official@gmail.com', 'jesusgomez.s@hotmail.com', 'rubenblcs@gmail.com'];
+                const adminEmails = ['rival.app.official@gmail.com', 'jesusgomez.s@hotmail.com'];
                 const userEmail = user?.email?.toLowerCase().trim();
 
                 if (!user || !userEmail || !adminEmails.includes(userEmail)) {

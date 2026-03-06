@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Download, Share2, Star } from "lucide-react";
 import clsx from "clsx";
@@ -54,8 +54,32 @@ function StatBar({ label, value, color }: { label: string; value: number; color:
 
 export default function AthleteCard({ profile, stats }: AthleteCardProps) {
     const cardRef = useRef<HTMLDivElement>(null);
+    const [isDownloading, setIsDownloading] = useState(false);
     const sport = profile.sport?.toLowerCase() || 'default';
     const colors = SPORT_COLORS[sport] || SPORT_COLORS.default;
+
+    const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
+
+    // Pre-load avatar to Base64 to avoid CORS issues with canvas generation
+    useEffect(() => {
+        if (!profile.avatar_url) return;
+        
+        const loadAvatar = async () => {
+            try {
+                const response = await fetch(profile.avatar_url!, { mode: 'cors' });
+                const blob = await response.blob();
+                const reader = new FileReader();
+                reader.onloadend = () => setAvatarBase64(reader.result as string);
+                reader.readAsDataURL(blob);
+            } catch (e) {
+                console.error("Error loading avatar for canvas:", e);
+                // Fallback to original URL if proxy fails, but it might break download
+                setAvatarBase64(profile.avatar_url!);
+            }
+        };
+
+        loadAvatar();
+    }, [profile.avatar_url]);
 
     const overallRating = Math.min(
         Math.round(
@@ -72,44 +96,32 @@ export default function AthleteCard({ profile, stats }: AthleteCardProps) {
 
     const handleDownload = async () => {
         if (!cardRef.current) return;
+        setIsDownloading(true);
         try {
-            const html2canvas = (await import('html2canvas')).default;
-            const canvas = await html2canvas(cardRef.current, {
-                scale: 3,
-                backgroundColor: colors.to, // solid fallback, no transparent
-                logging: false,
-                useCORS: true,
-                allowTaint: true,
-                ignoreElements: (el) => {
-                    // Skip Next.js image wrappers that confuse html2canvas
-                    return el.tagName === 'NOSCRIPT';
-                },
-                onclone: (_doc, element) => {
-                    // Replace all computed oklch/lab colors with hex equivalents
-                    element.querySelectorAll('*').forEach((el: any) => {
-                        const style = el.style;
-                        if (!style) return;
-                        ['color', 'background', 'backgroundColor', 'borderColor', 'fill', 'stroke'].forEach(prop => {
-                            const val = style[prop as any];
-                            if (val && (val.includes('oklch') || val.includes('lab('))) {
-                                style[prop as any] = '#ffffff';
-                            }
-                        });
-                        // Also handle inline gradient strings
-                        const bg = style.background;
-                        if (bg && (bg.includes('oklch') || bg.includes('lab('))) {
-                            style.background = colors.from;
-                        }
-                    });
-                },
+            const { toPng } = await import('html-to-image');
+            
+            // Wait a tiny bit for any animations to settle
+            await new Promise(resolve => setTimeout(resolve, 200));
+
+            const dataUrl = await toPng(cardRef.current, {
+                cacheBust: true,
+                pixelRatio: 3,
+                backgroundColor: colors.to,
+                style: {
+                    transform: 'scale(1)',
+                    transformOrigin: 'top left'
+                }
             });
+
             const link = document.createElement('a');
             link.download = `rival-card-${profile.username}.png`;
-            link.href = canvas.toDataURL('image/png');
+            link.href = dataUrl;
             link.click();
         } catch (e) {
             console.error('Download failed:', e);
             alert('Error al generar la imagen. Intenta de nuevo.');
+        } finally {
+            setIsDownloading(false);
         }
     };
 
@@ -146,10 +158,10 @@ export default function AthleteCard({ profile, stats }: AthleteCardProps) {
                 <div className="relative z-10 flex justify-center -mt-2">
                     <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 shadow-[0_0_30px_rgba(0,0,0,0.5)]"
                         style={{ borderColor: colors.accent }}>
-                        {profile.avatar_url ? (
+                        {(avatarBase64 || profile.avatar_url) ? (
                             // eslint-disable-next-line @next/next/no-img-element
                             <img
-                                src={profile.avatar_url}
+                                src={avatarBase64 || profile.avatar_url}
                                 alt={profile.full_name}
                                 className="w-full h-full object-cover"
                                 crossOrigin="anonymous"
@@ -201,11 +213,21 @@ export default function AthleteCard({ profile, stats }: AthleteCardProps) {
                 </div>
             </div>
 
-            {/* Action buttons */}
             <div className="flex gap-3">
-                <button onClick={handleDownload}
-                    className="flex items-center gap-2 bg-brand-red text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-600 transition-all shadow-[0_4px_15px_rgba(220,38,38,0.3)]">
-                    <Download className="w-3.5 h-3.5" /> Descargar
+                <button 
+                    onClick={handleDownload}
+                    disabled={isDownloading}
+                    className={clsx(
+                        "flex items-center gap-2 bg-brand-red text-white px-5 py-2.5 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-red-600 transition-all shadow-[0_4px_15px_rgba(220,38,38,0.3)]",
+                        isDownloading && "opacity-70 cursor-wait"
+                    )}
+                >
+                    {isDownloading ? (
+                        <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    ) : (
+                        <Download className="w-3.5 h-3.5" />
+                    )}
+                    {isDownloading ? 'Generando...' : 'Descargar'}
                 </button>
                 <button
                     onClick={async () => {

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, Volume2, VolumeX } from "lucide-react";
 import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
@@ -228,6 +228,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const [completionsCountWod, setCompletionsCountWod] = useState(0);
     const [hasCompletedWod, setHasCompletedWod] = useState(false);
     const [manualOriginalId, setManualOriginalId] = useState<string | null>(null);
+    const [isMuted, setIsMuted] = useState(true);
 
     // Parse wod_data if it's a string
     const parsedWodData = useMemo(() => {
@@ -998,8 +999,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             ) : (isImageUrl(image) || resolvedWorkoutData) ? (
                 <div className="flex flex-col gap-4">
                     {isImageUrl(image) && (
-                        <div className={isVideo ? "" : "px-2"}>
-                            <div className={`relative bg-black cursor-pointer group shadow-2xl overflow-hidden ${isVideo ? "aspect-[9/16] max-h-[85vh]" : "aspect-video rounded-xl"}`} onClick={() => setIsLightboxOpen(true)}>
+                        <div className={isVideo ? "flex justify-center px-2" : "px-2"}>
+                            <div className={`relative bg-black cursor-pointer group shadow-2xl overflow-hidden ${isVideo ? "aspect-[9/16] max-h-[80vh] w-full max-w-[480px] rounded-[24px] md:rounded-[32px] border border-white/10" : "aspect-video rounded-xl"}`} onClick={() => setIsLightboxOpen(true)}>
                                 {isVideo ? (
                                     <div className="relative w-full h-full">
                                         <video
@@ -1008,11 +1009,27 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                             autoPlay
                                             loop
                                             playsInline
-                                            muted
+                                            muted={isMuted}
                                             preload="auto"
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20 pointer-events-none" />
-                                        {/* Play/Pause Indicator */}
+                                        
+                                        {/* Mute/Unmute Button */}
+                                        <button 
+                                            onClick={(e) => { 
+                                                e.stopPropagation(); 
+                                                setIsMuted(!isMuted); 
+                                            }}
+                                            className="absolute bottom-4 right-4 z-20 bg-black/40 hover:bg-black/60 backdrop-blur-md p-2.5 rounded-full border border-white/10 transition-all active:scale-90 group/mute"
+                                        >
+                                            {isMuted ? (
+                                                <VolumeX className="w-4 h-4 text-white/90 group-hover/mute:text-white" />
+                                            ) : (
+                                                <Volume2 className="w-4 h-4 text-white/90 group-hover/mute:text-white" />
+                                            )}
+                                        </button>
+
+                                        {/* Play/Pause Indicator (Mobile centered feedback) */}
                                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                             <div className="bg-black/50 backdrop-blur-sm p-4 rounded-full">
                                                 <Play className="w-8 h-8 text-white" fill="white" />
