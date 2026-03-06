@@ -6,7 +6,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { X, Trophy, Loader2, Medal } from "lucide-react";
+import { X, Trophy, Loader2, Medal, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface LeaderboardEntry {
@@ -17,6 +17,9 @@ interface LeaderboardEntry {
   avatarUrl?: string;
   completionTimeSeconds?: number;
   roundsCompleted?: number;
+  totalReps?: number;
+  weightKg?: number;
+  score?: number;
   rx: boolean;
   completedAt: string;
 }
@@ -37,6 +40,7 @@ export default function WODLeaderboardModal({
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);
+  const [creator, setCreator] = useState<any>(null);
   const [filter, setFilter] = useState<"all" | "rx">("all");
 
   useEffect(() => {
@@ -56,6 +60,7 @@ export default function WODLeaderboardModal({
       if (data.success) {
         setLeaderboard(data.leaderboard);
         setStats(data.stats);
+        setCreator(data.creator);
       }
     } catch (error) {
       console.error("Error fetching leaderboard:", error);
@@ -91,166 +96,101 @@ export default function WODLeaderboardModal({
           initial={{ scale: 0.9, y: 20 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.9, y: 20 }}
-          className="bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-3xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide"
+          className="bg-[#0a0a0a] border border-white/5 rounded-[32px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide shadow-2xl"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-brand-red/20 rounded-xl">
-                <Trophy className="w-6 h-6 text-brand-red" />
-              </div>
-              <div>
-                <h2 className="text-2xl font-black text-white">Ranking</h2>
-                <p className="text-sm text-gray-400">{wodTitle}</p>
-              </div>
-            </div>
+            <h2 className="text-[14px] font-black text-brand-red uppercase tracking-[0.3em] px-2 truncate">
+              Tabla de Resultados
+            </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-white/10 rounded-full transition-colors"
+              className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-all group"
             >
-              <X className="w-6 h-6 text-gray-400" />
+              <ChevronUp className="w-6 h-6 text-gray-400 group-hover:text-white transition-colors" />
             </button>
           </div>
 
-          {/* Stats */}
-          {stats && (
-            <div className="bg-white/5 rounded-xl p-4 mb-6">
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-2xl font-black text-white">
-                    {stats.totalCompletions}
-                  </div>
-                  <div className="text-xs text-gray-400 uppercase">Atletas</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-black text-white">
-                    {stats.averageTime
-                      ? formatTime(Math.round(stats.averageTime))
-                      : stats.averageRounds
-                      ? formatRounds(stats.averageRounds)
-                      : "-"}
-                  </div>
-                  <div className="text-xs text-gray-400 uppercase">Promedio</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-black text-white">
-                    {Math.round(stats.rxPercentage)}%
-                  </div>
-                  <div className="text-xs text-gray-400 uppercase">Rx</div>
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* Filters */}
-          <div className="flex gap-2 mb-4">
-            <button
-              onClick={() => setFilter("all")}
-              className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${
-                filter === "all"
-                  ? "bg-brand-red text-white"
-                  : "bg-white/5 text-gray-400 hover:bg-white/10"
-              }`}
-            >
-              Todos
-            </button>
-            <button
-              onClick={() => setFilter("rx")}
-              className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${
-                filter === "rx"
-                  ? "bg-brand-red text-white"
-                  : "bg-white/5 text-gray-400 hover:bg-white/10"
-              }`}
-            >
-              Solo Rx
-            </button>
-          </div>
-
-          {/* Leaderboard */}
+          {/* Leaderboard Entries */}
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 text-brand-red animate-spin" />
-            </div>
-          ) : leaderboard.length === 0 ? (
-            <div className="text-center py-12">
-              <Trophy className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-400">
-                Sé el primero en completar este WOD
-              </p>
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="w-10 h-10 text-brand-red animate-spin" />
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-2 mb-8">
               {leaderboard.map((entry) => (
-                <div
+                <a
                   key={entry.userId}
-                  className={`flex items-center gap-4 p-4 rounded-xl border transition-colors ${
-                    entry.rank <= 3
-                      ? "bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/30"
-                      : "bg-white/5 border-white/10"
-                  }`}
+                  href={`/dashboard/profile/${entry.username}`}
+                  className="bg-[#111111] border border-white/5 rounded-[20px] p-3 px-4 flex items-center justify-between group hover:bg-[#161616] hover:border-brand-red/40 transition-all duration-300 gap-3"
                 >
-                  {/* Rank */}
-                  <div className="w-10 flex-shrink-0 text-center">
-                    {entry.rank === 1 ? (
-                      <Medal className="w-8 h-8 text-yellow-400 mx-auto" />
-                    ) : entry.rank === 2 ? (
-                      <Medal className="w-7 h-7 text-gray-300 mx-auto" />
-                    ) : entry.rank === 3 ? (
-                      <Medal className="w-6 h-6 text-orange-400 mx-auto" />
-                    ) : (
-                      <span className="text-xl font-black text-gray-400">
-                        {entry.rank}
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    {/* Rank Number */}
+                    <div className="text-lg font-black italic text-brand-red/90 min-w-[28px] flex-shrink-0">
+                      #{entry.rank}
+                    </div>
+
+                    {/* Avatar with Minimal Ring */}
+                    <div className="w-11 h-11 rounded-full p-[1.5px] bg-white/10 group-hover:bg-brand-red/30 transition-colors flex-shrink-0">
+                      <div className="w-full h-full rounded-full bg-black p-[1px]">
+                        {entry.avatarUrl ? (
+                          <img
+                            src={entry.avatarUrl}
+                            alt={entry.username}
+                            className="w-full h-full rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-full bg-zinc-800 flex items-center justify-center text-white text-xs font-black">
+                            {entry.username.charAt(0).toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="text-[15px] font-black text-white uppercase tracking-tight whitespace-normal leading-tight">
+                        {entry.fullName}
                       </span>
+                      <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest opacity-60">
+                        @{entry.username}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Score / Result - Prominent */}
+                  <div className="text-right flex-shrink-0 pl-2">
+                    <div className="text-[9px] text-zinc-500 font-black tracking-widest uppercase mb-0.5">
+                      {entry.roundsCompleted ? 'Rondas' : 
+                       entry.completionTimeSeconds ? 'Tiempo' : 
+                       entry.totalReps ? 'Reps' : 
+                       entry.weightKg ? 'Peso' : 'Puntaje'}
+                    </div>
+                    <div className="text-2xl font-black italic text-brand-red leading-none group-hover:scale-110 transition-transform origin-right">
+                      {entry.roundsCompleted || 
+                       entry.totalReps || 
+                       (entry.weightKg ? `${entry.weightKg}kg` : null) ||
+                       (entry.completionTimeSeconds ? formatTime(entry.completionTimeSeconds) : entry.score || entry.rank)}
+                    </div>
+                    {((entry.roundsCompleted || entry.totalReps) && entry.completionTimeSeconds) && (
+                       <div className="text-[9px] text-zinc-600 font-black tracking-widest mt-1">
+                         {formatTime(entry.completionTimeSeconds)}
+                       </div>
                     )}
                   </div>
-
-                  {/* Avatar */}
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-brand-red to-orange-600 flex items-center justify-center flex-shrink-0">
-                    {entry.avatarUrl ? (
-                      <img
-                        src={entry.avatarUrl}
-                        alt={entry.username}
-                        className="w-full h-full rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-white font-bold text-sm">
-                        {entry.username.charAt(0).toUpperCase()}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Name */}
-                  <div className="flex-1 min-w-0">
-                    <div className="text-white font-bold truncate">
-                      @{entry.username}
-                    </div>
-                    <div className="text-xs text-gray-400 truncate">
-                      {entry.fullName}
-                    </div>
-                  </div>
-
-                  {/* Result */}
-                  <div className="text-right">
-                    <div className="text-lg font-black text-white">
-                      {entry.completionTimeSeconds
-                        ? formatTime(entry.completionTimeSeconds)
-                        : entry.roundsCompleted
-                        ? formatRounds(entry.roundsCompleted)
-                        : "-"}
-                    </div>
-                    <div className="text-xs">
-                      {entry.rx ? (
-                        <span className="text-green-400 font-bold">Rx</span>
-                      ) : (
-                        <span className="text-orange-400 font-bold">Scaled</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                </a>
               ))}
             </div>
           )}
+
+          {/* Footer Disclaimer */}
+          <div className="pt-8 border-t border-white/5">
+             <p className="text-[10px] text-gray-600 font-black text-center uppercase tracking-widest leading-relaxed px-12">
+               Los resultados se basan en los reposts públicos realizados en la comunidad.
+             </p>
+          </div>
         </motion.div>
       </motion.div>
     </AnimatePresence>

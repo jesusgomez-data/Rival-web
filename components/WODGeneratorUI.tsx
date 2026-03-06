@@ -30,6 +30,13 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
   const [isPublishing, setIsPublishing] = useState(false);
   const [generatedWOD, setGeneratedWOD] = useState<GeneratedWOD | null>(null);
 
+  // Resultado del creador para el ranking
+  const [creatorTimeMin, setCreatorTimeMin] = useState("");
+  const [creatorTimeSec, setCreatorTimeSec] = useState("");
+  const [creatorRounds, setCreatorRounds] = useState("");
+  const [creatorRx, setCreatorRx] = useState(true);
+  const [showResults, setShowResults] = useState(false);
+
   // Form state
   const [workoutType, setWorkoutType] = useState<WorkoutType>("amrap");
   const [duration, setDuration] = useState(30);
@@ -106,10 +113,38 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
 
     setIsPublishing(true);
     try {
+      // Determinar tipo de resultado según el tipo de WOD
+      const isForTime = workoutType === "fortime";
+      const isAmrap = workoutType === "amrap" || workoutType === "emom" || workoutType === "tabata";
+
+      let creatorResult: Record<string, unknown> | undefined;
+      if (isForTime && (creatorTimeMin || creatorTimeSec)) {
+        creatorResult = {
+          completionType: "time",
+          completionTimeSeconds: parseInt(creatorTimeMin || "0") * 60 + parseInt(creatorTimeSec || "0"),
+          rx: creatorRx,
+        };
+      } else if (isAmrap && creatorRounds) {
+        // Soporte para formato "8 + 12" (8 rondas + 12 reps) -> se convierte a float 8.12 (o similar para el backend)
+        let roundsValue = 0;
+        if (typeof creatorRounds === 'string' && creatorRounds.includes('+')) {
+          const [r, p] = creatorRounds.split('+').map(s => parseFloat(s.trim()) || 0);
+          roundsValue = r + (p / 1000); // Guardamos reps como decimal muy pequeño para no confundir con rondas
+        } else {
+          roundsValue = parseFloat(creatorRounds as string);
+        }
+
+        creatorResult = {
+          completionType: "rounds",
+          roundsCompleted: roundsValue,
+          rx: creatorRx,
+        };
+      }
+
       const response = await fetch("/api/wod/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wod: generatedWOD }),
+        body: JSON.stringify({ wod: generatedWOD, creatorResult }),
       });
 
       const data = await response.json();
@@ -121,7 +156,11 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
       // Cerrar modal y recargar feed
       setIsOpen(false);
       setGeneratedWOD(null);
-      window.location.reload(); // Recargar para ver el WOD en el feed
+      setShowResults(false);
+      setCreatorTimeMin("");
+      setCreatorTimeSec("");
+      setCreatorRounds("");
+      window.location.reload(); 
     } catch (error: any) {
       alert(error.message);
     } finally {
@@ -138,7 +177,7 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
         className="fixed bottom-24 right-6 z-50 bg-gradient-to-r from-brand-red to-orange-600 text-white p-4 rounded-full shadow-2xl flex items-center gap-3 font-bold hover:shadow-brand-red/50 transition-shadow"
       >
         <Sparkles className="w-6 h-6" />
-        <span className="hidden sm:inline">Generar WOD con IA</span>
+        <span className="hidden sm:inline">Generar WOD</span>
       </motion.button>
     );
   }
@@ -164,7 +203,7 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
               <Sparkles className="w-6 h-6 text-brand-red" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-white">WOD Generator AI</h2>
+              <h2 className="text-2xl font-black text-white">WOD Generator</h2>
               <p className="text-sm text-gray-400">Powered by Gemini</p>
             </div>
           </div>
@@ -294,7 +333,7 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
         ) : (
           <div className="space-y-4">
             {/* Generated WOD Display */}
-            <div className="bg-gradient-to-br from-brand-red/10 to-orange-600/10 border border-brand-red/30 rounded-2xl p-6">
+            <div className={`bg-gradient-to-br from-brand-red/10 to-orange-600/10 border border-brand-red/30 rounded-2xl p-6 transition-all ${showResults ? 'opacity-40 blur-sm pointer-events-none scale-95' : ''}`}>
               <div className="flex items-center gap-3 mb-4">
                 <Trophy className="w-8 h-8 text-brand-red" />
                 <div>
@@ -303,7 +342,11 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
                 </div>
               </div>
 
-              <div className="flex items-center gap-6 mb-6 text-sm">
+              <div className="flex flex-wrap items-center gap-4 md:gap-6 mb-6 text-[10px] md:text-sm">
+                <div className="flex items-center gap-2 bg-white/5 px-2.5 py-1 rounded-lg border border-white/5">
+                  <Target className="w-3.5 h-3.5 text-brand-red" />
+                  <span className="text-white font-black uppercase tracking-wider">{workoutType}</span>
+                </div>
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-gray-400" />
                   <span className="text-white">{generatedWOD.estimatedDuration} min</span>
@@ -313,7 +356,7 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
                   <span className="text-white">{generatedWOD.caloriesBurn} kcal</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Target className="w-4 h-4 text-gray-400" />
+                  <TrendingUp className="w-4 h-4 text-gray-400" />
                   <span className="text-white capitalize">{generatedWOD.difficulty}</span>
                 </div>
               </div>
@@ -347,30 +390,122 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
                 </div>
               )}
             </div>
+            {/* Results Input Section - Appears when "Realizar WOD" is clicked */}
+            {showResults && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-brand-gray/40 border border-brand-red/30 rounded-2xl p-6 shadow-2xl backdrop-blur-md"
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 rounded-full bg-brand-red/10 border border-brand-red/20 flex items-center justify-center">
+                    <Trophy className="w-5 h-5 text-brand-red" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-white uppercase italic leading-none">Registrar Resultado</h3>
+                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1">Ingresa tus marcas finales</p>
+                  </div>
+                </div>
 
-            {/* Actions */}
+                <div className="space-y-6">
+                  {workoutType === 'fortime' ? (
+                    <div className="flex items-center gap-4">
+                      <div className="flex-1">
+                        <label className="block text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2 px-1">Minutos</label>
+                        <input 
+                          type="number"
+                          value={creatorTimeMin}
+                          onChange={(e) => setCreatorTimeMin(e.target.value)}
+                          placeholder="00"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white font-black text-2xl text-center focus:border-brand-red/50 focus:bg-black/60 transition-all outline-none"
+                        />
+                      </div>
+                      <div className="text-2xl font-black text-gray-600 mt-6">:</div>
+                      <div className="flex-1">
+                        <label className="block text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2 px-1">Segundos</label>
+                        <input 
+                          type="number"
+                          value={creatorTimeSec}
+                          onChange={(e) => setCreatorTimeSec(e.target.value)}
+                          placeholder="00"
+                          className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white font-black text-2xl text-center focus:border-brand-red/50 focus:bg-black/60 transition-all outline-none"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2 px-1">Rondas y Repeticiones</label>
+                      <input 
+                        type="text"
+                        value={creatorRounds}
+                        onChange={(e) => setCreatorRounds(e.target.value)}
+                        placeholder="Ej: 8 + 12"
+                        className="w-full bg-black/40 border border-white/10 rounded-xl p-4 text-white font-black text-2xl text-center focus:border-brand-red/50 focus:bg-black/60 transition-all outline-none"
+                      />
+                    </div>
+                  )}
+
+                  <div className="flex items-center gap-2 p-1 bg-black/20 rounded-xl border border-white/5">
+                    <button
+                      onClick={() => setCreatorRx(true)}
+                      className={`flex-1 py-3 rounded-lg font-black text-xs uppercase tracking-[0.2em] transition-all ${
+                        creatorRx ? 'bg-brand-red text-white shadow-glow-sm' : 'text-gray-500 hover:text-gray-300'
+                      }`}
+                    >
+                      RX
+                    </button>
+                    <button
+                      onClick={() => setCreatorRx(false)}
+                      className={`flex-1 py-3 rounded-lg font-black text-xs uppercase tracking-[0.2em] transition-all ${
+                        !creatorRx ? 'bg-brand-red text-white shadow-glow-sm' : 'text-gray-500 hover:text-gray-300'
+                      }`}
+                    >
+                      SCALED
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             <div className="flex gap-3">
               <button
-                onClick={() => setGeneratedWOD(null)}
+                onClick={() => {
+                  if (showResults) {
+                    setShowResults(false);
+                  } else {
+                    setGeneratedWOD(null);
+                  }
+                }}
                 disabled={isPublishing}
                 className="flex-1 bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Generar Otro
+                {showResults ? "Atrás" : "Generar Otro"}
               </button>
-              <button
-                onClick={handlePublish}
-                disabled={isPublishing}
-                className="flex-1 bg-brand-red hover:bg-brand-accent text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {isPublishing ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Publicando...
-                  </>
-                ) : (
-                  "Publicar WOD"
-                )}
-              </button>
+              
+              {!showResults ? (
+                <button
+                  onClick={() => setShowResults(true)}
+                  className="flex-1 bg-brand-red hover:bg-brand-accent text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-brand-red/30 flex items-center justify-center gap-2"
+                >
+                  <Trophy className="w-5 h-5" />
+                  Realizar WOD
+                </button>
+              ) : (
+                <button
+                  onClick={handlePublish}
+                  disabled={isPublishing || (!creatorTimeMin && !creatorRounds)}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isPublishing ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Publicando...
+                    </>
+                  ) : (
+                    "Finalizar y Publicar"
+                  )}
+                </button>
+              )}
             </div>
           </div>
         )}

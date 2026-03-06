@@ -22,8 +22,13 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const [preview, setPreview] = useState<string | null>(null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [postType, setPostType] = useState<'standard' | 'pr' | 'wod'>(initialPostType || 'standard');
-    const [wodData, setWodData] = useState<{ title: string, blocks: WodBlock[], summary: WodSummary } | null>(
+    const [wodData, setWodData] = useState<{ title: string, blocks: WodBlock[], summary: WodSummary, originalWodPostId?: string } | null>(
         initialPostType === 'wod' && initialData ? initialData : null
+    );
+    const [originalWodPostId, setOriginalWodPostId] = useState<string | null>(
+        initialPostType === 'wod' && (initialData?.original_wod_post_id || initialData?.postId) 
+            ? (initialData.original_wod_post_id || initialData.postId) 
+            : null
     );
     const [exercise, setExercise] = useState("");
     const [weight, setWeight] = useState("");
@@ -124,7 +129,8 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
             } else if (postType === 'wod' && wodData) {
                 const finalWodData = {
                     ...wodData,
-                    media_url: mediaUrl || (wodData as any).media_url || null
+                    media_url: mediaUrl || (wodData as any).media_url || null,
+                    original_wod_post_id: originalWodPostId
                 };
                 const finalCaption = showWodFooter && content.trim() ? content.trim() : '';
 

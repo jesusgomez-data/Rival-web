@@ -1,0 +1,7 @@
+--- Verifying Registration for Org ID: 36117009-b263-4cb2-bdd5-dfc8344d549f ---
+Org: Rival Automated Box | Owner: fd186c78-1013-4cf9-a6d3-408ede5460e1
+Found 2 centers
+ - Center: Rival Automated Box (993edb6b-a081-49c9-bca8-57955498e55e)
+ - Center: Rival Automated Box (f9384db0-7aa0-4202-9c36-056d5459aed7)
+Found 1 roles
+ - User fd186c78-1013-4cf9-a6d3-408ede5460e1: head_coach

@@ -20,7 +20,8 @@ import {
     Trash2,
     Edit2,
     Sun,
-    Moon
+    Moon,
+    Brain,
 } from 'lucide-react';
 import {
     getAdminStats,
@@ -192,6 +193,14 @@ export default function AdminDashboard() {
                     </div>
 
                     <div className="flex items-center gap-4">
+                        <Link
+                            href="/dashboard/admin/ai-team"
+                            className="flex items-center gap-2 px-3 py-2 rounded-xl bg-brand-red/10 border border-brand-red/20 hover:bg-brand-red/20 transition-all"
+                        >
+                            <Brain className="w-4 h-4 text-brand-red" />
+                            <span className="text-xs font-black text-brand-red uppercase tracking-widest hidden sm:inline">AI Team</span>
+                            <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
+                        </Link>
                         <button
                             onClick={toggleTheme}
                             className="p-2 rounded-xl bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white transition-all active:scale-95 shadow-sm dark:shadow-none border border-gray-200 dark:border-white/10"

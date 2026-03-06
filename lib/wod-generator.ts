@@ -1,11 +1,6 @@
-/**
- * RIVALFIT - WOD Generator powered by Gemini AI
- * Genera entrenamientos personalizados basados en preferencias del usuario
- */
-
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "");
+// AI engines are initialized inside the WODGenerator class
 
 // ============================================
 // TIPOS
@@ -83,53 +78,35 @@ export interface GeneratedWOD {
 // PROMPT TEMPLATES
 // ============================================
 
-const SYSTEM_PROMPT = `Eres un entrenador de CrossFit elite certificado y experto en programación de entrenamientos. Tu misión es crear WODs (Workout of the Day) personalizados, seguros y efectivos.
+const SYSTEM_PROMPT = `You are an elite CrossFit Coach. 
+Create a unique, safe, and effective WOD based on the user's requirements.
 
-**REGLAS IMPORTANTES:**
-1. **USAR SOLO EL EQUIPAMIENTO ESPECIFICADO**: Si el usuario indica equipamiento específico (ej: barras, mancuernas), TODOS los ejercicios deben usar EXCLUSIVAMENTE ese equipamiento. NO incluyas ejercicios bodyweight si se especificó equipamiento.
-2. Siempre incluir calentamiento y enfriamiento (estos sí pueden ser bodyweight)
-3. Progresar de ejercicios simples a complejos
-4. Balancear grupos musculares
-5. Considerar el nivel del atleta para evitar lesiones
-6. Incluir opciones de scaling (modificaciones)
-7. Ser específico con reps, peso, tiempo
-8. Añadir tips de técnica cuando sea necesario
-9. Formato de respuesta: JSON estructurado
+RULES:
+1. TYPE ADHERENCE: If AMRAP, it MUST be AMRAP. If FOR TIME, it MUST be a task for time. If EMOM, it MUST be every minute.
+2. LEVEL: 
+   - Beginner: Simple movements, low impact.
+   - Intermediate: Standard movements.
+   - Advanced/Elite: Complex movements, heavy weights.
+3. EQUIPMENT: Use ONLY the specified equipment.
+4. VARIETY: Create ORIGINAL WODs. Do not repeat the same movements every time. Use the provided Random Seed to change the selection.
+5. LANGUAGE: The training content (titles, exercise names, tips) MUST BE IN SPANISH.
+6. JSON: Return ONLY a valid JSON object.
 
-**FORMATO DE RESPUESTA:**
-Devuelve SOLO un objeto JSON válido con esta estructura (sin markdown, sin explicaciones adicionales):
+JSON STRUCTURE:
 {
-  "title": "Nombre creativo del WOD",
-  "subtitle": "Descripción corta (1 línea)",
+  "title": "Creative Name (Spanish)",
+  "subtitle": "Short desc like AMRAP 20 or 5 Rounds (Spanish)",
   "difficulty": "beginner|intermediate|advanced|elite",
-  "estimatedDuration": 45,
-  "caloriesBurn": 450,
+  "estimatedDuration": number,
+  "caloriesBurn": number,
   "blocks": [
     {
-      "type": "warmup",
-      "title": "Calentamiento",
-      "duration": "10 min",
-      "exercises": [
-        { "name": "Movilidad de cadera", "reps": "2 min", "notes": "Círculos amplios" }
-      ]
-    },
-    {
-      "type": "metcon",
-      "title": "AMRAP 15 min",
-      "duration": "15 min",
-      "config": { "timeLimit": "15:00" },
-      "exercises": [
-        { "name": "Burpees", "reps": 10 },
-        { "name": "Air Squats", "reps": 20 }
-      ]
+      "type": "warmup|strength|metcon|cooldown",
+      "title": "Title (Spanish)",
+      "exercises": [{ "name": "Name (Spanish)", "reps": "Amount", "notes": "Obs (Spanish)" }]
     }
   ],
-  "tips": ["Mantén el core activado", "Respira profundo"],
-  "scalingOptions": {
-    "beginner": "Reduce reps a 50%",
-    "intermediate": "Como está prescrito",
-    "advanced": "Añade peso o reps"
-  }
+  "tips": ["Tip 1 (Spanish)", "Tip 2 (Spanish)"]
 }`;
 
 // ============================================
@@ -137,45 +114,78 @@ Devuelve SOLO un objeto JSON válido con esta estructura (sin markdown, sin expl
 // ============================================
 
 export class WODGenerator {
-  private model: any;
+  private groqApiKey: string;
+  private geminiModel: any;
 
   constructor() {
-    if (!genAI) {
-      throw new Error("Gemini API key not configured");
+    this.groqApiKey = process.env.GROQ_API_KEY || "";
+    
+    // Configurar Gemini como fallback
+    try {
+      const geminiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+      if (geminiKey) {
+        const genAI = new GoogleGenerativeAI(geminiKey);
+        this.geminiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      }
+    } catch (e) {
+      console.warn("Gemini setup failed, will use Groq only", e);
     }
-    this.model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
   }
 
   async generateWOD(request: WODRequest): Promise<GeneratedWOD> {
     const userPrompt = this.buildUserPrompt(request);
 
-    try {
-      const result = await this.model.generateContent([
-        { text: SYSTEM_PROMPT },
-        { text: userPrompt }
-      ]);
+    // PRIMERO: Intentar con GROQ (Más rápido y confiable para JSON)
+    if (this.groqApiKey) {
+      try {
+        console.log("⚡ Generating with Groq...");
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${this.groqApiKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: userPrompt }
+            ],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.7,
+            response_format: { type: "json_object" }
+          }),
+        });
 
-      const response = await result.response;
-      let text = response.text();
-
-      // Limpiar el texto (remover markdown si existe)
-      text = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-
-      // Parsear JSON
-      const wod: GeneratedWOD = JSON.parse(text);
-
-      // Validar estructura básica
-      if (!wod.title || !wod.blocks || wod.blocks.length === 0) {
-        throw new Error("Invalid WOD structure");
+        const data = await response.json();
+        const text = data.choices[0].message.content;
+        return JSON.parse(text);
+      } catch (error) {
+        console.error("❌ Groq failed, falling back to Gemini/Manual", error);
       }
-
-      return wod;
-    } catch (error) {
-      console.error("Error generating WOD:", error);
-
-      // Fallback: Retornar un WOD básico si falla
-      return this.getFallbackWOD(request);
     }
+
+    // SEGUNDO: Intentar con GEMINI
+    if (this.geminiModel) {
+      try {
+        console.log("💎 Generating with Gemini...");
+        const result = await this.geminiModel.generateContent([
+          { text: SYSTEM_PROMPT },
+          { text: userPrompt }
+        ]);
+
+        const response = await result.response;
+        let text = response.text();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) text = jsonMatch[0];
+        
+        return JSON.parse(text);
+      } catch (error) {
+        console.error("❌ Gemini failed too", error);
+      }
+    }
+
+    // TERCERO: Fallback Manual (ÚLTIMO RECURSO)
+    return this.getFallbackWOD(request);
   }
 
   private buildUserPrompt(request: WODRequest): string {
@@ -183,85 +193,59 @@ export class WODGenerator {
     const targetMusclesList = request.targetMuscles?.join(", ") || "cuerpo completo";
     const goalsList = request.goals?.join(", ") || "fitness general";
     const excludeList = request.excludeMovements?.join(", ") || "ninguno";
+    const randomSeed = Math.random().toString(36).substring(7);
+    const timestamp = new Date().toISOString();
 
     return `
-Genera un WOD con las siguientes especificaciones:
+Genera un WOD ÚNICO y ORIGINAL con estas especificaciones:
 
-**Tipo de Workout:** ${request.workoutType.toUpperCase()}
-**Duración:** ${request.duration} minutos
-**Nivel:** ${request.fitnessLevel}
-**Equipamiento disponible:** ${equipmentList}
-**IMPORTANTE:** Usa EXCLUSIVAMENTE el equipamiento mencionado arriba (${equipmentList}) en TODOS los ejercicios del metcon/strength. El calentamiento y enfriamiento pueden ser bodyweight.
-**Músculos objetivo:** ${targetMusclesList}
-**Objetivos:** ${goalsList}
-**Excluir movimientos:** ${excludeList}
+**TIPO OBLIGATORIO:** ${request.workoutType.toUpperCase()} (Respeta este formato estrictamente)
+**DURACIÓN OBJETIVO:** ${request.duration} minutos
+**NIVEL ATLETA:** ${request.fitnessLevel}
+**EQUIPAMIENTO DISPONIBLE:** ${equipmentList}
+**SEMILLA DE VARIEDAD:** ${randomSeed} (Usa esta semilla para inspirarte en movimientos diferentes a los habituales)
+**FECHA:** ${timestamp}
 
-${request.previousWorkouts && request.previousWorkouts.length > 0 ? `
-**Entrenamientos recientes (evita repetir):**
-${request.previousWorkouts.map((w, i) => `${i + 1}. ${w}`).join("\n")}
-` : ""}
+Instrucciones adicionales:
+- Si es FOR TIME: Indica número de rondas o tarea total clara.
+- Si es AMRAP: Especifica los minutos claramente en el título del bloque metcon.
+- Si es EMOM: Especifica qué se hace en cada minuto.
 
-Crea un WOD completo, seguro y efectivo que cumpla con estas especificaciones.
-Recuerda: responder SOLO con el JSON, sin explicaciones adicionales.
+Responde SOLO el JSON.
     `.trim();
   }
 
   private getFallbackWOD(request: WODRequest): GeneratedWOD {
-    // WOD básico de emergencia
+    const isAmrap = request.workoutType === "amrap";
+    
+    // Listas de ejercicios para variar el fallback si la IA falla
+    const bodyweight = ["Burpees", "Air Squats", "Push-ups", "Sit-ups", "Jumping Jacks", "Lunges", "Mountain Climbers", "Plank Tap"];
+    const shuffled = bodyweight.sort(() => 0.5 - Math.random());
+    const selected = shuffled.slice(0, 4);
+
     return {
-      title: "WARRIOR WORKOUT",
-      subtitle: "Full body conditioning",
+      title: "WOD " + request.workoutType.toUpperCase() + " (Fallback)",
+      subtitle: isAmrap ? `AMRAP ${request.duration} min` : "5 Rounds For Time",
       difficulty: request.fitnessLevel,
       estimatedDuration: request.duration,
       caloriesBurn: Math.round(request.duration * 10),
       blocks: [
         {
           type: "warmup",
-          title: "Calentamiento Dinámico",
-          duration: "8 min",
+          title: "Calentamiento",
           exercises: [
-            { name: "Jumping Jacks", reps: "2 min" },
-            { name: "Movilidad de hombros", reps: "2 min" },
-            { name: "Sentadillas lentas", reps: 10 },
-            { name: "Flexiones inclinadas", reps: 10 }
+            { name: "Movilidad dinámica", reps: "5 min" },
+            { name: shuffled[4] || "Jumping Jacks", reps: "20" },
+            { name: shuffled[5] || "Air Squats", reps: "15" }
           ]
         },
         {
           type: "metcon",
-          title: request.workoutType === "amrap" ? "AMRAP 15 min" : "For Time",
-          duration: request.workoutType === "amrap" ? "15 min" : undefined,
-          config: {
-            rounds: request.workoutType === "fortime" ? 5 : undefined,
-            timeLimit: request.workoutType === "amrap" ? "15:00" : undefined
-          },
-          exercises: [
-            { name: "Burpees", reps: 10 },
-            { name: "Air Squats", reps: 15 },
-            { name: "Push-ups", reps: 10 },
-            { name: "Sit-ups", reps: 15 }
-          ]
-        },
-        {
-          type: "cooldown",
-          title: "Enfriamiento",
-          duration: "5 min",
-          exercises: [
-            { name: "Estiramiento de cuádriceps", reps: "1 min/lado" },
-            { name: "Estiramiento de pecho", reps: "1 min" },
-            { name: "Child's pose", reps: "2 min" }
-          ]
+          title: isAmrap ? `AMRAP ${request.duration} min` : "5 Rounds For Time",
+          exercises: selected.map(name => ({ name, reps: (Math.floor(Math.random() * 10) + 10).toString() }))
         }
       ],
-      tips: [
-        "Mantén un ritmo constante",
-        "Respira profundamente",
-        "Hidrata entre rondas"
-      ],
-      scalingOptions: {
-        beginner: "Reduce las reps en un 50% y toma descansos cuando lo necesites",
-        intermediate: "Como está prescrito",
-        advanced: "Añade 5 reps a cada movimiento"
-      }
+      tips: ["Mantén un ritmo constante", "Respira profundo"]
     };
   }
 }

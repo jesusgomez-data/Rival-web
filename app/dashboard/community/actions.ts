@@ -184,6 +184,7 @@ export async function createWodPost(formData: FormData) {
             const scoreType = (w.summary?.scoreType || w.metrics?.type || 'SCORE').toUpperCase();
             const timeStr = w.summary?.totalTime || w.metrics?.duration || w.metrics?.time;
             const scoreStr = w.summary?.scoreLabel || w.metrics?.score;
+            const originalWodPostId = w.original_wod_post_id || null;
 
             let completionType = 'score';
             let completionTimeSeconds = null;
@@ -194,7 +195,6 @@ export async function createWodPost(formData: FormData) {
 
             if (scoreType === 'TIME' && scoreStr) {
                 completionType = 'time';
-                // Convert MM:SS to seconds from scoreStr if possible (e.g. 12:30 -> 750)
                 const timeMatch = scoreStr.match(/(\d+):(\d+)(?::(\d+))?/);
                 if (timeMatch) {
                     if (timeMatch[3]) completionTimeSeconds = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseInt(timeMatch[3]);
@@ -216,11 +216,10 @@ export async function createWodPost(formData: FormData) {
                 score = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
             }
 
-            // Always insert if we have a valid parsed score/time
             if (completionTimeSeconds || roundsCompleted || totalReps || weightKg || score) {
                 await supabase.from('wod_completions').insert({
                     user_id: user.id,
-                    original_wod_post_id: newPost.id,
+                    original_wod_post_id: originalWodPostId || newPost.id,
                     completion_post_id: newPost.id,
                     completion_type: completionType,
                     completion_time_seconds: completionTimeSeconds,

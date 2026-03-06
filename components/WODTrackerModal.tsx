@@ -5,7 +5,7 @@
  * Modal simple para registrar que completaste un WOD
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Dumbbell, Clock, Zap, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -27,11 +27,47 @@ export default function WODTrackerModal({
   onSuccess,
 }: WODTrackerModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [timeMinutes, setTimeMinutes] = useState("");
   const [timeSeconds, setTimeSeconds] = useState("");
   const [rounds, setRounds] = useState("");
   const [rx, setRx] = useState(true);
   const [notes, setNotes] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchExistingCompletion();
+    }
+  }, [isOpen]);
+
+  const fetchExistingCompletion = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`/api/wod/my-completion?wodPostId=${wodPostId}`);
+      const data = await response.json();
+      
+      if (data.success && data.completion) {
+        const c = data.completion;
+        setIsEditing(true);
+        setRx(c.rx);
+        setNotes(c.notes || "");
+        
+        if (wodType === "time" && c.completion_time_seconds) {
+          const mins = Math.floor(c.completion_time_seconds / 60);
+          const secs = c.completion_time_seconds % 60;
+          setTimeMinutes(mins.toString());
+          setTimeSeconds(secs.toString());
+        } else if (wodType === "rounds" && c.rounds_completed) {
+          setRounds(c.rounds_completed.toString());
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching completion:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,13 +75,15 @@ export default function WODTrackerModal({
 
     try {
       // Convertir tiempo a segundos
-      const completionTimeSeconds =
-        wodType === "time"
-          ? parseInt(timeMinutes || "0") * 60 + parseInt(timeSeconds || "0")
-          : undefined;
+      let completionTimeSeconds;
+      if (wodType === "time") {
+        completionTimeSeconds = parseInt(timeMinutes || "0") * 60 + parseInt(timeSeconds || "0");
+      }
 
-      const roundsCompleted =
-        wodType === "rounds" ? parseFloat(rounds) : undefined;
+      let roundsCompleted;
+      if (wodType === "rounds") {
+        roundsCompleted = parseFloat(rounds);
+      }
 
       const response = await fetch("/api/wod/complete", {
         method: "POST",
@@ -63,7 +101,7 @@ export default function WODTrackerModal({
       const data = await response.json();
 
       if (data.success) {
-        alert("¡WOD completado! 🎉");
+        alert(isEditing ? "¡Resultado actualizado! 🎉" : "¡WOD completado! 🎉");
         onSuccess?.();
         onClose();
       } else {
@@ -115,134 +153,141 @@ export default function WODTrackerModal({
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Tiempo o Rounds */}
-            {wodType === "time" ? (
-              <div>
-                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  Tiempo Total
-                </label>
-                <div className="flex gap-2">
-                  <div className="flex-1">
-                    <input
-                      type="number"
-                      min="0"
-                      max="120"
-                      value={timeMinutes}
-                      onChange={(e) => setTimeMinutes(e.target.value)}
-                      placeholder="Min"
-                      className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white font-bold text-center focus:outline-none focus:border-brand-red/50"
-                      required
-                    />
-                    <div className="text-xs text-gray-400 text-center mt-1">
-                      Minutos
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3 text-gray-500">
+              <Loader2 className="w-8 h-8 animate-spin text-brand-red" />
+              <p className="text-xs font-bold uppercase tracking-widest">Cargando...</p>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Tiempo o Rounds */}
+              {wodType === "time" ? (
+                <div>
+                  <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Tiempo Total
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="120"
+                        value={timeMinutes}
+                        onChange={(e) => setTimeMinutes(e.target.value)}
+                        placeholder="Min"
+                        className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white font-bold text-center focus:outline-none focus:border-brand-red/50"
+                        required
+                      />
+                      <div className="text-xs text-gray-400 text-center mt-1">
+                        Minutos
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-3xl text-gray-600 self-center">:</div>
-                  <div className="flex-1">
-                    <input
-                      type="number"
-                      min="0"
-                      max="59"
-                      value={timeSeconds}
-                      onChange={(e) => setTimeSeconds(e.target.value)}
-                      placeholder="Seg"
-                      className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white font-bold text-center focus:outline-none focus:border-brand-red/50"
-                      required
-                    />
-                    <div className="text-xs text-gray-400 text-center mt-1">
-                      Segundos
+                    <div className="text-3xl text-gray-600 self-center">:</div>
+                    <div className="flex-1">
+                      <input
+                        type="number"
+                        min="0"
+                        max="59"
+                        value={timeSeconds}
+                        onChange={(e) => setTimeSeconds(e.target.value)}
+                        placeholder="Seg"
+                        className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white font-bold text-center focus:outline-none focus:border-brand-red/50"
+                        required
+                      />
+                      <div className="text-xs text-gray-400 text-center mt-1">
+                        Segundos
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
-                  <Zap className="w-4 h-4" />
-                  Rounds Completados
-                </label>
-                <input
-                  type="number"
-                  step="0.5"
-                  min="0"
-                  value={rounds}
-                  onChange={(e) => setRounds(e.target.value)}
-                  placeholder="Ej: 8.5"
-                  className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white font-bold focus:outline-none focus:border-brand-red/50"
-                  required
-                />
-                <div className="text-xs text-gray-400 mt-1">
-                  Usa decimales para rondas parciales (ej: 8.5)
-                </div>
-              </div>
-            )}
-
-            {/* Rx / Scaled */}
-            <div>
-              <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
-                Modalidad
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRx(true)}
-                  className={`p-3 rounded-xl border-2 transition-all font-bold ${
-                    rx
-                      ? "border-green-500 bg-green-500/10 text-green-400"
-                      : "border-white/10 text-gray-400"
-                  }`}
-                >
-                  ⚡ Rx
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRx(false)}
-                  className={`p-3 rounded-xl border-2 transition-all font-bold ${
-                    !rx
-                      ? "border-orange-500 bg-orange-500/10 text-orange-400"
-                      : "border-white/10 text-gray-400"
-                  }`}
-                >
-                  🔥 Scaled
-                </button>
-              </div>
-            </div>
-
-            {/* Notas */}
-            <div>
-              <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
-                Notas (Opcional)
-              </label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="¿Cómo te sentiste? ¿Modificaciones?"
-                className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-brand-red/50 resize-none"
-                rows={3}
-              />
-            </div>
-
-            {/* Submit */}
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-gradient-to-r from-brand-red to-orange-600 hover:from-brand-accent hover:to-orange-700 text-white font-black text-lg py-4 rounded-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-brand-red/50"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  Guardando...
-                </>
               ) : (
-                <>
-                  <Dumbbell className="w-6 h-6" />
-                  Guardar Resultado
-                </>
+                <div>
+                  <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
+                    <Zap className="w-4 h-4" />
+                    Rounds Completados
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={rounds}
+                    onChange={(e) => setRounds(e.target.value)}
+                    placeholder="Ej: 8.5"
+                    className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white font-bold focus:outline-none focus:border-brand-red/50"
+                    required
+                  />
+                  <div className="text-xs text-gray-400 mt-1">
+                    Usa decimales para rondas parciales (ej: 8.5)
+                  </div>
+                </div>
               )}
-            </button>
-          </form>
+
+              {/* Rx / Scaled */}
+              <div>
+                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
+                  Modalidad
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setRx(true)}
+                    className={`p-3 rounded-xl border-2 transition-all font-bold ${
+                      rx
+                        ? "border-green-500 bg-green-500/10 text-green-400"
+                        : "border-white/10 text-gray-400"
+                    }`}
+                  >
+                    ⚡ Rx
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRx(false)}
+                    className={`p-3 rounded-xl border-2 transition-all font-bold ${
+                      !rx
+                        ? "border-orange-500 bg-orange-500/10 text-orange-400"
+                        : "border-white/10 text-gray-400"
+                    }`}
+                  >
+                    🔥 Scaled
+                  </button>
+                </div>
+              </div>
+
+              {/* Notas */}
+              <div>
+                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
+                  Notas (Opcional)
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="¿Cómo te sentiste? ¿Modificaciones?"
+                  className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:outline-none focus:border-brand-red/50 resize-none"
+                  rows={3}
+                />
+              </div>
+
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-gradient-to-r from-brand-red to-orange-600 hover:from-brand-accent hover:to-orange-700 text-white font-black text-lg py-4 rounded-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-brand-red/50"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    {isEditing ? "Actualizando..." : "Guardando..."}
+                  </>
+                ) : (
+                  <>
+                    <Dumbbell className="w-6 h-6" />
+                    {isEditing ? "Actualizar Resultado" : "Guardar Resultado"}
+                  </>
+                )}
+              </button>
+            </form>
+          )}
         </motion.div>
       </motion.div>
     </AnimatePresence>

@@ -495,3 +495,100 @@ export async function getFinanceStats() {
 
     return { orders: orders || [], sales: sales || [] };
 }
+
+export async function getManagementIntelligenceData() {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
+
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+    const [orgs, newUsers, allUsers, churnData, inactiveProfiles, workouts] = await Promise.all([
+        supabaseAdmin.from('organizations').select('plan, monthly_revenue'),
+        supabaseAdmin.from('profiles').select('id').gte('created_at', thirtyDaysAgo.toISOString()),
+        supabaseAdmin.from('profiles').select('id', { count: 'exact', head: true }),
+        supabaseAdmin.from('subscription_logs').select('event_type, created_at').eq('event_type', 'cancel').gte('created_at', thirtyDaysAgo.toISOString()),
+        supabaseAdmin.from('profiles').select('id, full_name, last_seen_at, subscription_tier').not('subscription_tier', 'eq', 'free').order('last_seen_at', { ascending: true, nullsFirst: false }).limit(10),
+        supabaseAdmin.from('workouts').select('created_at').gte('created_at', thirtyDaysAgo.toISOString()),
+    ]);
+
+    // KPI: MRR
+    const mrr = orgs.data?.reduce((acc: number, org: any) => {
+        if (org.plan === 'starter') return acc + 49.99;
+        if (org.plan === 'pro') return acc + 99.99;
+        return acc + (Number(org.monthly_revenue) || 0);
+    }, 0) || 0;
+
+    const totalUsers = allUsers.count || 0;
+    const newMembersCount = newUsers.data?.length || 0;
+    const prevMonthUsers = totalUsers - newMembersCount;
+    const memberGrowthPct = prevMonthUsers > 0
+        ? `+${Math.round((newMembersCount / prevMonthUsers) * 100)}%`
+        : `+${newMembersCount}`;
+
+    const churnCount = churnData.data?.length || 0;
+    const churnRate = totalUsers > 0 ? ((churnCount / totalUsers) * 100).toFixed(1) : '0.0';
+
+    // Heatmap: group workouts by hour bucket and day of week
+    const hourBuckets = [8, 10, 14, 18, 20];
+    const heatmap: number[][] = hourBuckets.map(() => Array(7).fill(0));
+
+    (workouts.data || []).forEach((w: any) => {
+        const d = new Date(w.created_at);
+        const hour = d.getHours();
+        const dayOfWeek = (d.getDay() + 6) % 7; // 0=Mon, 6=Sun
+        let bucketIdx = 0;
+        let minDiff = Math.abs(hour - hourBuckets[0]);
+        hourBuckets.forEach((h, i) => {
+            const diff = Math.abs(hour - h);
+            if (diff < minDiff) { minDiff = diff; bucketIdx = i; }
+        });
+        heatmap[bucketIdx][dayOfWeek]++;
+    });
+
+    const maxVal = Math.max(...heatmap.flat(), 1);
+    const heatmapPct = heatmap.map(row => row.map(v => Math.round((v / maxVal) * 100)));
+
+    // Find day with lowest average attendance for AI insight
+    const dayTotals = Array(7).fill(0);
+    heatmap.forEach(row => row.forEach((v, d) => { dayTotals[d] += v; }));
+    const days = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+    const lowestDayIdx = dayTotals.indexOf(Math.min(...dayTotals));
+    const lowestDay = days[lowestDayIdx];
+
+    // Churn risk: profiles with last_seen_at older than 14 days with paid tier
+    const churnRiskUsers = (inactiveProfiles.data || [])
+        .filter((p: any) => {
+            if (!p.last_seen_at) return true;
+            return new Date(p.last_seen_at) < fourteenDaysAgo;
+        })
+        .slice(0, 3)
+        .map((p: any) => {
+            const daysSince = p.last_seen_at
+                ? Math.floor((now.getTime() - new Date(p.last_seen_at).getTime()) / (24 * 60 * 60 * 1000))
+                : 30;
+            return {
+                id: p.id,
+                name: p.full_name || 'Usuario',
+                risk: daysSince > 21 ? 'Alto' : 'Medio',
+                daysInactive: daysSince,
+                tier: p.subscription_tier || 'premium',
+            };
+        });
+
+    return {
+        kpis: {
+            projectedRevenue: `€${Math.round(mrr * 1.12).toLocaleString('es-ES')}`,
+            revenueChange: '+12%',
+            newMembers: newMembersCount,
+            memberChange: memberGrowthPct,
+            churnRate: `${churnRate}%`,
+            churnChange: churnCount > 0 ? `+${churnCount}` : '0',
+        },
+        heatmap: heatmapPct,
+        churnRisk: churnRiskUsers,
+        aiInsight: workouts.data && workouts.data.length > 0
+            ? `Detectamos menor actividad los ${lowestDay}s. Recomendamos programar un evento especial o clase de prueba gratuita para ese día.`
+            : 'Aún no hay suficientes datos de entrenamiento para generar recomendaciones automáticas. Anima a tus usuarios a registrar sus workouts.',
+    };
+}

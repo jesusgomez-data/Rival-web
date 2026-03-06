@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2 } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat } from "lucide-react";
 import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
@@ -225,10 +225,47 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     // Estados para modales de WOD
     const [showWODTracker, setShowWODTracker] = useState(false);
     const [showWODLeaderboard, setShowWODLeaderboard] = useState(false);
+    const [completionsCountWod, setCompletionsCountWod] = useState(0);
+    const [hasCompletedWod, setHasCompletedWod] = useState(false);
+    const [manualOriginalId, setManualOriginalId] = useState<string | null>(null);
+
+    // Parse wod_data if it's a string
+    const parsedWodData = useMemo(() => {
+        if (!wod_data) return null;
+        if (typeof wod_data === 'object') return wod_data;
+        try {
+            return JSON.parse(wod_data);
+        } catch (e) {
+            console.error("Error parsing wod_data:", e);
+            return null;
+        }
+    }, [wod_data]);
+
+
 
     const emojiPickerRef = useRef<HTMLDivElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
     const commentInputRef = useRef<HTMLInputElement>(null);
+
+    // Memoize the workout data: use prop if available, otherwise try to parse from "image" (media_url)
+    const resolvedWorkoutData = useMemo(() => {
+        if (workoutData) return workoutData;
+        if (!image || isImageUrl(image)) return null;
+        try {
+            const parsed = JSON.parse(image);
+            // Verify it's actually workout data (has blocks or metrics or title)
+            if (parsed && (parsed.blocks || parsed.metrics || parsed.title)) {
+                return parsed;
+            }
+        } catch (e) {
+            return null;
+        }
+        return null;
+    }, [workoutData, image]);
+
+    // Extract IDs from workout data if possible
+    const workoutWodId = (resolvedWorkoutData as any)?.original_wod_post_id || (resolvedWorkoutData as any)?.postId;
+    const targetWodId = manualOriginalId || (parsedWodData as any)?.original_wod_post_id || workoutWodId || postId;
 
 
     // Improved video detection
@@ -255,23 +292,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         }
     };
 
-    // Memoize the workout data: use prop if available, otherwise try to parse from "image" (media_url)
-    const resolvedWorkoutData = (() => {
-        if (workoutData) return workoutData;
-        if (!image || isImageUrl(image)) return null;
-        try {
-            const parsed = JSON.parse(image);
-            // Verify it's actually workout data (has blocks or metrics or title)
-            if (parsed && (parsed.blocks || parsed.metrics || parsed.title)) {
-                return parsed;
-            }
-        } catch (e) {
-            return null;
-        }
-        return null;
-    })();
 
-
+    
     useEffect(() => {
         if (showComments && commentList.length === 0) {
             setIsLoadingComments(true);
@@ -283,6 +305,43 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             });
         }
     }, [showComments, postId]);
+
+    useEffect(() => {
+        // Fetch completion data if it's a WOD post OR a post with resolved workout data that looks like a WOD
+        const isWodData = resolvedWorkoutData && (resolvedWorkoutData.blocks || (resolvedWorkoutData.metrics && resolvedWorkoutData.metrics.blocks));
+        if ((post_type === 'wod' || isWodData) && targetWodId) {
+            fetchCompletionsCount(targetWodId);
+            checkUserCompletion(targetWodId);
+        }
+    }, [post_type, targetWodId, resolvedWorkoutData]);
+
+    const fetchCompletionsCount = async (targetWodId: string) => {
+        try {
+            const res = await fetch(`/api/wod/leaderboard?wodPostId=${targetWodId}`);
+            const data = await res.json();
+            if (data.success && typeof data.total === 'number') {
+                setCompletionsCountWod(data.total);
+            }
+        } catch (e) {
+            console.error("Error fetching completions count:", e);
+        }
+    };
+
+    const checkUserCompletion = async (targetWodId: string) => {
+        try {
+            const res = await fetch(`/api/wod/my-completion?wodPostId=${targetWodId}`);
+            const data = await res.json();
+            if (data.success && data.completion) {
+                setHasCompletedWod(true);
+                // If we found a completion, and it has an original_wod_post_id, use it for everything!
+                if (data.completion.original_wod_post_id && data.completion.original_wod_post_id !== targetWodId) {
+                    setManualOriginalId(data.completion.original_wod_post_id);
+                }
+            }
+        } catch (e) {
+            console.error("Error checking user completion:", e);
+        }
+    };
 
     useEffect(() => {
         setCommentTree(buildTree(commentList));
@@ -421,6 +480,24 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         } finally {
             setIsDownloadingVideo(false);
         }
+    };
+
+    const handleRepost = () => {
+        const originalWodId = (parsedWodData as any)?.original_wod_post_id || (resolvedWorkoutData as any)?.original_wod_post_id || postId;
+        
+        window.dispatchEvent(new CustomEvent('repost-wod', {
+            detail: {
+                title: parsedWodData?.title || resolvedWorkoutData?.title || "WOD",
+                blocks: parsedWodData?.blocks || resolvedWorkoutData?.blocks || (resolvedWorkoutData?.metrics?.blocks) || [],
+                summary: parsedWodData?.summary || resolvedWorkoutData?.summary || {
+                    scoreLabel: resolvedWorkoutData?.metrics?.score || 'COMPLETADO',
+                    scoreType: resolvedWorkoutData?.metrics?.type || 'WORKOUT',
+                    totalTime: resolvedWorkoutData?.metrics?.duration || resolvedWorkoutData?.metrics?.time || '--:--'
+                },
+                postId: postId,
+                original_wod_post_id: originalWodId
+            }
+        }));
     };
 
     if (isDeleting) return null;
@@ -647,40 +724,51 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                     <div className="flex items-center gap-2 text-sm text-gray-400">
                         <Trophy className="w-4 h-4 text-brand-red" />
                         <span>
-                            <span className="font-bold text-white">0 atletas</span> han completado este WOD
+                            <span className="font-bold text-white">{completionsCountWod} atletas</span> han completado este WOD
                         </span>
                     </div>
 
                     {/* Botones de acción */}
-                    <div className="flex gap-3">
-                        <button
-                            className="flex-1 bg-gradient-to-r from-brand-red to-orange-600 hover:from-brand-accent hover:to-orange-700 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-brand-red/50"
-                            onClick={() => setShowWODTracker(true)}
-                        >
-                            <Dumbbell className="w-5 h-5" />
-                            Hacer este WOD
-                        </button>
-                        <button
-                            className="px-6 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
-                            onClick={() => setShowWODLeaderboard(true)}
-                        >
-                            <Trophy className="w-5 h-5" />
-                            Ranking
-                        </button>
+                    <div className="flex flex-col sm:flex-row gap-3">
+                        {hasCompletedWod && (
+                            <button
+                                className="flex-1 bg-gradient-to-r from-brand-red to-orange-600 hover:from-brand-accent hover:to-orange-700 text-white font-black uppercase tracking-widest text-[10px] md:text-sm py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-brand-red/50 active:scale-95"
+                                onClick={() => setShowWODTracker(true)}
+                            >
+                                <Edit2 className="w-5 h-5" />
+                                Editar mi resultado
+                            </button>
+                        )}
+                        <div className="flex gap-3 flex-1">
+                            <button
+                                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black uppercase tracking-widest text-[10px] md:text-sm py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95"
+                                onClick={() => setShowWODLeaderboard(true)}
+                            >
+                                <Trophy className="w-5 h-5 text-brand-yellow" />
+                                Ranking
+                            </button>
+                            <button
+                                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black uppercase tracking-widest text-[10px] md:text-sm py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 group"
+                                onClick={handleRepost}
+                            >
+                                <Repeat className="w-5 h-5 text-brand-red group-hover:rotate-180 transition-transform duration-500" />
+                                Repostear
+                            </button>
+                        </div>
                     </div>
 
                     {/* Modales */}
                     <WODTrackerModal
-                        wodPostId={postId}
-                        wodTitle={wod_data?.title || "WOD"}
+                        wodPostId={targetWodId}
+                        wodTitle={parsedWodData?.title || "WOD"}
                         wodType="rounds"
                         isOpen={showWODTracker}
                         onClose={() => setShowWODTracker(false)}
                         onSuccess={() => window.location.reload()}
                     />
                     <WODLeaderboardModal
-                        wodPostId={postId}
-                        wodTitle={wod_data?.title || "WOD"}
+                        wodPostId={targetWodId}
+                        wodTitle={parsedWodData?.title || "WOD"}
                         isOpen={showWODLeaderboard}
                         onClose={() => setShowWODLeaderboard(false)}
                     />
@@ -959,7 +1047,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 ...b,
                                 config: b.config || {} // Safety for legacy data
                             }));
-                            const normalizedWodData = {
+                             const normalizedWodData = {
                                 title: w.title || (w.sport_type && w.sport_type !== 'Entrenamiento Libre' ? w.sport_type : 'WORKOUT OF THE DAY'),
                                 blocks: blocks,
                                 summary: w.summary || {
@@ -967,15 +1055,19 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     scoreType: w.metrics?.type || 'WORKOUT',
                                     totalTime: w.metrics?.duration || w.metrics?.time || '--:--'
                                 },
-                                media_url: image && isImageUrl(image) ? image : null
+                                media_url: image && isImageUrl(image) ? image : null,
+                                original_wod_post_id: (w as any).original_wod_post_id || null
                             };
 
                             return (
                                 <div className="w-full mt-2">
                                     <WodCard
+                                        completionsCount={completionsCountWod}
+                                        hasCompleted={hasCompletedWod}
                                         data={normalizedWodData as any}
                                         userName={username || user}
                                         publishDate={time}
+                                        postId={postId}
                                     />
                                 </div>
                             );

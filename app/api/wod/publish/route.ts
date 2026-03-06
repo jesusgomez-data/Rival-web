@@ -28,6 +28,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const wod = body.wod as GeneratedWOD;
 
+    // Resultado opcional del publicador
+    const creatorResult = body.creatorResult as {
+      completionType: string;
+      completionTimeSeconds?: number;
+      roundsCompleted?: number;
+      totalReps?: number;
+      weightKg?: number;
+      score?: number;
+      rx?: boolean;
+      notes?: string;
+    } | undefined;
+
     if (!wod || !wod.title) {
       return NextResponse.json(
         { error: "WOD inválido" },
@@ -45,7 +57,7 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         caption: postContent,
         post_type: "wod",
-        wod_data: wod, // Guardar WOD completo como JSON
+        wod_data: wod,
         created_at: new Date().toISOString(),
       })
       .select()
@@ -57,6 +69,23 @@ export async function POST(request: NextRequest) {
         { error: "Error al publicar WOD" },
         { status: 500 }
       );
+    }
+
+    // 5. Si el publicador envió su resultado, guardarlo en el ranking automáticamente
+    if (creatorResult && post) {
+      await supabase.from("wod_completions").insert({
+        user_id: user.id,
+        original_wod_post_id: post.id,
+        completion_type: creatorResult.completionType,
+        completion_time_seconds: creatorResult.completionTimeSeconds ?? null,
+        rounds_completed: creatorResult.roundsCompleted ?? null,
+        total_reps: creatorResult.totalReps ?? null,
+        weight_kg: creatorResult.weightKg ?? null,
+        score: creatorResult.score ?? null,
+        notes: creatorResult.notes ?? null,
+        rx: creatorResult.rx ?? true,
+        completed_at: new Date().toISOString(),
+      });
     }
 
     return NextResponse.json({

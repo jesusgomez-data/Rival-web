@@ -10,9 +10,11 @@ import {
     Dumbbell,
     Trophy,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    Edit2,
+    Activity
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { WodBlock, WodFormat, WodSummary, ExerciseEntry } from "../training/WodCreator";
 import { cn, isImageUrl } from "@/lib/utils";
 import { getWodResults } from "@/app/dashboard/community/actions";
@@ -33,6 +35,8 @@ interface WodCardProps {
     userName: string;
     publishDate?: string;
     postId?: string;
+    completionsCount?: number;
+    hasCompleted?: boolean;
 }
 
 const FORMAT_CONFIG: Partial<Record<WodFormat, { label: string, color: string, icon: any }>> = {
@@ -48,10 +52,38 @@ const FORMAT_CONFIG: Partial<Record<WodFormat, { label: string, color: string, i
 
 const DEFAULT_CONFIG = { label: 'WOD', color: 'text-green-500', icon: Target };
 
-export default function WodCard({ data, userName, publishDate, postId }: WodCardProps) {
+export default function WodCard({ data, userName, publishDate, postId, completionsCount = 0, hasCompleted: initialHasCompleted = false }: WodCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showWODLeaderboard, setShowWODLeaderboard] = useState(false);
     const [showWODTracker, setShowWODTracker] = useState(false);
+    const [hasCompleted, setHasCompleted] = useState(initialHasCompleted);
+    const [isLoadingStatus, setIsLoadingStatus] = useState(false);
+
+    useEffect(() => {
+        if (postId || (data as any).original_wod_post_id) {
+            checkCompletionStatus();
+        }
+    }, [postId, data]);
+
+    const checkCompletionStatus = async () => {
+        setIsLoadingStatus(true);
+        const targetWodId = (data as any).original_wod_post_id || postId;
+        if (!targetWodId) {
+            setIsLoadingStatus(false);
+            return;
+        }
+        try {
+            const response = await fetch(`/api/wod/my-completion?wodPostId=${targetWodId}`);
+            const resData = await response.json();
+            if (resData.success && resData.completion) {
+                setHasCompleted(true);
+            }
+        } catch (error) {
+            console.error("Error checking completion status:", error);
+        } finally {
+            setIsLoadingStatus(false);
+        }
+    };
 
     if (!data.blocks || data.blocks.length === 0) return null;
 
@@ -67,6 +99,13 @@ export default function WodCard({ data, userName, publishDate, postId }: WodCard
                     </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+
+                <div className="absolute top-4 left-6 flex items-center gap-2 z-10">
+                    <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-full px-3 py-1 flex items-center gap-2">
+                        <Activity className="w-3 h-3 text-brand-red" />
+                        <span className="text-[9px] font-black text-white uppercase tracking-widest">{completionsCount} ATLETAS</span>
+                    </div>
+                </div>
 
                 <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
                     <div className="min-w-0 flex-1">
@@ -206,19 +245,51 @@ export default function WodCard({ data, userName, publishDate, postId }: WodCard
                             </div>
 
                             <div className="flex flex-col gap-2">
-                                <button
-                                    onClick={() => {
-                                        if (postId) {
-                                            setShowWODTracker(true);
-                                        } else {
-                                            window.dispatchEvent(new CustomEvent('repost-wod', { detail: data }));
-                                        }
-                                    }}
-                                    className="bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl px-6 py-4 flex items-center justify-center gap-2 transition-all active:scale-95 group/repost"
-                                >
-                                    {postId ? <Dumbbell className="w-4 h-4 text-brand-red transition-transform duration-500" /> : <Repeat className="w-4 h-4 text-brand-red group-hover/repost:rotate-180 transition-transform duration-500" />}
-                                    <span className="text-[8px] font-black text-gray-300 uppercase tracking-widest whitespace-nowrap">{postId ? "HACER ESTE WOD" : "REPOSTEAR WOD"}</span>
-                                </button>
+                                <div className="flex gap-2">
+                                    {hasCompleted && (
+                                        <button
+                                            onClick={() => {
+                                                if (postId) {
+                                                    setShowWODTracker(true);
+                                                } else {
+                                                    window.dispatchEvent(new CustomEvent('repost-wod', { 
+                                                        detail: {
+                                                            ...data,
+                                                            postId: postId
+                                                        } 
+                                                    }));
+                                                }
+                                            }}
+                                            className={cn(
+                                                "flex-1 bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl px-6 py-4 flex items-center justify-center gap-2 transition-all active:scale-95 group/track",
+                                                "border-green-500/50 hover:bg-green-500/5"
+                                            )}
+                                        >
+                                            <Edit2 className="w-4 h-4 text-green-500" />
+                                            <span className="text-[8px] font-black text-gray-300 uppercase tracking-widest whitespace-nowrap">
+                                                EDITAR MI RESULTADO
+                                            </span>
+                                        </button>
+                                    )}
+
+                                    {postId && (
+                                        <button
+                                            onClick={() => {
+                                                window.dispatchEvent(new CustomEvent('repost-wod', { 
+                                                    detail: {
+                                                        ...data,
+                                                        postId: (data as any).original_wod_post_id || postId
+                                                    }
+                                                }));
+                                            }}
+                                            className="bg-white/5 hover:bg-white/10 border border-white/5 rounded-2xl px-4 py-4 flex items-center justify-center transition-all active:scale-95 group/repost"
+                                            title="Repostear en mi muro"
+                                        >
+                                            <Repeat className="w-4 h-4 text-brand-red group-hover/repost:rotate-180 transition-transform duration-500" />
+                                            <span className="text-[8px] font-black text-gray-300 uppercase tracking-widest ml-2">REPOSTEAR</span>
+                                        </button>
+                                    )}
+                                </div>
 
                                 <button
                                     onClick={() => {
@@ -253,7 +324,7 @@ export default function WodCard({ data, userName, publishDate, postId }: WodCard
             {postId && (
                 <>
                     <WODTrackerModal
-                        wodPostId={postId}
+                        wodPostId={(data as any).original_wod_post_id || postId || ""}
                         wodTitle={data.title || "WOD"}
                         wodType={data.summary?.scoreType?.toUpperCase() === 'TIME' ? 'time' : 'rounds'}
                         isOpen={showWODTracker}
@@ -261,7 +332,7 @@ export default function WodCard({ data, userName, publishDate, postId }: WodCard
                         onSuccess={() => window.location.reload()}
                     />
                     <WODLeaderboardModal
-                        wodPostId={postId}
+                        wodPostId={(data as any).original_wod_post_id || postId || ""}
                         wodTitle={data.title || "WOD"}
                         isOpen={showWODLeaderboard}
                         onClose={() => setShowWODLeaderboard(false)}

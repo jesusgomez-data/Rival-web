@@ -5,7 +5,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import WODCompletionsService from "@/lib/wod-completions";
 
 export async function POST(request: NextRequest) {
   try {
@@ -45,46 +44,90 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Registrar completion
-    const service = new WODCompletionsService();
-    const result = await service.completeWOD({
-      originalWodPostId,
-      completionType,
-      completionTimeSeconds,
-      roundsCompleted,
-      totalReps,
-      weightKg,
-      score,
-      notes,
-      rx: rx ?? true,
-      startedAt: startedAt ? new Date(startedAt) : undefined,
-    });
+    // 4. Verificar que el post existe
+    const { data: originalPost, error: postError } = await supabase
+      .from("posts")
+      .select("id")
+      .eq("id", originalWodPostId)
+      .single();
 
-    if (!result.success) {
-      return NextResponse.json(
-        { error: result.error || "Error al completar WOD" },
-        { status: 400 }
-      );
+    if (postError || !originalPost) {
+      return NextResponse.json({ error: "WOD no encontrado" }, { status: 404 });
     }
 
-    // 5. Opcional: Crear post en el feed del usuario
-    // (Puedes activar esto si quieres que se publique automáticamente)
-    /*
-    const completionPost = await supabase
-      .from("posts")
+    // 5. Verificar si ya completó este WOD
+    const { data: existing } = await supabase
+      .from("wod_completions")
+      .select("id")
+      .eq("user_id", user.id)
+      .eq("original_wod_post_id", originalWodPostId)
+      .maybeSingle();
+
+    if (existing) {
+      // 6. Actualizar completion existente
+      const { data: updated, error: updateError } = await supabase
+        .from("wod_completions")
+        .update({
+          completion_type: completionType,
+          completion_time_seconds: completionTimeSeconds ?? null,
+          rounds_completed: roundsCompleted ?? null,
+          total_reps: totalReps ?? null,
+          weight_kg: weightKg ?? null,
+          score: score ?? null,
+          notes: notes ?? null,
+          rx: rx ?? true,
+          completed_at: new Date().toISOString(),
+        })
+        .eq("id", existing.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error("Error updating completion:", updateError);
+        return NextResponse.json(
+          { error: "Error al actualizar completion: " + updateError.message },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        completion: updated,
+        message: "¡Resultado actualizado exitosamente!",
+      });
+    }
+
+    // 6. Insertar completion usando el cliente autenticado del servidor
+    const { data: completion, error: insertError } = await supabase
+      .from("wod_completions")
       .insert({
         user_id: user.id,
-        caption: `¡Completé este WOD! ⏱️ ${formatResult(result.completion)}`,
-        post_type: "workout_completion",
-        // Link al WOD original
+        original_wod_post_id: originalWodPostId,
+        completion_type: completionType,
+        completion_time_seconds: completionTimeSeconds ?? null,
+        rounds_completed: roundsCompleted ?? null,
+        total_reps: totalReps ?? null,
+        weight_kg: weightKg ?? null,
+        score: score ?? null,
+        notes: notes ?? null,
+        rx: rx ?? true,
+        started_at: startedAt ? new Date(startedAt).toISOString() : null,
+        completed_at: new Date().toISOString(),
       })
       .select()
       .single();
-    */
+
+    if (insertError) {
+      console.error("Error inserting completion:", insertError);
+      return NextResponse.json(
+        { error: "Error al registrar completion: " + insertError.message },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      completion: result.completion,
+      completion,
       message: "¡WOD completado exitosamente!",
     });
   } catch (error: any) {
@@ -93,22 +136,5 @@ export async function POST(request: NextRequest) {
       { error: error.message || "Error interno del servidor" },
       { status: 500 }
     );
-  }
-}
-
-// Helper para formatear el resultado
-function formatResult(completion: any): string {
-  if (completion.completionTimeSeconds) {
-    const mins = Math.floor(completion.completionTimeSeconds / 60);
-    const secs = completion.completionTimeSeconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  } else if (completion.roundsCompleted) {
-    return `${completion.roundsCompleted} rounds`;
-  } else if (completion.totalReps) {
-    return `${completion.totalReps} reps`;
-  } else if (completion.weightKg) {
-    return `${completion.weightKg} kg`;
-  } else {
-    return `Score: ${completion.score}`;
   }
 }
