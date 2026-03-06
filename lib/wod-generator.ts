@@ -119,11 +119,11 @@ export class WODGenerator {
   private geminiModel: any;
 
   constructor() {
-    this.groqApiKey = process.env.GROQ_API_KEY || "";
+    this.groqApiKey = (process.env.GROQ_API_KEY || "").trim();
     
     // Configurar Gemini como fallback
     try {
-      const geminiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+      const geminiKey = (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "").trim();
       if (geminiKey) {
         const genAI = new GoogleGenerativeAI(geminiKey);
         this.geminiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
