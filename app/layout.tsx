@@ -31,7 +31,7 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   icons: {
     icon: "/logo.svg",
-    apple: "/rival_logo.png",
+    apple: "/logo.svg",
   },
   openGraph: {
     title: "Rival Fit | Face Yourself. Conquer All.",
