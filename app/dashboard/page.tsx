@@ -72,7 +72,7 @@ function StatCard({ label, value, subtext, icon }: { label: string, value: strin
 }
 
 
-function CollapsibleCreatePost({ currentUser, language }: { currentUser: any, language: string }) {
+function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser: any, language: string, refresh: () => void }) {
     const [isOpen, setIsOpen] = useState(false);
     const [repostData, setRepostData] = useState<any>(null);
     const [editMode, setEditMode] = useState<{ id: string } | null>(null);
@@ -150,6 +150,7 @@ function CollapsibleCreatePost({ currentUser, language }: { currentUser: any, la
                             setIsOpen(false);
                             setRepostData(null);
                             setEditMode(null);
+                            refresh();
                         }}
                         initialPostType={repostData ? 'wod' : 'standard'}
                         initialData={repostData}
@@ -553,7 +554,14 @@ export default function DashboardHome() {
 
                         {data.workoutCount === 0 && <EssentialsHero />}
 
-                        <CollapsibleCreatePost currentUser={data.currentUser} language={language} />
+                        <CollapsibleCreatePost 
+                            currentUser={data.currentUser} 
+                            language={language} 
+                            refresh={() => {
+                                setRefreshKey(prev => prev + 1);
+                                loadData();
+                            }}
+                        />
 
                         <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] ml-2">{t.dashboard.recentActivity}</h3>
                         {data.feedPosts && data.feedPosts.length > 0 ? (

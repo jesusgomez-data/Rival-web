@@ -32,13 +32,9 @@ const nextConfig: NextConfig = {
       }
     ],
   },
-  // Disable strict checks for deployment
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   experimental: {
     serverActions: {
-      bodySizeLimit: '200mb',
+      bodySizeLimit: '50mb',
     },
     // Enable optimistic client cache for faster navigations
     staleTimes: {
@@ -52,8 +48,7 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
-  // Strict mode helps catch bugs early without runtime cost in prod
-  reactStrictMode: false,
+  reactStrictMode: true,
 };
 
 export default withNextIntl(nextConfig);

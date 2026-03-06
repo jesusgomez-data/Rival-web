@@ -5,17 +5,7 @@ export function createAdminClient() {
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!serviceRoleKey) {
-        console.warn("⚠️ SUPABASE_SERVICE_ROLE_KEY missing. Falling back to ANON KEY. RLS policies will apply.");
-        return createClient(
-            supabaseUrl,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            {
-                auth: {
-                    autoRefreshToken: false,
-                    persistSession: false
-                }
-            }
-        );
+        throw new Error("SUPABASE_SERVICE_ROLE_KEY is required but not set. Check your environment variables.");
     }
 
     return createClient(

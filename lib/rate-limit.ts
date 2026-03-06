@@ -179,27 +179,28 @@ export const rateLimiters = {
 // ============================================
 
 export function getClientIdentifier(request: Request): string {
-  // 1. Intentar obtener IP desde headers (detrás de proxy/CDN)
-  const forwarded = request.headers.get('x-forwarded-for');
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
-
-  // 2. Cloudflare
+  // 1. Cloudflare - most trusted (set by CF infra, not spoofable)
   const cfConnectingIp = request.headers.get('cf-connecting-ip');
   if (cfConnectingIp) {
     return cfConnectingIp;
   }
 
-  // 3. Vercel
+  // 2. Vercel - set by Vercel infra
   const vercelIp = request.headers.get('x-real-ip');
   if (vercelIp) {
     return vercelIp;
   }
 
-  // 4. Fallback a User-Agent (menos confiable)
-  const userAgent = request.headers.get('user-agent') || 'unknown';
-  return `ua-${userAgent.substring(0, 50)}`;
+  // 3. X-Forwarded-For: take the LAST IP (closest trusted proxy),
+  //    not the first (which can be spoofed by clients)
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (forwarded) {
+    const ips = forwarded.split(',').map(ip => ip.trim());
+    return ips[ips.length - 1];
+  }
+
+  // 4. Fallback
+  return 'unknown';
 }
 
 // ============================================

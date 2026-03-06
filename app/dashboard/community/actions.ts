@@ -138,6 +138,70 @@ export async function createPRPost(formData: FormData) {
     }
 }
 
+async function syncWodCompletion(supabase: any, user: any, postId: string, wodDataJson: string) {
+    try {
+        const wodObj = JSON.parse(wodDataJson);
+        const w = Array.isArray(wodObj) ? wodObj[0] : wodObj;
+
+        const scoreType = (w.summary?.scoreType || w.metrics?.type || 'SCORE').toUpperCase();
+        const scoreStr = w.summary?.scoreLabel || w.metrics?.score;
+        const originalWodPostId = w.original_wod_post_id || null;
+
+        let completionType = 'score';
+        let completionTimeSeconds = null;
+        let roundsCompleted = null;
+        let totalReps = null;
+        let weightKg = null;
+        let score = null;
+
+        if (scoreType === 'TIME' && scoreStr) {
+            completionType = 'time';
+            const timeMatch = scoreStr.match(/(\d+):(\d+)(?::(\d+))?/);
+            if (timeMatch) {
+                if (timeMatch[3]) completionTimeSeconds = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseInt(timeMatch[3]);
+                else completionTimeSeconds = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]);
+            } else {
+                completionTimeSeconds = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
+            }
+        } else if ((scoreType === 'AMRAP' || scoreType === 'ROUNDS') && scoreStr) {
+            completionType = 'rounds';
+            roundsCompleted = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
+        } else if (scoreType === 'REPS' && scoreStr) {
+            completionType = 'reps';
+            totalReps = parseInt(scoreStr.replace(/[^0-9]/g, '')) || 0;
+        } else if (scoreType === 'WEIGHT' && scoreStr) {
+            completionType = 'weight';
+            weightKg = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
+        } else if (scoreStr) {
+            completionType = 'score';
+            score = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
+        }
+
+        const completionData = {
+            user_id: user.id,
+            original_wod_post_id: originalWodPostId || postId,
+            completion_post_id: postId,
+            completion_type: completionType,
+            completion_time_seconds: completionTimeSeconds,
+            rounds_completed: roundsCompleted,
+            total_reps: totalReps,
+            weight_kg: weightKg,
+            score: score,
+            rx: true,
+            completed_at: new Date().toISOString()
+        };
+
+        // Upsert based on completion_post_id
+        const { error: upsertError } = await supabase
+            .from('wod_completions')
+            .upsert(completionData, { onConflict: 'completion_post_id' });
+
+        if (upsertError) console.error("WOD completion sync error:", upsertError);
+    } catch (e) {
+        console.error("WOD completion sync catch:", e);
+    }
+}
+
 export async function createWodPost(formData: FormData) {
     try {
         const supabase = await createClient()
@@ -176,63 +240,9 @@ export async function createWodPost(formData: FormData) {
             return { error: `Database error: ${insertError.message}` }
         }
 
-        // --- NEW: Add the creator to the leaderboard if they provided a score ---
-        try {
-            const wodObj = JSON.parse(wodDataJson);
-            const w = Array.isArray(wodObj) ? wodObj[0] : wodObj;
-
-            const scoreType = (w.summary?.scoreType || w.metrics?.type || 'SCORE').toUpperCase();
-            const timeStr = w.summary?.totalTime || w.metrics?.duration || w.metrics?.time;
-            const scoreStr = w.summary?.scoreLabel || w.metrics?.score;
-            const originalWodPostId = w.original_wod_post_id || null;
-
-            let completionType = 'score';
-            let completionTimeSeconds = null;
-            let roundsCompleted = null;
-            let totalReps = null;
-            let weightKg = null;
-            let score = null;
-
-            if (scoreType === 'TIME' && scoreStr) {
-                completionType = 'time';
-                const timeMatch = scoreStr.match(/(\d+):(\d+)(?::(\d+))?/);
-                if (timeMatch) {
-                    if (timeMatch[3]) completionTimeSeconds = parseInt(timeMatch[1]) * 3600 + parseInt(timeMatch[2]) * 60 + parseInt(timeMatch[3]);
-                    else completionTimeSeconds = parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]);
-                } else {
-                    completionTimeSeconds = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
-                }
-            } else if ((scoreType === 'AMRAP' || scoreType === 'ROUNDS') && scoreStr) {
-                completionType = 'rounds';
-                roundsCompleted = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
-            } else if (scoreType === 'REPS' && scoreStr) {
-                completionType = 'reps';
-                totalReps = parseInt(scoreStr.replace(/[^0-9]/g, '')) || 0;
-            } else if (scoreType === 'WEIGHT' && scoreStr) {
-                completionType = 'weight';
-                weightKg = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
-            } else if (scoreStr) {
-                completionType = 'score';
-                score = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
-            }
-
-            if (completionTimeSeconds || roundsCompleted || totalReps || weightKg || score) {
-                await supabase.from('wod_completions').insert({
-                    user_id: user.id,
-                    original_wod_post_id: originalWodPostId || newPost.id,
-                    completion_post_id: newPost.id,
-                    completion_type: completionType,
-                    completion_time_seconds: completionTimeSeconds,
-                    rounds_completed: roundsCompleted,
-                    total_reps: totalReps,
-                    weight_kg: weightKg,
-                    score: score,
-                    rx: true,
-                    completed_at: new Date().toISOString()
-                });
-            }
-        } catch (autoErr) {
-            console.error("Auto-completion insert failed:", autoErr);
+        // --- Sync WOD completion record for leaderboard ---
+        if (newPost) {
+            await syncWodCompletion(supabase, user, newPost.id, wodDataJson);
         }
 
         revalidatePath('/dashboard/community')
@@ -539,7 +549,19 @@ export async function updatePost(postId: string, newCaption: string, mediaUrl?: 
     const isAdmin = profile?.is_official === true;
 
     const updateData: any = { caption: newCaption };
-    if (mediaUrl) updateData.media_url = mediaUrl;
+    if (mediaUrl) {
+        updateData.media_url = mediaUrl;
+        
+        // If it's a JSON string that looks like WOD data, also update wod_data column
+        try {
+            if (mediaUrl.startsWith('{') || mediaUrl.startsWith('[')) {
+                updateData.wod_data = JSON.parse(mediaUrl);
+                updateData.media_type = 'wod';
+            }
+        } catch (e) {
+            // Not JSON, ignore
+        }
+    }
     if (scheduledFor) {
         updateData.created_at = new Date(`${scheduledFor}T${new Date().toISOString().split('T')[1]}`).toISOString();
     }
@@ -556,6 +578,12 @@ export async function updatePost(postId: string, newCaption: string, mediaUrl?: 
         if (adminError) return { error: adminError.message };
     } else {
         if (error) return { error: error.message }
+    }
+
+    // --- NEW: Sync WOD result if it's a WOD post ---
+    const { data: post } = await supabase.from('posts').select('media_type, media_url').eq('id', postId).single();
+    if (post && post.media_type === 'wod' && post.media_url) {
+        await syncWodCompletion(supabase, user, postId, post.media_url);
     }
 
     revalidatePath('/dashboard')
