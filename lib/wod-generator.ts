@@ -136,6 +136,8 @@ export class WODGenerator {
   async generateWOD(request: WODRequest): Promise<GeneratedWOD> {
     const userPrompt = this.buildUserPrompt(request);
     let errorLog = "";
+    
+    const maskKey = (key: string) => key ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : "MISSING";
 
     // PRIMERO: Intentar con GROQ
     if (this.groqApiKey) {
@@ -166,7 +168,7 @@ export class WODGenerator {
         const wod = JSON.parse(text);
         return { ...wod, source: "groq" };
       } catch (error: any) {
-        errorLog += error.message + " | ";
+        errorLog += `Groq(${maskKey(this.groqApiKey)}): ${error.message} | `;
         console.error("❌ Groq Error:", error.message);
       }
     } else {
@@ -184,7 +186,9 @@ export class WODGenerator {
         const wod = JSON.parse(text);
         return { ...wod, source: "gemini" };
       } catch (error: any) {
-        errorLog += error.message + " | ";
+        // Encontrar la clave que se intentó usar para Gemini
+        const gemKeyUsed = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+        errorLog += `Gemini(${maskKey(gemKeyUsed)}): ${error.message} | `;
         console.error("❌ Gemini Error:", error.message);
       }
     } else {
