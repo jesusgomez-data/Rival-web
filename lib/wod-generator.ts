@@ -135,9 +135,6 @@ export class WODGenerator {
 
   async generateWOD(request: WODRequest): Promise<GeneratedWOD> {
     const userPrompt = this.buildUserPrompt(request);
-    let errorLog = "";
-    
-    const maskKey = (key: string) => key ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : "MISSING";
 
     // PRIMERO: Intentar con GROQ
     if (this.groqApiKey) {
@@ -168,11 +165,8 @@ export class WODGenerator {
         const wod = JSON.parse(text);
         return { ...wod, source: "groq" };
       } catch (error: any) {
-        errorLog += `Groq(${maskKey(this.groqApiKey)}): ${error.message} | `;
         console.error("❌ Groq Error:", error.message);
       }
-    } else {
-      errorLog += "No Groq Key | ";
     }
 
     // SEGUNDO: Intentar con GEMINI
@@ -186,17 +180,12 @@ export class WODGenerator {
         const wod = JSON.parse(text);
         return { ...wod, source: "gemini" };
       } catch (error: any) {
-        // Encontrar la clave que se intentó usar para Gemini
-        const gemKeyUsed = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
-        errorLog += `Gemini(${maskKey(gemKeyUsed)}): ${error.message} | `;
         console.error("❌ Gemini Error:", error.message);
       }
-    } else {
-      errorLog += "No Gemini Key | ";
     }
 
-    // TERCERO: Fallback Manual con Diagnóstico
-    return this.getFallbackWOD(request, errorLog);
+    // TERCERO: Fallback Manual
+    return this.getFallbackWOD(request);
   }
 
   private buildUserPrompt(request: WODRequest): string {
@@ -226,7 +215,7 @@ Responde SOLO el JSON.
     `.trim();
   }
 
-  private getFallbackWOD(request: WODRequest, error?: string): GeneratedWOD {
+  private getFallbackWOD(request: WODRequest): GeneratedWOD {
     const isAmrap = request.workoutType === "amrap";
     
     // Listas de ejercicios para variar el fallback si la IA falla
@@ -236,8 +225,8 @@ Responde SOLO el JSON.
 
     return {
       source: "fallback",
-      title: "WOD " + request.workoutType.toUpperCase() + " (" + (Math.floor(Math.random() * 999)) + ")",
-      subtitle: error ? `ERR: ${error.substring(0, 50)}...` : (isAmrap ? `AMRAP ${request.duration} min` : "5 Rounds For Time"),
+      title: "WOD " + request.workoutType.toUpperCase(),
+      subtitle: isAmrap ? `AMRAP ${request.duration} min` : "5 Rounds For Time",
       difficulty: request.fitnessLevel,
       estimatedDuration: request.duration,
       caloriesBurn: Math.round(request.duration * 10),
