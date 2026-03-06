@@ -112,7 +112,7 @@ JSON STRUCTURE:
 
 // ============================================
 // GENERADOR
-// ============================================
+// Final build force for Vercel keys - 16:15
 
 export class WODGenerator {
   private groqApiKey: string;
