@@ -135,11 +135,11 @@ export class WODGenerator {
 
   async generateWOD(request: WODRequest): Promise<GeneratedWOD> {
     const userPrompt = this.buildUserPrompt(request);
+    let errorLog = "";
 
-    // PRIMERO: Intentar con GROQ (Más rápido y confiable para JSON)
+    // PRIMERO: Intentar con GROQ
     if (this.groqApiKey) {
       try {
-        console.log("⚡ Generating with Groq...");
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -158,43 +158,41 @@ export class WODGenerator {
         });
 
         const data = await response.json();
-        
-        if (data.error) {
-          throw new Error(`Groq API Error: ${data.error.message || JSON.stringify(data.error)}`);
-        }
+        if (data.error) throw new Error(`Groq: ${data.error.message || 'API Error'}`);
 
         const text = data.choices?.[0]?.message?.content;
-        console.log("⚡ Groq Response Raw:", text);
+        if (!text) throw new Error("Groq: Empty content");
 
         const wod = JSON.parse(text);
         return { ...wod, source: "groq" };
-      } catch (error) {
-        console.error("❌ Groq failed, falling back to Gemini/Manual", error);
+      } catch (error: any) {
+        errorLog += error.message + " | ";
+        console.error("❌ Groq Error:", error.message);
       }
+    } else {
+      errorLog += "No Groq Key | ";
     }
 
     // SEGUNDO: Intentar con GEMINI
     if (this.geminiModel) {
       try {
-        console.log("💎 Generating with Gemini...");
-        const result = await this.geminiModel.generateContent([
-          { text: SYSTEM_PROMPT },
-          { text: userPrompt }
-        ]);
-
+        const result = await this.geminiModel.generateContent([{ text: SYSTEM_PROMPT }, { text: userPrompt }]);
         const response = await result.response;
         let text = response.text();
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         if (jsonMatch) text = jsonMatch[0];
         const wod = JSON.parse(text);
         return { ...wod, source: "gemini" };
-      } catch (error) {
-        console.error("❌ Gemini failed too", error);
+      } catch (error: any) {
+        errorLog += error.message + " | ";
+        console.error("❌ Gemini Error:", error.message);
       }
+    } else {
+      errorLog += "No Gemini Key | ";
     }
 
-    // TERCERO: Fallback Manual (ÚLTIMO RECURSO)
-    return this.getFallbackWOD(request);
+    // TERCERO: Fallback Manual con Diagnóstico
+    return this.getFallbackWOD(request, errorLog);
   }
 
   private buildUserPrompt(request: WODRequest): string {
@@ -224,7 +222,7 @@ Responde SOLO el JSON.
     `.trim();
   }
 
-  private getFallbackWOD(request: WODRequest): GeneratedWOD {
+  private getFallbackWOD(request: WODRequest, error?: string): GeneratedWOD {
     const isAmrap = request.workoutType === "amrap";
     
     // Listas de ejercicios para variar el fallback si la IA falla
@@ -235,7 +233,7 @@ Responde SOLO el JSON.
     return {
       source: "fallback",
       title: "WOD " + request.workoutType.toUpperCase() + " (" + (Math.floor(Math.random() * 999)) + ")",
-      subtitle: isAmrap ? `AMRAP ${request.duration} min` : "5 Rounds For Time",
+      subtitle: error ? `ERR: ${error.substring(0, 50)}...` : (isAmrap ? `AMRAP ${request.duration} min` : "5 Rounds For Time"),
       difficulty: request.fitnessLevel,
       estimatedDuration: request.duration,
       caloriesBurn: Math.round(request.duration * 10),
