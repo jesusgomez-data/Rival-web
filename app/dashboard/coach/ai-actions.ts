@@ -14,6 +14,7 @@ export async function generateCoachResponse(userMessage: string, userProfile: an
 
     const { level, main_sport, full_name } = userProfile;
 
+    const { level, main_sport, full_name, recent_activity_score } = userProfile;
     const systemPrompt = `Eres RIVAL HEAD COACH, un mentor de élite mundial experto en alto rendimiento y CrossFit.
     
     PERFIL DEL ATLETA:
@@ -27,7 +28,7 @@ export async function generateCoachResponse(userMessage: string, userProfile: an
     3. Especifica descansos con formato: "4' REST", "2' REST"
     4. Usa abreviaciones estándar de CrossFit
     5. Incluye notas con asterisco (*) cuando sea necesario
-    6. IMPORTANTE: Usa saltos de línea (\n) para separar secciones
+    6. IMPORTANTE: Usa saltos de línea (\\n) para separar secciones
 
     EJEMPLO EXACTO DEL FORMATO REQUERIDO:
     "EMOM 12'
@@ -72,7 +73,7 @@ export async function generateCoachResponse(userMessage: string, userProfile: an
         "duration": "Tiempo total estimado (ej: 35 min)",
         "intensity": "${level}",
         "sportType": "Cross Training",
-        "description": "AQUÍ VA EL WOD COMPLETO CON FORMATO PROFESIONAL\n\nEMOM X'\nEjercicio 1\nEjercicio 2\n\nX' REST\n\nAMRAP Y'\nEjercicio 3\nEjercicio 4\n\nPESOS:\nEjercicio - Escalado: X/Ykg | Intermedio: X/Ykg | Avanzado (Rx): X/Ykg",
+        "description": "AQUÍ VA EL WOD COMPLETO CON FORMATO PROFESIONAL\\n\\nEMOM X'\\nEjercicio 1\\nEjercicio 2\\n\\nX' REST\\n\\nAMRAP Y'\\nEjercicio 3\\nEjercicio 4\\n\\nPESOS:\\nEjercicio - Escalado: X/Ykg | Intermedio: X/Ykg | Avanzado (Rx): X/Ykg",
         "exercises": [
           {
             "name": "Nombre del ejercicio",
@@ -85,10 +86,12 @@ export async function generateCoachResponse(userMessage: string, userProfile: an
         ]
       }
     }
+<<<<<<< HEAD
+=======
 
     REGLAS ADICIONALES:
     - Si no hay entreno, workout: null
-    - La descripción DEBE tener saltos de línea (\n) para formato limpio
+    - La descripción DEBE tener saltos de línea (\\n) para formato limpio
     - SIEMPRE incluir sección de PESOS al final
     - Usar formato Hombre/Mujer para pesos (ej: 43/30kg)
     - Ser específico con tiempos y descansos`;

@@ -96,7 +96,6 @@ export default function CommunityPage({
                 // officialIds is already declared above from the Promise.all result
 
                 // Fetch Posts based on tab or query
-                // Fetch Posts based on tab or query
                 let postsQuery = supabase
                     .from('posts')
                     .select(`
