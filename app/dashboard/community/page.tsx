@@ -102,7 +102,6 @@ export default function CommunityPage({
                 const officialIds = officialAccounts?.map(acc => acc.id) || [];
 
                 // Fetch Posts based on tab or query
-                // Fetch Posts based on tab or query
                 let postsQuery = supabase
                     .from('posts')
                     .select(`
