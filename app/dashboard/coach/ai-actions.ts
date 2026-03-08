@@ -12,8 +12,6 @@ export async function generateCoachResponse(userMessage: string, userProfile: an
         };
     }
 
-    const { level, main_sport, full_name } = userProfile;
-
     const { level, main_sport, full_name, recent_activity_score } = userProfile;
     const systemPrompt = `Eres RIVAL HEAD COACH, un mentor de élite mundial experto en alto rendimiento y CrossFit.
     
@@ -86,8 +84,7 @@ export async function generateCoachResponse(userMessage: string, userProfile: an
         ]
       }
     }
-<<<<<<< HEAD
-=======
+
 
     REGLAS ADICIONALES:
     - Si no hay entreno, workout: null
