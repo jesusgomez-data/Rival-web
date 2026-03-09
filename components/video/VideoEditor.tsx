@@ -79,6 +79,8 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const [isSaving, setIsSaving] = useState(false);
     const [saveProgress, setSaveProgress] = useState(0);
     const [activeTool, setActiveTool] = useState<'filter' | 'text' | 'sticker' | 'trim' | 'image' | 'music' | 'fx' | 'none'>('none');
+    const [draggingId, setDraggingId] = useState<string | null>(null);
+    const [lastDragEndTime, setLastDragEndTime] = useState(0);
     const [videoDuration, setVideoDuration] = useState(0);
     const [currentTime, setCurrentTime] = useState(0);
     const [trimRange, setTrimRange] = useState({ start: 0, end: 0 }); 
@@ -243,54 +245,152 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                     <AnimatePresence>
                         {imageOverlays.map(img => (
                             <motion.div
-                                key={img.id} drag dragMomentum={false}
+                                key={img.id}
+                                drag
+                                dragMomentum={false}
+                                dragElastic={0}
+                                dragConstraints={containerRef}
+                                onDragStart={() => setDraggingId(img.id)}
                                 onDragEnd={(_, info) => {
-                                    const rect = containerRef.current!.getBoundingClientRect();
-                                    setImageOverlays(prev => prev.map(i => i.id === img.id ? { ...i, x: ((info.point.x - rect.left) / rect.width) * 100, y: ((info.point.y - rect.top) / rect.height) * 100 } : i));
+                                    setDraggingId(null);
+                                    setLastDragEndTime(Date.now());
+                                    if (!containerRef.current) return;
+                                    const rect = containerRef.current.getBoundingClientRect();
+                                    
+                                    // Update using delta (offset) for absolute stability
+                                    const deltaX = (info.offset.x / rect.width) * 100;
+                                    const deltaY = (info.offset.y / rect.height) * 100;
+                                    
+                                    setImageOverlays(prev => prev.map(i => i.id === img.id ? { 
+                                        ...i, 
+                                        x: i.x + deltaX, 
+                                        y: i.y + deltaY 
+                                    } : i));
                                 }}
-                                className="absolute pointer-events-auto cursor-grab shadow-2xl rounded-xl overflow-hidden border-2 border-white/20"
-                                style={{ left: `${img.x}%`, top: `${img.y}%`, width: `${img.width}px`, height: `${img.height}px`, translateX: '-50%', translateY: '-50%' }}
+                                className="absolute pointer-events-auto cursor-grab active:cursor-grabbing shadow-2xl rounded-xl border-2 border-white/20 group"
+                                animate={{ x: 0, y: 0 }}
+                                transition={{ duration: 0 }}
+                                style={{ 
+                                    left: `${img.x}%`, 
+                                    top: `${img.y}%`, 
+                                    width: `${img.width}px`, 
+                                    height: `${img.height}px`,
+                                    translateX: '-50%',
+                                    translateY: '-50%'
+                                }}
                             >
-                                <img src={img.src} className="w-full h-full object-cover" />
-                                <button onClick={() => setImageOverlays(prev => prev.filter(i => i.id !== img.id))} className="absolute top-1 right-1 bg-black/50 p-1 rounded-full"><X size={14} color="white" /></button>
+                                <img src={img.src} className="w-full h-full object-cover rounded-lg pointer-events-none" />
+                                {draggingId !== img.id && (
+                                    <button 
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        onClick={(e) => { 
+                                            e.preventDefault();
+                                            e.stopPropagation(); 
+                                            // Prevent deletion if a drag recently ended (accidental click protection)
+                                            if (Date.now() - lastDragEndTime < 300) return;
+                                            setImageOverlays(prev => prev.filter(i => i.id !== img.id)); 
+                                        }} 
+                                        className="absolute -top-4 -right-4 bg-brand-red w-8 h-8 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-50 border-2 border-white"
+                                    >
+                                        <X size={16} color="white" strokeWidth={3} />
+                                    </button>
+                                )}
                             </motion.div>
                         ))}
                         {textOverlays.map(to => (
                             <motion.div
-                                key={to.id} drag dragMomentum={false}
+                                key={to.id}
+                                drag
+                                dragMomentum={false}
+                                dragElastic={0}
+                                dragConstraints={containerRef}
+                                onDragStart={() => setDraggingId(to.id)}
                                 onDragEnd={(_, info) => {
-                                    const rect = containerRef.current!.getBoundingClientRect();
-                                    setTextOverlays(prev => prev.map(t => t.id === to.id ? { ...t, x: ((info.point.x - rect.left) / rect.width) * 100, y: ((info.point.y - rect.top) / rect.height) * 100 } : t));
+                                    setDraggingId(null);
+                                    setLastDragEndTime(Date.now());
+                                    if (!containerRef.current) return;
+                                    const rect = containerRef.current.getBoundingClientRect();
+                                    
+                                    const deltaX = (info.offset.x / rect.width) * 100;
+                                    const deltaY = (info.offset.y / rect.height) * 100;
+                                    
+                                    setTextOverlays(prev => prev.map(t => t.id === to.id ? { 
+                                        ...t, 
+                                        x: t.x + deltaX, 
+                                        y: t.y + deltaY 
+                                    } : t));
                                 }}
-                                className="absolute pointer-events-auto p-4 cursor-grab"
-                                style={{ left: `${to.x}%`, top: `${to.y}%`, translateX: '-50%', translateY: '-50%', color: to.color, fontSize: `${to.fontSize}px`, fontFamily: to.fontFamily, fontWeight: 950, fontStyle: 'italic', textTransform: 'uppercase', textShadow: to.style === 'neon' ? `0 0 20px ${to.color}` : '0 4px 20px rgba(0,0,0,0.85)', whiteSpace: 'nowrap' }}
+                                className="absolute pointer-events-auto p-4 cursor-grab active:cursor-grabbing group"
+                                animate={{ x: 0, y: 0 }}
+                                transition={{ duration: 0 }}
+                                style={{ 
+                                    left: `${to.x}%`, 
+                                    top: `${to.y}%`,
+                                    translateX: '-50%',
+                                    translateY: '-50%',
+                                    color: to.color, 
+                                    fontSize: `${to.fontSize}px`, 
+                                    fontFamily: to.fontFamily, 
+                                    fontWeight: 950, 
+                                    fontStyle: 'italic', 
+                                    textTransform: 'uppercase', 
+                                    textShadow: to.style === 'neon' ? `0 0 20px ${to.color}` : '0 4px 20px rgba(0,0,0,0.85)', 
+                                    whiteSpace: 'nowrap' 
+                                }}
                             >
                                 {to.text}
+                                {draggingId !== to.id && (
+                                    <button 
+                                        onPointerDown={(e) => e.stopPropagation()}
+                                        onClick={(e) => { 
+                                            e.preventDefault();
+                                            e.stopPropagation(); 
+                                            if (Date.now() - lastDragEndTime < 300) return;
+                                            setTextOverlays(prev => prev.filter(t => t.id !== to.id)); 
+                                        }} 
+                                        className="absolute -top-2 -right-2 bg-brand-red w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-50 border-2 border-white"
+                                    >
+                                        <X size={12} color="white" strokeWidth={3} />
+                                    </button>
+                                )}
                             </motion.div>
                         ))}
                     </AnimatePresence>
                 </div>
             </div>
 
-            {/* 2. TOP TOOLBAR: CENTERED ACCORDING TO USER REQUEST */}
-            <div className="absolute top-0 left-0 right-0 p-8 pt-16 flex flex-col items-center z-[500] pointer-events-none">
-                <div className="w-full flex justify-between items-center mb-6">
-                    <button onClick={onCancel} className="p-4 bg-black/40 backdrop-blur-3xl rounded-full text-white pointer-events-auto border border-white/10 shadow-2xl"><X size={28} /></button>
-                    <button onClick={() => setIsMuted(!isMuted)} className="p-4 bg-black/40 backdrop-blur-3xl rounded-full text-white pointer-events-auto border border-white/10 shadow-2xl">
-                        {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
-                    </button>
+            {/* EXIT & MUTE CONTROLS (TOP) */}
+            <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-[500] pointer-events-none">
+                <button onClick={onCancel} className="p-4 bg-black/40 backdrop-blur-xl rounded-full text-white pointer-events-auto border border-white/10 shadow-2xl active:scale-95 transition-transform"><X size={24} /></button>
+                <button onClick={() => setIsMuted(!isMuted)} className="p-4 bg-black/40 backdrop-blur-xl rounded-full text-white pointer-events-auto border border-white/10 shadow-2xl active:scale-95 transition-transform">
+                    {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                </button>
+            </div>
+
+            {/* UI STACK AT THE BOTTOM: TOOLBAR + SAVE BUTTON */}
+            <div className="absolute bottom-0 left-0 right-0 p-8 pb-8 flex flex-col items-center gap-8 z-[500] pointer-events-none">
+                {/* TOOLS BAR */}
+                <div className="flex bg-black/60 backdrop-blur-2xl px-6 py-3 rounded-2xl border border-white/10 pointer-events-auto gap-6 shadow-2xl">
+                    <NavBtn icon={<Sparkles size={18} />} onClick={() => setActiveTool('filter')} active={activeTool === 'filter'} title="FX" />
+                    <NavBtn icon={<Zap size={18} />} onClick={() => setActiveTool('fx')} active={activeTool === 'fx'} title="Visual" />
+                    <NavBtn icon={<Scissors size={18} />} onClick={() => setActiveTool('trim')} active={activeTool === 'trim'} title="Cortar" />
+                    <NavBtn icon={<MusicIcon size={18} />} onClick={() => setActiveTool('music')} active={activeTool === 'music'} title="Audio" />
+                    <NavBtn icon={<Smile size={18} />} onClick={() => setActiveTool('sticker')} active={activeTool === 'sticker'} title="Stickers" />
+                    <NavBtn icon={<ImageIcon size={18} />} onClick={() => { setActiveTool('image'); imageInputRef.current?.click(); }} active={activeTool === 'image'} title="Imagen" />
+                    <NavBtn icon={<Type size={18} />} onClick={() => setActiveTool('text')} active={activeTool === 'text'} title="Texto" />
                 </div>
-                
-                {/* Herramientas Principales: Centradas e Inmersivas */}
-                <div className="flex bg-black/40 backdrop-blur-3xl px-8 py-3 rounded-full border border-white/10 pointer-events-auto gap-8 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-                    <NavBtn icon={<Sparkles size={20} />} onClick={() => setActiveTool('filter')} active={activeTool === 'filter'} />
-                    <NavBtn icon={<Zap size={20} />} onClick={() => setActiveTool('fx')} active={activeTool === 'fx'} title="FX" />
-                    <NavBtn icon={<Scissors size={20} />} onClick={() => setActiveTool('trim')} active={activeTool === 'trim'} />
-                    <NavBtn icon={<MusicIcon size={20} />} onClick={() => setActiveTool('music')} active={activeTool === 'music'} />
-                    <NavBtn icon={<Smile size={20} />} onClick={() => setActiveTool('sticker')} active={activeTool === 'sticker'} />
-                    <NavBtn icon={<ImageIcon size={20} />} onClick={() => { setActiveTool('image'); imageInputRef.current?.click(); }} active={activeTool === 'image'} />
-                    <NavBtn icon={<Type size={20} />} onClick={() => setActiveTool('text')} active={activeTool === 'text'} />
-                </div>
+
+                {/* BOTÓN GUARDAR - SOLO FLECHA */}
+                <button 
+                    onClick={handleExport} disabled={isSaving}
+                    className="w-16 h-16 bg-white text-black rounded-full shadow-2xl pointer-events-auto flex items-center justify-center hover:scale-110 active:scale-90 transition-all group"
+                >
+                    {isSaving ? (
+                        <Loader2 size={24} className="animate-spin text-brand-red" />
+                    ) : (
+                        <ChevronRight size={32} className="group-hover:translate-x-1 transition-transform" />
+                    )}
+                </button>
             </div>
 
             {/* Oculto: Input de Imagen */}
@@ -370,18 +470,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                 )}
             </AnimatePresence>
 
-            {/* BOTÓN NEXT - CENTRADO Y GRANDE */}
-            <div className="absolute bottom-0 left-0 right-0 p-12 flex justify-center z-[500] pointer-events-none">
-                <button 
-                    onClick={handleExport} disabled={isSaving}
-                    className="group bg-white text-black pl-12 pr-10 py-6 rounded-full font-black uppercase tracking-[0.4em] text-[14px] shadow-[0_30px_100px_rgba(0,0,0,1)] pointer-events-auto flex items-center gap-8 hover:scale-105 active:scale-95 transition-all"
-                >
-                    {isSaving ? 'MODO MASTERING...' : 'GUARDAR RIVAL REEL'}
-                    <div className="w-12 h-12 bg-black rounded-full flex items-center justify-center text-white group-hover:bg-brand-red transition-all">
-                        {isSaving ? <Loader2 size={24} className="animate-spin" /> : <ChevronRight size={28} />}
-                    </div>
-                </button>
-            </div>
+
 
             {/* OVERLAY EXPORTACIÓN */}
             <AnimatePresence>
