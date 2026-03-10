@@ -19,6 +19,8 @@ export async function createClient() {
                                 ...options,
                                 sameSite: 'lax',
                                 secure: process.env.NODE_ENV === 'production',
+                                // Sesión persistente: 30 días (como Instagram/TikTok)
+                                maxAge: options.maxAge ?? 60 * 60 * 24 * 30,
                             })
                         )
                     } catch {
