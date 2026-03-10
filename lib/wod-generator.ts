@@ -1,6 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-// AI engines are initialized inside the WODGenerator class
+// AI engine (Groq) is initialized inside the WODGenerator class
 
 // ============================================
 // TIPOS
@@ -116,21 +114,9 @@ JSON STRUCTURE:
 
 export class WODGenerator {
   private groqApiKey: string;
-  private geminiModel: any;
 
   constructor() {
     this.groqApiKey = (process.env.GROQ_API_KEY || "").trim();
-    
-    // Configurar Gemini como fallback
-    try {
-      const geminiKey = (process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "").trim();
-      if (geminiKey) {
-        const genAI = new GoogleGenerativeAI(geminiKey);
-        this.geminiModel = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-      }
-    } catch (e) {
-      console.warn("Gemini setup failed, will use Groq only", e);
-    }
   }
 
   async generateWOD(request: WODRequest): Promise<GeneratedWOD> {
@@ -169,22 +155,7 @@ export class WODGenerator {
       }
     }
 
-    // SEGUNDO: Intentar con GEMINI
-    if (this.geminiModel) {
-      try {
-        const result = await this.geminiModel.generateContent([{ text: SYSTEM_PROMPT }, { text: userPrompt }]);
-        const response = await result.response;
-        let text = response.text();
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) text = jsonMatch[0];
-        const wod = JSON.parse(text);
-        return { ...wod, source: "gemini" };
-      } catch (error: any) {
-        console.error("❌ Gemini Error:", error.message);
-      }
-    }
-
-    // TERCERO: Fallback Manual
+    // SEGUNDO: Fallback Manual
     return this.getFallbackWOD(request);
   }
 

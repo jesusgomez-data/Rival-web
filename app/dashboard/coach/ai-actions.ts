@@ -1,20 +1,18 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { createClient } from "@/utils/supabase/server";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
 
 export async function generateCoachResponse(userMessage: string, userProfile: any, chatHistory: any[] = []) {
-    if (!process.env.GEMINI_API_KEY) {
-        console.error("GEMINI_API_KEY no configurada");
+    if (!process.env.GROQ_API_KEY) {
+        console.error("GROQ_API_KEY no configurada");
         return {
             replyText: "Soldado, el cuartel de IA está saturado. Intentalo de nuevo en unos minutos.",
             workout: null
         };
     }
 
-    const { level, main_sport, full_name, recent_activity_score } = userProfile;
+    const { level, main_sport, full_name } = userProfile;
     const systemPrompt = `Eres RIVAL HEAD COACH, un mentor de élite mundial experto en alto rendimiento y CrossFit.
-    
+
     PERFIL DEL ATLETA:
     - Nombre: ${full_name || 'Rival'}
     - Disciplina: ${main_sport}
@@ -93,46 +91,52 @@ export async function generateCoachResponse(userMessage: string, userProfile: an
     - Usar formato Hombre/Mujer para pesos (ej: 43/30kg)
     - Ser específico con tiempos y descansos`;
 
-    const modelsToTry = [
-        { name: "gemini-1.5-flash", timeout: 8000 },
-        { name: "gemini-1.5-flash-8b", timeout: 6000 },
-        { name: "gemini-2.0-flash-exp", timeout: 10000 }
-    ];
+    // Convertir historial de chat al formato OpenAI (compatible con Groq)
+    // Gemini usa role "model", OpenAI/Groq usa "assistant"
+    const history = chatHistory.map((msg: any) => ({
+        role: msg.role === "model" ? "assistant" : msg.role,
+        content: Array.isArray(msg.parts)
+            ? msg.parts.map((p: any) => p.text ?? p).join("")
+            : (msg.content ?? "")
+    }));
 
-    let lastError = "";
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
 
-    for (const modelCfg of modelsToTry) {
-        try {
-            const model = genAI.getGenerativeModel({
-                model: modelCfg.name,
-                generationConfig: { responseMimeType: "application/json" },
-                systemInstruction: systemPrompt
-            });
+        const response = await fetch(GROQ_API_URL, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                model: GROQ_MODEL,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    ...history,
+                    { role: "user", content: userMessage }
+                ],
+                temperature: 0.7,
+                response_format: { type: "json_object" }
+            }),
+            signal: controller.signal
+        });
 
-            const chat = model.startChat({ history: chatHistory });
-            const resultPromise = chat.sendMessage(userMessage);
-            const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), modelCfg.timeout));
+        clearTimeout(timeout);
 
-            const result = await Promise.race([resultPromise, timeoutPromise]) as any;
+        const data = await response.json();
+        if (data.error) throw new Error(`Groq: ${data.error.message || "API Error"}`);
 
-            if (!result || !result.response) throw new Error("Respuesta vacía");
+        const text = data.choices?.[0]?.message?.content;
+        if (!text) throw new Error("Groq: respuesta vacía");
 
-            const text = result.response.text();
-            try {
-                return JSON.parse(text);
-            } catch (parseError) {
-                console.error(`Error parsing JSON from ${modelCfg.name}:`, text);
-                throw parseError;
-            }
-        } catch (error: any) {
-            console.error(`Error con modelo ${modelCfg.name}:`, error.message);
-            lastError = error.message;
-            continue;
-        }
+        return JSON.parse(text);
+    } catch (error: any) {
+        console.error("Error con Groq coach:", error.message);
+        return {
+            replyText: "Lo siento, la central de mando tiene interferencias. Intentalo de nuevo en unos segundos.",
+            workout: null
+        };
     }
-
-    return {
-        replyText: "Lo siento, la central de mando tiene interferencias. Intentalo de nuevo en unos segundos.",
-        workout: null
-    };
 }
