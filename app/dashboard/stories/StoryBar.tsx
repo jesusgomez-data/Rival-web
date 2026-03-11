@@ -14,6 +14,8 @@ import MusicPicker from '../MusicPicker'
 import { MusicTrack } from '../music-data'
 import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
 import { createClient } from '@/utils/supabase/client'
+import VideoEditor from '@/components/video/VideoEditor'
+import { Sparkles } from 'lucide-react'
 import RouteMap from '@/components/training/RouteMap'
 import { isImageUrl } from '@/lib/utils'
 
@@ -83,6 +85,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const [currentTextInput, setCurrentTextInput] = useState("")
     const [textColor, setTextColor] = useState("#FFFFFF")
     const [isMusicPickerOpen, setIsMusicPickerOpen] = useState(false)
+    const [isVideoEditing, setIsVideoEditing] = useState(false)
+    const [editorVideoFile, setEditorVideoFile] = useState<File | null>(null)
 
     // Image adjustment controls (Instagram-style)
     const [imageZoom, setImageZoom] = useState(1)
@@ -103,6 +107,15 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null)
     const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null)
     const [showFullSummary, setShowFullSummary] = useState(false)
+
+    // Inline feedback — reemplaza alert() y confirm() para no freezar el móvil
+    const [storyError, setStoryError] = useState<string | null>(null)
+    const [confirmingDelete, setConfirmingDelete] = useState(false)
+
+    const showError = (msg: string) => {
+        setStoryError(msg)
+        setTimeout(() => setStoryError(null), 5000)
+    }
 
     useEffect(() => {
         // Poll for stories every 30 seconds to catch new ones
@@ -170,7 +183,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                     }
                 } catch (err) {
                     console.error("Error preparing shared story:", err);
-                    alert("Error al cargar la imagen para la historia.");
+                    showError("Error al cargar la imagen para la historia.");
                 } finally {
                     setIsUploading(false);
                 }
@@ -285,10 +298,9 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 setVideoDuration(duration);
 
                 if (duration > 30) {
-                    // Auto-open trimmer for videos longer than 30s
-                    setTrimStart(0);
-                    setTrimmerVideoUrl(URL.createObjectURL(file));
-                    setIsVideoTrimming(true);
+                    // Auto-open editor for videos longer than 30s to suggest trimming
+                    setEditorVideoFile(file);
+                    setIsVideoEditing(true);
                     return;
                 }
 
@@ -464,7 +476,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
             const res = await createStory(formData)
             if (res.error) {
                 console.error("Upload error:", res.error);
-                alert(`Error: ${res.error}`)
+                showError(`Error: ${res.error}`)
             } else {
                 console.log("Upload success!");
                 setPreviewFile(null)
@@ -476,7 +488,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
             }
         } catch (err) {
             console.error("Post story critical error:", err);
-            alert("Error crítico al subir la historia.");
+            showError("Error crítico al subir la historia. Intenta de nuevo.");
         } finally {
             setIsUploading(false)
         }
@@ -493,7 +505,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
             const captureStream = (video as any).captureStream || (video as any).mozCaptureStream;
 
             if (!captureStream) {
-                alert("Tu navegador no soporta el recorte de video directo. Por favor, intenta subir un video de menos de 30 segundos o recórtalo en tu galería antes de subirlo.");
+                showError("Tu navegador no soporta el recorte de video. Sube un video de menos de 30 segundos o recórtalo en tu galería antes de subirlo.");
                 setIsTrimmingLoading(false);
                 setIsVideoTrimming(false);
                 setTrimmerVideoUrl(null);
@@ -512,7 +524,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
             }
 
             if (!mimeType) {
-                alert("Formato de video no compatible para recorte en este navegador.");
+                showError("Formato de video no compatible para recorte en este navegador.");
                 setIsTrimmingLoading(false);
                 return;
             }
@@ -530,7 +542,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 if (safetyTimeout) clearTimeout(safetyTimeout);
 
                 if (chunks.length === 0) {
-                    alert("Error: No se capturaron datos del video. Intenta de nuevo.");
+                    showError("No se capturaron datos del video. Intenta de nuevo.");
                     setIsTrimmingLoading(false);
                     return;
                 }
@@ -548,7 +560,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
 
             recorder.onerror = (err) => {
                 console.error("MediaRecorder Error:", err);
-                alert("Error durante el procesamiento del video.");
+                showError("Error durante el procesamiento del video. Intenta de nuevo.");
                 setIsTrimmingLoading(false);
             };
 
@@ -629,7 +641,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
 
             const res = await createPRStory(formData)
             if (res.error) {
-                alert(res.error)
+                showError(res.error)
             } else {
                 setPrWeight("")
                 setShowPRCreator(false)
@@ -647,10 +659,15 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         e.stopPropagation()
         if (!currentUserStories || !currentStory) return
 
-        if (!confirm('¿Estás seguro de que quieres eliminar esta historia?')) return
+        if (!confirmingDelete) {
+            setConfirmingDelete(true)
+            setTimeout(() => setConfirmingDelete(false), 4000)
+            return
+        }
+        setConfirmingDelete(false)
         const res = await deleteStory(currentStory.id)
         if (res.error) {
-            alert(res.error)
+            showError(res.error)
         } else {
             if (currentUserStories.stories.length === 1) {
                 setSelectedUserIndex(null)
@@ -1200,6 +1217,18 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                 >
                                     <Move className="w-5 h-5" />
                                 </button>
+                                <button
+                                    onClick={() => {
+                                        if (previewFile) {
+                                            setEditorVideoFile(previewFile);
+                                            setIsVideoEditing(true);
+                                        }
+                                    }}
+                                    className="p-2 bg-brand-red rounded-full hover:bg-brand-red/80 transition-all border border-white/20 shadow-glow"
+                                    title="Editar con Video Pro"
+                                >
+                                    <Sparkles className="w-5 h-5 text-white" />
+                                </button>
                                 <button onClick={() => setShowTextInput(true)} className="p-2 bg-black/40 rounded-full hover:bg-white/10 transition-colors border border-white/5">
                                     <Type className="w-5 h-5 text-white" />
                                 </button>
@@ -1451,8 +1480,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
 
             {/* Story Viewer (Updated to show overlays) */}
             {selectedUserIndex !== null && currentStory && (
-                <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4">
-                    <div className="relative w-full max-w-[400px] h-[90vh] bg-black rounded-[32px] overflow-hidden shadow-2xl border border-white/5 mx-auto flex flex-col">
+                <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4 dark-section keep-all">
+                    <div className="relative w-full max-w-[400px] h-[90vh] bg-black rounded-[32px] overflow-hidden shadow-2xl border border-white/5 mx-auto flex flex-col keep-all">
                         <AnimatePresence>
                             {!isPressed && (
                                 <motion.div
@@ -1507,13 +1536,22 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                     </div>
                                     <div className="flex items-center gap-2">
                                         {isOwner && (
-                                            <button
-                                                onClick={handleDeleteStory}
-                                                className="p-2 bg-black/40 hover:bg-red-500/60 text-white rounded-full backdrop-blur-md transition-all group/delete"
-                                                title="Eliminar historia"
-                                            >
-                                                <Trash2 className="w-5 h-5 group-hover/delete:scale-110 transition-transform" />
-                                            </button>
+                                            confirmingDelete ? (
+                                                <button
+                                                    onClick={handleDeleteStory}
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-xs font-black rounded-full backdrop-blur-md transition-all animate-pulse"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" /> ¿Confirmar?
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={handleDeleteStory}
+                                                    className="p-2 bg-black/40 hover:bg-red-500/60 text-white rounded-full backdrop-blur-md transition-all group/delete"
+                                                    title="Eliminar historia"
+                                                >
+                                                    <Trash2 className="w-5 h-5 group-hover/delete:scale-110 transition-transform" />
+                                                </button>
+                                            )
                                         )}
                                         <button onClick={() => setSelectedUserIndex(null)} className="p-2 bg-black/40 hover:text-brand-red text-white rounded-full backdrop-blur-md transition-colors border border-white/5 shadow-lg">
                                             <X className="w-8 h-8" />
@@ -2157,6 +2195,33 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                 }}
                 style={{ width: '1px', height: '1px', opacity: 0.01, position: 'absolute', pointerEvents: 'none' }}
             />
+            
+            {/* Video Editor Pro Modal */}
+            {isVideoEditing && editorVideoFile && (
+                <VideoEditor
+                    videoFile={editorVideoFile}
+                    onSave={(editedFile, dur) => {
+                        setupPreview(editedFile);
+                        setIsVideoEditing(false);
+                        setEditorVideoFile(null);
+                        setIsVideoTrimming(false);
+                    }}
+                    onCancel={() => {
+                        setIsVideoEditing(false);
+                        setEditorVideoFile(null);
+                        if (!previewUrl && fileInputRef.current) {
+                            fileInputRef.current.value = "";
+                        }
+                    }}
+                />
+            )}
+            {/* Error Toast — reemplaza alert() para no freezar el móvil */}
+            {storyError && (
+                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[999] flex items-center gap-2 bg-red-600/90 backdrop-blur-md text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-xl max-w-xs text-center pointer-events-none">
+                    <X className="w-3.5 h-3.5 shrink-0" />
+                    {storyError}
+                </div>
+            )}
         </div>
     )
 }
