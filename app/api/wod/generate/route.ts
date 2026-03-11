@@ -29,9 +29,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generar WOD con Gemini AI
+    // Generar WOD con Groq AI (timeout de 25s para no colgarse en móvil)
     const generator = new WODGenerator();
-    const wod = await generator.generateWOD(body);
+    const wodPromise = generator.generateWOD(body);
+    const timeoutPromise = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("WOD generation timed out. Intenta de nuevo.")), 25000)
+    );
+    const wod = await Promise.race([wodPromise, timeoutPromise]);
 
     return NextResponse.json({
       success: true,

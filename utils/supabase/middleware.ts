@@ -29,9 +29,10 @@ export async function updateSession(request: NextRequest) {
                             ...options,
                             sameSite: 'lax',
                             secure: process.env.NODE_ENV === 'production',
-                            // Sesión persistente: 30 días (como Instagram/TikTok)
-                            // Solo aplica fallback si Supabase no envía su propio maxAge
-                            maxAge: options.maxAge ?? 60 * 60 * 24 * 30,
+                            // Sesión persistente: mínimo 30 días
+                            // Math.max en lugar de ?? porque Supabase envía maxAge:3600 (1h)
+                            // y necesitamos FORZAR al menos 30 días para que no expire al cerrar el navegador
+                            maxAge: Math.max(options.maxAge ?? 0, 60 * 60 * 24 * 30),
                         })
                     )
                 },

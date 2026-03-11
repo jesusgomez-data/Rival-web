@@ -125,6 +125,9 @@ export class WODGenerator {
     // PRIMERO: Intentar con GROQ
     if (this.groqApiKey) {
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout (mobile-safe)
+
         const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
           method: "POST",
           headers: {
@@ -140,7 +143,9 @@ export class WODGenerator {
             temperature: 0.7,
             response_format: { type: "json_object" }
           }),
+          signal: controller.signal,
         });
+        clearTimeout(timeout);
 
         const data = await response.json();
         if (data.error) throw new Error(`Groq: ${data.error.message || 'API Error'}`);
