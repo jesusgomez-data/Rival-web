@@ -5,7 +5,7 @@ import { Flame, MoreHorizontal, MessageCircle, Heart, Share2, TrendingUp, Trophy
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import clsx from "clsx";
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useLanguage } from "@/app/LanguageContext";
 import LikeButton from "./community/LikeButton";
 import FollowButton from "./community/FollowButton";
@@ -186,6 +186,8 @@ export default function DashboardHome() {
     });
     const [activeTab, setActiveTab] = useState('following');
     const [refreshKey, setRefreshKey] = useState(0);
+    // Cache the auth user to avoid repeated auth.getUser() calls across loadData + fetchFeed
+    const currentUserRef = useRef<any>(null);
 
     // Memoized fetch for main dashboard data (profile, stats, duels)
     const loadData = useCallback(async () => {
@@ -195,13 +197,15 @@ export default function DashboardHome() {
             const user = authData?.user;
             if (!user) return;
 
-            // All queries run in parallel — zero sequential waiting
+            // Cache user for reuse in fetchFeed (avoids repeated auth.getUser() calls)
+            currentUserRef.current = user;
+
+            // All queries run in parallel — 8 queries (merged the 2 follows into 1)
             const [
                 { data: memberships },
                 { data: profileData },
                 { count: workouts },
                 { count: classes },
-                { count: followingCount },
                 { data: myFollows },
                 { data: trending },
                 missionsData,
@@ -211,7 +215,7 @@ export default function DashboardHome() {
                 supabase.from('profiles').select('*').eq('id', user.id).single(),
                 supabase.from('workouts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
                 supabase.from('class_results').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-                supabase.from('follows').select('*', { count: 'exact', head: true }).eq('follower_id', user.id),
+                // Single follows query — derive count from .length (saves 1 DB roundtrip)
                 supabase.from('follows').select('following_id').eq('follower_id', user.id),
                 supabase.from('profiles')
                     .select('id, username, full_name, avatar_url, level, is_official')
@@ -224,6 +228,7 @@ export default function DashboardHome() {
             ]);
 
             const followedIds = new Set(myFollows?.map((f: { following_id: string }) => f.following_id) || []);
+            const followingCount = myFollows?.length || 0;
 
             const sessionMission = missionsData?.find((m: any) => m.goal_type === 'sessions_count' || m.goal_type === 'workouts');
             const weeklyProgress = {
@@ -269,12 +274,10 @@ export default function DashboardHome() {
         return () => window.removeEventListener('profile-updated', handleProfileUpdate);
     }, [loadData]);
 
-    // Memoized feed fetcher: auth is resolved first, then follows+officials run in parallel
+    // Memoized feed fetcher: reuses cached user from loadData (no extra auth.getUser() call)
     const fetchFeed = useCallback(async () => {
         try {
-            // Step 1: get the authenticated user (required for filtering)
-            const { data: authData } = await supabase.auth.getUser();
-            const user = authData?.user;
+            const user = currentUserRef.current;
             if (!user) return;
 
             // Step 2: fetch follows and official profiles in parallel
