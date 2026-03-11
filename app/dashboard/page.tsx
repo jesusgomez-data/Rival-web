@@ -186,6 +186,7 @@ export default function DashboardHome() {
     });
     const [activeTab, setActiveTab] = useState('following');
     const [refreshKey, setRefreshKey] = useState(0);
+    const [feedLoading, setFeedLoading] = useState(true);
     // Cache the auth user to avoid repeated auth.getUser() calls across loadData + fetchFeed
     const currentUserRef = useRef<any>(null);
 
@@ -274,36 +275,40 @@ export default function DashboardHome() {
         return () => window.removeEventListener('profile-updated', handleProfileUpdate);
     }, [loadData]);
 
-    // Memoized feed fetcher: reuses cached user from loadData (no extra auth.getUser() call)
+    // Memoized feed fetcher: reuses cached user, skips follows query on global tab
     const fetchFeed = useCallback(async () => {
         try {
             const user = currentUserRef.current;
             if (!user) return;
 
-            // Step 2: fetch follows and official profiles in parallel
-            const [{ data: myFollows }, { data: officialProfiles }] = await Promise.all([
-                supabase.from('follows').select('following_id').eq('follower_id', user.id),
-                supabase.from('profiles').select('id').eq('is_official', true),
-            ]);
+            setFeedLoading(true);
 
-            const followedIds = new Set(myFollows?.map((f: { following_id: string }) => f.following_id) || []);
-            const officialIds = officialProfiles?.map((p: { id: string }) => p.id) || [];
-
+            // Narrowed profiles select: only fields used by FeedPost (saves ~70% profile payload)
             let query = supabase
                 .from('posts')
-                .select('*, profiles:user_id(*), workouts:workout_id(*, metrics, workout_sets(*)), likes:likes(user_id)')
+                .select('*, profiles:user_id(id, username, full_name, avatar_url, level, is_official), workouts:workout_id(*, metrics, workout_sets(*)), likes:likes(user_id)')
                 .order('created_at', { ascending: false })
                 .limit(20);
 
             if (activeTab === 'following') {
+                // Only fetch follows+officials when filtering is needed
+                const [{ data: myFollows }, { data: officialProfiles }] = await Promise.all([
+                    supabase.from('follows').select('following_id').eq('follower_id', user.id),
+                    supabase.from('profiles').select('id').eq('is_official', true),
+                ]);
+                const followedIds = new Set(myFollows?.map((f: { following_id: string }) => f.following_id) || []);
+                const officialIds = officialProfiles?.map((p: { id: string }) => p.id) || [];
                 const idsToFetch = Array.from(new Set([...Array.from(followedIds), user.id, ...officialIds]));
                 query = query.in('user_id', idsToFetch);
             }
+            // Global tab: no follows query — posts query starts immediately
 
             const { data: posts } = await query;
             setData((prev: any) => ({ ...prev, feedPosts: posts || [] }));
         } catch (e) {
             console.error("Error fetching feed:", e);
+        } finally {
+            setFeedLoading(false);
         }
     }, [supabase, activeTab]);
 
@@ -363,9 +368,10 @@ export default function DashboardHome() {
             {/* Hero Welcome Banner */}
             <div className="relative min-h-[200px] md:h-64 rounded-[32px] md:rounded-[40px] overflow-hidden border border-white/5 shadow-2xl flex flex-col justify-center dark-section">
                 <Image
-                    src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop"
+                    src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=60&w=800&auto=format&fit=crop"
                     alt="Training Arena"
                     fill
+                    sizes="(max-width: 768px) 100vw, 80vw"
                     className="object-cover opacity-40 grayscale"
                     priority
                 />
@@ -567,7 +573,30 @@ export default function DashboardHome() {
                         />
 
                         <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] ml-2">{t.dashboard.recentActivity}</h3>
-                        {data.feedPosts && data.feedPosts.length > 0 ? (
+
+                        {/* Feed skeleton — visible while posts load */}
+                        {feedLoading && (
+                            <div className="space-y-8">
+                                {[1, 2, 3].map(i => (
+                                    <div key={i} className="bg-white/[0.03] border border-white/5 rounded-[28px] p-5 space-y-4 animate-pulse">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-white/10 shrink-0" />
+                                            <div className="space-y-2 flex-1">
+                                                <div className="h-3 bg-white/10 rounded-full w-32" />
+                                                <div className="h-2 bg-white/5 rounded-full w-20" />
+                                            </div>
+                                        </div>
+                                        <div className="h-48 bg-white/5 rounded-2xl" />
+                                        <div className="flex gap-4">
+                                            <div className="h-3 bg-white/10 rounded-full w-12" />
+                                            <div className="h-3 bg-white/10 rounded-full w-12" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        {!feedLoading && data.feedPosts && data.feedPosts.length > 0 ? (
                             <div className="space-y-10">
                                 {(() => {
                                     const activeDuelUserIds = new Set(data.duels.filter((d: any) => d.status === 'active' || d.status === 'pending').map((d: any) => d.challenger_id === data.currentUser?.id ? d.opponent_id : d.challenger_id));
