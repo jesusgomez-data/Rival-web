@@ -30,6 +30,7 @@ interface Message {
     role: 'user' | 'assistant';
     content: string;
     workout?: Workout | null;
+    sentAt?: Date;
 }
 
 export default function CoachPage() {
@@ -39,6 +40,7 @@ export default function CoachPage() {
             id: '1',
             role: 'assistant',
             content: "Bienvenido, Atleta. Soy tu Head Coach Rival. Experto en alto rendimiento y programación deportiva integral. Analizaré tu progreso para diseñar tu estrategia de hoy. ¿En qué disciplina vamos a trabajar?",
+            sentAt: new Date(),
         }
     ]);
     const [input, setInput] = useState("");
@@ -48,7 +50,17 @@ export default function CoachPage() {
     const [stats, setStats] = useState<any>({ daily: [], fatigue: 0 });
     const [activeTab, setActiveTab] = useState<'chat' | 'insights'>('chat');
     const [isScheduling, setIsScheduling] = useState(false);
+    const [scheduleSuccess, setScheduleSuccess] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
+
+    const formatTime = (date?: Date) => {
+        if (!date) return '';
+        const now = new Date();
+        const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+        if (diff < 60) return 'ahora';
+        if (diff < 3600) return `${Math.floor(diff / 60)}m`;
+        return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    };
 
     useEffect(() => {
         async function loadData() {
@@ -81,7 +93,8 @@ export default function CoachPage() {
         const userMsg: Message = {
             id: Date.now().toString(),
             role: 'user',
-            content: messageText
+            content: messageText,
+            sentAt: new Date(),
         };
 
         setMessages(prev => [...prev, userMsg]);
@@ -130,7 +143,8 @@ export default function CoachPage() {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
                 content: aiResponse.replyText,
-                workout: aiResponse.workout
+                workout: aiResponse.workout,
+                sentAt: new Date(),
             };
 
             setMessages(prev => [...prev, botMsg]);
@@ -140,6 +154,7 @@ export default function CoachPage() {
                 id: (Date.now() + 1).toString(),
                 role: 'assistant',
                 content: "Atleta, la línea está saturada. Inténtalo de nuevo o usa el Protocolo de Emergencia.",
+                sentAt: new Date(),
             };
             setMessages(prev => [...prev, errorMsg]);
         } finally {
@@ -162,7 +177,8 @@ export default function CoachPage() {
         });
         setIsScheduling(false);
         if (res.success) {
-            alert("¡Misión asignada a tu calendario, Atleta!");
+            setScheduleSuccess("¡Misión asignada al calendario!");
+            setTimeout(() => setScheduleSuccess(null), 3000);
         }
     };
 
@@ -183,13 +199,12 @@ export default function CoachPage() {
                 <div className="flex bg-white/5 rounded-lg p-1 border border-white/10 gap-1">
                     <button
                         onClick={() => {
-                            if (confirm("¿Reiniciar sesión táctica?")) {
-                                setMessages([{
-                                    id: '1',
-                                    role: 'assistant',
-                                    content: "Sesión reiniciada. Estoy listo para una nueva programación. ¿Cuál es el objetivo de hoy?",
-                                }]);
-                            }
+                            setMessages([{
+                                id: '1',
+                                role: 'assistant',
+                                content: "Sesión reiniciada. Estoy listo para una nueva programación. ¿Cuál es el objetivo de hoy?",
+                                sentAt: new Date(),
+                            }]);
                         }}
                         className="px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest text-gray-500 hover:text-white"
                         title="Reiniciar Chat"
@@ -220,26 +235,31 @@ export default function CoachPage() {
                             <div
                                 key={msg.id}
                                 className={clsx(
-                                    "flex gap-4 max-w-[85%]",
+                                    "flex gap-3 max-w-[85%]",
                                     msg.role === 'user' ? "ml-auto flex-row-reverse" : ""
                                 )}
                             >
                                 <div className={clsx(
-                                    "w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1",
-                                    msg.role === 'user' ? "bg-gray-700" : "bg-brand-red"
+                                    "w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 shadow-lg",
+                                    msg.role === 'user' ? "bg-gray-700" : "bg-brand-red shadow-[0_0_12px_rgba(220,38,38,0.4)]"
                                 )}>
                                     {msg.role === 'user' ? <UserIcon className="w-4 h-4 text-white" /> : <Bot className="w-4 h-4 text-white" />}
                                 </div>
 
-                                <div className="space-y-2">
+                                <div className="space-y-1">
                                     <div className={clsx(
-                                        "p-4 rounded-2xl text-sm leading-relaxed",
+                                        "p-4 rounded-2xl text-sm leading-relaxed shadow-md",
                                         msg.role === 'user'
-                                            ? "bg-white text-black font-medium rounded-tr-none"
-                                            : "bg-black/50 border border-white/10 text-gray-200 rounded-tl-none"
+                                            ? "bg-white text-black font-medium rounded-tr-none shadow-white/5"
+                                            : "bg-black/60 border border-white/10 text-gray-200 rounded-tl-none shadow-black/40"
                                     )}>
                                         {msg.content}
                                     </div>
+                                    {msg.sentAt && (
+                                        <p className={clsx("text-[10px] text-gray-600 px-1", msg.role === 'user' ? "text-right" : "")}>
+                                            {formatTime(msg.sentAt)}
+                                        </p>
+                                    )}
 
                                     {msg.workout && (
                                         <div className="bg-black border border-brand-red/30 rounded-xl overflow-hidden shadow-[0_4px_20px_rgba(220,38,38,0.1)] max-w-md">
@@ -300,18 +320,31 @@ export default function CoachPage() {
                         ))}
 
                         {isTyping && (
-                            <div className="flex gap-4 max-w-[85%]">
-                                <div className="w-8 h-8 rounded-full bg-brand-red flex items-center justify-center shrink-0 mt-1">
+                            <div className="flex gap-3 max-w-[85%]">
+                                <div className="w-8 h-8 rounded-full bg-brand-red shadow-[0_0_12px_rgba(220,38,38,0.4)] flex items-center justify-center shrink-0 mt-1">
                                     <Bot className="w-4 h-4 text-white" />
                                 </div>
-                                <div className="bg-black/50 border border-white/10 text-gray-200 rounded-2xl rounded-tl-none p-4 flex items-center gap-2">
-                                    <Loader2 className="w-4 h-4 animate-spin text-brand-red" />
-                                    <span className="text-xs text-gray-400">{loadingStep}</span>
+                                <div className="bg-black/60 border border-white/10 rounded-2xl rounded-tl-none px-5 py-4 flex flex-col gap-1">
+                                    {/* 3 bouncing dots — WhatsApp/iMessage style */}
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="w-2 h-2 rounded-full bg-brand-red animate-bounce [animation-delay:0ms]" />
+                                        <span className="w-2 h-2 rounded-full bg-brand-red animate-bounce [animation-delay:150ms]" />
+                                        <span className="w-2 h-2 rounded-full bg-brand-red animate-bounce [animation-delay:300ms]" />
+                                    </div>
+                                    <span className="text-[10px] text-gray-500">{loadingStep}</span>
                                 </div>
                             </div>
                         )}
                         <div ref={messagesEndRef} />
                     </div>
+
+                    {/* Toast de éxito al agendar */}
+                    {scheduleSuccess && (
+                        <div className="mx-4 mb-2 flex items-center gap-2 bg-green-500/10 border border-green-500/30 text-green-400 text-xs font-bold px-4 py-2 rounded-xl animate-pulse">
+                            <Check className="w-3 h-3 shrink-0" />
+                            {scheduleSuccess}
+                        </div>
+                    )}
 
                     {/* Quick Actions */}
                     <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar bg-black/20 border-t border-white/5 pb-4">
@@ -334,13 +367,24 @@ export default function CoachPage() {
                                 type="text"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' && !e.shiftKey && !isTyping) {
+                                        e.preventDefault();
+                                        handleSend();
+                                    }
+                                }}
                                 placeholder="Dile al Coach qué quieres entrenar..."
-                                className="w-full bg-brand-gray border border-white/10 text-white placeholder:text-gray-500 text-sm rounded-xl py-3 pl-4 pr-12 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all"
+                                disabled={isTyping}
+                                className="w-full bg-brand-gray border border-white/10 text-white placeholder:text-gray-600 text-sm rounded-xl py-3 pl-4 pr-14 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/30 transition-all disabled:opacity-50"
                             />
                             <button
                                 onClick={() => handleSend()}
-                                className="absolute right-2 p-2 bg-brand-red rounded-lg text-white hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                className={clsx(
+                                    "absolute right-2 p-2.5 rounded-xl text-white transition-all duration-200",
+                                    input.trim() && !isTyping
+                                        ? "bg-brand-red hover:bg-red-600 hover:scale-105 active:scale-95 shadow-[0_0_12px_rgba(220,38,38,0.4)]"
+                                        : "bg-white/5 cursor-not-allowed opacity-40"
+                                )}
                                 disabled={!input.trim() || isTyping}
                             >
                                 <Send className="w-4 h-4" />
