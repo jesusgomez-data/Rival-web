@@ -27,17 +27,18 @@ const BLOCK_STYLES: Record<string, { label: string; color: string; dimColor: str
 
 function getBlockMeta(block: WorkoutBlock): string[] {
     const tags: string[] = [];
-    if (block.type === 'emom') {
+    const t = (block.type || '').toLowerCase();
+    if (t === 'emom') {
         if (block.rounds) tags.push(`FREQ ${block.rounds}MIN`);
         if (block.duration) tags.push(`TOTAL ${block.duration}MIN`);
-    } else if (block.type === 'amrap') {
+    } else if (t === 'amrap') {
         if (block.duration) tags.push(`${block.duration} MIN`);
-    } else if (block.type === 'intervals') {
+    } else if (t === 'intervals') {
         if (block.rounds) tags.push(`RONDAS ${block.rounds}`);
         if (block.duration) tags.push(`WORK ${block.duration}MIN`);
-    } else if (block.type === 'fortime') {
+    } else if (t === 'fortime') {
         if (block.duration) tags.push(`TIME CAP ${block.duration}MIN`);
-    } else if (block.type === 'tabata') {
+    } else if (t === 'tabata') {
         tags.push('20SEC ON / 10SEC OFF');
         if (block.rounds) tags.push(`${block.rounds} RONDAS`);
     }
@@ -133,7 +134,7 @@ export default function WorkoutShareCard({ blocks, workoutTitle, sportType, dura
                                 <div className="flex items-center gap-1.5 mb-1.5">
                                     <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] flex-shrink-0" style={{ boxShadow: '0 0 6px #ef4444' }} />
                                     <span style={{ color: '#ef4444', fontSize: '8px', fontWeight: 900, letterSpacing: '0.25em', textTransform: 'uppercase' }}>
-                                        {sportType.toUpperCase()}
+                                        {(sportType || 'Cross Training').toUpperCase()}
                                     </span>
                                     <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: '8px', fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
                                         · {blocks.length} BLOQUE{blocks.length !== 1 ? 'S' : ''}
@@ -157,8 +158,9 @@ export default function WorkoutShareCard({ blocks, workoutTitle, sportType, dura
 
                         {/* Blocks */}
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                            {blocks.map((block, i) => {
-                                const style = BLOCK_STYLES[block.type] ?? { label: block.type.toUpperCase(), color: '#ef4444', dimColor: 'rgba(239,68,68,0.15)' };
+                            {(blocks || []).map((block, i) => {
+                                const typeKey = (block.type || '').toLowerCase();
+                                const style = BLOCK_STYLES[typeKey] ?? { label: (block.type || 'BLOQUE').toUpperCase(), color: '#ef4444', dimColor: 'rgba(239,68,68,0.15)' };
                                 const meta = getBlockMeta(block);
 
                                 return (
@@ -198,7 +200,7 @@ export default function WorkoutShareCard({ blocks, workoutTitle, sportType, dura
 
                                         {/* Exercises */}
                                         <div style={{ background: 'rgba(255,255,255,0.02)', padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {block.exercises.map((ex, j) => {
+                                            {(block.exercises || []).map((ex, j) => {
                                                 const summary = getExerciseSummary(ex);
                                                 return (
                                                     <div key={j} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
