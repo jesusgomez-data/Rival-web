@@ -63,7 +63,7 @@ export default function WorkoutShareCard({ blocks, workoutTitle, sportType, dura
 
     const durationMin = Math.floor(duration / 60);
     const durationSec = duration % 60;
-    const displayDuration = durationLabel || (duration > 0 ? `${durationMin}:${String(durationSec).padStart(2, '0')}` : null);
+    const displayDuration = durationLabel || (duration > 0 ? `${durationMin}:${String(durationSec).padStart(2, '0')}` : '--:--');
 
     const handleDownload = async () => {
         if (!cardRef.current) return;
@@ -147,14 +147,12 @@ export default function WorkoutShareCard({ blocks, workoutTitle, sportType, dura
                                 </h2>
                             </div>
                             {/* Duration */}
-                            {displayDuration && (
-                                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                    <p style={{ color: '#fff', fontSize: '20px', fontWeight: 900, fontStyle: 'italic', lineHeight: 1, letterSpacing: '-0.03em' }}>
-                                        {displayDuration}
-                                    </p>
-                                    <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', marginTop: '2px' }}>MIN</p>
-                                </div>
-                            )}
+                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                <p style={{ color: '#fff', fontSize: '20px', fontWeight: 900, fontStyle: 'italic', lineHeight: 1, letterSpacing: '-0.03em' }}>
+                                    {displayDuration}
+                                </p>
+                                <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', marginTop: '2px' }}>MIN</p>
+                            </div>
                         </div>
 
                         {/* Divider */}
