@@ -1426,15 +1426,16 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             }
             {
                 showInstagramCard && (() => {
-                    const wodBlocks = (resolvedWorkoutData as any)?.blocks || (resolvedWorkoutData as any)?.metrics?.blocks;
+                    const wd: any = Array.isArray(resolvedWorkoutData) ? resolvedWorkoutData[0] : resolvedWorkoutData;
+                    const wodBlocks = wd?.blocks || wd?.metrics?.blocks;
                     // For WODs with real blocks → use WorkoutShareCard (shows exercises + reps + weights)
                     if (wodBlocks && wodBlocks.length > 0) {
                         return (
                             <WorkoutShareCard
                                 blocks={wodBlocks}
-                                workoutTitle={resolvedWorkoutData?.title || 'Entrenamiento'}
-                                sportType={(resolvedWorkoutData as any)?.sport_type || 'Cross Training'}
-                                duration={(resolvedWorkoutData as any)?.duration_seconds || resolvedWorkoutData?.duration || 0}
+                                workoutTitle={wd?.title || 'Entrenamiento'}
+                                sportType={wd?.sport_type || 'Cross Training'}
+                                duration={wd?.duration_seconds || wd?.duration || 0}
                                 date={time}
                                 userName={user}
                                 onClose={() => setShowInstagramCard(false)}
