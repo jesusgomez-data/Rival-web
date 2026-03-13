@@ -17,6 +17,7 @@ import VideoReelsModal from "./VideoReelsModal";
 import dynamic from 'next/dynamic';
 import ShareableCard from "@/components/ShareableCard";
 import RunShareCard from "@/components/training/RunShareCard";
+import WorkoutShareCard from "@/components/training/WorkoutShareCard";
 import RouteMap from "@/components/training/RouteMap";
 import WODPostDisplay from "@/components/WODPostDisplay";
 import WODTrackerModal from "@/components/WODTrackerModal";
@@ -1424,46 +1425,56 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 )
             }
             {
-                showInstagramCard && (
-                    <InstagramShareCard
-                        user={user}
-                        username={username || user}
-                        avatar={avatar}
-                        content={{
-                            type: (resolvedWorkoutData as any)?.metrics?.type === 'running' ? 'running' : (mediaType === 'pr' ? 'pr' : (resolvedWorkoutData ? 'wod' : (mediaType as any || 'workout'))),
-                            title: (resolvedWorkoutData?.title === 'Entrenamiento Híbrido Libre' || resolvedWorkoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (resolvedWorkoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (resolvedWorkoutData?.title || (mediaType === 'running' ? 'RUNNING' : 'ENTRENAMIENTO'))),
-                            highlight: highlight || caption,
-                            stats: (resolvedWorkoutData as any)?.metrics?.type === 'running'
-                                ? [
-                                    { label: 'DISTANCIA', value: `${(((resolvedWorkoutData as any).metrics.distance || 0) / 1000).toFixed(2)} KM`, icon: 'distance' },
-                                    { label: 'RITMO', value: (resolvedWorkoutData as any).metrics.pace || '0:00', icon: 'pace' },
-                                    { label: 'TIEMPO', value: (resolvedWorkoutData as any).metrics.time || '00:00', icon: 'time' },
-                                    { label: 'DESNIVEL', value: `${(resolvedWorkoutData as any).metrics.elevation || 0}m`, icon: 'elevation' },
-                                    { label: 'PULSO MED.', value: `${(resolvedWorkoutData as any).metrics.avgHeartRate || 0}`, icon: 'heart' }
-                                ]
-                                : (() => {
-                                    // Support both new WOD format (blocks) and old format (metrics.blocks)
-                                    const wodBlocks = (resolvedWorkoutData as any)?.blocks || (resolvedWorkoutData as any)?.metrics?.blocks;
-                                    if (wodBlocks && wodBlocks.length > 0) {
-                                        return wodBlocks.slice(0, 4).map((b: any) => ({
-                                            label: (b.title && b.title !== 'METCON' && !b.title.startsWith('BLOCK') ? b.title : (b.format || b.type || 'BLOQUE')).toUpperCase(),
-                                            value: b.exercises?.length ? `${b.exercises.length} EJERC.` : (b.result?.time || `${b.result?.rounds || b.result?.reps || '-'} ${b.result?.rounds ? 'RDS' : 'REPS'}`)
-                                        }));
-                                    }
-                                    if (mediaType === 'pr') {
-                                        try {
-                                            const d = JSON.parse(image);
-                                            return [{ label: d.exerciseName?.toUpperCase(), value: `${d.weight}${d.unit}` }];
-                                        } catch (e) { return []; }
-                                    }
-                                    return [];
-                                })(),
-                            image: isImageUrl(image) ? image : undefined,
-                            mapData: (resolvedWorkoutData as any)?.metrics?.path ? 'GPS_PATH_ACTIVE' : undefined
-                        }}
-                        onClose={() => setShowInstagramCard(false)}
-                    />
-                )
+                showInstagramCard && (() => {
+                    const wodBlocks = (resolvedWorkoutData as any)?.blocks || (resolvedWorkoutData as any)?.metrics?.blocks;
+                    // For WODs with real blocks → use WorkoutShareCard (shows exercises + reps + weights)
+                    if (wodBlocks && wodBlocks.length > 0) {
+                        return (
+                            <WorkoutShareCard
+                                blocks={wodBlocks}
+                                workoutTitle={resolvedWorkoutData?.title || 'Entrenamiento'}
+                                sportType={(resolvedWorkoutData as any)?.sport_type || 'Cross Training'}
+                                duration={resolvedWorkoutData?.duration || 0}
+                                date={time}
+                                userName={user}
+                                onClose={() => setShowInstagramCard(false)}
+                            />
+                        );
+                    }
+                    // Fallback for running / PR / generic posts
+                    return (
+                        <InstagramShareCard
+                            user={user}
+                            username={username || user}
+                            avatar={avatar}
+                            content={{
+                                type: (resolvedWorkoutData as any)?.metrics?.type === 'running' ? 'running' : (mediaType === 'pr' ? 'pr' : (resolvedWorkoutData ? 'wod' : (mediaType as any || 'workout'))),
+                                title: (resolvedWorkoutData?.title === 'Entrenamiento Híbrido Libre' || resolvedWorkoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (resolvedWorkoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (resolvedWorkoutData?.title || (mediaType === 'running' ? 'RUNNING' : 'ENTRENAMIENTO'))),
+                                highlight: highlight || caption,
+                                stats: (resolvedWorkoutData as any)?.metrics?.type === 'running'
+                                    ? [
+                                        { label: 'DISTANCIA', value: `${(((resolvedWorkoutData as any).metrics.distance || 0) / 1000).toFixed(2)} KM`, icon: 'distance' },
+                                        { label: 'RITMO', value: (resolvedWorkoutData as any).metrics.pace || '0:00', icon: 'pace' },
+                                        { label: 'TIEMPO', value: (resolvedWorkoutData as any).metrics.time || '00:00', icon: 'time' },
+                                        { label: 'DESNIVEL', value: `${(resolvedWorkoutData as any).metrics.elevation || 0}m`, icon: 'elevation' },
+                                        { label: 'PULSO MED.', value: `${(resolvedWorkoutData as any).metrics.avgHeartRate || 0}`, icon: 'heart' }
+                                    ]
+                                    : (() => {
+                                        if (mediaType === 'pr') {
+                                            try {
+                                                const d = JSON.parse(image);
+                                                return [{ label: d.exerciseName?.toUpperCase(), value: `${d.weight}${d.unit}` }];
+                                            } catch (e) { return []; }
+                                        }
+                                        return [];
+                                    })(),
+                                image: isImageUrl(image) ? image : undefined,
+                                mapData: (resolvedWorkoutData as any)?.metrics?.path ? 'GPS_PATH_ACTIVE' : undefined
+                            }}
+                            onClose={() => setShowInstagramCard(false)}
+                        />
+                    );
+                })()
             }
             {
                 showShareCard && (
