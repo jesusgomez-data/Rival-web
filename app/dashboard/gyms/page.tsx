@@ -132,33 +132,51 @@ function CenterListPageContent() {
         setLoading(false);
     }
 
-    const requestLocation = () => {
+    const requestLocation = (showAlert: boolean = true) => {
         if (!navigator.geolocation) {
-            alert("La geolocalización no está soportada por tu navegador.");
+           if (showAlert) alert("La geolocalización no está soportada por tu navegador.");
             return;
         }
 
         setIsLocating(true);
+        console.log("📍 Iniciando rastreo de ubicación...");
+
         navigator.geolocation.getCurrentPosition(
             async (position) => {
                 const { latitude, longitude } = position.coords;
+                console.log("✅ Ubicación capturada:", latitude, longitude);
                 setUserLocation({ lat: latitude, lng: longitude });
                 const nearby = await getNearbyOrganizations(latitude, longitude);
                 setNearbyOrgs(nearby);
                 setIsLocating(false);
             },
             (error) => {
-                console.error("Error obtaining location:", error);
+                console.error("❌ Error al obtener ubicación:", error.code, error.message);
                 setIsLocating(false);
-                alert("No pudimos obtener tu ubicación. Por favor, asegúrate de dar permisos de geolocalización.");
+                if (showAlert) {
+                    if (error.code === error.PERMISSION_DENIED) {
+                        alert("Acceso denegado. Aunque el navegador tenga permiso, revisa si la 'Ubicación' está activada en la Configuración de Privacidad de tu sistema (Windows/macOS).");
+                    } else if (error.code === error.POSITION_UNAVAILABLE) {
+                        alert("Información de ubicación no disponible. Inténtalo de nuevo en unos momentos.");
+                    } else if (error.code === error.TIMEOUT) {
+                         alert("La solicitud ha expirado. Asegúrate de tener buena conexión e inténtalo de nuevo.");
+                    } else {
+                        alert("No pudimos captar tu ubicación. Error: " + error.message);
+                    }
+                }
             },
-            { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+            { 
+                enableHighAccuracy: true, 
+                timeout: 20000, 
+                maximumAge: 0 
+            }
         );
     };
 
     useEffect(() => {
         if ("geolocation" in navigator) {
-            requestLocation();
+            // Intentar obtener la ubicación en segundo plano al cargar, de forma silenciosa.
+            requestLocation(false);
         }
     }, []);
 
@@ -171,10 +189,17 @@ function CenterListPageContent() {
                 setNewOrgLng(position.coords.longitude);
                 setIsCapturingLoc(false);
             },
-            () => {
+            (error) => {
                 setIsCapturingLoc(false);
-                alert("No se pudo obtener la ubicación actual.");
-            }
+                if (error.code === error.PERMISSION_DENIED) {
+                    alert("No se pudo obtener la ubicación porque el acceso fue denegado. Por favor, actívala en tu navegador.");
+                } else if (error.code === error.TIMEOUT) {
+                    alert("La solicitud ha expirado. Asegúrate de tener buena señal GPS.");
+                } else {
+                    alert("No se pudo obtener la ubicación actual.");
+                }
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
         );
     };
 
@@ -702,7 +727,7 @@ function CenterListPageContent() {
                         </div>
                         {!userLocation && (
                             <button
-                                onClick={requestLocation}
+                                onClick={() => requestLocation(true)}
                                 disabled={isLocating}
                                 className={`text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl border transition-all flex items-center gap-2 ${theme === 'dark' ? 'border-white/10 hover:bg-brand-red/10 hover:border-brand-red' : 'border-gray-200 hover:bg-brand-red/5 hover:border-brand-red'} ${isLocating ? 'opacity-50' : ''}`}
                             >
@@ -717,7 +742,7 @@ function CenterListPageContent() {
                             <MapPin className={`w-12 h-12 mx-auto mb-4 ${textMuted} opacity-20`} />
                             <p className={`mb-6 ${textMuted}`}>Activa tu ubicación para descubrir los centros más cercanos a ti.</p>
                             <button
-                                onClick={requestLocation}
+                                onClick={() => requestLocation(true)}
                                 className="bg-brand-red/10 text-brand-red border border-brand-red/20 px-6 py-2.5 rounded-xl font-bold uppercase text-xs tracking-widest hover:bg-brand-red hover:text-white transition-all shadow-glow-sm"
                             >
                                 Descubrir Centros

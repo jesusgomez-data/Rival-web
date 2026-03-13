@@ -9,3 +9,5 @@ export * from './class-actions';
 export * from './membership-plan-actions';
 export * from './analytics-actions';
 export * from './public-actions';
+export * from './checkin-actions';
+export * from './communications-actions';

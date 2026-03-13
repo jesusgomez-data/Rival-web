@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { X, Type, Smile, Loader2, Sparkles, ChevronRight, Music as MusicIcon, Scissors, Image as ImageIcon, Volume2, VolumeX, Zap, Play, Pause, SlidersHorizontal, Gauge } from 'lucide-react'
+import { X, Type, Smile, Loader2, Sparkles, ChevronRight, Music as MusicIcon, Scissors, Image as ImageIcon, Volume2, VolumeX, Zap, Play, Pause, SlidersHorizontal, Gauge, UserPlus, Search } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react'
 import { createPortal } from 'react-dom'
+import { createClient } from '@/utils/supabase/client'
 
 interface TextOverlay {
     id: string; text: string; x: number; y: number; fontSize: number;
@@ -13,7 +14,10 @@ interface TextOverlay {
 }
 interface StickerOverlay { id: string; emoji: string; x: number; y: number; size: number; }
 interface ImageOverlay { id: string; src: string; x: number; y: number; width: number; height: number; }
+interface TagOverlay { id: string; username: string; fullName: string; avatarUrl: string | null; x: number; y: number; }
 interface Adjustments { brightness: number; contrast: number; saturation: number; warmth: number; vignette: number; }
+
+interface UserProfile { id: string; username: string; full_name?: string; avatar_url?: string | null; }
 
 const FILTERS = [
     { name: "Normal",    css: "none" },
@@ -82,10 +86,29 @@ const SPEEDS = [
 ]
 
 const TRACKS = [
-    { name: "Rival Energy",      url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" },
-    { name: "Gym Hardcore",      url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3" },
-    { name: "Urban Beat",        url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3" },
-    { name: "Elite Performance", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
+    // ── DUBSTEP / AGGRESSIVE ELECTRONIC · The Avalune (CC BY 4.0) ──
+    { name: "Kinetic Breach",       artist: "The Avalune",  genre: "Dubstep",       url: "https://archive.org/download/avalune-kinetic-aggressive-dubstep-mix-30-min/Kinetic%20Breach.mp3" },
+    { name: "Armor Shatter",        artist: "The Avalune",  genre: "Dubstep",       url: "https://archive.org/download/avalune-kinetic-aggressive-dubstep-mix-30-min/Armor%20Shatter.mp3" },
+    { name: "Digital Anarchy",      artist: "The Avalune",  genre: "Industrial",    url: "https://archive.org/download/avalune-kinetic-aggressive-dubstep-mix-30-min/Digital%20Anarchy.mp3" },
+    { name: "System Implosion",     artist: "The Avalune",  genre: "Heavy EDM",     url: "https://archive.org/download/avalune-kinetic-aggressive-dubstep-mix-30-min/System%20Implosion.mp3" },
+    { name: "Dominance Wave",       artist: "The Avalune",  genre: "Dubstep",       url: "https://archive.org/download/avalune-kinetic-aggressive-dubstep-mix-30-min/Dominance%20Wave.mp3" },
+    { name: "Pulse Weaponry",       artist: "The Avalune",  genre: "Future Bass",   url: "https://archive.org/download/avalune-kinetic-aggressive-dubstep-mix-30-min/Pulse%20Weaponry.mp3" },
+    // ── SYNTHWAVE / HIGH-OCTANE · The Avalune (CC BY 4.0) ──
+    { name: "Velocity Surge",       artist: "The Avalune",  genre: "Synthwave",     url: "https://archive.org/download/avalune-blaze-highoctane-synth-mix-30-minute/Velocity%20Surge.mp3" },
+    { name: "Chrome Metropolis",    artist: "The Avalune",  genre: "Synthwave",     url: "https://archive.org/download/avalune-blaze-highoctane-synth-mix-30-minute/Chrome%20Metropolis.mp3" },
+    { name: "Midnight Pursuit",     artist: "The Avalune",  genre: "Dark Synth",    url: "https://archive.org/download/avalune-blaze-highoctane-synth-mix-30-minute/Midnight%20Pursuit.mp3" },
+    { name: "Night Drive Protocol", artist: "The Avalune",  genre: "Synthwave",     url: "https://archive.org/download/avalune-blaze-highoctane-synth-mix-30-minute/Night%20Drive%20Protocol.mp3" },
+    { name: "Street Heat",          artist: "The Avalune",  genre: "Outrun",        url: "https://archive.org/download/avalune-velocity-chiptune-outrun-mix-23-minutes/Street%20Heat.mp3" },
+    { name: "Electric Streets",     artist: "The Avalune",  genre: "Chiptune",      url: "https://archive.org/download/avalune-velocity-chiptune-outrun-mix-23-minutes/Electric%20Streets.mp3" },
+    { name: "Nightfall Pursuit",    artist: "The Avalune",  genre: "Outrun",        url: "https://archive.org/download/avalune-velocity-chiptune-outrun-mix-23-minutes/Nightfall%20Pursuit.mp3" },
+    { name: "Urban Circuit",        artist: "The Avalune",  genre: "Electronic",    url: "https://archive.org/download/avalune-velocity-chiptune-outrun-mix-23-minutes/Urban%20Circuit.mp3" },
+    // ── METAL / ROCK · Komiku (CC0 — Dominio Público) ──
+    { name: "Metal Circuit",        artist: "Komiku",       genre: "Metal",         url: "https://archive.org/download/komiku-incredible-kart-game/Metal%20Circuit.mp3" },
+    { name: "Punk Rock Circuit",    artist: "Komiku",       genre: "Punk Rock",     url: "https://archive.org/download/komiku-incredible-kart-game/Punk%20Rock%20Circuit.mp3" },
+    { name: "Rock'n Roll Circuit",  artist: "Komiku",       genre: "Rock",          url: "https://archive.org/download/komiku-incredible-kart-game/Rock%27n%20Roll%20Circuit.mp3" },
+    { name: "Boss Fight Circuit",   artist: "Komiku",       genre: "Action Rock",   url: "https://archive.org/download/komiku-incredible-kart-game/Boss%20Fight%20Circuit.mp3" },
+    // ── HIP-HOP BEAT · Cely Grande (CC0 — Dominio Público) ──
+    { name: "Real Man Use Fists",   artist: "Cely Grande",  genre: "Hip-Hop",       url: "https://archive.org/download/CelyGrande-RealManUseFistsdeepUndergroundRapInstrumental/Celygrande-Real_man_use_fists.mp3" },
 ]
 
 const ASPECT_RATIOS = [
@@ -112,7 +135,11 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const [imageOverlays, setImageOverlays] = useState<ImageOverlay[]>([])
     const [isSaving, setIsSaving]           = useState(false)
     const [saveProgress, setSaveProgress]   = useState(0)
-    const [activeTool, setActiveTool]       = useState<'filter'|'fx'|'adjust'|'speed'|'format'|'text'|'sticker'|'trim'|'image'|'music'|'none'>('none')
+    const [activeTool, setActiveTool]       = useState<'filter'|'fx'|'adjust'|'speed'|'format'|'text'|'sticker'|'trim'|'image'|'music'|'tag'|'none'>('none')
+    const [tagOverlays, setTagOverlays]     = useState<TagOverlay[]>([])
+    const [tagSearch, setTagSearch]         = useState('')
+    const [tagResults, setTagResults]       = useState<UserProfile[]>([])
+    const [tagLoading, setTagLoading]       = useState(false)
     const [videoDuration, setVideoDuration] = useState(0)
     const [currentTime, setCurrentTime]     = useState(0)
     const [trimRange, setTrimRange]         = useState({ start: 0, end: 0 })
@@ -193,6 +220,23 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
         }
     }, [videoDuration])
 
+    // Force play music when track changes (browser autoplay policy may block it)
+    useEffect(() => {
+        if (!selectedTrack) {
+            musicRef.current?.pause()
+            return
+        }
+        const tryPlay = () => {
+            if (musicRef.current) {
+                musicRef.current.currentTime = 0
+                musicRef.current.play().catch(() => {/* blocked by browser policy */})
+            }
+        }
+        // Small delay to let the audio element mount with the new src
+        const t = setTimeout(tryPlay, 100)
+        return () => clearTimeout(t)
+    }, [selectedTrack])
+
     useEffect(() => {
         const video = videoRef.current
         if (!video || videoDuration === 0) return
@@ -208,6 +252,38 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     }, [trimRange, videoDuration])
 
     if (!mounted) return null
+
+    const searchUsers = async (query: string) => {
+        setTagSearch(query)
+        if (!query.trim()) { setTagResults([]); return }
+        setTagLoading(true)
+        try {
+            const supabase = createClient()
+            const { data } = await supabase
+                .from('profiles')
+                .select('id, username, full_name, avatar_url')
+                .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
+                .limit(15)
+            setTagResults(data || [])
+        } catch {
+            setTagResults([])
+        } finally {
+            setTagLoading(false)
+        }
+    }
+
+    const addTag = (user: UserProfile) => {
+        setTagOverlays(prev => [...prev, {
+            id: Date.now().toString(),
+            username: user.username,
+            fullName: user.full_name || user.username,
+            avatarUrl: user.avatar_url || null,
+            x: 50, y: 50,
+        }])
+        setTagSearch('')
+        setTagResults([])
+        setActiveTool('none')
+    }
 
     const addText = () => {
         if (!pendingText.trim()) return
@@ -282,6 +358,27 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                 ctx.textAlign = 'center'; ctx.fillStyle = to.color
                 ctx.fillText(to.style === 'script' ? to.text : to.text.toUpperCase(), 0, 0); ctx.restore()
             })
+            tagOverlays.forEach(tag => {
+                const scale = canvas.height / 800
+                const cx = (tag.x/100)*canvas.width
+                const cy = (tag.y/100)*canvas.height
+                const text = `@${tag.username}`
+                const fs = 14 * scale
+                ctx.font = `800 ${fs}px Inter, sans-serif`
+                const tw = ctx.measureText(text).width
+                const pad = 10 * scale
+                const bh = (fs + pad * 2)
+                const bw = tw + pad * 2 + (tag.avatarUrl ? bh + 4*scale : 0)
+                ctx.save()
+                ctx.fillStyle = 'rgba(0,0,0,0.65)'
+                ctx.beginPath()
+                ctx.roundRect(cx - bw/2, cy - bh/2, bw, bh, bh/2)
+                ctx.fill()
+                ctx.fillStyle = '#ffffff'
+                ctx.textAlign = 'right'
+                ctx.fillText(text, cx + bw/2 - pad, cy + fs*0.35)
+                ctx.restore()
+            })
             if (recorder.state === 'recording') requestAnimationFrame(renderLoop)
         }
         renderLoop()
@@ -304,7 +401,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     }
 
     // Called every frame during drag: moves element to pointer minus grab offset
-    const onOverlayDrag = (id: string, info: any, type: 'text'|'sticker'|'image') => {
+    const onOverlayDrag = (id: string, info: any, type: 'text'|'sticker'|'image'|'tag') => {
         if (!containerRef.current || dragState.current.id !== id) return
         const rect = containerRef.current.getBoundingClientRect()
         const xPct = clamp(((info.point.x - rect.left - dragState.current.ox) / rect.width)  * 100)
@@ -312,6 +409,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
         if (type === 'text')    setTextOverlays(p    => p.map(t => t.id === id ? { ...t, x: xPct, y: yPct } : t))
         if (type === 'sticker') setStickerOverlays(p => p.map(s => s.id === id ? { ...s, x: xPct, y: yPct } : s))
         if (type === 'image')   setImageOverlays(p   => p.map(i => i.id === id ? { ...i, x: xPct, y: yPct } : i))
+        if (type === 'tag')     setTagOverlays(p     => p.map(t => t.id === id ? { ...t, x: xPct, y: yPct } : t))
     }
 
     return createPortal(
@@ -341,7 +439,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                         <div className="absolute inset-0 pointer-events-none" style={{ background: `radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,${adjustments.vignette/100}) 100%)` }} />
                     )}
 
-                    {selectedTrack && <audio ref={musicRef} src={selectedTrack.url} loop crossOrigin="anonymous" />}
+                    {selectedTrack && <audio ref={musicRef} src={selectedTrack.url} loop autoPlay />}
 
                     {/* Overlay layer */}
                     <div className="absolute inset-0 pointer-events-none z-20">
@@ -387,6 +485,29 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                                     {selectedId===so.id && <DeleteBtn onClick={e => { e.stopPropagation(); setStickerOverlays(p=>p.filter(s=>s.id!==so.id)); setSelectedId(null) }} />}
                                 </motion.div>
                             ))}
+
+                            {tagOverlays.map(tag => (
+                                <motion.div key={tag.id} drag dragMomentum={false} dragElastic={0}
+                                    dragConstraints={{ left:0, right:0, top:0, bottom:0 }}
+                                    onDragStart={(_, info) => onOverlayDragStart(tag.id, tag.x, tag.y, info)}
+                                    onDrag={(_, info) => onOverlayDrag(tag.id, info, 'tag')}
+                                    onClick={() => setSelectedId(tag.id)}
+                                    className="absolute pointer-events-auto cursor-grab active:cursor-grabbing overflow-visible"
+                                    style={{ left:`${tag.x}%`, top:`${tag.y}%`, translateX:'-50%', translateY:'-50%' }}
+                                >
+                                    <div className={clsx(
+                                        "flex items-center gap-1.5 px-3 py-1.5 rounded-full backdrop-blur-md border transition-all",
+                                        selectedId===tag.id ? "border-brand-red shadow-glow" : "border-white/30"
+                                    )} style={{ background: 'rgba(0,0,0,0.65)', whiteSpace:'nowrap' }}>
+                                        {tag.avatarUrl
+                                            ? <img src={tag.avatarUrl} className="w-5 h-5 rounded-full object-cover flex-shrink-0" />
+                                            : <div className="w-5 h-5 rounded-full bg-brand-red flex items-center justify-center flex-shrink-0 text-[9px] font-black text-white">{tag.username[0]?.toUpperCase()}</div>
+                                        }
+                                        <span style={{ color:'#fff', fontSize:'12px', fontWeight:800, letterSpacing:'0.02em' }}>@{tag.username}</span>
+                                    </div>
+                                    {selectedId===tag.id && <DeleteBtn small onClick={e => { e.stopPropagation(); setTagOverlays(p=>p.filter(t=>t.id!==tag.id)); setSelectedId(null) }} />}
+                                </motion.div>
+                            ))}
                         </AnimatePresence>
                     </div>
                 </div>
@@ -416,6 +537,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                         <NavBtn icon={<Smile size={17}/>}           onClick={() => setActiveTool('sticker')} active={activeTool==='sticker'} title="Stickers" />
                         <NavBtn icon={<ImageIcon size={17}/>}       onClick={() => { setActiveTool('image'); imageInputRef.current?.click() }} active={activeTool==='image'} title="Imagen" />
                         <NavBtn icon={<Type size={17}/>}            onClick={() => setActiveTool('text')}   active={activeTool==='text'}   title="Texto" />
+                        <NavBtn icon={<UserPlus size={17}/>}        onClick={() => { setActiveTool('tag'); setTagSearch(''); setTagResults([]) }} active={activeTool==='tag'} title="Etiquetar" />
                     </div>
                     <button onClick={handleExport} disabled={isSaving}
                         className="w-14 h-14 bg-white text-black rounded-full shadow-2xl pointer-events-auto flex items-center justify-center hover:scale-110 active:scale-90 transition-all group"
@@ -570,18 +692,40 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                 {/* MUSIC */}
                 {activeTool === 'music' && (
                     <motion.div initial={{y:300}} animate={{y:0}} exit={{y:300}} className="absolute bottom-0 left-0 right-0 z-[600] bg-black/95 pt-5 pb-24 border-t border-white/10 pointer-events-auto px-5">
-                        <p className="text-[9px] font-black italic uppercase tracking-[0.5em] text-white/30 mb-4 text-center">MÚSICA</p>
-                        <div className="grid gap-3 mb-5 overflow-y-auto max-h-[35vh]">
-                            {TRACKS.map(t => (
-                                <button key={t.name} onClick={() => setSelectedTrack(selectedTrack?.name===t.name ? null : t)}
-                                    className={clsx("flex justify-between items-center p-4 rounded-2xl border transition-all", selectedTrack?.name===t.name ? "bg-brand-red border-brand-red shadow-glow" : "bg-white/5 border-white/10")}
-                                >
-                                    <span className="text-xs font-black uppercase italic text-white">{t.name}</span>
-                                    {selectedTrack?.name===t.name ? <Pause size={16} color="white"/> : <Play size={16} color="white"/>}
-                                </button>
+                        <div className="flex items-center justify-between mb-4">
+                            <p className="text-[9px] font-black italic uppercase tracking-[0.5em] text-white/30">MÚSICA · {TRACKS.length} TRACKS</p>
+                            <span className="text-[8px] font-black uppercase tracking-widest text-white/20 bg-white/5 px-2 py-1 rounded-full">Royalty-Free</span>
+                        </div>
+                        <div className="grid gap-2 mb-5 overflow-y-auto max-h-[40vh] pr-1">
+                            {/* Group by artist */}
+                            {Array.from(new Set(TRACKS.map(t => t.artist))).map(artist => (
+                                <div key={artist}>
+                                    <p className="text-[8px] font-black uppercase tracking-[0.3em] text-white/20 mb-1.5 mt-1">{artist}</p>
+                                    {TRACKS.filter(t => t.artist === artist).map(t => (
+                                        <button key={t.name} onClick={() => setSelectedTrack(selectedTrack?.name===t.name ? null : t)}
+                                            className={clsx("w-full flex items-center gap-3 p-3 rounded-xl border transition-all mb-1.5", selectedTrack?.name===t.name ? "bg-brand-red/20 border-brand-red" : "bg-white/5 border-white/5 hover:border-white/20")}
+                                        >
+                                            <div className={clsx("w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all", selectedTrack?.name===t.name ? "bg-brand-red" : "bg-white/10")}>
+                                                {selectedTrack?.name===t.name ? <Pause size={13} color="white"/> : <Play size={13} color="white"/>}
+                                            </div>
+                                            <div className="text-left min-w-0 flex-1">
+                                                <p className={clsx("text-xs font-black uppercase italic truncate", selectedTrack?.name===t.name ? "text-white" : "text-white/70")}>{t.name}</p>
+                                                <p className="text-[8px] text-white/30 font-bold uppercase tracking-widest">{t.genre}</p>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
                             ))}
                         </div>
+                        {selectedTrack && (
+                            <div className="mb-3 px-3 py-2 bg-brand-red/10 border border-brand-red/20 rounded-xl flex items-center gap-2">
+                                <div className="w-2 h-2 rounded-full bg-brand-red animate-pulse shrink-0"/>
+                                <p className="text-[10px] font-black text-brand-red truncate flex-1">{selectedTrack.name} · {selectedTrack.artist}</p>
+                                <button onClick={() => setSelectedTrack(null)} className="text-white/30 hover:text-white shrink-0"><X size={12}/></button>
+                            </div>
+                        )}
                         <button onClick={() => setActiveTool('none')} className="w-full py-4 bg-white text-black rounded-full font-black text-[11px] uppercase">CONFIRMAR</button>
+                        <p className="text-center text-[8px] text-white/15 font-bold mt-2">CC0 / CC BY 4.0 · Uso comercial permitido</p>
                     </motion.div>
                 )}
 
@@ -610,6 +754,83 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                         <div className="flex gap-8 mt-8">
                             <button onClick={() => { setPendingText(''); setActiveTool('none') }} className="text-white/30 font-black text-[10px] uppercase tracking-widest">ATRÁS</button>
                             <button onClick={addText} className="bg-white text-black px-10 py-4 rounded-full font-black text-[10px] uppercase shadow-2xl">AÑADIR</button>
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* TAG PEOPLE */}
+                {activeTool === 'tag' && (
+                    <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-3xl flex flex-col pointer-events-auto">
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 pt-14 pb-4 border-b border-white/10">
+                            <p className="text-[10px] font-black uppercase tracking-[0.5em] text-white/40">ETIQUETAR PERSONAS</p>
+                            <button onClick={() => setActiveTool('none')} className="p-2 bg-white/10 rounded-full text-white"><X size={18}/></button>
+                        </div>
+
+                        {/* Search bar */}
+                        <div className="px-5 pt-4 pb-3">
+                            <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
+                                <Search size={16} className="text-white/30 shrink-0"/>
+                                <input
+                                    autoFocus
+                                    type="text"
+                                    value={tagSearch}
+                                    onChange={e => searchUsers(e.target.value)}
+                                    placeholder="Buscar por nombre o @usuario..."
+                                    className="bg-transparent text-white text-sm w-full outline-none placeholder:text-white/20"
+                                />
+                                {tagLoading && <Loader2 size={14} className="animate-spin text-brand-red shrink-0"/>}
+                            </div>
+                        </div>
+
+                        {/* Already tagged */}
+                        {tagOverlays.length > 0 && tagSearch === '' && (
+                            <div className="px-5 pb-3">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-white/25 mb-2">YA ETIQUETADOS</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {tagOverlays.map(tag => (
+                                        <div key={tag.id} className="flex items-center gap-1.5 bg-brand-red/20 border border-brand-red/40 rounded-full px-3 py-1.5">
+                                            <span className="text-brand-red text-[11px] font-black">@{tag.username}</span>
+                                            <button onClick={() => setTagOverlays(p => p.filter(t => t.id !== tag.id))}>
+                                                <X size={10} className="text-brand-red/60 hover:text-brand-red"/>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Results */}
+                        <div className="flex-1 overflow-y-auto px-5 pb-10">
+                            {tagResults.length === 0 && tagSearch !== '' && !tagLoading && (
+                                <p className="text-center text-white/20 text-xs font-bold uppercase tracking-widest mt-10">Sin resultados</p>
+                            )}
+                            {tagResults.length === 0 && tagSearch === '' && (
+                                <p className="text-center text-white/15 text-[10px] font-bold uppercase tracking-widest mt-10">Escribe para buscar atletas</p>
+                            )}
+                            <div className="space-y-2 mt-2">
+                                {tagResults.map(user => {
+                                    const already = tagOverlays.some(t => t.username === user.username)
+                                    return (
+                                        <button key={user.id} onClick={() => !already && addTag(user)} disabled={already}
+                                            className={clsx("w-full flex items-center gap-4 p-4 rounded-2xl border transition-all text-left", already ? "bg-brand-red/10 border-brand-red/30 opacity-60" : "bg-white/5 border-white/10 hover:border-white/30 active:scale-[0.98]")}
+                                        >
+                                            {user.avatar_url
+                                                ? <img src={user.avatar_url} className="w-11 h-11 rounded-full object-cover flex-shrink-0 border border-white/10"/>
+                                                : <div className="w-11 h-11 rounded-full bg-brand-red flex items-center justify-center flex-shrink-0 text-white font-black text-lg">{user.username[0]?.toUpperCase()}</div>
+                                            }
+                                            <div className="min-w-0">
+                                                <p className="text-white font-black text-sm truncate">{user.full_name || user.username}</p>
+                                                <p className="text-white/40 text-[11px] font-bold">@{user.username}</p>
+                                            </div>
+                                            {already
+                                                ? <span className="ml-auto text-brand-red text-[9px] font-black uppercase tracking-widest shrink-0">Añadido</span>
+                                                : <UserPlus size={16} className="ml-auto text-white/30 shrink-0"/>
+                                            }
+                                        </button>
+                                    )
+                                })}
+                            </div>
                         </div>
                     </motion.div>
                 )}

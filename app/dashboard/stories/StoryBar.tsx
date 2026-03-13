@@ -287,30 +287,19 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         const file = e.target.files?.[0]
         if (!file) return
 
-        // No file size limit - all videos accepted, will be trimmed if needed
         if (file.type.startsWith('video/')) {
+            // Always open VideoEditor Pro for videos
             const video = document.createElement('video');
             video.preload = 'metadata';
-
             video.onloadedmetadata = function () {
                 window.URL.revokeObjectURL(video.src);
-                const duration = video.duration;
-                setVideoDuration(duration);
-
-                if (duration > 30) {
-                    // Auto-open editor for videos longer than 30s to suggest trimming
-                    setEditorVideoFile(file);
-                    setIsVideoEditing(true);
-                    return;
-                }
-
-                setupPreview(file);
+                setVideoDuration(video.duration);
+                setEditorVideoFile(file);
+                setIsVideoEditing(true);
             };
-
             video.onerror = function () {
                 alert('Error al procesar el video. Asegúrate de que sea un formato compatible.');
             };
-
             video.src = URL.createObjectURL(file);
         } else {
             setupPreview(file);
@@ -1027,7 +1016,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                     </button>
                     <div className="flex flex-col items-center">
                         <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest leading-none">Story</span>
-                        <span className="text-[7px] font-bold text-brand-red uppercase tracking-tighter mt-1 opacity-60">Max 30s</span>
+                        <span className="text-[7px] font-bold text-brand-red uppercase tracking-tighter mt-1 opacity-60">+ Editor</span>
                     </div>
                 </div>
 

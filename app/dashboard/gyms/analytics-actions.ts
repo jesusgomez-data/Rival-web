@@ -118,3 +118,128 @@ export async function getDashboardMetrics(centerId: string) {
         cancelledMonth: cM || 0
     };
 }
+
+export async function getAdvancedAnalytics(orgId: string) {
+    const admin = createAdminClient();
+    const now = new Date();
+
+    const [{ data: members }, { data: sales }, { data: classes }, { data: enrollments }] = await Promise.all([
+        admin.from('members').select('id, status, plan, created_at, membership_start_date').eq('center_id', orgId),
+        admin.from('sales').select('total_amount, created_at').eq('organization_id', orgId),
+        admin.from('classes').select('id, name, scheduled_time').eq('organization_id', orgId),
+        admin.from('class_enrollments').select('class_id, member_id, attended').eq('attended', true),
+    ]);
+
+    const allMembers = members || [];
+    const allSales = sales || [];
+    const allClasses = classes || [];
+    const allEnrollments = enrollments || [];
+
+    // ── Plan Distribution ─────────────────────────────────────────────────
+    const planCounts: Record<string, number> = {};
+    allMembers.forEach((m: any) => {
+        const plan = (m.plan || 'Sin plan').trim();
+        planCounts[plan] = (planCounts[plan] || 0) + 1;
+    });
+    const planDistribution = Object.entries(planCounts)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 6);
+
+    // ── Status Distribution ───────────────────────────────────────────────
+    const active = allMembers.filter((m: any) => m.status === 'active').length;
+    const inactive = allMembers.filter((m: any) => m.status === 'inactive').length;
+    const cancelled = allMembers.filter((m: any) => ['cancelled', 'banned'].includes(m.status)).length;
+    const statusDistribution = [
+        { name: 'Activos', value: active, color: '#22c55e' },
+        { name: 'Inactivos', value: inactive, color: '#f59e0b' },
+        { name: 'Cancelados', value: cancelled, color: '#ef4444' },
+    ];
+
+    // ── Monthly Revenue (12 months) ───────────────────────────────────────
+    const monthlyRevenue = [];
+    for (let i = 11; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const nextMonth = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+        const monthName = d.toLocaleString('es-ES', { month: 'short' });
+
+        const rev = allSales
+            .filter((s: any) => { const dt = new Date(s.created_at); return dt >= d && dt < nextMonth; })
+            .reduce((acc: number, s: any) => acc + (s.total_amount || 0), 0);
+
+        const newM = allMembers.filter((m: any) => {
+            const joinDate = new Date(m.membership_start_date || m.created_at);
+            return joinDate >= d && joinDate < nextMonth;
+        }).length;
+
+        const churn = allMembers.filter((m: any) => {
+            if (m.status !== 'inactive' && m.status !== 'cancelled') return false;
+            const joinDate = new Date(m.membership_start_date || m.created_at);
+            return joinDate >= d && joinDate < nextMonth;
+        }).length;
+
+        monthlyRevenue.push({ name: monthName, revenue: Math.round(rev), nuevos: newM, bajas: churn });
+    }
+
+    // ── Retention Rate (members active after 3 months) ─────────────────
+    const threeMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 3, 1);
+    const membersThreeMonthsAgo = allMembers.filter((m: any) => {
+        const joinDate = new Date(m.membership_start_date || m.created_at);
+        return joinDate <= threeMonthsAgo;
+    });
+    const stillActive = membersThreeMonthsAgo.filter((m: any) => m.status === 'active').length;
+    const retentionRate = membersThreeMonthsAgo.length > 0
+        ? Math.round((stillActive / membersThreeMonthsAgo.length) * 100)
+        : 0;
+
+    // ── Class Popularity (top classes by attendance) ───────────────────
+    const classIds = new Set(allClasses.map((c: any) => c.id));
+    const attendanceByClass: Record<string, number> = {};
+    allEnrollments.forEach((e: any) => {
+        if (classIds.has(e.class_id)) {
+            attendanceByClass[e.class_id] = (attendanceByClass[e.class_id] || 0) + 1;
+        }
+    });
+    const classPopularity = allClasses
+        .map((c: any) => ({ name: c.name, attendance: attendanceByClass[c.id] || 0 }))
+        .sort((a: any, b: any) => b.attendance - a.attendance)
+        .slice(0, 8);
+
+    // ── Weekly Attendance Heatmap (last 8 weeks, by day of week) ─────────
+    const eightWeeksAgo = new Date(now);
+    eightWeeksAgo.setDate(eightWeeksAgo.getDate() - 56);
+    const recentClasses = allClasses.filter((c: any) => new Date(c.scheduled_time) >= eightWeeksAgo);
+    const recentClassIds = new Set(recentClasses.map((c: any) => c.id));
+    const recentEnrollments = allEnrollments.filter((e: any) => recentClassIds.has(e.class_id));
+
+    const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const attendanceByDay = Array(7).fill(0);
+    recentClasses.forEach((c: any) => {
+        const day = new Date(c.scheduled_time).getDay();
+        const count = recentEnrollments.filter((e: any) => e.class_id === c.id).length;
+        attendanceByDay[day] += count;
+    });
+    const attendanceHeatmap = dayNames.map((name, i) => ({ name, value: attendanceByDay[i] }));
+
+    // ── Total Revenue ─────────────────────────────────────────────────────
+    const totalRevenue = Math.round(allSales.reduce((acc: number, s: any) => acc + (s.total_amount || 0), 0));
+    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const thisMonthRevenue = Math.round(
+        allSales
+            .filter((s: any) => new Date(s.created_at) >= thisMonthStart)
+            .reduce((acc: number, s: any) => acc + (s.total_amount || 0), 0)
+    );
+
+    return {
+        planDistribution,
+        statusDistribution,
+        monthlyRevenue,
+        retentionRate,
+        classPopularity,
+        attendanceHeatmap,
+        totalRevenue,
+        thisMonthRevenue,
+        totalMembers: allMembers.length,
+        activeMembers: active,
+    };
+}

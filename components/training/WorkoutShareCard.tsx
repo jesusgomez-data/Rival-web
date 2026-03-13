@@ -87,16 +87,49 @@ export default function WorkoutShareCard({ blocks, workoutTitle, sportType, dura
         }
     };
 
-    const handleShareToStory = () => {
-        const event = new CustomEvent('share-to-story', {
-            detail: {
-                type: 'workout_sticker',
-                content: JSON.stringify({ title: workoutTitle, sportType, duration, blocks }),
+    const handleShareToStory = async () => {
+        if (!cardRef.current) return;
+        setIsDownloading(true);
+        try {
+            const dataUrl = await toPng(cardRef.current, {
+                quality: 1.0,
+                pixelRatio: 3,
+                cacheBust: true,
+                backgroundColor: '#090909',
+            });
+
+            // Convert dataUrl to Blob/File
+            const res = await fetch(dataUrl);
+            const blob = await res.blob();
+            const file = new File([blob], `RivalFit-WOD-${Date.now()}.png`, { type: 'image/png' });
+
+            // Try Web Share API (opens native share sheet → Instagram Stories on mobile)
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    files: [file],
+                    title: 'Rival Fit · WOD',
+                    text: '¡Mira mi entrenamiento de hoy en Rival Fit!',
+                });
+                onClose();
+            } else {
+                // Fallback: download and guide user
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `RivalFit-WOD-${Date.now()}.png`;
+                a.click();
+                URL.revokeObjectURL(url);
+                alert('La imagen se ha descargado. Ábrela desde tu galería y súbela a Instagram Stories.');
+                onClose();
             }
-        });
-        window.dispatchEvent(event);
-        onClose();
-        alert("¡Tu WOD se ha enviado al editor de historias!");
+        } catch (err: any) {
+            if (err?.name !== 'AbortError') {
+                console.error(err);
+                alert('No se pudo abrir Instagram. Descarga la imagen y súbela manualmente.');
+            }
+        } finally {
+            setIsDownloading(false);
+        }
     };
 
     return (
@@ -244,10 +277,11 @@ export default function WorkoutShareCard({ blocks, workoutTitle, sportType, dura
                 <div className="flex gap-2">
                     <button
                         onClick={handleShareToStory}
-                        className="flex-1 py-4 bg-brand-red text-white rounded-2xl font-heading font-black italic uppercase tracking-widest flex items-center justify-center gap-2 shadow-glow active:scale-95 transition-all text-xs border border-white/10"
+                        disabled={isDownloading}
+                        className="flex-1 py-4 bg-brand-red text-white rounded-2xl font-heading font-black italic uppercase tracking-widest flex items-center justify-center gap-2 shadow-glow active:scale-95 transition-all text-xs border border-white/10 disabled:opacity-60"
                     >
-                        <Send className="w-4 h-4 -rotate-12" />
-                        A HISTORIA
+                        {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 -rotate-12" />}
+                        INSTAGRAM
                     </button>
                     <button
                         onClick={handleDownload}

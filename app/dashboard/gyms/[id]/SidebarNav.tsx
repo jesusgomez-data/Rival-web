@@ -11,7 +11,10 @@ import {
     Zap,
     ShoppingBag,
     Edit,
-    CreditCard
+    CreditCard,
+    BarChart2,
+    ScanLine,
+    Megaphone
 } from "lucide-react";
 import SupportModal from "../SupportModal";
 
@@ -38,6 +41,9 @@ export default function SidebarNav({ id, isAdmin, centerType }: { id: string, is
         { name: isPT ? 'Mis Alumnos' : 'Miembros', href: `/dashboard/gyms/${id}/members${query}`, icon: Users },
         { name: 'Equipo y Roles', href: `/dashboard/gyms/${id}/team${query}`, icon: Shield, adminOnly: true },
         { name: isPT ? 'Programación' : 'Entrenamientos (WODs)', href: `/dashboard/gyms/${id}/${isPT ? 'programming' : 'wods'}${query}`, icon: Dumbbell },
+        { name: 'Check-in', href: `/dashboard/gyms/${id}/checkin${query}`, icon: ScanLine },
+        { name: 'Comunicaciones', href: `/dashboard/gyms/${id}/communications${query}`, icon: Megaphone, adminOnly: true },
+        { name: 'Analytics', href: `/dashboard/gyms/${id}/analytics`, icon: BarChart2, adminOnly: true },
         { name: 'Muro Social', href: `/dashboard/gyms/${id}/feed${query}`, icon: Zap },
         { name: 'Tienda', href: `/dashboard/gyms/${id}/store${query}`, icon: ShoppingBag },
         { name: 'Facturación', href: `/dashboard/gyms/${id}/settings/billing`, icon: CreditCard, adminOnly: true },
