@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import RouteMap from '@/components/training/RouteMap';
 import RunShareCard from '@/components/training/RunShareCard';
+import WorkoutShareCard from '@/components/training/WorkoutShareCard';
 import Image from "next/image";
 import { useState, useEffect, Suspense, useMemo, useRef } from "react";
 import { saveWorkout, getExercises, getExercisePreviousRecord, getWorkoutDetails, uploadWorkoutMedia, getUserProfile, getGuidedWorkoutsCount } from "../actions";
@@ -116,6 +117,7 @@ function SessionContent() {
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [instantSpeed, setInstantSpeed] = useState(0); // km/h
     const [showShareCard, setShowShareCard] = useState(false);
+    const [showWorkoutShareCard, setShowWorkoutShareCard] = useState(false);
     const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
     const wakeLockRef = useRef<any>(null);
     const runDistanceRef = useRef<number>(0);
@@ -1274,6 +1276,8 @@ function SessionContent() {
                         elevation={elevationGain}
                         runPath={runPath}
                         onOpenShare={() => setShowShareCard(true)}
+                        blocks={blocks}
+                        onOpenWorkoutCard={() => setShowWorkoutShareCard(true)}
                     />
                 )}
 
@@ -1288,6 +1292,18 @@ function SessionContent() {
                         date={new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                         userName={userName}
                         onClose={() => setShowShareCard(false)}
+                    />
+                )}
+
+                {showWorkoutShareCard && blocks.length > 0 && (
+                    <WorkoutShareCard
+                        blocks={blocks}
+                        workoutTitle={workoutTitle}
+                        sportType={sportMode === 'hybrid' ? 'Hybrid Training' : sportMode === 'ocr' ? 'OCR' : 'Cross Training'}
+                        duration={elapsedSeconds}
+                        date={new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                        userName={userName}
+                        onClose={() => setShowWorkoutShareCard(false)}
                     />
                 )}
 
@@ -4086,7 +4102,9 @@ function FinishModal({
     pace = "0:00",
     elevation = 0,
     runPath = [],
-    onOpenShare
+    onOpenShare,
+    blocks = [],
+    onOpenWorkoutCard,
 }: {
     onConfirm: () => void;
     onCancel: () => void;
@@ -4109,6 +4127,8 @@ function FinishModal({
     elevation?: number;
     runPath?: { lat: number; lon: number }[];
     onOpenShare?: () => void;
+    blocks?: WorkoutBlock[];
+    onOpenWorkoutCard?: () => void;
 }) {
 
     const { theme } = useTheme();
@@ -4243,6 +4263,17 @@ function FinishModal({
                         />
                     </div>
                 </div>
+
+                {/* WOD Share Card Button (Cross Training / Hybrid / OCR) */}
+                {blocks && blocks.length > 0 && onOpenWorkoutCard && (
+                    <button
+                        onClick={onOpenWorkoutCard}
+                        className="w-full py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                    >
+                        <Share2 className="w-4 h-4" />
+                        Ver Tarjeta del WOD
+                    </button>
+                )}
 
                 {/* RPE Selector */}
                 <div className="space-y-3">
