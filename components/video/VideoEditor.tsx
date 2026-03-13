@@ -88,6 +88,13 @@ const TRACKS = [
     { name: "Elite Performance", url: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3" },
 ]
 
+const ASPECT_RATIOS = [
+    { label: "9:16",  name: "Vertical",    desc: "TikTok · Reels",      ratio: 9/16  },
+    { label: "1:1",   name: "Cuadrado",    desc: "Instagram Feed",       ratio: 1     },
+    { label: "4:5",   name: "Portrait",    desc: "Instagram Portrait",   ratio: 4/5   },
+    { label: "16:9",  name: "Horizontal",  desc: "YouTube · Landscape",  ratio: 16/9  },
+]
+
 interface VideoEditorProps {
     videoFile: File
     onSave: (editedFile: File, duration: number) => void
@@ -105,7 +112,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const [imageOverlays, setImageOverlays] = useState<ImageOverlay[]>([])
     const [isSaving, setIsSaving]           = useState(false)
     const [saveProgress, setSaveProgress]   = useState(0)
-    const [activeTool, setActiveTool]       = useState<'filter'|'fx'|'adjust'|'speed'|'text'|'sticker'|'trim'|'image'|'music'|'none'>('none')
+    const [activeTool, setActiveTool]       = useState<'filter'|'fx'|'adjust'|'speed'|'format'|'text'|'sticker'|'trim'|'image'|'music'|'none'>('none')
     const [videoDuration, setVideoDuration] = useState(0)
     const [currentTime, setCurrentTime]     = useState(0)
     const [trimRange, setTrimRange]         = useState({ start: 0, end: 0 })
@@ -119,6 +126,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const [activeTextColor, setActiveTextColor] = useState(COLORS[0])
     const [selectedId, setSelectedId]       = useState<string | null>(null)
     const [mounted, setMounted]             = useState(false)
+    const [aspectRatio, setAspectRatio]     = useState(ASPECT_RATIOS[0])
 
     const containerRef    = useRef<HTMLDivElement>(null)
     const videoRef        = useRef<HTMLVideoElement>(null)
@@ -126,6 +134,8 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const exportCanvasRef = useRef<HTMLCanvasElement>(null)
     const musicRef        = useRef<HTMLAudioElement>(null)
     const imageInputRef   = useRef<HTMLInputElement>(null)
+    // Tracks grab offset so element doesn't jump on drag start
+    const dragState       = useRef<{ id: string|null; ox: number; oy: number }>({ id: null, ox: 0, oy: 0 })
 
     const computedFilter = useMemo(() => {
         const adj = `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%) saturate(${adjustments.saturation}%) hue-rotate(${adjustments.warmth}deg)`
@@ -277,15 +287,31 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
         renderLoop()
     }
 
-    const dragEnd = (id: string, info: any, type: 'text'|'sticker'|'image') => {
+    const clamp = (v: number) => Math.max(2, Math.min(98, v))
+
+    // Called on drag start: records the offset between pointer and element center
+    const onOverlayDragStart = (id: string, currentX: number, currentY: number, info: any) => {
+        setSelectedId(id)
         if (!containerRef.current) return
         const rect = containerRef.current.getBoundingClientRect()
-        const dx = (info.offset.x / rect.width) * 100
-        const dy = (info.offset.y / rect.height) * 100
-        const clamp = (v: number) => Math.max(0, Math.min(100, v))
-        if (type === 'text')    setTextOverlays(p    => p.map(t => t.id === id ? { ...t, x: clamp(t.x+dx), y: clamp(t.y+dy) } : t))
-        if (type === 'sticker') setStickerOverlays(p => p.map(s => s.id === id ? { ...s, x: clamp(s.x+dx), y: clamp(s.y+dy) } : s))
-        if (type === 'image')   setImageOverlays(p   => p.map(i => i.id === id ? { ...i, x: clamp(i.x+dx), y: clamp(i.y+dy) } : i))
+        const centerXpx = (currentX / 100) * rect.width
+        const centerYpx = (currentY / 100) * rect.height
+        dragState.current = {
+            id,
+            ox: info.point.x - rect.left - centerXpx,
+            oy: info.point.y - rect.top  - centerYpx,
+        }
+    }
+
+    // Called every frame during drag: moves element to pointer minus grab offset
+    const onOverlayDrag = (id: string, info: any, type: 'text'|'sticker'|'image') => {
+        if (!containerRef.current || dragState.current.id !== id) return
+        const rect = containerRef.current.getBoundingClientRect()
+        const xPct = clamp(((info.point.x - rect.left - dragState.current.ox) / rect.width)  * 100)
+        const yPct = clamp(((info.point.y - rect.top  - dragState.current.oy) / rect.height) * 100)
+        if (type === 'text')    setTextOverlays(p    => p.map(t => t.id === id ? { ...t, x: xPct, y: yPct } : t))
+        if (type === 'sticker') setStickerOverlays(p => p.map(s => s.id === id ? { ...s, x: xPct, y: yPct } : s))
+        if (type === 'image')   setImageOverlays(p   => p.map(i => i.id === id ? { ...i, x: xPct, y: yPct } : i))
     }
 
     return createPortal(
@@ -298,7 +324,10 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
 
             {/* Phone-sized container */}
             <div className="relative w-full h-full md:w-[min(480px,95vw)] md:h-[min(850px,90vh)] md:rounded-[40px] md:border-[10px] md:border-white/10 md:shadow-[0_0_100px_rgba(0,0,0,0.8)] overflow-hidden bg-black flex items-center justify-center z-10">
-                <div ref={containerRef} className="relative w-full h-full overflow-hidden flex items-center justify-center">
+                {/* Aspect ratio crop frame — black bars simulate the final output */}
+                <div ref={containerRef} className="relative overflow-hidden flex items-center justify-center bg-black"
+                    style={{ width:'100%', height:'100%', maxWidth: aspectRatio.ratio < 1 ? `${aspectRatio.ratio * 100}vh` : '100%', maxHeight: aspectRatio.ratio > 1 ? `${(1/aspectRatio.ratio) * 100}vw` : '100%' }}
+                >
                     <video
                         ref={videoRef} src={videoUrl||undefined}
                         className="w-full h-full object-cover"
@@ -318,12 +347,12 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                     <div className="absolute inset-0 pointer-events-none z-20">
                         <AnimatePresence>
                             {imageOverlays.map(img => (
-                                <motion.div key={img.id} drag dragMomentum={false} dragElastic={0} dragConstraints={containerRef}
-                                    onDragStart={() => setSelectedId(img.id)}
-                                    onDragEnd={(_, info) => { dragEnd(img.id, info, 'image') }}
-                                    whileDrag={{ scale: 1.05, zIndex: 1000 }} animate={{ x:0, y:0 }} transition={{ duration:0 }}
+                                <motion.div key={img.id} drag dragMomentum={false} dragElastic={0}
+                                    dragConstraints={{ left:0, right:0, top:0, bottom:0 }}
+                                    onDragStart={(_, info) => onOverlayDragStart(img.id, img.x, img.y, info)}
+                                    onDrag={(_, info) => onOverlayDrag(img.id, info, 'image')}
                                     onClick={() => setSelectedId(img.id)}
-                                    className={clsx("absolute pointer-events-auto cursor-grab active:cursor-grabbing rounded-xl border-2 transition-colors", selectedId===img.id ? "border-brand-red" : "border-white/20")}
+                                    className={clsx("absolute pointer-events-auto cursor-grab active:cursor-grabbing rounded-xl border-2 transition-colors overflow-visible", selectedId===img.id ? "border-brand-red" : "border-white/20")}
                                     style={{ left:`${img.x}%`, top:`${img.y}%`, width:`${img.width}px`, height:`${img.height}px`, translateX:'-50%', translateY:'-50%' }}
                                 >
                                     <img src={img.src} className="w-full h-full object-cover rounded-lg pointer-events-none" />
@@ -332,12 +361,12 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                             ))}
 
                             {textOverlays.map(to => (
-                                <motion.div key={to.id} drag dragMomentum={false} dragElastic={0} dragConstraints={containerRef}
-                                    onDragStart={() => setSelectedId(to.id)}
-                                    onDragEnd={(_, info) => { dragEnd(to.id, info, 'text') }}
-                                    whileDrag={{ scale:1.1, zIndex:1000 }} animate={{ x:0, y:0 }} transition={{ duration:0 }}
+                                <motion.div key={to.id} drag dragMomentum={false} dragElastic={0}
+                                    dragConstraints={{ left:0, right:0, top:0, bottom:0 }}
+                                    onDragStart={(_, info) => onOverlayDragStart(to.id, to.x, to.y, info)}
+                                    onDrag={(_, info) => onOverlayDrag(to.id, info, 'text')}
                                     onClick={() => setSelectedId(to.id)}
-                                    className={clsx("absolute pointer-events-auto p-4 cursor-grab active:cursor-grabbing", selectedId===to.id && "ring-2 ring-brand-red ring-offset-2 ring-offset-black/50 rounded-lg", to.animation !== 'none' && `ve-anim-${to.animation}`)}
+                                    className={clsx("absolute pointer-events-auto p-4 cursor-grab active:cursor-grabbing overflow-visible", selectedId===to.id && "ring-2 ring-brand-red ring-offset-2 ring-offset-black/50 rounded-lg", to.animation !== 'none' && `ve-anim-${to.animation}`)}
                                     style={{ left:`${to.x}%`, top:`${to.y}%`, translateX:'-50%', translateY:'-50%', color:to.color, fontSize:`${to.fontSize}px`, fontFamily:to.fontFamily, fontWeight:950, fontStyle:to.style==='script'?'normal':'italic', textTransform:to.style==='script'?'none':'uppercase', textShadow:to.style==='neon'?`0 0 30px ${to.color}, 0 0 10px ${to.color}`:'0 4px 20px rgba(0,0,0,0.85)', whiteSpace:'nowrap' }}
                                 >
                                     {to.text}
@@ -346,12 +375,12 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                             ))}
 
                             {stickerOverlays.map(so => (
-                                <motion.div key={so.id} drag dragMomentum={false} dragElastic={0} dragConstraints={containerRef}
-                                    onDragStart={() => setSelectedId(so.id)}
-                                    onDragEnd={(_, info) => { dragEnd(so.id, info, 'sticker') }}
-                                    whileDrag={{ scale:1.2, zIndex:1000 }} animate={{ x:0, y:0 }} transition={{ duration:0 }}
+                                <motion.div key={so.id} drag dragMomentum={false} dragElastic={0}
+                                    dragConstraints={{ left:0, right:0, top:0, bottom:0 }}
+                                    onDragStart={(_, info) => onOverlayDragStart(so.id, so.x, so.y, info)}
+                                    onDrag={(_, info) => onOverlayDrag(so.id, info, 'sticker')}
                                     onClick={() => setSelectedId(so.id)}
-                                    className="absolute pointer-events-auto cursor-grab active:cursor-grabbing"
+                                    className="absolute pointer-events-auto cursor-grab active:cursor-grabbing overflow-visible"
                                     style={{ left:`${so.x}%`, top:`${so.y}%`, translateX:'-50%', translateY:'-50%' }}
                                 >
                                     <span style={{ fontSize:`${so.size}px`, lineHeight:1 }}>{so.emoji}</span>
@@ -366,6 +395,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                 <div className="absolute top-0 left-0 right-0 p-5 flex justify-between items-center z-[500] pointer-events-none">
                     <button onClick={onCancel} className="p-4 bg-black/40 backdrop-blur-xl rounded-full text-white pointer-events-auto border border-white/10 shadow-2xl active:scale-95 transition-transform"><X size={20}/></button>
                     <div className="flex gap-2 pointer-events-auto items-center">
+                        {aspectRatio.label !== '9:16' && <span className="px-3 py-1.5 bg-black/60 text-white/70 text-[10px] font-black rounded-full border border-white/10">{aspectRatio.label}</span>}
                         {playbackSpeed !== 1 && <span className="px-3 py-1.5 bg-brand-red/90 text-white text-[10px] font-black rounded-full">{playbackSpeed}×</span>}
                         <button onClick={() => setIsMuted(!isMuted)} className="p-4 bg-black/40 backdrop-blur-xl rounded-full text-white border border-white/10 shadow-2xl active:scale-95 transition-transform">
                             {isMuted ? <VolumeX size={18}/> : <Volume2 size={18}/>}
@@ -380,6 +410,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                         <NavBtn icon={<Zap size={17}/>}             onClick={() => setActiveTool('fx')}     active={activeTool==='fx'}     title="Efectos" />
                         <NavBtn icon={<SlidersHorizontal size={17}/>} onClick={() => setActiveTool('adjust')} active={activeTool==='adjust'} title="Ajustar" />
                         <NavBtn icon={<Gauge size={17}/>}           onClick={() => setActiveTool('speed')}  active={activeTool==='speed'}  title="Velocidad" />
+                        <NavBtn icon={<span className="text-[11px] font-black leading-none">9:16</span>} onClick={() => setActiveTool('format')} active={activeTool==='format'} title="Formato" />
                         <NavBtn icon={<Scissors size={17}/>}        onClick={() => setActiveTool('trim')}   active={activeTool==='trim'}   title="Cortar" />
                         <NavBtn icon={<MusicIcon size={17}/>}       onClick={() => setActiveTool('music')}  active={activeTool==='music'}  title="Música" />
                         <NavBtn icon={<Smile size={17}/>}           onClick={() => setActiveTool('sticker')} active={activeTool==='sticker'} title="Stickers" />
@@ -484,6 +515,32 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                         <p className="text-[9px] text-white/20 text-center mt-3 font-bold uppercase tracking-widest">
                             {playbackSpeed < 1 ? '⏪ Cámara lenta' : playbackSpeed > 1 ? '⏩ Cámara rápida' : '▶ Normal'}
                         </p>
+                        <button onClick={() => setActiveTool('none')} className="w-full mt-5 py-4 bg-white/5 text-white/40 font-black text-[10px] uppercase tracking-widest rounded-full border border-white/5">LISTO</button>
+                    </motion.div>
+                )}
+
+                {/* FORMAT */}
+                {activeTool === 'format' && (
+                    <motion.div initial={{y:250}} animate={{y:0}} exit={{y:250}} className="absolute bottom-0 left-0 right-0 z-[600] bg-black/95 pt-5 pb-20 border-t border-white/10 pointer-events-auto px-5">
+                        <p className="text-[9px] font-black italic uppercase tracking-[0.5em] text-white/30 mb-5 text-center">FORMATO DEL VIDEO</p>
+                        <div className="grid grid-cols-2 gap-3">
+                            {ASPECT_RATIOS.map(ar => (
+                                <button key={ar.label} onClick={() => setAspectRatio(ar)}
+                                    className={clsx("flex items-center gap-4 p-4 rounded-2xl border transition-all", aspectRatio.label===ar.label ? "bg-brand-red/20 border-brand-red" : "bg-white/5 border-white/10")}
+                                >
+                                    {/* Mini visual preview of ratio */}
+                                    <div className="shrink-0 flex items-center justify-center w-10 h-10">
+                                        <div className={clsx("bg-white/20 rounded-sm border-2", aspectRatio.label===ar.label ? "border-brand-red" : "border-white/30")}
+                                            style={{ width: ar.ratio >= 1 ? 36 : Math.round(36*ar.ratio), height: ar.ratio >= 1 ? Math.round(36/ar.ratio) : 36 }}
+                                        />
+                                    </div>
+                                    <div className="text-left">
+                                        <p className={clsx("font-black text-sm", aspectRatio.label===ar.label ? "text-brand-red" : "text-white")}>{ar.label} — {ar.name}</p>
+                                        <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest">{ar.desc}</p>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
                         <button onClick={() => setActiveTool('none')} className="w-full mt-5 py-4 bg-white/5 text-white/40 font-black text-[10px] uppercase tracking-widest rounded-full border border-white/5">LISTO</button>
                     </motion.div>
                 )}
