@@ -1433,9 +1433,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         wd?.blocks ||
                         parsedWodData?.blocks ||
                         null;
-                    // Duration: try all sources
+                    // Duration: try all sources (same chain as WodCard uses at line 1074)
                     const durSec = wd?.duration_seconds || wd?.duration || 0;
-                    const durLabel = wd?.metrics?.time || undefined;
+                    const durLabel = wd?.metrics?.duration || wd?.metrics?.time || wd?.summary?.totalTime || parsedWodData?.summary?.totalTime || undefined;
                     // Title & sport
                     const wodTitle = wd?.title || parsedWodData?.title || 'Entrenamiento';
                     const wodSport = wd?.sport_type || parsedWodData?.sportType || 'Cross Training';
