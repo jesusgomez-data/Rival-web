@@ -1427,16 +1427,28 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             {
                 showInstagramCard && (() => {
                     const wd: any = Array.isArray(resolvedWorkoutData) ? resolvedWorkoutData[0] : resolvedWorkoutData;
-                    const wodBlocks = wd?.blocks || wd?.metrics?.blocks;
+                    // Blocks: try all sources — completed workout metrics, AI WOD data, or direct blocks
+                    const wodBlocks =
+                        wd?.metrics?.blocks ||
+                        wd?.blocks ||
+                        parsedWodData?.blocks ||
+                        null;
+                    // Duration: try all sources
+                    const durSec = wd?.duration_seconds || wd?.duration || 0;
+                    const durLabel = wd?.metrics?.time || undefined;
+                    // Title & sport
+                    const wodTitle = wd?.title || parsedWodData?.title || 'Entrenamiento';
+                    const wodSport = wd?.sport_type || parsedWodData?.sportType || 'Cross Training';
+
                     // For WODs with real blocks → use WorkoutShareCard (shows exercises + reps + weights)
                     if (wodBlocks && wodBlocks.length > 0) {
                         return (
                             <WorkoutShareCard
                                 blocks={wodBlocks}
-                                workoutTitle={wd?.title || 'Entrenamiento'}
-                                sportType={wd?.sport_type || 'Cross Training'}
-                                duration={wd?.duration_seconds || wd?.duration || 0}
-                                durationLabel={wd?.metrics?.time || undefined}
+                                workoutTitle={wodTitle}
+                                sportType={wodSport}
+                                duration={durSec}
+                                durationLabel={durLabel}
                                 date={time}
                                 userName={user}
                                 onClose={() => setShowInstagramCard(false)}
