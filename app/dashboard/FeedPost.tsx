@@ -1436,6 +1436,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 workoutTitle={wd?.title || 'Entrenamiento'}
                                 sportType={wd?.sport_type || 'Cross Training'}
                                 duration={wd?.duration_seconds || wd?.duration || 0}
+                                durationLabel={wd?.metrics?.time || undefined}
                                 date={time}
                                 userName={user}
                                 onClose={() => setShowInstagramCard(false)}

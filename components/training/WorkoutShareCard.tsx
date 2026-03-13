@@ -10,6 +10,7 @@ interface WorkoutShareCardProps {
     workoutTitle: string;
     sportType: string;
     duration: number;
+    durationLabel?: string; // pre-formatted "35:42" override
     date: string;
     userName: string;
     onClose: () => void;
@@ -56,12 +57,13 @@ function getExerciseSummary(ex: { name: string; sets: any[] }): string {
     return `${s.reps}${unit || ' REPS'}${weight}`;
 }
 
-export default function WorkoutShareCard({ blocks, workoutTitle, sportType, duration, date, userName, onClose }: WorkoutShareCardProps) {
+export default function WorkoutShareCard({ blocks, workoutTitle, sportType, duration, durationLabel, date, userName, onClose }: WorkoutShareCardProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [isDownloading, setIsDownloading] = useState(false);
 
     const durationMin = Math.floor(duration / 60);
     const durationSec = duration % 60;
+    const displayDuration = durationLabel || (duration > 0 ? `${durationMin}:${String(durationSec).padStart(2, '0')}` : null);
 
     const handleDownload = async () => {
         if (!cardRef.current) return;
@@ -145,12 +147,14 @@ export default function WorkoutShareCard({ blocks, workoutTitle, sportType, dura
                                 </h2>
                             </div>
                             {/* Duration */}
-                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                                <p style={{ color: '#fff', fontSize: '20px', fontWeight: 900, fontStyle: 'italic', lineHeight: 1, letterSpacing: '-0.03em' }}>
-                                    {durationMin}<span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '13px' }}>:{String(durationSec).padStart(2, '0')}</span>
-                                </p>
-                                <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', marginTop: '2px' }}>MIN</p>
-                            </div>
+                            {displayDuration && (
+                                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                                    <p style={{ color: '#fff', fontSize: '20px', fontWeight: 900, fontStyle: 'italic', lineHeight: 1, letterSpacing: '-0.03em' }}>
+                                        {displayDuration}
+                                    </p>
+                                    <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', marginTop: '2px' }}>MIN</p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Divider */}
