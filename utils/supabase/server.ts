@@ -20,7 +20,7 @@ export async function createClient() {
                                 ...options,
                                 sameSite: 'lax',
                                 secure: process.env.NODE_ENV === 'production',
-                                httpOnly: true,
+                                // NOTE: do NOT set httpOnly — Supabase client-side SDK must read these cookies
                                 ...(isDeleteOp ? {} : { maxAge: 60 * 60 * 24 * 30 }),
                             });
                         })
