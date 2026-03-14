@@ -14,19 +14,18 @@ export async function createClient() {
                 },
                 setAll(cookiesToSet) {
                     try {
-                        cookiesToSet.forEach(({ name, value, options }) =>
+                        cookiesToSet.forEach(({ name, value, options }) => {
+                            const isDeleteOp = options.maxAge === 0;
                             cookieStore.set(name, value, {
                                 ...options,
                                 sameSite: 'lax',
                                 secure: process.env.NODE_ENV === 'production',
-                                // Sesión persistente: mínimo 30 días (forzado con Math.max)
-                                maxAge: Math.max(options.maxAge ?? 0, 60 * 60 * 24 * 30),
-                            })
-                        )
+                                httpOnly: true,
+                                ...(isDeleteOp ? {} : { maxAge: 60 * 60 * 24 * 30 }),
+                            });
+                        })
                     } catch {
-                        // The `setAll` method was called from a Server Component.
-                        // This can be ignored if you have middleware refreshing
-                        // user sessions.
+                        // Called from a Server Component — safe to ignore.
                     }
                 },
             },

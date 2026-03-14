@@ -16,25 +16,23 @@ export async function updateSession(request: NextRequest) {
                     return request.cookies.getAll()
                 },
                 setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value, options }) => {
-                        // Asegurar que la sesión sea persistente (no expire al cerrar pestaña)
-                        // Si no hay maxAge, le ponemos uno largo (30 días por defecto en auth)
+                    cookiesToSet.forEach(({ name, value }) => {
                         request.cookies.set(name, value)
                     })
-                    supabaseResponse = NextResponse.next({
-                        request,
-                    })
-                    cookiesToSet.forEach(({ name, value, options }) =>
+                    supabaseResponse = NextResponse.next({ request })
+                    cookiesToSet.forEach(({ name, value, options }) => {
+                        // Supabase deletes cookies by setting maxAge:0 — preserve that.
+                        // For all other auth cookies (undefined or positive maxAge),
+                        // force 30 days so the session survives browser close/reopen.
+                        const isDeleteOp = options.maxAge === 0;
                         supabaseResponse.cookies.set(name, value, {
                             ...options,
                             sameSite: 'lax',
                             secure: process.env.NODE_ENV === 'production',
-                            // Sesión persistente: mínimo 30 días
-                            // Math.max en lugar de ?? porque Supabase envía maxAge:3600 (1h)
-                            // y necesitamos FORZAR al menos 30 días para que no expire al cerrar el navegador
-                            maxAge: Math.max(options.maxAge ?? 0, 60 * 60 * 24 * 30),
-                        })
-                    )
+                            httpOnly: true,
+                            ...(isDeleteOp ? {} : { maxAge: 60 * 60 * 24 * 30 }),
+                        });
+                    })
                 },
             },
         }

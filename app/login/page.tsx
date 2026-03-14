@@ -8,12 +8,22 @@ import { useActionState } from "react";
 import { useLanguage } from "@/app/LanguageContext";
 import { createClient } from "@/utils/supabase/client";
 import ThemeToggle from "@/components/ThemeToggle";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 
 export default function LoginPage() {
     const { t } = useLanguage();
     const [state, formAction, isPending] = useActionState(login, null);
     const supabase = createClient();
+    const router = useRouter();
+
+    // If user already has an active session, redirect to dashboard immediately
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            if (session) router.replace('/dashboard');
+        });
+    }, []);
 
     const handleOAuthLogin = async (provider: 'google' | 'apple') => {
         await supabase.auth.signInWithOAuth({
