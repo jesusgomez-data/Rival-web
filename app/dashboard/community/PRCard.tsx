@@ -33,7 +33,7 @@ export default function PRCard({
     return (
         <div className={clsx(
             "relative overflow-hidden group shadow-2xl transition-all",
-            isStory ? "w-full h-full" : "w-full aspect-square md:aspect-video rounded-[32px] border border-white/5 bg-black"
+            isStory ? "w-full h-full dark-section" : "w-full aspect-square md:aspect-video rounded-[32px] border border-white/5 bg-black dark-section"
         )}>
             {/* Background Image with Overlay */}
             {backgroundImage && isImageUrl(backgroundImage) ? (

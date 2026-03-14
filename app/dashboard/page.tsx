@@ -181,8 +181,8 @@ export default function DashboardHome() {
         missionProgress: 0,
         missionGoal: 5,
         duels: [],
-        myGyms: [],
-        activeCenterIds: new Set<string>()
+        activeCenterIds: new Set<string>(),
+        workoutStreak: 0
     });
     const [activeTab, setActiveTab] = useState('following');
     const [refreshKey, setRefreshKey] = useState(0);
@@ -248,7 +248,8 @@ export default function DashboardHome() {
                 missionGoal: weeklyProgress.goal,
                 duels: duelsData || [],
                 myGyms: memberships?.map((m: any) => m.organization) || [],
-                activeCenterIds: new Set(memberships?.filter((m: any) => m.status === 'active').map((m: any) => m.center_id) || [])
+                activeCenterIds: new Set(memberships?.filter((m: any) => m.status === 'active').map((m: any) => m.center_id) || []),
+                workoutStreak: missionsData?.find((m: any) => m.goal_type === 'streak')?.current_value || 0
             }));
         } catch (e) {
             console.error(e);
@@ -398,7 +399,13 @@ export default function DashboardHome() {
             <div className="grid sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-2">
                     {todayCheckin !== undefined && (
-                        <DailyCheckinWidget existingCheckin={todayCheckin} onComplete={() => getTodayCheckin().then(setTodayCheckin)} />
+                        <DailyCheckinWidget 
+                            existingCheckin={todayCheckin} 
+                            onComplete={() => {
+                                getTodayCheckin().then(setTodayCheckin);
+                                loadData();
+                            }} 
+                        />
                     )}
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-1 gap-3">
@@ -499,7 +506,7 @@ export default function DashboardHome() {
                             <Link href="/dashboard/leaderboard" className="group">
                                 <StatCard
                                     label={t.dashboard.statsRacha}
-                                    value={data.workoutCount ? (language === 'es' ? "1 Día" : "1 Day") : "0"}
+                                    value={data.workoutStreak > 0 ? `${data.workoutStreak} ${data.workoutStreak === 1 ? (language === 'es' ? 'Día' : 'Day') : (language === 'es' ? 'Días' : 'Days')}` : "0"}
                                     icon={<Trophy className="w-4 h-4 text-yellow-500" />}
                                     subtext={t.dashboard.statsContinuo}
                                 />

@@ -306,7 +306,7 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-6">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-center">
               {[
-                { val: "850K+", label: "Atletas activos" },
+                { val: "100+", label: "Atletas activos" },
                 { val: "45M+", label: "Entrenamientos" },
                 { val: "180+", label: "Países" },
                 { val: "4.9⭐", label: "Valoración" }
@@ -413,7 +413,7 @@ export default function Home() {
                 <div className="text-6xl mb-4">🔥</div>
                 <h3 className="text-3xl font-heading font-black text-foreground mb-3 tracking-tighter">Únete. Entrena. Domina.</h3>
                 <p className="text-muted-foreground text-lg mb-8 max-w-xl mx-auto">
-                  Más de 850K atletas ya compiten en Rival. Sin comisiones, sin membresías.
+                  Más de 100+ atletas ya compiten en Rival. Sin comisiones, sin membresías.
                   El único precio que pagamos es el de entrenar duro.
                 </p>
                 <Link href="/signup" className="bg-brand-red hover:bg-brand-accent text-white px-10 py-4 rounded-full font-bold text-lg transition-all shadow-[0_0_30px_rgba(220,38,38,0.4)] transform hover:scale-105 inline-flex items-center gap-2">
@@ -434,7 +434,7 @@ export default function Home() {
               transition={{ duration: 0.5 }}
             >
               <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold mb-4 sm:mb-6 text-foreground">¿Listo para <span className="text-brand-red">Enfrentarte a Ti Mismo?</span></h2>
-              <p className="text-muted-foreground text-base sm:text-lg mb-8 px-4 sm:px-0">Únete a más de 850K atletas que superan sus límites cada día.</p>
+              <p className="text-muted-foreground text-base sm:text-lg mb-8 px-4 sm:px-0">Únete a más de 100+ atletas que superan sus límites cada día.</p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Link href="/signup" className="bg-brand-red hover:bg-brand-accent text-white px-10 py-4 rounded-full font-bold text-lg transition-all shadow-[0_0_30px_rgba(220,38,38,0.3)] transform hover:scale-105 active:scale-95">
                   Comienza tu viaje <ArrowRight className="w-5 h-5 inline ml-2" />

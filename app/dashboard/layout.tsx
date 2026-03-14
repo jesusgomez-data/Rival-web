@@ -270,7 +270,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                     <div className="p-6 flex items-center justify-between border-b border-border">
                         <div className="flex items-center gap-3">
                             <Image src="/logo.svg" alt="Rival Logo" width={32} height={32} className="w-8 h-8" />
-                            <span className="font-heading font-bold text-2xl tracking-tighter text-foreground uppercase italic">RIVAL</span>
+                            <span className="font-heading font-bold text-2xl tracking-tight text-foreground uppercase italic">RIVAL</span>
                         </div>
                     </div>
 
@@ -360,14 +360,14 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 {/* Mobile Header Bar */}
                 {showMobileNav && (
                     <div className="lg:hidden h-20 border-b border-border flex items-center justify-between px-6 sticky top-0 bg-background/95 backdrop-blur-xl z-[200]">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
                                 <Image src="/logo.svg" alt="Rival Logo" width={28} height={28} className="w-7 h-7" />
-                                <span className="font-heading font-bold text-xl text-white uppercase italic tracking-tighter">RIVAL</span>
+                                <span className="font-heading font-bold text-xl text-white uppercase italic tracking-tight">RIVAL</span>
                             </div>
 
                             {/* Icons moved next to logo */}
-                            <div className="flex items-center gap-1 ml-1 border-l border-white/10 pl-2">
+                            <div className="flex items-center gap-1 ml-2 border-l border-white/10 pl-3">
                                 <ThemeToggle className="bg-transparent border-none p-1.5" />
                                 <NotificationBell />
                             </div>

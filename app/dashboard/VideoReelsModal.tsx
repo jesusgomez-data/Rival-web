@@ -98,50 +98,56 @@ function CommentsDrawer({ postId, onClose }: { postId: string, onClose: () => vo
                         Sé el primero en comentar.
                     </div>
                 ) : (
-                    comments.map((comment) => (
-                        <div key={comment.id} className="flex gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gray-800 overflow-hidden flex-shrink-0 border border-white/10">
-                                {comment.user?.avatar_url ? (
-                                    <Image src={comment.user.avatar_url} alt={comment.user.username} width={32} height={32} className="object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-[10px] text-white font-bold">
-                                        {comment.user?.username?.[0]?.toUpperCase()}
+                    <>
+                        {comments.map((comment) => (
+                            <div key={comment.id} className="flex gap-3">
+                                <Link href={`/dashboard/profile/${comment.profiles?.username}`}>
+                                    <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10">
+                                        {comment.profiles?.avatar_url ? (
+                                            <Image src={comment.profiles.avatar_url} alt="user" width={32} height={32} className="object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                                <User className="w-3 h-3 text-gray-500" />
+                                            </div>
+                                        )}
                                     </div>
-                                )}
-                            </div>
-                            <div className="flex-1">
-                                <div className="flex items-baseline gap-2">
-                                    <span className="text-white text-xs font-bold">{comment.user?.username}</span>
-                                    <span className="text-gray-500 text-[10px]">{new Date(comment.created_at).toLocaleDateString()}</span>
+                                </Link>
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-0.5">
+                                        <Link href={`/dashboard/profile/${comment.profiles?.username}`} className="text-white font-bold text-[10px] hover:underline">
+                                            {comment.profiles?.username}
+                                        </Link>
+                                        <span className="text-gray-500 text-[9px] uppercase tracking-widest">
+                                            {new Date(comment.created_at).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <p className="text-white/80 text-xs leading-relaxed">
+                                        <MentionText text={comment.content} className="text-brand-red hover:underline" />
+                                    </p>
                                 </div>
-                                <MentionText text={comment.content} className="text-gray-300 text-xs mt-0.5 leading-relaxed block" />
                             </div>
-                        </div>
-                    ))
+                        ))}
+                        <div ref={messagesEndRef} />
+                    </>
                 )}
-                <div ref={messagesEndRef} />
             </div>
 
-            <div className="p-4 border-t border-white/10 bg-black/20 backdrop-blur-md">
-                <div className="flex gap-2">
-                    <MentionInput
-                        value={newComment}
-                        onChange={setNewComment}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault();
-                                handleSend();
-                            }
-                        }}
-                        placeholder="Añade un comentario..."
-                        className="flex-1 bg-white/5 border border-white/10 rounded-full px-4 text-sm text-white focus:outline-none focus:border-brand-red/50 placeholder:text-gray-600 h-10 w-full"
-                    />
+            <div className="p-4 border-t border-white/10">
+                <div className="relative flex items-center gap-2 bg-white/5 rounded-2xl border border-white/10 px-4 focus-within:border-brand-red transition-all">
+                    <div className="flex-1">
+                        <MentionInput
+                            value={newComment}
+                            onChange={setNewComment}
+                            placeholder="Escribe un comentario..."
+                            className="bg-transparent border-none focus:ring-0 text-white text-xs py-3 w-full outline-none"
+                        />
+                    </div>
                     <button
                         onClick={handleSend}
                         disabled={submitting || !newComment.trim()}
-                        className="p-2.5 bg-brand-red text-white rounded-full disabled:opacity-50 disabled:cursor-not-allowed hover:bg-red-600 transition-colors"
+                        className="p-2 text-brand-red hover:scale-110 active:scale-95 transition-all disabled:opacity-50 disabled:grayscale"
                     >
-                        {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        <Send className="w-4 h-4" />
                     </button>
                 </div>
             </div>
@@ -299,34 +305,34 @@ function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: bo
                             {post.profiles?.avatar_url ? (
                                 <Image src={post.profiles.avatar_url} alt={post.profiles.username || 'user'} width={40} height={40} className="object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-xs font-bold text-gray-400">
-                                    {(post.profiles?.username?.[0] || '?').toUpperCase()}
+                                <div className="w-full h-full flex items-center justify-center bg-gray-900">
+                                    <User className="w-5 h-5 text-gray-400" />
                                 </div>
                             )}
                         </div>
                     </Link>
-                    <div>
-                        <Link href={`/dashboard/profile/${post.profiles?.username || ''}`} className="flex items-center gap-1.5 group">
-                            <span className="text-white font-bold group-hover:text-brand-red transition-colors">@{post.profiles?.username || 'user'}</span>
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-1.5">
+                            <Link href={`/dashboard/profile/${post.profiles?.username || ''}`} className="text-white font-black italic uppercase text-sm drop-shadow-md hover:underline">
+                                @{post.profiles?.username}
+                            </Link>
                             {post.profiles?.is_official && (
-                                <span className="bg-brand-red p-0.5 rounded-full">
-                                    <Trophy className="w-2.5 h-2.5 text-white" />
-                                </span>
+                                <Trophy className="w-3 h-3 text-brand-red fill-current" />
                             )}
-                        </Link>
+                        </div>
                     </div>
                 </div>
-
-                <p className="text-white text-sm mb-4 line-clamp-2">{post.caption}</p>
-
+                <p className="text-white/90 text-xs leading-relaxed max-w-[80%] line-clamp-2">
+                    <MentionText text={post.caption} className="text-brand-red font-bold hover:underline" />
+                </p>
                 {post.music_title && (
-                    <div className="flex items-center gap-2">
-                        <Music className="w-3.5 h-3.5 text-white animate-spin-slow" />
-                        <div className="overflow-hidden flex-1">
-                            <div className="text-[10px] text-white font-medium uppercase tracking-widest whitespace-nowrap animate-marquee">
-                                {post.music_title} • {post.music_artist || 'Original Audio'}
-                            </div>
+                    <div className="flex items-center gap-2 mt-4">
+                        <div className="w-6 h-6 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center animate-spin-slow">
+                            <Music className="w-3 h-3 text-white" />
                         </div>
+                        <p className="text-white/70 text-[10px] font-medium tracking-wide">
+                            {post.music_title} — {post.music_artist}
+                        </p>
                     </div>
                 )}
             </div>
@@ -336,15 +342,14 @@ function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: bo
 
 export default function VideoReelsModal({ isOpen, onClose, initialPostId, context }: VideoReelsModalProps) {
     const [posts, setPosts] = useState<ReelPost[]>([]);
-    const [loading, setLoading] = useState(false);
     const [activeIndex, setActiveIndex] = useState(0);
+    const [loading, setLoading] = useState(true);
     const containerRef = useRef<HTMLDivElement>(null);
     const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
 
     useEffect(() => {
         if (isOpen) {
             loadPosts();
-            // Prevent body scroll
             document.body.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
@@ -385,7 +390,7 @@ export default function VideoReelsModal({ isOpen, onClose, initialPostId, contex
                 initial={{ opacity: 0, y: 100 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 100 }}
-                className="fixed inset-0 z-[200] bg-black flex items-center justify-center md:bg-black/90"
+                className="fixed inset-0 z-[200] bg-black flex items-center justify-center md:bg-black/90 dark-section keep-all"
             >
                 {/* Desktop Close Button */}
                 <button

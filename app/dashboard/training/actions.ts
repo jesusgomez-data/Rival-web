@@ -8,10 +8,12 @@ async function calculateWorkoutStreak(supabase: any, userId: string) {
     // Fetch unified history (independent and classes)
     const { data: workouts } = await supabase.from('workouts').select('created_at').eq('user_id', userId).order('created_at', { ascending: false });
     const { data: classResults } = await supabase.from('class_results').select('date_performed').eq('user_id', userId).order('date_performed', { ascending: false });
+    const { data: checkins } = await supabase.from('daily_checkins').select('checkin_date').eq('user_id', userId).order('checkin_date', { ascending: false });
 
     const allDates = [
         ...(workouts || []).map((w: any) => new Date(w.created_at).toISOString().split('T')[0]),
-        ...(classResults || []).map((c: any) => new Date(c.date_performed).toISOString().split('T')[0])
+        ...(classResults || []).map((c: any) => new Date(c.date_performed).toISOString().split('T')[0]),
+        ...(checkins || []).map((ch: any) => ch.checkin_date)
     ];
 
     // Unique dates and sort descending

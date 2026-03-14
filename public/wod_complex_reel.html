@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rival Fit - WOD Complex Reel Cover</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,900;1,900&family=Outfit:wght@100;400;900&display=swap"
+        rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --brand-red: #dc2626;
+            --brand-red-dark: #7f1d1d;
+            --brand-black: #000000;
+            --brand-gray: #0a0a0a;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #111;
+            font-family: 'Outfit', sans-serif;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* --- INSTAGRAM PORTRAIT CANVAS (1080x1350 - 4:5) --- */
+        #ad-canvas {
+            width: 1080px;
+            height: 1350px;
+            background-color: var(--brand-black);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Background Pattern (Hexagons) */
+        .honeycomb {
+            position: absolute;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='98' viewBox='0 0 56 98'%3E%3Cpath fill='%230a0a0a' fill-opacity='1' d='M27.99 18.5l26 15v30l-26 15L1 63.5v-30l26.99-15zM6 35.8l22-12.7 22 12.7v25.4l-22 12.7-22-12.7V35.8z'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            z-index: 1;
+            opacity: 0.5;
+        }
+
+        /* Intense Red Glows */
+        .glow-top {
+            position: absolute;
+            top: -150px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 1000px;
+            height: 600px;
+            background: radial-gradient(ellipse, rgba(220, 38, 38, 0.15) 0%, transparent 70%);
+            z-index: 2;
+        }
+
+        .glow-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 1200px;
+            height: 1200px;
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.1) 0%, transparent 75%);
+            z-index: 2;
+        }
+
+        .glow-bottom {
+            position: absolute;
+            bottom: -200px;
+            right: -150px;
+            width: 800px;
+            height: 800px;
+            background: radial-gradient(circle, rgba(220, 38, 38, 0.12) 0%, transparent 70%);
+            z-index: 2;
+        }
+
+        /* Decorative Lines */
+        .line-top {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--brand-red), transparent);
+            z-index: 3;
+            opacity: 0.3;
+        }
+
+        .line-bottom {
+            position: absolute;
+            bottom: 220px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--brand-red), transparent);
+            z-index: 3;
+            opacity: 0.2;
+        }
+
+        .content {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 80px 0 60px;
+        }
+
+        /* Header Logo */
+        .header {
+            text-align: center;
+        }
+
+        .r-logo {
+            width: 120px;
+            height: 120px;
+            filter: drop-shadow(0 0 30px rgba(220, 38, 38, 0.5));
+            margin-bottom: 5px;
+        }
+
+        .fit-tag {
+            background-color: var(--brand-red);
+            color: white;
+            font-size: 28px;
+            font-weight: 950;
+            font-style: italic;
+            padding: 4px 14px;
+            border-radius: 6px;
+            display: inline-block;
+            transform: rotate(-3deg);
+            margin-top: -10px;
+            box-shadow: 0 10px 20px rgba(220, 38, 38, 0.4);
+        }
+
+        /* Main Title Area */
+        .title-wrapper {
+            width: 100%;
+            padding: 0 40px;
+            text-align: center;
+        }
+
+        .category-tag {
+            color: var(--brand-red);
+            font-size: 28px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.4em;
+            margin-bottom: 15px;
+            display: block;
+            text-indent: 0.4em;
+        }
+
+        .main-title {
+            font-size: 160px;
+            line-height: 0.85;
+            font-weight: 950;
+            font-style: italic;
+            text-transform: uppercase;
+            letter-spacing: -0.05em;
+            margin: 0;
+            text-shadow: 0 0 50px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .main-title span:first-child {
+            color: white;
+            font-size: 140px;
+        }
+
+        .main-title span:last-child {
+            color: var(--brand-red);
+            font-size: 180px;
+            filter: drop-shadow(0 0 60px rgba(220, 38, 38, 0.3));
+        }
+
+        .sub-headline {
+            font-size: 32px;
+            font-weight: 400;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            margin-top: 30px;
+        }
+
+        /* Bottom Branding */
+        .footer {
+            width: 100%;
+            text-align: center;
+        }
+
+        .join-arena {
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: 0.8em;
+            color: rgba(255,255,255,0.2);
+            text-transform: uppercase;
+            margin-bottom: 30px;
+            text-indent: 0.8em;
+        }
+
+        .app-url {
+            font-size: 32px;
+            font-weight: 900;
+            color: white;
+            opacity: 0.9;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+
+        /* Controls */
+        .controls {
+            position: fixed;
+            bottom: 40px;
+            z-index: 100;
+            display: flex;
+            gap: 20px;
+        }
+
+        .btn {
+            background: var(--brand-red);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 50px;
+            font-size: 18px;
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+            box-shadow: 0 10px 40px rgba(220, 38, 38, 0.4);
+            font-family: 'Outfit', sans-serif;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            transform: scale(1.05);
+            background-color: #ff3333;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Subtle Texture */
+        .overlay-texture {
+            position: absolute;
+            inset: 0;
+            background: url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
+            opacity: 0.1;
+            z-index: 4;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="ad-canvas">
+        <div class="honeycomb"></div>
+        <div class="overlay-texture"></div>
+        <div class="glow-top"></div>
+        <div class="glow-center"></div>
+        <div class="glow-bottom"></div>
+        
+        <div class="line-top"></div>
+        <div class="line-bottom"></div>
+
+        <div class="content">
+            <!-- Brand Header -->
+            <div class="header">
+                <svg class="r-logo" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <g transform="translate(38.4, -40) scale(0.85)">
+                        <path
+                            d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z"
+                            fill="#DC2626" />
+                        <path d="M160 100L145 310H220L235 100H160Z" fill="#991B1B" />
+                    </g>
+                </svg>
+                <div class="fit-tag">FIT</div>
+            </div>
+
+            <!-- Main Duel Visual -->
+            <div class="title-wrapper">
+                <span class="category-tag">Cross Training</span>
+                <h1 class="main-title">
+                    <span>WOD</span>
+                    <span>COMPLEX</span>
+                </h1>
+                <p class="sub-headline">MÁXIMA INTENSIDAD • RIVAL FIT</p>
+            </div>
+
+            <!-- Bottom CTA -->
+            <div class="footer">
+                <div class="join-arena">JOIN THE ARENA</div>
+                <div class="app-url">RIVALFIT.APP</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="btn" onclick="saveAd()">Descargar Post Instagram</button>
+    </div>
+
+    <script>
+        function saveAd() {
+            const canvas = document.getElementById('ad-canvas');
+            const btn = document.querySelector('.btn');
+            btn.textContent = 'Generando...';
+            btn.disabled = true;
+
+            html2canvas(canvas, {
+                scale: 2, // Mejora la calidad para el feed
+                backgroundColor: '#000000',
+                logging: false,
+                useCORS: true,
+                allowTaint: true
+            }).then(canvasImage => {
+                const link = document.createElement('a');
+                link.download = 'rival-fit-wod-complex-post.png';
+                link.href = canvasImage.toDataURL('image/png');
+                link.click();
+                btn.textContent = 'Descargar Post Instagram';
+                btn.disabled = false;
+            });
+        }
+    </script>
+</body>
+
+</html>

@@ -112,7 +112,7 @@ export default function BillingPage() {
                         </p>
                         <div className="flex flex-wrap gap-3 mt-6 justify-center md:justify-start">
                             <div className="flex items-center gap-2 bg-white/5 rounded-full px-4 py-1.5 text-xs font-bold text-gray-300">
-                                <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" /> 850K+ Atletas
+                                <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" /> 100+ Atletas
                             </div>
                             <div className="flex items-center gap-2 bg-white/5 rounded-full px-4 py-1.5 text-xs font-bold text-gray-300">
                                 <Globe className="w-3 h-3 text-blue-400" /> 180+ Países

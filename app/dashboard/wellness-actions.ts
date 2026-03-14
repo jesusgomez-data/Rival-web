@@ -297,6 +297,7 @@ export async function getAthleteCardStats() {
         { data: profile },
         { data: workouts },
         { data: classResults },
+        { data: checkins },
         { data: sets },
     ] = await Promise.all([
         supabase
@@ -319,6 +320,13 @@ export async function getAthleteCardStats() {
             .eq('user_id', user.id)
             .order('date_performed', { ascending: false }),
 
+        // Daily check-ins for streak
+        supabase
+            .from('daily_checkins')
+            .select('checkin_date')
+            .eq('user_id', user.id)
+            .order('checkin_date', { ascending: false }),
+
         // All sets to get max weight EVER and PR count
         workoutIds.length > 0
             ? supabase
@@ -331,6 +339,7 @@ export async function getAthleteCardStats() {
     const allWorkouts = workouts || []
     const allSets = sets || []
     const allClassResults = classResults || []
+    const allCheckins = checkins || []
 
     // ── Raw metrics from real data ────────────────────────────────────────────
 
@@ -361,6 +370,7 @@ export async function getAthleteCardStats() {
     const allDates = [
         ...allWorkouts.map((w: any) => new Date(w.created_at).toISOString().split('T')[0]),
         ...allClassResults.map((c: any) => new Date(c.date_performed).toISOString().split('T')[0]),
+        ...allCheckins.map((ch: any) => ch.checkin_date),
     ]
     const uniqueDates = Array.from(new Set(allDates)).sort((a, b) => b.localeCompare(a))
     const today = new Date().toISOString().split('T')[0]

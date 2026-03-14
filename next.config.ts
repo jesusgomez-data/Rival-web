@@ -45,7 +45,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'cdn.jsdelivr.net',
+        hostname: 'rivalfit.app',
       },
       {
         protocol: 'https',
