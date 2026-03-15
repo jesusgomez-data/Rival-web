@@ -656,13 +656,16 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     {mediaType === 'wod' && (
                                         <button
                                             onClick={() => {
-                                                let wodData;
-                                                try { wodData = JSON.parse(image); } catch (e) { }
+                                                // Use wod_data prop (new format) first, fallback to parsing media_url (old format)
+                                                let parsedWodData = wod_data;
+                                                if (!parsedWodData && image) {
+                                                    try { parsedWodData = JSON.parse(image); } catch (e) { }
+                                                }
                                                 window.dispatchEvent(new CustomEvent('edit-wod', {
                                                     detail: {
                                                         postId,
                                                         content: displayCaption,
-                                                        wodData
+                                                        wodData: parsedWodData
                                                     }
                                                 }));
                                                 setShowMenu(false);

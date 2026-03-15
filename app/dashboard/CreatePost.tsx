@@ -157,7 +157,8 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                 const finalCaption = showWodFooter && content.trim() ? content.trim() : '';
 
                 if (editingPostId) {
-                    res = await updatePost(editingPostId, finalCaption, JSON.stringify(finalWodData), scheduledFor);
+                    // Don't pass scheduledFor when editing — avoids changing the post's created_at date
+                    res = await updatePost(editingPostId, finalCaption, JSON.stringify(finalWodData));
                 } else {
                     formData.append("content", finalCaption);
                     formData.append("wod_data", JSON.stringify(finalWodData));

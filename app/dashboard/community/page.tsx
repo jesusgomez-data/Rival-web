@@ -47,6 +47,20 @@ export default function CommunityPage({
         fetchParams();
     }, [searchParams]);
 
+    // Handle edit-wod event: redirect to dashboard where the WOD editor lives
+    useEffect(() => {
+        const handleEditWod = (e: any) => {
+            const { postId } = e.detail || {};
+            if (postId) {
+                window.location.href = `/dashboard#post-${postId}`;
+            } else {
+                window.location.href = '/dashboard';
+            }
+        };
+        window.addEventListener('edit-wod', handleEditWod as any);
+        return () => window.removeEventListener('edit-wod', handleEditWod as any);
+    }, []);
+
     useEffect(() => {
         async function loadContent() {
             try {
