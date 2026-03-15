@@ -154,6 +154,8 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const [selectedId, setSelectedId]       = useState<string | null>(null)
     const [mounted, setMounted]             = useState(false)
     const [aspectRatio, setAspectRatio]     = useState(ASPECT_RATIOS[0])
+    const [videoScale, setVideoScale]       = useState(1)
+    const [videoPan, setVideoPan]           = useState({ x: 0, y: 0 })
 
     const containerRef    = useRef<HTMLDivElement>(null)
     const videoRef        = useRef<HTMLVideoElement>(null)
@@ -163,6 +165,12 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const imageInputRef   = useRef<HTMLInputElement>(null)
     // Tracks grab offset so element doesn't jump on drag start
     const dragState       = useRef<{ id: string|null; ox: number; oy: number }>({ id: null, ox: 0, oy: 0 })
+    // Trim handle drag state
+    const trimBarRef      = useRef<HTMLDivElement>(null)
+    const trimDragRef     = useRef<{ handle: 'start' | 'end' | null }>({ handle: null })
+    // Pinch-to-zoom state
+    const pinchRef        = useRef<{ dist: number; scale: number; px: number; py: number } | null>(null)
+    const panRef          = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null)
 
     const computedFilter = useMemo(() => {
         const adj = `brightness(${adjustments.brightness}%) contrast(${adjustments.contrast}%) saturate(${adjustments.saturation}%) hue-rotate(${adjustments.warmth}deg)`
@@ -454,6 +462,57 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
         if (type === 'tag')     setTagOverlays(p     => p.map(t => t.id === id ? { ...t, x: xPct, y: yPct } : t))
     }
 
+    // ── Trim handles ──────────────────────────────────────────────────────────
+    const onTrimHandleDown = (e: React.PointerEvent, handle: 'start' | 'end') => {
+        e.stopPropagation()
+        e.preventDefault()
+        ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+        trimDragRef.current.handle = handle
+    }
+    const onTrimHandleMove = (e: React.PointerEvent, handle: 'start' | 'end') => {
+        if (trimDragRef.current.handle !== handle || !trimBarRef.current) return
+        const rect = trimBarRef.current.getBoundingClientRect()
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+        const t = ratio * videoDuration
+        if (handle === 'start') {
+            setTrimRange(p => ({ ...p, start: Math.max(0, Math.min(t, p.end - 0.5)) }))
+            if (videoRef.current) videoRef.current.currentTime = t
+        } else {
+            setTrimRange(p => ({ ...p, end: Math.min(videoDuration, Math.max(t, p.start + 0.5)) }))
+            if (videoRef.current) videoRef.current.currentTime = t
+        }
+    }
+    const onTrimHandleUp = () => { trimDragRef.current.handle = null }
+
+    // ── Pinch-to-zoom & pan ───────────────────────────────────────────────────
+    const getPinchDist = (t: React.TouchList) =>
+        Math.sqrt((t[0].clientX - t[1].clientX) ** 2 + (t[0].clientY - t[1].clientY) ** 2)
+
+    const onVideoTouchStart = (e: React.TouchEvent) => {
+        if (e.touches.length === 2) {
+            e.preventDefault()
+            pinchRef.current = { dist: getPinchDist(e.touches), scale: videoScale, px: videoPan.x, py: videoPan.y }
+            panRef.current = null
+        } else if (e.touches.length === 1 && videoScale > 1) {
+            panRef.current = { sx: e.touches[0].clientX, sy: e.touches[0].clientY, px: videoPan.x, py: videoPan.y }
+        }
+    }
+    const onVideoTouchMove = (e: React.TouchEvent) => {
+        if (e.touches.length === 2 && pinchRef.current) {
+            e.preventDefault()
+            const scale = Math.max(1, Math.min(4, pinchRef.current.scale * (getPinchDist(e.touches) / pinchRef.current.dist)))
+            setVideoScale(scale)
+        } else if (e.touches.length === 1 && panRef.current && videoScale > 1) {
+            const dx = e.touches[0].clientX - panRef.current.sx
+            const dy = e.touches[0].clientY - panRef.current.sy
+            setVideoPan({ x: panRef.current.px + dx, y: panRef.current.py + dy })
+        }
+    }
+    const onVideoTouchEnd = (e: React.TouchEvent) => {
+        if (e.touches.length < 2) pinchRef.current = null
+        if (e.touches.length === 0) { panRef.current = null; if (videoScale <= 1) setVideoPan({ x: 0, y: 0 }) }
+    }
+
     return createPortal(
         <div className="fixed inset-0 z-[1000000] bg-black overflow-hidden select-none touch-none w-screen h-[100dvh] flex flex-col items-center justify-center">
 
@@ -467,13 +526,17 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                 {/* Aspect ratio crop frame — black bars simulate the final output */}
                 <div ref={containerRef} className="relative overflow-hidden flex items-center justify-center bg-black"
                     style={{ width:'100%', height:'100%', maxWidth: aspectRatio.ratio < 1 ? `${aspectRatio.ratio * 100}vh` : '100%', maxHeight: aspectRatio.ratio > 1 ? `${(1/aspectRatio.ratio) * 100}vw` : '100%' }}
+                    onTouchStart={onVideoTouchStart}
+                    onTouchMove={onVideoTouchMove}
+                    onTouchEnd={onVideoTouchEnd}
                 >
                     <video
                         ref={videoRef} src={videoUrl||undefined}
                         className="w-full h-full object-cover"
-                        style={{ filter: computedFilter }}
+                        style={{ filter: computedFilter, transform: `scale(${videoScale}) translate(${videoPan.x / videoScale}px, ${videoPan.y / videoScale}px)`, transformOrigin: 'center center', willChange: 'transform' }}
                         playsInline loop autoPlay muted={isMuted}
                         onLoadedMetadata={e => setVideoDuration(e.currentTarget.duration)}
+                        onTimeUpdate={e => setCurrentTime(e.currentTarget.currentTime)}
                     />
 
                     {/* Vignette */}
@@ -716,18 +779,54 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                             <span className="text-[9px] font-black italic uppercase tracking-[0.4em] text-white/30">RECORTE</span>
                             <span className="text-2xl font-black italic text-brand-red">{(trimRange.end - trimRange.start).toFixed(1)}s</span>
                         </div>
-                        <div className="relative h-20 bg-zinc-900 rounded-2xl overflow-hidden flex border border-white/10">
-                            {thumbnails.map((src, i) => <img key={i} src={src} className="flex-1 h-full object-cover opacity-60 grayscale"/>)}
-                            <div className="absolute inset-0 z-20">
-                                <div className="absolute inset-y-0 border-y-4 border-brand-red z-10" style={{ left:`${(trimRange.start/videoDuration)*100}%`, right:`${100-(trimRange.end/videoDuration)*100}%` }}>
-                                    <div className="absolute -left-1 inset-y-0 w-3 bg-brand-red rounded shadow-glow"/>
-                                    <div className="absolute -right-1 inset-y-0 w-3 bg-brand-red rounded shadow-glow"/>
+                        {/* Trim bar — custom dual handles with pointer capture */}
+                        <div ref={trimBarRef} className="relative h-20 bg-zinc-900 rounded-2xl overflow-visible flex border border-white/10 touch-none select-none">
+                            {/* Thumbnails */}
+                            {thumbnails.map((src, i) => <img key={i} src={src} className="flex-1 h-full object-cover opacity-60 grayscale rounded-2xl"/>)}
+                            {/* Dimmed region — before start */}
+                            <div className="absolute inset-y-0 left-0 bg-black/60 z-10 rounded-l-2xl pointer-events-none" style={{ width: `${(trimRange.start/videoDuration)*100}%` }}/>
+                            {/* Dimmed region — after end */}
+                            <div className="absolute inset-y-0 right-0 bg-black/60 z-10 rounded-r-2xl pointer-events-none" style={{ width: `${(1 - trimRange.end/videoDuration)*100}%` }}/>
+                            {/* Active selection border */}
+                            <div className="absolute inset-y-0 border-y-4 border-brand-red z-20 pointer-events-none"
+                                style={{ left:`${(trimRange.start/videoDuration)*100}%`, right:`${(1 - trimRange.end/videoDuration)*100}%` }}/>
+                            {/* Playhead */}
+                            {videoDuration > 0 && (
+                                <div className="absolute top-0 bottom-0 w-0.5 bg-white/70 z-20 pointer-events-none"
+                                    style={{ left:`${(currentTime/videoDuration)*100}%` }}/>
+                            )}
+                            {/* Left handle */}
+                            <div
+                                className="absolute inset-y-0 w-8 bg-brand-red z-30 flex items-center justify-center cursor-ew-resize rounded-l-xl touch-none"
+                                style={{ left:`${(trimRange.start/videoDuration)*100}%`, transform:'translateX(-50%)' }}
+                                onPointerDown={e => onTrimHandleDown(e, 'start')}
+                                onPointerMove={e => onTrimHandleMove(e, 'start')}
+                                onPointerUp={onTrimHandleUp}
+                            >
+                                <div className="flex gap-0.5">
+                                    <div className="w-0.5 h-5 bg-white/70 rounded-full"/>
+                                    <div className="w-0.5 h-5 bg-white/70 rounded-full"/>
                                 </div>
-                                <input type="range" min={0} max={videoDuration} step={0.1} value={trimRange.start} onChange={e => setTrimRange(p => ({ ...p, start: Math.min(parseFloat(e.target.value), p.end-1) }))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"/>
-                                <input type="range" min={0} max={videoDuration} step={0.1} value={trimRange.end}   onChange={e => setTrimRange(p => ({ ...p, end:   Math.max(parseFloat(e.target.value), p.start+1) }))} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"/>
+                            </div>
+                            {/* Right handle */}
+                            <div
+                                className="absolute inset-y-0 w-8 bg-brand-red z-30 flex items-center justify-center cursor-ew-resize rounded-r-xl touch-none"
+                                style={{ right:`${(1 - trimRange.end/videoDuration)*100}%`, transform:'translateX(50%)' }}
+                                onPointerDown={e => onTrimHandleDown(e, 'end')}
+                                onPointerMove={e => onTrimHandleMove(e, 'end')}
+                                onPointerUp={onTrimHandleUp}
+                            >
+                                <div className="flex gap-0.5">
+                                    <div className="w-0.5 h-5 bg-white/70 rounded-full"/>
+                                    <div className="w-0.5 h-5 bg-white/70 rounded-full"/>
+                                </div>
                             </div>
                         </div>
-                        <button onClick={() => setActiveTool('none')} className="w-full mt-6 py-4 bg-white/5 text-white/40 font-black uppercase text-[10px] rounded-full">LISTO</button>
+                        <div className="flex justify-between mt-2 px-1">
+                            <span className="text-[9px] text-white/30 font-bold">{trimRange.start.toFixed(1)}s</span>
+                            <span className="text-[9px] text-white/30 font-bold">{trimRange.end.toFixed(1)}s</span>
+                        </div>
+                        <button onClick={() => setActiveTool('none')} className="w-full mt-4 py-4 bg-white/5 text-white/40 font-black uppercase text-[10px] rounded-full">LISTO</button>
                     </motion.div>
                 )}
 
