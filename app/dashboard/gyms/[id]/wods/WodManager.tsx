@@ -625,42 +625,49 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                         </div>
 
                                         {(block.format === 'AMRAP' || block.format === 'FOR TIME' || block.format === 'ROUNDS FOR TIME') && (
-                                            <div className="flex gap-2">
+                                            <div className="flex items-end gap-2">
                                                 {block.format === 'ROUNDS FOR TIME' && (
-                                                    <input
-                                                        type="number"
-                                                        value={block.config?.rounds || ''}
-                                                        onChange={(e) => updateBlock(index, { config: { ...block.config, rounds: parseInt(e.target.value) || 0 } })}
-                                                        placeholder="Rounds"
-                                                        className="w-16 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-brand-red outline-none placeholder-gray-600 font-bold"
-                                                    />
+                                                    <div className="flex flex-col items-center gap-0.5">
+                                                        <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Rounds</span>
+                                                        <div className="flex items-center bg-black/50 rounded-xl border border-white/10 overflow-hidden">
+                                                            <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, rounds: Math.max(1, (block.config?.rounds || 1) - 1) } })} className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-white/5 active:scale-90 transition-transform"><Minus className="w-3.5 h-3.5" /></button>
+                                                            <span className="w-8 text-center text-sm font-black text-white">{block.config?.rounds || 1}</span>
+                                                            <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, rounds: (block.config?.rounds || 1) + 1 } })} className="w-9 h-9 flex items-center justify-center text-brand-red hover:bg-white/5 active:scale-95 transition-transform"><Plus className="w-3.5 h-3.5" /></button>
+                                                        </div>
+                                                    </div>
                                                 )}
-                                                <input
-                                                    value={block.config?.timecap || ''}
-                                                    onChange={(e) => updateBlock(index, { config: { ...block.config, timecap: e.target.value } })}
-                                                    placeholder="Time Cap"
-                                                    className="w-24 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-brand-red outline-none placeholder-gray-600 font-bold"
-                                                />
+                                                <div className="flex flex-col items-center gap-0.5">
+                                                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Time Cap</span>
+                                                    <div className="flex items-center bg-black/50 rounded-xl border border-brand-red/30 overflow-hidden">
+                                                        <button type="button" onClick={() => {
+                                                            const [m, s] = (block.config?.timecap || '20:00').split(':').map(Number);
+                                                            const newMins = Math.max(0, (isNaN(m) ? 20 : m) - 1);
+                                                            updateBlock(index, { config: { ...block.config, timecap: `${String(newMins).padStart(2,'0')}:${String(isNaN(s) ? 0 : s).padStart(2,'0')}` } });
+                                                        }} className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-white/5 active:scale-90 transition-transform"><Minus className="w-3.5 h-3.5" /></button>
+                                                        <span className="text-sm font-black text-brand-red px-1 tabular-nums">{(() => { const [m,s]=(block.config?.timecap||'20:00').split(':').map(Number); return `${String(isNaN(m)?20:m).padStart(2,'0')}:${String(isNaN(s)?0:s).padStart(2,'0')}`; })()}</span>
+                                                        <button type="button" onClick={() => {
+                                                            const [m, s] = (block.config?.timecap || '20:00').split(':').map(Number);
+                                                            const newMins = (isNaN(m) ? 20 : m) + 1;
+                                                            updateBlock(index, { config: { ...block.config, timecap: `${String(newMins).padStart(2,'0')}:${String(isNaN(s) ? 0 : s).padStart(2,'0')}` } });
+                                                        }} className="w-9 h-9 flex items-center justify-center text-brand-red hover:bg-white/5 active:scale-95 transition-transform"><Plus className="w-3.5 h-3.5" /></button>
+                                                    </div>
+                                                </div>
                                             </div>
                                         )}
 
                                         {block.format === 'EMOM' && (
-                                            <div className="flex items-center gap-2">
-                                                <input
-                                                    value={block.config?.minutes || ''}
-                                                    onChange={(e) => updateBlock(index, { config: { ...block.config, minutes: parseInt(e.target.value) || 0 } })}
-                                                    placeholder="Mins"
-                                                    className="w-16 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-brand-red outline-none placeholder-gray-600 font-bold"
-                                                />
-                                                <input
-                                                    value={block.config?.frequency || '1 MIN'}
-                                                    onChange={(e) => updateBlock(index, { config: { ...block.config, frequency: e.target.value } })}
-                                                    placeholder="Freq"
-                                                    className="w-20 bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:border-brand-red outline-none placeholder-gray-600 font-bold"
-                                                />
+                                            <div className="flex items-end gap-2">
+                                                <div className="flex flex-col items-center gap-0.5">
+                                                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Minutos</span>
+                                                    <div className="flex items-center bg-black/50 rounded-xl border border-brand-red/30 overflow-hidden">
+                                                        <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, minutes: Math.max(1, (block.config?.minutes || 12) - 1) } })} className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-white/5 active:scale-90 transition-transform"><Minus className="w-3.5 h-3.5" /></button>
+                                                        <span className="w-8 text-center text-sm font-black text-brand-red">{block.config?.minutes || 12}</span>
+                                                        <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, minutes: (block.config?.minutes || 12) + 1 } })} className="w-9 h-9 flex items-center justify-center text-brand-red hover:bg-white/5 active:scale-95 transition-transform"><Plus className="w-3.5 h-3.5" /></button>
+                                                    </div>
+                                                </div>
                                                 {block.config?.minutes && (block.exercises?.length || 0) > 0 && (
-                                                    <div className="px-2 py-1 bg-brand-red/10 rounded-lg border border-brand-red/20 animate-in fade-in duration-500">
-                                                        <p className="text-[10px] font-black text-brand-red uppercase italic leading-none">{block.config.minutes} RONDAS TOTALES</p>
+                                                    <div className="px-2 py-1.5 bg-brand-red/10 rounded-xl border border-brand-red/20 animate-in fade-in duration-500">
+                                                        <p className="text-[10px] font-black text-brand-red uppercase italic leading-none">{block.config.minutes} RONDAS</p>
                                                     </div>
                                                 )}
                                             </div>
