@@ -653,12 +653,14 @@ export default function ProfilePage() {
                                 <p className="text-brand-red font-black tracking-widest text-xs uppercase mt-1 drop-shadow-md keep-white">@{profile?.username || 'user'}</p>
                             </div>
                             <div className="flex gap-2 mb-2">
-                                <Link
-                                    href={`/dashboard/profile/${profile?.username}`}
-                                    className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-[8px] md:text-[10px] font-black uppercase tracking-widest px-3 py-1.5 md:px-4 md:py-2 rounded-lg md:rounded-xl border border-white/10 backdrop-blur-md transition-all shadow-xl"
-                                >
-                                    Ver Perfil <ExternalLink className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                                </Link>
+                                {profile?.username && (
+                                    <Link
+                                        href={`/dashboard/profile/${profile.username}`}
+                                        className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white text-[8px] md:text-[10px] font-black uppercase tracking-widest px-3 py-1.5 md:px-4 md:py-2 rounded-lg md:rounded-xl border border-white/10 backdrop-blur-md transition-all shadow-xl"
+                                    >
+                                        Ver Perfil <ExternalLink className="w-2.5 h-2.5 md:w-3 md:h-3" />
+                                    </Link>
+                                )}
                                 {hasOrgs && (
                                     <Link
                                         href="/dashboard/gyms"

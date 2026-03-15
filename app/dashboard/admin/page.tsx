@@ -522,7 +522,7 @@ export default function AdminDashboard() {
                                                 filteredUsers.map((user) => (
                                                     <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
                                                         <td className="px-6 py-4 font-medium">
-                                                            <Link href={`/dashboard/profile/${user.username || user.id}`} className="flex items-center gap-3 group/link">
+                                                            <Link href={user.username ? `/dashboard/profile/${user.username}` : `/dashboard/admin`} className="flex items-center gap-3 group/link">
                                                                 <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-white/10 flex items-center justify-center overflow-hidden shrink-0">
                                                                     {user.avatar_url ? (
                                                                         <Image src={user.avatar_url} width={32} height={32} alt={user.full_name || 'U'} className="w-full h-full object-cover" />
