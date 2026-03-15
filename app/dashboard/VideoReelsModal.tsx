@@ -101,22 +101,32 @@ function CommentsDrawer({ postId, onClose }: { postId: string, onClose: () => vo
                     <>
                         {comments.map((comment) => (
                             <div key={comment.id} className="flex gap-3">
-                                <Link href={`/dashboard/profile/${comment.profiles?.username}`}>
-                                    <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10">
-                                        {comment.profiles?.avatar_url ? (
-                                            <Image src={comment.profiles.avatar_url} alt="user" width={32} height={32} className="object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
-                                                <User className="w-3 h-3 text-gray-500" />
-                                            </div>
-                                        )}
+                                {comment.user?.username ? (
+                                    <Link href={`/dashboard/profile/${comment.user.username}`}>
+                                        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10">
+                                            {comment.user?.avatar_url ? (
+                                                <Image src={comment.user.avatar_url} alt="user" width={32} height={32} className="object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                                    <User className="w-3 h-3 text-gray-500" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </Link>
+                                ) : (
+                                    <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10 bg-gray-800 flex items-center justify-center">
+                                        <User className="w-3 h-3 text-gray-500" />
                                     </div>
-                                </Link>
+                                )}
                                 <div className="flex-1">
                                     <div className="flex items-center gap-2 mb-0.5">
-                                        <Link href={`/dashboard/profile/${comment.profiles?.username}`} className="text-white font-bold text-[10px] hover:underline">
-                                            {comment.profiles?.username}
-                                        </Link>
+                                        {comment.user?.username ? (
+                                            <Link href={`/dashboard/profile/${comment.user.username}`} className="text-white font-bold text-[10px] hover:underline">
+                                                {comment.user.username}
+                                            </Link>
+                                        ) : (
+                                            <span className="text-white font-bold text-[10px]">Usuario</span>
+                                        )}
                                         <span className="text-gray-500 text-[9px] uppercase tracking-widest">
                                             {new Date(comment.created_at).toLocaleDateString()}
                                         </span>
@@ -300,22 +310,32 @@ function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: bo
             {/* Bottom Info Overlay */}
             <div className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-black/80 via-black/40 to-transparent z-10">
                 <div className="flex items-center gap-3 mb-4">
-                    <Link href={`/dashboard/profile/${post.profiles?.username || ''}`} className="relative">
-                        <div className="w-10 h-10 rounded-full border-2 border-brand-red overflow-hidden bg-gray-800">
-                            {post.profiles?.avatar_url ? (
-                                <Image src={post.profiles.avatar_url} alt={post.profiles.username || 'user'} width={40} height={40} className="object-cover" />
-                            ) : (
-                                <div className="w-full h-full flex items-center justify-center bg-gray-900">
-                                    <User className="w-5 h-5 text-gray-400" />
-                                </div>
-                            )}
+                    {post.profiles?.username ? (
+                        <Link href={`/dashboard/profile/${post.profiles.username}`} className="relative">
+                            <div className="w-10 h-10 rounded-full border-2 border-brand-red overflow-hidden bg-gray-800">
+                                {post.profiles?.avatar_url ? (
+                                    <Image src={post.profiles.avatar_url} alt={post.profiles.username} width={40} height={40} className="object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-900">
+                                        <User className="w-5 h-5 text-gray-400" />
+                                    </div>
+                                )}
+                            </div>
+                        </Link>
+                    ) : (
+                        <div className="w-10 h-10 rounded-full border-2 border-brand-red overflow-hidden bg-gray-800 flex items-center justify-center">
+                            <User className="w-5 h-5 text-gray-400" />
                         </div>
-                    </Link>
+                    )}
                     <div className="flex flex-col">
                         <div className="flex items-center gap-1.5">
-                            <Link href={`/dashboard/profile/${post.profiles?.username || ''}`} className="text-white font-black italic uppercase text-sm drop-shadow-md hover:underline">
-                                @{post.profiles?.username}
-                            </Link>
+                            {post.profiles?.username ? (
+                                <Link href={`/dashboard/profile/${post.profiles.username}`} className="text-white font-black italic uppercase text-sm drop-shadow-md hover:underline">
+                                    @{post.profiles.username}
+                                </Link>
+                            ) : (
+                                <span className="text-white font-black italic uppercase text-sm drop-shadow-md">Usuario</span>
+                            )}
                             {post.profiles?.is_official && (
                                 <Trophy className="w-3 h-3 text-brand-red fill-current" />
                             )}

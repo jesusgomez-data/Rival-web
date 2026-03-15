@@ -597,7 +597,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         )}
                     </div>
                 </div>
-                <Link href={`/dashboard/profile/${username || user.toLowerCase().replace(/\s+/g, '')}`} className="flex-1 group">
+                <Link href={username ? `/dashboard/profile/${username}` : `/dashboard`} className="flex-1 group">
                     <div>
                         <p className="text-base font-black group-hover:opacity-80 transition-opacity leading-tight uppercase font-heading italic tracking-tight flex items-center gap-1.5 text-brand-red">
                             {user}
