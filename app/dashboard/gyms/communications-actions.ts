@@ -78,9 +78,8 @@ export async function sendCenterAnnouncement(
             user_id: m.user_id,
             type: 'announcement',
             title,
-            message,
-            read: false,
-            related_id: orgId,
+            content: message,
+            is_read: false,
         }));
 
     if (notifications.length > 0) {
@@ -158,19 +157,18 @@ export async function getAnnouncementHistory(orgId: string) {
     // Get announcements sent to members of this org (type = 'announcement', related_id = orgId)
     const { data } = await admin
         .from('notifications')
-        .select('id, title, message, created_at')
+        .select('id, title, content, created_at')
         .eq('type', 'announcement')
-        .eq('related_id', orgId)
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(200);
 
     if (!data || data.length === 0) return [];
 
-    // De-duplicate by title + message + created_at (same second = same broadcast)
+    // De-duplicate by title + content + created_at (same second = same broadcast)
     const seen = new Set<string>();
     const unique: any[] = [];
     for (const n of data) {
-        const key = `${n.title}__${n.message}__${n.created_at?.slice(0, 16)}`;
+        const key = `${n.title}__${n.content}__${n.created_at?.slice(0, 16)}`;
         if (!seen.has(key)) {
             seen.add(key);
             unique.push(n);

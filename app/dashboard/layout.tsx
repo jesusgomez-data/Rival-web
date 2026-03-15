@@ -88,16 +88,20 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         let isMounted = true;
         async function loadProfile() {
-            const { data: authData } = await supabase.auth.getUser();
-            const user = authData?.user;
-            if (isMounted) {
-                const email = user?.email?.toLowerCase() || null;
-                setUserEmail(email);
-                const data = await getUserProfile();
-                if (isMounted) setProfile(data);
+            try {
+                const { data: authData } = await supabase.auth.getUser();
+                const user = authData?.user;
+                if (isMounted) {
+                    const email = user?.email?.toLowerCase() || null;
+                    setUserEmail(email);
+                    const data = await getUserProfile();
+                    if (isMounted) setProfile(data);
 
-                const unread = await getUnreadMessageCount();
-                if (isMounted) setUnreadMessages(unread);
+                    const unread = await getUnreadMessageCount();
+                    if (isMounted) setUnreadMessages(unread);
+                }
+            } catch (err) {
+                console.error('loadProfile error:', err);
             }
         }
         loadProfile();

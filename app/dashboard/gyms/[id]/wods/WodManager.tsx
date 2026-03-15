@@ -253,19 +253,22 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
         });
 
         let res;
-        if (editingId) {
-            res = await updateWod(centerId, editingId, formData);
-        } else {
-            res = await createWod(centerId, formData);
+        try {
+            if (editingId) {
+                res = await updateWod(centerId, editingId, formData);
+            } else {
+                res = await createWod(centerId, formData);
+            }
+        } catch (e) {
+            res = { error: 'Error de conexión. Inténtalo de nuevo.' };
+        } finally {
+            setIsPosting(false);
         }
 
-        setIsPosting(false);
-
-        if (res.error) {
+        if (res?.error) {
             alert(res.error);
         } else {
             resetForm();
-            // Reload posts (simple reload for now)
             window.location.reload();
         }
     };
