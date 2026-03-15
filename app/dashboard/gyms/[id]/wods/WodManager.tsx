@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Plus, Minus, Trash2, FileText, Image as ImageIcon, X, Video, ChevronDown, Check, Edit2, Search, Clock, Trophy, Calendar } from "lucide-react";
 import { createWod, updateWod, addExerciseToCatalog } from "../../wod-actions";
 import { getExercises } from "../../actions";
@@ -116,16 +116,16 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
     const [isSavingExercise, setIsSavingExercise] = useState(false);
 
     // Initial Load
-    useState(() => {
+    useEffect(() => {
         const fetchCatalog = async () => {
-            const exData = await getExercises('cross_training'); // Default for WOD manager
+            const exData = await getExercises('cross_training');
             if (exData) {
                 const names = exData.map((e: any) => e.name);
                 setCatalogExercises(Array.from(new Set([...COMMON_EXERCISES, ...names])).sort());
             }
         };
         fetchCatalog();
-    });
+    }, []);
 
     // Global files (optional, attached to WOD generally? keeping simple for now)
     // We already have "Add Media" at bottom, let's keep that as "Global Attachments"? 
@@ -354,30 +354,31 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
     // --- EXERCISE LOGIC ---
 
     const addExercise = (blockIndex: number) => {
-        const newBlocks = [...blocks];
-        if (!newBlocks[blockIndex].exercises) newBlocks[blockIndex].exercises = [];
-        newBlocks[blockIndex].exercises!.push({
-            id: Math.random().toString(36).substr(2, 9),
-            name: '',
-        });
-        setBlocks(newBlocks);
+        setBlocks(prev => prev.map((b, i) =>
+            i === blockIndex
+                ? { ...b, exercises: [...(b.exercises || []), { id: Math.random().toString(36).substr(2, 9), name: '' }] }
+                : b
+        ));
     };
 
     const updateExercise = (blockIndex: number, exIndex: number, updates: Partial<WodExercise>) => {
-        const newBlocks = [...blocks];
-        if (newBlocks[blockIndex].exercises && newBlocks[blockIndex].exercises![exIndex]) {
-            newBlocks[blockIndex].exercises![exIndex] = { ...newBlocks[blockIndex].exercises![exIndex], ...updates };
-            setBlocks(newBlocks);
-        }
+        setBlocks(prev => prev.map((b, i) => {
+            if (i !== blockIndex || !b.exercises) return b;
+            const newExercises = b.exercises.map((ex, j) =>
+                j === exIndex ? { ...ex, ...updates } : ex
+            );
+            return { ...b, exercises: newExercises };
+        }));
     };
 
     const removeExercise = (blockIndex: number, exIndex: number) => {
-        const newBlocks = [...blocks];
-        const blockId = newBlocks[blockIndex].id;
-        const exId = newBlocks[blockIndex].exercises![exIndex].id;
+        const blockId = blocks[blockIndex].id;
+        const exId = blocks[blockIndex].exercises![exIndex].id;
 
-        newBlocks[blockIndex].exercises = newBlocks[blockIndex].exercises!.filter((_, i) => i !== exIndex);
-        setBlocks(newBlocks);
+        setBlocks(prev => prev.map((b, i) => {
+            if (i !== blockIndex) return b;
+            return { ...b, exercises: b.exercises!.filter((_, j) => j !== exIndex) };
+        }));
 
         // Cleanup file
         setExerciseFiles(prev => {
@@ -420,35 +421,29 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
 
     // Auto-convert Content <-> Exercises when switching modes
     const toggleBlockMode = (index: number) => {
-        const newBlocks = [...blocks];
-        const block = newBlocks[index];
-        const newMode = block.mode === 'builder' ? 'text' : 'builder';
-
-        if (newMode === 'builder') {
-            // Convert Text to Exercises
-            const lines = block.content.split('\n').filter(l => l.trim());
-            if ((!block.exercises || block.exercises.length === 0) && lines.length > 0) {
-                block.exercises = lines.map(line => ({
-                    id: Math.random().toString(36).substr(2, 9),
-                    name: line
-                }));
-            } else if (!block.exercises) {
-                block.exercises = [{ id: Math.random().toString(36).substr(2, 9), name: '' }];
+        setBlocks(prev => prev.map((block, i) => {
+            if (i !== index) return block;
+            const newMode = block.mode === 'builder' ? 'text' : 'builder';
+            if (newMode === 'builder') {
+                const lines = block.content.split('\n').filter(l => l.trim());
+                const exercises = block.exercises && block.exercises.length > 0
+                    ? block.exercises
+                    : lines.length > 0
+                        ? lines.map(line => ({ id: Math.random().toString(36).substr(2, 9), name: line }))
+                        : [{ id: Math.random().toString(36).substr(2, 9), name: '' }];
+                return { ...block, mode: newMode, exercises };
+            } else {
+                const content = !block.content.trim() && block.exercises && block.exercises.length > 0
+                    ? block.exercises.map(ex => {
+                        let line = ex.name;
+                        if (ex.sets || ex.reps) line += ` (${ex.sets || '?'} x ${ex.reps || '?'})`;
+                        if (ex.value) line += ` @ ${ex.value}`;
+                        return line;
+                    }).join('\n')
+                    : block.content;
+                return { ...block, mode: newMode, content };
             }
-        } else {
-            // Convert Exercises to Text (if text is empty)
-            if (!block.content.trim() && block.exercises && block.exercises.length > 0) {
-                block.content = block.exercises.map(ex => {
-                    let line = ex.name;
-                    if (ex.sets || ex.reps) line += ` (${ex.sets || '?'} x ${ex.reps || '?'})`;
-                    if (ex.value) line += ` @ ${ex.value}`;
-                    return line;
-                }).join('\n');
-            }
-        }
-
-        block.mode = newMode;
-        setBlocks(newBlocks);
+        }));
     };
 
     const handleSaveNewExercise = async (name: string, bIdx: number, exIdx: number) => {
