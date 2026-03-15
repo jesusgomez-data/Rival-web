@@ -542,7 +542,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         onClick={() => {
                             setReplyingTo(comment);
                             // Pre-fill mention if not already there
-                            const mention = `@${comment.user.username} `;
+                            const mention = `@${comment.user?.username || ''} `;
                             if (!newComment.includes(mention)) {
                                 setNewComment(prev => mention + prev);
                             }
@@ -1373,7 +1373,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         <form onSubmit={(e) => handleAddComment(e, replyingTo?.id)} className="flex flex-col gap-2 border-t border-white/5 pt-4 mt-2">
                             {replyingTo && (
                                 <div className="flex items-center justify-between bg-white/5 p-2 rounded-lg text-xs">
-                                    <span className="text-gray-400">Respondiendo a <span className="font-bold text-brand-red">{replyingTo.user.username}</span></span>
+                                    <span className="text-gray-400">Respondiendo a <span className="font-bold text-brand-red">{replyingTo.user?.username || 'usuario'}</span></span>
                                     <button type="button" onClick={() => setReplyingTo(null)}><X className="w-3 h-3" /></button>
                                 </div>
                             )}

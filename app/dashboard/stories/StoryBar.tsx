@@ -1049,7 +1049,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                         <div className="w-full h-full rounded-full overflow-hidden relative">
                             <Image
                                 src={us.user.avatar_url || `https://ui-avatars.com/api/?name=${us.user.full_name}&background=random`}
-                                alt={us.user.username} fill className="object-cover"
+                                alt={us.user?.username || us.user?.full_name || 'user'} fill className="object-cover"
                             />
                         </div>
                         {(us.user as any).is_official && (
@@ -1062,7 +1062,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                         "text-[10px] font-black uppercase tracking-widest truncate max-w-[64px]",
                         (us.user as any).is_official ? "text-brand-red" : "text-gray-300"
                     )}>
-                        {us.user.username}
+                        {us.user?.username || us.user?.full_name?.split(' ')[0] || 'Usuario'}
                     </span>
                 </div>
             ))}
