@@ -312,76 +312,118 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const handleExport = async () => {
         if (!exportCanvasRef.current || !exportVideoRef.current) return
         setIsSaving(true); setSaveProgress(0)
-        const canvas = exportCanvasRef.current
-        const video  = exportVideoRef.current
-        const ctx    = canvas.getContext('2d')!
+
         const durationToRecord = trimRange.end - trimRange.start
-        canvas.width = video.videoWidth; canvas.height = video.videoHeight
-        const stream   = canvas.captureStream(30)
-        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 25000000 })
-        const chunks: Blob[] = []
-        recorder.ondataavailable = e => chunks.push(e.data)
-        recorder.onstop = () => {
-            const blob = new Blob(chunks, { type: recorder.mimeType })
-            onSave(new File([blob], 'rival_pro.webm', { type: recorder.mimeType }), durationToRecord)
+
+        // iOS / Safari fallback: canvas.captureStream not supported → upload original file directly
+        const canvas = exportCanvasRef.current
+        const captureStreamFn = (canvas as any).captureStream || (canvas as any).webkitCaptureStream
+        const MIME_TYPES = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4']
+        const supportedMime = typeof MediaRecorder !== 'undefined'
+            ? MIME_TYPES.find(t => MediaRecorder.isTypeSupported(t))
+            : null
+
+        if (!captureStreamFn || !supportedMime) {
+            // No canvas recording support (iOS Safari) — upload original video as-is
+            setSaveProgress(100)
+            onSave(videoFile, durationToRecord)
+            setIsSaving(false)
+            return
+        }
+
+        try {
+            const video = exportVideoRef.current
+            const ctx   = canvas.getContext('2d')!
+            canvas.width = video.videoWidth; canvas.height = video.videoHeight
+            const stream   = captureStreamFn.call(canvas, 30) as MediaStream
+            const recorder = new MediaRecorder(stream, { mimeType: supportedMime, videoBitsPerSecond: 8000000 })
+            const chunks: Blob[] = []
+            recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data) }
+            recorder.onstop = () => {
+                const blob = new Blob(chunks, { type: supportedMime })
+                const ext  = supportedMime.includes('mp4') ? 'mp4' : 'webm'
+                onSave(new File([blob], `rival_video.${ext}`, { type: supportedMime }), durationToRecord)
+                setIsSaving(false)
+            }
+            recorder.onerror = () => {
+                // Recorder failed mid-way — fall back to original file
+                onSave(videoFile, durationToRecord)
+                setIsSaving(false)
+            }
+
+            video.playbackRate = playbackSpeed
+            video.currentTime  = trimRange.start
+            await new Promise(r => { video.onseeked = r })
+            video.play(); recorder.start(100) // collect data every 100ms
+
+            // Safety timeout: if export takes more than 3× the video duration, abort
+            const timeoutId = setTimeout(() => {
+                if (recorder.state === 'recording') {
+                    recorder.stop()
+                    video.pause()
+                }
+            }, durationToRecord * 3000 + 10000)
+
+            const renderLoop = () => {
+                if (video.currentTime >= trimRange.end || video.ended) {
+                    clearTimeout(timeoutId)
+                    recorder.stop(); video.pause(); return
+                }
+                setSaveProgress(Math.min(99, Math.round(((video.currentTime - trimRange.start) / durationToRecord) * 100)))
+                ctx.filter = computedFilter
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+                ctx.filter = 'none'
+                if (adjustments.vignette > 0) {
+                    const g = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.height*0.3, canvas.width/2, canvas.height/2, canvas.height*0.9)
+                    g.addColorStop(0, 'rgba(0,0,0,0)')
+                    g.addColorStop(1, `rgba(0,0,0,${adjustments.vignette/100})`)
+                    ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height)
+                }
+                imageOverlays.forEach(img => {
+                    const el = new Image(); el.src = img.src
+                    ctx.drawImage(el, (img.x/100)*canvas.width - img.width/2, (img.y/100)*canvas.height - img.height/2, img.width, img.height)
+                })
+                stickerOverlays.forEach(so => {
+                    ctx.save(); ctx.translate((so.x/100)*canvas.width, (so.y/100)*canvas.height)
+                    ctx.font = `${so.size*(canvas.height/800)}px Arial`; ctx.textAlign = 'center'
+                    ctx.fillText(so.emoji, 0, 0); ctx.restore()
+                })
+                textOverlays.forEach(to => {
+                    ctx.save(); ctx.translate((to.x/100)*canvas.width, (to.y/100)*canvas.height)
+                    if (to.style === 'neon') { ctx.shadowColor = to.color; ctx.shadowBlur = 30*(canvas.height/800) }
+                    ctx.font = `${to.style === 'script' ? 'normal' : 'italic'} 950 ${to.fontSize*(canvas.height/800)}px ${to.fontFamily}`
+                    ctx.textAlign = 'center'; ctx.fillStyle = to.color
+                    ctx.fillText(to.style === 'script' ? to.text : to.text.toUpperCase(), 0, 0); ctx.restore()
+                })
+                tagOverlays.forEach(tag => {
+                    const scale = canvas.height / 800
+                    const cx = (tag.x/100)*canvas.width
+                    const cy = (tag.y/100)*canvas.height
+                    const text = `@${tag.username}`
+                    const fs = 14 * scale
+                    ctx.font = `800 ${fs}px Inter, sans-serif`
+                    const tw = ctx.measureText(text).width
+                    const pad = 10 * scale
+                    const bh = (fs + pad * 2)
+                    const bw = tw + pad * 2 + (tag.avatarUrl ? bh + 4*scale : 0)
+                    ctx.save()
+                    ctx.fillStyle = 'rgba(0,0,0,0.65)'
+                    ctx.beginPath()
+                    ctx.roundRect(cx - bw/2, cy - bh/2, bw, bh, bh/2)
+                    ctx.fill()
+                    ctx.fillStyle = '#ffffff'
+                    ctx.textAlign = 'right'
+                    ctx.fillText(text, cx + bw/2 - pad, cy + fs*0.35)
+                    ctx.restore()
+                })
+                if (recorder.state === 'recording') requestAnimationFrame(renderLoop)
+            }
+            renderLoop()
+        } catch (err) {
+            console.error('Video export failed, uploading original:', err)
+            onSave(videoFile, durationToRecord)
             setIsSaving(false)
         }
-        video.playbackRate = playbackSpeed
-        video.currentTime  = trimRange.start
-        await new Promise(r => { video.onseeked = r })
-        video.play(); recorder.start()
-        const renderLoop = () => {
-            if (video.currentTime >= trimRange.end) { recorder.stop(); video.pause(); return }
-            setSaveProgress(Math.min(99, Math.round(((video.currentTime - trimRange.start) / durationToRecord) * 100)))
-            ctx.filter = computedFilter
-            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-            ctx.filter = 'none'
-            if (adjustments.vignette > 0) {
-                const g = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.height*0.3, canvas.width/2, canvas.height/2, canvas.height*0.9)
-                g.addColorStop(0, 'rgba(0,0,0,0)')
-                g.addColorStop(1, `rgba(0,0,0,${adjustments.vignette/100})`)
-                ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height)
-            }
-            imageOverlays.forEach(img => {
-                const el = new Image(); el.src = img.src
-                ctx.drawImage(el, (img.x/100)*canvas.width - img.width/2, (img.y/100)*canvas.height - img.height/2, img.width, img.height)
-            })
-            stickerOverlays.forEach(so => {
-                ctx.save(); ctx.translate((so.x/100)*canvas.width, (so.y/100)*canvas.height)
-                ctx.font = `${so.size*(canvas.height/800)}px Arial`; ctx.textAlign = 'center'
-                ctx.fillText(so.emoji, 0, 0); ctx.restore()
-            })
-            textOverlays.forEach(to => {
-                ctx.save(); ctx.translate((to.x/100)*canvas.width, (to.y/100)*canvas.height)
-                if (to.style === 'neon') { ctx.shadowColor = to.color; ctx.shadowBlur = 30*(canvas.height/800) }
-                ctx.font = `${to.style === 'script' ? 'normal' : 'italic'} 950 ${to.fontSize*(canvas.height/800)}px ${to.fontFamily}`
-                ctx.textAlign = 'center'; ctx.fillStyle = to.color
-                ctx.fillText(to.style === 'script' ? to.text : to.text.toUpperCase(), 0, 0); ctx.restore()
-            })
-            tagOverlays.forEach(tag => {
-                const scale = canvas.height / 800
-                const cx = (tag.x/100)*canvas.width
-                const cy = (tag.y/100)*canvas.height
-                const text = `@${tag.username}`
-                const fs = 14 * scale
-                ctx.font = `800 ${fs}px Inter, sans-serif`
-                const tw = ctx.measureText(text).width
-                const pad = 10 * scale
-                const bh = (fs + pad * 2)
-                const bw = tw + pad * 2 + (tag.avatarUrl ? bh + 4*scale : 0)
-                ctx.save()
-                ctx.fillStyle = 'rgba(0,0,0,0.65)'
-                ctx.beginPath()
-                ctx.roundRect(cx - bw/2, cy - bh/2, bw, bh, bh/2)
-                ctx.fill()
-                ctx.fillStyle = '#ffffff'
-                ctx.textAlign = 'right'
-                ctx.fillText(text, cx + bw/2 - pad, cy + fs*0.35)
-                ctx.restore()
-            })
-            if (recorder.state === 'recording') requestAnimationFrame(renderLoop)
-        }
-        renderLoop()
     }
 
     const clamp = (v: number) => Math.max(2, Math.min(98, v))
