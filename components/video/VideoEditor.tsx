@@ -148,7 +148,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const [pendingText, setPendingText]     = useState('')
     const [pendingTextAnim, setPendingTextAnim] = useState('none')
     const [activeFont, setActiveFont]       = useState(FONTS[0])
-    const [isMuted, setIsMuted]             = useState(false)
+    const [isMuted, setIsMuted]             = useState(true)   // start muted so iOS autoplay works
     const [selectedTrack, setSelectedTrack] = useState<typeof TRACKS[0] | null>(null)
     const [activeTextColor, setActiveTextColor] = useState(COLORS[0])
     const [selectedId, setSelectedId]       = useState<string | null>(null)
@@ -168,6 +168,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     // Trim handle drag state
     const trimBarRef      = useRef<HTMLDivElement>(null)
     const trimDragRef     = useRef<{ handle: 'start' | 'end' | null }>({ handle: null })
+    const trimRangeRef    = useRef(trimRange)   // always-current trimRange for event closures
     // Pinch-to-zoom state
     const pinchRef        = useRef<{ dist: number; scale: number; px: number; py: number } | null>(null)
     const panRef          = useRef<{ sx: number; sy: number; px: number; py: number } | null>(null)
@@ -258,6 +259,64 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
         video.addEventListener('timeupdate', checkTime)
         return () => video.removeEventListener('timeupdate', checkTime)
     }, [trimRange, videoDuration])
+
+    // Keep trimRangeRef in sync so event handler closures always see current value
+    useEffect(() => { trimRangeRef.current = trimRange }, [trimRange])
+
+    // ── Non-passive touch events for trim bar (iOS Safari requires this) ──────
+    useEffect(() => {
+        const bar = trimBarRef.current
+        if (!bar || activeTool !== 'trim' || videoDuration === 0) return
+
+        let activeHandle: 'start' | 'end' | null = null
+        let activeTouchId: number | null = null
+
+        const handleTouchStart = (e: TouchEvent) => {
+            if (activeTouchId !== null) return
+            e.preventDefault()
+            const touch = e.changedTouches[0]
+            activeTouchId = touch.identifier
+            const rect = bar.getBoundingClientRect()
+            const ratio = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width))
+            const { start, end } = trimRangeRef.current
+            const distToStart = Math.abs(ratio - start / videoDuration)
+            const distToEnd   = Math.abs(ratio - end   / videoDuration)
+            activeHandle = distToStart <= distToEnd ? 'start' : 'end'
+        }
+
+        const handleTouchMove = (e: TouchEvent) => {
+            if (activeHandle === null || activeTouchId === null) return
+            e.preventDefault()
+            const touch = Array.from(e.changedTouches).find(t => t.identifier === activeTouchId)
+            if (!touch) return
+            const rect = bar.getBoundingClientRect()
+            const ratio = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width))
+            const t = ratio * videoDuration
+            if (activeHandle === 'start') {
+                setTrimRange(p => ({ ...p, start: Math.max(0, Math.min(t, p.end - 0.5)) }))
+            } else {
+                setTrimRange(p => ({ ...p, end: Math.min(videoDuration, Math.max(t, p.start + 0.5)) }))
+            }
+            if (videoRef.current) videoRef.current.currentTime = t
+        }
+
+        const handleTouchEnd = (e: TouchEvent) => {
+            if (Array.from(e.changedTouches).some(t => t.identifier === activeTouchId)) {
+                activeHandle = null; activeTouchId = null
+            }
+        }
+
+        bar.addEventListener('touchstart',  handleTouchStart,  { passive: false })
+        bar.addEventListener('touchmove',   handleTouchMove,   { passive: false })
+        bar.addEventListener('touchend',    handleTouchEnd)
+        bar.addEventListener('touchcancel', handleTouchEnd)
+        return () => {
+            bar.removeEventListener('touchstart',  handleTouchStart)
+            bar.removeEventListener('touchmove',   handleTouchMove)
+            bar.removeEventListener('touchend',    handleTouchEnd)
+            bar.removeEventListener('touchcancel', handleTouchEnd)
+        }
+    }, [activeTool, videoDuration])
 
     if (!mounted) return null
 
@@ -536,7 +595,6 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                         style={{ filter: computedFilter, transform: `scale(${videoScale}) translate(${videoPan.x / videoScale}px, ${videoPan.y / videoScale}px)`, transformOrigin: 'center center', willChange: 'transform' }}
                         playsInline loop autoPlay muted={isMuted}
                         onLoadedMetadata={e => setVideoDuration(e.currentTarget.duration)}
-                        onTimeUpdate={e => setCurrentTime(e.currentTarget.currentTime)}
                     />
 
                     {/* Vignette */}
@@ -779,49 +837,45 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                             <span className="text-[9px] font-black italic uppercase tracking-[0.4em] text-white/30">RECORTE</span>
                             <span className="text-2xl font-black italic text-brand-red">{(trimRange.end - trimRange.start).toFixed(1)}s</span>
                         </div>
-                        {/* Trim bar — custom dual handles with pointer capture */}
+                        {/* Trim bar — touch events managed via non-passive useEffect */}
+                        {videoDuration === 0 ? (
+                            <div className="h-20 bg-zinc-900 rounded-2xl border border-white/10 flex items-center justify-center">
+                                <span className="text-white/30 text-[10px] font-black uppercase tracking-widest animate-pulse">Cargando video...</span>
+                            </div>
+                        ) : (
                         <div ref={trimBarRef} className="relative h-20 bg-zinc-900 rounded-2xl overflow-visible flex border border-white/10 touch-none select-none">
                             {/* Thumbnails */}
-                            {thumbnails.map((src, i) => <img key={i} src={src} className="flex-1 h-full object-cover opacity-60 grayscale rounded-2xl"/>)}
+                            {thumbnails.map((src, i) => <img key={i} src={src} className="flex-1 h-full object-cover opacity-60 grayscale rounded-2xl" alt=""/>)}
                             {/* Dimmed region — before start */}
-                            <div className="absolute inset-y-0 left-0 bg-black/60 z-10 rounded-l-2xl pointer-events-none" style={{ width: `${(trimRange.start/videoDuration)*100}%` }}/>
+                            <div className="absolute inset-y-0 left-0 bg-black/60 z-10 rounded-l-2xl pointer-events-none"
+                                style={{ width: `${(trimRange.start / videoDuration) * 100}%` }}/>
                             {/* Dimmed region — after end */}
-                            <div className="absolute inset-y-0 right-0 bg-black/60 z-10 rounded-r-2xl pointer-events-none" style={{ width: `${(1 - trimRange.end/videoDuration)*100}%` }}/>
+                            <div className="absolute inset-y-0 right-0 bg-black/60 z-10 rounded-r-2xl pointer-events-none"
+                                style={{ width: `${(1 - trimRange.end / videoDuration) * 100}%` }}/>
                             {/* Active selection border */}
                             <div className="absolute inset-y-0 border-y-4 border-brand-red z-20 pointer-events-none"
-                                style={{ left:`${(trimRange.start/videoDuration)*100}%`, right:`${(1 - trimRange.end/videoDuration)*100}%` }}/>
+                                style={{ left: `${(trimRange.start / videoDuration) * 100}%`, right: `${(1 - trimRange.end / videoDuration) * 100}%` }}/>
                             {/* Playhead */}
-                            {videoDuration > 0 && (
-                                <div className="absolute top-0 bottom-0 w-0.5 bg-white/70 z-20 pointer-events-none"
-                                    style={{ left:`${(currentTime/videoDuration)*100}%` }}/>
-                            )}
-                            {/* Left handle */}
-                            <div
-                                className="absolute inset-y-0 w-8 bg-brand-red z-30 flex items-center justify-center cursor-ew-resize rounded-l-xl touch-none"
-                                style={{ left:`${(trimRange.start/videoDuration)*100}%`, transform:'translateX(-50%)' }}
-                                onPointerDown={e => onTrimHandleDown(e, 'start')}
-                                onPointerMove={e => onTrimHandleMove(e, 'start')}
-                                onPointerUp={onTrimHandleUp}
-                            >
+                            <div className="absolute top-0 bottom-0 w-0.5 bg-white/70 z-20 pointer-events-none"
+                                style={{ left: `${(currentTime / videoDuration) * 100}%` }}/>
+                            {/* Left handle — visual only; touch handled by useEffect */}
+                            <div className="absolute inset-y-0 w-8 bg-brand-red z-30 flex items-center justify-center rounded-l-xl pointer-events-none"
+                                style={{ left: `${(trimRange.start / videoDuration) * 100}%`, transform: 'translateX(-50%)' }}>
                                 <div className="flex gap-0.5">
                                     <div className="w-0.5 h-5 bg-white/70 rounded-full"/>
                                     <div className="w-0.5 h-5 bg-white/70 rounded-full"/>
                                 </div>
                             </div>
-                            {/* Right handle */}
-                            <div
-                                className="absolute inset-y-0 w-8 bg-brand-red z-30 flex items-center justify-center cursor-ew-resize rounded-r-xl touch-none"
-                                style={{ right:`${(1 - trimRange.end/videoDuration)*100}%`, transform:'translateX(50%)' }}
-                                onPointerDown={e => onTrimHandleDown(e, 'end')}
-                                onPointerMove={e => onTrimHandleMove(e, 'end')}
-                                onPointerUp={onTrimHandleUp}
-                            >
+                            {/* Right handle — visual only; touch handled by useEffect */}
+                            <div className="absolute inset-y-0 w-8 bg-brand-red z-30 flex items-center justify-center rounded-r-xl pointer-events-none"
+                                style={{ right: `${(1 - trimRange.end / videoDuration) * 100}%`, transform: 'translateX(50%)' }}>
                                 <div className="flex gap-0.5">
                                     <div className="w-0.5 h-5 bg-white/70 rounded-full"/>
                                     <div className="w-0.5 h-5 bg-white/70 rounded-full"/>
                                 </div>
                             </div>
                         </div>
+                        )}
                         <div className="flex justify-between mt-2 px-1">
                             <span className="text-[9px] text-white/30 font-bold">{trimRange.start.toFixed(1)}s</span>
                             <span className="text-[9px] text-white/30 font-bold">{trimRange.end.toFixed(1)}s</span>
