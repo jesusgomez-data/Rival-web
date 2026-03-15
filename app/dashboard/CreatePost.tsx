@@ -85,16 +85,43 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
 
         // DIRECT CLIENT UPLOAD for larger files and reliability
         if (file && file.size > 0) {
+            // Warn if file is very large (common on iPhone .MOV files)
+            const MAX_SIZE_MB = 200;
+            if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+                alert(`El archivo es muy grande (${(file.size / 1024 / 1024).toFixed(0)}MB). Máximo ${MAX_SIZE_MB}MB. En iPhone, usa el modo "Alta Eficiencia" en Ajustes > Cámara > Formatos para reducir el tamaño.`);
+                setIsPosting(false);
+                setUploadProgress(0);
+                return;
+            }
+
             try {
-                const fileExt = file.name.split('.').pop();
+                const fileExt = (file.name.split('.').pop() || 'mp4').toLowerCase();
                 const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
 
-                setUploadProgress(30);
-                const { data: uploadData, error: uploadError } = await supabaseClient.storage
-                    .from('posts')
-                    .upload(fileName, file);
+                setUploadProgress(20);
 
-                if (uploadError) throw uploadError;
+                // Upload with real progress tracking and 3-minute timeout
+                const TIMEOUT_MS = 3 * 60 * 1000;
+                const uploadPromise = supabaseClient.storage
+                    .from('posts')
+                    .upload(fileName, file, {
+                        cacheControl: '3600',
+                        upsert: true,
+                        onUploadProgress: (progress: { loaded: number; total: number }) => {
+                            if (progress.total > 0) {
+                                // Map upload progress to 20-80% range
+                                const pct = Math.round(20 + (progress.loaded / progress.total) * 60);
+                                setUploadProgress(Math.min(pct, 79));
+                            }
+                        },
+                    } as any);
+
+                const timeoutPromise = new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error('La subida tardó demasiado. Revisa tu conexión e inténtalo de nuevo.')), TIMEOUT_MS)
+                );
+
+                const result = await Promise.race([uploadPromise, timeoutPromise]) as any;
+                if (result?.error) throw result.error;
 
                 const { data: { publicUrl } } = supabaseClient.storage
                     .from('posts')
@@ -103,15 +130,12 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                 mediaUrl = publicUrl;
                 mediaType = file.type.startsWith('video/') ? 'video' : 'image';
                 setUploadProgress(80);
-            } catch (error) {
+            } catch (error: any) {
                 console.error("Direct upload failed:", error);
-
-                if (file.size > 200 * 1024 * 1024) {
-                    alert("Error al subir el archivo directamente y es demasiado grande (>200MB).");
-                    setIsPosting(false);
-                    setUploadProgress(0);
-                    return;
-                }
+                alert(error?.message || "Error al subir el archivo. Revisa tu conexión e inténtalo de nuevo.");
+                setIsPosting(false);
+                setUploadProgress(0);
+                return;
             }
         }
 
