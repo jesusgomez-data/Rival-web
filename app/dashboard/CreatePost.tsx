@@ -207,37 +207,33 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // No file size limit - all videos accepted, will be trimmed if needed
-            if (file.type.startsWith('video/')) {
+            if (file.type.startsWith('video/') || file.name.toLowerCase().match(/\.(mov|mp4|m4v|webm|ogg)$/)) {
+                // Set preview and pendingFile immediately — don't block on metadata
+                // (iOS Safari with .MOV files often never fires onloadedmetadata)
+                const url = URL.createObjectURL(file);
+                setPreview(url);
+                setPendingFile(file);
+                setDuration(null);
+
+                // Try to get duration in the background — non-blocking
                 const docVideo = document.createElement('video');
                 docVideo.preload = 'metadata';
                 docVideo.onloadedmetadata = () => {
                     const dur = docVideo.duration;
                     setVideoDuration(dur);
                     setDuration(dur);
-                    window.URL.revokeObjectURL(docVideo.src);
-
-                    if (dur > 60) {
-                        // Auto-open editor for videos longer than 1 minute to suggest trimming
-                        setEditorVideoFile(file);
-                        setIsVideoEditing(true);
-                        return;
-                    }
-
-                    const url = URL.createObjectURL(file);
-                    setPreview(url);
-                };
-                docVideo.onerror = () => {
-                    alert("Error al procesar el video. Asegúrate de que sea un formato compatible.");
+                    URL.revokeObjectURL(docVideo.src);
                 };
                 docVideo.src = URL.createObjectURL(file);
             } else {
                 const url = URL.createObjectURL(file);
                 setPreview(url);
+                setPendingFile(file);
                 setDuration(null);
             }
         } else {
             setPreview(null);
+            setPendingFile(null);
             setDuration(null);
         }
     };
