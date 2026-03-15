@@ -116,7 +116,7 @@ export default function LeaderboardClient({ initialData, currentUser, followedId
 
                                 {/* User Details */}
                                 <div className="flex-1 min-w-0 mr-1 sm:mr-3">
-                                    <Link href={`/dashboard/profile/${athlete.username}`} className="block">
+                                    <Link href={athlete.username ? `/dashboard/profile/${athlete.username}` : `/dashboard/leaderboard`} className="block">
                                         <div className="flex items-center gap-1 sm:gap-2">
                                             <h3 className="font-heading font-black text-white italic uppercase tracking-tight text-[11px] sm:text-lg group-hover:text-brand-red transition-colors truncate">
                                                 {athlete.full_name}
