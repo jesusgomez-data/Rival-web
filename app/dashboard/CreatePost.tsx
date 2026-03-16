@@ -19,7 +19,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const { language } = useLanguage();
     const [content, setContent] = useState(initialData?.caption || initialData?.content || "");
     const [isPosting, setIsPosting] = useState(false);
-    const [preview, setPreview] = useState<string | null>(null);
+    const [preview, setPreview] = useState<string | null>(initialData?.media_url || null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [postType, setPostType] = useState<'standard' | 'pr' | 'wod'>(initialPostType || 'standard');
     const [wodData, setWodData] = useState<{ title: string, blocks: WodBlock[], summary: WodSummary, originalWodPostId?: string } | null>(
@@ -46,6 +46,17 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const fileInputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
     const supabaseClient = createClient();
+
+    // Sync props to state if they change (important because CreatePost might not remount)
+    useEffect(() => {
+        if (initialData) {
+            setContent(initialData.caption || initialData.content || "");
+            setPreview(initialData.media_url || null);
+            if (initialPostType === 'wod') {
+                setWodData(initialData);
+            }
+        }
+    }, [initialData, initialPostType]);
 
     // Close emoji picker when clicking outside
     useEffect(() => {
@@ -167,14 +178,19 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                     res = await createWodPost(formData);
                 }
             } else {
-                formData.append("content", content);
-                if (mediaUrl) {
-                    formData.append("media_url", mediaUrl);
-                    formData.append("media_type", mediaType!);
-                } else if (file) {
-                    formData.append("media", file);
+                if (editingPostId) {
+                    // editing a standard post
+                    res = await updatePost(editingPostId, content, mediaUrl || undefined);
+                } else {
+                    formData.append("content", content);
+                    if (mediaUrl) {
+                        formData.append("media_url", mediaUrl);
+                        formData.append("media_type", mediaType!);
+                    } else if (file) {
+                        formData.append("media", file);
+                    }
+                    res = await createUserPost(formData);
                 }
-                res = await createUserPost(formData);
             }
 
             setUploadProgress(100);

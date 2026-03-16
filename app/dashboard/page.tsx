@@ -84,17 +84,19 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
         const handleEdit = (e: any) => {
-            const { postId, content, wodData } = e.detail;
-            setRepostData({ ...wodData, caption: content });
+            const { postId, content, wodData, mediaUrl, mediaType } = e.detail;
+            setRepostData({ ...wodData, caption: content, media_url: mediaUrl, media_type: mediaType });
             setEditMode({ id: postId });
             setIsOpen(true);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
         window.addEventListener('repost-wod', handleRepost as any);
         window.addEventListener('edit-wod', handleEdit as any);
+        window.addEventListener('edit-post', handleEdit as any);
         return () => {
             window.removeEventListener('repost-wod', handleRepost as any);
             window.removeEventListener('edit-wod', handleEdit as any);
+            window.removeEventListener('edit-post', handleEdit as any);
         };
     }, []);
 

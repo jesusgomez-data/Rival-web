@@ -214,9 +214,6 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     };
 
     const [showMenu, setShowMenu] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
-    const [editCaption, setEditCaption] = useState(caption || "");
-    const [displayCaption, setDisplayCaption] = useState(caption || "");
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDownloadingVideo, setIsDownloadingVideo] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState(0);
@@ -440,15 +437,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         }
     };
 
-    const handleUpdate = async () => {
-        const res = await updatePost(postId, editCaption);
-        if (res.error) {
-            alert(res.error);
-        } else {
-            setDisplayCaption(editCaption);
-            setIsEditing(false);
-        }
-    };
+    // Local handleUpdate is removed as we use the global edit form now
 
     const toggleMusic = (e: React.MouseEvent) => {
         e.stopPropagation();
@@ -648,33 +637,32 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             {showMenu && (
                                 <div className="absolute right-0 top-full mt-2 w-40 bg-brand-gray border border-white/10 rounded-2xl shadow-2xl z-20 overflow-hidden backdrop-blur-xl">
                                     <button
-                                        onClick={() => { setIsEditing(true); setShowMenu(false); }}
-                                        className="w-full text-left px-5 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 transition-colors"
-                                    >
-                                        <Edit2 className="w-4 h-4" /> {mediaType === 'wod' ? 'Editar Pie' : 'Editar'}
-                                    </button>
-                                    {mediaType === 'wod' && (
-                                        <button
-                                            onClick={() => {
-                                                // Use wod_data prop (new format) first, fallback to parsing media_url (old format)
+                                        onClick={() => {
+                                            const eventData: any = {
+                                                postId,
+                                                content: caption || '',
+                                                mediaType: mediaType
+                                            };
+
+                                            if (mediaType === 'wod') {
                                                 let parsedWodData = wod_data;
                                                 if (!parsedWodData && image) {
                                                     try { parsedWodData = JSON.parse(image); } catch (e) { }
                                                 }
-                                                window.dispatchEvent(new CustomEvent('edit-wod', {
-                                                    detail: {
-                                                        postId,
-                                                        content: displayCaption,
-                                                        wodData: parsedWodData
-                                                    }
-                                                }));
-                                                setShowMenu(false);
-                                            }}
-                                            className="w-full text-left px-5 py-3 text-sm text-brand-red bg-brand-red/5 hover:bg-brand-red/10 flex items-center gap-3 transition-colors border-t border-white/5"
-                                        >
-                                            <Dumbbell className="w-4 h-4" /> Editar Entrenamiento
-                                        </button>
-                                    )}
+                                                eventData.wodData = parsedWodData;
+                                            } else {
+                                                eventData.mediaUrl = image && isImageUrl(image) ? image : null;
+                                            }
+
+                                            window.dispatchEvent(new CustomEvent('edit-post', {
+                                                detail: eventData
+                                            }));
+                                            setShowMenu(false);
+                                        }}
+                                        className="w-full text-left px-5 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 transition-colors"
+                                    >
+                                        <Edit2 className="w-4 h-4" /> {mediaType === 'wod' ? 'Editar Entrenamiento / Post' : 'Editar Publicación'}
+                                    </button>
                                     <button
                                         onClick={() => { handleDelete(); setShowMenu(false); }}
                                         className="w-full text-left px-5 py-3 text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-3 transition-colors"
@@ -688,29 +676,16 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 </div>
             </div>
 
-            {/* Caption or WOD Display - Only show if not a class_result (unless editing) */}
-            {((displayCaption && mediaType !== 'class_result') || isEditing || (post_type === 'wod' && wod_data)) && (
-                <div className={post_type === 'wod' && wod_data && !isEditing ? "px-4 pb-3" : "px-4 pb-3"}>
-                    {isEditing ? (
-                        <div className="flex gap-2">
-                            <textarea
-                                value={editCaption}
-                                onChange={(e) => setEditCaption(e.target.value)}
-                                className="w-full bg-black/20 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-brand-red/50"
-                                rows={2}
-                            />
-                            <div className="flex flex-col gap-1">
-                                <button onClick={handleUpdate} className="p-2 bg-green-500/10 text-green-500 rounded-lg" title="Guardar"><Save className="w-4 h-4" /></button>
-                                <button onClick={() => { setIsEditing(false); setEditCaption(displayCaption); }} className="p-2 bg-red-500/10 text-red-500 rounded-lg" title="Cancelar"><X className="w-4 h-4" /></button>
-                            </div>
-                        </div>
-                    ) : post_type === 'wod' && wod_data ? (
+            {/* Caption or WOD Display - Only show if not a class_result */}
+            {((caption && mediaType !== 'class_result') || (post_type === 'wod' && wod_data)) && (
+                <div className={post_type === 'wod' && wod_data ? "px-4 pb-3" : "px-4 pb-3"}>
+                    {post_type === 'wod' && wod_data ? (
                         // Renderizar WOD con diseño especial
                         <WODPostDisplay wod={wod_data} compact={false} />
                     ) : (
                         // Renderizar caption normal
                         <MentionText
-                            text={displayCaption}
+                            text={caption || ''}
                             className={clsx(
                                 "text-sm sm:text-base whitespace-pre-wrap font-accent font-medium tracking-tight leading-relaxed",
                                 theme === 'dark' ? "text-gray-100" : "text-black",
@@ -959,13 +934,13 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
                                 })}
 
-                                {displayCaption && displayCaption.includes('📝 COMENTARIO:') && (
+                                {caption && caption.includes('📝 COMENTARIO:') && (
                                     <div className="mt-2 p-6 bg-brand-red/5 border border-brand-red/10 rounded-[24px] relative overflow-hidden group shadow-lg">
                                         <div className="absolute top-0 right-0 p-6 opacity-5">
                                             <MessageCircle className="w-16 h-16 text-brand-red" />
                                         </div>
                                         <p className="text-brand-red font-accent font-semibold text-sm md:text-base relative z-10 leading-relaxed border-l-4 border-brand-red pl-6 py-2">
-                                            {displayCaption.split('📝 COMENTARIO:')[1].trim()}
+                                            {caption.split('📝 COMENTARIO:')[1].trim()}
                                         </p>
                                     </div>
                                 )}
@@ -1068,7 +1043,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 ...b,
                                 config: b.config || {} // Safety for legacy data
                             }));
-                             const normalizedWodData = {
+                            const normalizedWodData = {
                                 title: w.title || (w.sport_type && w.sport_type !== 'Entrenamiento Libre' ? w.sport_type : 'WORKOUT OF THE DAY'),
                                 blocks: blocks,
                                 summary: w.summary || {
@@ -1076,7 +1051,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     scoreType: w.metrics?.type || 'WORKOUT',
                                     totalTime: w.metrics?.duration || w.metrics?.time || '--:--'
                                 },
-                                media_url: image && isImageUrl(image) ? image : null,
+                                // BUG FIX: Extract media_url from the workout data if 'image' is a JSON string
+                                media_url: w.media_url || (image && isImageUrl(image) ? image : null),
                                 original_wod_post_id: (w as any).original_wod_post_id || null
                             };
 

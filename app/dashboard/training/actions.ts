@@ -6,9 +6,9 @@ import { redirect } from 'next/navigation'
 
 async function calculateWorkoutStreak(supabase: any, userId: string) {
     // Fetch unified history (independent and classes)
-    const { data: workouts } = await supabase.from('workouts').select('created_at').eq('user_id', userId).order('created_at', { ascending: false });
-    const { data: classResults } = await supabase.from('class_results').select('date_performed').eq('user_id', userId).order('date_performed', { ascending: false });
-    const { data: checkins } = await supabase.from('daily_checkins').select('checkin_date').eq('user_id', userId).order('checkin_date', { ascending: false });
+    const { data: workouts } = await supabase.from('workouts').select('created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(100);
+    const { data: classResults } = await supabase.from('class_results').select('date_performed').eq('user_id', userId).order('date_performed', { ascending: false }).limit(100);
+    const { data: checkins } = await supabase.from('daily_checkins').select('checkin_date').eq('user_id', userId).order('checkin_date', { ascending: false }).limit(100);
 
     const allDates = [
         ...(workouts || []).map((w: any) => new Date(w.created_at).toISOString().split('T')[0]),
@@ -100,6 +100,8 @@ export async function getMissions() {
 
     // 5. Merge and update missions
     const finalMissions = []
+    const missionsToUpsert = []
+    const xpUpdates = []
 
     for (const mission of missions) {
         const progress = userMissions?.find(um => um.mission_id === mission.id)
@@ -119,19 +121,17 @@ export async function getMissions() {
         const needsUpdate = currentValue !== (progress?.current_value || 0) || (isCompleted && !progress?.is_completed);
 
         if (needsUpdate) {
-            await supabase
-                .from('user_missions')
-                .upsert({
-                    user_id: user.id,
-                    mission_id: mission.id,
-                    current_value: currentValue,
-                    is_completed: isCompleted,
-                    completed_at: isCompleted ? (progress?.completed_at || new Date().toISOString()) : null,
-                    week_start: currentWeekStart
-                }, { onConflict: 'user_id,mission_id,week_start' });
+            missionsToUpsert.push({
+                user_id: user.id,
+                mission_id: mission.id,
+                current_value: currentValue,
+                is_completed: isCompleted,
+                completed_at: isCompleted ? (progress?.completed_at || new Date().toISOString()) : null,
+                week_start: currentWeekStart
+            });
 
             if (isCompleted && (!progress || !progress.is_completed)) {
-                await supabase.rpc('increment_xp', { amount: mission.xp_reward, profile_id: user.id });
+                xpUpdates.push(mission.xp_reward);
             }
         }
 
@@ -140,6 +140,18 @@ export async function getMissions() {
             current_value: currentValue,
             is_completed: isCompleted
         });
+    }
+
+    // Perform batched updates
+    if (missionsToUpsert.length > 0) {
+        await supabase
+            .from('user_missions')
+            .upsert(missionsToUpsert, { onConflict: 'user_id,mission_id,week_start' });
+    }
+
+    if (xpUpdates.length > 0) {
+        const totalXp = xpUpdates.reduce((acc, xp) => acc + xp, 0);
+        await supabase.rpc('increment_xp', { amount: totalXp, profile_id: user.id });
     }
 
     return finalMissions;
