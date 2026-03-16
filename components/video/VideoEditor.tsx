@@ -388,7 +388,12 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
         if (!exportCanvasRef.current || !exportVideoRef.current) return
         setIsSaving(true); setSaveProgress(0)
 
-        const durationToRecord = trimRange.end - trimRange.start
+        const durationToRecord = (trimRange.end - trimRange.start) || videoDuration || 0
+        if (!isFinite(durationToRecord) || durationToRecord <= 0) {
+            alert("Error: Duración de video inválida.")
+            setIsSaving(false)
+            return
+        }
 
         // iOS / Safari fallback: canvas.captureStream not supported → upload original file directly
         const canvas = exportCanvasRef.current
@@ -484,63 +489,74 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                 }
             }, durationToRecord * 3000 + 10000)
 
-            const renderLoop = () => {
-                if (video.currentTime >= trimRange.end || video.ended) {
-                    clearTimeout(timeoutId)
-                    if (recorder.state === 'recording') recorder.stop()
-                    video.pause()
-                    if (musicRef.current) musicRef.current.pause()
-                    return
+                // --- Pre-load images for this export session to avoid 'new Image()' every frame ---
+                const loadedImages = await Promise.all(imageOverlays.map(img => {
+                    return new Promise<HTMLImageElement>((resolve) => {
+                        const el = new Image(); el.crossOrigin = 'anonymous'; el.onload = () => resolve(el); el.src = img.src
+                    })
+                }))
+
+                const renderLoop = () => {
+                    if (video.currentTime >= trimRange.end || video.ended) {
+                        clearTimeout(timeoutId)
+                        if (recorder.state === 'recording') recorder.stop()
+                        video.pause()
+                        if (musicRef.current) musicRef.current.pause()
+                        return
+                    }
+                    setSaveProgress(Math.min(99, Math.round(((video.currentTime - trimRange.start) / durationToRecord) * 100)))
+                    ctx.filter = computedFilter
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+                    ctx.filter = 'none'
+                    if (adjustments.vignette > 0) {
+                        const g = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.height*0.3, canvas.width/2, canvas.height/2, canvas.height*0.9)
+                        g.addColorStop(0, 'rgba(0,0,0,0)')
+                        g.addColorStop(1, `rgba(0,0,0,${adjustments.vignette/100})`)
+                        ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height)
+                    }
+                    imageOverlays.forEach((img, i) => {
+                        const el = loadedImages[i]
+                        if (el) ctx.drawImage(el, (img.x/100)*canvas.width - img.width/2, (img.y/100)*canvas.height - img.height/2, img.width, img.height)
+                    })
+                    stickerOverlays.forEach(so => {
+                        ctx.save(); ctx.translate((so.x/100)*canvas.width, (so.y/100)*canvas.height)
+                        ctx.font = `${so.size*(canvas.height/800)}px Arial`; ctx.textAlign = 'center'
+                        ctx.fillText(so.emoji, 0, 0); ctx.restore()
+                    })
+                    textOverlays.forEach(to => {
+                        ctx.save(); ctx.translate((to.x/100)*canvas.width, (to.y/100)*canvas.height)
+                        if (to.style === 'neon') { ctx.shadowColor = to.color; ctx.shadowBlur = 30*(canvas.height/800) }
+                        ctx.font = `${to.style === 'script' ? 'normal' : 'italic'} 950 ${to.fontSize*(canvas.height/800)}px ${to.fontFamily}`
+                        ctx.textAlign = 'center'; ctx.fillStyle = to.color
+                        ctx.fillText(to.style === 'script' ? to.text : to.text.toUpperCase(), 0, 0); ctx.restore()
+                    })
+                    tagOverlays.forEach(tag => {
+                        const scale = canvas.height / 800
+                        const cx = (tag.x/100)*canvas.width
+                        const cy = (tag.y/100)*canvas.height
+                        const text = `@${tag.username}`
+                        const fs = 14 * scale
+                        ctx.font = `800 ${fs}px Inter, sans-serif`
+                        const tw = ctx.measureText(text).width
+                        const pad = 10 * scale
+                        const bh = (fs + pad * 2)
+                        const bw = tw + pad * 2 + (tag.avatarUrl ? bh + 4*scale : 0)
+                        ctx.save()
+                        ctx.fillStyle = 'rgba(0,0,0,0.65)'
+                        ctx.beginPath()
+                        if (ctx.roundRect) {
+                            ctx.roundRect(cx - bw/2, cy - bh/2, bw, bh, bh/2)
+                        } else {
+                            ctx.rect(cx - bw/2, cy - bh/2, bw, bh)
+                        }
+                        ctx.fill()
+                        ctx.fillStyle = '#ffffff'
+                        ctx.textAlign = 'right'
+                        ctx.fillText(text, cx + bw/2 - pad, cy + fs*0.35)
+                        ctx.restore()
+                    })
+                    if (recorder.state === 'recording') requestAnimationFrame(renderLoop)
                 }
-                setSaveProgress(Math.min(99, Math.round(((video.currentTime - trimRange.start) / durationToRecord) * 100)))
-                ctx.filter = computedFilter
-                ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-                ctx.filter = 'none'
-                if (adjustments.vignette > 0) {
-                    const g = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.height*0.3, canvas.width/2, canvas.height/2, canvas.height*0.9)
-                    g.addColorStop(0, 'rgba(0,0,0,0)')
-                    g.addColorStop(1, `rgba(0,0,0,${adjustments.vignette/100})`)
-                    ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height)
-                }
-                imageOverlays.forEach(img => {
-                    const el = new Image(); el.src = img.src
-                    ctx.drawImage(el, (img.x/100)*canvas.width - img.width/2, (img.y/100)*canvas.height - img.height/2, img.width, img.height)
-                })
-                stickerOverlays.forEach(so => {
-                    ctx.save(); ctx.translate((so.x/100)*canvas.width, (so.y/100)*canvas.height)
-                    ctx.font = `${so.size*(canvas.height/800)}px Arial`; ctx.textAlign = 'center'
-                    ctx.fillText(so.emoji, 0, 0); ctx.restore()
-                })
-                textOverlays.forEach(to => {
-                    ctx.save(); ctx.translate((to.x/100)*canvas.width, (to.y/100)*canvas.height)
-                    if (to.style === 'neon') { ctx.shadowColor = to.color; ctx.shadowBlur = 30*(canvas.height/800) }
-                    ctx.font = `${to.style === 'script' ? 'normal' : 'italic'} 950 ${to.fontSize*(canvas.height/800)}px ${to.fontFamily}`
-                    ctx.textAlign = 'center'; ctx.fillStyle = to.color
-                    ctx.fillText(to.style === 'script' ? to.text : to.text.toUpperCase(), 0, 0); ctx.restore()
-                })
-                tagOverlays.forEach(tag => {
-                    const scale = canvas.height / 800
-                    const cx = (tag.x/100)*canvas.width
-                    const cy = (tag.y/100)*canvas.height
-                    const text = `@${tag.username}`
-                    const fs = 14 * scale
-                    ctx.font = `800 ${fs}px Inter, sans-serif`
-                    const tw = ctx.measureText(text).width
-                    const pad = 10 * scale
-                    const bh = (fs + pad * 2)
-                    const bw = tw + pad * 2 + (tag.avatarUrl ? bh + 4*scale : 0)
-                    ctx.save()
-                    ctx.fillStyle = 'rgba(0,0,0,0.65)'
-                    ctx.beginPath()
-                    ctx.roundRect(cx - bw/2, cy - bh/2, bw, bh, bh/2)
-                    ctx.fill()
-                    ctx.fillStyle = '#ffffff'
-                    ctx.textAlign = 'right'
-                    ctx.fillText(text, cx + bw/2 - pad, cy + fs*0.35)
-                    ctx.restore()
-                })
-                if (recorder.state === 'recording') requestAnimationFrame(renderLoop)
-            }
             renderLoop()
         } catch (err) {
             console.error('Video export failed, uploading original:', err)
@@ -649,8 +665,15 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                         ref={videoRef} src={videoUrl||undefined}
                         className="w-full h-full object-cover"
                         style={{ filter: computedFilter, transform: `scale(${videoScale}) translate(${videoPan.x / videoScale}px, ${videoPan.y / videoScale}px)`, transformOrigin: 'center center', willChange: 'transform' }}
-                        playsInline loop autoPlay muted={isMuted}
-                        onLoadedMetadata={e => setVideoDuration(e.currentTarget.duration)}
+                        playsInline loop autoPlay muted={isMuted} preload="metadata"
+                        onLoadedMetadata={e => {
+                            const d = e.currentTarget.duration
+                            if (d && !isNaN(d) && isFinite(d)) setVideoDuration(d)
+                        }}
+                        onDurationChange={e => {
+                            const d = e.currentTarget.duration
+                            if (d && !isNaN(d) && isFinite(d)) setVideoDuration(d)
+                        }}
                     />
 
                     {/* Vignette */}
@@ -891,7 +914,9 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                     <motion.div initial={{y:250}} animate={{y:0}} exit={{y:250}} className="absolute bottom-0 left-0 right-0 z-[600] bg-black pt-5 pb-16 border-t border-white/10 pointer-events-auto px-5">
                         <div className="flex justify-between items-end mb-4">
                             <span className="text-[9px] font-black italic uppercase tracking-[0.4em] text-white/30">RECORTE</span>
-                            <span className="text-2xl font-black italic text-brand-red">{(trimRange.end - trimRange.start).toFixed(1)}s</span>
+                            <span className="text-2xl font-black italic text-brand-red">
+                                {isFinite(trimRange.end - trimRange.start) ? (trimRange.end - trimRange.start).toFixed(1) : '0.0'}s
+                            </span>
                         </div>
                         {/* Trim bar — touch events managed via non-passive useEffect */}
                         {videoDuration === 0 ? (
@@ -933,8 +958,8 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                         </div>
                         )}
                         <div className="flex justify-between mt-2 px-1">
-                            <span className="text-[9px] text-white/30 font-bold">{trimRange.start.toFixed(1)}s</span>
-                            <span className="text-[9px] text-white/30 font-bold">{trimRange.end.toFixed(1)}s</span>
+                            <span className="text-[9px] text-white/30 font-bold">{isFinite(trimRange.start) ? trimRange.start.toFixed(1) : '0.0'}s</span>
+                            <span className="text-[9px] text-white/30 font-bold">{isFinite(trimRange.end) ? trimRange.end.toFixed(1) : '0.0'}s</span>
                         </div>
                         <button onClick={() => setActiveTool('none')} className="w-full mt-4 py-4 bg-white/5 text-white/40 font-black uppercase text-[10px] rounded-full">LISTO</button>
                     </motion.div>

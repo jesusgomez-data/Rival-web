@@ -1,17 +1,17 @@
 'use client'
 
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import ChatList from './ChatList'
 import ChatWindow from './ChatWindow'
 import NewChatModal from './NewChatModal'
 import { getConversations, getMessages, sendMessage, getOrCreateConversation, getFriendsToChat, deleteMessage, editMessage, uploadChatImage, toggleMessageLike, deleteConversation, markConversationAsRead } from './actions'
 import { Loader2 } from 'lucide-react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { clsx } from 'clsx'
 import { Suspense } from 'react'
 import { usePresence } from '../PresenceContext'
-import { useLanguage } from '@/app/LanguageContext'
+
 
 export default function MessagesPage() {
     return (
@@ -23,7 +23,6 @@ export default function MessagesPage() {
 
 function MessagesContent() {
     const searchParams = useSearchParams()
-    const router = useRouter()
     const targetUserId = searchParams.get('userId')
 
     const [conversations, setConversations] = useState<any[]>([])
@@ -73,7 +72,7 @@ function MessagesContent() {
             setIsMobileListVisible(true);
             await loadConversations();
         } else {
-            alert(`Error: ${result.error}`);
+            console.error('Error deleting conversation:', result.error)
         }
     }
 
@@ -269,7 +268,7 @@ function MessagesContent() {
 
         if (result.error) {
             setMessages(prev => prev.filter(m => m.id !== tempId))
-            alert(`Error al enviar: ${result.error}`)
+            console.error('Error sending message:', result.error)
         } else {
             // Reemplazar mensaje temporal con el real de forma segura
             setMessages(prev => {
@@ -292,7 +291,7 @@ function MessagesContent() {
             const person = friends.find(f => f.id === userId)
             handleSelectConversation(result.conversationId, person || { full_name: 'Nuevo Rival' })
         } else {
-            alert(`Error: ${result.error}`)
+            console.error('Error creating conversation:', result.error)
         }
     }
 
@@ -342,6 +341,7 @@ function MessagesContent() {
                     messages={messages}
                     otherPerson={otherPerson}
                     currentUserId={currentUserId}
+                    conversationId={activeConversationId}
                     onSendMessage={handleSendMessage}
                     onUploadImage={uploadChatImage}
                     onDeleteMessage={deleteMessage}
