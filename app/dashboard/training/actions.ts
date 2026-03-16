@@ -6,9 +6,15 @@ import { redirect } from 'next/navigation'
 
 async function calculateWorkoutStreak(supabase: any, userId: string) {
     // Fetch unified history (independent and classes)
-    const { data: workouts } = await supabase.from('workouts').select('created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(100);
-    const { data: classResults } = await supabase.from('class_results').select('date_performed').eq('user_id', userId).order('date_performed', { ascending: false }).limit(100);
-    const { data: checkins } = await supabase.from('daily_checkins').select('checkin_date').eq('user_id', userId).order('checkin_date', { ascending: false }).limit(100);
+    const [
+        { data: workouts },
+        { data: classResults },
+        { data: checkins }
+    ] = await Promise.all([
+        supabase.from('workouts').select('created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(100),
+        supabase.from('class_results').select('date_performed').eq('user_id', userId).order('date_performed', { ascending: false }).limit(100),
+        supabase.from('daily_checkins').select('checkin_date').eq('user_id', userId).order('checkin_date', { ascending: false }).limit(100)
+    ]);
 
     const allDates = [
         ...(workouts || []).map((w: any) => new Date(w.created_at).toISOString().split('T')[0]),
@@ -58,50 +64,38 @@ export async function getMissions() {
     const currentWeekStart = getMonday();
     const weekStartDate = new Date(currentWeekStart);
 
-    // 1. Get all active missions
-    const { data: missions, error: missionsError } = await supabase
-        .from('missions')
-        .select('*')
+    // 1-4. Batch all history and mission queries in parallel
+    const [
+        { data: missions, error: missionsError },
+        { data: userMissions, error: progressError },
+        { data: workoutsThisWeek },
+        { data: classesThisWeek },
+        realStreak
+    ] = await Promise.all([
+        supabase.from('missions').select('*'),
+        supabase.from('user_missions').select('*').eq('user_id', user.id).eq('week_start', currentWeekStart),
+        supabase.from('workouts').select('total_volume_kg, created_at').eq('user_id', user.id).gte('created_at', weekStartDate.toISOString()),
+        supabase.from('class_results').select('date_performed').eq('user_id', user.id).gte('date_performed', weekStartDate.toISOString()),
+        calculateWorkoutStreak(supabase, user.id)
+    ]);
 
-    if (missionsError) {
+    if (missionsError || !missions) {
         console.error('Error fetching missions:', missionsError)
         return []
     }
-
-    // 2. Get user's progress for this week
-    const { data: userMissions, error: progressError } = await supabase
-        .from('user_missions')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('week_start', currentWeekStart)
 
     if (progressError) {
         console.error('Error fetching user progress:', progressError)
     }
 
-    // 3. ACTUAL SYNC: Calculate real sessions and volume for this week to fix any sync issues
-    const { data: workoutsThisWeek } = await supabase
-        .from('workouts')
-        .select('total_volume_kg, created_at')
-        .eq('user_id', user.id)
-        .gte('created_at', weekStartDate.toISOString());
-
-    const { data: classesThisWeek } = await supabase
-        .from('class_results')
-        .select('date_performed')
-        .eq('user_id', user.id)
-        .gte('date_performed', weekStartDate.toISOString());
-
-    const realSessionsCount = (workoutsThisWeek?.length || 0) + (classesThisWeek?.length || 0);
-    const realTotalVolume = (workoutsThisWeek || []).reduce((acc: number, w: any) => acc + (Number(w.total_volume_kg) || 0), 0);
-
-    // 4. Calculate dynamic streak
-    const realStreak = await calculateWorkoutStreak(supabase, user.id);
-
     // 5. Merge and update missions
     const finalMissions = []
     const missionsToUpsert = []
     const xpUpdates = []
+
+    // 3. ACTUAL SYNC: Calculate real sessions and volume for this week to fix any sync issues
+    const realSessionsCount = (workoutsThisWeek?.length || 0) + (classesThisWeek?.length || 0);
+    const realTotalVolume = (workoutsThisWeek || []).reduce((acc: number, w: any) => acc + (Number(w.total_volume_kg) || 0), 0);
 
     for (const mission of missions) {
         const progress = userMissions?.find(um => um.mission_id === mission.id)

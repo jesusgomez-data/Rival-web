@@ -50,31 +50,33 @@ async function calculateDuelScores(duel: any) {
         const endDateTime = new Date(duel.end_date);
         endDateTime.setHours(23, 59, 59, 999);
 
-        // 1. Fetch Regular Workouts
-        const { data: workouts } = await supabase
-            .from('workouts')
-            .select('id, total_volume_kg, duration_seconds, metrics')
-            .eq('user_id', userId)
-            .gte('start_time', duel.start_date)
-            .lte('start_time', endDateTime.toISOString());
-
-        // 2. Fetch Class Results (WODs Arena)
-        const { data: classResults } = await supabase
-            .from('class_results')
-            .select('data, date_performed')
-            .eq('user_id', userId)
-            .gte('date_performed', duel.start_date)
-            .lte('date_performed', endDateTime.toISOString());
-
-        // 3. Fetch Manual Posts (WOD/PR from feed not linked to workouts)
-        const { data: manualPosts } = await supabase
-            .from('posts')
-            .select('id, media_type, workout_id')
-            .eq('user_id', userId)
-            .in('media_type', ['wod', 'pr'])
-            .is('workout_id', null)
-            .gte('created_at', duel.start_date)
-            .lte('created_at', endDateTime.toISOString());
+        // Run all three queries in parallel
+        const [
+            { data: workouts },
+            { data: classResults },
+            { data: manualPosts }
+        ] = await Promise.all([
+            supabase
+                .from('workouts')
+                .select('id, total_volume_kg, duration_seconds, metrics')
+                .eq('user_id', userId)
+                .gte('start_time', duel.start_date)
+                .lte('start_time', endDateTime.toISOString()),
+            supabase
+                .from('class_results')
+                .select('data, date_performed')
+                .eq('user_id', userId)
+                .gte('date_performed', duel.start_date)
+                .lte('date_performed', endDateTime.toISOString()),
+            supabase
+                .from('posts')
+                .select('id, media_type, workout_id')
+                .eq('user_id', userId)
+                .in('media_type', ['wod', 'pr'])
+                .is('workout_id', null)
+                .gte('created_at', duel.start_date)
+                .lte('created_at', endDateTime.toISOString())
+        ]);
 
         let totalScore = 0;
 
@@ -144,8 +146,13 @@ async function calculateDuelScores(duel: any) {
         return totalScore;
     };
 
-    const challengerScore = Math.floor(await getUserScore(duel.challenger_id));
-    const opponentScore = Math.floor(await getUserScore(duel.opponent_id));
+    const [challengerScoreRaw, opponentScoreRaw] = await Promise.all([
+        getUserScore(duel.challenger_id),
+        getUserScore(duel.opponent_id)
+    ]);
+
+    const challengerScore = Math.floor(challengerScoreRaw);
+    const opponentScore = Math.floor(opponentScoreRaw);
 
     return { challengerScore, opponentScore };
 }
@@ -193,11 +200,13 @@ export async function getMyDuels() {
             opponent:opponent_id (username, full_name, avatar_url)
         `)
         .or(`challenger_id.eq.${user.id},opponent_id.eq.${user.id}`)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(10); // Limit to 10 most recent duels to speed up dashboard
 
     const duelsWithScores = await Promise.all((data || []).map(async (duel: any) => {
-        // Only calculate for active or completed, or just active to show progress
-        if (duel.status !== 'pending') {
+        // Only calculate scores for ACTIVE duels. Pending have 0, Completed should be finalized.
+        // This avoids heavy re-calculation of years-old duels every single load.
+        if (duel.status === 'active') {
             const { challengerScore, opponentScore } = await calculateDuelScores(duel);
 
             // --- AUTO CLOSE EXPIRED DUELS ---

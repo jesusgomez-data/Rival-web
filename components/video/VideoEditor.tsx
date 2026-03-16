@@ -163,6 +163,10 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const exportCanvasRef = useRef<HTMLCanvasElement>(null)
     const musicRef        = useRef<HTMLAudioElement>(null)
     const imageInputRef   = useRef<HTMLInputElement>(null)
+    const audioCtxRef     = useRef<AudioContext | null>(null)
+    const videoSourceRef  = useRef<MediaElementAudioSourceNode | null>(null)
+    const musicSourceRef  = useRef<MediaElementAudioSourceNode | null>(null)
+    const audioDestRef    = useRef<MediaStreamAudioDestinationNode | null>(null)
     // Tracks grab offset so element doesn't jump on drag start
     const dragState       = useRef<{ id: string|null; ox: number; oy: number }>({ id: null, ox: 0, oy: 0 })
     // Trim handle drag state
@@ -184,7 +188,11 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
         setMounted(true)
         const url = URL.createObjectURL(videoFile)
         setVideoUrl(url)
-        return () => { URL.revokeObjectURL(url); setMounted(false) }
+        return () => { 
+            URL.revokeObjectURL(url)
+            setMounted(false) 
+            if (audioCtxRef.current) audioCtxRef.current.close()
+        }
     }, [videoFile])
 
     useEffect(() => {
@@ -387,7 +395,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
         const captureStreamFn = (canvas as any).captureStream || (canvas as any).webkitCaptureStream
         const MIME_TYPES = ['video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm', 'video/mp4']
         const supportedMime = typeof MediaRecorder !== 'undefined'
-            ? MIME_TYPES.find(t => MediaRecorder.isTypeSupported(t))
+            ? MIME_TYPES.find(t => MediaRecorder.isTypeSupported(t)) || null
             : null
 
         if (!captureStreamFn || !supportedMime) {
@@ -402,39 +410,87 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
             const video = exportVideoRef.current
             const ctx   = canvas.getContext('2d')!
             canvas.width = video.videoWidth; canvas.height = video.videoHeight
-            const stream   = captureStreamFn.call(canvas, 30) as MediaStream
-            const recorder = new MediaRecorder(stream, { mimeType: supportedMime, videoBitsPerSecond: 8000000 })
+
+            // --- AUDIO MIXING ---
+            if (!audioCtxRef.current) {
+                const AudioContextClass = (window as any).AudioContext || (window as any).webkitAudioContext
+                const ctx = new AudioContextClass()
+                audioCtxRef.current = ctx
+                audioDestRef.current = ctx.createMediaStreamDestination()
+            }
+            const audioCtx = audioCtxRef.current!
+            const dest = audioDestRef.current!
+            
+            if (!videoSourceRef.current && video) {
+                videoSourceRef.current = audioCtx.createMediaElementSource(video)
+                videoSourceRef.current.connect(dest)
+                videoSourceRef.current.connect(audioCtx.destination) // Connect to speakers so we can hear progress
+            }
+            
+            if (selectedTrack && musicRef.current && !musicSourceRef.current) {
+                musicSourceRef.current = audioCtx.createMediaElementSource(musicRef.current)
+                musicSourceRef.current.connect(dest)
+                musicSourceRef.current.connect(audioCtx.destination)
+            }
+
+            const canvasStream = captureStreamFn.call(canvas, 30) as MediaStream
+            const combinedStream = new MediaStream([
+                ...canvasStream.getVideoTracks(),
+                ...dest.stream.getAudioTracks()
+            ])
+
+            const recorder = new MediaRecorder(combinedStream, { mimeType: supportedMime, videoBitsPerSecond: 8000000 })
             const chunks: Blob[] = []
             recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data) }
+            
             recorder.onstop = () => {
                 const blob = new Blob(chunks, { type: supportedMime })
                 const ext  = supportedMime.includes('mp4') ? 'mp4' : 'webm'
                 onSave(new File([blob], `rival_video.${ext}`, { type: supportedMime }), durationToRecord)
                 setIsSaving(false)
             }
+            
             recorder.onerror = () => {
-                // Recorder failed mid-way — fall back to original file
                 onSave(videoFile, durationToRecord)
                 setIsSaving(false)
             }
 
             video.playbackRate = playbackSpeed
             video.currentTime  = trimRange.start
+            video.muted = false // MUST BE UNMUTED for capture
+            video.volume = 1.0
+            
+            if (musicRef.current) {
+                musicRef.current.currentTime = 0
+                musicRef.current.playbackRate = playbackSpeed
+                musicRef.current.volume = 1.0
+            }
+
             await new Promise(r => { video.onseeked = r })
-            video.play(); recorder.start(100) // collect data every 100ms
+            
+            if (audioCtx.state === 'suspended') await audioCtx.resume()
+            
+            video.play()
+            if (musicRef.current) musicRef.current.play()
+            
+            recorder.start(1000) // Collect data every 1s to prevent memory issues and "stuck" frames
 
             // Safety timeout: if export takes more than 3× the video duration, abort
             const timeoutId = setTimeout(() => {
                 if (recorder.state === 'recording') {
                     recorder.stop()
                     video.pause()
+                    if (musicRef.current) musicRef.current.pause()
                 }
             }, durationToRecord * 3000 + 10000)
 
             const renderLoop = () => {
                 if (video.currentTime >= trimRange.end || video.ended) {
                     clearTimeout(timeoutId)
-                    recorder.stop(); video.pause(); return
+                    if (recorder.state === 'recording') recorder.stop()
+                    video.pause()
+                    if (musicRef.current) musicRef.current.pause()
+                    return
                 }
                 setSaveProgress(Math.min(99, Math.round(((video.currentTime - trimRange.start) / durationToRecord) * 100)))
                 ctx.filter = computedFilter

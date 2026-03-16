@@ -257,6 +257,7 @@ export async function getActiveStories() {
             `)
             .gt('expires_at', now)
             .order('created_at', { ascending: false })
+            .limit(50); // Limit to 50 active stories to prevent 13s loading issues
 
         if (error) {
             console.error("Error fetching stories:", error)
