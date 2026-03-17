@@ -414,7 +414,18 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
         try {
             const video = exportVideoRef.current
             const ctx   = canvas.getContext('2d')!
-            canvas.width = video.videoWidth; canvas.height = video.videoHeight
+            
+            // Limit resolution for better export performance (cap at 1080p)
+            const MAX_RES = 1080
+            let w = video.videoWidth
+            let h = video.videoHeight
+            if (w > MAX_RES || h > MAX_RES) {
+                const ratio = Math.min(MAX_RES / w, MAX_RES / h)
+                w = Math.round(w * ratio)
+                h = Math.round(h * ratio)
+            }
+            canvas.width = w
+            canvas.height = h
 
             // --- AUDIO MIXING ---
             if (!audioCtxRef.current) {

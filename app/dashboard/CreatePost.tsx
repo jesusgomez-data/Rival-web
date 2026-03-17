@@ -180,7 +180,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
             } else {
                 if (editingPostId) {
                     // editing a standard post
-                    res = await updatePost(editingPostId, content, mediaUrl || undefined);
+                    res = await updatePost(editingPostId, content, mediaUrl || undefined, undefined, mediaType || undefined);
                 } else {
                     formData.append("content", content);
                     if (mediaUrl) {

@@ -280,45 +280,66 @@ export default function DashboardHome() {
 
     // Memoized feed fetcher: reuses cached user, skips follows query on global tab
     const fetchFeed = useCallback(async () => {
+        const user = data.currentUser || currentUserRef.current;
+        if (!user) {
+            console.log("[fetchFeed] No user yet, skipping...");
+            return;
+        }
+
         try {
-            const user = currentUserRef.current;
-            if (!user) return;
-
             setFeedLoading(true);
+            console.log(`[fetchFeed] Fetching for tab: ${activeTab}, User: ${user.id}`);
 
-            // Narrowed profiles select: only fields used by FeedPost (saves ~70% profile payload)
+            // Reduced select for better performance and reliability
             let query = supabase
                 .from('posts')
-                .select('*, profiles:user_id(id, username, full_name, avatar_url, level, is_official), workouts:workout_id(*, metrics, workout_sets(*)), likes:likes(user_id)')
+                .select(`
+                    *,
+                    profiles:user_id (id, username, full_name, avatar_url, level, is_official),
+                    workouts:workout_id (*, workout_sets(*)),
+                    likes (user_id)
+                `)
                 .order('created_at', { ascending: false })
                 .limit(20);
 
             if (activeTab === 'following') {
-                // Only fetch follows+officials when filtering is needed
+                // Fetch follows and official accounts
                 const [{ data: myFollows }, { data: officialProfiles }] = await Promise.all([
                     supabase.from('follows').select('following_id').eq('follower_id', user.id),
                     supabase.from('profiles').select('id').eq('is_official', true),
                 ]);
-                const followedIds = new Set(myFollows?.map((f: { following_id: string }) => f.following_id) || []);
-                const officialIds = officialProfiles?.map((p: { id: string }) => p.id) || [];
-                const idsToFetch = Array.from(new Set([...Array.from(followedIds), user.id, ...officialIds]));
+
+                const followedIds = myFollows?.map((f: any) => f.following_id) || [];
+                const officialIds = officialProfiles?.map((p: any) => p.id) || [];
+                
+                // Ensure unique IDs, including current user
+                const idsToFetch = Array.from(new Set([user.id, ...followedIds, ...officialIds])).filter(Boolean);
+                
+                console.log(`[fetchFeed] Following IDs count (with self): ${idsToFetch.length}`);
                 query = query.in('user_id', idsToFetch);
             }
-            // Global tab: no follows query — posts query starts immediately
 
-            const { data: posts } = await query;
+            const { data: posts, error } = await query;
+            
+            if (error) {
+                console.error("[fetchFeed] Query error:", error);
+            }
+
+            console.log(`[fetchFeed] Received ${posts?.length || 0} posts`);
             setData((prev: any) => ({ ...prev, feedPosts: posts || [] }));
         } catch (e) {
-            console.error("Error fetching feed:", e);
+            console.error("[fetchFeed] Catch error:", e);
         } finally {
             setFeedLoading(false);
         }
-    }, [supabase, activeTab]);
+    }, [supabase, activeTab, data.currentUser?.id]);
 
-    // Trigger feed fetch whenever the tab changes or a refresh is requested
+    // Trigger feed fetch whenever the tab changes, a refresh is requested, or the user is ready
     useEffect(() => {
-        fetchFeed();
-    }, [fetchFeed, refreshKey]);
+        if (data.currentUser) {
+            fetchFeed();
+        }
+    }, [fetchFeed, refreshKey, data.currentUser?.id]);
 
     // Scroll to post if hash is present
     useEffect(() => {

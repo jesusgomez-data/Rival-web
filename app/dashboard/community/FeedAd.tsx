@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
@@ -10,7 +10,42 @@ import { cn } from '@/lib/utils';
 export default function FeedAd({ tier }: { tier: string }) {
     const [ad, setAd] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [isVisible, setIsVisible] = useState(false);
+    const adRef = useRef<HTMLDivElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
     const supabase = createClient();
+
+    // Intersection Observer
+    useEffect(() => {
+        if (!adRef.current) return;
+        const observer = new IntersectionObserver(([entry]) => {
+            setIsVisible(entry.isIntersecting);
+        }, { threshold: 0.5 });
+        observer.observe(adRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    // Page Visibility
+    useEffect(() => {
+        const handleVisibility = () => {
+            if (document.hidden) {
+                videoRef.current?.pause();
+            } else if (isVisible) {
+                videoRef.current?.play().catch(() => { });
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => document.removeEventListener('visibilitychange', handleVisibility);
+    }, [isVisible]);
+
+    // Internal Visibility
+    useEffect(() => {
+        if (isVisible) {
+            videoRef.current?.play().catch(() => { });
+        } else {
+            videoRef.current?.pause();
+        }
+    }, [isVisible]);
 
     useEffect(() => {
         if (tier !== 'free') {
@@ -41,7 +76,7 @@ export default function FeedAd({ tier }: { tier: string }) {
     if (tier !== 'free' || loading || !ad) return null;
 
     return (
-        <div className="bg-brand-gray border border-white/5 rounded-3xl overflow-hidden mb-8 group animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <div className="bg-brand-gray border border-white/5 rounded-3xl overflow-hidden mb-8 group animate-in fade-in slide-in-from-bottom-4 duration-700" ref={adRef}>
             <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-brand-red/20 flex items-center justify-center text-brand-red">
@@ -61,9 +96,10 @@ export default function FeedAd({ tier }: { tier: string }) {
             <div className="relative aspect-video w-full overflow-hidden">
                 {ad.image_url?.match(/\.(mp4|webm|mov|ogg)$/i) ? (
                     <video
+                        ref={videoRef}
                         src={ad.image_url}
                         autoPlay
-                        muted
+                        muted={!isVisible || (typeof document !== 'undefined' && document.hidden)}
                         loop
                         playsInline
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-1000"

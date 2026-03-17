@@ -176,6 +176,21 @@ function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: bo
     const [showHeart, setShowHeart] = useState(false);
 
     useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden && videoRef.current) {
+                videoRef.current.pause();
+                setIsPlaying(false);
+            } else if (!document.hidden && isActive && videoRef.current) {
+                videoRef.current.play().catch(() => { });
+                setIsPlaying(true);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [isActive]);
+
+    useEffect(() => {
         if (isActive && videoRef.current) {
             videoRef.current.play().catch(e => console.error("Auto-play failed", e));
             setIsPlaying(true);
@@ -233,6 +248,7 @@ function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: bo
                 className="h-full w-full object-contain cursor-pointer"
                 loop
                 playsInline
+                muted={!isActive || (typeof document !== 'undefined' && document.hidden)}
                 onClick={handleTap}
             />
 

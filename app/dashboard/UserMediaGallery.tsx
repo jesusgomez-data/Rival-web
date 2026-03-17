@@ -12,6 +12,18 @@ export default function UserMediaGallery({ userId, limit }: { userId: string, li
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
     useEffect(() => {
+        const handleVisibilityChange = () => {
+            const videos = document.querySelectorAll('video');
+            if (document.hidden) {
+                videos.forEach(v => v.pause());
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    }, []);
+
+    useEffect(() => {
         if (userId) {
             getUserMedia(userId).then((data) => {
                 // Filter out class_result or JSON strings immediately

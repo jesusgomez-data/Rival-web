@@ -121,8 +121,8 @@ export default function CommunityPage({
                     .order('created_at', { ascending: false });
 
                 if (activeTab === 'following' && !query) {
-                    // Include followed users AND official accounts
-                    const idsToFetch = [...Array.from(followedIds), ...officialIds];
+                    // Include followed users, official accounts AND the current user themselves
+                    const idsToFetch = [user.id, ...Array.from(followedIds), ...officialIds];
 
                     if (idsToFetch.length > 0) {
                         postsQuery = postsQuery.in('user_id', idsToFetch);

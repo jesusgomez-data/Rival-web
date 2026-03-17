@@ -540,7 +540,7 @@ export async function deleteComment(commentId: string) {
     return { success: true }
 }
 
-export async function updatePost(postId: string, newCaption: string, mediaUrl?: string, scheduledFor?: string) {
+export async function updatePost(postId: string, newCaption: string, mediaUrl?: string, scheduledFor?: string, mediaType?: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
@@ -551,6 +551,7 @@ export async function updatePost(postId: string, newCaption: string, mediaUrl?: 
     const updateData: any = { caption: newCaption };
     if (mediaUrl) {
         updateData.media_url = mediaUrl;
+        if (mediaType) updateData.media_type = mediaType;
         
         // If it's a JSON string that looks like WOD data, also update wod_data column
         try {

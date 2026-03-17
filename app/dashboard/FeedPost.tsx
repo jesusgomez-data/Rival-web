@@ -227,6 +227,49 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const [hasCompletedWod, setHasCompletedWod] = useState(false);
     const [manualOriginalId, setManualOriginalId] = useState<string | null>(null);
     const [isMuted, setIsMuted] = useState(true);
+    const [isVisible, setIsVisible] = useState(false);
+    const postRef = useRef<HTMLDivElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    // Intersection Observer to detect if post is in view
+    useEffect(() => {
+        if (!postRef.current) return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                setIsVisible(entry.isIntersecting);
+            },
+            { threshold: 0.5 } // 50% of the post must be visible
+        );
+
+        observer.observe(postRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    // Handle Page Visibility (app in background)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden && videoRef.current) {
+                videoRef.current.pause();
+            } else if (!document.hidden && isVisible && videoRef.current) {
+                videoRef.current.play().catch(() => {});
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [isVisible]);
+
+    // Apply mute/play status based on visibility
+    useEffect(() => {
+        if (!videoRef.current) return;
+
+        if (isVisible) {
+            videoRef.current.play().catch(() => {});
+        } else {
+            videoRef.current.pause();
+        }
+    }, [isVisible]);
 
     // Parse wod_data if it's a string
     const parsedWodData = useMemo(() => {
@@ -555,6 +598,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
     return (
         <div
+            ref={postRef}
             id={`post-${postId}`}
             className={clsx(
                 "md:border md:rounded-2xl overflow-hidden transition-all mb-4 md:mb-6",
@@ -983,12 +1027,13 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 {isVideo ? (
                                     <div className="relative w-full h-full">
                                         <video
+                                            ref={videoRef}
                                             src={image}
                                             className="w-full h-full object-cover"
                                             autoPlay
                                             loop
                                             playsInline
-                                            muted={isMuted}
+                                            muted={isMuted || !isVisible || (typeof document !== 'undefined' && document.hidden)}
                                             preload="auto"
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20 pointer-events-none" />

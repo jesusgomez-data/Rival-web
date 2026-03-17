@@ -134,6 +134,23 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
         }
     }, [refreshStories])
 
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                setIsPaused(true);
+                if (audioRef.current) audioRef.current.pause();
+                if (storyVideoRef.current) storyVideoRef.current.pause();
+            } else if (selectedUserIndex !== null && !showViewers && !previewUrl) {
+                // Return to normal state only if a story viewer is open
+                setIsPaused(false);
+                if (storyVideoRef.current) storyVideoRef.current.play().catch(() => {});
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [selectedUserIndex, showViewers, previewUrl]);
+
     // Specific effect to handle the 'trigger-story-open' so it has access to current userStories
     useEffect(() => {
         const handleTrigger = (e: any) => {

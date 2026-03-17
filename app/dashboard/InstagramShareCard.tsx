@@ -56,8 +56,13 @@ export default function InstagramShareCard({ user, avatar, username, content, on
         try {
             // Give extra time for images to load if needed
             const blob = await toBlob(cardRef.current, {
-                pixelRatio: 2,
+                pixelRatio: 3, // High quality for shares
                 quality: 1,
+                width: 360,
+                height: 640,
+                style: {
+                    transform: 'scale(1)',
+                }
             });
 
             if (!blob) throw new Error('Failed to generate image');
@@ -109,7 +114,7 @@ export default function InstagramShareCard({ user, avatar, username, content, on
 
                     <div
                         ref={cardRef}
-                        className="w-[360px] h-[640px] bg-black relative overflow-hidden flex flex-col items-center justify-between p-10 font-sans"
+                        className="w-[360px] h-[640px] bg-black relative overflow-hidden flex flex-col items-center justify-between py-10 px-6 font-sans"
                         style={{
                             backgroundImage: 'radial-gradient(circle at center, #1a1a1a 0%, #000000 100%)',
                         }}
@@ -119,7 +124,7 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                         <div className="absolute bottom-0 left-0 w-64 h-64 bg-brand-red/10 blur-[100px] -ml-32 -mb-32" />
 
                         {/* Branding Header */}
-                        <div className="relative z-10 flex flex-col items-center gap-6 pt-4">
+                        <div className="relative z-10 flex flex-col items-center gap-3">
                             <div className="flex flex-col items-center gap-2">
                                 <div className="flex items-center gap-3">
                                     <span className="text-white font-black text-5xl tracking-tighter italic drop-shadow-lg">RIVAL</span>
@@ -141,7 +146,7 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                         </div>
 
                         {/* Content Specifics */}
-                        <div className="w-full bg-white/5 border border-white/10 rounded-[32px] p-6 backdrop-blur-xl shadow-2xl relative overflow-hidden">
+                        <div className="w-full bg-white/5 border border-white/10 rounded-[32px] p-5 backdrop-blur-xl shadow-2xl relative overflow-hidden">
                             <div className="absolute top-0 right-0 p-4 opacity-10">
                                 <Flame className="w-16 h-16 text-brand-red" />
                             </div>
@@ -201,7 +206,7 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                         </div>
 
                         {/* Footer */}
-                        <div className="relative z-10 flex flex-col items-center gap-4">
+                        <div className="relative z-10 flex flex-col items-center gap-2">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-white/5 border border-white/10 rounded-xl">
                                     <Trophy className="w-5 h-5 text-brand-red" />

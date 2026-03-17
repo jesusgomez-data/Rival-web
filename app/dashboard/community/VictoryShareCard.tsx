@@ -202,7 +202,7 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
                         <div className="absolute inset-0 opacity-[0.03] invert" style={{ backgroundImage: 'url("https://www.transparenttextures.com/patterns/carbon-fibre.png")' }} />
                     </div>
 
-                    <div className="relative z-10 h-full flex flex-col p-8 items-center text-center">
+                    <div className="relative z-10 h-full flex flex-col py-8 px-6 items-center text-center">
                         {/* Header */}
                         <div className="mt-4 mb-2">
                             <div className="bg-brand-red text-white py-1 px-4 rounded-full text-[10px] font-black uppercase tracking-[0.4em] mb-4 inline-block shadow-glow">
@@ -215,7 +215,7 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
                         </div>
 
                         {/* Versus Visual */}
-                        <div className="flex-1 w-full flex items-center justify-center gap-4 my-8">
+                        <div className="flex-1 w-full flex items-center justify-center gap-4 my-4">
                             {/* Winner Side */}
                             <div className="flex-1 flex flex-col items-center">
                                 <div className="relative mb-4">
@@ -267,7 +267,7 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
                         </div>
 
                         {/* Branding Footer */}
-                        <div className="mt-auto mb-4 w-full pt-8 border-t border-white/5 flex flex-col items-center">
+                        <div className="mt-auto mb-2 w-full pt-4 border-t border-white/5 flex flex-col items-center">
                             <div className="flex items-center gap-2 mb-2">
                                 <div className="bg-brand-red w-4 h-4 rounded-sm flex items-center justify-center">
                                     <Swords className="w-2.5 h-2.5 text-white" />

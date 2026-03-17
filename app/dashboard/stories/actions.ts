@@ -233,6 +233,8 @@ export async function getActiveStories() {
         const now = new Date().toISOString()
 
         // Fetch active stories (not expired)
+        // Optimization: Only fetch IDs for likes/views to reduce payload. 
+        // Viewer profiles are only needed for the owner and will be fetched separately if needed.
         const { data, error } = await supabase
             .from('stories')
             .select(`
@@ -245,19 +247,11 @@ export async function getActiveStories() {
                     is_official
                 ),
                 story_likes (user_id),
-                story_views (
-                    created_at,
-                    profiles:user_id (
-                        id, 
-                        username, 
-                        full_name, 
-                        avatar_url
-                    )
-                )
+                story_views (user_id, created_at)
             `)
             .gt('expires_at', now)
             .order('created_at', { ascending: false })
-            .limit(50); // Limit to 50 active stories to prevent 13s loading issues
+            .limit(50);
 
         if (error) {
             console.error("Error fetching stories:", error)
@@ -286,12 +280,11 @@ export async function getActiveStories() {
                 music_artist: story.music_artist || (story.metadata as any)?.music?.artist || null,
                 likes_count: story.story_likes?.length || 0,
                 has_liked: story.story_likes?.some((l: any) => l.user_id === user?.id),
-                has_seen: story.story_views?.some((v: any) => (v.user_id === user?.id) || (v.profiles?.id === user?.id)),
+                has_seen: story.story_views?.some((v: any) => v.user_id === user?.id),
                 views_count: story.story_views?.length || 0,
-                viewer_details: showDetails ? (story.story_views || []).map((v: any) => ({
-                    created_at: v.created_at,
-                    profiles: v.profiles
-                })) : []
+                // Viewer details removed from main bar query to save 90% bandwidth.
+                // We'll fetch them on demand or as simple IDs.
+                viewer_details: []
             }
 
             groupedStories[userId].stories.push(enhancedStory)

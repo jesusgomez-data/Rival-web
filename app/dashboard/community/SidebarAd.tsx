@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
@@ -9,7 +9,42 @@ import { ExternalLink, Megaphone } from 'lucide-react';
 export default function SidebarAd({ tier }: { tier: string }) {
     const [ad, setAd] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [isVisible, setIsVisible] = useState(false);
+    const adRef = useRef<HTMLDivElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
     const supabase = createClient();
+
+    // Intersection Observer
+    useEffect(() => {
+        if (!adRef.current) return;
+        const observer = new IntersectionObserver(([entry]) => {
+            setIsVisible(entry.isIntersecting);
+        }, { threshold: 0.5 });
+        observer.observe(adRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    // Page Visibility
+    useEffect(() => {
+        const handleVisibility = () => {
+            if (document.hidden) {
+                videoRef.current?.pause();
+            } else if (isVisible) {
+                videoRef.current?.play().catch(() => { });
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => document.removeEventListener('visibilitychange', handleVisibility);
+    }, [isVisible]);
+
+    // Internal Visibility
+    useEffect(() => {
+        if (isVisible) {
+            videoRef.current?.play().catch(() => { });
+        } else {
+            videoRef.current?.pause();
+        }
+    }, [isVisible]);
 
     useEffect(() => {
         if (tier !== 'free') {
@@ -61,13 +96,14 @@ export default function SidebarAd({ tier }: { tier: string }) {
     const isInternalLink = ad.link_url?.startsWith('/') || ad.link_url?.includes('rival');
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-1000">
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-1000" ref={adRef}>
             <div className="bg-brand-gray border border-white/5 rounded-3xl p-1 relative overflow-hidden aspect-[4/5] group shadow-2xl">
                 {ad.image_url?.match(/\.(mp4|webm|mov|ogg)$/i) ? (
                     <video
+                        ref={videoRef}
                         src={ad.image_url}
                         autoPlay
-                        muted
+                        muted={!isVisible || (typeof document !== 'undefined' && document.hidden)}
                         loop
                         playsInline
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"

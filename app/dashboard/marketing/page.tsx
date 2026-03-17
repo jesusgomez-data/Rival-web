@@ -94,7 +94,12 @@ export default function MarketingStudio() {
         try {
             const blob = await toBlob(postRef.current, {
                 quality: 1,
-                pixelRatio: 2,
+                pixelRatio: 3, // Increased for better quality
+                width: 500,
+                height: 500,
+                style: {
+                    transform: 'scale(1)',
+                }
             });
             if (blob) {
                 const url = URL.createObjectURL(blob);
@@ -152,7 +157,7 @@ export default function MarketingStudio() {
                         <div
                             ref={postRef}
                             className={clsx(
-                                "w-[500px] h-[500px] mx-auto relative overflow-hidden flex flex-col items-center justify-center p-12 select-none shadow-2xl",
+                                "w-[500px] h-[500px] mx-auto relative overflow-hidden flex flex-col items-center justify-between py-10 px-10 select-none shadow-2xl",
                                 currentPost.bg
                             )}
                         >
@@ -177,22 +182,22 @@ export default function MarketingStudio() {
                             <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#fff 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
 
                             {/* Official Logo */}
-                            <div className="relative z-20 mb-12 flex flex-col items-center">
+                            <div className="relative z-20 flex flex-col items-center">
                                 <img
                                     src="/logo_transparent.svg"
                                     alt="Rival Fit Official Logo"
-                                    className="w-24 h-24 object-contain filter drop-shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                                    className="w-20 h-20 object-contain filter drop-shadow-[0_0_20px_rgba(220,38,38,0.3)]"
                                 />
-                                <div className="mt-2 text-center">
-                                    <span className="text-lg font-black tracking-[0.2em] text-white italic uppercase">RIVAL FIT</span>
+                                <div className="mt-1 text-center">
+                                    <span className="text-base font-black tracking-[0.2em] text-white italic uppercase">RIVAL FIT</span>
                                 </div>
                             </div>
 
                             {/* Content based on template */}
                             {currentPost.id === 'metrics_premium' ? (
-                                <div className="relative z-20 w-full px-8 space-y-8">
+                                <div className="relative z-20 w-full px-4 space-y-4">
                                     {/* Simulated Metric Card */}
-                                    <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-[32px] p-8 shadow-2xl transform rotate-1 scale-105">
+                                    <div className="bg-black/60 backdrop-blur-xl border border-white/10 rounded-[32px] p-6 shadow-2xl transform rotate-1">
                                         <div className="flex justify-between items-start mb-6">
                                             <div>
                                                 <p className="text-[10px] font-black text-brand-red uppercase tracking-[0.2em] mb-1">Métrica Destacada</p>
@@ -218,7 +223,7 @@ export default function MarketingStudio() {
                                         </div>
                                     </div>
 
-                                    <div className="text-center space-y-4 pt-8">
+                                    <div className="text-center space-y-2 pt-2">
                                         <h3 className="text-4xl font-black italic uppercase leading-none tracking-tighter text-white">
                                             CADA SEGUNDO <span className="text-brand-red">CUENTA.</span>
                                         </h3>
@@ -228,9 +233,9 @@ export default function MarketingStudio() {
                                     </div>
                                 </div>
                             ) : currentPost.id === 'management_pro' ? (
-                                <div className="relative z-20 w-full px-8 space-y-8">
+                                <div className="relative z-20 w-full px-4 space-y-6">
                                     {/* Simulated Management Dashboard Snippet */}
-                                    <div className="bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[32px] p-8 shadow-2xl">
+                                    <div className="bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[32px] p-6 shadow-2xl">
                                         <div className="flex items-center justify-between mb-8">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-full bg-brand-red flex items-center justify-center">
@@ -272,7 +277,7 @@ export default function MarketingStudio() {
                                     </div>
                                 </div>
                             ) : currentPost.id === 'athlete_card' ? (
-                                <div className="relative z-20 w-full px-6 space-y-5">
+                                <div className="relative z-20 w-full px-6 space-y-2">
                                     {/* Mock Athlete Card */}
                                     <div className="mx-auto w-48 bg-gradient-to-b from-[#7f1d1d] to-[#1a0505] rounded-3xl p-4 border border-red-900/50 shadow-[0_0_40px_rgba(220,38,38,0.3)] transform -rotate-1">
                                         <div className="flex justify-between items-start mb-2">
@@ -310,7 +315,7 @@ export default function MarketingStudio() {
                                     </div>
                                 </div>
                             ) : currentPost.id === 'nutrition' ? (
-                                <div className="relative z-20 w-full px-6 space-y-5">
+                                <div className="relative z-20 w-full px-6 space-y-3">
                                     {/* Mock Nutrition UI */}
                                     <div className="bg-black/60 border border-green-900/40 rounded-3xl p-5 shadow-[0_0_30px_rgba(34,197,94,0.1)]">
                                         <div className="flex justify-between items-center mb-4">
@@ -346,7 +351,7 @@ export default function MarketingStudio() {
                                     </div>
                                 </div>
                             ) : currentPost.id === 'recovery' ? (
-                                <div className="relative z-20 w-full px-6 space-y-5">
+                                <div className="relative z-20 w-full px-6 space-y-3">
                                     {/* Mock Recovery Score UI */}
                                     <div className="bg-black/60 border border-purple-900/40 rounded-3xl p-5 shadow-[0_0_30px_rgba(139,92,246,0.15)]">
                                         <p className="text-[8px] font-black text-purple-400 uppercase tracking-widest mb-3">Daily Check-in · Hoy</p>
@@ -377,7 +382,7 @@ export default function MarketingStudio() {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="relative z-20 text-center space-y-6 max-w-[80%]">
+                                <div className="relative z-20 text-center space-y-4 max-w-[80%]">
                                     <h3 className="text-5xl font-black italic uppercase leading-[0.85] tracking-tighter text-white">
                                         {currentPost.headline.split('.').map((part, i) => (
                                             <span key={i} className="block last:text-brand-red">
@@ -399,9 +404,9 @@ export default function MarketingStudio() {
                             )}
 
                             {/* Footer */}
-                            <div className="absolute bottom-10 left-0 w-full px-12 flex justify-between items-center z-20 opacity-60">
-                                <span className="text-[8px] font-black tracking-[0.5em] text-gray-500 uppercase">JOIN THE ARENA</span>
-                                <span className="text-[8px] font-black tracking-[0.2em] text-white uppercase italic">RIVALFIT.APP</span>
+                            <div className="relative w-full px-12 flex justify-between items-center z-20 opacity-60 text-white/50">
+                                <span className="text-[7px] font-black tracking-[0.4em] uppercase">JOIN THE ARENA</span>
+                                <span className="text-[7px] font-black tracking-[0.15em] uppercase italic">RIVALFIT.APP</span>
                             </div>
 
                             {/* Corner Accents */}

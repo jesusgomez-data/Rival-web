@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import clsx from "clsx";
 import { MessageCircle, Heart, Share2, MoreHorizontal, Send, Trash2, X, Building2, Dumbbell, Zap, Flame, TrendingUp, ChevronDown, Plus, Play, Clock, ArrowRight } from "lucide-react";
 import { toggleCenterPostLike, addCenterPostComment, getCenterPostComments, deletePost, deleteCenterPostComment } from "./feed-actions";
@@ -22,6 +22,51 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
     const [isMounted, setIsMounted] = useState(false);
     const [expandedBlocks, setExpandedBlocks] = useState<Record<string, boolean>>({});
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+    const [isVisible, setIsVisible] = useState(false);
+    const postRef = useRef<HTMLDivElement>(null);
+    const videoRef = useRef<HTMLVideoElement>(null);
+
+    // Intersection Observer to detect if post is in view
+    useEffect(() => {
+        if (!postRef.current) return;
+
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                setIsVisible(entry.isIntersecting);
+            },
+            { threshold: 0.5 } // 50% of the post must be visible
+        );
+
+        observer.observe(postRef.current);
+        return () => observer.disconnect();
+    }, []);
+
+    // Handle Page Visibility (app in background)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                // When app goes to background, pause video
+                if (videoRef.current) videoRef.current.pause();
+            } else {
+                // When app comes to foreground, play if visible
+                if (isVisible && videoRef.current) {
+                    videoRef.current.play().catch(() => { });
+                }
+            }
+        };
+
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    }, [isVisible]);
+
+    // Handle play/pause based on visibility
+    useEffect(() => {
+        if (isVisible) {
+            videoRef.current?.play().catch(() => { });
+        } else {
+            videoRef.current?.pause();
+        }
+    }, [isVisible]);
 
     useEffect(() => {
         setIsMounted(true);
@@ -106,7 +151,7 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
     }
 
     return (
-        <div className="bg-card border border-border rounded-2xl overflow-hidden mb-8 animate-fade-in shadow-lg">
+        <div className="bg-card border border-border rounded-2xl overflow-hidden mb-8 animate-fade-in shadow-lg" ref={postRef}>
             {/* Header */}
             <div className="p-4 flex items-center justify-between border-b border-border bg-muted/20">
                 <div className="flex items-center gap-3">
@@ -211,10 +256,11 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                         {/\.(mp4|webm|ogg|mov)$/i.test(post.image_urls[0]) ? (
                             <div className="relative w-full h-full">
                                 <video
+                                    ref={videoRef}
                                     src={post.image_urls[0]}
                                     className="w-full max-h-[600px] object-contain bg-black"
                                     autoPlay
-                                    muted
+                                    muted={!isVisible || (typeof document !== 'undefined' && document.hidden)}
                                     loop
                                     playsInline
                                     preload="auto"
