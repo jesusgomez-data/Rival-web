@@ -55,17 +55,14 @@ export default function NotificationBell() {
                 .on(
                     'postgres_changes',
                     {
-                        event: 'INSERT',
+                        event: '*',
                         schema: 'public',
                         table: 'notifications',
+                        filter: `user_id=eq.${user.id}`
                     },
                     (payload: any) => {
-                        console.log(`[NotificationBell] ¡Nueva señal detectada en el radar!`, payload);
-                        if (payload.new.user_id === user.id) {
-                            // Instant sound first, then load data
-                            // playNotificationSound(); // Disabled constant sound as per user request
-                            loadNotifications();
-                        }
+                        console.log(`[NotificationBell] Cambio detectado en señales:`, payload);
+                        loadNotifications();
                     }
                 )
                 .subscribe((status: string) => {
@@ -161,10 +158,13 @@ export default function NotificationBell() {
                                             "p-4 border-b border-border hover:bg-muted transition-all cursor-pointer relative group",
                                             !n.is_read ? "bg-brand-red/[0.05]" : ""
                                         )}
-                                        onClick={() => {
-                                            if (!n.is_read) handleMarkAsRead(n.id);
+                                        onClick={async () => {
+                                            if (!n.is_read) await handleMarkAsRead(n.id);
                                             setIsOpen(false);
-                                            if (n.link) router.push(n.link);
+                                            if (n.link) {
+                                                // If it's a post link, we can go directly to the detail page
+                                                router.push(n.link);
+                                            }
                                         }}
                                     >
                                         <div className="flex gap-4">

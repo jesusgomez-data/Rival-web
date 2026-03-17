@@ -266,8 +266,8 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                                     preload="auto"
                                 />
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/10 group-hover:bg-transparent transition-colors">
-                                    <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-glow">
-                                        <Play className="w-5 h-5 text-white fill-white ml-1 opacity-50" />
+                                    <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-glow keep-all">
+                                        <Play className="w-5 h-5 text-white fill-white ml-1 opacity-50 keep-white" />
                                     </div>
                                 </div>
                             </div>

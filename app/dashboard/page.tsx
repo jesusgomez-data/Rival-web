@@ -60,12 +60,12 @@ function StatCard({ label, value, subtext, icon }: { label: string, value: strin
     return (
         <div className="bg-brand-gray/40 border border-border/10 p-3 md:p-6 rounded-[24px] backdrop-blur-md hover:border-brand-red/40 hover:bg-brand-gray/60 transition-all group cursor-pointer h-full flex flex-col justify-between overflow-hidden">
             <div className="flex items-center justify-between mb-2 md:mb-4 gap-2">
-                <div className="text-foreground/60 text-[8px] md:text-[10px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] truncate flex-1">{label}</div>
+                <div className="text-foreground/60 text-[8px] md:text-[10px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] flex-1">{label}</div>
                 <div className="p-1.5 md:p-2 bg-foreground/5 rounded-lg group-hover:scale-110 group-hover:bg-brand-red/20 transition-all shrink-0">{icon}</div>
             </div>
             <div>
                 <div className={`text-xl md:text-3xl font-heading font-black text-foreground italic tracking-tighter truncate`}>{value}</div>
-                <div className="text-foreground/40 text-[8px] md:text-[10px] font-bold uppercase tracking-widest mt-1 group-hover:text-foreground/80 transition-opacity truncate">{subtext}</div>
+                <div className="text-foreground/40 text-[8px] md:text-[10px] font-bold uppercase tracking-widest mt-1 group-hover:text-foreground/80 transition-opacity">{subtext}</div>
             </div>
         </div>
     )

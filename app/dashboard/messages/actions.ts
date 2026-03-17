@@ -39,20 +39,33 @@ export async function getConversations() {
                 .neq('user_id', user.id)
                 .maybeSingle()
 
-            // Contar mensajes no leídos de forma directa y real
-            const { count: unreadCount } = await supabase
+            // Buscar el último mensaje real para saber quién lo envió
+            const { data: lastMsg } = await supabase
                 .from('messages')
-                .select('id', { count: 'exact', head: true })
+                .select('sender_id, created_at')
                 .eq('conversation_id', p.conversation_id)
-                .neq('sender_id', user.id)
-                .gt('created_at', p.last_read_at || '1900-01-01')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+
+            // Cálculo ROBUSTO de no leídos por diferencia de tiempo
+            const lastMsgAt = lastMsg?.created_at || conv.last_message_at || conv.updated_at
+            const lastReadAt = p.last_read_at
+            let isUnread = false
+
+            // Solo es unread si el último mensaje NO es mío
+            if (lastMsgAt && lastMsg && lastMsg.sender_id !== user.id) {
+                if (!lastReadAt || new Date(lastMsgAt).getTime() > new Date(lastReadAt).getTime()) {
+                    isUnread = true
+                }
+            }
 
             return {
                 id: conv.id,
                 last_message_text: conv.last_message_text,
-                last_message_at: conv.last_message_at || conv.updated_at,
+                last_message_at: lastMsgAt,
                 other_person: otherParts?.profiles || { full_name: 'Usuario Rival', username: 'rival' },
-                unread_count: (unreadCount || 0) > 0 ? 1 : 0
+                unread_count: isUnread ? 1 : 0
             }
         }))
 
@@ -76,27 +89,46 @@ export async function getUnreadMessageCount() {
 
     const { data: participations } = await supabase
         .from('conversation_participants')
-        .select('conversation_id, last_read_at, conversations(last_message_at, last_message_text)')
+        .select(`
+            conversation_id,
+            last_read_at,
+            conversations (
+                id,
+                last_message_at,
+                updated_at
+            )
+        `)
         .eq('user_id', user.id)
 
     if (!participations) return 0
 
-    const unreadConvs = new Set<string>()
+    let unreadCount = 0
+    for (const p of participations) {
+        const conv = p.conversations as any
+        if (!conv) continue
 
-    await Promise.all(participations.map(async (p: any) => {
-        const { count } = await supabase
-            .from('messages')
-            .select('id', { count: 'exact', head: true })
-            .eq('conversation_id', p.conversation_id)
-            .neq('sender_id', user.id)
-            .gt('created_at', p.last_read_at || '1900-01-01')
+        const lastMsgAt = conv.last_message_at || conv.updated_at
+        const lastReadAt = p.last_read_at
 
-        if (count && count > 0) {
-            unreadConvs.add(p.conversation_id)
+        if (lastMsgAt) {
+            // Verificar quién envió el último mensaje
+            const { data: lastMsg } = await supabase
+                .from('messages')
+                .select('sender_id')
+                .eq('conversation_id', (p as any).conversation_id || (p as any).conversations?.id)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+
+            if (lastMsg && lastMsg.sender_id !== user.id) {
+                if (!lastReadAt || new Date(lastMsgAt).getTime() > new Date(lastReadAt).getTime()) {
+                    unreadCount++
+                }
+            }
         }
-    }))
+    }
 
-    return unreadConvs.size
+    return unreadCount
 }
 
 export async function getMessages(conversationId: string) {
@@ -129,9 +161,14 @@ export async function markConversationAsRead(conversationId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
 
+    // Use a date slightly in the future (5s) to ensure we cover any millisecond precision issues in DB
+    const futureDate = new Date();
+    futureDate.setSeconds(futureDate.getSeconds() + 5);
+    const futureIso = futureDate.toISOString();
+
     const { error } = await supabase
         .from('conversation_participants')
-        .update({ last_read_at: new Date().toISOString() })
+        .update({ last_read_at: futureIso })
         .eq('conversation_id', conversationId)
         .eq('user_id', user.id)
 

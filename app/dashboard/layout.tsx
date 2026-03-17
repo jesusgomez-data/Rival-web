@@ -42,6 +42,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import PendingReviewPrompt from "./PendingReviewPrompt";
 import SupportModal from "./gyms/SupportModal";
 import AnalyticsTracker from "./admin/AnalyticsTracker";
+import { playNotificationSound } from "@/app/utils/audio";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -56,9 +57,14 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showBottomNav, setShowBottomNav] = useState(true);
     const lastScrollY = useRef(0);
+    const pathnameRef = useRef(pathname);
     const { userStories, openStory } = useStories();
     // useMemo ensures we reuse the singleton client, not create a new one on re-render
     const supabase = useMemo(() => createClient(), []);
+
+    useEffect(() => {
+        pathnameRef.current = pathname;
+    }, [pathname]);
 
     // Hide bottom nav on scroll down, show on scroll up
     // FIX: use useRef for lastScrollY so the effect is stable (no re-registration on each scroll)
@@ -99,6 +105,11 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
                     const unread = await getUnreadMessageCount();
                     if (isMounted) setUnreadMessages(unread);
+
+                    // Ask for notification permissions globally
+                    if (typeof Notification !== 'undefined' && Notification.permission === "default") {
+                        Notification.requestPermission();
+                    }
                 }
             } catch (err) {
                 console.error('loadProfile error:', err);
@@ -130,53 +141,55 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             if (!user || !isMounted) return;
 
             channel = supabase
-                .channel('global-chat-notifications')
+                .channel(`notifs:${user.id}`)
                 .on(
                     'postgres_changes',
                     {
                         event: 'INSERT',
                         schema: 'public',
-                        table: 'messages'
+                        table: 'notifications'
                     },
-                    (payload: { new: Record<string, string> }) => {
-                        const newMessage = payload.new;
-                        if (newMessage.sender_id !== user.id) {
-                            supabase
-                                .from('conversation_participants')
-                                .select('id')
-                                .eq('conversation_id', newMessage.conversation_id)
-                                .eq('user_id', user.id)
-                                .maybeSingle()
-                                .then(({ data: isMyConversation }: { data: { id: string } | null }) => {
-                                    if (isMyConversation) {
-                                        import("@/app/utils/audio").then(m => m.playNotificationSound());
-                                        getUnreadMessageCount().then(count => {
-                                            if (isMounted) setUnreadMessages(count);
-                                        });
-                                        if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
-                                            new Notification("Rival: Nuevo Mensaje", {
-                                                body: newMessage.text || "📷 Imagen",
-                                                icon: "/logo.svg",
-                                                tag: newMessage.conversation_id
-                                            });
-                                        }
-                                    }
+                    (payload: any) => {
+                        const newNotif = payload.new;
+                        // Manual filtering for reliability
+                        if (newNotif.user_id === user.id && newNotif.type === 'message') {
+                            playNotificationSound();
+                            
+                            // Only refresh count and show browser notif if NOT in messages tab
+                            if (!pathnameRef.current?.startsWith('/dashboard/messages')) {
+                                getUnreadMessageCount().then(count => {
+                                    if (isMounted) setUnreadMessages(count);
                                 });
+
+                                if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
+                                    new Notification("Rival Fit", {
+                                        body: newNotif.content || "Nuevo mensaje recibido",
+                                        icon: "/logo.svg",
+                                        tag: newNotif.link || 'messages'
+                                    });
+                                }
+                            }
                         }
                     }
                 )
                 .on(
                     'postgres_changes',
                     {
-                        event: 'UPDATE',
+                        event: '*',
                         schema: 'public',
                         table: 'conversation_participants',
                         filter: `user_id=eq.${user.id}`
                     },
                     () => {
-                        // When user marks messages as read in ANY tab, refresh count
+                        // Refresh count on any change (read messages, new message, etc)
                         getUnreadMessageCount().then(count => {
-                            if (isMounted) setUnreadMessages(count);
+                            if (!isMounted) return;
+                            // Use Ref for current pathname to avoid stale closures
+                            if (pathnameRef.current?.startsWith('/dashboard/messages')) {
+                                setUnreadMessages(0);
+                            } else {
+                                setUnreadMessages(count);
+                            }
                         });
                     }
                 )
@@ -192,7 +205,11 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         if (isMounted) setProfile(payload.new);
                     }
                 )
-                .subscribe();
+                .subscribe((status: string) => {
+                    if (status !== 'SUBSCRIBED') {
+                        console.warn(`[Realtime] Subscription status for notifications (${user.id}): ${status}`);
+                    }
+                });
 
         };
 
@@ -363,15 +380,17 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             <main className={clsx("flex-1 min-h-screen relative bg-background w-full overflow-x-hidden transition-all duration-300", showSidebar && "lg:ml-64")}>
                 {/* Mobile Header Bar */}
                 {showMobileNav && (
-                    <div className="lg:hidden h-20 border-b border-border flex items-center justify-between px-6 sticky top-0 bg-background/95 backdrop-blur-xl z-[200]">
+                    <div className="lg:hidden flex flex-col sticky top-0 bg-background z-[200]">
+                        <div className="h-[env(safe-area-inset-top)] w-full bg-background" />
+                        <div className="h-20 flex items-center justify-between px-6">
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
                                 <Image src="/logo.svg" alt="Rival Logo" width={28} height={28} className="w-7 h-7" />
-                                <span className="font-heading font-bold text-xl text-white uppercase italic tracking-tight">RIVAL</span>
+                                <span className="font-heading font-bold text-xl text-foreground uppercase italic tracking-tight">RIVAL</span>
                             </div>
 
                             {/* Icons moved next to logo */}
-                            <div className="flex items-center gap-1 ml-2 border-l border-white/10 pl-3">
+                            <div className="flex items-center gap-1 ml-2 pl-3">
                                 <ThemeToggle className="bg-transparent border-none p-1.5" />
                                 <NotificationBell />
                             </div>
@@ -393,7 +412,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                             </button>
 
                             <Link href="/dashboard/profile" className="ml-2 relative shrink-0">
-                                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-white/10">
+                                <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-border">
                                     {profile?.avatar_url ? (
                                         <Image src={profile.avatar_url} alt="Profile" fill className="object-cover rounded-full" />
                                     ) : (
@@ -405,6 +424,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                             </Link>
                         </div>
                     </div>
+                </div>
                 )}
 
                 {/* Mobile Search Overlay */}

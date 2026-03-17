@@ -50,29 +50,56 @@
 }
 
 /* Ensure common color utilities respect the theme, but respect dark containers */
-[data-theme='light'] .text-white:not(.bg-brand-red *):not(.bg-brand-red):not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
-  color: #0f172a !important;
-}
-
 [data-theme='light'] .bg-brand-gray:not(.keep-bg):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
   background-color: #ffffff !important;
   border-color: #e2e8f0 !important;
+  color: #0f172a !important;
 }
 
-[data-theme='light'] .border-white\/5:not(.keep-border):not(.dark-section):not(.dark-section *),
-[data-theme='light'] .border-white\/10:not(.keep-border):not(.dark-section):not(.dark-section *),
-[data-theme='light'] .border-white\/20:not(.keep-border):not(.dark-section):not(.dark-section *) {
-  border-color: #e2e8f0 !important;
+[data-theme='light'] .text-white:not(.bg-brand-red *):not(.bg-brand-red):not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *):not(.text-brand-red),
+[data-theme='light'] .\!text-white:not(.bg-brand-red *):not(.bg-brand-red):not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *):not(.text-brand-red) {
+  color: #0f172a !important;
 }
 
-[data-theme='light'] .bg-black:not(.keep-bg):not(.dark-section):not(.dark-section *),
-[data-theme='light'] .bg-black\/40:not(.keep-bg):not(.dark-section):not(.dark-section *),
-[data-theme='light'] .bg-black\/60:not(.keep-bg):not(.dark-section):not(.dark-section *),
-[data-theme='light'] .bg-white\/5:not(.keep-bg):not(.dark-section):not(.dark-section *),
-[data-theme='light'] .bg-white\/10:not(.keep-bg):not(.dark-section):not(.dark-section *) {
+/* Hardcoded dark backgrounds that should be light in [SOL] mode */
+[data-theme='light'] .bg-\[\#0a0a0a\]:not(.keep-all):not(.keep-all *),
+[data-theme='light'] .bg-\[\#0d0d0d\]:not(.keep-all):not(.keep-all *),
+[data-theme='light'] .bg-\[\#0f0f0f\]:not(.keep-all):not(.keep-all *),
+[data-theme='light'] .bg-\[\#111\]:not(.keep-all):not(.keep-all *),
+[data-theme='light'] .bg-zinc-900:not(.keep-all):not(.keep-all *),
+[data-theme='light'] .bg-zinc-950:not(.keep-all):not(.keep-all *) {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+[data-theme='light'] .border-white\/5:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-white\/10:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-white\/20:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
+  border-color: #cbd5e1 !important; /* Slightly darker for better visibility in light mode */
+}
+
+[data-theme='light'] .stroke-white\/5,
+[data-theme='light'] circle[stroke='rgba(255,255,255,0.05)'] {
+  stroke: rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-theme='light'] .bg-black:not(.keep-bg):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *):not(.z-\[100\]):not(.z-\[200\]):not(.fixed *),
+[data-theme='light'] .bg-black\/40:not(.keep-bg):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
+  background-color: #f1f5f9 !important; /* Muted background in light mode instead of pure white */
+  color: #0f172a !important;
+}
+
+[data-theme='light'] .bg-black\/60,
+[data-theme='light'] .bg-black\/80,
+[data-theme='light'] .bg-black\/90,
+[data-theme='light'] .bg-white\/5,
+[data-theme='light'] .bg-white\/10 {
   background-color: #ffffff !important;
   box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1) !important;
+  color: #0f172a !important;
 }
+
+
 
 [data-theme='light'] .text-gray-50:not(.dark-section):not(.dark-section *),
 [data-theme='light'] .text-gray-100:not(.dark-section):not(.dark-section *),
@@ -81,10 +108,11 @@
 }
 
 [data-theme='light'] .text-gray-300:not(.dark-section):not(.dark-section *),
-[data-theme='light'] .text-gray-400:not(.dark-section):not(.dark-section *) {
+[data-theme='light'] .\!text-gray-300:not(.dark-section):not(.dark-section *) {
   color: #475569 !important; /* Slate-600 */
 }
 
+[data-theme='light'] .text-gray-400:not(.dark-section):not(.dark-section *),
 [data-theme='light'] .text-gray-500:not(.dark-section):not(.dark-section *),
 [data-theme='light'] .text-gray-600:not(.dark-section):not(.dark-section *),
 [data-theme='light'] .text-slate-400:not(.dark-section):not(.dark-section *),
@@ -93,19 +121,20 @@
   color: #64748b !important; /* Slate-500 */
 }
 
-[data-theme='light'] .text-white\/20:not(.dark-section):not(.dark-section *),
-[data-theme='light'] .text-white\/30:not(.dark-section):not(.dark-section *) {
+[data-theme='light'] .text-white\/20:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
+[data-theme='light'] .text-white\/30:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all) {
   color: rgba(15, 23, 42, 0.2) !important;
 }
 
-[data-theme='light'] .text-white\/40:not(.dark-section):not(.dark-section *),
-[data-theme='light'] .text-white\/50:not(.dark-section):not(.dark-section *),
-[data-theme='light'] .text-white\/60:not(.dark-section):not(.dark-section *) {
+[data-theme='light'] .text-white\/40:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
+[data-theme='light'] .text-white\/50:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
+[data-theme='light'] .text-white\/60:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all) {
   color: rgba(15, 23, 42, 0.4) !important;
 }
 
-[data-theme='light'] .text-white\/70:not(.dark-section):not(.dark-section *),
-[data-theme='light'] .text-white\/80:not(.dark-section):not(.dark-section *) {
+[data-theme='light'] .text-white\/70:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
+[data-theme='light'] .text-white\/80:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
+[data-theme='light'] .text-white\/90:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all) {
   color: rgba(15, 23, 42, 0.7) !important;
 }
 
@@ -218,10 +247,15 @@ body {
   0% {
     transform: translateX(100%);
   }
-
   100% {
     transform: translateX(-100%);
   }
+}
+
+body {
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
 }
 
 @keyframes progress-fast {

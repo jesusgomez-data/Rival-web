@@ -9,6 +9,7 @@ import { clsx } from 'clsx'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLanguage } from '@/app/LanguageContext'
 import { usePresence } from '../PresenceContext'
+import { useTheme } from '@/app/ThemeContext'
 
 interface ChatListProps {
     conversations: any[]
@@ -21,6 +22,7 @@ interface ChatListProps {
 export default function ChatList({ conversations, activeId, onSearch, onSelect, onNewChat }: ChatListProps) {
     const { t } = useLanguage()
     const { onlineUsers } = usePresence()
+    const { theme } = useTheme()
 
     return (
         <div className="flex flex-col h-full bg-card">
@@ -76,10 +78,9 @@ export default function ChatList({ conversations, activeId, onSearch, onSelect, 
                                         'w-full flex items-center gap-3 px-3 py-3 rounded-2xl transition-all relative overflow-hidden',
                                         isActive
                                             ? 'bg-muted border border-border/80'
-                                            : 'hover:bg-white/[0.03] border border-transparent'
+                                            : 'hover:bg-foreground/[0.03] border border-transparent text-foreground/70'
                                     )}
                                 >
-                                    {/* Active indicator */}
                                     {isActive && (
                                         <motion.div
                                             layoutId="chat-active"
@@ -114,7 +115,9 @@ export default function ChatList({ conversations, activeId, onSearch, onSelect, 
                                             <h4
                                                 className={clsx(
                                                     'font-bold text-sm truncate leading-none',
-                                                    isActive ? 'text-white font-accent italic' : 'text-foreground/90'
+                                                    isActive 
+                                                        ? (theme === 'dark' ? 'text-white' : 'text-gray-900') + ' font-accent italic' 
+                                                        : 'text-foreground/90'
                                                 )}
                                             >
                                                 {person?.full_name || person?.username}

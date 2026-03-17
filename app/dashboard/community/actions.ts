@@ -172,6 +172,24 @@ async function syncWodCompletion(supabase: any, user: any, postId: string, wodDa
         } else if (scoreType === 'WEIGHT' && scoreStr) {
             completionType = 'weight';
             weightKg = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
+        } else if (scoreType === 'DISTANCE' && scoreStr) {
+            completionType = 'distance';
+            // Simple parsing for KM or M
+            const val = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
+            if (scoreStr.toUpperCase().includes('KM')) score = val; // KM as base score
+            else score = val / 1000; // M converted to KM for standardization
+        } else if (scoreType === 'PACE' && scoreStr) {
+            completionType = 'pace';
+            // Parse MM:SS or float
+            const paceMatch = scoreStr.match(/(\d+):(\d+)/);
+            if (paceMatch) score = parseInt(paceMatch[1]) * 60 + parseInt(paceMatch[2]);
+            else score = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
+        } else if (scoreType === 'WATTS' && scoreStr) {
+            completionType = 'watts';
+            score = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
+        } else if (scoreType === 'CALORIES' && scoreStr) {
+            completionType = 'calories';
+            score = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
         } else if (scoreStr) {
             completionType = 'score';
             score = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;

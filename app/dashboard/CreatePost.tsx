@@ -10,7 +10,7 @@ import Image from "next/image";
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import MusicPicker from "./MusicPicker";
 import { MusicTrack } from "./music-data";
-import WodCreator, { WodBlock, WodSummary } from "@/components/training/WodCreator";
+import WodCreator, { WodBlock, WodSummary, WorkoutCategory } from "@/components/training/WodCreator";
 import { useLanguage } from "@/app/LanguageContext";
 import VideoEditor from "@/components/video/VideoEditor";
 import clsx from "clsx";
@@ -22,7 +22,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const [preview, setPreview] = useState<string | null>(initialData?.media_url || null);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [postType, setPostType] = useState<'standard' | 'pr' | 'wod'>(initialPostType || 'standard');
-    const [wodData, setWodData] = useState<{ title: string, blocks: WodBlock[], summary: WodSummary, originalWodPostId?: string } | null>(
+    const [wodData, setWodData] = useState<{ title: string, blocks: WodBlock[], summary: WodSummary, category?: WorkoutCategory, originalWodPostId?: string } | null>(
         initialPostType === 'wod' && initialData ? initialData : null
     );
     const [originalWodPostId, setOriginalWodPostId] = useState<string | null>(

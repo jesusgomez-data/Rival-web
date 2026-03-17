@@ -8,9 +8,11 @@ import { Send, Loader2, MessageSquarePlus, ImagePlus, ChevronLeft, Trash2, Edit2
 import { clsx } from 'clsx'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLanguage } from '@/app/LanguageContext'
+import { useTheme } from '@/app/ThemeContext'
 import MentionText from '@/components/MentionText'
 import MentionInput from '@/components/MentionInput'
 import { createClient } from '@/utils/supabase/client'
+
 
 const EMOJIS = [
     '😀','😂','🥰','😍','🤣','😊','😎','🥳','🤩','😏',
@@ -20,17 +22,23 @@ const EMOJIS = [
 ]
 
 function DateSeparator({ date }: { date: Date }) {
+    const { theme } = useTheme()
     let label: string
     if (isToday(date)) label = 'Hoy'
     else if (isYesterday(date)) label = 'Ayer'
     else label = format(date, "EEEE d 'de' MMMM", { locale: es })
     return (
         <div className="flex items-center gap-3 my-4 px-2">
-            <div className="flex-1 h-px bg-white/[0.06]" />
-            <span className="text-[9px] text-gray-500 font-black uppercase tracking-widest px-3 py-1 bg-white/[0.04] rounded-full border border-white/[0.06] shrink-0">
+            <div className="flex-1 h-px bg-border/20" />
+            <span className={clsx(
+                "text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border shrink-0",
+                theme === 'dark' 
+                    ? "text-gray-500 bg-white/[0.04] border-white/[0.06]" 
+                    : "text-gray-600 bg-gray-100 border-gray-200"
+            )}>
                 {label}
             </span>
-            <div className="flex-1 h-px bg-white/[0.06]" />
+            <div className="flex-1 h-px bg-border/20" />
         </div>
     )
 }
@@ -69,6 +77,10 @@ export default function ChatWindow({
     otherParticipantLastRead,
 }: ChatWindowProps) {
     const { t } = useLanguage()
+    const { theme } = useTheme()
+    const [search, setSearch] = React.useState('')
+
+
     const scrollRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const typingChannelRef = useRef<any>(null)
@@ -317,7 +329,10 @@ export default function ChatWindow({
     return (
         <div className="flex-1 flex flex-col bg-background relative overflow-hidden h-full">
             {/* ── Header ── */}
-            <header className="px-4 py-3 border-b border-border flex items-center justify-between z-30 bg-card/80 backdrop-blur-xl shadow-sm shrink-0">
+            <header className={clsx(
+                "px-4 py-3 flex items-center justify-between z-30 shrink-0",
+                theme === 'dark' ? "bg-card/80 backdrop-blur-xl border-b border-white/5" : "bg-white border-b border-gray-100"
+            )}>
                 <div className="flex items-center gap-3">
                     {onBack && (
                         <button
@@ -340,11 +355,18 @@ export default function ChatWindow({
                             />
                         </div>
                         {isOnline && (
-                            <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-card rounded-full" />
+                            <div className={clsx(
+                                "absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 rounded-full",
+                                theme === 'dark' ? "border-card" : "border-white"
+                            )} />
                         )}
+
                     </div>
                     <div>
-                        <h4 className="font-heading font-black text-white italic uppercase text-sm leading-none tracking-tight">
+                        <h4 className={clsx(
+                            "font-heading font-black italic uppercase text-sm leading-none tracking-tight",
+                            theme === 'dark' ? "text-white" : "text-gray-900"
+                        )}>
                             {otherPerson.full_name}
                         </h4>
                         <div className="mt-0.5 h-4 flex items-center">
@@ -412,8 +434,11 @@ export default function ChatWindow({
             <div
                 ref={scrollRef}
                 onScroll={handleScroll}
-                className="flex-1 overflow-y-auto px-4 md:px-8 py-4 relative custom-scrollbar"
-                style={{ background: '#070707' }}
+                className={clsx(
+                    "flex-1 overflow-y-auto px-4 md:px-8 py-4 relative custom-scrollbar",
+                    theme === 'dark' ? "bg-[#070707]" : "bg-white"
+                )}
+
             >
                 {/* Subtle doodle BG */}
                 <div
@@ -557,9 +582,11 @@ export default function ChatWindow({
                                                         ? 'rounded-2xl p-1 bg-white/[0.04] border border-white/[0.08]'
                                                         : clsx(
                                                               'px-4 py-2.5 shadow-sm',
-                                                              isMine
-                                                                  ? 'bg-brand-red text-white rounded-[18px]'
-                                                                  : 'bg-[#1E1E1E] border border-white/[0.06] text-foreground rounded-[18px]',
+                                                                    isMine
+                                                                        ? 'bg-brand-red text-white rounded-[18px]'
+                                                                        : (theme === 'dark' 
+                                                                            ? 'bg-[#1E1E1E] border border-white/[0.06] text-foreground rounded-[18px]' 
+                                                                            : 'bg-gray-100 border-none text-gray-900 rounded-[18px]'),
                                                               // Tail on last message
                                                               isLast && isMine && 'rounded-br-[4px]',
                                                               isLast && !isMine && 'rounded-bl-[4px]'
@@ -705,7 +732,8 @@ export default function ChatWindow({
                                                         animate={{ scale: 1 }}
                                                         exit={{ scale: 0 }}
                                                         className={clsx(
-                                                            'mt-0.5 px-1.5 py-0.5 bg-[#1A1A1A] border border-white/[0.06] rounded-full flex items-center gap-0.5',
+                                                            'mt-0.5 px-1.5 py-0.5 rounded-full flex items-center gap-0.5',
+                                                            theme === 'dark' ? 'bg-[#1A1A1A] border border-white/[0.06]' : 'bg-gray-100 border-gray-200',
                                                             isMine ? 'self-end' : 'self-start'
                                                         )}
                                                     >
@@ -877,7 +905,10 @@ export default function ChatWindow({
             {/* ── Input bar ── */}
             <div className="px-4 pb-4 pt-2 bg-background/90 backdrop-blur-md border-t border-border/20 relative z-20 shrink-0">
                 <div className="max-w-4xl mx-auto flex items-end gap-2">
-                    <div className="flex-1 bg-[#181818] rounded-[1.5rem] border border-white/[0.06] focus-within:border-brand-red/25 transition-colors flex items-end px-3 py-2 gap-1.5 shadow-inner">
+                    <div className={clsx(
+                        "flex-1 rounded-[1.5rem] border transition-colors flex items-end px-3 py-2 gap-1.5 shadow-inner",
+                        theme === 'dark' ? "bg-[#181818] border-white/[0.06] focus-within:border-brand-red/25" : "bg-gray-100 border-gray-200 focus-within:border-brand-red/20"
+                    )}>
                         <button
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isUploading}

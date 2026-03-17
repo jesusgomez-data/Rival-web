@@ -808,7 +808,12 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             <Dumbbell className="w-8 h-8 text-brand-red" />
                         </div>
                         <div className="relative z-10">
-                            <h3 className="font-heading font-black italic uppercase text-lg text-white mb-2 leading-none">Entrenamiento Exclusivo</h3>
+                            <h3 className={clsx(
+                                "font-heading font-black italic uppercase text-lg mb-2 leading-none",
+                                theme === 'dark' ? "text-white" : "text-gray-900"
+                            )}>
+                                Entrenamiento Exclusivo
+                            </h3>
                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-[250px] mx-auto">
                                 Este entrenamiento es solo para atletas de este centro. ¡Inscríbete para verlo!
                             </p>
@@ -1044,19 +1049,19 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                 e.stopPropagation(); 
                                                 setIsMuted(!isMuted); 
                                             }}
-                                            className="absolute bottom-4 right-4 z-20 bg-black/40 hover:bg-black/60 backdrop-blur-md p-2.5 rounded-full border border-white/10 transition-all active:scale-90 group/mute"
+                                            className="absolute bottom-4 right-4 z-20 bg-black/40 hover:bg-black/60 backdrop-blur-md p-2.5 rounded-full border border-white/10 transition-all active:scale-90 group/mute keep-all"
                                         >
                                             {isMuted ? (
-                                                <VolumeX className="w-4 h-4 text-white/90 group-hover/mute:text-white" />
+                                                <VolumeX className="w-4 h-4 text-white/90 group-hover/mute:text-white keep-white" />
                                             ) : (
-                                                <Volume2 className="w-4 h-4 text-white/90 group-hover/mute:text-white" />
+                                                <Volume2 className="w-4 h-4 text-white/90 group-hover/mute:text-white keep-white" />
                                             )}
                                         </button>
 
                                         {/* Play/Pause Indicator (Mobile centered feedback) */}
                                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                            <div className="bg-black/50 backdrop-blur-sm p-4 rounded-full">
-                                                <Play className="w-8 h-8 text-white" fill="white" />
+                                            <div className="bg-black/50 backdrop-blur-sm p-4 rounded-full keep-all">
+                                                <Play className="w-8 h-8 text-white keep-white" fill="white" />
                                             </div>
                                         </div>
                                     </div>
@@ -1098,7 +1103,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 },
                                 // BUG FIX: Extract media_url from the workout data if 'image' is a JSON string
                                 media_url: w.media_url || (image && isImageUrl(image) ? image : null),
-                                original_wod_post_id: (w as any).original_wod_post_id || null
+                                original_wod_post_id: (w as any).original_wod_post_id || null,
+                                category: w.category
                             };
 
                             return (
@@ -1412,7 +1418,10 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                         }
                                     }}
                                     placeholder="Escribe un comentario..."
-                                    className="flex-1 bg-black/40 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-brand-red/50"
+                                    className={clsx(
+                                        "flex-1 border rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-brand-red/50",
+                                        theme === 'dark' ? "bg-black/40 border-white/10 text-white" : "bg-gray-100 border-gray-200 text-gray-900"
+                                    )}
                                 />
                                 <button type="submit" disabled={!newComment.trim() || isPostingComment} className="p-2 bg-brand-red text-white rounded-xl hover:bg-red-600 transition-colors shadow-glow">
                                     <Send className="w-4 h-4" />

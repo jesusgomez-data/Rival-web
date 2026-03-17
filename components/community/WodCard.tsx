@@ -15,7 +15,7 @@ import {
     Activity
 } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-import { WodBlock, WodFormat, WodSummary, ExerciseEntry } from "../training/WodCreator";
+import { WodBlock, WodFormat, WodSummary, ExerciseEntry, WorkoutCategory } from "../training/WodCreator";
 import { cn, isImageUrl } from "@/lib/utils";
 import { getWodResults } from "@/app/dashboard/community/actions";
 import Link from "next/link";
@@ -28,6 +28,7 @@ interface WodData {
     blocks: WodBlock[];
     summary: WodSummary;
     media_url?: string | null;
+    category?: WorkoutCategory;
 }
 
 interface WodCardProps {
@@ -51,6 +52,18 @@ const FORMAT_CONFIG: Partial<Record<WodFormat, { label: string, color: string, i
 };
 
 const DEFAULT_CONFIG = { label: 'WOD', color: 'text-green-500', icon: Target };
+
+const CATEGORY_CONFIG: Record<WorkoutCategory, { label: string, color: string, icon: string, gradient: string }> = {
+    'CROSS_TRAINING': { label: 'CROSS TRAINING', color: 'bg-brand-red', icon: '🏋️', gradient: 'from-brand-red to-brand-orange' },
+    'RUNNING': { label: 'RUNNING', color: 'bg-blue-600', icon: '🏃', gradient: 'from-blue-600 to-cyan-500' },
+    'GYM': { label: 'GYM / MUSCLE', color: 'bg-purple-600', icon: '💪', gradient: 'from-purple-600 to-indigo-500' },
+    'OCR': { label: 'OCR / OBSTACLES', color: 'bg-orange-600', icon: '🧗', gradient: 'from-orange-600 to-yellow-500' },
+    'HYROX': { label: 'HYROX', color: 'bg-red-700', icon: '🔥', gradient: 'from-red-700 to-orange-600' },
+    'CYCLING': { label: 'CYCLING', color: 'bg-green-600', icon: '🚴', gradient: 'from-green-600 to-emerald-500' },
+    'SWIMMING': { label: 'SWIMMING', color: 'bg-blue-500', icon: '🏊', gradient: 'from-blue-500 to-blue-300' },
+    'YOGA': { label: 'YOGA / MOBILITY', color: 'bg-teal-500', icon: '🧘', gradient: 'from-teal-500 to-emerald-400' },
+    'BOXING': { label: 'BOXING', color: 'bg-red-800', icon: '🥊', gradient: 'from-red-800 to-red-600' }
+};
 
 export default function WodCard({ data, userName, publishDate, postId, completionsCount = 0, hasCompleted: initialHasCompleted = false }: WodCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -90,12 +103,14 @@ export default function WodCard({ data, userName, publishDate, postId, completio
     return (
         <div className="w-full bg-black/40 border border-white/5 rounded-[32px] overflow-hidden group hover:border-brand-red/30 transition-all shadow-2xl relative">
             {/* Header / Backdrop Image */}
-            <div className="relative h-32 md:h-40 bg-gradient-to-br from-brand-red to-brand-orange overflow-hidden">
+            <div className={cn("relative h-32 md:h-40 overflow-hidden bg-gradient-to-br", CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].gradient)}>
                 {data.media_url ? (
                     <img src={data.media_url} alt="WOD" className="w-full h-full object-cover opacity-60 mix-blend-overlay" />
                 ) : (
-                    <div className="absolute inset-0 flex items-center justify-center opacity-10">
-                        <Dumbbell className="w-40 h-40 -rotate-12" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="text-8xl transform -rotate-12 opacity-30 select-none">
+                            {CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].icon}
+                        </div>
                     </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
@@ -110,7 +125,9 @@ export default function WodCard({ data, userName, publishDate, postId, completio
                 <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                            <span className="bg-brand-red text-white text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded">CROSS TRAINING</span>
+                            <span className={cn("text-white text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded", CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].color)}>
+                                {CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].label}
+                            </span>
                             <span className="text-white/60 text-[8px] font-bold uppercase tracking-widest">{data.blocks.length} BLOQUES</span>
                         </div>
                         <h3 className="text-xl md:text-3xl font-heading font-black italic uppercase tracking-tighter text-white drop-shadow-lg leading-tight truncate">

@@ -6,6 +6,8 @@ import { X, Search, Trophy, Zap, UserPlus, Target } from 'lucide-react'
 import { clsx } from 'clsx'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useLanguage } from '@/app/LanguageContext'
+import { useTheme } from '@/app/ThemeContext'
+
 
 interface NewChatModalProps {
     friends: any[]
@@ -15,7 +17,9 @@ interface NewChatModalProps {
 
 export default function NewChatModal({ friends, onClose, onSelect }: NewChatModalProps) {
     const { t } = useLanguage()
+    const { theme } = useTheme()
     const [search, setSearch] = React.useState('')
+
 
     const filteredFriends = friends.filter(f =>
         f.full_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -109,9 +113,13 @@ export default function NewChatModal({ friends, onClose, onSelect }: NewChatModa
                                                 className="object-cover"
                                             />
                                         </div>
-                                        <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-brand-red border-[4px] border-[#0a0a0c] rounded-full flex items-center justify-center shadow-lg">
+                                        <div className={clsx(
+                                            "absolute -bottom-1 -right-1 w-5 h-5 bg-brand-red border-[4px] rounded-full flex items-center justify-center shadow-lg",
+                                            theme === 'dark' ? "border-[#0a0a0c]" : "border-white"
+                                        )}>
                                             <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                                         </div>
+
                                     </div>
                                     <div className="text-left flex-1 min-w-0">
                                         <p className="font-accent font-bold text-lg text-foreground italic uppercase tracking-tighter leading-none mb-1 group-hover:text-brand-red transition-colors">
@@ -129,10 +137,14 @@ export default function NewChatModal({ friends, onClose, onSelect }: NewChatModa
                 </div>
 
                 {/* Secure Footer */}
-                <footer className="p-8 bg-black/40 border-t border-white/[0.05] flex items-center justify-center gap-3">
+                <footer className={clsx(
+                    "p-8 border-t flex items-center justify-center gap-3",
+                    theme === 'dark' ? "bg-black/40 border-white/[0.05]" : "bg-gray-50 border-gray-100"
+                )}>
                     <Trophy className="w-4 h-4 text-brand-red/50" />
                     <p className="text-[9px] text-gray-700 font-black uppercase tracking-[0.3em]">{t.chat.onlyFollowed}</p>
                 </footer>
+
             </motion.div>
         </div>
     )

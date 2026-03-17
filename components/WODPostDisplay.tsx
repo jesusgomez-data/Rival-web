@@ -8,9 +8,15 @@
 import { useState } from "react";
 import { Clock, Zap, Trophy, Target, ChevronDown, ChevronUp } from "lucide-react";
 import type { GeneratedWOD } from "@/lib/wod-generator";
+import { WorkoutCategory } from "./training/WodCreator";
+import { cn } from "@/lib/utils";
+
+interface ExtendedWOD extends GeneratedWOD {
+  category?: WorkoutCategory;
+}
 
 interface WODPostDisplayProps {
-  wod: GeneratedWOD;
+  wod: ExtendedWOD;
   compact?: boolean;
 }
 
@@ -40,12 +46,26 @@ export default function WODPostDisplay({ wod, compact = false }: WODPostDisplayP
     cooldown: "🧘",
   };
 
+  const CATEGORY_STYLES: Record<WorkoutCategory, { color: string, icon: string, gradient: string }> = {
+    'CROSS_TRAINING': { color: 'border-brand-red/30', icon: '🏋️', gradient: 'from-brand-red/20 to-orange-600/20' },
+    'RUNNING': { color: 'border-blue-600/30', icon: '🏃', gradient: 'from-blue-600/20 to-cyan-500/20' },
+    'GYM': { color: 'border-purple-600/30', icon: '💪', gradient: 'from-purple-600/20 to-indigo-500/20' },
+    'OCR': { color: 'border-orange-600/30', icon: '🧗', gradient: 'from-orange-600/20 to-yellow-500/20' },
+    'HYROX': { color: 'border-red-700/30', icon: '🔥', gradient: 'from-red-700/20 to-orange-600/20' },
+    'CYCLING': { color: 'border-green-600/30', icon: '🚴', gradient: 'from-green-600/20 to-emerald-500/20' },
+    'SWIMMING': { color: 'border-blue-500/30', icon: '🏊', gradient: 'from-blue-500/20 to-blue-300/20' },
+    'YOGA': { color: 'border-teal-500/30', icon: '🧘', gradient: 'from-teal-500/20 to-emerald-400/20' },
+    'BOXING': { color: 'border-red-800/30', icon: '🥊', gradient: 'from-red-800/20 to-red-600/20' }
+  };
+
+  const currentStyle = CATEGORY_STYLES[wod.category || 'CROSS_TRAINING'];
+
   return (
     <div className="w-full bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-brand-red/20 to-orange-600/20 border-b border-brand-red/30 p-6">
+      <div className={cn("border-b p-6", currentStyle.gradient, currentStyle.color)}>
         <div className="flex items-start gap-3 mb-4">
-          <div className="text-3xl">💪</div>
+          <div className="text-3xl">{currentStyle.icon}</div>
           <div className="flex-1">
             <h3 className="text-2xl font-black text-white mb-1 uppercase tracking-tight">
               {wod.title}

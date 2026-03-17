@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { getExercises, addNewExercise } from "@/app/dashboard/training/actions";
 
 export type WodFormat = 'AMRAP' | 'FOR TIME' | 'EMOM' | 'TABATA' | 'INTERVALS' | 'DEATH BY' | 'ROUNDS FOR TIME' | '21-15-9' | 'FUERZA' | 'LIBRE';
+export type WorkoutCategory = 'CROSS_TRAINING' | 'RUNNING' | 'GYM' | 'OCR' | 'HYROX' | 'CYCLING' | 'SWIMMING' | 'YOGA' | 'BOXING';
 
 import { BENCHMARKS } from "./benchmarks";
 
@@ -50,15 +51,17 @@ export interface ExerciseEntry {
     roundDetails?: string[];
 }
 
+export type ScoreType = 'TIME' | 'REPS' | 'WEIGHT' | 'ROUNDS' | 'CALORIES' | 'DISTANCE' | 'PACE' | 'WATTS' | 'OTHER' | 'NONE';
+
 export interface WodSummary {
     totalTime: string;
-    scoreType: 'TIME' | 'REPS' | 'WEIGHT' | 'ROUNDS' | 'CALORIES' | 'OTHER' | 'NONE';
+    scoreType: ScoreType;
     scoreLabel: string;
 }
 
 interface WodCreatorProps {
-    onUpdate: (wodData: { title: string, date: string, blocks: WodBlock[], summary: WodSummary }) => void;
-    initialData?: { title: string, date: string, blocks: WodBlock[], summary: WodSummary };
+    onUpdate: (wodData: { title: string, date: string, blocks: WodBlock[], summary: WodSummary, category?: WorkoutCategory }) => void;
+    initialData?: { title: string, date: string, blocks: WodBlock[], summary: WodSummary, category?: WorkoutCategory };
 }
 
 const FORMAT_ICONS: Record<WodFormat, React.ReactNode> = {
@@ -109,6 +112,8 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
         scoreLabel: ''
     });
 
+    const [category, setCategory] = useState<WorkoutCategory>(initialData?.category || 'CROSS_TRAINING');
+
     const [catalog, setCatalog] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [activeExercisePath, setActiveExercisePath] = useState<{ bId: string, exId: string } | null>(null);
@@ -136,8 +141,8 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const updateWod = (newTitle: string, newBlocks: WodBlock[], newSummary: WodSummary = summary, newDate: string = date) => {
-        onUpdate({ title: newTitle, date: newDate, blocks: newBlocks, summary: newSummary });
+    const updateWod = (newTitle: string, newBlocks: WodBlock[], newSummary: WodSummary = summary, newDate: string = date, newCategory: WorkoutCategory = category) => {
+        onUpdate({ title: newTitle, date: newDate, blocks: newBlocks, summary: newSummary, category: newCategory });
     };
 
     const addBlock = () => {
@@ -150,19 +155,19 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
         };
         const updated = [...blocks, newBlock];
         setBlocks(updated);
-        updateWod(title, updated, summary, date);
+        updateWod(title, updated, summary, date, category);
     };
 
     const removeBlock = (id: string) => {
         const updated = blocks.filter(b => b.id !== id);
         setBlocks(updated);
-        updateWod(title, updated, summary, date);
+        updateWod(title, updated, summary, date, category);
     };
 
     const updateBlock = (id: string, updates: Partial<WodBlock>) => {
         const updated = blocks.map(b => b.id === id ? { ...b, ...updates } : b);
         setBlocks(updated);
-        updateWod(title, updated, summary, date);
+        updateWod(title, updated, summary, date, category);
     };
 
     const addExercise = (blockId: string) => {
@@ -176,7 +181,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
             return b;
         });
         setBlocks(updated);
-        updateWod(title, updated, summary, date);
+        updateWod(title, updated, summary, date, category);
     };
 
     const removeExercise = (blockId: string, exId: string) => {
@@ -190,7 +195,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
             return b;
         });
         setBlocks(updated);
-        updateWod(title, updated, summary, date);
+        updateWod(title, updated, summary, date, category);
     };
 
     const COMMON_UNITS = ['REPS', 'KG', 'LBS', 'SEC', 'MIN', 'M', 'KM', 'CAL', '%', 'MAX'];
@@ -206,13 +211,13 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
             return b;
         });
         setBlocks(updated);
-        updateWod(title, updated, summary, date);
+        updateWod(title, updated, summary, date, category);
     };
 
     const updateSummary = (updates: Partial<WodSummary>) => {
         const newSummary = { ...summary, ...updates };
         setSummary(newSummary);
-        updateWod(title, blocks, newSummary, date);
+        updateWod(title, blocks, newSummary, date, category);
     };
 
     const handleSaveNewExercise = async (blockId: string, exId: string, name: string) => {
@@ -227,8 +232,138 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
         setActiveExercisePath(null);
     };
 
+    const CATEGORIES: { id: WorkoutCategory, label: string, icon: string }[] = [
+        { id: 'CROSS_TRAINING', label: 'CROSS TRAINING', icon: '🏋️' },
+        { id: 'RUNNING', label: 'RUNNING', icon: '🏃' },
+        { id: 'GYM', label: 'GYM / MUSC', icon: '💪' },
+        { id: 'OCR', label: 'OCR', icon: '🧗' },
+        { id: 'HYROX', label: 'HYROX', icon: '🔥' },
+        { id: 'CYCLING', label: 'CYCLING', icon: '🚴' },
+        { id: 'SWIMMING', label: 'SWIMMING', icon: '🏊' },
+        { id: 'YOGA', label: 'YOGA / MOB', icon: '🧘' },
+        { id: 'BOXING', label: 'BOXING', icon: '🥊' }
+    ];
+
+    const SCORE_TYPE_LABELS: Record<ScoreType, string> = {
+        'TIME': 'TIEMPO (MM:SS)',
+        'REPS': 'REPETICIONES',
+        'WEIGHT': 'PESO (KG/LBS)',
+        'ROUNDS': 'RONDAS',
+        'CALORIES': 'CALORÍAS',
+        'DISTANCE': 'DISTANCIA (M/KM)',
+        'PACE': 'RITMO (MIN/KM)',
+        'WATTS': 'POTENCIA (WATTS)',
+        'OTHER': 'OTROS',
+        'NONE': 'SIN RESULTADO (COMPLETADO)'
+    };
+
+    const CATEGORY_SCORE_TYPES: Record<WorkoutCategory, ScoreType[]> = {
+        'CROSS_TRAINING': ['TIME', 'REPS', 'WEIGHT', 'ROUNDS', 'CALORIES', 'OTHER', 'NONE'],
+        'RUNNING': ['TIME', 'DISTANCE', 'PACE', 'CALORIES', 'OTHER'],
+        'GYM': ['WEIGHT', 'REPS', 'OTHER', 'NONE'],
+        'OCR': ['TIME', 'OTHER', 'NONE'],
+        'HYROX': ['TIME', 'OTHER', 'NONE'],
+        'CYCLING': ['TIME', 'DISTANCE', 'WATTS', 'CALORIES', 'OTHER'],
+        'SWIMMING': ['TIME', 'DISTANCE', 'OTHER'],
+        'YOGA': ['NONE', 'TIME', 'OTHER'],
+        'BOXING': ['ROUNDS', 'TIME', 'OTHER']
+    };
+
+    const SCORE_PLACEHOLDERS: Record<ScoreType, string> = {
+        'TIME': 'EJ: 15:30',
+        'REPS': 'EJ: 150 REPS',
+        'WEIGHT': 'EJ: 100 KG',
+        'ROUNDS': 'EJ: 15 RONDAS',
+        'CALORIES': 'EJ: 300 CAL',
+        'DISTANCE': 'EJ: 10 KM / 5000 M',
+        'PACE': 'EJ: 4:30 MIN/KM',
+        'WATTS': 'EJ: 250 WATTS',
+        'OTHER': 'ESCRIBE TU RESULTADO',
+        'NONE': 'COMPLETADO'
+    };
+
     return (
         <div className="space-y-6">
+            {/* Category Selector */}
+            <div className="space-y-3">
+                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2">Selecciona Tipo de Entrenamiento</label>
+                <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
+                    {CATEGORIES.map((cat) => (
+                        <button
+                            key={cat.id}
+                            type="button"
+                            onClick={() => {
+                                setCategory(cat.id);
+                                let newTitle = title;
+                                let newBlocks = blocks;
+                                
+                                // Autofill if empty
+                                const isEmpty = blocks.length === 1 && blocks[0].exercises.length === 1 && blocks[0].exercises[0].name === '';
+                                const isDefaultTitle = !title || title.trim() === '' || title === 'WORKOUT OF THE DAY';
+                                
+                                if (isDefaultTitle) {
+                                    if (cat.id === 'RUNNING') newTitle = 'SESIÓN DE RUNNING';
+                                    else if (cat.id === 'HYROX') newTitle = 'HYROX TRAINING';
+                                    else if (cat.id === 'OCR') newTitle = 'ENTRENO OCR';
+                                    else if (cat.id === 'GYM') newTitle = 'MUSCULACIÓN / GYM';
+                                    else if (cat.id === 'CYCLING') newTitle = 'SESIÓN DE CICLISMO';
+                                    else if (cat.id === 'SWIMMING') newTitle = 'SESIÓN DE NATACIÓN';
+                                    else if (cat.id === 'YOGA') newTitle = 'YOGA / MOVILIDAD';
+                                    else if (cat.id === 'BOXING') newTitle = 'SESIÓN DE BOXEO';
+                                    else newTitle = 'WORKOUT OF THE DAY';
+                                    setTitle(newTitle);
+                                }
+
+                                if (isEmpty) {
+                                    if (cat.id === 'RUNNING') {
+                                        newBlocks = [{
+                                            ...blocks[0],
+                                            title: 'CARRERA',
+                                            format: 'FOR TIME',
+                                            exercises: [{ id: 'run1', name: 'Distancia (km)', reps: '', detail: '' }]
+                                        }];
+                                    } else if (cat.id === 'GYM') {
+                                        newBlocks = [{
+                                            ...blocks[0],
+                                            title: 'FUERZA',
+                                            format: 'FUERZA',
+                                            exercises: [{ id: 'gym1', name: 'Ejercicio principal', reps: '4 x 10', detail: '' }]
+                                        }];
+                                    } else if (cat.id === 'HYROX') {
+                                        newBlocks = [{
+                                            ...blocks[0],
+                                            title: 'SIMULACIÓN',
+                                            format: 'FOR TIME',
+                                            exercises: [{ id: 'hy1', name: 'Carrera (km)', reps: '1', detail: '' }, { id: 'hy2', name: 'Burpee broad jump (m)', reps: '80', detail: '' }]
+                                        }];
+                                    }
+                                    setBlocks(newBlocks);
+                                }
+
+                                // Update score type based on category defaults
+                                let newSummary = { ...summary };
+                                const availableTypes = CATEGORY_SCORE_TYPES[cat.id];
+                                if (!availableTypes.includes(summary.scoreType)) {
+                                    newSummary.scoreType = availableTypes[0];
+                                    setSummary(newSummary);
+                                }
+                                
+                                updateWod(newTitle, newBlocks, newSummary, date, cat.id);
+                            }}
+                            className={cn(
+                                "flex flex-col items-center justify-center p-3 rounded-2xl border transition-all gap-1.5",
+                                category === cat.id
+                                    ? "bg-brand-red/10 border-brand-red text-brand-red shadow-glow-sm"
+                                    : "bg-black/20 border-white/5 text-gray-500 hover:border-white/20 hover:text-white"
+                            )}
+                        >
+                            <span className="text-xl">{cat.icon}</span>
+                            <span className="text-[7px] font-black uppercase tracking-tighter whitespace-nowrap">{cat.label}</span>
+                        </button>
+                    ))}
+                </div>
+            </div>
+
             <div className="relative group">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
                     <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2">Título del WOD</label>
@@ -678,13 +813,9 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                             value={summary.scoreType}
                             onChange={(e) => updateSummary({ scoreType: e.target.value as any })}
                         >
-                            <option value="TIME">TIEMPO (MM:SS)</option>
-                            <option value="REPS">REPETICIONES</option>
-                            <option value="WEIGHT">PESO (KG/LBS)</option>
-                            <option value="ROUNDS">RONDAS</option>
-                            <option value="CALORIES">CALORÍAS</option>
-                            <option value="NONE">SIN RESULTADO (ACCESORIO)</option>
-                            <option value="OTHER">OTROS</option>
+                            {CATEGORY_SCORE_TYPES[category].map(type => (
+                                <option key={type} value={type}>{SCORE_TYPE_LABELS[type]}</option>
+                            ))}
                         </select>
                     </div>
 
@@ -692,7 +823,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                         <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none">TOTAL</span>
                         <input
                             type="text"
-                            placeholder="Ej: 21:05 / 250 REPS"
+                            placeholder={SCORE_PLACEHOLDERS[summary.scoreType]}
                             className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-4 text-sm font-bold text-white placeholder:text-gray-700 focus:outline-none focus:border-brand-red/50 transition-all uppercase"
                             value={summary.scoreLabel}
                             onChange={(e) => updateSummary({ scoreLabel: e.target.value.toUpperCase() })}

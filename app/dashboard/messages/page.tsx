@@ -79,10 +79,6 @@ function MessagesContent() {
     useEffect(() => {
         const init = async () => {
             try {
-                // Pedir permiso para notificaciones
-                if (typeof Notification !== 'undefined' && Notification.permission === "default") {
-                    Notification.requestPermission()
-                }
 
                 const { data: authData } = await supabase.auth.getUser()
                 const user = authData?.user
@@ -165,10 +161,12 @@ function MessagesContent() {
             }, (payload: any) => {
                 const newMessage = payload.new
 
-                // Si el chat está activo y el mensaje es de la otra persona, marcar como leído
                 if (newMessage.sender_id !== currentUserId && activeConversationId) {
                     markConversationAsRead(activeConversationId).then(() => {
-                        loadConversations() // Recargar para limpiar notificación en lista
+                        // Actualizar localmente para evitar parpadeos
+                        setConversations(prev => prev.map(c => 
+                            c.id === activeConversationId ? { ...c, unread_count: 0 } : c
+                        ))
                     })
                 }
 
@@ -243,6 +241,10 @@ function MessagesContent() {
             setIsMobileListVisible(false)
             await loadMessages(id)
             await markConversationAsRead(id)
+            // Actualización optimista inmediata
+            setConversations(prev => prev.map(c => 
+                c.id === id ? { ...c, unread_count: 0 } : c
+            ))
             await loadConversations()
         } catch (err) {
             console.error("Error al seleccionar:", err)

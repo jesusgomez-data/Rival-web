@@ -8,6 +8,8 @@
 import { useState, useEffect } from "react";
 import { X, Trophy, Loader2, Medal, ChevronUp } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTheme } from "@/app/ThemeContext";
+import clsx from "clsx";
 
 interface LeaderboardEntry {
   rank: number;
@@ -42,6 +44,8 @@ export default function WODLeaderboardModal({
   const [stats, setStats] = useState<any>(null);
   const [creator, setCreator] = useState<any>(null);
   const [filter, setFilter] = useState<"all" | "rx">("all");
+
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (isOpen) {
@@ -89,52 +93,74 @@ export default function WODLeaderboardModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+        className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
         onClick={onClose}
       >
         <motion.div
           initial={{ scale: 0.9, y: 20 }}
           animate={{ scale: 1, y: 0 }}
           exit={{ scale: 0.9, y: 20 }}
-          className="bg-[#0a0a0a] border border-white/5 rounded-[32px] p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto scrollbar-hide shadow-2xl"
+          className={clsx(
+            "border rounded-[40px] p-6 md:p-8 max-w-2xl w-full max-h-[85vh] overflow-y-auto scrollbar-hide shadow-2xl relative",
+            theme === 'dark' ? "bg-[#0a0a0a] border-white/5" : "bg-white border-gray-100"
+          )}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-[14px] font-black text-brand-red uppercase tracking-[0.3em] px-2 truncate">
-              Tabla de Resultados
-            </h2>
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-[12px] font-black text-brand-red uppercase tracking-[0.4em] mb-1">
+                TOP SEÑALES
+              </h2>
+              <h3 className={clsx(
+                "text-2xl font-heading font-black italic uppercase tracking-tighter",
+                theme === 'dark' ? "text-white" : "text-black"
+              )}>
+                Ranking Comunitario
+              </h3>
+            </div>
             <button
               onClick={onClose}
-              className="p-2 bg-white/5 hover:bg-white/10 rounded-full transition-all group"
+              className={clsx(
+                "p-3 rounded-2xl transition-all group border",
+                theme === 'dark' ? "bg-white/5 border-white/5 hover:bg-white/10" : "bg-gray-50 border-gray-100 hover:bg-gray-100"
+              )}
             >
-              <ChevronUp className="w-6 h-6 text-gray-400 group-hover:text-white transition-colors" />
+              <X className={clsx("w-5 h-5", theme === 'dark' ? "text-gray-400 group-hover:text-white" : "text-gray-500 group-hover:text-black")} />
             </button>
           </div>
 
-
           {/* Leaderboard Entries */}
           {isLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <Loader2 className="w-10 h-10 text-brand-red animate-spin" />
+            <div className="flex flex-col items-center justify-center py-24 gap-4">
+              <div className="w-12 h-12 border-4 border-brand-red border-t-transparent rounded-full animate-spin" />
+              <p className="text-[10px] text-gray-500 font-black uppercase tracking-[0.2em] animate-pulse">Sincronizando Radar...</p>
             </div>
-          ) : (
-            <div className="space-y-2 mb-8">
+          ) : leaderboard.length > 0 ? (
+            <div className="space-y-3 mb-10">
               {leaderboard.map((entry) => (
                 <a
                   key={entry.userId}
                   href={`/dashboard/profile/${entry.username}`}
-                  className="bg-[#111111] border border-white/5 rounded-[20px] p-3 px-4 flex items-center justify-between group hover:bg-[#161616] hover:border-brand-red/40 transition-all duration-300 gap-3"
+                  className={clsx(
+                    "border rounded-3xl p-4 flex items-center justify-between group transition-all duration-300 gap-4",
+                    theme === 'dark' 
+                      ? "bg-[#111111] border-white/5 hover:bg-[#161616] hover:border-brand-red/30" 
+                      : "bg-[#f8f9fa] border-gray-100 hover:bg-white hover:border-brand-red/20 shadow-sm hover:shadow-md"
+                  )}
                 >
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     {/* Rank Number */}
-                    <div className="text-lg font-black italic text-brand-red/90 min-w-[28px] flex-shrink-0">
+                    <div className="text-xl font-heading font-black italic text-brand-red min-w-[32px] flex-shrink-0 text-center">
                       #{entry.rank}
                     </div>
 
-                    {/* Avatar with Minimal Ring */}
-                    <div className="w-11 h-11 rounded-full p-[1.5px] bg-white/10 group-hover:bg-brand-red/30 transition-colors flex-shrink-0">
-                      <div className="w-full h-full rounded-full bg-black p-[1px]">
+                    {/* Avatar */}
+                    <div className={clsx(
+                      "w-12 h-12 rounded-full p-0.5 transition-all flex-shrink-0 bg-gradient-to-tr",
+                      entry.rank === 1 ? "from-yellow-400 to-orange-500" : "from-gray-300 to-gray-500"
+                    )}>
+                      <div className="w-full h-full rounded-full overflow-hidden bg-black relative">
                         {entry.avatarUrl ? (
                           <img
                             src={entry.avatarUrl}
@@ -142,8 +168,8 @@ export default function WODLeaderboardModal({
                             className="w-full h-full rounded-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full rounded-full bg-zinc-800 flex items-center justify-center text-white text-xs font-black">
-                            {entry.username.charAt(0).toUpperCase()}
+                          <div className="w-full h-full flex items-center justify-center text-white text-[10px] font-black uppercase">
+                            {entry.username.substring(0, 2)}
                           </div>
                         )}
                       </div>
@@ -151,44 +177,52 @@ export default function WODLeaderboardModal({
 
                     {/* Info */}
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="text-[15px] font-black text-white uppercase tracking-tight whitespace-normal leading-tight">
+                      <span className={clsx(
+                        "text-[14px] font-black uppercase tracking-tight leading-none mb-1",
+                        theme === 'dark' ? "text-white" : "text-gray-900"
+                      )}>
                         {entry.fullName}
                       </span>
-                      <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest opacity-60">
+                      <span className="text-[9px] text-brand-red font-black uppercase tracking-widest opacity-70">
                         @{entry.username}
                       </span>
                     </div>
                   </div>
 
-                  {/* Score / Result - Prominent */}
+                  {/* Score */}
                   <div className="text-right flex-shrink-0 pl-2">
-                    <div className="text-[9px] text-zinc-500 font-black tracking-widest uppercase mb-0.5">
-                      {entry.roundsCompleted ? 'Rondas' : 
-                       entry.completionTimeSeconds ? 'Tiempo' : 
-                       entry.totalReps ? 'Reps' : 
-                       entry.weightKg ? 'Peso' : 'Puntaje'}
+                    <div className="text-[8px] text-gray-500 font-bold tracking-[0.2em] uppercase mb-0.5">
+                      {entry.roundsCompleted ? 'ROUNDS' : 
+                       entry.completionTimeSeconds ? 'TIEMPO' : 
+                       entry.totalReps ? 'REPS' : 
+                       entry.weightKg ? 'PESO' : 'RESULTADO'}
                     </div>
-                    <div className="text-2xl font-black italic text-brand-red leading-none group-hover:scale-110 transition-transform origin-right">
+                    <div className="text-2xl font-heading font-black italic text-brand-red leading-none group-hover:scale-105 transition-transform origin-right">
                       {entry.roundsCompleted || 
                        entry.totalReps || 
-                       (entry.weightKg ? `${entry.weightKg}kg` : null) ||
+                       (entry.weightKg ? `${entry.weightKg}KG` : null) ||
                        (entry.completionTimeSeconds ? formatTime(entry.completionTimeSeconds) : entry.score || entry.rank)}
                     </div>
-                    {((entry.roundsCompleted || entry.totalReps) && entry.completionTimeSeconds) && (
-                       <div className="text-[9px] text-zinc-600 font-black tracking-widest mt-1">
-                         {formatTime(entry.completionTimeSeconds)}
-                       </div>
-                    )}
                   </div>
                 </a>
               ))}
             </div>
+          ) : (
+            <div className="py-20 text-center space-y-4">
+              <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto border border-white/5">
+                <Trophy className="w-8 h-8 text-gray-700" />
+              </div>
+              <p className="text-sm text-gray-500 font-bold uppercase tracking-widest italic">Aún no hay resultados para este WOD</p>
+            </div>
           )}
 
-          {/* Footer Disclaimer */}
-          <div className="pt-8 border-t border-white/5">
-             <p className="text-[10px] text-gray-600 font-black text-center uppercase tracking-widest leading-relaxed px-12">
-               Los resultados se basan en los reposts públicos realizados en la comunidad.
+          {/* Footer */}
+          <div className={clsx(
+            "pt-6 border-t",
+            theme === 'dark' ? "border-white/5" : "border-gray-100"
+          )}>
+             <p className="text-[9px] text-gray-500 font-bold text-center uppercase tracking-[0.2em] leading-relaxed max-w-xs mx-auto">
+               Los resultados se basan en los reportes públicos de la comunidad Rival Fit.
              </p>
           </div>
         </motion.div>
