@@ -191,6 +191,9 @@ export default function DashboardHome() {
     const [feedLoading, setFeedLoading] = useState(true);
     // Cache the auth user to avoid repeated auth.getUser() calls across loadData + fetchFeed
     const currentUserRef = useRef<any>(null);
+    // Cache follows & official IDs so fetchFeed doesn't re-fetch them
+    const followedIdsRef = useRef<string[]>([]);
+    const officialIdsRef = useRef<string[]>([]);
 
     // Memoized fetch for main dashboard data (profile, stats, duels)
     const loadData = useCallback(async () => {
@@ -211,6 +214,7 @@ export default function DashboardHome() {
                 { count: classes },
                 { data: myFollows },
                 { data: trending },
+                { data: officialProfiles },
                 missionsData,
                 duelsData
             ] = await Promise.all([
@@ -218,7 +222,6 @@ export default function DashboardHome() {
                 supabase.from('profiles').select('*').eq('id', user.id).single(),
                 supabase.from('workouts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
                 supabase.from('class_results').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-                // Single follows query — derive count from .length (saves 1 DB roundtrip)
                 supabase.from('follows').select('following_id').eq('follower_id', user.id),
                 supabase.from('profiles')
                     .select('id, username, full_name, avatar_url, level, is_official')
@@ -226,12 +229,17 @@ export default function DashboardHome() {
                     .eq('is_official', false)
                     .order('xp_points', { ascending: false })
                     .limit(4),
+                // Prefetch official IDs here so fetchFeed can skip its own query
+                supabase.from('profiles').select('id').eq('is_official', true),
                 getMissions(),
                 getMyDuels()
             ]);
 
             const followedIds = new Set(myFollows?.map((f: { following_id: string }) => f.following_id) || []);
             const followingCount = myFollows?.length || 0;
+            // Cache for reuse in fetchFeed — avoids re-fetching on every feed load
+            followedIdsRef.current = Array.from(followedIds) as string[];
+            officialIdsRef.current = (officialProfiles?.map((p: any) => p.id) || []) as string[];
 
             const sessionMission = missionsData?.find((m: any) => m.goal_type === 'sessions_count' || m.goal_type === 'workouts');
             const weeklyProgress = {
@@ -303,19 +311,23 @@ export default function DashboardHome() {
                 .limit(20);
 
             if (activeTab === 'following') {
-                // Fetch follows and official accounts
-                const [{ data: myFollows }, { data: officialProfiles }] = await Promise.all([
-                    supabase.from('follows').select('following_id').eq('follower_id', user.id),
-                    supabase.from('profiles').select('id').eq('is_official', true),
-                ]);
+                // Reuse cached follows from loadData — skip extra DB roundtrip
+                let followedIds = followedIdsRef.current;
+                let officialIds = officialIdsRef.current;
 
-                const followedIds = myFollows?.map((f: any) => f.following_id) || [];
-                const officialIds = officialProfiles?.map((p: any) => p.id) || [];
-                
-                // Ensure unique IDs, including current user
+                // Only fetch if cache is empty (e.g. direct navigation before loadData finishes)
+                if (followedIds.length === 0) {
+                    const [{ data: myFollows }, { data: officialProfiles }] = await Promise.all([
+                        supabase.from('follows').select('following_id').eq('follower_id', user.id),
+                        supabase.from('profiles').select('id').eq('is_official', true),
+                    ]);
+                    followedIds = myFollows?.map((f: any) => f.following_id) || [];
+                    officialIds = officialProfiles?.map((p: any) => p.id) || [];
+                    followedIdsRef.current = followedIds;
+                    officialIdsRef.current = officialIds;
+                }
+
                 const idsToFetch = Array.from(new Set([user.id, ...followedIds, ...officialIds])).filter(Boolean);
-                
-                console.log(`[fetchFeed] Following IDs count (with self): ${idsToFetch.length}`);
                 query = query.in('user_id', idsToFetch);
             }
 
