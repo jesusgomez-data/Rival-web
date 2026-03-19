@@ -129,14 +129,14 @@ export default function AthleteCard({ profile, stats }: AthleteCardProps) {
         <div className="flex flex-col items-center gap-4">
             {/* Card */}
             <div ref={cardRef}
-                className="relative w-64 h-96 rounded-[1.5rem] overflow-hidden shadow-2xl select-none"
+                className="relative w-64 h-96 rounded-[2rem] overflow-hidden shadow-2xl select-none keep-all dark-section"
                 style={{ background: `linear-gradient(145deg, ${colors.from}, ${colors.to})` }}>
                 {/* Background pattern */}
-                <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)', backgroundSize: '12px 12px' }} />
-                <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 50% 30%, ${colors.accent}33 0%, transparent 70%)` }} />
+                <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #fff 0, #fff 1px, transparent 0, transparent 50%)', backgroundSize: '12px 12px' }} />
+                <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 50% 30%, ${colors.accent}44 0%, transparent 70%)` }} />
 
                 {/* Top Section */}
-                <div className="relative z-10 pt-5 px-5 pb-3">
+                <div className="relative z-10 pt-6 px-6 pb-3">
                     <div className="flex items-start justify-between">
                         <div>
                             <div className={clsx("text-5xl font-heading font-black leading-none bg-gradient-to-b", levelGradient, "bg-clip-text text-transparent")}>{overallRating}</div>

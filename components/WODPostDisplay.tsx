@@ -61,7 +61,7 @@ export default function WODPostDisplay({ wod, compact = false }: WODPostDisplayP
   const currentStyle = CATEGORY_STYLES[wod.category || 'CROSS_TRAINING'];
 
   return (
-    <div className="w-full bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl overflow-hidden">
+    <div className="w-full bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl overflow-hidden keep-all dark-section">
       {/* Header */}
       <div className={cn("border-b p-6", currentStyle.gradient, currentStyle.color)}>
         <div className="flex items-start gap-3 mb-4">

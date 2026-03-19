@@ -101,7 +101,7 @@ export default function WodCard({ data, userName, publishDate, postId, completio
     if (!data.blocks || data.blocks.length === 0) return null;
 
     return (
-        <div className="w-full bg-black/40 border border-white/5 rounded-[32px] overflow-hidden group hover:border-brand-red/30 transition-all shadow-2xl relative">
+        <div className="w-full bg-black/40 border border-white/5 rounded-[32px] overflow-hidden group hover:border-brand-red/30 transition-all shadow-2xl relative keep-all dark-section">
             {/* Header / Backdrop Image */}
             <div className={cn("relative h-32 md:h-40 overflow-hidden bg-gradient-to-br", CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].gradient)}>
                 {data.media_url ? (

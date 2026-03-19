@@ -13,7 +13,7 @@ export default function PromoCard({
     className
 }: PromoCardProps) {
     return (
-        <div className={clsx("relative w-full aspect-[4/5] max-w-md mx-auto overflow-hidden rounded-[40px] shadow-2xl group select-none", className)}>
+        <div className={clsx("relative w-full aspect-[4/5] max-w-md mx-auto overflow-hidden rounded-[40px] shadow-2xl group select-none keep-all dark-section", className)}>
 
             {/* Background Image */}
             <div

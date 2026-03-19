@@ -72,7 +72,7 @@ export default function ShareableCard({ user, data }: ShareableCardProps) {
     return (
         <div
             ref={cardRef}
-            className="w-full aspect-[4/5] bg-[#050505] rounded-[48px] overflow-hidden relative border border-white/5 shadow-2xl group/card selection:bg-brand-red/30"
+            className="w-full aspect-[4/5] bg-[#050505] rounded-[48px] overflow-hidden relative border border-white/5 shadow-2xl group/card selection:bg-brand-red/30 keep-all dark-section"
         >
             {/* Background Texture & Effects */}
             <div className="absolute inset-0 z-0">
