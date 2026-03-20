@@ -230,8 +230,6 @@ export async function createWodPost(formData: FormData) {
         const title = formData.get('title') as string
         const content = formData.get('content') as string
         const wodDataJson = formData.get('wod_data') as string
-        const mediaUrl = formData.get('media_url') as string || null
-
         if (!wodDataJson) {
             return { error: "WOD data is required" }
         }
@@ -370,7 +368,6 @@ export async function addComment(postId: string, content: string, parentId?: str
 
     // Notify Post Author
     if (post && post.user_id !== user.id) {
-        console.log(`[addComment] Notifying author ${post.user_id} of comment from ${user.id}`);
         const res = await createNotification({
             userId: post.user_id,
             type: 'comment',
@@ -378,9 +375,6 @@ export async function addComment(postId: string, content: string, parentId?: str
             content: `${profile?.full_name || 'Alguien'} comentó: "${truncated}"`,
             link: `/dashboard/post/${postId}`
         });
-        console.log(`[addComment] Notification result:`, res);
-    } else {
-        console.log(`[addComment] No notification sent. Post author: ${post?.user_id}, Current user: ${user.id}`);
     }
 
     // Notify Parent Comment Author (if it's a reply)
@@ -585,18 +579,13 @@ export async function updatePost(postId: string, newCaption: string, mediaUrl?: 
         updateData.created_at = new Date(`${scheduledFor}T${new Date().toISOString().split('T')[1]}`).toISOString();
     }
 
-    const { error } = await supabase
-        .from('posts')
-        .update(updateData)
-        .eq('id', postId)
-        .eq('user_id', isAdmin ? undefined : user.id)
-
     if (isAdmin) {
         const adminSupabase = createAdminClient();
         const { error: adminError } = await adminSupabase.from('posts').update(updateData).eq('id', postId);
-        if (adminError) return { error: adminError.message };
+        if (adminError) return { error: 'Error al actualizar el post.' };
     } else {
-        if (error) return { error: error.message }
+        const { error } = await supabase.from('posts').update(updateData).eq('id', postId).eq('user_id', user.id);
+        if (error) return { error: 'Error al actualizar el post.' };
     }
 
     // --- NEW: Sync WOD result if it's a WOD post ---

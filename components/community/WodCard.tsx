@@ -48,8 +48,18 @@ const FORMAT_CONFIG: Partial<Record<WodFormat, { label: string, color: string, i
     '21-15-9': { label: 'POR TIEMPO', color: 'text-blue-500', icon: Clock },
     'INTERVALS': { label: 'INTERVALOS', color: 'text-brand-red', icon: Zap },
     'TABATA': { label: 'TABATA', color: 'text-brand-orange', icon: Zap },
-    'DEATH BY': { label: 'DEATH BY', color: 'text-red-600', icon: Trophy }
+    'DEATH BY': { label: 'DEATH BY', color: 'text-red-600', icon: Trophy },
+    // Endurance
+    'CARRERA LIBRE': { label: 'CARRERA LIBRE', color: 'text-cyan-400', icon: Activity },
+    'INTERVALOS': { label: 'INTERVALOS', color: 'text-brand-red', icon: Repeat },
+    'FARTLEK': { label: 'FARTLEK', color: 'text-yellow-400', icon: Zap },
+    'TEMPO': { label: 'TEMPO', color: 'text-blue-400', icon: Timer },
+    'SERIES': { label: 'SERIES', color: 'text-brand-red', icon: Target },
+    'TRAIL': { label: 'TRAIL', color: 'text-green-400', icon: Activity },
 };
+
+const ENDURANCE_CATEGORIES: WorkoutCategory[] = ['RUNNING', 'CYCLING', 'SWIMMING'];
+const ENDURANCE_FORMATS: WodFormat[] = ['CARRERA LIBRE', 'INTERVALOS', 'FARTLEK', 'TEMPO', 'SERIES', 'TRAIL'];
 
 const DEFAULT_CONFIG = { label: 'WOD', color: 'text-green-500', icon: Target };
 
@@ -99,6 +109,250 @@ export default function WodCard({ data, userName, publishDate, postId, completio
     };
 
     if (!data.blocks || data.blocks.length === 0) return null;
+
+    const isEndurance = ENDURANCE_CATEGORIES.includes(data.category || 'CROSS_TRAINING');
+
+    // --- RENDERIZADO ENDURANCE (RUNNING, CYCLING, SWIMMING) ---
+    if (isEndurance) {
+        const firstBlock = data.blocks[0];
+        const config = firstBlock?.config || {};
+        
+        // Mapeo de métricas por deporte
+        const metricsMap = {
+            'RUNNING': {
+                distUnit: 'KM',
+                paceLabel: 'RITMO',
+                paceUnit: '/KM',
+                paceValue: config.pace || '--:--',
+                distValue: config.distance?.split(' ')[0] || (data.summary?.scoreType === 'DISTANCE' ? data.summary.scoreLabel : '--')
+            },
+            'CYCLING': {
+                distUnit: 'KM',
+                paceLabel: 'VELOCIDAD',
+                paceUnit: 'KM/H',
+                paceValue: config.pace || '--', // In cycling 'pace' field might store speed
+                distValue: config.distance?.split(' ')[0] || (data.summary?.scoreType === 'DISTANCE' ? data.summary.scoreLabel : '--')
+            },
+            'SWIMMING': {
+                distUnit: 'M',
+                paceLabel: 'RITMO',
+                paceUnit: '/100M',
+                paceValue: config.pace || '--:--',
+                distValue: config.distance?.split(' ')[0] || (data.summary?.scoreType === 'DISTANCE' ? data.summary.scoreLabel : '--')
+            }
+        };
+
+        const sportMetrics = metricsMap[data.category as keyof typeof metricsMap] || metricsMap['RUNNING'];
+
+        return (
+            <div className={cn(
+                "w-full bg-[#0a0a0a] border border-white/5 rounded-[32px] overflow-hidden group hover:border-brand-red/30 transition-all shadow-2xl relative keep-all dark-section font-sans",
+                isExpanded ? "ring-2 ring-brand-red/20" : ""
+            )}>
+                {/* Grid Background */}
+                <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+                     style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+                
+                {/* Strava Header */}
+                <div className="relative p-6 z-10">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-2">
+                            <span className={cn("text-white text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded shadow-glow-sm", CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].color)}>
+                                {CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].label}
+                            </span>
+                            <div className="w-1 h-1 rounded-full bg-brand-red animate-pulse" />
+                            <span className="text-[9px] font-black text-white/40 uppercase tracking-widest italic">{userName} SESSION</span>
+                        </div>
+                        <div className="bg-white/5 px-2 py-1 rounded-full border border-white/5 flex items-center gap-2">
+                            <Activity className="w-2.5 h-2.5 text-brand-red/50" />
+                            <span className="text-[8px] font-black text-white/30 uppercase tracking-tighter italic">GPS_SESSION_ID: {Math.random().toString(36).substring(7).toUpperCase()}</span>
+                        </div>
+                    </div>
+
+                    <div className="mb-4 flex items-end justify-between">
+                        <div className="min-w-0">
+                            <h3 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter uppercase leading-none group-hover:text-brand-red transition-colors">
+                                {data.title || 'ENDURANCE SESSION'}
+                            </h3>
+                            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-2">{publishDate || 'PREMIUM ACTIVITY PERFORMANCE'}</p>
+                        </div>
+                    </div>
+
+                    {/* Main Stats Grid - Strava Inspired (Persistent in both states) */}
+                    <div className={cn(
+                        "grid grid-cols-3 gap-4 border-y border-white/5 py-8 relative transition-all duration-500",
+                        isExpanded ? "bg-white/[0.02] -mx-6 px-6 mb-8" : "mb-6"
+                    )}>
+                        <div className="space-y-1">
+                            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Distancia</span>
+                            <div className="flex items-baseline gap-1 font-mono">
+                                <span className="text-3xl md:text-5xl font-black text-white leading-none tracking-tighter">
+                                    {sportMetrics.distValue}
+                                </span>
+                                <span className="text-sm font-black text-brand-red italic uppercase">{sportMetrics.distUnit}</span>
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-1 border-x border-white/5 px-4">
+                            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">{sportMetrics.paceLabel}</span>
+                            <div className="flex items-baseline gap-1 font-mono">
+                                <span className="text-3xl md:text-5xl font-black text-white leading-none tracking-tighter">
+                                    {sportMetrics.paceValue}
+                                </span>
+                                <span className="text-[10px] md:text-xs font-black text-brand-red italic uppercase">{sportMetrics.paceUnit}</span>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1 pl-4">
+                            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Tiempo</span>
+                            <div className="flex items-baseline gap-1 font-mono">
+                                <span className="text-3xl md:text-5xl font-black text-white leading-none tracking-tighter">
+                                    {data.summary?.totalTime || '--:--'}
+                                </span>
+                                <span className="text-sm font-black text-brand-red italic uppercase">MIN</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* EXPANDED CONTENT: Analysis, Splits, Charts */}
+                    {isExpanded && (
+                        <div className="animate-in fade-in slide-in-from-top-4 duration-500 space-y-10 pb-6">
+                            {/* Analysis Mockup - Rhythm Chart */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h4 className="text-[10px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
+                                        <Activity className="w-3.5 h-3.5 text-brand-red" />
+                                        ANÁLISIS DE RITMO Y RENDIMIENTO
+                                    </h4>
+                                    <span className="text-[8px] font-bold text-gray-500 uppercase">TIEMPO REAL (GPS)</span>
+                                </div>
+                                <div className="h-24 w-full bg-white/[0.02] rounded-2xl border border-white/5 relative overflow-hidden group/chart">
+                                    <div className="absolute inset-0 flex items-end justify-between px-2 pb-1 gap-1">
+                                        {[40, 60, 45, 70, 55, 80, 65, 90, 75, 85, 60, 50, 65, 75, 80, 85, 70, 60, 55, 45].map((h, i) => (
+                                            <div 
+                                                key={i} 
+                                                className="w-full bg-brand-red/20 rounded-t-sm group-hover/chart:bg-brand-red/40 transition-all hover:!bg-brand-red" 
+                                                style={{ height: `${h}%` }} 
+                                            />
+                                        ))}
+                                    </div>
+                                    <div className="absolute top-1/2 left-0 right-0 h-px bg-white/5 border-dashed border-t border-white/10" />
+                                </div>
+                            </div>
+
+                            {/* Splits / Blocks */}
+                            <div className="space-y-6">
+                                <h4 className="text-[10px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-2 mb-4">
+                                    <Target className="w-3.5 h-3.5 text-brand-red" />
+                                    DETALLE DE BLOQUES Y SPLITS
+                                </h4>
+                                <div className="grid gap-4">
+                                    {data.blocks.map((block, bIdx) => (
+                                        <div key={bIdx} className="bg-white/[0.03] border border-white/5 rounded-2xl p-6 hover:bg-white/[0.05] transition-all relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 p-3 opacity-5">
+                                                <span className="text-4xl font-black italic">{bIdx + 1}</span>
+                                            </div>
+                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+                                                <div>
+                                                    <span className="text-[9px] font-black text-brand-red uppercase tracking-widest bg-brand-red/10 px-2 py-0.5 rounded border border-brand-red/10">{block.format}</span>
+                                                    <h5 className="text-lg font-black text-white italic uppercase tracking-tight mt-1">{block.title}</h5>
+                                                </div>
+                                                <div className="flex gap-6">
+                                                    {block.config?.work && (
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[8px] font-bold text-gray-500 uppercase">TRABAJO</span>
+                                                            <span className="text-xs font-black text-white">{block.config.work}</span>
+                                                        </div>
+                                                    )}
+                                                    {block.config?.rest && (
+                                                        <div className="flex flex-col">
+                                                            <span className="text-[8px] font-bold text-gray-500 uppercase">REST</span>
+                                                            <span className="text-xs font-black text-gray-400">{block.config.rest}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            
+                                            {block.exercises.length > 0 && (
+                                                <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
+                                                    {block.exercises.map((ex, eIdx) => (
+                                                        <div key={eIdx} className="flex items-center justify-between text-[11px] font-bold text-gray-400 group/ex">
+                                                            <span className="group-hover/ex:text-white transition-colors uppercase italic">• {ex.name}</span>
+                                                            {ex.reps && <span className="text-white">{ex.reps} {ex.detail}</span>}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="border-t border-white/5 pt-8 mt-10 flex flex-col sm:flex-row gap-4">
+                                <button
+                                    onClick={() => {
+                                        window.dispatchEvent(new CustomEvent('repost-wod', { 
+                                            detail: { ...data, postId: (data as any).original_wod_post_id || postId }
+                                        }));
+                                    }}
+                                    className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl py-4 flex items-center justify-center gap-3 transition-all active:scale-95 group/rep"
+                                >
+                                    <Repeat className="w-4 h-4 text-brand-red group-hover/rep:rotate-180 transition-transform duration-500" />
+                                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Repostear Actividad</span>
+                                </button>
+                                {postId && (
+                                    <button
+                                        onClick={() => setShowWODLeaderboard(true)}
+                                        className="flex-1 bg-brand-red/10 hover:bg-brand-red/20 border border-brand-red/20 rounded-2xl py-4 flex items-center justify-center gap-3 transition-all active:scale-95"
+                                    >
+                                        <Trophy className="w-4 h-4 text-brand-red animate-pulse" />
+                                        <span className="text-[10px] font-black text-white uppercase tracking-widest">Ver Ranking del Tramo</span>
+                                    </button>
+                                )}
+                            </div>
+
+                            <button 
+                                onClick={() => setIsExpanded(false)}
+                                className="w-full py-4 text-[9px] font-black text-gray-600 uppercase tracking-widest hover:text-white transition-colors border-t border-white/5 mt-6"
+                            >
+                                <ChevronUp className="w-4 h-4 inline-block mr-2" /> CERRAR DETALLES
+                            </button>
+                        </div>
+                    )}
+                    {/* COLLAPSED CONTENT: Action Hint */}
+                    {!isExpanded && (
+                        <button 
+                            onClick={() => setIsExpanded(true)}
+                            className="w-full flex items-center justify-center gap-2 text-[9px] font-black text-gray-600 uppercase tracking-widest hover:text-white transition-colors py-3 bg-white/[0.02] rounded-xl border border-dashed border-white/5 hover:border-brand-red/30"
+                        >
+                            <Activity className="w-3.5 h-3.5 text-brand-red" />
+                            Click para ver analítica de ritmo y bloques
+                        </button>
+                    )}
+
+                    {/* Modals for Tracking and Leaderboard (Endurance View) */}
+                    {postId && (
+                        <>
+                            <WODTrackerModal
+                                wodPostId={(data as any).original_wod_post_id || postId || ""}
+                                wodTitle={data.title || "WOD"}
+                                wodType={data.summary?.scoreType?.toUpperCase() === 'TIME' ? 'time' : 'rounds'}
+                                isOpen={showWODTracker}
+                                onClose={() => setShowWODTracker(false)}
+                                onSuccess={() => window.location.reload()}
+                            />
+                            <WODLeaderboardModal
+                                wodPostId={(data as any).original_wod_post_id || postId || ""}
+                                wodTitle={data.title || "WOD"}
+                                isOpen={showWODLeaderboard}
+                                onClose={() => setShowWODLeaderboard(false)}
+                            />
+                        </>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="w-full bg-black/40 border border-white/5 rounded-[32px] overflow-hidden group hover:border-brand-red/30 transition-all shadow-2xl relative keep-all dark-section">

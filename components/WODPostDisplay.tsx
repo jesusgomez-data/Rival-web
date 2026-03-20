@@ -60,6 +60,128 @@ export default function WODPostDisplay({ wod, compact = false }: WODPostDisplayP
 
   const currentStyle = CATEGORY_STYLES[wod.category || 'CROSS_TRAINING'];
 
+  // --- RENDERIZADO ESTILO RUNNING / STRAVA ---
+  if (wod.category === 'RUNNING') {
+    return (
+      <div className="w-full bg-[#0a0a0a] border border-white/5 rounded-[32px] overflow-hidden shadow-2xl keep-all dark-section font-sans relative group">
+        {/* Grid Background Mockup */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+             style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+        
+        {/* Header Strava Style */}
+        <div className="relative p-8 z-10">
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-brand-red shadow-[0_0_10px_rgba(255,46,46,0.5)] animate-pulse" />
+                <span className="text-[10px] font-black text-gray-500 uppercase tracking-[0.4em]">GPS TRACKING ACTIVE</span>
+            </div>
+            <div className="bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                <span className="text-[9px] font-black text-white/40 uppercase tracking-widest">SESSION ID: {Math.random().toString(36).substring(7).toUpperCase()}</span>
+            </div>
+          </div>
+          
+          <div className="mb-10">
+            <h3 className="text-5xl font-black text-white italic tracking-tighter uppercase leading-none mb-2 group-hover:text-brand-red transition-colors">
+                {wod.title}
+            </h3>
+            <p className="text-gray-500 text-xs font-bold uppercase tracking-[0.2em]">{wod.subtitle || 'Outdoor Running Session'}</p>
+          </div>
+
+          {/* Main Stats Grid */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-10 mb-10 border-y border-white/5 py-10 relative">
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Distancia Total</span>
+              <div className="flex items-baseline gap-1.5 font-mono">
+                <span className="text-5xl font-black text-white leading-none tracking-tighter">
+                    {wod.blocks[0]?.config?.distance?.split(' ')[0] || '--'}
+                </span>
+                <span className="text-lg font-black text-brand-red italic uppercase">KM</span>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Ritmo de Carrera</span>
+              <div className="flex items-baseline gap-1.5 font-mono">
+                <span className="text-5xl font-black text-white leading-none tracking-tighter">
+                    {wod.blocks[0]?.config?.pace || '--'}
+                </span>
+                <span className="text-lg font-black text-brand-red italic uppercase text-sm">/KM</span>
+              </div>
+            </div>
+
+            <div className="space-y-2 col-span-2 lg:col-span-1">
+              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em]">Tiempo en Movimiento</span>
+              <div className="flex items-baseline gap-1.5 font-mono">
+                <span className="text-5xl font-black text-white leading-none tracking-tighter">
+                    {wod.estimatedDuration || '--'}
+                </span>
+                <span className="text-lg font-black text-brand-red italic uppercase">MIN</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Details / Blocks */}
+          <div className="space-y-8">
+            {wod.blocks.map((block, bIdx) => (
+              <div key={bIdx} className="space-y-5">
+                <div className="flex items-center gap-4">
+                  <span className="text-[10px] font-black text-brand-red bg-brand-red/10 border border-brand-red/20 px-3 py-1 rounded-sm uppercase italic tracking-[0.2em]">{block.title}</span>
+                  <div className="h-[1px] flex-1 bg-gradient-to-r from-brand-red/20 to-transparent" />
+                </div>
+
+                <div className="grid gap-3">
+                    {block.exercises.map((ex, eIdx) => (
+                    <div key={eIdx} className="bg-white/[0.03] border border-white/5 rounded-[22px] p-8 hover:bg-white/[0.05] transition-all hover:border-white/10 group/row">
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="space-y-1.5">
+                                <p className="text-lg font-black text-white group-hover/row:text-brand-red transition-colors uppercase italic tracking-tight">{ex.name}</p>
+                                {ex.notes && <p className="text-sm text-gray-500 font-medium leading-relaxed max-w-md">{ex.notes}</p>}
+                            </div>
+                            {ex.reps && (
+                                <div className="bg-black border border-white/10 px-4 py-2 rounded-xl">
+                                    <span className="text-xs font-black text-white/50 uppercase italic">{ex.reps}</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Footer Stats */}
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-between gap-6 pt-8 border-t border-white/5 bg-gradient-to-b from-transparent to-black/50 -mx-8 px-8 pb-4">
+            <div className="flex gap-10">
+                <div className="flex flex-col gap-1">
+                    <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Kcal Quemadas</span>
+                    <div className="flex items-center gap-2">
+                        <Zap className="w-3 h-3 text-brand-red" />
+                        <span className="text-xs font-black text-gray-300 italic tracking-tighter">{wod.caloriesBurn} KCAL</span>
+                    </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                    <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">Intensidad</span>
+                    <div className="flex items-center gap-2">
+                        <Trophy className="w-3 h-3 text-brand-yellow" />
+                        <span className="text-xs font-black text-gray-300 italic uppercase tracking-tighter">{wod.difficulty}</span>
+                    </div>
+                </div>
+            </div>
+            <div className="flex flex-col items-end gap-1">
+                <span className="text-[8px] font-black text-gray-700 uppercase tracking-[0.3em]">Official Performance Data</span>
+                <div className="flex items-center gap-2">
+                    <Target className="w-3 h-3 text-brand-red/40" />
+                    <span className="text-[10px] font-black text-gray-600 tracking-[0.1em] italic">RIVALFIT HIGH-PERFORMANCE UNIT</span>
+                </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- RENDERIZADO ESTÁNDAR (CROSSFIT, HYROX, ETC) ---
   return (
     <div className="w-full bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl overflow-hidden keep-all dark-section">
       {/* Header */}
@@ -95,8 +217,8 @@ export default function WODPostDisplay({ wod, compact = false }: WODPostDisplayP
 
       {/* Blocks */}
       <div className="p-6 space-y-4">
-        {/* Si no está expandido, no mostrar ningún bloque */}
-        {isExpanded && wod.blocks.map((block, idx) => {
+        {/* Si no está expandido o es compact, mostrar bloques */}
+        {(isExpanded || compact) && wod.blocks.map((block, idx) => {
           // Filtrar warmup/cooldown si es compact
           if (compact && (block.type === "warmup" || block.type === "cooldown")) {
             return null;
@@ -123,12 +245,12 @@ export default function WODPostDisplay({ wod, compact = false }: WODPostDisplayP
                   <div key={`ex-${idx}-${i}-${ex.name}`} className="flex items-start gap-2 text-gray-200">
                     <span className="text-brand-red font-bold">•</span>
                     <div className="flex-1">
-                      <span className="font-medium">
-                        {ex.reps && <span className="text-white font-bold">{ex.reps} </span>}
-                        {ex.name}
-                      </span>
+                      <div className="flex items-baseline gap-2">
+                        {ex.reps && <span className="text-white font-bold shrink-0">{ex.reps}</span>}
+                        <span className="font-medium">{ex.name}</span>
+                      </div>
                       {ex.notes && (
-                        <span className="text-xs text-gray-400 ml-2">({ex.notes})</span>
+                        <p className="text-xs text-gray-500 mt-0.5">{ex.notes}</p>
                       )}
                     </div>
                   </div>
@@ -139,35 +261,14 @@ export default function WODPostDisplay({ wod, compact = false }: WODPostDisplayP
         })}
 
         {/* Tips */}
-        {wod.tips && wod.tips.length > 0 && !compact && (
+        {wod.tips && wod.tips.length > 0 && !compact && isExpanded && (
           <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-4">
             <div className="flex items-start gap-2">
               <span className="text-xl">💡</span>
               <div className="flex-1">
-                <h5 className="text-yellow-400 font-bold text-sm mb-2 uppercase">TIP:</h5>
+                <h5 className="text-yellow-400 font-bold text-sm mb-2 uppercase">TIP DE ENTRENAMIENTO:</h5>
                 <p className="text-gray-200 text-sm">{wod.tips[0]}</p>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Scaling Options */}
-        {wod.scalingOptions && !compact && isExpanded && (
-          <div className="border-t border-white/10 pt-4 mt-4">
-            <h5 className="text-xs text-gray-400 font-bold uppercase mb-2">Escalado:</h5>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {wod.scalingOptions.beginner && (
-                <div className="bg-green-500/10 border border-green-500/30 rounded px-2 py-1">
-                  <span className="text-green-400 font-bold">🌱 Principiante:</span>
-                  <span className="text-gray-300 ml-1">{wod.scalingOptions.beginner}</span>
-                </div>
-              )}
-              {wod.scalingOptions.advanced && (
-                <div className="bg-red-500/10 border border-red-500/30 rounded px-2 py-1">
-                  <span className="text-red-400 font-bold">🔥 Avanzado:</span>
-                  <span className="text-gray-300 ml-1">{wod.scalingOptions.advanced}</span>
-                </div>
-              )}
             </div>
           </div>
         )}

@@ -847,27 +847,94 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                     (() => {
                         try {
                             const data = JSON.parse(overlay.content);
-                            // Support both new WOD format (data.blocks) and old format (data.metrics.blocks)
                             const wodBlocks = data.blocks || data.metrics?.blocks || [];
                             const hasWodBlocks = wodBlocks.length > 0;
+                            const category = data.category || data.metrics?.type?.toUpperCase() || '';
+                            const isEndurance = ['RUNNING','CYCLING','SWIMMING'].includes(category) || data.sport_type?.toLowerCase() === 'running';
+
+                            // Endurance metrics from WodCreator block config or GPS metrics
+                            const firstBlock = wodBlocks[0];
+                            const endDist = firstBlock?.config?.distance || (data.metrics?.distance ? `${(data.metrics.distance / 1000).toFixed(2)} KM` : null);
+                            const endPace = firstBlock?.config?.pace || data.metrics?.pace || null;
+                            const endTime = data.summary?.totalTime || data.metrics?.time || null;
+                            const endFormat = firstBlock?.format || null;
+                            const endElevation = firstBlock?.config?.frequency || (data.metrics?.elevation ? `${data.metrics.elevation}M` : null);
+
+                            const SPORT_META: Record<string, { label: string; icon: string; color: string; paceLabel: string; paceUnit: string }> = {
+                                RUNNING:  { label: 'RUNNING',  icon: '🏃', color: '#3b82f6', paceLabel: 'RITMO',     paceUnit: '/KM'  },
+                                CYCLING:  { label: 'CYCLING',  icon: '🚴', color: '#22c55e', paceLabel: 'VELOCIDAD', paceUnit: 'KM/H' },
+                                SWIMMING: { label: 'SWIMMING', icon: '🏊', color: '#06b6d4', paceLabel: 'RITMO',     paceUnit: '/100M'},
+                            };
+                            const sportMeta = SPORT_META[category] || SPORT_META['RUNNING'];
 
                             return (
-                                <div className="bg-black/60 backdrop-blur-3xl border border-white/10 p-5 rounded-[24px] shadow-2xl w-[300px] max-w-[calc(100vw-40px)] relative overflow-hidden group select-none transition-all">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
-                                    <div className="flex items-center gap-4 mb-4 relative z-10">
-                                        <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
-                                            <Dumbbell className="w-5 h-5 text-brand-red" />
+                                <div className="bg-black/70 backdrop-blur-3xl border border-white/10 rounded-[24px] shadow-2xl w-[300px] max-w-[calc(100vw-40px)] relative overflow-hidden group select-none transition-all">
+                                    {/* Top accent line */}
+                                    <div className="h-[2px] w-full" style={{ background: isEndurance ? `linear-gradient(90deg, ${sportMeta.color}, transparent)` : 'linear-gradient(90deg, #ef4444, transparent)' }} />
+
+                                    <div className="p-4">
+                                        {/* Header */}
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="w-9 h-9 rounded-xl flex items-center justify-center border text-lg"
+                                                style={{ background: isEndurance ? `${sportMeta.color}15` : 'rgba(239,68,68,0.1)', borderColor: isEndurance ? `${sportMeta.color}30` : 'rgba(239,68,68,0.2)' }}>
+                                                {isEndurance ? sportMeta.icon : '🏋️'}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[8px] font-black uppercase tracking-[0.2em] mb-0.5"
+                                                    style={{ color: isEndurance ? sportMeta.color : '#ef4444' }}>
+                                                    {isEndurance ? sportMeta.label : `WOD · ${category || 'CROSS TRAINING'}`}
+                                                    {endFormat && isEndurance && <span className="text-white/30 ml-1">· {endFormat}</span>}
+                                                </p>
+                                                <h4 className="text-white font-black italic uppercase text-base tracking-tighter truncate leading-none">
+                                                    {data.title || 'WORKOUT OF THE DAY'}
+                                                </h4>
+                                            </div>
                                         </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-[9px] text-brand-red font-black uppercase tracking-[0.2em] mb-0.5">WOD · CROSS TRAINING</p>
-                                            <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || 'WORKOUT OF THE DAY'}</h4>
-                                            {data.summary?.totalTime && data.summary.totalTime !== '--:--' && (
-                                                <p className="text-[9px] text-white/40 font-bold mt-0.5">{data.blocks?.length || 0} bloques · {data.summary.totalTime}</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <div className="space-y-2 relative z-10">
-                                        {hasWodBlocks ? (
+
+                                        {/* ENDURANCE: Strava-style stats */}
+                                        {isEndurance ? (
+                                            <div className="rounded-2xl p-3 space-y-3" style={{ background: `${sportMeta.color}08`, border: `1px solid ${sportMeta.color}20` }}>
+                                                {/* Distance hero */}
+                                                <div className="text-center pb-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                                                    <p className="text-[7px] font-black text-white/30 uppercase tracking-[0.4em] mb-1">DISTANCIA</p>
+                                                    <div className="flex items-baseline justify-center gap-1">
+                                                        <span className="text-4xl font-black italic text-white tracking-tighter leading-none">
+                                                            {endDist ? endDist.replace(/[A-Za-z\s]/g, '').trim() || endDist : '--'}
+                                                        </span>
+                                                        <span className="text-sm font-black italic uppercase" style={{ color: sportMeta.color }}>
+                                                            {endDist ? 'KM' : ''}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                {/* Pace + Time grid */}
+                                                <div className="grid grid-cols-2 gap-2">
+                                                    <div className="text-center">
+                                                        <p className="text-[6px] font-black text-white/30 uppercase tracking-widest">{sportMeta.paceLabel}</p>
+                                                        <p className="text-base font-black italic text-white tracking-tighter">{endPace || '--'}</p>
+                                                        <p className="text-[6px] font-bold uppercase" style={{ color: sportMeta.color }}>{sportMeta.paceUnit}</p>
+                                                    </div>
+                                                    <div className="text-center">
+                                                        <p className="text-[6px] font-black text-white/30 uppercase tracking-widest">TIEMPO</p>
+                                                        <p className="text-base font-black italic text-white tracking-tighter">{endTime || '--'}</p>
+                                                        <p className="text-[6px] font-bold uppercase" style={{ color: sportMeta.color }}>MIN</p>
+                                                    </div>
+                                                </div>
+                                                {/* Elevation if available */}
+                                                {endElevation && (
+                                                    <div className="text-center pt-1" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                                                        <p className="text-[6px] font-black text-white/30 uppercase tracking-widest">DESNIVEL</p>
+                                                        <p className="text-sm font-black italic text-white">{endElevation} <span className="text-[8px]" style={{ color: sportMeta.color }}>D+</span></p>
+                                                    </div>
+                                                )}
+                                                {/* Pace bars decoration */}
+                                                <div className="flex items-end gap-0.5 h-4 opacity-20">
+                                                    {[40,60,45,80,55,90,65,75,85,70,60,55,75,80,65,50,70,85,60,45].map((h, i) => (
+                                                        <div key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%`, background: sportMeta.color }} />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ) : hasWodBlocks ? (
+                                            // STANDARD WOD BLOCKS
                                             <div className="space-y-1.5">
                                                 {wodBlocks.slice(0, 3).map((block: any, idx: number) => (
                                                     <div key={idx} className="bg-white/[0.04] border border-white/5 p-2.5 rounded-xl">
@@ -893,9 +960,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                     </div>
                                                 ))}
                                                 {wodBlocks.length > 3 && (
-                                                    <div className="text-[8px] text-center text-brand-red/60 font-black uppercase tracking-[0.2em] pt-1">
-                                                        +{wodBlocks.length - 3} bloques más
-                                                    </div>
+                                                    <p className="text-[8px] text-center text-brand-red/60 font-black uppercase tracking-[0.2em] pt-1">+{wodBlocks.length - 3} bloques más</p>
                                                 )}
                                             </div>
                                         ) : data.exercises && data.exercises.length > 0 ? (
@@ -903,23 +968,21 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                 {data.exercises.slice(0, 4).map((ex: any, idx: number) => (
                                                     <div key={idx} className="flex justify-between items-center bg-white/5 p-2 rounded-xl border border-white/5">
                                                         <span className="text-[9px] font-black text-white uppercase tracking-tight truncate flex-1 pr-2">{ex.name}</span>
-                                                        <span className="text-brand-red font-black text-xs italic tracking-tighter shrink-0">
-                                                            {ex.sets?.length || 0} SERIES
-                                                        </span>
+                                                        <span className="text-brand-red font-black text-xs italic tracking-tighter shrink-0">{ex.sets?.length || 0} SERIES</span>
                                                     </div>
                                                 ))}
                                             </div>
                                         ) : data.metrics?.path && data.metrics.path.length > 1 ? (
                                             <div className="bg-black/40 p-3 rounded-2xl border border-white/10 flex flex-col items-center">
-                                                <RouteMap path={data.metrics.path} className="w-24 h-24 mb-3" color="#DC2626" />
-                                                <div className="grid grid-cols-2 gap-4 w-full text-center">
+                                                <RouteMap path={data.metrics.path} className="w-20 h-20 mb-2" color="#DC2626" />
+                                                <div className="grid grid-cols-2 gap-3 w-full text-center">
                                                     <div>
                                                         <p className="text-white font-black italic text-[10px]">{(data.metrics.distance / 1000).toFixed(2)} km</p>
-                                                        <p className="text-[6px] text-gray-500 font-black uppercase tracking-widest leading-none">Distancia</p>
+                                                        <p className="text-[6px] text-gray-500 font-black uppercase tracking-widest">Distancia</p>
                                                     </div>
                                                     <div>
                                                         <p className="text-white font-black italic text-[10px]">{data.metrics.pace}</p>
-                                                        <p className="text-[6px] text-gray-500 font-black uppercase tracking-widest leading-none">Ritmo</p>
+                                                        <p className="text-[6px] text-gray-500 font-black uppercase tracking-widest">Ritmo</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -929,9 +992,10 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                             </div>
                                         )}
                                     </div>
-                                    <div className="mt-4 pt-3 border-t border-white/5 flex justify-center">
-                                        <div className="flex items-center gap-1.5 opacity-50">
-                                            <div className="w-1.5 h-1.5 bg-brand-red rounded-full animate-pulse" />
+
+                                    <div className="px-4 pb-3 flex justify-center">
+                                        <div className="flex items-center gap-1.5 opacity-40">
+                                            <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: isEndurance ? sportMeta.color : '#ef4444' }} />
                                             <span className="text-[8px] text-gray-400 font-black uppercase tracking-[0.3em]">RIVAL FIT ATLETA</span>
                                         </div>
                                     </div>
@@ -1832,7 +1896,21 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                 try {
                                                     const data = JSON.parse(overlay.content);
                                                     const hasBlocks = data.metrics?.blocks?.length > 0;
+                                                    const wodBlocks2 = data.blocks || data.metrics?.blocks || [];
                                                     const isExpanded = expandedWorkoutId === overlay.id;
+                                                    const category2 = data.category || data.metrics?.type?.toUpperCase() || '';
+                                                    const isEnd2 = ['RUNNING','CYCLING','SWIMMING'].includes(category2) || data.sport_type?.toLowerCase() === 'running';
+                                                    const fBlock2 = wodBlocks2[0];
+                                                    const e2Dist = fBlock2?.config?.distance || (data.metrics?.distance ? `${(data.metrics.distance / 1000).toFixed(2)} KM` : null);
+                                                    const e2Pace = fBlock2?.config?.pace || data.metrics?.pace || null;
+                                                    const e2Time = data.summary?.totalTime || data.metrics?.time || null;
+                                                    const e2Elev = fBlock2?.config?.frequency || (data.metrics?.elevation ? `${data.metrics.elevation}M` : null);
+                                                    const SPORT_META2: Record<string, { label: string; icon: string; color: string; paceLabel: string; paceUnit: string }> = {
+                                                        RUNNING:  { label: 'RUNNING',  icon: '🏃', color: '#3b82f6', paceLabel: 'RITMO',     paceUnit: '/KM'  },
+                                                        CYCLING:  { label: 'CYCLING',  icon: '🚴', color: '#22c55e', paceLabel: 'VELOCIDAD', paceUnit: 'KM/H' },
+                                                        SWIMMING: { label: 'SWIMMING', icon: '🏊', color: '#06b6d4', paceLabel: 'RITMO',     paceUnit: '/100M'},
+                                                    };
+                                                    const sMeta2 = SPORT_META2[category2] || SPORT_META2['RUNNING'];
 
                                                     return (
                                                         <div
@@ -1842,25 +1920,56 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                                 setIsPaused(!isExpanded);
                                                             }}
                                                             className={clsx(
-                                                                "bg-black/60 backdrop-blur-3xl border border-white/10 p-5 rounded-[24px] shadow-2xl relative overflow-hidden select-none",
-                                                                isExpanded ? "w-[340px] max-h-[500px] overflow-y-auto no-scrollbar" : "w-[300px]"
+                                                                "bg-black/70 backdrop-blur-3xl border border-white/10 rounded-[24px] shadow-2xl relative overflow-hidden select-none",
+                                                                isExpanded ? "w-[320px] max-h-[480px] overflow-y-auto no-scrollbar" : "w-[280px]"
                                                             )}
                                                         >
-                                                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10 pointer-events-none" />
-                                                            <div className="flex items-center gap-4 mb-4 relative z-10">
-                                                                <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shadow-[0_0_15px_rgba(220,38,38,0.3)]">
-                                                                    <Trophy className="w-5 h-5 text-brand-red" />
+                                                            <div className="h-[2px] w-full" style={{ background: isEnd2 ? `linear-gradient(90deg, ${sMeta2.color}, transparent)` : 'linear-gradient(90deg, #ef4444, transparent)' }} />
+                                                            <div className="p-4">
+                                                                <div className="flex items-center gap-3 mb-3">
+                                                                    <div className="w-9 h-9 rounded-xl flex items-center justify-center border text-base"
+                                                                        style={{ background: isEnd2 ? `${sMeta2.color}15` : 'rgba(239,68,68,0.1)', borderColor: isEnd2 ? `${sMeta2.color}30` : 'rgba(239,68,68,0.2)' }}>
+                                                                        {isEnd2 ? sMeta2.icon : '🏋️'}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="text-[8px] font-black uppercase tracking-[0.2em] mb-0.5" style={{ color: isEnd2 ? sMeta2.color : '#ef4444' }}>
+                                                                            {isEnd2 ? sMeta2.label : 'ENTRENAMIENTO'}
+                                                                        </p>
+                                                                        <h4 className="text-white font-black italic uppercase text-base tracking-tighter truncate leading-none">{data.title || data.name || 'Sesión'}</h4>
+                                                                    </div>
+                                                                    <div className="shrink-0">{isExpanded ? <ChevronUp className="w-4 h-4 text-brand-red" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}</div>
                                                                 </div>
-                                                                <div className="flex-1 min-w-0">
-                                                                    <p className="text-[9px] text-gray-400 font-black uppercase tracking-[0.2em] mb-0.5">Entrenamiento</p>
-                                                                    <h4 className="text-white font-black italic uppercase text-lg tracking-tighter truncate leading-none">{data.title || data.name || 'Sesión'}</h4>
-                                                                </div>
-                                                                <div className="shrink-0 flex items-center justify-center">
-                                                                    {isExpanded ? <ChevronUp className="w-4 h-4 text-brand-red" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-                                                                </div>
-                                                            </div>
-                                                            <div className="space-y-2 relative z-10">
-                                                                {hasBlocks ? (
+
+                                                                {isEnd2 ? (
+                                                                    // ENDURANCE VIEWER
+                                                                    <div className="rounded-xl p-3 space-y-2" style={{ background: `${sMeta2.color}08`, border: `1px solid ${sMeta2.color}20` }}>
+                                                                        <div className="text-center pb-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                                                                            <p className="text-[6px] font-black text-white/30 uppercase tracking-[0.4em] mb-1">DISTANCIA</p>
+                                                                            <div className="flex items-baseline justify-center gap-1">
+                                                                                <span className="text-3xl font-black italic text-white tracking-tighter">{e2Dist ? e2Dist.replace(/[A-Za-z\s]/g, '').trim() || e2Dist : '--'}</span>
+                                                                                <span className="text-sm font-black italic uppercase" style={{ color: sMeta2.color }}>{e2Dist ? 'KM' : ''}</span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="grid grid-cols-2 gap-2">
+                                                                            <div className="text-center">
+                                                                                <p className="text-[6px] font-black text-white/30 uppercase tracking-widest">{sMeta2.paceLabel}</p>
+                                                                                <p className="text-sm font-black italic text-white">{e2Pace || '--'}</p>
+                                                                                <p className="text-[6px] font-bold uppercase" style={{ color: sMeta2.color }}>{sMeta2.paceUnit}</p>
+                                                                            </div>
+                                                                            <div className="text-center">
+                                                                                <p className="text-[6px] font-black text-white/30 uppercase tracking-widest">TIEMPO</p>
+                                                                                <p className="text-sm font-black italic text-white">{e2Time || '--'}</p>
+                                                                                <p className="text-[6px] font-bold uppercase" style={{ color: sMeta2.color }}>MIN</p>
+                                                                            </div>
+                                                                        </div>
+                                                                        {e2Elev && <div className="text-center pt-1 text-xs font-black text-white">{e2Elev} <span className="text-[8px]" style={{ color: sMeta2.color }}>D+</span></div>}
+                                                                        <div className="flex items-end gap-0.5 h-3 opacity-20">
+                                                                            {[40,60,45,80,55,90,65,75,85,70,60,55,75,80,65].map((h, i) => (
+                                                                                <div key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%`, background: sMeta2.color }} />
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                ) : hasBlocks ? (
                                                                     <div className="space-y-1.5">
                                                                         {(isExpanded ? data.metrics.blocks : data.metrics.blocks.slice(0, 3)).map((block: any, idx: number) => (
                                                                             <motion.div
@@ -1868,22 +1977,19 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                                                 animate={{ opacity: 1, y: 0 }}
                                                                                 transition={{ delay: idx * 0.05 }}
                                                                                 key={idx}
-                                                                                className="flex flex-col bg-white/5 p-3 rounded-xl border border-white/5 hover:border-white/10 transition-colors gap-2"
+                                                                                className="flex flex-col bg-white/5 p-3 rounded-xl border border-white/5 gap-2"
                                                                             >
                                                                                 <div className="flex justify-between items-center">
                                                                                     <div className="flex flex-col">
-                                                                                        <span className="text-[10px] font-black text-white uppercase tracking-tight">{block.title || block.type || 'BLOQUE'}</span>
-                                                                                        {isExpanded && block.type && (
-                                                                                            <span className="text-[8px] text-brand-red/70 font-bold uppercase tracking-widest">{block.type}</span>
-                                                                                        )}
+                                                                                        <span className="text-[10px] font-black text-white uppercase">{block.title || block.type || 'BLOQUE'}</span>
+                                                                                        {isExpanded && block.type && <span className="text-[8px] text-brand-red/70 font-bold uppercase">{block.type}</span>}
                                                                                     </div>
-                                                                                    <span className="text-brand-red font-black text-sm italic tracking-tighter">
+                                                                                    <span className="text-brand-red font-black text-sm italic">
                                                                                         {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : '-'))}
                                                                                     </span>
                                                                                 </div>
-
-                                                                                {isExpanded && block.exercises && block.exercises.length > 0 && (
-                                                                                    <div className="grid grid-cols-1 gap-1.5 mt-1 border-t border-white/5 pt-2">
+                                                                                {isExpanded && block.exercises?.length > 0 && (
+                                                                                    <div className="grid gap-1.5 border-t border-white/5 pt-2">
                                                                                         {block.exercises.map((ex: any, eIdx: number) => (
                                                                                             <div key={eIdx} className="flex justify-between items-center bg-black/20 px-2 py-1.5 rounded-lg">
                                                                                                 <span className="text-[9px] text-gray-300 font-bold uppercase truncate max-w-[150px]">{ex.name}</span>
@@ -1901,30 +2007,14 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                                         )}
                                                                     </div>
                                                                 ) : (
-                                                                    <>
-                                                                        {(data.total_volume_kg > 0 || data.max_weight) && (
-                                                                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
-                                                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Carga Máxima</span>
-                                                                                <span className="text-brand-red font-black text-sm">{data.total_volume_kg || data.max_weight} KG</span>
-                                                                            </div>
-                                                                        )}
-                                                                        {data.location_name && (
-                                                                            <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
-                                                                                <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Lugar</span>
-                                                                                <span className="text-white font-bold text-xs truncate max-w-[150px] uppercase">{data.location_name}</span>
-                                                                            </div>
-                                                                        )}
-                                                                    </>
-                                                                )}
-                                                                {!hasBlocks && !data.total_volume_kg && !data.location_name && (
-                                                                    <div className="bg-white/5 p-3 rounded-xl border border-white/5">
-                                                                        <p className="text-white/60 text-xs italic text-center">¡Entrenamiento completado!</p>
+                                                                    <div className="bg-white/5 p-3 rounded-xl border border-white/5 text-center">
+                                                                        <p className="text-white/60 text-xs italic">¡Entrenamiento completado!</p>
                                                                     </div>
                                                                 )}
                                                             </div>
-                                                            <div className="mt-4 pt-3 border-t border-white/5 flex justify-center">
-                                                                <div className="flex items-center gap-1.5 opacity-50">
-                                                                    <div className="w-1.5 h-1.5 bg-brand-red rounded-full animate-pulse" />
+                                                            <div className="px-4 pb-3 flex justify-center">
+                                                                <div className="flex items-center gap-1.5 opacity-40">
+                                                                    <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: isEnd2 ? sMeta2.color : '#ef4444' }} />
                                                                     <span className="text-[8px] text-gray-400 font-black uppercase tracking-[0.3em]">RIVAL FIT ATLETA</span>
                                                                 </div>
                                                             </div>

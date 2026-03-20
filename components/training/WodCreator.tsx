@@ -21,7 +21,9 @@ import { motion, Reorder, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { getExercises, addNewExercise } from "@/app/dashboard/training/actions";
 
-export type WodFormat = 'AMRAP' | 'FOR TIME' | 'EMOM' | 'TABATA' | 'INTERVALS' | 'DEATH BY' | 'ROUNDS FOR TIME' | '21-15-9' | 'FUERZA' | 'LIBRE';
+export type WodFormat = 'AMRAP' | 'FOR TIME' | 'EMOM' | 'TABATA' | 'INTERVALS' | 'DEATH BY' | 'ROUNDS FOR TIME' | '21-15-9' | 'FUERZA' | 'LIBRE'
+    // Endurance formats
+    | 'CARRERA LIBRE' | 'INTERVALOS' | 'FARTLEK' | 'TEMPO' | 'SERIES' | 'TRAIL';
 export type WorkoutCategory = 'CROSS_TRAINING' | 'RUNNING' | 'GYM' | 'OCR' | 'HYROX' | 'CYCLING' | 'SWIMMING' | 'YOGA' | 'BOXING';
 
 import { BENCHMARKS } from "./benchmarks";
@@ -37,6 +39,8 @@ export interface WodBlock {
         rest?: string;
         frequency?: string;
         minutes?: number;
+        distance?: string;
+        pace?: string;
     };
     exercises: ExerciseEntry[];
 }
@@ -74,7 +78,14 @@ const FORMAT_ICONS: Record<WodFormat, React.ReactNode> = {
     'ROUNDS FOR TIME': <Repeat className="w-5 h-5" />,
     '21-15-9': <Zap className="w-5 h-5" />,
     'FUERZA': <Dumbbell className="w-5 h-5" />,
-    'LIBRE': <Activity className="w-5 h-5" />
+    'LIBRE': <Activity className="w-5 h-5" />,
+    // Endurance
+    'CARRERA LIBRE': <Activity className="w-5 h-5" />,
+    'INTERVALOS': <Repeat className="w-5 h-5" />,
+    'FARTLEK': <Zap className="w-5 h-5" />,
+    'TEMPO': <Timer className="w-5 h-5" />,
+    'SERIES': <Target className="w-5 h-5" />,
+    'TRAIL': <Activity className="w-5 h-5" />,
 };
 
 const FORMAT_DESCRIPTIONS: Record<WodFormat, string> = {
@@ -87,7 +98,26 @@ const FORMAT_DESCRIPTIONS: Record<WodFormat, string> = {
     'ROUNDS FOR TIME': 'REALIZA LAS RONDAS POR TIEMPO',
     '21-15-9': 'ESQUEMA CLÁSICO DE REPETICIONES',
     'FUERZA': 'TRABAJO DE FUERZA Y POWERLIFTING',
-    'LIBRE': 'ENTRENAMIENTO SIN FORMATO DEFINIDO'
+    'LIBRE': 'ENTRENAMIENTO SIN FORMATO DEFINIDO',
+    // Endurance
+    'CARRERA LIBRE': 'DISTANCIA Y TIEMPO LIBRE',
+    'INTERVALOS': 'SERIES CON DESCANSO DEFINIDO',
+    'FARTLEK': 'RITMO VARIABLE POR SENSACIONES',
+    'TEMPO': 'RITMO CONSTANTE Y CONTROLADO',
+    'SERIES': 'REPETICIONES EN PISTA / DISTANCIA',
+    'TRAIL': 'CARRERA POR MONTAÑA / TRAIL',
+};
+
+const CATEGORY_FORMATS: Record<WorkoutCategory, WodFormat[]> = {
+    'CROSS_TRAINING': ['AMRAP', 'FOR TIME', 'EMOM', 'TABATA', 'INTERVALS', 'DEATH BY', 'ROUNDS FOR TIME', '21-15-9', 'FUERZA', 'LIBRE'],
+    'GYM':            ['FUERZA', 'INTERVALS', 'LIBRE'],
+    'OCR':            ['FOR TIME', 'ROUNDS FOR TIME', 'INTERVALS', 'LIBRE'],
+    'HYROX':          ['FOR TIME', 'INTERVALS', 'ROUNDS FOR TIME', 'LIBRE'],
+    'BOXING':         ['ROUNDS FOR TIME', 'TABATA', 'INTERVALS', 'LIBRE'],
+    'YOGA':           ['LIBRE'],
+    'RUNNING':        ['CARRERA LIBRE', 'INTERVALOS', 'FARTLEK', 'TEMPO', 'SERIES', 'TRAIL'],
+    'CYCLING':        ['CARRERA LIBRE', 'INTERVALOS', 'TEMPO', 'SERIES', 'FARTLEK'],
+    'SWIMMING':       ['CARRERA LIBRE', 'SERIES', 'INTERVALOS', 'TEMPO'],
 };
 
 export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
@@ -167,7 +197,29 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
     const updateBlock = (id: string, updates: Partial<WodBlock>) => {
         const updated = blocks.map(b => b.id === id ? { ...b, ...updates } : b);
         setBlocks(updated);
-        updateWod(title, updated, summary, date, category);
+        
+        let newSummary = { ...summary };
+        
+        // Auto-sync para Endurance (Sincronizar tiempo y distancia entre bloque y resumen)
+        const isEndurance = ['RUNNING', 'CYCLING', 'SWIMMING'].includes(category);
+        if (isEndurance && updated.length === 1) {
+            const b = updated[0];
+            const config = b.config;
+            
+            if (config.timecap) newSummary.totalTime = config.timecap;
+            
+            // Si el modo de puntuación es Distancia, heredar la distancia del bloque
+            if (newSummary.scoreType === 'DISTANCE' && config.distance) {
+                newSummary.scoreLabel = config.distance;
+            } else if (newSummary.scoreType === 'TIME' && config.timecap) {
+                newSummary.scoreLabel = config.timecap;
+            } else if (newSummary.scoreType === 'PACE' && config.pace) {
+                newSummary.scoreLabel = config.pace;
+            }
+            setSummary(newSummary);
+        }
+        
+        updateWod(title, updated, newSummary, date, category);
     };
 
     const addExercise = (blockId: string) => {
@@ -319,8 +371,9 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                         newBlocks = [{
                                             ...blocks[0],
                                             title: 'CARRERA',
-                                            format: 'FOR TIME',
-                                            exercises: [{ id: 'run1', name: 'Distancia (km)', reps: '', detail: '' }]
+                                            format: 'CARRERA LIBRE',
+                                            config: { distance: '', pace: '', timecap: '' },
+                                            exercises: [{ id: 'run1', name: 'Notas / Descripción', reps: '', detail: '' }]
                                         }];
                                     } else if (cat.id === 'GYM') {
                                         newBlocks = [{
@@ -347,7 +400,14 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                     newSummary.scoreType = availableTypes[0];
                                     setSummary(newSummary);
                                 }
-                                
+
+                                // Reset block format if not valid for new category
+                                const validFormats = CATEGORY_FORMATS[cat.id];
+                                newBlocks = newBlocks.map(b =>
+                                    validFormats.includes(b.format) ? b : { ...b, format: validFormats[0], config: {} }
+                                );
+                                setBlocks(newBlocks);
+
                                 updateWod(newTitle, newBlocks, newSummary, date, cat.id);
                             }}
                             className={cn(
@@ -487,10 +547,17 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                             else if (newFormat === 'INTERVALS') newConfig = { rounds: 4, work: '40S', rest: '20S' };
                                             else if (newFormat === 'FUERZA') newConfig = { rounds: 5 };
                                             else if (newFormat === 'LIBRE') newConfig = {};
+                                            // Endurance formats
+                                            else if (newFormat === 'CARRERA LIBRE') newConfig = { distance: '', pace: '', timecap: '' };
+                                            else if (newFormat === 'INTERVALOS') newConfig = { rounds: 6, work: '1 KM', rest: '2:00', pace: '' };
+                                            else if (newFormat === 'FARTLEK') newConfig = { timecap: '45:00', distance: '' };
+                                            else if (newFormat === 'TEMPO') newConfig = { distance: '5 KM', pace: '' };
+                                            else if (newFormat === 'SERIES') newConfig = { rounds: 10, work: '400 M', rest: '1:30', pace: '' };
+                                            else if (newFormat === 'TRAIL') newConfig = { distance: '', frequency: '', timecap: '' };
                                             updateBlock(block.id, { format: newFormat, config: newConfig });
                                         }}
                                     >
-                                        {Object.keys(FORMAT_ICONS).map(f => (
+                                        {CATEGORY_FORMATS[category].map(f => (
                                             <option key={f} value={f}>{f}</option>
                                         ))}
                                     </select>
@@ -553,6 +620,49 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                 {block.format === 'LIBRE' && (
                                     <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest py-2 px-4 italic opacity-50">Formato libre - Añade ejercicios y detalles sin restricciones</p>
                                 )}
+                                {/* Endurance formats */}
+                                {block.format === 'CARRERA LIBRE' && (
+                                    <>
+                                        <ConfigInput label="DISTANCIA" value={block.config.distance || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, distance: v } })} placeholder="EJ: 10 KM" />
+                                        <ConfigInput label="RITMO OBJ." value={block.config.pace || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, pace: v } })} placeholder="EJ: 4:30 /KM" />
+                                        <ConfigInput label="TIEMPO OBJ." value={block.config.timecap || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} placeholder="EJ: 45:00" />
+                                    </>
+                                )}
+                                {block.format === 'INTERVALOS' && (
+                                    <>
+                                        <ConfigInput label="SERIES" value={block.config.rounds === undefined ? '' : block.config.rounds.toString()} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rounds: v === '' ? undefined : (parseInt(v) || 0) } })} placeholder="EJ: 6" />
+                                        <ConfigInput label="DISTANCIA" value={block.config.work || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, work: v } })} placeholder="EJ: 1 KM" />
+                                        <ConfigInput label="DESCANSO" value={block.config.rest || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rest: v } })} placeholder="EJ: 2:00" />
+                                        <ConfigInput label="RITMO OBJ." value={block.config.pace || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, pace: v } })} placeholder="EJ: 4:30 /KM" />
+                                    </>
+                                )}
+                                {block.format === 'FARTLEK' && (
+                                    <>
+                                        <ConfigInput label="DURACIÓN" value={block.config.timecap || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} placeholder="EJ: 45:00" />
+                                        <ConfigInput label="DISTANCIA" value={block.config.distance || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, distance: v } })} placeholder="EJ: 8 KM" />
+                                    </>
+                                )}
+                                {block.format === 'TEMPO' && (
+                                    <>
+                                        <ConfigInput label="DISTANCIA" value={block.config.distance || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, distance: v } })} placeholder="EJ: 5 KM" />
+                                        <ConfigInput label="RITMO OBJ." value={block.config.pace || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, pace: v } })} placeholder="EJ: 4:45 /KM" />
+                                    </>
+                                )}
+                                {block.format === 'SERIES' && (
+                                    <>
+                                        <ConfigInput label="SERIES" value={block.config.rounds === undefined ? '' : block.config.rounds.toString()} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rounds: v === '' ? undefined : (parseInt(v) || 0) } })} placeholder="EJ: 10" />
+                                        <ConfigInput label="DISTANCIA" value={block.config.work || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, work: v } })} placeholder="EJ: 400 M" />
+                                        <ConfigInput label="DESCANSO" value={block.config.rest || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rest: v } })} placeholder="EJ: 1:30" />
+                                        <ConfigInput label="RITMO OBJ." value={block.config.pace || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, pace: v } })} placeholder="EJ: 1:45 /400M" />
+                                    </>
+                                )}
+                                {block.format === 'TRAIL' && (
+                                    <>
+                                        <ConfigInput label="DISTANCIA" value={block.config.distance || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, distance: v } })} placeholder="EJ: 20 KM" />
+                                        <ConfigInput label="DESNIVEL D+" value={block.config.frequency || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, frequency: v } })} placeholder="EJ: 800 M" />
+                                        <ConfigInput label="TIEMPO OBJ." value={block.config.timecap || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} placeholder="EJ: 2:30:00" />
+                                    </>
+                                )}
                             </div>
                         </div>
 
@@ -582,82 +692,93 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                         </div>
 
                                         <div className="flex items-center gap-2 w-full">
-                                            <input
-                                                placeholder="REPS"
-                                                inputMode="decimal"
-                                                className="w-20 sm:w-16 bg-white/5 border border-white/5 rounded-xl px-4 py-3 sm:py-2 text-sm sm:text-xs font-bold text-white placeholder:text-gray-700 focus:outline-none focus:border-brand-red/30 transition-all uppercase shrink-0"
-                                                value={ex.reps}
-                                                onFocus={(e) => e.target.select()}
-                                                onChange={(e) => updateExercise(block.id, ex.id, { reps: e.target.value.toUpperCase() })}
-                                            />
+                                            {category !== 'RUNNING' && (
+                                                <input
+                                                    placeholder="REPS"
+                                                    inputMode="decimal"
+                                                    className="w-20 sm:w-16 bg-white/5 border border-white/5 rounded-xl px-4 py-3 sm:py-2 text-sm sm:text-xs font-bold text-white placeholder:text-gray-700 focus:outline-none focus:border-brand-red/30 transition-all uppercase shrink-0"
+                                                    value={ex.reps}
+                                                    onFocus={(e) => e.target.select()}
+                                                    onChange={(e) => updateExercise(block.id, ex.id, { reps: e.target.value.toUpperCase() })}
+                                                />
+                                            )}
 
                                             <div className="hidden sm:block flex-[3] relative">
                                                 <input
                                                     ref={el => { if (el) inputRefs.current[ex.id] = el; }}
-                                                    placeholder="EJERCICIO"
+                                                    placeholder={category === 'RUNNING' ? "NOTAS / SENSACIONES / CLAVES" : "EJERCICIO"}
                                                     className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-2 text-xs font-bold text-white placeholder:text-gray-700 focus:outline-none focus:border-brand-red/30 transition-all uppercase"
                                                     value={ex.name}
                                                     onFocus={() => {
-                                                        setActiveExercisePath({ bId: block.id, exId: ex.id });
-                                                        setSearchQuery(ex.name);
+                                                        if (category !== 'RUNNING') {
+                                                            setActiveExercisePath({ bId: block.id, exId: ex.id });
+                                                            setSearchQuery(ex.name);
+                                                        }
                                                     }}
                                                     onChange={(e) => {
                                                         const val = e.target.value.toUpperCase();
                                                         updateExercise(block.id, ex.id, { name: val });
-                                                        setSearchQuery(val);
+                                                        if (category !== 'RUNNING') {
+                                                            setSearchQuery(val);
+                                                        }
                                                     }}
                                                 />
-                                                <AnimatePresence>
-                                                    {activeExercisePath?.bId === block.id && activeExercisePath?.exId === ex.id && searchQuery.length > 0 && (
-                                                        <motion.div
-                                                            ref={dropdownRef}
-                                                            initial={{ opacity: 0, y: -10 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            exit={{ opacity: 0, y: -10 }}
-                                                            className="absolute left-0 right-0 top-full mt-2 bg-brand-gray border border-white/10 rounded-xl shadow-2xl z-[100] max-h-60 overflow-y-auto backdrop-blur-xl ring-1 ring-black/50"
-                                                        >
-                                                            {catalog
-                                                                .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
-                                                                .sort((a, b) => a.name.toUpperCase().startsWith(searchQuery) ? -1 : 1)
-                                                                .slice(0, 15)
-                                                                .map((ce, i) => (
-                                                                    <button
-                                                                        key={i}
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            updateExercise(block.id, ex.id, { name: ce.name.toUpperCase() });
-                                                                            setActiveExercisePath(null);
-                                                                        }}
-                                                                        className="w-full text-left px-4 py-3 text-[10px] font-bold text-gray-300 hover:text-white hover:bg-white/10 border-b border-white/5 last:border-0 transition-colors uppercase flex items-center gap-2"
-                                                                    >
-                                                                        <span className={cn("w-1.5 h-1.5 rounded-full", ce.name.toUpperCase() === searchQuery ? "bg-brand-red" : "bg-white/20")} />
-                                                                        {ce.name}
+                                                {category !== 'RUNNING' && (
+                                                    <AnimatePresence>
+                                                        {activeExercisePath?.bId === block.id && activeExercisePath?.exId === ex.id && searchQuery.length > 0 && (
+                                                            <motion.div
+                                                                ref={dropdownRef}
+                                                                initial={{ opacity: 0, y: -10 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                                exit={{ opacity: 0, y: -10 }}
+                                                                className="absolute left-0 right-0 top-full mt-2 bg-brand-gray border border-white/10 rounded-xl shadow-2xl z-[100] max-h-60 overflow-y-auto backdrop-blur-xl ring-1 ring-black/50"
+                                                            >
+                                                                {catalog
+                                                                    .filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                                                                    .sort((a, b) => a.name.toUpperCase().startsWith(searchQuery) ? -1 : 1)
+                                                                    .slice(0, 15)
+                                                                    .map((ce, i) => (
+                                                                        <button
+                                                                            key={i}
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                updateExercise(block.id, ex.id, { name: ce.name.toUpperCase() });
+                                                                                setActiveExercisePath(null);
+                                                                            }}
+                                                                            className="w-full text-left px-4 py-3 text-[10px] font-bold text-gray-300 hover:text-white hover:bg-white/10 border-b border-white/5 last:border-0 transition-colors uppercase flex items-center gap-2"
+                                                                        >
+                                                                            <span className={cn("w-1.5 h-1.5 rounded-full", ce.name.toUpperCase() === searchQuery ? "bg-brand-red" : "bg-white/20")} />
+                                                                            {ce.name}
+                                                                        </button>
+                                                                    ))
+                                                                }
+                                                                {!catalog.find(c => c.name.toUpperCase() === searchQuery) && 
+                                                                !["NOTAS", "NOTAS / DESCRIPCIÓN", "DESCRIPCIÓN", "COMENTARIOS"].includes(searchQuery.toUpperCase()) && (
+                                                                    <button type="button" onClick={() => handleSaveNewExercise(block.id, ex.id, searchQuery)} className="w-full text-left px-4 py-3 text-[9px] font-black text-brand-red bg-brand-red/5 hover:bg-brand-red/10 border-t border-white/5 transition-all flex items-center justify-between uppercase tracking-widest">
+                                                                        <span>AGREGAR "{searchQuery}" A LA LIBRERÍA</span>
+                                                                        {isSavingNew ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
                                                                     </button>
-                                                                ))
-                                                            }
-                                                            {!catalog.find(c => c.name.toUpperCase() === searchQuery) && (
-                                                                <button type="button" onClick={() => handleSaveNewExercise(block.id, ex.id, searchQuery)} className="w-full text-left px-4 py-3 text-[9px] font-black text-brand-red bg-brand-red/5 hover:bg-brand-red/10 border-t border-white/5 transition-all flex items-center justify-between uppercase tracking-widest">
-                                                                    <span>AGREGAR "{searchQuery}" A LA LIBRERÍA</span>
-                                                                    {isSavingNew ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
-                                                                </button>
-                                                            )}
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
+                                                                )}
+                                                            </motion.div>
+                                                        )}
+                                                    </AnimatePresence>
+                                                )}
                                             </div>
 
                                             <div className="flex-1 relative group/unit">
-                                                <input
-                                                    placeholder="VALOR"
-                                                    inputMode="decimal"
-                                                    className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 sm:py-2 text-sm sm:text-xs font-bold text-brand-red placeholder:text-gray-700 focus:outline-none focus:border-brand-red/30 transition-all uppercase"
-                                                    value={ex.detail}
-                                                    onFocus={(e) => {
-                                                        e.target.select();
-                                                        setActiveUnitPath({ bId: block.id, exId: ex.id });
-                                                    }}
-                                                    onChange={(e) => updateExercise(block.id, ex.id, { detail: e.target.value.toUpperCase() })}
-                                                />
+                                                {category !== 'RUNNING' || ['INTERVALOS', 'SERIES'].includes(block.format) ? (
+                                                    <input
+                                                        placeholder="VALOR"
+                                                        inputMode="decimal"
+                                                        className="w-full bg-white/5 border border-white/5 rounded-xl px-4 py-3 sm:py-2 text-sm sm:text-xs font-bold text-brand-red placeholder:text-gray-700 focus:outline-none focus:border-brand-red/30 transition-all uppercase"
+                                                        value={ex.detail}
+                                                        onFocus={(e) => {
+                                                            e.target.select();
+                                                            setActiveUnitPath({ bId: block.id, exId: ex.id });
+                                                        }}
+                                                        onChange={(e) => updateExercise(block.id, ex.id, { detail: e.target.value.toUpperCase() })}
+                                                    />
+                                                ) : null}
 
                                                 <AnimatePresence>
                                                     {activeUnitPath?.bId === block.id && activeUnitPath?.exId === ex.id && (
@@ -792,19 +913,22 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-2">
-                        <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none">Tiempo Total Estimado</span>
-                        <div className="relative">
-                            <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-red" />
-                            <input
-                                type="text"
-                                placeholder="Ej: 60:00"
-                                className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-4 text-sm font-bold text-white placeholder:text-gray-700 focus:outline-none focus:border-brand-red/50 transition-all uppercase"
-                                value={summary.totalTime}
-                                onChange={(e) => updateSummary({ totalTime: e.target.value.toUpperCase() })}
-                            />
+                    {/* Tiempo Total - Ocultar si es Endurance y solo hay un bloque (redundante) */}
+                    {(!['RUNNING', 'CYCLING', 'SWIMMING'].includes(category) || blocks.length > 1) && (
+                        <div className="space-y-2">
+                            <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none">Tiempo Total Estimado</span>
+                            <div className="relative">
+                                <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-red" />
+                                <input
+                                    type="text"
+                                    placeholder="Ej: 60:00"
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-4 text-sm font-bold text-white placeholder:text-gray-700 focus:outline-none focus:border-brand-red/50 transition-all uppercase"
+                                    value={summary.totalTime}
+                                    onChange={(e) => updateSummary({ totalTime: e.target.value.toUpperCase() })}
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     <div className="space-y-2">
                         <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none">RESULTADO</span>
@@ -820,7 +944,9 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                     </div>
 
                     <div className="space-y-2">
-                        <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none">TOTAL</span>
+                        <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none">
+                            {['RUNNING', 'CYCLING', 'SWIMMING'].includes(category) ? 'META / OBJETIVO' : 'TOTAL'}
+                        </span>
                         <input
                             type="text"
                             placeholder={SCORE_PLACEHOLDERS[summary.scoreType]}
@@ -830,6 +956,14 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                         />
                     </div>
                 </div>
+
+                {['RUNNING', 'CYCLING', 'SWIMMING'].includes(category) && blocks.length === 1 && (
+                    <div className="mt-4 p-3 bg-brand-red/10 border border-brand-red/20 rounded-xl text-center">
+                        <p className="text-[10px] font-bold text-brand-red uppercase tracking-wider">
+                            ✨ El objetivo se sincroniza automáticamente con los datos de tu sesión
+                        </p>
+                    </div>
+                )}
 
                 <div className="mt-8 p-4 bg-white/5 rounded-2xl border border-white/5">
                     <div className="flex items-center gap-3">
@@ -844,7 +978,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
     );
 }
 
-function ConfigInput({ label, value, onChange }: { label: string, value: string, onChange: (v: string) => void }) {
+function ConfigInput({ label, value, onChange, placeholder }: { label: string, value: string, onChange: (v: string) => void, placeholder?: string }) {
     return (
         <div className="flex flex-col gap-2 min-w-[80px]">
             <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none">{label}</span>
@@ -852,6 +986,7 @@ function ConfigInput({ label, value, onChange }: { label: string, value: string,
                 inputMode="decimal"
                 className="bg-black/20 border border-white/5 rounded-xl text-sm font-black text-brand-red px-4 py-3 focus:ring-0 focus:border-brand-red transition-all w-28 sm:w-24"
                 value={value}
+                placeholder={placeholder}
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => onChange(e.target.value.toUpperCase())}
             />

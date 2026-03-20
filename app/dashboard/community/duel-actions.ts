@@ -221,7 +221,9 @@ export async function getMyDuels() {
                 // Update DB
                 await supabase.from('duels').update({
                     status: 'completed',
-                    winner_id: winnerId
+                    winner_id: winnerId,
+                    challenger_score: challengerScore,
+                    opponent_score: opponentScore
                 }).eq('id', duel.id);
 
                 // Notify Winner (if not a draw)
@@ -240,7 +242,8 @@ export async function getMyDuels() {
 
             return { ...duel, challenger_score: challengerScore, opponent_score: opponentScore };
         }
-        return { ...duel, challenger_score: 0, opponent_score: 0 };
+        // For completed/pending duels, use the scores already stored in DB
+        return duel;
     }));
 
     return duelsWithScores;
@@ -249,8 +252,7 @@ export async function getMyDuels() {
 export async function getPublicProfile(username: string) {
     const supabase = await createClient();
 
-    // Decoded just in case
-    const target = decodeURIComponent(username);
+    const target = decodeURIComponent(username).trim().toLowerCase();
 
     const { data, error } = await supabase
         .from('profiles')
@@ -259,7 +261,7 @@ export async function getPublicProfile(username: string) {
             followers_count:follows!following_id(count),
             following_count:follows!follower_id(count)
         `)
-        .or(`username.eq."${target}",email.eq."${target}"`)
+        .eq('username', target)
         .maybeSingle();
 
     if (!data) {

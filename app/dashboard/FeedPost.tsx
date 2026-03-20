@@ -1473,6 +1473,15 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                     const wodTitle = wd?.title || parsedWodData?.title || 'Entrenamiento';
                     const wodSport = wd?.sport_type || parsedWodData?.sportType || 'Cross Training';
 
+                    // Resolve category and run metrics from all sources
+                    const wodCategory = parsedWodData?.category || wd?.category || wd?.metrics?.type?.toUpperCase();
+                    const isEndurancePost = ['RUNNING','CYCLING','SWIMMING'].includes(wodCategory || '') || wodSport?.toLowerCase() === 'running';
+                    const runMetricsData = isEndurancePost ? {
+                        distance: wd?.metrics?.distance ? `${(wd.metrics.distance / 1000).toFixed(2)} KM` : undefined,
+                        pace: wd?.metrics?.pace || undefined,
+                        elevation: wd?.metrics?.elevation ? `${wd.metrics.elevation}M` : undefined,
+                    } : undefined;
+
                     // For WODs with real blocks → use WorkoutShareCard (shows exercises + reps + weights)
                     if (wodBlocks && wodBlocks.length > 0) {
                         return (
@@ -1480,6 +1489,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 blocks={wodBlocks}
                                 workoutTitle={wodTitle}
                                 sportType={wodSport}
+                                category={wodCategory}
+                                wodBlocks={parsedWodData?.blocks || wd?.blocks}
+                                runMetrics={runMetricsData}
                                 duration={durSec}
                                 durationLabel={durLabel}
                                 date={time}
@@ -1524,20 +1536,67 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 })()
             }
             {
-                showShareCard && (
-                    resolvedWorkoutData?.metrics?.path || resolvedWorkoutData?.metrics?.type === 'running' ? (
-                        <RunShareCard
-                            imageUrl={image && isImageUrl(image) ? image : null}
-                            distance={resolvedWorkoutData.metrics.distance || 0}
-                            time={resolvedWorkoutData.duration || 0}
-                            pace={resolvedWorkoutData.metrics.pace || "0:00"}
-                            elevation={resolvedWorkoutData.metrics.elevation || 0}
-                            path={resolvedWorkoutData.metrics.path || []}
-                            date={time}
-                            userName={user}
-                            onClose={() => setShowShareCard(false)}
-                        />
-                    ) : (
+                showShareCard && (() => {
+                    const wd = resolvedWorkoutData;
+                    const hasPath = (wd?.metrics?.path?.length ?? 0) > 0;
+                    const sportTypeLower = (wd?.sport_type || '').toLowerCase();
+                    const titleLower = (wd?.title || highlight || '').toLowerCase();
+                    const isEndurance = hasPath ||
+                        wd?.metrics?.type === 'running' ||
+                        wd?.metrics?.distance > 0 ||
+                        ['running', 'cycling', 'swimming'].includes(sportTypeLower) ||
+                        titleLower.includes('running') || titleLower.includes('carrera') ||
+                        titleLower.includes('cycling') || titleLower.includes('ciclismo') ||
+                        titleLower.includes('swimming') || titleLower.includes('natación');
+
+                    if (hasPath) {
+                        return (
+                            <RunShareCard
+                                imageUrl={image && isImageUrl(image) ? image : null}
+                                distance={wd.metrics.distance || 0}
+                                time={wd.duration || 0}
+                                pace={wd.metrics.pace || "0:00"}
+                                elevation={wd.metrics.elevation || 0}
+                                path={wd.metrics.path || []}
+                                date={time}
+                                userName={user}
+                                onClose={() => setShowShareCard(false)}
+                            />
+                        );
+                    }
+
+                    if (isEndurance) {
+                        const categoryMap: Record<string, string> = { running: 'RUNNING', cycling: 'CYCLING', swimming: 'SWIMMING' };
+                        const category = categoryMap[sportTypeLower] ||
+                            (titleLower.includes('cycling') || titleLower.includes('ciclismo') ? 'CYCLING' :
+                             titleLower.includes('swimming') || titleLower.includes('natación') ? 'SWIMMING' : 'RUNNING');
+                        const distM = wd?.metrics?.distance || 0;
+                        const distKm = distM > 0 ? `${(distM / 1000).toFixed(2)} KM` : undefined;
+                        const durationSecs = wd?.duration || wd?.metrics?.duration || 0;
+                        const timeLabel = durationSecs > 0
+                            ? `${Math.floor(durationSecs / 60)}:${String(durationSecs % 60).padStart(2, '0')}`
+                            : undefined;
+                        return (
+                            <WorkoutShareCard
+                                blocks={wd?.blocks || []}
+                                workoutTitle={wd?.title || `SESIÓN DE ${category}`}
+                                sportType={category.charAt(0) + category.slice(1).toLowerCase()}
+                                category={category}
+                                runMetrics={{
+                                    distance: distKm,
+                                    pace: wd?.metrics?.pace,
+                                    elevation: wd?.metrics?.elevation ? `${wd.metrics.elevation}M` : undefined,
+                                }}
+                                duration={durationSecs}
+                                durationLabel={timeLabel}
+                                date={time}
+                                userName={user}
+                                onClose={() => setShowShareCard(false)}
+                            />
+                        );
+                    }
+
+                    return (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
                             <div className="relative w-full max-w-lg animate-in zoom-in-95 duration-500">
                                 <button
@@ -1557,21 +1616,21 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     }}
                                     data={{
                                         type: mediaType === 'pr' ? 'pr' : mediaType === 'class_result' ? 'medal' : 'workout',
-                                        title: (resolvedWorkoutData?.sport_type && resolvedWorkoutData.sport_type !== 'fitness') ? resolvedWorkoutData.sport_type.toUpperCase() : (highlight || resolvedWorkoutData?.title || 'ENTRENAMIENTO'),
+                                        title: (wd?.sport_type && wd.sport_type !== 'fitness') ? wd.sport_type.toUpperCase() : (highlight || wd?.title || 'ENTRENAMIENTO'),
                                         date: time,
                                         stats: mediaType === 'pr' ? (() => {
                                             try { const d = JSON.parse(image); return [{ label: "PESO", value: `${d.weight}${d.unit}` }, { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }]; } catch (e) { return [] }
-                                        })() : (resolvedWorkoutData as any)?.metrics?.blocks?.map((b: any) => ({
+                                        })() : (wd as any)?.metrics?.blocks?.map((b: any) => ({
                                             label: b.type?.toUpperCase(),
                                             value: b.result?.time || `${b.result?.rounds || 0} RDS`
-                                        })).slice(0, 3) || [{ label: "DISCIPLINA", value: (resolvedWorkoutData?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "COMPLETADO" }],
+                                        })).slice(0, 3) || [{ label: "DISCIPLINA", value: (wd?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "COMPLETADO" }],
                                         image: (!isVideo && isImageUrl(image)) ? image : undefined
                                     }}
                                 />
                             </div>
                         </div>
-                    )
-                )
+                    );
+                })()
             }
         </div >
     );

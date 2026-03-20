@@ -2,7 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
+
 
 async function calculateWorkoutStreak(supabase: any, userId: string) {
     // Fetch unified history (independent and classes)
@@ -154,6 +154,10 @@ export async function getMissions() {
 export async function updateMissionProgress(userId: string, type: 'volume_kg' | 'sessions_count' | 'social_interactions', amount: number) {
     const supabase = await createClient()
 
+    // Verify the caller is authenticated and only updates their own progress
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user || user.id !== userId) return
+
     // 1. Find relevant missions
     const { data: relevantMissions } = await supabase
         .from('missions')
@@ -292,7 +296,7 @@ export async function saveWorkout(workoutData: any) {
 
     if (workoutError) {
         console.error('SERVER ACTION ERROR: saving workout header:', workoutError)
-        return { error: 'Failed to save workout header: ' + workoutError.message }
+        return { error: 'Error al guardar el entrenamiento. Intenta de nuevo.' }
     }
 
     if (!workout) {
@@ -1074,7 +1078,7 @@ export async function getDetailedAnalytics() {
         .eq('workouts.user_id', user.id)
         .eq('is_pr', true)
         .gte('workouts.created_at', fourWeeksAgo.toISOString())
-        .order('created_at', { foreignTable: 'workouts', ascending: false })
+        .order('created_at', { referencedTable: 'workouts', ascending: false })
 
     const prHistory = rawPrHistory?.map((pr: any) => ({
         exercise_name: pr.exercise_name,

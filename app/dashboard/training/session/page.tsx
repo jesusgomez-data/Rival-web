@@ -1299,7 +1299,21 @@ function SessionContent() {
                     <WorkoutShareCard
                         blocks={blocks}
                         workoutTitle={workoutTitle}
-                        sportType={sportMode === 'hybrid' ? 'Hybrid Training' : sportMode === 'ocr' ? 'OCR' : 'Cross Training'}
+                        sportType={sportMode === 'hybrid' ? 'Hybrid Training' : sportMode === 'ocr' ? 'OCR' : sportMode === 'running' ? 'Running' : sportMode === 'gym' ? 'Gym' : 'Cross Training'}
+                        category={sportMode === 'running' ? 'RUNNING' : sportMode === 'cycling' ? 'CYCLING' : sportMode === 'swimming' ? 'SWIMMING' : undefined}
+                        runMetrics={sportMode === 'running' ? {
+                            distance: runDistance > 0 ? `${(runDistance / 1000).toFixed(2)} KM` : undefined,
+                            pace: (() => {
+                                if (runDistance > 0 && elapsedSeconds > 0) {
+                                    const minPerKm = (elapsedSeconds / 60) / (runDistance / 1000);
+                                    const pMin = Math.floor(minPerKm);
+                                    const pSec = Math.floor((minPerKm - pMin) * 60);
+                                    return `${pMin}:${pSec < 10 ? '0' + pSec : pSec}`;
+                                }
+                                return undefined;
+                            })(),
+                            elevation: elevationGain > 0 ? `${elevationGain}M` : undefined,
+                        } : undefined}
                         duration={elapsedSeconds}
                         date={new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
                         userName={userName}

@@ -54,6 +54,8 @@ export interface WODBlock {
     rounds?: number;
     timeLimit?: string;
     restBetweenRounds?: string;
+    distance?: string;
+    pace?: string;
   };
 }
 
