@@ -1,25 +1,20 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
 import {
     Clock,
     Timer,
     Repeat,
     Zap,
     Target,
-    Dumbbell,
     Trophy,
     ChevronDown,
     ChevronUp,
     Edit2,
     Activity
 } from "lucide-react";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { WodBlock, WodFormat, WodSummary, ExerciseEntry, WorkoutCategory } from "../training/WodCreator";
-import { cn, isImageUrl } from "@/lib/utils";
-import { getWodResults } from "@/app/dashboard/community/actions";
-import Link from "next/link";
-import Image from "next/image";
+import { cn } from "@/lib/utils";
 import WODLeaderboardModal from "@/components/WODLeaderboardModal";
 import WODTrackerModal from "@/components/WODTrackerModal";
 
@@ -29,6 +24,8 @@ interface WodData {
     summary: WodSummary;
     media_url?: string | null;
     category?: WorkoutCategory;
+    // Session metrics as fallback for endurance cards (distance in meters, pace as string)
+    metrics?: { distance?: number; pace?: string; elevation?: number; time?: string; duration?: number } | null;
 }
 
 interface WodCardProps {
@@ -59,7 +56,6 @@ const FORMAT_CONFIG: Partial<Record<WodFormat, { label: string, color: string, i
 };
 
 const ENDURANCE_CATEGORIES: WorkoutCategory[] = ['RUNNING', 'CYCLING', 'SWIMMING'];
-const ENDURANCE_FORMATS: WodFormat[] = ['CARRERA LIBRE', 'INTERVALOS', 'FARTLEK', 'TEMPO', 'SERIES', 'TRAIL'];
 
 const DEFAULT_CONFIG = { label: 'WOD', color: 'text-green-500', icon: Target };
 
@@ -80,7 +76,7 @@ export default function WodCard({ data, userName, publishDate, postId, completio
     const [showWODLeaderboard, setShowWODLeaderboard] = useState(false);
     const [showWODTracker, setShowWODTracker] = useState(false);
     const [hasCompleted, setHasCompleted] = useState(initialHasCompleted);
-    const [isLoadingStatus, setIsLoadingStatus] = useState(false);
+    const [, setIsLoadingStatus] = useState(false);
 
     useEffect(() => {
         if (postId || (data as any).original_wod_post_id) {
@@ -117,28 +113,36 @@ export default function WodCard({ data, userName, publishDate, postId, completio
         const firstBlock = data.blocks[0];
         const config = firstBlock?.config || {};
         
+        // Fallback distance/pace from session metrics (for live-session running posts)
+        const sessionDistM = data.metrics?.distance || 0;
+        const sessionDistKm = sessionDistM > 0 ? (sessionDistM / 1000).toFixed(2) : null;
+        const sessionPace = data.metrics?.pace || null;
+        const sessionTime = data.metrics?.time || (data.metrics?.duration
+            ? `${Math.floor(data.metrics.duration / 60)}:${String(data.metrics.duration % 60).padStart(2, '0')}`
+            : null);
+
         // Mapeo de métricas por deporte
         const metricsMap = {
             'RUNNING': {
                 distUnit: 'KM',
                 paceLabel: 'RITMO',
                 paceUnit: '/KM',
-                paceValue: config.pace || '--:--',
-                distValue: config.distance?.split(' ')[0] || (data.summary?.scoreType === 'DISTANCE' ? data.summary.scoreLabel : '--')
+                paceValue: config.pace || sessionPace || '--:--',
+                distValue: config.distance?.split(' ')[0] || sessionDistKm || (data.summary?.scoreType === 'DISTANCE' ? data.summary.scoreLabel : '--')
             },
             'CYCLING': {
                 distUnit: 'KM',
                 paceLabel: 'VELOCIDAD',
                 paceUnit: 'KM/H',
-                paceValue: config.pace || '--', // In cycling 'pace' field might store speed
-                distValue: config.distance?.split(' ')[0] || (data.summary?.scoreType === 'DISTANCE' ? data.summary.scoreLabel : '--')
+                paceValue: config.pace || sessionPace || '--',
+                distValue: config.distance?.split(' ')[0] || sessionDistKm || (data.summary?.scoreType === 'DISTANCE' ? data.summary.scoreLabel : '--')
             },
             'SWIMMING': {
                 distUnit: 'M',
                 paceLabel: 'RITMO',
                 paceUnit: '/100M',
-                paceValue: config.pace || '--:--',
-                distValue: config.distance?.split(' ')[0] || (data.summary?.scoreType === 'DISTANCE' ? data.summary.scoreLabel : '--')
+                paceValue: config.pace || sessionPace || '--:--',
+                distValue: config.distance?.split(' ')[0] || sessionDistKm || (data.summary?.scoreType === 'DISTANCE' ? data.summary.scoreLabel : '--')
             }
         };
 
@@ -207,7 +211,7 @@ export default function WodCard({ data, userName, publishDate, postId, completio
                             <span className="text-[9px] font-bold text-gray-500 uppercase tracking-widest">Tiempo</span>
                             <div className="flex items-baseline gap-1 font-mono">
                                 <span className="text-3xl md:text-5xl font-black text-white leading-none tracking-tighter">
-                                    {data.summary?.totalTime || '--:--'}
+                                    {data.summary?.totalTime || sessionTime || '--:--'}
                                 </span>
                                 <span className="text-sm font-black text-brand-red italic uppercase">MIN</span>
                             </div>
@@ -409,7 +413,7 @@ export default function WodCard({ data, userName, publishDate, postId, completio
                 isExpanded ? "max-h-[3000px] opacity-100 py-4 md:py-6" : "max-h-0 opacity-0 py-0"
             )}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {data.blocks.map((block: WodBlock, bIdx: number) => {
+                    {data.blocks.map((block: WodBlock) => {
                         const config = FORMAT_CONFIG[block.format] || DEFAULT_CONFIG;
                         const Icon = config.icon;
 
@@ -454,7 +458,7 @@ export default function WodCard({ data, userName, publishDate, postId, completio
 
                                     {/* Exercises */}
                                     <div className="space-y-4 border-t border-white/5 pt-4">
-                                        {block.exercises.map((ex: ExerciseEntry, exIdx: number) => (
+                                        {block.exercises.map((ex: ExerciseEntry) => (
                                             <div key={ex.id} className="space-y-2">
                                                 <div className="flex items-center justify-between gap-2 group-hover/block:translate-x-1 transition-transform">
                                                     <div className="flex items-center gap-3">

@@ -1091,8 +1091,24 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             // Normalize data for WodCard if it's in the old metrics.blocks format
                             const blocks = (w.blocks || w.metrics.blocks).map((b: any) => ({
                                 ...b,
-                                config: b.config || {} // Safety for legacy data
+                                config: b.config || {}
                             }));
+
+                            // Derive category from sport_type when category is not explicitly set
+                            const derivedCategory = (() => {
+                                if (w.category) return w.category;
+                                const st = (w.sport_type || '').toLowerCase();
+                                if (st === 'running') return 'RUNNING';
+                                if (st === 'cycling' || st === 'ciclismo') return 'CYCLING';
+                                if (st === 'swimming' || st === 'natación') return 'SWIMMING';
+                                if (st === 'fitness' || st === 'gym') return 'GYM';
+                                if (st === 'ocr') return 'OCR';
+                                if (st === 'hyrox') return 'HYROX';
+                                if (st === 'yoga' || st.includes('mobil')) return 'YOGA';
+                                if (st === 'boxing' || st === 'boxeo') return 'BOXING';
+                                return 'CROSS_TRAINING';
+                            })();
+
                             const normalizedWodData = {
                                 title: w.title || (w.sport_type && w.sport_type !== 'Entrenamiento Libre' ? w.sport_type : 'WORKOUT OF THE DAY'),
                                 blocks: blocks,
@@ -1101,10 +1117,11 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     scoreType: w.metrics?.type || 'WORKOUT',
                                     totalTime: w.metrics?.duration || w.metrics?.time || '--:--'
                                 },
-                                // BUG FIX: Extract media_url from the workout data if 'image' is a JSON string
                                 media_url: w.media_url || (image && isImageUrl(image) ? image : null),
                                 original_wod_post_id: (w as any).original_wod_post_id || null,
-                                category: w.category
+                                category: derivedCategory,
+                                // Pass session metrics so WodCard can show distance/pace for endurance sessions
+                                metrics: w.metrics || null,
                             };
 
                             return (
