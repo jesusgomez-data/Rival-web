@@ -178,7 +178,7 @@ export default function TrainingPage() {
                     <div className="max-w-xl">
                         <div className="flex items-center gap-2 mb-2">
                             <span className="bg-brand-red text-white text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded">Programa Actual</span>
-                            <span className="text-gray-300 text-xs font-bold uppercase tracking-widest !text-gray-300">Semana 4 • Bloque de Hipertrofia</span>
+                            <span className="text-white text-xs font-black uppercase tracking-widest drop-shadow-[0_1px_6px_rgba(0,0,0,1)]">Semana 4 • Bloque de Hipertrofia</span>
                         </div>
                         <h1 className="text-4xl md:text-5xl font-heading font-black !text-white glow-text">CENTRO DE ENTRENAMIENTO</h1>
                     </div>
