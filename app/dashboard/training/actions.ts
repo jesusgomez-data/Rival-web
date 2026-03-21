@@ -1298,6 +1298,13 @@ export async function deleteWorkout(workoutId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
 
+    // Delete associated feed post first (to avoid FK constraint issues)
+    await supabase
+        .from('posts')
+        .delete()
+        .eq('workout_id', workoutId)
+        .eq('user_id', user.id)
+
     const { error } = await supabase
         .from('workouts')
         .delete()
@@ -1309,6 +1316,9 @@ export async function deleteWorkout(workoutId: string) {
         return { error: 'Failed to delete' }
     }
 
+    revalidatePath('/dashboard')
+    revalidatePath('/dashboard/community')
+    revalidatePath('/dashboard/training/logs')
     return { success: true }
 }
 // 18. Get Published Class Results
