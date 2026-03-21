@@ -57,6 +57,7 @@ function WorkoutLogsContent() {
         const result = await deleteWorkout(id);
         if (result.success) {
             setWorkouts(prev => prev.filter(w => w.id !== id));
+            router.refresh(); // Invalidate training page cache so it reflects the deletion
         } else {
             alert("Error al borrar el entrenamiento");
         }

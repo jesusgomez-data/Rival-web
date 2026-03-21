@@ -36,6 +36,13 @@ export default function TrainingPage() {
             setIsLoading(false);
         }
         fetchData();
+
+        // Refetch workouts when the tab regains focus (e.g. after deleting from logs)
+        const handleFocus = () => {
+            getWorkoutHistory(30).then(data => setWorkouts(data));
+        };
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
     }, []);
 
     // Unified Level to Difficulty Mapping
