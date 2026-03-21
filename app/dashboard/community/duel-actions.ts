@@ -242,7 +242,16 @@ export async function getMyDuels() {
 
             return { ...duel, challenger_score: challengerScore, opponent_score: opponentScore };
         }
-        // For completed/pending duels, use the scores already stored in DB
+        // For completed duels with missing scores (legacy data), recalculate and backfill
+        if (duel.status === 'completed' && (duel.challenger_score == null || duel.opponent_score == null)) {
+            const { challengerScore, opponentScore } = await calculateDuelScores(duel);
+            await supabase.from('duels').update({
+                challenger_score: challengerScore,
+                opponent_score: opponentScore
+            }).eq('id', duel.id);
+            return { ...duel, challenger_score: challengerScore, opponent_score: opponentScore };
+        }
+        // For completed duels with scores already stored, return as-is
         return duel;
     }));
 
