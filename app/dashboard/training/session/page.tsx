@@ -121,6 +121,10 @@ function SessionContent() {
     const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
     const wakeLockRef = useRef<any>(null);
     const runDistanceRef = useRef<number>(0);
+    // Km splits tracking: records pace (seconds/km) for each completed km
+    const kmSplitsRef = useRef<{ km: number; paceSecondsPerKm: number }[]>([]);
+    const lastSplitDistRef = useRef<number>(0);
+    const lastSplitTimeRef = useRef<number>(Date.now());
 
     useEffect(() => {
         const fetchLimits = async () => {
@@ -440,9 +444,24 @@ function SessionContent() {
                         const isMoving = speed !== null ? speed > 0.4 : d > 5;
 
                         if (!isPaused && gpsStatus === 'tracking' && d > 3 && d < 40 && isMoving && accuracy < 35) {
+                            const prevKm = Math.floor(runDistanceRef.current / 1000);
                             runDistanceRef.current += d;
                             setRunDistance(runDistanceRef.current);
                             setRunPath(prev => [...prev, { lat: latitude, lon: longitude }]);
+
+                            // Record split when each km is crossed
+                            const newKm = Math.floor(runDistanceRef.current / 1000);
+                            if (newKm > prevKm && newKm >= 1) {
+                                const now = Date.now();
+                                const elapsedMs = now - lastSplitTimeRef.current;
+                                const distSinceLastSplit = runDistanceRef.current - lastSplitDistRef.current;
+                                if (distSinceLastSplit > 0 && elapsedMs > 0) {
+                                    const paceSecondsPerKm = (elapsedMs / 1000 / distSinceLastSplit) * 1000;
+                                    kmSplitsRef.current = [...kmSplitsRef.current, { km: newKm, paceSecondsPerKm }];
+                                }
+                                lastSplitDistRef.current = newKm * 1000;
+                                lastSplitTimeRef.current = now;
+                            }
 
                             // Altitude Logic
                             if (altitude !== null && accuracy < 25) {
@@ -937,7 +956,8 @@ function SessionContent() {
                     elevation: elevationGain,
                     avgHeartRate: avgHr,
                     path: runPath,
-                    maxZone: currentZone
+                    maxZone: currentZone,
+                    splits: kmSplitsRef.current  // per-km splits [{km, paceSecondsPerKm}]
                 },
                 locationName,
                 imageUrl,

@@ -25,7 +25,7 @@ interface WodData {
     media_url?: string | null;
     category?: WorkoutCategory;
     // Session metrics as fallback for endurance cards (distance in meters, pace as string)
-    metrics?: { distance?: number; pace?: string; elevation?: number; time?: string; duration?: number } | null;
+    metrics?: { distance?: number; pace?: string; elevation?: number; time?: string; duration?: number; splits?: { km: number; paceSecondsPerKm: number }[] } | null;
 }
 
 interface WodCardProps {
@@ -221,27 +221,61 @@ export default function WodCard({ data, userName, publishDate, postId, completio
                     {/* EXPANDED CONTENT: Analysis, Splits, Charts */}
                     {isExpanded && (
                         <div className="animate-in fade-in slide-in-from-top-4 duration-500 space-y-10 pb-6">
-                            {/* Analysis Mockup - Rhythm Chart */}
+                            {/* Splits per km chart - real GPS data */}
                             <div className="space-y-4">
-                                <div className="flex items-center justify-between">
-                                    <h4 className="text-[10px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
-                                        <Activity className="w-3.5 h-3.5 text-brand-red" />
-                                        ANÁLISIS DE RITMO Y RENDIMIENTO
-                                    </h4>
-                                    <span className="text-[8px] font-bold text-gray-500 uppercase">TIEMPO REAL (GPS)</span>
-                                </div>
-                                <div className="h-24 w-full bg-white/[0.02] rounded-2xl border border-white/5 relative overflow-hidden group/chart">
-                                    <div className="absolute inset-0 flex items-end justify-between px-2 pb-1 gap-1">
-                                        {[40, 60, 45, 70, 55, 80, 65, 90, 75, 85, 60, 50, 65, 75, 80, 85, 70, 60, 55, 45].map((h, i) => (
-                                            <div 
-                                                key={i} 
-                                                className="w-full bg-brand-red/20 rounded-t-sm group-hover/chart:bg-brand-red/40 transition-all hover:!bg-brand-red" 
-                                                style={{ height: `${h}%` }} 
-                                            />
-                                        ))}
-                                    </div>
-                                    <div className="absolute top-1/2 left-0 right-0 h-px bg-white/5 border-dashed border-t border-white/10" />
-                                </div>
+                                {(() => {
+                                    const splits = (data.metrics as any)?.splits as { km: number; paceSecondsPerKm: number }[] | undefined;
+                                    const hasRealSplits = splits && splits.length >= 2;
+                                    let barHeights: number[] = [];
+                                    let paceLabels: string[] = [];
+                                    if (hasRealSplits) {
+                                        const paces = splits.map(s => s.paceSecondsPerKm);
+                                        const minP = Math.min(...paces);
+                                        const maxP = Math.max(...paces);
+                                        const range = maxP - minP || 1;
+                                        barHeights = paces.map(p => Math.round(20 + ((maxP - p) / range) * 75));
+                                        paceLabels = paces.map(p => {
+                                            const m = Math.floor(p / 60);
+                                            const s = Math.round(p % 60);
+                                            return `${m}:${s < 10 ? '0' + s : s}`;
+                                        });
+                                    }
+                                    return (
+                                        <>
+                                            <div className="flex items-center justify-between">
+                                                <h4 className="text-[10px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
+                                                    <Activity className="w-3.5 h-3.5 text-brand-red" />
+                                                    SPLITS POR KILÓMETRO
+                                                </h4>
+                                                <span className="text-[8px] font-bold text-gray-500 uppercase">
+                                                    {hasRealSplits ? `${splits.length} KM · GPS REAL` : 'SIN DATOS DE SPLITS'}
+                                                </span>
+                                            </div>
+                                            <div className="h-24 w-full bg-white/[0.02] rounded-2xl border border-white/5 relative overflow-hidden group/chart">
+                                                {hasRealSplits ? (
+                                                    <div className="absolute inset-0 flex items-end justify-between px-2 pb-1 gap-1">
+                                                        {barHeights.map((h, i) => (
+                                                            <div
+                                                                key={i}
+                                                                className="w-full bg-brand-red/30 rounded-t-sm group-hover/chart:bg-brand-red/50 transition-all hover:!bg-brand-red relative group/bar"
+                                                                style={{ height: `${h}%` }}
+                                                            >
+                                                                <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-[6px] font-black text-white/60 opacity-0 group-hover/bar:opacity-100 whitespace-nowrap transition-opacity">
+                                                                    {paceLabels[i]}/km
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <span className="text-[9px] font-bold text-gray-600 uppercase tracking-widest">Los próximos runs mostrarán splits reales</span>
+                                                    </div>
+                                                )}
+                                                <div className="absolute top-1/2 left-0 right-0 h-px bg-white/5 border-dashed border-t border-white/10" />
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </div>
 
                             {/* Splits / Blocks */}
