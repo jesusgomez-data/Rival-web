@@ -3,9 +3,7 @@
 import { createClient } from "@/utils/supabase/client";
 import Image from "next/image";
 import Link from "next/link";
-import { Heart, MessageCircle, Share2, MoreHorizontal, Trophy, Dumbbell, UserSearch, Flame, Compass, Users, TrendingUp, Swords, Star } from "lucide-react";
-import LikeButton from "./LikeButton";
-import FollowButton from "./FollowButton";
+import { Trophy, UserSearch, Flame, Compass, Users, TrendingUp, Swords } from "lucide-react";
 import DuelButton from "./DuelButton";
 import SearchAthletes from "./SearchAthletes";
 import { getMyDuels } from "./duel-actions";
@@ -23,7 +21,7 @@ export default function CommunityPage({
 }: {
     searchParams: any
 }) {
-    const { language, t } = useLanguage();
+    const { t } = useLanguage();
     const [query, setQuery] = useState("");
     const [activeTab, setActiveTab] = useState<'following' | 'explore'>('explore');
     const [data, setData] = useState<any>({
@@ -34,6 +32,7 @@ export default function CommunityPage({
         posts: [],
         loading: true,
         isMember: false,
+        gymEvents: [],
         activeDuelUserIds: new Set()
     });
 
@@ -76,10 +75,24 @@ export default function CommunityPage({
                 ] = await Promise.all([
                     supabase.from('follows').select('following_id').eq('follower_id', user.id),
                     supabase.from('profiles').select('*').eq('id', user.id).single(),
-                    supabase.from('members').select('id').eq('user_id', user.id).in('status', ['active', 'trial']).limit(1),
+                    supabase.from('members').select('id, center_id').eq('user_id', user.id).in('status', ['active', 'trial']).limit(1),
                     supabase.from('profiles').select('id').eq('is_official', true),
                     getMyDuels()
                 ]);
+
+                // Fetch gym events if member
+                let gymEvents: any[] = [];
+                const centerId = membership?.[0]?.center_id;
+                if (centerId) {
+                    const { data: events } = await supabase
+                        .from('gym_events')
+                        .select('id, title, description, event_date, status, event_type, attendees_count')
+                        .eq('center_id', centerId)
+                        .neq('status', 'past')
+                        .order('event_date', { ascending: true })
+                        .limit(3);
+                    gymEvents = events || [];
+                }
 
                 const followedIds = new Set(myFollows?.map((f: any) => f.following_id) || []);
                 const officialIds = officialAccounts?.map((acc: any) => acc.id) || [];
@@ -145,6 +158,7 @@ export default function CommunityPage({
                     posts: posts || [],
                     loading: false,
                     isMember: (membership && membership.length > 0),
+                    gymEvents,
                     activeDuelUserIds
                 });
             } catch (e) {
@@ -329,28 +343,36 @@ export default function CommunityPage({
                                     content="Competiciones, clases especiales y eventos sociales organizados por tu sede oficial."
                                 />
                             </h3>
-                            <div className="space-y-6">
-                                <div className="flex gap-4 group/item cursor-pointer">
-                                    <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center border border-white/5 shrink-0 group-hover/item:border-brand-red/50 transition-colors">
-                                        <Swords className="w-5 h-5 text-brand-red" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-[10px] font-black text-brand-red uppercase tracking-widest leading-none mb-1">Activo</p>
-                                        <h4 className="text-white font-bold text-sm truncate uppercase italic tracking-tight">Open 2024 Qualifiers</h4>
-                                        <p className="text-[10px] text-gray-500 font-medium">124 Atletas participando</p>
-                                    </div>
+                            {data.gymEvents.length > 0 ? (
+                                <div className="space-y-6">
+                                    {data.gymEvents.map((event: any) => {
+                                        const isActive = event.status === 'active';
+                                        const statusLabel = isActive ? 'Activo' : 'Próximamente';
+                                        const statusColor = isActive ? 'text-brand-red' : 'text-yellow-500';
+                                        const iconColor = isActive ? 'text-brand-red' : 'text-yellow-500';
+                                        const EventIcon = event.event_type === 'competition' ? Swords : Trophy;
+                                        const subtitle = event.attendees_count > 0
+                                            ? `${event.attendees_count} Atletas participando`
+                                            : event.event_date
+                                                ? new Date(event.event_date).toLocaleDateString('es-ES', { weekday: 'long', hour: '2-digit', minute: '2-digit' })
+                                                : event.description || '';
+                                        return (
+                                            <div key={event.id} className="flex gap-4 group/item cursor-pointer">
+                                                <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center border border-white/5 shrink-0 group-hover/item:border-brand-red/50 transition-colors">
+                                                    <EventIcon className={`w-5 h-5 ${iconColor}`} />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className={`text-[10px] font-black ${statusColor} uppercase tracking-widest leading-none mb-1`}>{statusLabel}</p>
+                                                    <h4 className="text-white font-bold text-sm truncate uppercase italic tracking-tight">{event.title}</h4>
+                                                    <p className="text-[10px] text-gray-500 font-medium capitalize">{subtitle}</p>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                                <div className="flex gap-4 group/item cursor-pointer">
-                                    <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center border border-white/5 shrink-0 group-hover/item:border-brand-red/50 transition-colors">
-                                        <Trophy className="w-5 h-5 text-yellow-500" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-[10px] font-black text-yellow-500 uppercase tracking-widest leading-none mb-1">Próximamente</p>
-                                        <h4 className="text-white font-bold text-sm truncate uppercase italic tracking-tight">Cena de Comunidad</h4>
-                                        <p className="text-[10px] text-gray-500 font-medium">Viernes, 21:00h</p>
-                                    </div>
-                                </div>
-                            </div>
+                            ) : (
+                                <p className="text-[11px] text-gray-600 font-medium italic text-center py-4">No hay eventos próximos</p>
+                            )}
                             <button className="w-full mt-8 py-3 bg-white/5 hover:bg-white/10 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest border border-white/10 transition-all">
                                 Ver Calendario
                             </button>
