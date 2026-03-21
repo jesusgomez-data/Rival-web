@@ -31,6 +31,7 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [generatedWOD, setGeneratedWOD] = useState<GeneratedWOD | null>(null);
+  const [dailyLimitReached, setDailyLimitReached] = useState(false);
 
   // Resultado del creador para el ranking
   const [creatorTimeMin, setCreatorTimeMin] = useState("");
@@ -96,6 +97,11 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
       });
 
       const data = await response.json();
+
+      if (response.status === 429 && data.error === "daily_limit") {
+        setDailyLimitReached(true);
+        return;
+      }
 
       if (!response.ok) {
         throw new Error(data.error || "Error generando WOD");
@@ -312,25 +318,32 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
             </div>
 
             {/* Generate Button */}
-            <motion.button
-              onClick={handleGenerate}
-              disabled={isGenerating || equipment.length === 0}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="w-full bg-gradient-to-r from-brand-red to-orange-600 hover:from-brand-accent hover:to-orange-700 text-white font-black text-lg py-4 rounded-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-brand-red/50"
-            >
-              {isGenerating ? (
-                <>
-                  <Loader2 className="w-6 h-6 animate-spin" />
-                  Generando tu WOD...
-                </>
-              ) : (
-                <>
-                  <Zap className="w-6 h-6" />
-                  Generar WOD Ahora
-                </>
-              )}
-            </motion.button>
+            {dailyLimitReached ? (
+              <div className="w-full bg-white/5 border border-white/10 text-gray-500 font-black text-sm py-4 rounded-xl flex items-center justify-center gap-3 cursor-not-allowed">
+                <Clock className="w-5 h-5 text-brand-red" />
+                Ya generaste tu WOD de hoy · Vuelve mañana 🔒
+              </div>
+            ) : (
+              <motion.button
+                onClick={handleGenerate}
+                disabled={isGenerating || equipment.length === 0}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full bg-gradient-to-r from-brand-red to-orange-600 hover:from-brand-accent hover:to-orange-700 text-white font-black text-lg py-4 rounded-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg hover:shadow-brand-red/50"
+              >
+                {isGenerating ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    Generando tu WOD...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-6 h-6" />
+                    Generar WOD Ahora
+                  </>
+                )}
+              </motion.button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

@@ -51,6 +51,7 @@ export default function CoachPage() {
     const [activeTab, setActiveTab] = useState<'chat' | 'insights'>('chat');
     const [isScheduling, setIsScheduling] = useState(false);
     const [scheduleSuccess, setScheduleSuccess] = useState<string | null>(null);
+    const [dailyLimitReached, setDailyLimitReached] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const formatTime = (date?: Date) => {
@@ -138,6 +139,10 @@ export default function CoachPage() {
                 recent_activity_score: recentActivityScore,
                 injuries: profile?.injuries
             }, history);
+
+            if (aiResponse.dailyLimitReached) {
+                setDailyLimitReached(true);
+            }
 
             const botMsg: Message = {
                 id: (Date.now() + 1).toString(),
@@ -346,50 +351,62 @@ export default function CoachPage() {
                         </div>
                     )}
 
-                    {/* Quick Actions */}
-                    <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar bg-black/20 border-t border-white/5 pb-4">
-                        <QuickAction label="Cross Training" onClick={() => handleSend("Dame un WOD de Cross Training del día. Profesional y exigente.")} />
-                        <QuickAction label="OCR" onClick={() => handleSend("Dame un entrenamiento de OCR. Incluye carrera y obstáculos técnicos.")} />
-                        <QuickAction label="Hybrid" onClick={() => handleSend("Dame una sesión de entrenamiento estilo Hybrid.")} />
-                        <QuickAction label="Running" onClick={() => handleSend("Dame un plan de Running para hoy.")} />
-                        <QuickAction label="Calistenia" onClick={() => handleSend("Entrenamiento de Calistenia para dominio corporal.")} />
-                        <QuickAction label="Gym" onClick={() => handleSend("Rutina de Gym (Musculación) completa.")} />
-                        <div className="w-px h-6 bg-white/10 mx-2 shrink-0 self-center" />
-                        <QuickAction label="Tren Inferior" onClick={() => handleSend("Dame un entrenamiento de piernas")} />
-                        <QuickAction label="Empuje (Push)" onClick={() => handleSend("Crea un entrenamiento de pecho, hombros y tríceps")} />
-                        <QuickAction label="Tracción (Pull)" onClick={() => handleSend("Entrenamiento de espalda y bíceps")} />
-                    </div>
+                    {/* Quick Actions - hidden when limit reached */}
+                    {!dailyLimitReached && (
+                        <div className="px-4 py-2 flex gap-2 overflow-x-auto no-scrollbar bg-black/20 border-t border-white/5 pb-4">
+                            <QuickAction label="Cross Training" onClick={() => handleSend("Dame un WOD de Cross Training del día. Profesional y exigente.")} />
+                            <QuickAction label="OCR" onClick={() => handleSend("Dame un entrenamiento de OCR. Incluye carrera y obstáculos técnicos.")} />
+                            <QuickAction label="Hybrid" onClick={() => handleSend("Dame una sesión de entrenamiento estilo Hybrid.")} />
+                            <QuickAction label="Running" onClick={() => handleSend("Dame un plan de Running para hoy.")} />
+                            <QuickAction label="Calistenia" onClick={() => handleSend("Entrenamiento de Calistenia para dominio corporal.")} />
+                            <QuickAction label="Gym" onClick={() => handleSend("Rutina de Gym (Musculación) completa.")} />
+                            <div className="w-px h-6 bg-white/10 mx-2 shrink-0 self-center" />
+                            <QuickAction label="Tren Inferior" onClick={() => handleSend("Dame un entrenamiento de piernas")} />
+                            <QuickAction label="Empuje (Push)" onClick={() => handleSend("Crea un entrenamiento de pecho, hombros y tríceps")} />
+                            <QuickAction label="Tracción (Pull)" onClick={() => handleSend("Entrenamiento de espalda y bíceps")} />
+                        </div>
+                    )}
 
                     {/* Input Area */}
                     <div className="p-4 bg-black border-t border-white/10">
-                        <div className="relative flex items-center gap-2">
-                            <input
-                                type="text"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey && !isTyping) {
-                                        e.preventDefault();
-                                        handleSend();
-                                    }
-                                }}
-                                placeholder="Dile al Coach qué quieres entrenar..."
-                                disabled={isTyping}
-                                className="w-full bg-brand-gray border border-white/10 text-white placeholder:text-gray-600 text-sm rounded-xl py-3 pl-4 pr-14 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/30 transition-all disabled:opacity-50"
-                            />
-                            <button
-                                onClick={() => handleSend()}
-                                className={clsx(
-                                    "absolute right-2 p-2.5 rounded-xl text-white transition-all duration-200",
-                                    input.trim() && !isTyping
-                                        ? "bg-brand-red hover:bg-red-600 hover:scale-105 active:scale-95 shadow-[0_0_12px_rgba(220,38,38,0.4)]"
-                                        : "bg-white/5 cursor-not-allowed opacity-40"
-                                )}
-                                disabled={!input.trim() || isTyping}
-                            >
-                                <Send className="w-4 h-4" />
-                            </button>
-                        </div>
+                        {dailyLimitReached ? (
+                            <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                                <Clock className="w-4 h-4 text-brand-red shrink-0" />
+                                <p className="text-[11px] font-bold text-gray-500 uppercase tracking-widest flex-1">
+                                    Misión del día completada · Vuelve mañana
+                                </p>
+                                <span className="text-[10px] font-black text-brand-red uppercase tracking-widest">🔒 1/día</span>
+                            </div>
+                        ) : (
+                            <div className="relative flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey && !isTyping) {
+                                            e.preventDefault();
+                                            handleSend();
+                                        }
+                                    }}
+                                    placeholder="Dile al Coach qué quieres entrenar..."
+                                    disabled={isTyping}
+                                    className="w-full bg-brand-gray border border-white/10 text-white placeholder:text-gray-600 text-sm rounded-xl py-3 pl-4 pr-14 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/30 transition-all disabled:opacity-50"
+                                />
+                                <button
+                                    onClick={() => handleSend()}
+                                    className={clsx(
+                                        "absolute right-2 p-2.5 rounded-xl text-white transition-all duration-200",
+                                        input.trim() && !isTyping
+                                            ? "bg-brand-red hover:bg-red-600 hover:scale-105 active:scale-95 shadow-[0_0_12px_rgba(220,38,38,0.4)]"
+                                            : "bg-white/5 cursor-not-allowed opacity-40"
+                                    )}
+                                    disabled={!input.trim() || isTyping}
+                                >
+                                    <Send className="w-4 h-4" />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </>
             ) : (

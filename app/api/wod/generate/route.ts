@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import WODGenerator, { WODRequest } from "@/lib/wod-generator";
 import { rateLimiters, getClientIdentifier, setRateLimitHeaders } from "@/lib/rate-limit";
+import { checkAndRecordDailyUsage } from "@/lib/ai-usage";
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,6 +17,18 @@ export async function POST(request: NextRequest) {
           retryAfter: Math.ceil((rateLimit.reset - Date.now()) / 1000),
         },
         { status: 429, headers }
+      );
+    }
+
+    // 🗓️ Daily limit: 1 WOD generation per user per day
+    const { allowed } = await checkAndRecordDailyUsage('wod_generator');
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          error: "daily_limit",
+          message: "Ya generaste tu WOD de hoy. Vuelve mañana para una nueva recomendación. 🔥",
+        },
+        { status: 429 }
       );
     }
 

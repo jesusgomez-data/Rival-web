@@ -1,9 +1,21 @@
 'use server'
 
+import { checkAndRecordDailyUsage } from '@/lib/ai-usage';
+
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
 export async function generateCoachResponse(userMessage: string, userProfile: any, chatHistory: any[] = []) {
+    // Daily limit: 1 coach recommendation per user per day
+    const { allowed } = await checkAndRecordDailyUsage('coach');
+    if (!allowed) {
+        return {
+            replyText: "Soldado, ya recibiste tu programación de hoy. 🔒 Un entreno al día es la clave de la consistencia. Vuelve mañana y diseñaremos tu próxima misión. ¡Descansa, recupera y prepárate!",
+            workout: null,
+            dailyLimitReached: true
+        };
+    }
+
     if (!process.env.GROQ_API_KEY) {
         console.error("GROQ_API_KEY no configurada");
         return {
