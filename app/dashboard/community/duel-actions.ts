@@ -322,10 +322,12 @@ export async function getCombatStats(userId: string) {
             const adminSupabase = createAdminClient();
             await adminSupabase.from('duels').update({
                 status: 'completed',
-                winner_id: winnerId
+                winner_id: winnerId,
+                challenger_score: challengerScore,
+                opponent_score: opponentScore
             }).eq('id', duel.id);
 
-            return { ...duel, status: 'completed', winner_id: winnerId };
+            return { ...duel, status: 'completed', winner_id: winnerId, challenger_score: challengerScore, opponent_score: opponentScore };
         }
         return duel;
     }));

@@ -13,13 +13,13 @@ interface VictoryShareCardProps {
         name: string;
         username: string;
         avatar: string;
-        score: number;
+        score: number | null | undefined;
     };
     loser: {
         name: string;
         username: string;
         avatar: string;
-        score: number;
+        score: number | null | undefined;
     };
     onClose: () => void;
 }
@@ -235,7 +235,7 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
                                 </div>
                                 <p className="text-lg font-black text-white uppercase italic tracking-tighter truncate w-full px-2">{winner.name}</p>
                                 <div className="mt-2 flex items-center gap-1.5 text-brand-red font-black text-2xl">
-                                    {winner.score.toLocaleString()} <span className="text-[10px] uppercase tracking-widest text-gray-500">pts</span>
+                                    {(winner.score ?? 0).toLocaleString()} <span className="text-[10px] uppercase tracking-widest text-gray-500">pts</span>
                                 </div>
                             </div>
 
@@ -261,7 +261,7 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
                                 </div>
                                 <p className="text-sm font-bold text-gray-400 uppercase tracking-tight truncate w-full px-2">{loser.name}</p>
                                 <div className="mt-1 flex items-center gap-1.5 text-gray-400 font-bold">
-                                    {loser.score.toLocaleString()} <span className="text-[8px] uppercase tracking-widest">pts</span>
+                                    {(loser.score ?? 0).toLocaleString()} <span className="text-[8px] uppercase tracking-widest">pts</span>
                                 </div>
                             </div>
                         </div>
