@@ -52,597 +52,635 @@ function getSportKey(category?: string, sportType?: string): SportKey {
 }
 
 const BLOCK_STYLES: Record<string, { label: string; color: string }> = {
-    emom:      { label: 'EMOM',      color: '#ef4444' },
-    amrap:     { label: 'AMRAP',     color: '#f97316' },
-    fortime:   { label: 'FOR TIME',  color: '#eab308' },
-    intervals: { label: 'INTERVALS', color: '#3b82f6' },
-    strength:  { label: 'STRENGTH',  color: '#a855f7' },
-    tabata:    { label: 'TABATA',    color: '#ec4899' },
-    chipper:   { label: 'CHIPPER',   color: '#06b6d4' },
+    emom:      { label: 'EMOM',            color: '#ef4444' },
+    amrap:     { label: 'AMRAP',           color: '#f97316' },
+    fortime:   { label: 'FOR TIME',        color: '#eab308' },
+    rounds:    { label: 'ROUNDS FOR TIME', color: '#eab308' },
+    intervals: { label: 'INTERVALS',       color: '#3b82f6' },
+    strength:  { label: 'STRENGTH',        color: '#a855f7' },
+    tabata:    { label: 'TABATA',          color: '#ec4899' },
+    chipper:   { label: 'CHIPPER',         color: '#06b6d4' },
 };
 
-function getExerciseSummary(ex: { name: string; sets: any[] }): string {
-    const s = ex.sets?.[0];
-    if (!s) return '';
-    const weight = s.weight && s.weight > 0 ? ` × ${s.weight}KG` : '';
-    const unit = s.unit === 'cal' ? 'CAL' : s.unit === 'time' ? 'SEC' : '';
-    if (ex.sets.length > 1) return `${ex.sets.length}×${s.reps}${unit || ' REPS'}${weight}`;
-    return `${s.reps}${unit || ' REPS'}${weight}`;
+// ─── Exercise detail formatter ────────────────────────────────────────────────
+function getExerciseDetail(ex: any): string {
+    // Only treat sets as array if it actually is one (not a string/number count)
+    const s = Array.isArray(ex.sets) ? ex.sets[0] : undefined;
+    if (s) {
+        const unit = (s.unit || '').toLowerCase();
+        if (unit === 'm' || unit === 'meters' || unit === 'meter') return `· ${s.reps}M`;
+        if (unit === 'cal' || unit === 'calories') return `${s.reps} CAL`;
+        if (unit === 'time') return `${s.reps} SEC`;
+        const weight = s.weight ?? 0;
+        const w = weight > 0 ? ` · ${weight}KG` : '';
+        if (s.reps) return `${s.reps}${w}`;
+        if (w) return w.trim();
+    }
+    // Fallback to top-level properties (WOD definition format)
+    if (ex.value) return String(ex.value);
+    const exUnit = (ex.unit || ex.measure || '').toLowerCase();
+    const rawReps = ex.reps;
+    if (rawReps) {
+        const repsStr = String(rawReps);
+        if (exUnit === 'm' || exUnit === 'meters') return `· ${repsStr}M`;
+        if (exUnit === 'cal') return `${repsStr} CAL`;
+        const tW = (ex.weight ?? ex.weight_kg ?? 0) > 0 ? ` · ${ex.weight ?? ex.weight_kg}KG` : '';
+        return `${repsStr}${tW}`;
+    }
+    if (ex.detail) return `${ex.detail}${ex.unit || ''}`;
+    if (ex.target && ex.target !== '-') return String(ex.target);
+    return '';
 }
 
-function computeVolume(blocks: WorkoutBlock[]): number {
-    return blocks.reduce((tot, b) =>
-        tot + (b.exercises || []).reduce((a, ex) =>
-            a + (ex.sets || []).reduce((s2, s) => s2 + (s.weight > 0 && s.reps > 0 ? s.weight * s.reps : 0), 0), 0), 0);
+// ─── Helper: resolve block type label & color ─────────────────────────────────
+function getBlockStyle(block: any): { label: string; color: string } {
+    const key = (block.type || block.blockType || '').toLowerCase().replace(/[\s_-]/g, '');
+    return BLOCK_STYLES[key] ?? { label: (block.type || 'BLOCK').toUpperCase(), color: '#ffffff' };
 }
 
-function computeSets(blocks: WorkoutBlock[]): number {
-    return blocks.reduce((a, b) => a + (b.exercises || []).reduce((c, ex) => c + (ex.sets || []).length, 0), 0);
+// ─── Background pattern ───────────────────────────────────────────────────────
+function patternStyle(type: SportCfg['patternType'], color: string): React.CSSProperties {
+    const c = color + '18';
+    switch (type) {
+        case 'dots':
+            return { backgroundImage: `radial-gradient(circle, ${c} 1px, transparent 1px)`, backgroundSize: '20px 20px' };
+        case 'grid':
+            return { backgroundImage: `linear-gradient(${c} 1px, transparent 1px), linear-gradient(90deg, ${c} 1px, transparent 1px)`, backgroundSize: '24px 24px' };
+        case 'diagonal':
+            return { backgroundImage: `repeating-linear-gradient(45deg, ${c} 0, ${c} 1px, transparent 0, transparent 50%)`, backgroundSize: '18px 18px' };
+        case 'hlines':
+            return { backgroundImage: `repeating-linear-gradient(0deg, ${c} 0, ${c} 1px, transparent 0, transparent 20px)`, backgroundSize: '100% 20px' };
+        default:
+            return {};
+    }
 }
 
-function patternStyle(type: SportCfg['patternType']): React.CSSProperties {
-    if (type === 'dots')     return { backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1px, transparent 0)', backgroundSize: '20px 20px' };
-    if (type === 'grid')     return { backgroundImage: 'linear-gradient(rgba(255,255,255,0.9) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.9) 1px, transparent 1px)', backgroundSize: '28px 28px' };
-    if (type === 'diagonal') return { backgroundImage: 'repeating-linear-gradient(45deg, rgba(255,255,255,0.5) 0, rgba(255,255,255,0.5) 1px, transparent 0, transparent 50%)', backgroundSize: '16px 16px' };
-    if (type === 'hlines')   return { backgroundImage: 'repeating-linear-gradient(0deg, rgba(255,255,255,0.5) 0, rgba(255,255,255,0.5) 1px, transparent 0, transparent 24px)' };
-    return {};
-}
-
-// ─── Shared sub-pieces ───────────────────────────────────────────────────────
-
-function Badge({ color, children }: { color: string; children: React.ReactNode }) {
+// ─── Badge ────────────────────────────────────────────────────────────────────
+function Badge({ label, color }: { label: string; color: string }) {
     return (
-        <span style={{ background: `${color}22`, border: `1px solid ${color}55`, color, fontSize: '7px', fontWeight: 900, letterSpacing: '0.28em', textTransform: 'uppercase', padding: '3px 8px', borderRadius: '100px' }}>
-            {children}
-        </span>
+        <span style={{
+            background: color + '22',
+            color: color,
+            border: `1px solid ${color}55`,
+            borderRadius: 6,
+            padding: '2px 8px',
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: 1,
+            textTransform: 'uppercase',
+        }}>{label}</span>
     );
 }
 
-function StatBox({ label, value, unit, color }: { label: string; value: string; unit?: string; color: string }) {
+// ─── Stat box ─────────────────────────────────────────────────────────────────
+function StatBox({ label, value, color }: { label: string; value: string; color: string }) {
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px' }}>
-            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase' }}>{label}</p>
-            <p style={{ color: '#fff', fontSize: '22px', fontWeight: 900, fontStyle: 'italic', letterSpacing: '-0.03em', lineHeight: 1 }}>{value}</p>
-            {unit && <p style={{ color, fontSize: '7px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2em' }}>{unit}</p>}
+        <div style={{ textAlign: 'center', minWidth: 72 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, color, letterSpacing: 1 }}>{value}</div>
+            <div style={{ fontSize: 9, color: '#777', letterSpacing: 1, textTransform: 'uppercase', marginTop: 1 }}>{label}</div>
         </div>
     );
 }
 
-function Bars({ color, heights, height = 28 }: { color: string; heights?: number[]; height?: number }) {
-    const h = heights || [30,50,45,70,60,80,55,90,65,75,85,60,70,80,65,55,75,85,70,60];
+
+// ─── Footer ───────────────────────────────────────────────────────────────────
+function Footer({ color }: { color: string }) {
     return (
-        <div style={{ height: `${height}px`, display: 'flex', alignItems: 'flex-end', gap: '2px', opacity: 0.35 }}>
-            {h.map((v, i) => (
-                <div key={i} style={{ flex: 1, height: `${v}%`, background: color, borderRadius: '2px 2px 0 0' }} />
-            ))}
+        <div style={{
+            marginTop: 20,
+            paddingTop: 12,
+            borderTop: `1px solid ${color}30`,
+            textAlign: 'center',
+            fontSize: 10,
+            color: '#555',
+            letterSpacing: 2,
+            fontWeight: 600,
+            textTransform: 'uppercase',
+        }}>
+            ◉ RIVAL FIT ATLETA
         </div>
     );
 }
 
-function Footer({ userName, date, color }: { userName: string; date: string; color: string }) {
+// ─── Shared: block list renderer ──────────────────────────────────────────────
+function BlockList({ blocks, accentColor, blockResults }: { blocks: any[]; accentColor: string; blockResults?: Record<number, string> }) {
     return (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.07)', marginTop: '10px' }}>
-            <div>
-                <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '9px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.25em' }}>{userName}</p>
-                <p style={{ color: 'rgba(255,255,255,0.2)', fontSize: '7px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3em', marginTop: '2px' }}>{date}</p>
-            </div>
-            <p style={{ color: '#fff', fontSize: '16px', fontWeight: 900, fontStyle: 'italic', letterSpacing: '-0.03em' }}>
-                RIVAL <span style={{ color }}>FIT</span>
-            </p>
-        </div>
-    );
-}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {blocks.map((block: any, bi: number) => {
+                const bs = getBlockStyle(block);
+                const exercises: any[] = block.exercises || block.movements || [];
+                const roundInfo = block.rounds ? `${block.rounds} ROUNDS` : (block.duration ? `${block.duration} MIN` : '');
+                const blockLabel = block.title || block.label || '';
+                const manualResult = blockResults?.[bi];
+                const rightLabel = manualResult || (blockLabel && blockLabel !== bs.label ? blockLabel.toUpperCase() : roundInfo);
 
-// ─── Sport-specific card bodies ───────────────────────────────────────────────
-
-function CrossTrainingCard({ blocks, workoutTitle, displayDuration, cfg, userName, date }: any) {
-    return (
-        <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
-                <div style={{ minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                        <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: cfg.color, display: 'inline-block', boxShadow: `0 0 8px ${cfg.color}` }} />
-                        <Badge color={cfg.color}>{cfg.accentLabel}</Badge>
-                        <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '7px', fontWeight: 700, letterSpacing: '0.2em' }}>· {blocks.length} BLQ</span>
-                    </div>
-                    <h2 style={{ color: '#fff', fontSize: '19px', fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1.1, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                        {workoutTitle}
-                    </h2>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <p style={{ color: '#fff', fontSize: '22px', fontWeight: 900, fontStyle: 'italic', lineHeight: 1, letterSpacing: '-0.03em' }}>{displayDuration}</p>
-                    <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', marginTop: '2px' }}>MIN</p>
-                </div>
-            </div>
-            <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)' }} />
-            {/* Blocks */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {(blocks || []).map((block: WorkoutBlock, i: number) => {
-                    const key = (block.type || '').toLowerCase();
-                    const s = BLOCK_STYLES[key] ?? { label: (block.type || 'BLOQUE').toUpperCase(), color: cfg.color };
-                    return (
-                        <div key={i} style={{ borderRadius: '14px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
-                            <div style={{ background: `${s.color}18`, padding: '7px 12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Badge color={s.color}>{s.label}</Badge>
-                                {block.title && <span style={{ color: 'rgba(255,255,255,0.45)', fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{block.title}</span>}
-                                {block.duration && <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.3)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.15em', flexShrink: 0 }}>{block.duration}MIN</span>}
-                            </div>
-                            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                {(block.exercises || []).map((ex: any, j: number) => {
-                                    const sum = getExerciseSummary(ex);
+                return (
+                    <div key={bi} style={{
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: 12,
+                        overflow: 'hidden',
+                    }}>
+                        {/* Block header */}
+                        <div style={{
+                            background: bs.color + '20',
+                            padding: '7px 12px',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            borderBottom: `1px solid ${bs.color}30`,
+                        }}>
+                            <Badge label={bs.label} color={bs.color} />
+                            {rightLabel ? (
+                                <span style={{ fontSize: 10, color: manualResult ? accentColor : '#888', letterSpacing: 1, fontWeight: 700 }}>
+                                    {rightLabel}
+                                </span>
+                            ) : null}
+                        </div>
+                        {/* Exercise rows */}
+                        <div style={{ padding: '6px 0' }}>
+                            {exercises.length === 0 ? (
+                                <div style={{ padding: '4px 12px', fontSize: 11, color: '#666' }}>—</div>
+                            ) : (
+                                exercises.map((ex: any, ei: number) => {
+                                    const name = (ex.name || ex.exercise || ex.movement || '').toUpperCase();
+                                    const detail = getExerciseDetail(ex);
+                                    // Arrow indicator from exercise name
+                                    const arrow = name.includes('ROW') ? '→' : name.includes('RUN') ? '↑' : '·';
+                                    const displayName = name ? `${name} ${arrow}` : arrow;
                                     return (
-                                        <div key={j} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', minWidth: 0 }}>
-                                                <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: s.color, flexShrink: 0, opacity: 0.7 }} />
-                                                <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ex.name}</span>
-                                            </div>
-                                            {sum && <span style={{ color: s.color, fontSize: '10px', fontWeight: 900, textTransform: 'uppercase', flexShrink: 0 }}>{sum}</span>}
+                                        <div key={ei} style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            padding: '4px 12px',
+                                            borderBottom: ei < exercises.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
+                                        }}>
+                                            <span style={{ fontSize: 11, color: '#e0e0e0', fontWeight: 600, letterSpacing: 0.5 }}>
+                                                {displayName}
+                                            </span>
+                                            {detail ? (
+                                                <span style={{ fontSize: 11, color: accentColor, fontWeight: 700, letterSpacing: 0.5 }}>
+                                                    {detail}
+                                                </span>
+                                            ) : null}
                                         </div>
                                     );
-                                })}
-                            </div>
+                                })
+                            )}
                         </div>
-                    );
-                })}
-            </div>
-            <Footer userName={userName} date={date} color={cfg.color} />
-        </div>
-    );
-}
-
-function RunningCard({ runMetrics, workoutTitle, displayDuration, cfg, userName, date }: any) {
-    const dist = (runMetrics?.distance || '--').replace(/[A-Za-z\s]/g, '').trim() || '--';
-    const pace = runMetrics?.pace || '--';
-    const elev = runMetrics?.elevation || null;
-    return (
-        <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Badge color={cfg.color}>{cfg.emoji} {cfg.accentLabel}</Badge>
-                </div>
-                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.25em', textTransform: 'uppercase' }}>{date}</span>
-            </div>
-            <h2 style={{ color: '#fff', fontSize: '17px', fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1.1, margin: '-6px 0 0' }}>
-                {workoutTitle}
-            </h2>
-            {/* Distance hero */}
-            <div style={{ textAlign: 'center', padding: '14px 0 8px', borderTop: '1px solid rgba(59,130,246,0.15)', borderBottom: '1px solid rgba(59,130,246,0.15)' }}>
-                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '8px', fontWeight: 900, letterSpacing: '0.5em', textTransform: 'uppercase', marginBottom: '4px' }}>DISTANCIA TOTAL</p>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '8px' }}>
-                    <span style={{ color: '#fff', fontSize: '64px', fontWeight: 900, fontStyle: 'italic', letterSpacing: '-0.04em', lineHeight: 1 }}>{dist}</span>
-                    <span style={{ color: cfg.color, fontSize: '22px', fontWeight: 900, fontStyle: 'italic' }}>KM</span>
-                </div>
-            </div>
-            {/* Stats grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: elev ? '1fr 1fr 1fr' : '1fr 1fr', gap: '10px', background: `${cfg.color}0a`, borderRadius: '14px', padding: '14px', border: `1px solid ${cfg.color}20` }}>
-                <StatBox label="RITMO" value={pace} unit="/KM" color={cfg.color} />
-                <StatBox label="TIEMPO" value={displayDuration} unit="MIN" color={cfg.color} />
-                {elev && <StatBox label="DESNIVEL" value={elev} unit="D+" color={cfg.color} />}
-            </div>
-            {/* Pace bars */}
-            <Bars color={cfg.color} heights={[40,55,48,72,65,80,58,90,68,78,88,62,72,82,68,58,76,88,72,62]} />
-            <Footer userName={userName} date={date} color={cfg.color} />
-        </div>
-    );
-}
-
-function CyclingCard({ runMetrics, workoutTitle, displayDuration, cfg, userName, date }: any) {
-    const dist = (runMetrics?.distance || '--').replace(/[A-Za-z\s]/g, '').trim() || '--';
-    const speed = runMetrics?.pace || '--';
-    const elev = runMetrics?.elevation || null;
-    return (
-        <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Badge color={cfg.color}>{cfg.emoji} {cfg.accentLabel}</Badge>
-                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.25em', textTransform: 'uppercase' }}>{date}</span>
-            </div>
-            <h2 style={{ color: '#fff', fontSize: '17px', fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1.1, margin: '-6px 0 0' }}>
-                {workoutTitle}
-            </h2>
-            {/* Distance hero */}
-            <div style={{ textAlign: 'center', padding: '14px 0 8px', borderTop: `1px solid ${cfg.color}25`, borderBottom: `1px solid ${cfg.color}25` }}>
-                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '8px', fontWeight: 900, letterSpacing: '0.5em', textTransform: 'uppercase', marginBottom: '4px' }}>DISTANCIA</p>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '8px' }}>
-                    <span style={{ color: '#fff', fontSize: '64px', fontWeight: 900, fontStyle: 'italic', letterSpacing: '-0.04em', lineHeight: 1 }}>{dist}</span>
-                    <span style={{ color: cfg.color, fontSize: '22px', fontWeight: 900, fontStyle: 'italic' }}>KM</span>
-                </div>
-            </div>
-            {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: elev ? '1fr 1fr 1fr' : '1fr 1fr', gap: '10px', background: `${cfg.color}0a`, borderRadius: '14px', padding: '14px', border: `1px solid ${cfg.color}20` }}>
-                <StatBox label="VELOCIDAD" value={speed} unit="KM/H" color={cfg.color} />
-                <StatBox label="TIEMPO" value={displayDuration} unit="MIN" color={cfg.color} />
-                {elev && <StatBox label="DESNIVEL" value={elev} unit="D+" color={cfg.color} />}
-            </div>
-            {/* Speedometer bars (ascending then descending) */}
-            <Bars color={cfg.color} heights={[20,30,40,55,65,75,85,90,85,75,65,55,45,55,65,75,80,85,80,70]} />
-            <Footer userName={userName} date={date} color={cfg.color} />
-        </div>
-    );
-}
-
-function SwimmingCard({ runMetrics, workoutTitle, displayDuration, cfg, userName, date }: any) {
-    const dist = (runMetrics?.distance || '--').replace(/[A-Za-z\s]/g, '').trim() || '--';
-    const pace = runMetrics?.pace || '--';
-    const unit = dist !== '--' && parseFloat(dist) < 5 ? 'KM' : 'M';
-    return (
-        <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Badge color={cfg.color}>{cfg.emoji} {cfg.accentLabel}</Badge>
-                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.25em', textTransform: 'uppercase' }}>{date}</span>
-            </div>
-            <h2 style={{ color: '#fff', fontSize: '17px', fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1.1, margin: '-6px 0 0' }}>
-                {workoutTitle}
-            </h2>
-            {/* Distance hero */}
-            <div style={{ textAlign: 'center', padding: '14px 0 8px', background: `${cfg.color}08`, borderRadius: '16px', border: `1px solid ${cfg.color}20` }}>
-                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '8px', fontWeight: 900, letterSpacing: '0.5em', textTransform: 'uppercase', marginBottom: '4px' }}>DISTANCIA</p>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '8px' }}>
-                    <span style={{ color: '#fff', fontSize: '64px', fontWeight: 900, fontStyle: 'italic', letterSpacing: '-0.04em', lineHeight: 1 }}>{dist}</span>
-                    <span style={{ color: cfg.color, fontSize: '22px', fontWeight: 900, fontStyle: 'italic' }}>{unit}</span>
-                </div>
-            </div>
-            {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <StatBox label="RITMO" value={pace} unit="/100M" color={cfg.color} />
-                <StatBox label="TIEMPO" value={displayDuration} unit="MIN" color={cfg.color} />
-            </div>
-            {/* Wave bars */}
-            <Bars color={cfg.color} heights={[50,60,70,65,55,70,80,60,50,70,80,65,55,75,85,65,55,70,60,50]} />
-            <Footer userName={userName} date={date} color={cfg.color} />
-        </div>
-    );
-}
-
-function GymCard({ blocks, workoutTitle, displayDuration, cfg, userName, date }: any) {
-    const totalVol = computeVolume(blocks);
-    const totalSets = computeSets(blocks);
-    const allExercises = blocks.flatMap((b: WorkoutBlock) => b.exercises || []);
-    const heaviest = [...allExercises].sort((a: any, b: any) => {
-        const wa = Math.max(...(a.sets || []).map((s: any) => s.weight || 0));
-        const wb = Math.max(...(b.sets || []).map((s: any) => s.weight || 0));
-        return wb - wa;
-    }).slice(0, 5);
-
-    return (
-        <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '10px' }}>
-                <div>
-                    <Badge color={cfg.color}>{cfg.emoji} {cfg.accentLabel}</Badge>
-                    <h2 style={{ color: '#fff', fontSize: '18px', fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1.1, marginTop: '6px', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                        {workoutTitle}
-                    </h2>
-                </div>
-                <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <p style={{ color: '#fff', fontSize: '20px', fontWeight: 900, fontStyle: 'italic', lineHeight: 1, letterSpacing: '-0.03em' }}>{displayDuration}</p>
-                    <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.3em', textTransform: 'uppercase', marginTop: '2px' }}>MIN</p>
-                </div>
-            </div>
-            {/* Volume hero */}
-            {totalVol > 0 && (
-                <div style={{ textAlign: 'center', padding: '12px', background: `${cfg.color}0c`, borderRadius: '16px', border: `1px solid ${cfg.color}25` }}>
-                    <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.5em', textTransform: 'uppercase', marginBottom: '4px' }}>VOLUMEN TOTAL</p>
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '6px' }}>
-                        <span style={{ color: '#fff', fontSize: '48px', fontWeight: 900, fontStyle: 'italic', letterSpacing: '-0.04em', lineHeight: 1 }}>
-                            {totalVol >= 1000 ? `${(totalVol / 1000).toFixed(1)}` : totalVol}
-                        </span>
-                        <span style={{ color: cfg.color, fontSize: '18px', fontWeight: 900, fontStyle: 'italic' }}>
-                            {totalVol >= 1000 ? 'TON' : 'KG'}
-                        </span>
                     </div>
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                        <StatBox label="SERIES" value={String(totalSets)} color={cfg.color} />
-                        <StatBox label="BLOQUES" value={String(blocks.length)} color={cfg.color} />
-                        <StatBox label="EJERCS." value={String(allExercises.length)} color={cfg.color} />
-                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+type CardProps = { blocks: WorkoutBlock[]; title: string; duration: number; cfg: SportCfg; blockResults?: Record<number, string> };
+
+function CardHeader({ title, label, cfg, duration }: { title: string; label: string; cfg: SportCfg; duration: number }) {
+    return (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 18 }}>
+            <div>
+                <div style={{ fontSize: 11, color: cfg.color, letterSpacing: 3, fontWeight: 700, marginBottom: 4 }}>{cfg.emoji} {label}</div>
+                <div style={{ fontSize: 26, fontWeight: 900, fontStyle: 'italic', color: '#ffffff', textTransform: 'uppercase', letterSpacing: 1, lineHeight: 1.1 }}>
+                    {title || cfg.label}
+                </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: cfg.color }}>{duration || '--'}</div>
+                <div style={{ fontSize: 9, color: '#666', letterSpacing: 1 }}>MIN</div>
+            </div>
+        </div>
+    );
+}
+
+// ─── CrossTrainingCard ────────────────────────────────────────────────────────
+function CrossTrainingCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
+    return (
+        <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
+            <CardHeader title={title} label={cfg.accentLabel} cfg={cfg} duration={duration} />
+            <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
+            <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />
+            <Footer color={cfg.color} />
+        </div>
+    );
+}
+
+// ─── HyroxCard ────────────────────────────────────────────────────────────────
+function HyroxCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
+    return (
+        <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
+            <CardHeader title={title || 'HYROX TRAINING'} label="HYROX" cfg={cfg} duration={duration} />
+            <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
+            <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />
+            <Footer color={cfg.color} />
+        </div>
+    );
+}
+
+// ─── GymCard ──────────────────────────────────────────────────────────────────
+function GymCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
+    return (
+        <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
+            <CardHeader title={title || 'GYM · LIFT'} label="STRENGTH" cfg={cfg} duration={duration} />
+            <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
+            <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />
+            <Footer color={cfg.color} />
+        </div>
+    );
+}
+
+// ─── BoxingCard ───────────────────────────────────────────────────────────────
+function BoxingCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
+    return (
+        <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
+            <CardHeader title={title || 'BOXING'} label="COMBAT" cfg={cfg} duration={duration} />
+            <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
+            <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />
+            <Footer color={cfg.color} />
+        </div>
+    );
+}
+
+// ─── RunningCard ──────────────────────────────────────────────────────────────
+function RunningCard({ blocks, title, duration, cfg, blockResults, runMetrics }: CardProps & { runMetrics?: { distance?: string; pace?: string; elevation?: string } }) {
+    return (
+        <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
+            <CardHeader title={title || 'RUNNING'} label="RUN" cfg={cfg} duration={duration} />
+            {runMetrics && (
+                <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
+                    {runMetrics.distance && <StatBox label="DISTANCIA" value={runMetrics.distance} color={cfg.color} />}
+                    {runMetrics.pace && <StatBox label="RITMO" value={runMetrics.pace} color={cfg.color} />}
+                    {runMetrics.elevation && <StatBox label="DESNIVEL" value={runMetrics.elevation} color={cfg.color} />}
                 </div>
             )}
-            {/* Top exercises */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {heaviest.map((ex: any, i: number) => {
-                    const maxW = Math.max(...(ex.sets || []).map((s: any) => s.weight || 0));
-                    const sum = getExerciseSummary(ex);
-                    return (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                                <span style={{ color: cfg.color, fontSize: '10px', fontWeight: 900, width: '16px', flexShrink: 0 }}>
-                                    {'●'.repeat(Math.min(i + 1, 3))}
-                                </span>
-                                <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.03em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                    {ex.name}
-                                </span>
-                            </div>
-                            <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                                {maxW > 0 && <span style={{ color: cfg.color, fontSize: '10px', fontWeight: 900 }}>{maxW}KG</span>}
-                                {sum && <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: '9px', fontWeight: 700 }}>{sum}</span>}
-                            </div>
-                        </div>
-                    );
-                })}
-            </div>
-            <Footer userName={userName} date={date} color={cfg.color} />
+            <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
+            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />}
+            <Footer color={cfg.color} />
         </div>
     );
 }
 
-function HyroxCard({ blocks, workoutTitle, displayDuration, cfg, userName, date }: any) {
-    const stations = blocks.length;
+// ─── CyclingCard ──────────────────────────────────────────────────────────────
+function CyclingCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
     return (
-        <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Badge color={cfg.color}>{cfg.emoji} {cfg.accentLabel}</Badge>
-                <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.2em' }}>FUNCTIONAL FITNESS RACE</span>
-            </div>
-            <h2 style={{ color: '#fff', fontSize: '19px', fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1.1, margin: '-4px 0 0', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                {workoutTitle}
-            </h2>
-            {/* Race time hero */}
-            <div style={{ textAlign: 'center', padding: '16px', background: `${cfg.color}0d`, borderRadius: '16px', border: `1px solid ${cfg.color}30` }}>
-                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '8px', fontWeight: 900, letterSpacing: '0.5em', textTransform: 'uppercase', marginBottom: '6px' }}>TIEMPO DE CARRERA</p>
-                <p style={{ color: '#fff', fontSize: '56px', fontWeight: 900, fontStyle: 'italic', letterSpacing: '-0.04em', lineHeight: 1 }}>{displayDuration}</p>
-                <p style={{ color: cfg.color, fontSize: '9px', fontWeight: 900, letterSpacing: '0.4em', textTransform: 'uppercase', marginTop: '4px' }}>MIN · SEC</p>
-                <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', marginTop: '12px', paddingTop: '12px', borderTop: `1px solid ${cfg.color}20` }}>
-                    <StatBox label="ESTACIONES" value={String(stations)} color={cfg.color} />
-                    <StatBox label="ESTADO" value="FINISH" color={cfg.color} />
-                </div>
-            </div>
-            {/* Station list */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                {blocks.map((b: WorkoutBlock, i: number) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <span style={{ color: cfg.color, fontSize: '9px', fontWeight: 900, width: '16px', flexShrink: 0 }}>{String(i + 1).padStart(2, '0')}</span>
-                        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.title || b.type || `Station ${i + 1}`}</span>
-                    </div>
-                ))}
-            </div>
-            <Footer userName={userName} date={date} color={cfg.color} />
+        <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
+            <CardHeader title={title || 'CYCLING'} label="RIDE" cfg={cfg} duration={duration} />
+            <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
+            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />}
+            <Footer color={cfg.color} />
         </div>
     );
 }
 
-function OcrCard({ blocks, runMetrics, workoutTitle, displayDuration, cfg, userName, date }: any) {
-    const dist = (runMetrics?.distance || '--').replace(/[A-Za-z\s]/g, '').trim() || '--';
-    const elev = runMetrics?.elevation || null;
-    const obstacles = blocks.length > 0 ? blocks.length * 3 : null;
+// ─── SwimmingCard ─────────────────────────────────────────────────────────────
+function SwimmingCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
     return (
-        <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Badge color={cfg.color}>{cfg.emoji} {cfg.accentLabel}</Badge>
-                <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.25em', textTransform: 'uppercase' }}>TRAIL & OBSTACLE</span>
-            </div>
-            <h2 style={{ color: '#fff', fontSize: '19px', fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1.1, margin: '-4px 0 0' }}>
-                {workoutTitle}
-            </h2>
-            {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: `${cfg.color}08`, borderRadius: '16px', padding: '14px', border: `1px solid ${cfg.color}20` }}>
-                <div style={{ gridColumn: '1 / -1', textAlign: 'center', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)', marginBottom: '4px' }}>
-                    <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.5em', textTransform: 'uppercase', marginBottom: '4px' }}>DISTANCIA</p>
-                    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: '6px' }}>
-                        <span style={{ color: '#fff', fontSize: '52px', fontWeight: 900, fontStyle: 'italic', letterSpacing: '-0.04em', lineHeight: 1 }}>{dist}</span>
-                        <span style={{ color: cfg.color, fontSize: '20px', fontWeight: 900, fontStyle: 'italic' }}>KM</span>
-                    </div>
-                </div>
-                <StatBox label="TIEMPO" value={displayDuration} unit="MIN" color={cfg.color} />
-                {elev ? <StatBox label="DESNIVEL" value={elev} unit="D+" color={cfg.color} /> : obstacles ? <StatBox label="OBSTÁCULOS" value={`~${obstacles}`} color={cfg.color} /> : null}
-            </div>
-            {/* Terrain bars */}
-            <Bars color={cfg.color} heights={[20,35,55,70,65,80,90,75,60,80,95,85,70,60,75,85,90,80,65,50]} />
-            <Footer userName={userName} date={date} color={cfg.color} />
+        <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
+            <CardHeader title={title || 'SWIMMING'} label="POOL" cfg={cfg} duration={duration} />
+            <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
+            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />}
+            <Footer color={cfg.color} />
         </div>
     );
 }
 
-function YogaCard({ workoutTitle, displayDuration, cfg, userName, date }: any) {
-    const durationMin = displayDuration.split(':')[0] || displayDuration;
+// ─── YogaCard ─────────────────────────────────────────────────────────────────
+function YogaCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
     return (
-        <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Badge color={cfg.color}>{cfg.emoji} {cfg.accentLabel}</Badge>
-                <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.25em' }}>MIND & BODY</span>
-            </div>
-            <h2 style={{ color: '#fff', fontSize: '19px', fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1.1, margin: '-4px 0 0', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                {workoutTitle}
-            </h2>
-            {/* Duration as hero + breathing decoration */}
-            <div style={{ textAlign: 'center', padding: '20px 14px', background: `${cfg.color}08`, borderRadius: '20px', border: `1px solid ${cfg.color}20`, position: 'relative', overflow: 'hidden' }}>
-                {/* Concentric rings decoration */}
-                {[1, 2, 3].map((r) => (
-                    <div key={r} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: `${r * 80}px`, height: `${r * 80}px`, borderRadius: '50%', border: `1px solid ${cfg.color}${r === 1 ? '30' : r === 2 ? '18' : '0c'}`, pointerEvents: 'none' }} />
-                ))}
-                <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '8px', fontWeight: 900, letterSpacing: '0.5em', textTransform: 'uppercase', marginBottom: '6px', position: 'relative' }}>PRÁCTICA</p>
-                <p style={{ color: '#fff', fontSize: '60px', fontWeight: 900, fontStyle: 'italic', letterSpacing: '-0.04em', lineHeight: 1, position: 'relative' }}>{durationMin}</p>
-                <p style={{ color: cfg.color, fontSize: '9px', fontWeight: 900, letterSpacing: '0.4em', textTransform: 'uppercase', marginTop: '4px', position: 'relative' }}>MINUTOS</p>
-            </div>
-            {/* Soft stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-                <div style={{ textAlign: 'center', padding: '10px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <p style={{ color: cfg.color, fontSize: '16px', fontWeight: 900, fontStyle: 'italic' }}>🌬</p>
-                    <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', marginTop: '4px' }}>BREATH</p>
-                </div>
-                <div style={{ textAlign: 'center', padding: '10px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <p style={{ color: cfg.color, fontSize: '16px', fontWeight: 900, fontStyle: 'italic' }}>🧠</p>
-                    <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', marginTop: '4px' }}>FOCUS</p>
-                </div>
-                <div style={{ textAlign: 'center', padding: '10px 8px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <p style={{ color: cfg.color, fontSize: '16px', fontWeight: 900, fontStyle: 'italic' }}>✅</p>
-                    <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.2em', textTransform: 'uppercase', marginTop: '4px' }}>DONE</p>
-                </div>
-            </div>
-            <Footer userName={userName} date={date} color={cfg.color} />
+        <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
+            <CardHeader title={title || 'YOGA · MOB'} label="FLOW" cfg={cfg} duration={duration} />
+            <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
+            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />}
+            <Footer color={cfg.color} />
         </div>
     );
 }
 
-function BoxingCard({ blocks, workoutTitle, displayDuration, cfg, userName, date }: any) {
-    const rounds = blocks.length > 0 ? blocks.length : Math.ceil(parseInt(displayDuration) / 3) || '--';
+// ─── OcrCard ──────────────────────────────────────────────────────────────────
+function OcrCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
     return (
-        <div style={{ padding: '18px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Badge color={cfg.color}>{cfg.emoji} {cfg.accentLabel}</Badge>
-                <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: '8px', fontWeight: 700, letterSpacing: '0.2em' }}>FIGHT SESSION</span>
-            </div>
-            <h2 style={{ color: '#fff', fontSize: '19px', fontWeight: 900, fontStyle: 'italic', textTransform: 'uppercase', letterSpacing: '-0.02em', lineHeight: 1.1, margin: '-4px 0 0', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                {workoutTitle}
-            </h2>
-            {/* Rounds hero */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div style={{ textAlign: 'center', padding: '16px 12px', background: `${cfg.color}15`, borderRadius: '16px', border: `1px solid ${cfg.color}35` }}>
-                    <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.4em', textTransform: 'uppercase', marginBottom: '4px' }}>ROUNDS</p>
-                    <p style={{ color: '#fff', fontSize: '52px', fontWeight: 900, fontStyle: 'italic', letterSpacing: '-0.04em', lineHeight: 1 }}>{rounds}</p>
-                </div>
-                <div style={{ textAlign: 'center', padding: '16px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.07)' }}>
-                    <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.4em', textTransform: 'uppercase', marginBottom: '4px' }}>TIEMPO</p>
-                    <p style={{ color: '#fff', fontSize: '36px', fontWeight: 900, fontStyle: 'italic', letterSpacing: '-0.04em', lineHeight: 1 }}>{displayDuration}</p>
-                    <p style={{ color: cfg.color, fontSize: '7px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.2em', marginTop: '4px' }}>MIN</p>
-                </div>
-            </div>
-            {/* Impact bars - sharp peaks like punches */}
-            <Bars color={cfg.color} heights={[20,80,15,90,10,95,20,85,15,75,10,90,20,80,15,95,10,85,20,70]} height={36} />
-            {/* Rounds detail */}
-            {blocks.length > 0 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    {blocks.map((b: WorkoutBlock, i: number) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <span style={{ color: cfg.color, fontSize: '10px', fontWeight: 900, width: '22px', flexShrink: 0 }}>R{i + 1}</span>
-                            <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {(b.exercises || []).map((e: any) => e.name).filter(Boolean).join(' · ') || b.title || b.type || 'Round'}
-                            </span>
-                            {b.duration && <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.3)', fontSize: '8px', fontWeight: 900, flexShrink: 0 }}>{b.duration}MIN</span>}
-                        </div>
-                    ))}
-                </div>
-            )}
-            <Footer userName={userName} date={date} color={cfg.color} />
+        <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
+            <CardHeader title={title || 'OCR'} label="OBSTACLE" cfg={cfg} duration={duration} />
+            <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
+            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />}
+            <Footer color={cfg.color} />
         </div>
     );
 }
 
-// ─── Main component ───────────────────────────────────────────────────────────
+// ─── Card router ──────────────────────────────────────────────────────────────
+function SportCard({ sportKey, blocks, title, duration, cfg, runMetrics, blockResults }: {
+    sportKey: SportKey; blocks: WorkoutBlock[]; title: string; duration: number;
+    cfg: SportCfg; runMetrics?: { distance?: string; pace?: string; elevation?: string };
+    blockResults?: Record<number, string>;
+}) {
+    switch (sportKey) {
+        case 'hyrox':    return <HyroxCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
+        case 'gym':      return <GymCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
+        case 'boxing':   return <BoxingCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
+        case 'running':  return <RunningCard blocks={blocks} title={title} duration={duration} cfg={cfg} runMetrics={runMetrics} blockResults={blockResults} />;
+        case 'cycling':  return <CyclingCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
+        case 'swimming': return <SwimmingCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
+        case 'yoga':     return <YogaCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
+        case 'ocr':      return <OcrCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
+        default:         return <CrossTrainingCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
+    }
+}
 
-export default function WorkoutShareCard({ blocks, workoutTitle, sportType, duration, durationLabel, date, userName, onClose, category, runMetrics, wodBlocks }: WorkoutShareCardProps) {
+// ─── Main export ──────────────────────────────────────────────────────────────
+export default function WorkoutShareCard({
+    blocks,
+    workoutTitle,
+    sportType,
+    duration,
+    durationLabel,
+    date,
+    userName,
+    onClose,
+    category,
+    runMetrics,
+    wodBlocks,
+}: WorkoutShareCardProps) {
     const cardRef = useRef<HTMLDivElement>(null);
-    const [isDownloading, setIsDownloading] = useState(false);
-
-    const durationMin = Math.floor(duration / 60);
-    const durationSec = duration % 60;
-    const displayDuration = durationLabel || (duration > 0 ? `${durationMin}:${String(durationSec).padStart(2, '0')}` : '--:--');
+    const [loading, setLoading] = useState(false);
+    const [storyLoading, setStoryLoading] = useState(false);
+    const [editDuration, setEditDuration] = useState<string>('');
+    const [blockResults, setBlockResults] = useState<Record<number, string>>({});
 
     const sportKey = getSportKey(category, sportType);
     const cfg = SPORTS[sportKey];
 
-    // Resolve endurance metrics (also from wodBlocks[0].config as fallback)
-    const firstWodBlock = wodBlocks?.[0];
-    const resolvedRunMetrics = {
-        distance: runMetrics?.distance || firstWodBlock?.config?.distance,
-        pace: runMetrics?.pace || firstWodBlock?.config?.pace,
-        elevation: runMetrics?.elevation,
-    };
+    // Merge blocks sources
+    const allBlocks: WorkoutBlock[] = (wodBlocks && wodBlocks.length > 0 ? wodBlocks : blocks) ?? [];
 
+    // Compute display duration in minutes
+    const durationMins = (() => {
+        // Try to parse from durationLabel string (e.g. "45:30" or "1:05:00")
+        if (durationLabel && typeof durationLabel === 'string' && durationLabel.includes(':')) {
+            const parts = durationLabel.split(':').map(Number);
+            if (parts.length === 2) return parts[0]; // "45:30" → 45 min
+            if (parts.length === 3) return parts[0] * 60 + parts[1]; // "1:05:00" → 65 min
+        }
+        if (durationLabel && !isNaN(Number(durationLabel)) && Number(durationLabel) > 0) {
+            const n = Number(durationLabel);
+            return n > 90 ? Math.round(n / 60) : n;
+        }
+        // Convert seconds to minutes
+        if (duration > 90) return Math.round(duration / 60);
+        return duration > 0 ? duration : 0;
+    })();
+
+    // ── Download PNG ──────────────────────────────────────────────────────────
     const handleDownload = async () => {
         if (!cardRef.current) return;
-        setIsDownloading(true);
+        setLoading(true);
         try {
-            const dataUrl = await toPng(cardRef.current, { quality: 1.0, pixelRatio: 3, cacheBust: true, backgroundColor: cfg.bg });
-            const a = document.createElement('a');
-            a.download = `RivalFit-${cfg.label.replace(/\s/g, '-')}-${Date.now()}.png`;
-            a.href = dataUrl; a.click();
-        } catch (err) { console.error(err); alert("Error al generar la descarga."); }
-        finally { setIsDownloading(false); }
+            const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
+            const link = document.createElement('a');
+            link.download = `rival-workout-${Date.now()}.png`;
+            link.href = dataUrl;
+            link.click();
+        } catch (e) {
+            console.error('Download error', e);
+        } finally {
+            setLoading(false);
+        }
     };
 
+    // ── Share via Web Share API ────────────────────────────────────────────────
+    const handleShare = async () => {
+        if (!cardRef.current) return;
+        setLoading(true);
+        try {
+            const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
+            const blob = await (await fetch(dataUrl)).blob();
+            const file = new File([blob], 'rival-workout.png', { type: 'image/png' });
+            if (navigator.share && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: workoutTitle || 'Mi entrenamiento', text: '¡Entrenamiento completado con Rival Fit!' });
+            } else {
+                const link = document.createElement('a');
+                link.download = 'rival-workout.png';
+                link.href = dataUrl;
+                link.click();
+            }
+        } catch (e) {
+            console.error('Share error', e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ── Share to Story (9:16 Instagram) ──────────────────────────────────────
     const handleShareToStory = async () => {
         if (!cardRef.current) return;
-        setIsDownloading(true);
+        setStoryLoading(true);
         try {
-            const dataUrl = await toPng(cardRef.current, { quality: 1.0, pixelRatio: 3, cacheBust: true, backgroundColor: cfg.bg });
-            const res = await fetch(dataUrl);
-            const blob = await res.blob();
-            const file = new File([blob], `RivalFit-${Date.now()}.png`, { type: 'image/png' });
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-                await navigator.share({ files: [file], title: 'Rival Fit', text: '¡Mira mi entrenamiento en Rival Fit!' });
-                onClose();
+            const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
+            const blob = await (await fetch(dataUrl)).blob();
+            const file = new File([blob], 'rival-story.png', { type: 'image/png' });
+            if (navigator.share && navigator.canShare({ files: [file] })) {
+                await navigator.share({ files: [file], title: 'Historia Rival Fit' });
             } else {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a'); a.href = url;
-                a.download = `RivalFit-${Date.now()}.png`; a.click();
-                URL.revokeObjectURL(url);
-                alert('Imagen descargada. Súbela a Instagram Stories desde tu galería.');
-                onClose();
+                const link = document.createElement('a');
+                link.download = 'rival-story.png';
+                link.href = dataUrl;
+                link.click();
             }
-        } catch (err: any) {
-            if (err?.name !== 'AbortError') { console.error(err); alert('Error. Descarga la imagen manualmente.'); }
-        } finally { setIsDownloading(false); }
+        } catch (e) {
+            console.error('Story share error', e);
+        } finally {
+            setStoryLoading(false);
+        }
     };
 
-    const cardProps = { blocks, runMetrics: resolvedRunMetrics, workoutTitle, displayDuration, cfg, userName, date };
-
     return (
-        <div className="fixed inset-0 z-[300] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-xl animate-in fade-in duration-300 overflow-y-auto">
-            <div className="w-full max-w-[360px] flex flex-col gap-3 animate-in zoom-in-95 duration-300 py-4">
-                {/* Top bar */}
-                <div className="flex justify-between items-center text-white px-1">
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm">{cfg.emoji}</span>
-                        <h3 className="font-heading font-black italic uppercase tracking-tighter text-sm">{cfg.label}</h3>
-                    </div>
-                    <button onClick={onClose} className="p-2 bg-white/10 rounded-full hover:bg-brand-red transition-colors text-white">
-                        <X className="w-5 h-5" />
-                    </button>
+        /* ── Modal overlay ─────────────────────────────────────────────────── */
+        <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            padding: 16,
+            overflowY: 'auto',
+        }}>
+            {/* Close button */}
+            <button
+                onClick={onClose}
+                style={{
+                    position: 'fixed', top: 16, right: 16,
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '50%',
+                    width: 36, height: 36,
+                    cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#fff',
+                    zIndex: 10000,
+                }}
+            >
+                <X size={18} />
+            </button>
+
+            {/* ── The shareable card ──────────────────────────────────────────── */}
+            <div
+                ref={cardRef}
+                style={{
+                    width: 390,
+                    background: '#0a0a0a',
+                    border: `2px solid ${cfg.color}50`,
+                    borderRadius: 20,
+                    overflow: 'hidden',
+                    position: 'relative',
+                    ...patternStyle(cfg.patternType, cfg.color),
+                }}
+            >
+                {/* Date strip */}
+                <div style={{
+                    background: cfg.color + '15',
+                    borderBottom: `1px solid ${cfg.color}30`,
+                    padding: '6px 24px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                }}>
+                    <span style={{ fontSize: 10, color: cfg.color, letterSpacing: 2, fontWeight: 600 }}>
+                        {date}
+                    </span>
+                    <span style={{ fontSize: 10, color: '#555', letterSpacing: 2 }}>
+                        {userName}
+                    </span>
                 </div>
 
-                {/* THE CARD */}
-                <div
-                    ref={cardRef}
-                    style={{ background: cfg.bg, fontFamily: 'system-ui, -apple-system, sans-serif', position: 'relative', overflow: 'hidden', borderRadius: '24px' }}
-                    className="w-full shadow-2xl border border-white/[0.06]"
-                >
-                    {/* Background pattern */}
-                    <div style={{ position: 'absolute', inset: 0, opacity: 0.035, pointerEvents: 'none', ...patternStyle(cfg.patternType) }} />
-                    {/* Glow */}
-                    <div style={{ position: 'absolute', bottom: 0, right: 0, width: '220px', height: '220px', borderRadius: '50%', background: `radial-gradient(circle, ${cfg.color}22 0%, transparent 70%)`, pointerEvents: 'none' }} />
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: '160px', height: '160px', borderRadius: '50%', background: `radial-gradient(circle, ${cfg.color}10 0%, transparent 70%)`, pointerEvents: 'none' }} />
-                    {/* Top accent bar */}
-                    <div style={{ height: '3px', width: '100%', background: `linear-gradient(90deg, ${cfg.color} 0%, ${cfg.color}aa 50%, transparent 100%)` }} />
+                {/* Sport card content */}
+                <SportCard
+                    sportKey={sportKey}
+                    blocks={allBlocks}
+                    title={workoutTitle}
+                    duration={editDuration !== '' ? (parseInt(editDuration) || 0) : durationMins}
+                    cfg={cfg}
+                    runMetrics={runMetrics}
+                    blockResults={blockResults}
+                />
+            </div>
 
-                    {/* Sport-specific card body */}
-                    {sportKey === 'cross_training' && <CrossTrainingCard {...cardProps} />}
-                    {sportKey === 'running'        && <RunningCard       {...cardProps} />}
-                    {sportKey === 'cycling'        && <CyclingCard       {...cardProps} />}
-                    {sportKey === 'swimming'       && <SwimmingCard      {...cardProps} />}
-                    {sportKey === 'gym'            && <GymCard           {...cardProps} />}
-                    {sportKey === 'hyrox'          && <HyroxCard         {...cardProps} />}
-                    {sportKey === 'ocr'            && <OcrCard           {...cardProps} />}
-                    {sportKey === 'yoga'           && <YogaCard          {...cardProps} />}
-                    {sportKey === 'boxing'         && <BoxingCard        {...cardProps} />}
-                </div>
-
-                {/* Action buttons */}
-                <div className="flex gap-2">
-                    <button
-                        onClick={handleShareToStory}
-                        disabled={isDownloading}
-                        className="flex-1 py-4 text-white rounded-2xl font-heading font-black italic uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all text-xs border border-white/10 disabled:opacity-60"
-                        style={{ background: cfg.color }}
-                    >
-                        {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 -rotate-12" />}
-                        INSTAGRAM
-                    </button>
-                    <button
-                        onClick={handleDownload}
-                        disabled={isDownloading}
-                        className="flex-1 py-4 bg-white text-black rounded-2xl font-heading font-black italic uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-white/90 active:scale-95 transition-all text-xs"
-                    >
-                        {isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                        {isDownloading ? "..." : "GUARDAR PNG"}
-                    </button>
-                </div>
-                <p className="text-center text-[9px] text-white/25 font-black uppercase tracking-widest">
-                    Optimizado para Instagram Stories y Rival Feed
+            {/* ── Edit panel ──────────────────────────────────────────────────── */}
+            <div style={{
+                width: 390, marginTop: 12,
+                background: 'rgba(255,255,255,0.04)',
+                border: `1px solid ${cfg.color}30`,
+                borderRadius: 16, padding: '14px 16px',
+            }}>
+                <p style={{ fontSize: 10, color: cfg.color, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
+                    ✏ Editar tiempos
                 </p>
+                {/* Total time */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                    <span style={{ fontSize: 11, color: '#888', fontWeight: 600, width: 90, flexShrink: 0 }}>TIEMPO TOTAL</span>
+                    <input
+                        type="number"
+                        min={0}
+                        placeholder={durationMins > 0 ? String(durationMins) : 'min'}
+                        value={editDuration}
+                        onChange={e => setEditDuration(e.target.value)}
+                        style={{
+                            flex: 1, background: 'rgba(255,255,255,0.06)', border: `1px solid ${cfg.color}40`,
+                            borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700,
+                            padding: '6px 10px', outline: 'none',
+                        }}
+                    />
+                    <span style={{ fontSize: 10, color: '#555', fontWeight: 600 }}>MIN</span>
+                </div>
+                {/* Per-block results */}
+                {allBlocks.map((block: any, i: number) => (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                        <span style={{ fontSize: 11, color: '#888', fontWeight: 600, width: 90, flexShrink: 0, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {block.title || block.label || `BLOQUE ${i + 1}`}
+                        </span>
+                        <input
+                            type="text"
+                            placeholder="ej: 12:30 / 5 RDS"
+                            value={blockResults[i] || ''}
+                            onChange={e => setBlockResults(prev => ({ ...prev, [i]: e.target.value }))}
+                            style={{
+                                flex: 1, background: 'rgba(255,255,255,0.06)', border: `1px solid ${cfg.color}30`,
+                                borderRadius: 8, color: cfg.color, fontSize: 12, fontWeight: 700,
+                                padding: '6px 10px', outline: 'none',
+                            }}
+                        />
+                    </div>
+                ))}
+            </div>
+
+            {/* ── Action buttons ──────────────────────────────────────────────── */}
+            <div style={{
+                display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap', justifyContent: 'center',
+            }}>
+                {/* Download */}
+                <button
+                    onClick={handleDownload}
+                    disabled={loading}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        background: cfg.color,
+                        color: '#000',
+                        border: 'none',
+                        borderRadius: 10,
+                        padding: '10px 20px',
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        opacity: loading ? 0.7 : 1,
+                        letterSpacing: 0.5,
+                    }}
+                >
+                    {loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+                    DESCARGAR
+                </button>
+
+                {/* Share */}
+                <button
+                    onClick={handleShare}
+                    disabled={loading}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        background: 'rgba(255,255,255,0.08)',
+                        color: '#fff',
+                        border: `1px solid ${cfg.color}50`,
+                        borderRadius: 10,
+                        padding: '10px 20px',
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: loading ? 'not-allowed' : 'pointer',
+                        opacity: loading ? 0.7 : 1,
+                        letterSpacing: 0.5,
+                    }}
+                >
+                    {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                    COMPARTIR
+                </button>
+
+                {/* Story */}
+                <button
+                    onClick={handleShareToStory}
+                    disabled={storyLoading}
+                    style={{
+                        display: 'flex', alignItems: 'center', gap: 8,
+                        background: 'rgba(255,255,255,0.05)',
+                        color: cfg.color,
+                        border: `1px solid ${cfg.color}40`,
+                        borderRadius: 10,
+                        padding: '10px 20px',
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: storyLoading ? 'not-allowed' : 'pointer',
+                        opacity: storyLoading ? 0.7 : 1,
+                        letterSpacing: 0.5,
+                    }}
+                >
+                    {storyLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                    HISTORIA
+                </button>
             </div>
         </div>
     );

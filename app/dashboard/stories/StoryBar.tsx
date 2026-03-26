@@ -19,6 +19,36 @@ import { Sparkles } from 'lucide-react'
 import RouteMap from '@/components/training/RouteMap'
 import { isImageUrl } from '@/lib/utils'
 
+// ─── Exercise detail extractor (used in story cards) ─────────────────────────
+function getExDetail(ex: any): string {
+    // Only treat sets as array if it actually is one
+    const s = Array.isArray(ex.sets) ? ex.sets[0] : undefined;
+    if (s) {
+        const unit = (s.unit || '').toLowerCase();
+        if (unit === 'm' || unit === 'meters' || unit === 'meter') return `· ${s.reps}M`;
+        if (unit === 'cal' || unit === 'calories') return `${s.reps} CAL`;
+        if (unit === 'time') return `${s.reps} SEC`;
+        const w = (s.weight ?? 0) > 0 ? ` · ${s.weight}KG` : '';
+        if (s.reps) return `${s.reps}${w}`;
+        if (w) return w.trim();
+    }
+    // Top-level fallbacks
+    if (ex.value) return String(ex.value);
+    const exUnit = (ex.unit || ex.measure || '').toLowerCase();
+    const rawReps = ex.reps;
+    if (rawReps) {
+        const repsStr = String(rawReps);
+        if (exUnit === 'm' || exUnit === 'meters') return `· ${repsStr}M`;
+        if (exUnit === 'cal') return `${repsStr} CAL`;
+        const tW = (ex.weight ?? ex.weight_kg ?? 0) > 0 ? ` · ${ex.weight ?? ex.weight_kg}KG` : '';
+        return `${repsStr}${tW}`;
+    }
+    if (ex.target && ex.target !== '-') return String(ex.target);
+    if (ex.detail) return `${ex.detail}${ex.unit || ''}`;
+    if (ex.instructions) return String(ex.instructions);
+    return '';
+}
+
 interface Story {
     id: string
     media_url: string
@@ -56,7 +86,7 @@ interface OverlayElement {
     link?: string
 }
 
-export default function StoryBar({ currentUser }: { currentUser: any }) {
+export default function StoryBar({ currentUser, hideBar = false }: { currentUser: any, hideBar?: boolean }) {
     const { userStories, setUserStories, refreshStories } = useStories()
     const [selectedUserIndex, setSelectedUserIndex] = useState<number | null>(null)
     const [activeStoryIndex, setActiveStoryIndex] = useState(0)
@@ -245,7 +275,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                         type: type === 'pr' ? 'pr_sticker' : 'workout_sticker',
                         content: typeof data === 'string' ? data : JSON.stringify(data),
                         x: 50,
-                        y: 45,
+                        y: 55,
                         scale: 1,
                         rotation: 0,
                         link: postId ? `/dashboard` : undefined
@@ -945,14 +975,15 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                             )}
                                                         </div>
                                                         <div className="space-y-1">
-                                                            {(block.exercises || []).slice(0, 3).map((ex: any, eIdx: number) => (
-                                                                <div key={eIdx} className="flex items-center justify-between">
-                                                                    <span className="text-[9px] font-bold text-white/80 uppercase tracking-tight truncate flex-1 pr-2">{ex.name}</span>
-                                                                    <span className="text-[9px] font-black text-brand-red shrink-0">
-                                                                        {ex.reps && ex.reps}{ex.detail ? ` · ${ex.detail}${ex.unit || ''}` : ''}
-                                                                    </span>
-                                                                </div>
-                                                            ))}
+                                                            {(block.exercises || []).slice(0, 3).map((ex: any, eIdx: number) => {
+                                                                const d2 = getExDetail(ex);
+                                                                return (
+                                                                    <div key={eIdx} className="flex items-center justify-between">
+                                                                        <span className="text-[9px] font-bold text-white/80 uppercase tracking-tight truncate flex-1 pr-2">{ex.name}</span>
+                                                                        {d2 && <span className="text-[9px] font-black text-brand-red shrink-0">{d2}</span>}
+                                                                    </div>
+                                                                );
+                                                            })}
                                                             {(block.exercises || []).length > 3 && (
                                                                 <p className="text-[7px] text-gray-600 font-bold uppercase tracking-widest">+{block.exercises.length - 3} más</p>
                                                             )}
@@ -1076,9 +1107,11 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
     }
 
     return (
-        <div className="flex gap-4 overflow-x-auto pb-4 no-scrollbar items-center select-none">
-            {/* Add Story Button Group */}
-            <div className="flex gap-2 shrink-0 pr-4 border-r border-white/10">
+        <div className={clsx("relative", hideBar ? "w-0 h-0 overflow-visible" : "flex gap-4 overflow-x-auto pb-4 no-scrollbar items-center select-none")}>
+            {!hideBar && (
+                <>
+                    {/* Add Story Button Group */}
+                    <div className="flex gap-2 shrink-0 pr-4 border-r border-white/10">
                 <div className="flex flex-col items-center gap-2">
                     <button
                         onClick={() => fileInputRef.current?.click()}
@@ -1147,6 +1180,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                     </span>
                 </div>
             ))}
+                </>
+            )}
 
             {/* Video Trimmer Modal */}
             {isVideoTrimming && trimmerVideoUrl && (
@@ -1895,8 +1930,8 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                             (() => {
                                                 try {
                                                     const data = JSON.parse(overlay.content);
-                                                    const hasBlocks = data.metrics?.blocks?.length > 0;
                                                     const wodBlocks2 = data.blocks || data.metrics?.blocks || [];
+                                                    const hasBlocks = wodBlocks2.length > 0;
                                                     const isExpanded = expandedWorkoutId === overlay.id;
                                                     const category2 = data.category || data.metrics?.type?.toUpperCase() || '';
                                                     const isEnd2 = ['RUNNING','CYCLING','SWIMMING'].includes(category2) || data.sport_type?.toLowerCase() === 'running';
@@ -1971,7 +2006,7 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                                     </div>
                                                                 ) : hasBlocks ? (
                                                                     <div className="space-y-1.5">
-                                                                        {(isExpanded ? data.metrics.blocks : data.metrics.blocks.slice(0, 3)).map((block: any, idx: number) => (
+                                                                        {(isExpanded ? wodBlocks2 : wodBlocks2.slice(0, 3)).map((block: any, idx: number) => (
                                                                             <motion.div
                                                                                 initial={{ opacity: 0, y: 10 }}
                                                                                 animate={{ opacity: 1, y: 0 }}
@@ -1979,30 +2014,28 @@ export default function StoryBar({ currentUser }: { currentUser: any }) {
                                                                                 key={idx}
                                                                                 className="flex flex-col bg-white/5 p-3 rounded-xl border border-white/5 gap-2"
                                                                             >
-                                                                                <div className="flex justify-between items-center">
-                                                                                    <div className="flex flex-col">
-                                                                                        <span className="text-[10px] font-black text-white uppercase">{block.title || block.type || 'BLOQUE'}</span>
-                                                                                        {isExpanded && block.type && <span className="text-[8px] text-brand-red/70 font-bold uppercase">{block.type}</span>}
-                                                                                    </div>
-                                                                                    <span className="text-brand-red font-black text-sm italic">
-                                                                                        {block.type === 'fortime' ? block.result?.time : (block.result?.rounds ? `${block.result.rounds} RDS` : (block.result?.reps ? `${block.result.reps} REPS` : '-'))}
-                                                                                    </span>
+                                                                                <div className="flex justify-between items-center mb-1.5">
+                                                                                    <span className="text-[10px] font-black text-white uppercase">{block.title || block.type || 'BLOQUE'}</span>
+                                                                                    {block.rounds && <span className="text-[9px] text-brand-red font-black">{block.rounds} RDS</span>}
                                                                                 </div>
-                                                                                {isExpanded && block.exercises?.length > 0 && (
-                                                                                    <div className="grid gap-1.5 border-t border-white/5 pt-2">
-                                                                                        {block.exercises.map((ex: any, eIdx: number) => (
-                                                                                            <div key={eIdx} className="flex justify-between items-center bg-black/20 px-2 py-1.5 rounded-lg">
-                                                                                                <span className="text-[9px] text-gray-300 font-bold uppercase truncate max-w-[150px]">{ex.name}</span>
-                                                                                                <span className="text-[9px] text-white font-black italic">{ex.value || ex.weight_kg} {ex.reps ? `x ${ex.reps}` : ''}</span>
-                                                                                            </div>
-                                                                                        ))}
+                                                                                {block.exercises?.length > 0 && (
+                                                                                    <div className="grid gap-1 border-t border-white/5 pt-1.5">
+                                                                                        {block.exercises.map((ex: any, eIdx: number) => {
+                                                                                            const detail = getExDetail(ex);
+                                                                                            return (
+                                                                                                <div key={eIdx} className="flex justify-between items-center px-1.5 py-1 rounded-lg bg-black/20">
+                                                                                                    <span className="text-[9px] text-gray-200 font-bold uppercase truncate max-w-[160px]">{ex.name}</span>
+                                                                                                    {detail && <span className="text-[9px] text-brand-red font-black italic shrink-0 ml-2">{detail}</span>}
+                                                                                                </div>
+                                                                                            );
+                                                                                        })}
                                                                                     </div>
                                                                                 )}
                                                                             </motion.div>
                                                                         ))}
-                                                                        {!isExpanded && data.metrics.blocks.length > 3 && (
+                                                                        {!isExpanded && wodBlocks2.length > 3 && (
                                                                             <div className="text-[9px] text-center text-brand-red/70 font-black uppercase tracking-[0.2em] pt-2 animate-pulse">
-                                                                                Tocar para ver +{data.metrics.blocks.length - 3} bloques
+                                                                                Tocar para ver +{wodBlocks2.length - 3} bloques
                                                                             </div>
                                                                         )}
                                                                     </div>

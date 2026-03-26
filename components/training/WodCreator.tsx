@@ -586,15 +586,15 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                     </>
                                 )}
                                 {block.format === 'AMRAP' && (
-                                    <ConfigInput label="TIME CAP" value={block.config.timecap || '20:00'} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} />
+                                    <TimeInput label="TIME CAP" value={block.config.timecap || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} />
                                 )}
                                 {(block.format === 'FOR TIME' || block.format === '21-15-9') && (
-                                    <ConfigInput label="TIME CAP (OPT)" value={block.config.timecap || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} />
+                                    <TimeInput label="TIME CAP" value={block.config.timecap || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} optional />
                                 )}
                                 {block.format === 'ROUNDS FOR TIME' && (
                                     <>
                                         <ConfigInput label="ROUNDS" value={block.config.rounds === undefined ? '' : block.config.rounds.toString()} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rounds: v === '' ? undefined : (parseInt(v) || 0) } })} />
-                                        <ConfigInput label="TIME CAP" value={block.config.timecap || '20:00'} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} />
+                                        <TimeInput label="TIME CAP" value={block.config.timecap || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} optional />
                                     </>
                                 )}
                                 {block.format === 'TABATA' && (
@@ -625,20 +625,20 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                     <>
                                         <ConfigInput label="DISTANCIA" value={block.config.distance || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, distance: v } })} placeholder="EJ: 10 KM" />
                                         <ConfigInput label="RITMO OBJ." value={block.config.pace || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, pace: v } })} placeholder="EJ: 4:30 /KM" />
-                                        <ConfigInput label="TIEMPO OBJ." value={block.config.timecap || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} placeholder="EJ: 45:00" />
+                                        <TimeInput label="TIEMPO OBJ." value={block.config.timecap || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} optional />
                                     </>
                                 )}
                                 {block.format === 'INTERVALOS' && (
                                     <>
                                         <ConfigInput label="SERIES" value={block.config.rounds === undefined ? '' : block.config.rounds.toString()} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rounds: v === '' ? undefined : (parseInt(v) || 0) } })} placeholder="EJ: 6" />
                                         <ConfigInput label="DISTANCIA" value={block.config.work || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, work: v } })} placeholder="EJ: 1 KM" />
-                                        <ConfigInput label="DESCANSO" value={block.config.rest || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rest: v } })} placeholder="EJ: 2:00" />
+                                        <TimeInput label="DESCANSO" value={block.config.rest || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rest: v } })} optional />
                                         <ConfigInput label="RITMO OBJ." value={block.config.pace || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, pace: v } })} placeholder="EJ: 4:30 /KM" />
                                     </>
                                 )}
                                 {block.format === 'FARTLEK' && (
                                     <>
-                                        <ConfigInput label="DURACIÓN" value={block.config.timecap || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} placeholder="EJ: 45:00" />
+                                        <TimeInput label="DURACIÓN" value={block.config.timecap || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} optional />
                                         <ConfigInput label="DISTANCIA" value={block.config.distance || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, distance: v } })} placeholder="EJ: 8 KM" />
                                     </>
                                 )}
@@ -652,7 +652,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                     <>
                                         <ConfigInput label="SERIES" value={block.config.rounds === undefined ? '' : block.config.rounds.toString()} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rounds: v === '' ? undefined : (parseInt(v) || 0) } })} placeholder="EJ: 10" />
                                         <ConfigInput label="DISTANCIA" value={block.config.work || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, work: v } })} placeholder="EJ: 400 M" />
-                                        <ConfigInput label="DESCANSO" value={block.config.rest || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rest: v } })} placeholder="EJ: 1:30" />
+                                        <TimeInput label="DESCANSO" value={block.config.rest || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, rest: v } })} optional />
                                         <ConfigInput label="RITMO OBJ." value={block.config.pace || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, pace: v } })} placeholder="EJ: 1:45 /400M" />
                                     </>
                                 )}
@@ -660,7 +660,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                     <>
                                         <ConfigInput label="DISTANCIA" value={block.config.distance || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, distance: v } })} placeholder="EJ: 20 KM" />
                                         <ConfigInput label="DESNIVEL D+" value={block.config.frequency || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, frequency: v } })} placeholder="EJ: 800 M" />
-                                        <ConfigInput label="TIEMPO OBJ." value={block.config.timecap || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} placeholder="EJ: 2:30:00" />
+                                        <TimeInput label="TIEMPO OBJ." value={block.config.timecap || ''} onChange={(v) => updateBlock(block.id, { config: { ...block.config, timecap: v } })} optional />
                                     </>
                                 )}
                             </div>
@@ -990,6 +990,59 @@ function ConfigInput({ label, value, onChange, placeholder }: { label: string, v
                 onFocus={(e) => e.target.select()}
                 onChange={(e) => onChange(e.target.value.toUpperCase())}
             />
+        </div>
+    );
+}
+
+function TimeInput({ label, value, onChange, optional }: { label: string, value: string, onChange: (v: string) => void, optional?: boolean }) {
+    const parse = (v: string) => {
+        const parts = (v || '').split(':');
+        const m = parseInt(parts[0]) || 0;
+        const s = parseInt(parts[1]) || 0;
+        return { m, s };
+    };
+    const { m, s } = parse(value);
+    const set = (mins: number, secs: number) => onChange(`${String(mins).padStart(2,'0')}:${String(Math.min(59, secs)).padStart(2,'0')}`);
+    const presets = [5, 10, 12, 15, 20, 30];
+    return (
+        <div className="flex flex-col gap-2">
+            <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none">
+                {label}{optional && <span className="text-gray-600 ml-1 normal-case">(opc)</span>}
+            </span>
+            {/* MM : SS inputs */}
+            <div className="flex items-center gap-1 bg-black/20 border border-white/10 rounded-xl px-3 py-2 w-fit">
+                <input
+                    type="number" min={0} max={99}
+                    className="bg-transparent text-brand-red font-black text-base w-10 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                    value={m === 0 && !value ? '' : m}
+                    placeholder="00"
+                    inputMode="numeric"
+                    onChange={e => set(Math.max(0, parseInt(e.target.value) || 0), s)}
+                />
+                <span className="text-brand-red font-black text-base select-none">:</span>
+                <input
+                    type="number" min={0} max={59}
+                    className="bg-transparent text-brand-red font-black text-base w-10 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                    value={s === 0 && !value ? '' : s}
+                    placeholder="00"
+                    inputMode="numeric"
+                    onChange={e => set(m, Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
+                />
+                <span className="text-gray-600 text-[9px] font-bold ml-1">MIN</span>
+            </div>
+            {/* Quick preset buttons */}
+            <div className="flex gap-1.5 flex-wrap">
+                {presets.map(p => (
+                    <button
+                        key={p}
+                        type="button"
+                        onClick={() => set(p, 0)}
+                        className={`text-[10px] font-black px-2 py-1 rounded-lg border transition-all ${m === p && s === 0 ? 'bg-brand-red text-black border-brand-red' : 'bg-white/5 text-gray-400 border-white/10 hover:border-brand-red/50 hover:text-white'}`}
+                    >
+                        {p}'
+                    </button>
+                ))}
+            </div>
         </div>
     );
 }

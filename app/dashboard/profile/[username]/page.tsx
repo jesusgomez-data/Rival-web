@@ -113,6 +113,21 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
         currentUserProfile = p;
     }
 
+    // Fetch competition medals
+    let competitionMedals: any[] = [];
+    try {
+        const { data: medalData } = await supabase
+            .from('competition_results')
+            .select(`*, competition:competition_id(id, title, type, date)`)
+            .eq('user_id', profile.id)
+            .not('medal_type', 'is', null)
+            .order('created_at', { ascending: false });
+        competitionMedals = medalData || [];
+    } catch {
+        // Table may not exist yet
+        competitionMedals = [];
+    }
+
     return (
         <ProfileContent
             profile={profile}
@@ -127,6 +142,7 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
             gear={userGear || []}
             isAdminUser={currentUserProfile?.is_official === true}
             hasActiveDuel={!!activeDuel}
+            medals={competitionMedals}
         />
     );
 }

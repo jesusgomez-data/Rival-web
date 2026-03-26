@@ -15,6 +15,7 @@ import InfoTooltip from "@/components/InfoTooltip";
 
 import { getFollows } from "../../community/follows-actions";
 import StoryBar from "../../stories/StoryBar";
+import MedalShelf from "./MedalShelf";
 
 interface ProfileContentProps {
     profile: any;
@@ -29,9 +30,10 @@ interface ProfileContentProps {
     gear: any[];
     isAdminUser?: boolean;
     hasActiveDuel?: boolean;
+    medals?: any[];
 }
 
-export default function ProfileContent({ profile, combatStats, user, isFollowing, posts, canViewContent, privacy, workouts, badges, gear, isAdminUser = false, hasActiveDuel = false }: ProfileContentProps) {
+export default function ProfileContent({ profile, combatStats, user, isFollowing, posts, canViewContent, privacy, workouts, badges, gear, isAdminUser = false, hasActiveDuel = false, medals = [] }: ProfileContentProps) {
     const [mobileTab, setMobileTab] = useState<'activity' | 'gallery' | 'stats'>('activity');
     const [modalOpen, setModalOpen] = useState<'followers' | 'following' | null>(null);
     const [avatarModalOpen, setAvatarModalOpen] = useState(false);
@@ -55,7 +57,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
     return (
         <div className="max-w-5xl mx-auto space-y-6 md:space-y-12 animate-fade-in pb-20 px-4 md:px-0">
             {/* StoryBar must be mounted to handle share-to-story events from FeedPost */}
-            <div className="hidden"><StoryBar currentUser={user} /></div>
+            <StoryBar currentUser={user} hideBar={true} />
             {/* Tactical Banner */}
             <div className={clsx(
                 "relative group rounded-[40px] overflow-hidden border shadow-2xl dark-section transition-all duration-500",
@@ -237,6 +239,13 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                         </div>
                     </div>
                 )}
+
+                {/* Medal Shelf — mobile */}
+                {medals && medals.length > 0 && (
+                    <div className="px-1 pt-1">
+                        <MedalShelf medals={medals} />
+                    </div>
+                )}
             </div>
 
             {/* Mobile Tabs */}
@@ -308,6 +317,13 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                         "{profile.bio || (profile.is_official ? 'Canal oficial de comunicación de Rival Fit.' : 'Este atleta aún no ha escrito su manifiesto. Sus acciones hablan más que las palabras.')}"
                                     </p>
                                 </div>
+
+                                {/* Competition Medal Shelf */}
+                                {!profile.is_official && medals && medals.length > 0 && (
+                                    <div className="mb-10 bg-brand-gray/30 border border-white/5 p-6 rounded-[32px] backdrop-blur-xl">
+                                        <MedalShelf medals={medals} />
+                                    </div>
+                                )}
 
                                 {/* Badges Section */}
                                 {!profile.is_official && badges.length > 0 && (

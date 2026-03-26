@@ -1070,8 +1070,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                         {/* Buffering Indicator */}
                                         <AnimatePresence>
                                             {isBuffering && !loadError && (
-                                                <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px] z-10">
-                                                    <Loader2 className="w-8 h-8 text-brand-red animate-spin" />
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 backdrop-blur-[2px] z-10 gap-3">
+                                                    <Loader2 className="w-10 h-10 text-brand-red animate-spin shadow-glow" />
+                                                    <span className="text-white text-[10px] font-black uppercase tracking-[0.2em] drop-shadow-lg">Cargando Video...</span>
                                                 </div>
                                             )}
                                         </AnimatePresence>
@@ -1584,9 +1585,17 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         wd?.blocks ||
                         parsedWodData?.blocks ||
                         null;
-                    // Duration: try all sources (same chain as WodCard uses at line 1074)
-                    const durSec = wd?.duration_seconds || wd?.duration || 0;
+                    // Duration: try all sources
                     const durLabel = wd?.metrics?.duration || wd?.metrics?.time || wd?.summary?.totalTime || parsedWodData?.summary?.totalTime || undefined;
+                    const durSec = wd?.duration_seconds || wd?.metrics?.duration_seconds || wd?.duration || (() => {
+                        // Parse durLabel string like "45:30" → total seconds
+                        if (durLabel && typeof durLabel === 'string' && durLabel.includes(':')) {
+                            const parts = durLabel.split(':').map(Number);
+                            if (parts.length === 2) return parts[0] * 60 + (parts[1] || 0);
+                            if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + (parts[2] || 0);
+                        }
+                        return 0;
+                    })();
                     // Title & sport
                     const wodTitle = wd?.title || parsedWodData?.title || 'Entrenamiento';
                     const wodSport = wd?.sport_type || parsedWodData?.sportType || 'Cross Training';
