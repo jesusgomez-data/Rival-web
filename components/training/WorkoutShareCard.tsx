@@ -158,7 +158,7 @@ function CrossTrainingCard({ blocks, workoutTitle, displayDuration, cfg, userNam
             <div style={{ height: '1px', background: 'rgba(255,255,255,0.06)' }} />
             {/* Blocks */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {(blocks || []).slice(0, 4).map((block: WorkoutBlock, i: number) => {
+                {(blocks || []).map((block: WorkoutBlock, i: number) => {
                     const key = (block.type || '').toLowerCase();
                     const s = BLOCK_STYLES[key] ?? { label: (block.type || 'BLOQUE').toUpperCase(), color: cfg.color };
                     return (
@@ -169,7 +169,7 @@ function CrossTrainingCard({ blocks, workoutTitle, displayDuration, cfg, userNam
                                 {block.duration && <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.3)', fontSize: '7px', fontWeight: 900, letterSpacing: '0.15em', flexShrink: 0 }}>{block.duration}MIN</span>}
                             </div>
                             <div style={{ background: 'rgba(255,255,255,0.02)', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                {(block.exercises || []).slice(0, 4).map((ex: any, j: number) => {
+                                {(block.exercises || []).map((ex: any, j: number) => {
                                     const sum = getExerciseSummary(ex);
                                     return (
                                         <div key={j} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
@@ -341,7 +341,7 @@ function GymCard({ blocks, workoutTitle, displayDuration, cfg, userName, date }:
             )}
             {/* Top exercises */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                {heaviest.slice(0, 4).map((ex: any, i: number) => {
+                {heaviest.map((ex: any, i: number) => {
                     const maxW = Math.max(...(ex.sets || []).map((s: any) => s.weight || 0));
                     const sum = getExerciseSummary(ex);
                     return (
@@ -391,7 +391,7 @@ function HyroxCard({ blocks, workoutTitle, displayDuration, cfg, userName, date 
             </div>
             {/* Station list */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                {blocks.slice(0, 8).map((b: WorkoutBlock, i: number) => (
+                {blocks.map((b: WorkoutBlock, i: number) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <span style={{ color: cfg.color, fontSize: '9px', fontWeight: 900, width: '16px', flexShrink: 0 }}>{String(i + 1).padStart(2, '0')}</span>
                         <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '8px', fontWeight: 700, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{b.title || b.type || `Station ${i + 1}`}</span>
@@ -505,7 +505,7 @@ function BoxingCard({ blocks, workoutTitle, displayDuration, cfg, userName, date
             {/* Rounds detail */}
             {blocks.length > 0 && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                    {blocks.slice(0, 4).map((b: WorkoutBlock, i: number) => (
+                    {blocks.map((b: WorkoutBlock, i: number) => (
                         <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
                             <span style={{ color: cfg.color, fontSize: '10px', fontWeight: 900, width: '22px', flexShrink: 0 }}>R{i + 1}</span>
                             <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

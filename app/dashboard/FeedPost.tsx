@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, Volume2, VolumeX } from "lucide-react";
 import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./community/LikeButton";
@@ -226,10 +227,24 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const [completionsCountWod, setCompletionsCountWod] = useState(0);
     const [hasCompletedWod, setHasCompletedWod] = useState(false);
     const [manualOriginalId, setManualOriginalId] = useState<string | null>(null);
-    const [isMuted, setIsMuted] = useState(true);
-    const [isVisible, setIsVisible] = useState(false);
     const postRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const [isMuted, setIsMuted] = useState(true);
+    const [isVisible, setIsVisible] = useState(false);
+    const [showMuteHint, setShowMuteHint] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(true);
+    const [isActuallyPlaying, setIsActuallyPlaying] = useState(false);
+    const [loadError, setLoadError] = useState(false);
+
+    // Video detection (moved up to avoid TDZ ReferenceError)
+    const isVideo = !!(image && (
+        /\.(mp4|webm|ogg|mov|m4v)$/i.test(image) ||
+        (mediaType && mediaType === 'video') ||
+        image.includes('/videos/') ||
+        image.includes('video/upload') ||
+        image.includes('.mov?') ||
+        image.includes('.mp4?')
+    ));
 
     // Intersection Observer to detect if post is in view
     useEffect(() => {
@@ -239,7 +254,10 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             ([entry]) => {
                 setIsVisible(entry.isIntersecting);
             },
-            { threshold: 0.5 } // 50% of the post must be visible
+            { 
+                threshold: 0.15, // Reduced from 0.5 to play even if only 15% is on screen
+                rootMargin: '100px 0px' // Start loading/playing 100px before it enters viewport
+            }
         );
 
         observer.observe(postRef.current);
@@ -270,6 +288,16 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             videoRef.current.pause();
         }
     }, [isVisible]);
+
+    useEffect(() => {
+        if (isVisible && isMuted && isVideo) {
+            setShowMuteHint(true);
+            const timer = setTimeout(() => setShowMuteHint(false), 3000);
+            return () => clearTimeout(timer);
+        } else {
+            setShowMuteHint(false);
+        }
+    }, [isVisible, isMuted, isVideo]);
 
     // Parse wod_data if it's a string
     const parsedWodData = useMemo(() => {
@@ -310,15 +338,6 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const targetWodId = manualOriginalId || (parsedWodData as any)?.original_wod_post_id || workoutWodId || postId;
 
 
-    // Improved video detection
-    const isVideo = image && (
-        /\.(mp4|webm|ogg|mov)$/i.test(image) ||
-        (mediaType && mediaType === 'video') ||
-        image.includes('/videos/') ||
-        image.includes('video/upload') ||
-        image.includes('.mov?') ||
-        image.includes('.mp4?')
-    );
     const isOwner = currentUserId && authorId && currentUserId === authorId;
     const { userStories, openStory } = useStories();
 
@@ -1040,8 +1059,68 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                             playsInline
                                             muted={isMuted || !isVisible || (typeof document !== 'undefined' && document.hidden)}
                                             preload="auto"
+                                            onWaiting={() => setIsBuffering(true)}
+                                            onPlaying={() => { setIsBuffering(false); setIsActuallyPlaying(true); setLoadError(false); }}
+                                            onPause={() => setIsActuallyPlaying(false)}
+                                            onEnded={() => setIsActuallyPlaying(false)}
+                                            onError={() => { setLoadError(true); setIsBuffering(false); }}
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20 pointer-events-none" />
+                                        
+                                        {/* Buffering Indicator */}
+                                        <AnimatePresence>
+                                            {isBuffering && !loadError && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/10 backdrop-blur-[2px] z-10">
+                                                    <Loader2 className="w-8 h-8 text-brand-red animate-spin" />
+                                                </div>
+                                            )}
+                                        </AnimatePresence>
+
+                                        {/* Play Overlay (If paused but visible) */}
+                                        <AnimatePresence>
+                                            {isVisible && !isActuallyPlaying && !isBuffering && !loadError && (
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-10 pointer-events-none">
+                                                    <motion.div 
+                                                        initial={{ scale: 0.5, opacity: 0 }}
+                                                        animate={{ scale: 1, opacity: 1 }}
+                                                        className="bg-brand-red p-4 rounded-full shadow-glow"
+                                                    >
+                                                        <Play className="w-8 h-8 text-white fill-current" />
+                                                    </motion.div>
+                                                </div>
+                                            )}
+                                        </AnimatePresence>
+
+                                        {/* Error Overlay */}
+                                        <AnimatePresence>
+                                            {loadError && (
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md z-10 p-6 text-center">
+                                                    <X className="w-12 h-12 text-brand-red mb-3" />
+                                                    <p className="text-white text-xs font-black uppercase tracking-widest">Error al cargar video</p>
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); setLoadError(false); setIsBuffering(true); if(videoRef.current) { videoRef.current.load(); videoRef.current.play(); } }}
+                                                        className="mt-4 px-4 py-2 bg-brand-red text-white text-[10px] font-black rounded-lg"
+                                                    >
+                                                        REINTENTAR
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </AnimatePresence>
+                                        
+                                        {/* Mute Hint Overlay */}
+                                        <AnimatePresence>
+                                            {showMuteHint && isMuted && (
+                                                <motion.div 
+                                                    initial={{ opacity: 0, scale: 0.8 }}
+                                                    animate={{ opacity: 1, scale: 1 }}
+                                                    exit={{ opacity: 0, scale: 0.8 }}
+                                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 flex items-center gap-2 pointer-events-none"
+                                                >
+                                                    <VolumeX className="w-4 h-4 text-white" />
+                                                    <span className="text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Video silenciado</span>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
                                         
                                         {/* Mute/Unmute Button */}
                                         <button 
@@ -1109,6 +1188,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 return 'CROSS_TRAINING';
                             })();
 
+                            const embeddedPhotoUrl = w.media_url && isImageUrl(w.media_url) ? w.media_url : null;
+
                             const normalizedWodData = {
                                 title: w.title || (w.sport_type && w.sport_type !== 'Entrenamiento Libre' ? w.sport_type : 'WORKOUT OF THE DAY'),
                                 blocks: blocks,
@@ -1117,7 +1198,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     scoreType: w.metrics?.type || 'WORKOUT',
                                     totalTime: w.metrics?.duration || w.metrics?.time || '--:--'
                                 },
-                                media_url: w.media_url || (image && isImageUrl(image) ? image : null),
+                                media_url: embeddedPhotoUrl,
                                 original_wod_post_id: (w as any).original_wod_post_id || null,
                                 category: derivedCategory,
                                 // Pass session metrics so WodCard can show distance/pace for endurance sessions
@@ -1125,7 +1206,27 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             };
 
                             return (
-                                <div className="w-full mt-2">
+                                <div className="w-full mt-2 flex flex-col">
+                                    {/* Photo embedded in WOD post — show above the workout card */}
+                                    {embeddedPhotoUrl && (
+                                        <div className="px-2 mb-2">
+                                            <div
+                                                className="relative w-full rounded-xl overflow-hidden cursor-pointer group shadow-2xl bg-black"
+                                                style={{ maxHeight: '60vh' }}
+                                                onClick={() => setIsLightboxOpen(true)}
+                                            >
+                                                <Image
+                                                    src={embeddedPhotoUrl}
+                                                    alt="Foto del entreno"
+                                                    width={800}
+                                                    height={600}
+                                                    className="w-full object-cover group-hover:scale-105 transition-transform duration-700"
+                                                    style={{ maxHeight: '60vh', objectFit: 'cover' }}
+                                                    unoptimized={embeddedPhotoUrl.startsWith('data:')}
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                     <WodCard
                                         completionsCount={completionsCountWod}
                                         hasCompleted={hasCompletedWod}

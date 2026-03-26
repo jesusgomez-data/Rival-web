@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { clsx } from "clsx";
-import { Trophy, Swords, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, MessageSquare, ChevronRight, X } from "lucide-react";
+import { Trophy, Swords, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import DuelButton from "../../community/DuelButton";
@@ -14,6 +14,7 @@ import ActivityHeatmap from "@/components/ActivityHeatmap";
 import InfoTooltip from "@/components/InfoTooltip";
 
 import { getFollows } from "../../community/follows-actions";
+import StoryBar from "../../stories/StoryBar";
 
 interface ProfileContentProps {
     profile: any;
@@ -53,6 +54,8 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
 
     return (
         <div className="max-w-5xl mx-auto space-y-6 md:space-y-12 animate-fade-in pb-20 px-4 md:px-0">
+            {/* StoryBar must be mounted to handle share-to-story events from FeedPost */}
+            <div className="hidden"><StoryBar currentUser={user} /></div>
             {/* Tactical Banner */}
             <div className={clsx(
                 "relative group rounded-[40px] overflow-hidden border shadow-2xl dark-section transition-all duration-500",
@@ -77,20 +80,6 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                         </>
                     ) : (
                         <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-30 grayscale mix-blend-overlay"></div>
-                    )}
-                    {/* Manifiesto Overlay - Compact & Top-Right */}
-                    {!profile.is_official && profile.bio && (
-                        <div className="absolute top-2 right-2 z-[35] md:hidden max-w-[100px]">
-                            <div className="bg-black/70 backdrop-blur-md border border-white/10 rounded-xl p-2 shadow-2xl shadow-black/50 transition-transform duration-500">
-                                <div className="flex items-center gap-1 mb-1 justify-end">
-                                    <MessageSquare className="w-2 h-2 text-brand-red" />
-                                    <h3 className="text-[7px] font-black text-brand-red uppercase tracking-widest text-right">Manifiesto</h3>
-                                </div>
-                                <p className="text-[8px] text-zinc-200 font-medium italic leading-tight line-clamp-5 text-right shadow-black drop-shadow-sm keep-white">
-                                    "{profile.bio}"
-                                </p>
-                            </div>
-                        </div>
                     )}
                 </div>
 
@@ -131,7 +120,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                 </div>
 
                                 {!profile.is_official && (
-                                    <div className="flex gap-4 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 w-fit shadow-2xl mb-2">
+                                    <div className="hidden md:flex gap-4 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 w-fit shadow-2xl mb-2">
                                         <button
                                             onClick={() => handleOpenModal('followers')}
                                             className="flex items-center gap-2 hover:opacity-80 transition-opacity disabled:opacity-50"
@@ -197,24 +186,54 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
             </div>
 
 
-            {/* Mobile Actions Bar - Moved out of banner to prevent overlap */}
-            <div className="flex md:hidden px-4 mb-2">
+            {/* Mobile Profile Info — Instagram/TikTok style */}
+            <div className="flex md:hidden flex-col px-4 gap-3 -mt-2">
+                {/* Followers / Following stats */}
+                {!profile.is_official && (
+                    <div className="flex gap-6">
+                        <button
+                            onClick={() => handleOpenModal('followers')}
+                            className="flex flex-col items-center hover:opacity-80 transition-opacity disabled:opacity-50"
+                            disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
+                        >
+                            <span className="text-white font-black text-xl leading-none">{profile.followers_count || 0}</span>
+                            <span className="text-gray-400 text-[10px] uppercase font-bold tracking-widest mt-0.5">Seguidores</span>
+                        </button>
+                        <div className="w-px bg-white/10 self-stretch" />
+                        <button
+                            onClick={() => handleOpenModal('following')}
+                            className="flex flex-col items-center hover:opacity-80 transition-opacity disabled:opacity-50"
+                            disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
+                        >
+                            <span className="text-white font-black text-xl leading-none">{profile.following_count || 0}</span>
+                            <span className="text-gray-400 text-[10px] uppercase font-bold tracking-widest mt-0.5">Seguidos</span>
+                        </button>
+                    </div>
+                )}
+
+                {/* Bio / Manifiesto */}
+                {!profile.is_official && profile.bio && (
+                    <p className="text-sm text-gray-200 font-medium italic leading-relaxed border-l-2 border-brand-red/60 pl-3">
+                        "{profile.bio}"
+                    </p>
+                )}
+
+                {/* Action Buttons */}
                 {user?.id !== profile.id && !profile.is_official && (
-                    <div className="flex items-center gap-3 w-full overflow-x-auto custom-scrollbar pb-2">
+                    <div className="flex items-center gap-3 w-full">
+                        <div className="flex-1">
+                            <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
+                        </div>
                         {isFollowing && (
                             <Link
                                 href={`/dashboard/messages?userId=${profile.id}`}
-                                className="flex-1 min-w-[100px] py-3 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-brand-red hover:border-brand-red hover:text-white transition-all group flex justify-center items-center gap-2"
+                                className="py-3 px-4 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-brand-red hover:border-brand-red transition-all group flex justify-center items-center gap-2"
                             >
                                 <MessageCircle className="w-4 h-4 text-brand-red group-hover:text-white transition-colors" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Mensaje</span>
                             </Link>
                         )}
-                        <div className="flex-1 min-w-[120px]">
+                        <div className="shrink-0">
                             <DuelButton targetId={profile.id} isRival={isFollowing} hasActiveDuel={hasActiveDuel} />
-                        </div>
-                        <div className="flex-1 min-w-[140px]">
-                            <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
                         </div>
                     </div>
                 )}
