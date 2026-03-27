@@ -438,22 +438,46 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
             const dest = audioDestRef.current!
             
             if (!videoSourceRef.current && video) {
-                videoSourceRef.current = audioCtx.createMediaElementSource(video)
-                videoSourceRef.current.connect(dest)
-                videoSourceRef.current.connect(audioCtx.destination) // Connect to speakers so we can hear progress
+                try {
+                    videoSourceRef.current = audioCtx.createMediaElementSource(video)
+                    videoSourceRef.current.connect(dest)
+                    videoSourceRef.current.connect(audioCtx.destination)
+                } catch (e) {
+                    console.warn("Video element has no audio tracks, skipping video audio capture.", e)
+                }
             }
             
             if (selectedTrack && musicRef.current && !musicSourceRef.current) {
-                musicSourceRef.current = audioCtx.createMediaElementSource(musicRef.current)
-                musicSourceRef.current.connect(dest)
-                musicSourceRef.current.connect(audioCtx.destination)
+                try {
+                    musicSourceRef.current = audioCtx.createMediaElementSource(musicRef.current)
+                    musicSourceRef.current.connect(dest)
+                    musicSourceRef.current.connect(audioCtx.destination)
+                } catch (e) {
+                    console.warn("Music track error:", e)
+                }
             }
 
+            // --- EXPORT LOOP ---
+            const start = trimRange.start
+            video.currentTime = start
+            video.muted = false // MUST BE UNMUTED for capture
+            video.volume = 1.0
+            
+            // Resume context BEFORE creating stream/recorder
+            if (audioCtx.state === 'suspended') await audioCtx.resume()
+
             const canvasStream = captureStreamFn.call(canvas, 30) as MediaStream
-            const combinedStream = new MediaStream([
-                ...canvasStream.getVideoTracks(),
-                ...dest.stream.getAudioTracks()
-            ])
+            const combinedStream = new MediaStream()
+            
+            // Add video track
+            canvasStream.getVideoTracks().forEach(track => combinedStream.addTrack(track))
+            
+            // Wait a tiny bit for audio destination to be ready, then add tracks
+            dest.stream.getAudioTracks().forEach(track => combinedStream.addTrack(track))
+            
+            if (combinedStream.getAudioTracks().length === 0) {
+                console.warn("No audio tracks found in destination stream at start.")
+            }
 
             const recorder = new MediaRecorder(combinedStream, { mimeType: supportedMime, videoBitsPerSecond: 8000000 })
             const chunks: Blob[] = []
@@ -472,9 +496,6 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
             }
 
             video.playbackRate = playbackSpeed
-            video.currentTime  = trimRange.start
-            video.muted = false // MUST BE UNMUTED for capture
-            video.volume = 1.0
             
             if (musicRef.current) {
                 musicRef.current.currentTime = 0
@@ -1154,7 +1175,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                 )}
             </AnimatePresence>
 
-            <div className="hidden">
+            <div className="fixed -left-[9999px] -top-[9999px] opacity-0 pointer-events-none" aria-hidden="true">
                 <video ref={exportVideoRef} src={videoUrl||undefined} crossOrigin="anonymous"/>
                 <canvas ref={exportCanvasRef}/>
             </div>

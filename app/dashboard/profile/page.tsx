@@ -5,7 +5,7 @@ import { getUserProfile, deleteProfile } from "../training/actions";
 import { getUpcomingTrial } from "../gyms/trial-booking-actions";
 
 import { createClient } from "@/utils/supabase/client";
-import { User, Camera, Save, Loader2, Mail, Hash, MapPin, Trophy, Dumbbell, Swords, Award, ExternalLink, TrendingUp, Building2, Smile, Edit2, Move, Check, X, Calendar, LayoutGrid, Settings, Trash2, Lock, AlertTriangle, Zap } from "lucide-react";
+import { User, Camera, Save, Loader2, Mail, Hash, MapPin, Trophy, Dumbbell, Swords, Award, ExternalLink, TrendingUp, Building2, Smile, Edit2, Move, Check, X, Calendar, LayoutGrid, Settings, Trash2, Lock, AlertTriangle, Globe, UserCircle2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -36,6 +36,10 @@ export default function ProfilePage() {
         bio: "",
         main_sport: "",
         gym_home: "",
+        location: "",
+        website: "",
+        gender: "",
+        birth_date: "",
         privacy_setting: "public",
         birth_date_public: true,
     });
@@ -74,6 +78,10 @@ export default function ProfilePage() {
                     bio: data.bio || "",
                     main_sport: data.main_sport || "General",
                     gym_home: data.gym_home || "",
+                    location: data.location || "",
+                    website: data.website || "",
+                    gender: data.gender || "",
+                    birth_date: data.birth_date ? data.birth_date.split('T')[0] : "",
                     privacy_setting: data.privacy_setting || "public",
                     birth_date_public: data.birth_date_public !== false,
                 });
@@ -170,6 +178,10 @@ export default function ProfilePage() {
                     bio: formData.bio,
                     main_sport: formData.main_sport,
                     gym_home: formData.gym_home,
+                    location: formData.location,
+                    website: formData.website,
+                    gender: formData.gender,
+                    birth_date: formData.birth_date || null,
                     privacy_setting: formData.privacy_setting,
                     birth_date_public: formData.birth_date_public,
 
@@ -763,8 +775,9 @@ export default function ProfilePage() {
             <div className="pt-2 lg:pt-8 flex flex-col lg:grid lg:grid-cols-12 gap-8">
                 {/* Left side: Stats & Info */}
                 <div className="lg:col-span-4 space-y-6">
-                    {/* Athlete Card — uses real stats from DB */}
+                    {/* Athlete Card — only visible in stats tab on mobile */}
                     {profile && (
+                    <div className={clsx(mobileTab !== 'stats' && "hidden lg:block")}>
                         <AthleteCard
                             profile={{
                                 full_name: athleteStats?.full_name || profile.full_name || 'Athlete',
@@ -787,6 +800,7 @@ export default function ProfilePage() {
                                 wins: combatStats.wins,
                             }}
                         />
+                    </div>
                     )}
                     <div className={clsx(mobileTab !== 'gallery' && "hidden lg:block")}>
                         {profile?.id && <UserMediaGallery userId={profile.id} />}
@@ -919,6 +933,81 @@ export default function ProfilePage() {
                                 </div>
                             </div>
 
+                            {/* Personal info row: birth_date + gender */}
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Fecha de Nacimiento</label>
+                                    <div className="relative">
+                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                                            <Calendar className="w-4 h-4" />
+                                        </div>
+                                        <input
+                                            type="date"
+                                            name="birth_date"
+                                            value={formData.birth_date}
+                                            onChange={handleChange}
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl pl-9 pr-3 py-3 text-white text-sm focus:outline-none focus:border-brand-red transition-all [color-scheme:dark]"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Género</label>
+                                    <div className="relative">
+                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none">
+                                            <UserCircle2 className="w-4 h-4" />
+                                        </div>
+                                        <select
+                                            name="gender"
+                                            value={formData.gender}
+                                            onChange={handleChange}
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl pl-9 pr-3 py-3 text-white text-sm focus:outline-none focus:border-brand-red transition-all appearance-none"
+                                        >
+                                            <option value="">Prefiero no decirlo</option>
+                                            <option value="male">Masculino</option>
+                                            <option value="female">Femenino</option>
+                                            <option value="non_binary">No binario</option>
+                                            <option value="other">Otro</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Location + Website row */}
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Ubicación</label>
+                                    <div className="relative">
+                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                                            <MapPin className="w-4 h-4" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            name="location"
+                                            value={formData.location}
+                                            onChange={handleChange}
+                                            placeholder="Madrid, España"
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl pl-9 pr-3 py-3 text-white text-sm focus:outline-none focus:border-brand-red transition-all placeholder:text-gray-700"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Sitio Web / Link</label>
+                                    <div className="relative">
+                                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                                            <Globe className="w-4 h-4" />
+                                        </div>
+                                        <input
+                                            type="url"
+                                            name="website"
+                                            value={formData.website}
+                                            onChange={handleChange}
+                                            placeholder="https://tu-web.com"
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl pl-9 pr-3 py-3 text-white text-sm focus:outline-none focus:border-brand-red transition-all placeholder:text-gray-700"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="grid md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Deporte Principal</label>
@@ -999,31 +1088,6 @@ export default function ProfilePage() {
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="space-y-4 pt-4 border-t border-white/5">
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Sistema de Sonido</label>
-                                <div className="bg-black/40 border border-white/10 rounded-2xl p-4 flex items-center justify-between group hover:border-brand-red/30 transition-all">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red">
-                                            <Zap className="w-4 h-4" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-white">Sonido de Notificaciones</p>
-                                            <p className="text-[10px] text-gray-500 font-bold uppercase">Pulsa para probar el tono de identidad Rival</p>
-                                        </div>
-                                    </div>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            import("@/app/utils/audio").then(m => m.playNotificationSound());
-                                        }}
-                                        className="px-4 py-2 bg-brand-red/10 hover:bg-brand-red text-brand-red hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl border border-brand-red/20 transition-all shadow-glow-sm"
-                                    >
-                                        Probar Sonido
-                                    </button>
-                                </div>
-                            </div>
-
 
                             <div className="space-y-4 pt-4 border-t border-white/5">
                                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Récords Personales Destacados</label>

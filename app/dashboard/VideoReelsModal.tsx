@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Heart, MessageCircle, Share2, Music, User, Trophy, Play, Pause } from 'lucide-react';
+import { X, Heart, MessageCircle, Share2, Music, User, Trophy, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getReelPosts, toggleLike, getComments, addComment } from './community/actions';
 import Image from 'next/image';
@@ -165,15 +165,18 @@ function CommentsDrawer({ postId, onClose }: { postId: string, onClose: () => vo
     );
 }
 
-function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: boolean, onOpenComments: () => void }) {
+function Reel({ post, isActive, onOpenComments, isGlobalMuted, onToggleMute }: { post: ReelPost, isActive: boolean, onOpenComments: () => void, isGlobalMuted: boolean, onToggleMute: () => void }) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [isPlaying, setIsPlaying] = useState(true);
     const [liked, setLiked] = useState(post.hasLikedInitial);
     const [likes, setLikes] = useState(post.initialLikes);
+    const [showMuteHint, setShowMuteHint] = useState(false);
     const { t } = useLanguage();
 
     const lastTap = useRef<number>(0);
     const [showHeart, setShowHeart] = useState(false);
+    const [isBuffering, setIsBuffering] = useState(true);
+    const [loadError, setLoadError] = useState(false);
 
     useEffect(() => {
         const handleVisibilityChange = () => {
@@ -192,13 +195,32 @@ function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: bo
 
     useEffect(() => {
         if (isActive && videoRef.current) {
-            videoRef.current.play().catch(e => console.error("Auto-play failed", e));
+            // Attempt to play. Browsers might block if not muted.
+            const playPromise = videoRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise.catch(error => {
+                    console.warn("Auto-play blocked, retrying muted", error);
+                    if (videoRef.current) {
+                        videoRef.current.muted = true;
+                        videoRef.current.play().catch(e => console.error("Muted autoplay also failed", e));
+                    }
+                });
+            }
             setIsPlaying(true);
         } else if (videoRef.current) {
             videoRef.current.pause();
             setIsPlaying(false);
         }
     }, [isActive]);
+
+    // Show hint when muted status changes globally
+    useEffect(() => {
+        if (isActive && isGlobalMuted) {
+            setShowMuteHint(true);
+            const timer = setTimeout(() => setShowMuteHint(false), 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [isGlobalMuted, isActive]);
 
     const handleTap = (e: React.MouseEvent) => {
         const now = Date.now();
@@ -226,10 +248,17 @@ function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: bo
         if (videoRef.current) {
             if (isPlaying) {
                 videoRef.current.pause();
+                setIsPlaying(false);
             } else {
-                videoRef.current.play();
+                videoRef.current.play().catch(() => {
+                    // If play fails (e.g. sound was blocked), try playing muted
+                    if (videoRef.current) {
+                        videoRef.current.muted = true;
+                        videoRef.current.play();
+                    }
+                });
+                setIsPlaying(true);
             }
-            setIsPlaying(!isPlaying);
         }
     };
 
@@ -248,9 +277,49 @@ function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: bo
                 className="h-full w-full object-contain cursor-pointer"
                 loop
                 playsInline
-                muted={!isActive || (typeof document !== 'undefined' && document.hidden)}
+                muted={!isActive || isGlobalMuted || (typeof document !== 'undefined' && document.hidden)}
                 onClick={handleTap}
+                onWaiting={() => setIsBuffering(true)}
+                onPlaying={() => { setIsBuffering(false); setLoadError(false); }}
+                onEnded={() => setIsBuffering(false)}
+                onError={() => { setLoadError(true); setIsBuffering(false); }}
             />
+
+            {isBuffering && !loadError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] z-10 gap-3">
+                    <Loader2 className="w-12 h-12 text-brand-red animate-spin shadow-glow" />
+                    <span className="text-white text-xs font-black uppercase tracking-[0.2em] drop-shadow-xl">Cargando Reel...</span>
+                </div>
+            )}
+
+            {/* Error Overlay */}
+            {loadError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 z-10 p-10 text-center">
+                    <X className="w-16 h-16 text-brand-red mb-4" />
+                    <p className="text-white font-bold mb-4">No se pudo cargar el video</p>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setLoadError(false); setIsBuffering(true); videoRef.current?.load(); }}
+                        className="px-6 py-2 bg-brand-red text-white font-black rounded-full"
+                    >
+                        REINTENTAR
+                    </button>
+                </div>
+            )}
+
+            {/* Mute/Unmute Label Hint */}
+            <AnimatePresence>
+                {showMuteHint && isGlobalMuted && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                        className="absolute bottom-40 left-1/2 -translate-x-1/2 z-30 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 flex items-center gap-2 pointer-events-none"
+                    >
+                        <VolumeX className="w-4 h-4 text-white" />
+                        <span className="text-white text-[10px] font-black uppercase tracking-widest">Video silenciado · Toca para activar</span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             <AnimatePresence>
                 {showHeart && (
@@ -321,6 +390,13 @@ function Reel({ post, isActive, onOpenComments }: { post: ReelPost, isActive: bo
                 >
                     <Share2 className="w-6 h-6" />
                 </button>
+
+                <button
+                    onClick={(e) => { e.stopPropagation(); onToggleMute(); }}
+                    className="p-3 rounded-full bg-black/40 backdrop-blur-md text-white border border-white/10 hover:bg-black/60 transition-all"
+                >
+                    {isGlobalMuted ? <VolumeX className="w-6 h-6 text-brand-red" /> : <Volume2 className="w-6 h-6" />}
+                </button>
             </div>
 
             {/* Bottom Info Overlay */}
@@ -382,6 +458,7 @@ export default function VideoReelsModal({ isOpen, onClose, initialPostId, contex
     const [loading, setLoading] = useState(true);
     const containerRef = useRef<HTMLDivElement>(null);
     const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
+    const [isGlobalMuted, setIsGlobalMuted] = useState(true); // Start muted for autoplay reliability
 
     useEffect(() => {
         if (isOpen) {
@@ -456,6 +533,8 @@ export default function VideoReelsModal({ isOpen, onClose, initialPostId, contex
                                 post={post}
                                 isActive={activeIndex === index}
                                 onOpenComments={() => setCommentsPostId(post.id)}
+                                isGlobalMuted={isGlobalMuted}
+                                onToggleMute={() => setIsGlobalMuted(!isGlobalMuted)}
                             />
                         ))
                     ) : loading ? (

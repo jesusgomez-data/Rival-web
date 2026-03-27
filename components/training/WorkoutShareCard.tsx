@@ -64,31 +64,42 @@ const BLOCK_STYLES: Record<string, { label: string; color: string }> = {
 
 // ─── Exercise detail formatter ────────────────────────────────────────────────
 function getExerciseDetail(ex: any): string {
-    // Only treat sets as array if it actually is one (not a string/number count)
-    const s = Array.isArray(ex.sets) ? ex.sets[0] : undefined;
+    // 1. Check sets array (Normal GYM format)
+    const s = Array.isArray(ex.sets) && ex.sets.length > 0 ? ex.sets[0] : null;
     if (s) {
-        const unit = (s.unit || '').toLowerCase();
-        if (unit === 'm' || unit === 'meters' || unit === 'meter') return `· ${s.reps}M`;
-        if (unit === 'cal' || unit === 'calories') return `${s.reps} CAL`;
-        if (unit === 'time') return `${s.reps} SEC`;
-        const weight = s.weight ?? 0;
-        const w = weight > 0 ? ` · ${weight}KG` : '';
-        if (s.reps) return `${s.reps}${w}`;
-        if (w) return w.trim();
+        const reps = s.reps;
+        const weight = s.weight ?? s.load;
+        const unit = (s.unit || s.measure || '').toLowerCase();
+        
+        if (unit.includes('m')) return `· ${reps}M`;
+        if (unit.includes('cal')) return `${reps} CAL`;
+        if (unit === 'time' || unit.includes('sec')) return `${reps} SEC`;
+        
+        const wStr = (weight && Number(weight) > 0) ? ` · ${weight}KG` : '';
+        if (reps) return `${reps}${wStr}`;
+        if (weight && Number(weight) > 0) return `${weight}KG`;
     }
-    // Fallback to top-level properties (WOD definition format)
-    if (ex.value) return String(ex.value);
-    const exUnit = (ex.unit || ex.measure || '').toLowerCase();
-    const rawReps = ex.reps;
-    if (rawReps) {
-        const repsStr = String(rawReps);
-        if (exUnit === 'm' || exUnit === 'meters') return `· ${repsStr}M`;
-        if (exUnit === 'cal') return `${repsStr} CAL`;
-        const tW = (ex.weight ?? ex.weight_kg ?? 0) > 0 ? ` · ${ex.weight ?? ex.weight_kg}KG` : '';
-        return `${repsStr}${tW}`;
+
+    // 2. Direct properties (reps, weight)
+    const reps = ex.reps || ex.value;
+    const weight = ex.weight || ex.weight_kg || ex.load || ex.kg;
+    const unit = (ex.unit || ex.measure || '').toLowerCase();
+    
+    if (reps) {
+        const repsStr = String(reps);
+        if (unit.includes('m')) return `· ${repsStr}M`;
+        if (unit.includes('cal')) return `${repsStr} CAL`;
+        
+        const wStr = (weight && Number(weight) > 0) ? ` · ${weight}KG` : '';
+        return `${repsStr}${wStr}`;
     }
+    
+    if (weight && Number(weight) > 0) return `${weight}KG`;
+    
+    // 3. Fallbacks
     if (ex.detail) return `${ex.detail}${ex.unit || ''}`;
     if (ex.target && ex.target !== '-') return String(ex.target);
+    
     return '';
 }
 
@@ -163,7 +174,7 @@ function Footer({ color }: { color: string }) {
 }
 
 // ─── Shared: block list renderer ──────────────────────────────────────────────
-function BlockList({ blocks, accentColor, blockResults }: { blocks: any[]; accentColor: string; blockResults?: Record<number, string> }) {
+function BlockList({ blocks, accentColor }: { blocks: any[]; accentColor: string }) {
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {blocks.map((block: any, bi: number) => {
@@ -171,8 +182,7 @@ function BlockList({ blocks, accentColor, blockResults }: { blocks: any[]; accen
                 const exercises: any[] = block.exercises || block.movements || [];
                 const roundInfo = block.rounds ? `${block.rounds} ROUNDS` : (block.duration ? `${block.duration} MIN` : '');
                 const blockLabel = block.title || block.label || '';
-                const manualResult = blockResults?.[bi];
-                const rightLabel = manualResult || (blockLabel && blockLabel !== bs.label ? blockLabel.toUpperCase() : roundInfo);
+                const rightLabel = (blockLabel && blockLabel !== bs.label ? blockLabel.toUpperCase() : roundInfo);
 
                 return (
                     <div key={bi} style={{
@@ -191,7 +201,7 @@ function BlockList({ blocks, accentColor, blockResults }: { blocks: any[]; accen
                         }}>
                             <Badge label={bs.label} color={bs.color} />
                             {rightLabel ? (
-                                <span style={{ fontSize: 10, color: manualResult ? accentColor : '#888', letterSpacing: 1, fontWeight: 700 }}>
+                                <span style={{ fontSize: 10, color: '#888', letterSpacing: 1, fontWeight: 700 }}>
                                     {rightLabel}
                                 </span>
                             ) : null}
@@ -235,7 +245,7 @@ function BlockList({ blocks, accentColor, blockResults }: { blocks: any[]; accen
     );
 }
 
-type CardProps = { blocks: WorkoutBlock[]; title: string; duration: number; cfg: SportCfg; blockResults?: Record<number, string> };
+type CardProps = { blocks: WorkoutBlock[]; title: string; duration: number; cfg: SportCfg };
 
 function CardHeader({ title, label, cfg, duration }: { title: string; label: string; cfg: SportCfg; duration: number }) {
     return (
@@ -255,55 +265,55 @@ function CardHeader({ title, label, cfg, duration }: { title: string; label: str
 }
 
 // ─── CrossTrainingCard ────────────────────────────────────────────────────────
-function CrossTrainingCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
+function CrossTrainingCard({ blocks, title, duration, cfg }: CardProps) {
     return (
         <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
             <CardHeader title={title} label={cfg.accentLabel} cfg={cfg} duration={duration} />
             <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
-            <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />
+            <BlockList blocks={blocks} accentColor={cfg.color} />
             <Footer color={cfg.color} />
         </div>
     );
 }
 
 // ─── HyroxCard ────────────────────────────────────────────────────────────────
-function HyroxCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
+function HyroxCard({ blocks, title, duration, cfg }: CardProps) {
     return (
         <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
             <CardHeader title={title || 'HYROX TRAINING'} label="HYROX" cfg={cfg} duration={duration} />
             <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
-            <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />
+            <BlockList blocks={blocks} accentColor={cfg.color} />
             <Footer color={cfg.color} />
         </div>
     );
 }
 
 // ─── GymCard ──────────────────────────────────────────────────────────────────
-function GymCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
+function GymCard({ blocks, title, duration, cfg }: CardProps) {
     return (
         <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
             <CardHeader title={title || 'GYM · LIFT'} label="STRENGTH" cfg={cfg} duration={duration} />
             <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
-            <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />
+            <BlockList blocks={blocks} accentColor={cfg.color} />
             <Footer color={cfg.color} />
         </div>
     );
 }
 
 // ─── BoxingCard ───────────────────────────────────────────────────────────────
-function BoxingCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
+function BoxingCard({ blocks, title, duration, cfg }: CardProps) {
     return (
         <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
             <CardHeader title={title || 'BOXING'} label="COMBAT" cfg={cfg} duration={duration} />
             <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
-            <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />
+            <BlockList blocks={blocks} accentColor={cfg.color} />
             <Footer color={cfg.color} />
         </div>
     );
 }
 
 // ─── RunningCard ──────────────────────────────────────────────────────────────
-function RunningCard({ blocks, title, duration, cfg, blockResults, runMetrics }: CardProps & { runMetrics?: { distance?: string; pace?: string; elevation?: string } }) {
+function RunningCard({ blocks, title, duration, cfg, runMetrics }: CardProps & { runMetrics?: { distance?: string; pace?: string; elevation?: string } }) {
     return (
         <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
             <CardHeader title={title || 'RUNNING'} label="RUN" cfg={cfg} duration={duration} />
@@ -315,76 +325,75 @@ function RunningCard({ blocks, title, duration, cfg, blockResults, runMetrics }:
                 </div>
             )}
             <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
-            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />}
+            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} />}
             <Footer color={cfg.color} />
         </div>
     );
 }
 
 // ─── CyclingCard ──────────────────────────────────────────────────────────────
-function CyclingCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
+function CyclingCard({ blocks, title, duration, cfg }: CardProps) {
     return (
         <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
             <CardHeader title={title || 'CYCLING'} label="RIDE" cfg={cfg} duration={duration} />
             <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
-            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />}
+            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} />}
             <Footer color={cfg.color} />
         </div>
     );
 }
 
 // ─── SwimmingCard ─────────────────────────────────────────────────────────────
-function SwimmingCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
+function SwimmingCard({ blocks, title, duration, cfg }: CardProps) {
     return (
         <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
             <CardHeader title={title || 'SWIMMING'} label="POOL" cfg={cfg} duration={duration} />
             <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
-            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />}
+            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} />}
             <Footer color={cfg.color} />
         </div>
     );
 }
 
 // ─── YogaCard ─────────────────────────────────────────────────────────────────
-function YogaCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
+function YogaCard({ blocks, title, duration, cfg }: CardProps) {
     return (
         <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
             <CardHeader title={title || 'YOGA · MOB'} label="FLOW" cfg={cfg} duration={duration} />
             <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
-            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />}
+            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} />}
             <Footer color={cfg.color} />
         </div>
     );
 }
 
 // ─── OcrCard ──────────────────────────────────────────────────────────────────
-function OcrCard({ blocks, title, duration, cfg, blockResults }: CardProps) {
+function OcrCard({ blocks, title, duration, cfg }: CardProps) {
     return (
         <div style={{ padding: 24, fontFamily: "'Inter', 'Arial', sans-serif" }}>
             <CardHeader title={title || 'OCR'} label="OBSTACLE" cfg={cfg} duration={duration} />
             <div style={{ height: 1, background: `linear-gradient(90deg, ${cfg.color}80, transparent)`, marginBottom: 16 }} />
-            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} blockResults={blockResults} />}
+            {blocks.length > 0 && <BlockList blocks={blocks} accentColor={cfg.color} />}
             <Footer color={cfg.color} />
         </div>
     );
 }
 
 // ─── Card router ──────────────────────────────────────────────────────────────
-function SportCard({ sportKey, blocks, title, duration, cfg, runMetrics, blockResults }: {
+function SportCard({ sportKey, blocks, title, duration, cfg, runMetrics }: {
     sportKey: SportKey; blocks: WorkoutBlock[]; title: string; duration: number;
     cfg: SportCfg; runMetrics?: { distance?: string; pace?: string; elevation?: string };
-    blockResults?: Record<number, string>;
 }) {
     switch (sportKey) {
-        case 'hyrox':    return <HyroxCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
-        case 'gym':      return <GymCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
-        case 'boxing':   return <BoxingCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
-        case 'running':  return <RunningCard blocks={blocks} title={title} duration={duration} cfg={cfg} runMetrics={runMetrics} blockResults={blockResults} />;
-        case 'cycling':  return <CyclingCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
-        case 'swimming': return <SwimmingCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
-        case 'yoga':     return <YogaCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
-        case 'ocr':      return <OcrCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
-        default:         return <CrossTrainingCard blocks={blocks} title={title} duration={duration} cfg={cfg} blockResults={blockResults} />;
+        case 'hyrox':    return <HyroxCard blocks={blocks} title={title} duration={duration} cfg={cfg} />;
+        case 'gym':      return <GymCard blocks={blocks} title={title} duration={duration} cfg={cfg} />;
+        case 'boxing':   return <BoxingCard blocks={blocks} title={title} duration={duration} cfg={cfg} />;
+        case 'running':  return <RunningCard blocks={blocks} title={title} duration={duration} cfg={cfg} runMetrics={runMetrics} />;
+        case 'cycling':  return <CyclingCard blocks={blocks} title={title} duration={duration} cfg={cfg} />;
+        case 'swimming': return <SwimmingCard blocks={blocks} title={title} duration={duration} cfg={cfg} />;
+        case 'yoga':     return <YogaCard blocks={blocks} title={title} duration={duration} cfg={cfg} />;
+        case 'ocr':      return <OcrCard blocks={blocks} title={title} duration={duration} cfg={cfg} />;
+        default:         return <CrossTrainingCard blocks={blocks} title={title} duration={duration} cfg={cfg} />;
     }
 }
 
@@ -405,8 +414,7 @@ export default function WorkoutShareCard({
     const cardRef = useRef<HTMLDivElement>(null);
     const [loading, setLoading] = useState(false);
     const [storyLoading, setStoryLoading] = useState(false);
-    const [editDuration, setEditDuration] = useState<string>('');
-    const [blockResults, setBlockResults] = useState<Record<number, string>>({});
+
 
     const sportKey = getSportKey(category, sportType);
     const cfg = SPORTS[sportKey];
@@ -557,60 +565,13 @@ export default function WorkoutShareCard({
                     sportKey={sportKey}
                     blocks={allBlocks}
                     title={workoutTitle}
-                    duration={editDuration !== '' ? (parseInt(editDuration) || 0) : durationMins}
+                    duration={durationMins}
                     cfg={cfg}
                     runMetrics={runMetrics}
-                    blockResults={blockResults}
                 />
             </div>
 
-            {/* ── Edit panel ──────────────────────────────────────────────────── */}
-            <div style={{
-                width: 390, marginTop: 12,
-                background: 'rgba(255,255,255,0.04)',
-                border: `1px solid ${cfg.color}30`,
-                borderRadius: 16, padding: '14px 16px',
-            }}>
-                <p style={{ fontSize: 10, color: cfg.color, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 12 }}>
-                    ✏ Editar tiempos
-                </p>
-                {/* Total time */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <span style={{ fontSize: 11, color: '#888', fontWeight: 600, width: 90, flexShrink: 0 }}>TIEMPO TOTAL</span>
-                    <input
-                        type="number"
-                        min={0}
-                        placeholder={durationMins > 0 ? String(durationMins) : 'min'}
-                        value={editDuration}
-                        onChange={e => setEditDuration(e.target.value)}
-                        style={{
-                            flex: 1, background: 'rgba(255,255,255,0.06)', border: `1px solid ${cfg.color}40`,
-                            borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700,
-                            padding: '6px 10px', outline: 'none',
-                        }}
-                    />
-                    <span style={{ fontSize: 10, color: '#555', fontWeight: 600 }}>MIN</span>
-                </div>
-                {/* Per-block results */}
-                {allBlocks.map((block: any, i: number) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                        <span style={{ fontSize: 11, color: '#888', fontWeight: 600, width: 90, flexShrink: 0, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {block.title || block.label || `BLOQUE ${i + 1}`}
-                        </span>
-                        <input
-                            type="text"
-                            placeholder="ej: 12:30 / 5 RDS"
-                            value={blockResults[i] || ''}
-                            onChange={e => setBlockResults(prev => ({ ...prev, [i]: e.target.value }))}
-                            style={{
-                                flex: 1, background: 'rgba(255,255,255,0.06)', border: `1px solid ${cfg.color}30`,
-                                borderRadius: 8, color: cfg.color, fontSize: 12, fontWeight: 700,
-                                padding: '6px 10px', outline: 'none',
-                            }}
-                        />
-                    </div>
-                ))}
-            </div>
+
 
             {/* ── Action buttons ──────────────────────────────────────────────── */}
             <div style={{
