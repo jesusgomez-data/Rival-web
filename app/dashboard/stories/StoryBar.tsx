@@ -36,13 +36,22 @@ function getExDetail(ex: any): string {
     if (ex.value) return String(ex.value);
     const exUnit = (ex.unit || ex.measure || '').toLowerCase();
     const rawReps = ex.reps;
+    
+    // Include ex.detail as weight source if it is different from reps
+    const tW_val = (ex.weight ?? ex.weight_kg ?? ex.detail ?? 0);
+    const hasWeight = (typeof tW_val === 'string' && tW_val.trim().length > 0) || (typeof tW_val === 'number' && tW_val > 0);
+    
     if (rawReps) {
         const repsStr = String(rawReps);
         if (exUnit === 'm' || exUnit === 'meters') return `· ${repsStr}M`;
         if (exUnit === 'cal') return `${repsStr} CAL`;
-        const tW = (ex.weight ?? ex.weight_kg ?? 0) > 0 ? ` · ${ex.weight ?? ex.weight_kg}KG` : '';
-        return `${repsStr}${tW}`;
+        
+        const weightSuffix = (hasWeight && tW_val !== rawReps) ? ` · ${tW_val}${exUnit.includes('kg') || exUnit.includes('lb') ? '' : 'KG'}` : '';
+        return `${repsStr}${weightSuffix}`;
     }
+    
+    if (hasWeight) return `${tW_val}${exUnit.includes('kg') || exUnit.includes('lb') ? '' : 'KG'}`;
+    
     if (ex.target && ex.target !== '-') return String(ex.target);
     if (ex.detail) return `${ex.detail}${ex.unit || ''}`;
     if (ex.instructions) return String(ex.instructions);

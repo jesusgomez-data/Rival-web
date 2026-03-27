@@ -82,7 +82,8 @@ function getExerciseDetail(ex: any): string {
 
     // 2. Direct properties (reps, weight)
     const reps = ex.reps || ex.value;
-    const weight = ex.weight || ex.weight_kg || ex.load || ex.kg;
+    // Include ex.detail as a potential weight source for WOD exercises
+    const weight = ex.weight || ex.weight_kg || ex.load || ex.kg || ex.detail;
     const unit = (ex.unit || ex.measure || '').toLowerCase();
     
     if (reps) {
@@ -90,11 +91,14 @@ function getExerciseDetail(ex: any): string {
         if (unit.includes('m')) return `· ${repsStr}M`;
         if (unit.includes('cal')) return `${repsStr} CAL`;
         
-        const wStr = (weight && Number(weight) > 0) ? ` · ${weight}KG` : '';
+        // Ensure weight is not the same as reps to avoid "10 · 10"
+        const wStr = (weight && weight !== reps && (typeof weight !== 'number' || weight > 0)) 
+            ? ` · ${weight}${unit.includes('kg') || unit.includes('lb') ? '' : 'KG'}` 
+            : '';
         return `${repsStr}${wStr}`;
     }
     
-    if (weight && Number(weight) > 0) return `${weight}KG`;
+    if (weight && (typeof weight !== 'number' || weight > 0)) return `${weight}${unit.includes('kg') || unit.includes('lb') ? '' : 'KG'}`;
     
     // 3. Fallbacks
     if (ex.detail) return `${ex.detail}${ex.unit || ''}`;
