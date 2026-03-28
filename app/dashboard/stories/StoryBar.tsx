@@ -9,6 +9,7 @@ import PRCard from '../community/PRCard'
 import { Trophy, Activity } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useStories } from './StoryContext'
+import { useVideo } from '../VideoContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import MusicPicker from '../MusicPicker'
 import { MusicTrack } from '../music-data'
@@ -97,6 +98,7 @@ interface OverlayElement {
 
 export default function StoryBar({ currentUser, hideBar = false }: { currentUser: any, hideBar?: boolean }) {
     const { userStories, setUserStories, refreshStories } = useStories()
+    const { isMuted, toggleMute, setIsMuted } = useVideo()
     const [selectedUserIndex, setSelectedUserIndex] = useState<number | null>(null)
     const [activeStoryIndex, setActiveStoryIndex] = useState(0)
     const [isUploading, setIsUploading] = useState(false)
@@ -783,7 +785,10 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
             if (audioRef.current) {
                 audioRef.current.src = currentStory.music_url;
                 audioRef.current.currentTime = 0;
-                audioRef.current.play().catch(e => console.log("Audio play blocked by browser"));
+                audioRef.current.muted = isMuted;
+                if (!isMuted) {
+                    audioRef.current.play().catch(e => console.log("Audio play blocked by browser"));
+                }
             }
         } else {
             if (audioRef.current) audioRef.current.pause();
@@ -1161,6 +1166,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                             setSelectedUserIndex(idx)
                             setActiveStoryIndex(0)
                             recordView(us.stories[0].id)
+                            setIsMuted(false)
                         }}
                         className={clsx(
                             "w-16 h-16 p-0.5 rounded-full ring-2 transition-all hover:scale-105 active:scale-95 bg-black relative",
@@ -1649,6 +1655,12 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); toggleMute(); }}
+                                            className="p-2 bg-black/40 hover:bg-white/10 text-white rounded-full backdrop-blur-md transition-all border border-white/5 shadow-lg group/mute"
+                                        >
+                                            {isMuted ? <Music className="w-5 h-5 opacity-40 shrink-0" /> : <Music className="w-5 h-5 text-brand-red shrink-0" />}
+                                        </button>
                                         {isOwner && (
                                             confirmingDelete ? (
                                                 <button
@@ -1734,7 +1746,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                     }
                                 })()
                             ) : currentStory.media_type === 'video' ? (
-                                <video ref={storyVideoRef} src={currentStory.media_url} autoPlay playsInline className="w-full h-full object-cover pointer-events-none" />
+                                <video ref={storyVideoRef} src={currentStory.media_url} autoPlay playsInline muted={isMuted} className="w-full h-full object-cover pointer-events-none" />
                             ) : (
                                 <Image src={currentStory.media_url} alt="Story content" fill className="object-cover pointer-events-none" />
                             )}

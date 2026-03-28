@@ -11,6 +11,7 @@ import { useLanguage } from '../LanguageContext';
 import { Send, Loader2 } from 'lucide-react';
 import MentionText from '@/components/MentionText';
 import MentionInput from '@/components/MentionInput';
+import { useVideo } from './VideoContext';
 
 interface ReelPost {
     id: string;
@@ -458,7 +459,7 @@ export default function VideoReelsModal({ isOpen, onClose, initialPostId, contex
     const [loading, setLoading] = useState(true);
     const containerRef = useRef<HTMLDivElement>(null);
     const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
-    const [isGlobalMuted, setIsGlobalMuted] = useState(true); // Start muted for autoplay reliability
+    const { isMuted: isGlobalMuted, toggleMute } = useVideo();
 
     useEffect(() => {
         if (isOpen) {
@@ -534,7 +535,7 @@ export default function VideoReelsModal({ isOpen, onClose, initialPostId, contex
                                 isActive={activeIndex === index}
                                 onOpenComments={() => setCommentsPostId(post.id)}
                                 isGlobalMuted={isGlobalMuted}
-                                onToggleMute={() => setIsGlobalMuted(!isGlobalMuted)}
+                                onToggleMute={toggleMute}
                             />
                         ))
                     ) : loading ? (

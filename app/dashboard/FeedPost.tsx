@@ -26,6 +26,7 @@ import WODLeaderboardModal from "@/components/WODLeaderboardModal";
 import MentionText from "@/components/MentionText";
 import MentionInput from "@/components/MentionInput";
 import WodCard from "@/components/community/WodCard";
+import { useVideo } from "./VideoContext";
 
 const InstagramShareCard = dynamic(() => import("./InstagramShareCard"), { ssr: false });
 
@@ -229,7 +230,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const [manualOriginalId, setManualOriginalId] = useState<string | null>(null);
     const postRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
-    const [isMuted, setIsMuted] = useState(true);
+    const { isMuted, toggleMute, setLastActiveVideoId, setIsMuted } = useVideo();
     const [isVisible, setIsVisible] = useState(false);
     const [showMuteHint, setShowMuteHint] = useState(false);
     const [isBuffering, setIsBuffering] = useState(true);
@@ -262,7 +263,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
         observer.observe(postRef.current);
         return () => observer.disconnect();
-    }, []);
+    }, [postId, setLastActiveVideoId]);
 
     // Handle Page Visibility (app in background)
     useEffect(() => {
@@ -1047,7 +1048,12 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 <div className="flex flex-col gap-4">
                     {isImageUrl(image) && (
                         <div className={isVideo ? "flex justify-center px-2" : "px-2"}>
-                            <div className={`relative bg-black cursor-pointer group shadow-2xl overflow-hidden ${isVideo ? "aspect-[9/16] max-h-[80vh] w-full max-w-[480px] rounded-[24px] md:rounded-[32px] border border-white/10" : "aspect-video rounded-xl"}`} onClick={() => setIsLightboxOpen(true)}>
+                            <div className={`relative bg-black cursor-pointer group shadow-2xl overflow-hidden ${isVideo ? "aspect-[9/16] max-h-[80vh] w-full max-w-[480px] rounded-[24px] md:rounded-[32px] border border-white/10" : "aspect-video rounded-xl"}`} 
+                                onClick={() => { 
+                                    setIsLightboxOpen(true); 
+                                    if (isVideo) setIsMuted(false);
+                                }}
+                            >
                                 {isVideo ? (
                                     <div className="relative w-full h-full">
                                         <video
@@ -1127,7 +1133,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                         <button 
                                             onClick={(e) => { 
                                                 e.stopPropagation(); 
-                                                setIsMuted(!isMuted); 
+                                                toggleMute(); 
                                             }}
                                             className="absolute bottom-4 right-4 z-20 bg-black/40 hover:bg-black/60 backdrop-blur-md p-2.5 rounded-full border border-white/10 transition-all active:scale-90 group/mute keep-all"
                                         >

@@ -43,6 +43,7 @@ import PendingReviewPrompt from "./PendingReviewPrompt";
 import SupportModal from "./gyms/SupportModal";
 import AnalyticsTracker from "./admin/AnalyticsTracker";
 import { playNotificationSound } from "@/app/utils/audio";
+import { VideoProvider } from "./VideoContext";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -588,13 +589,15 @@ import { PresenceProvider } from "./PresenceContext";
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
         <UploadProvider>
-            <StoryProvider>
-                <PresenceProvider>
-                    <DashboardContent>
-                        {children}
-                    </DashboardContent>
-                </PresenceProvider>
-            </StoryProvider>
+            <VideoProvider>
+                <StoryProvider>
+                    <PresenceProvider>
+                        <DashboardContent>
+                            {children}
+                        </DashboardContent>
+                    </PresenceProvider>
+                </StoryProvider>
+            </VideoProvider>
         </UploadProvider>
     );
 }
