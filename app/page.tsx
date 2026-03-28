@@ -2,684 +2,319 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { ArrowRight, Trophy, Activity, Users, Play, BarChart3, Dumbbell, Flame, Check, Star, TrendingUp, Zap, Layout, CalendarCheck, UploadCloud, Building2, ShoppingBag, Globe, Mail, Instagram, Camera } from "lucide-react";
-import { useState, useEffect } from "react";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { 
+  ArrowRight, Trophy, Activity, Users, Play, BarChart3, 
+  Dumbbell, Flame, Check, Star, TrendingUp, Zap, 
+  Layout, CalendarCheck, UploadCloud, Building2, 
+  ShoppingBag, Globe, Mail, Instagram, Sparkles,
+  ChevronRight, Heart, Target, Shield, Globe2,
+  DollarSign, Monitor, UserPlus, FileText, Bell, Clock,
+  MoreVertical, Calendar, ZapOff, MapPin
+} from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { useLanguage } from "@/app/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
 import DemoModal from "@/components/DemoModal";
-
+import { clsx } from "clsx";
 
 export default function Home() {
   const { language, setLanguage, t } = useLanguage();
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [viewMode, setViewMode] = useState<'choice' | 'athlete' | 'business'>('choice');
   const [mounted, setMounted] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
-
+  
   useEffect(() => {
     setMounted(true);
-    const handleResize = () => {
-      setIsDesktop(window.innerWidth > 1024);
-    };
-
-    // Set initial value
-    handleResize();
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  return (
-    <div className="min-h-screen flex flex-col font-sans selection:bg-brand-red selection:text-white transition-colors duration-300 bg-background text-foreground overflow-x-hidden">
+  if (!mounted) return null;
 
-      {/* Video Modal / Demo */}
+  return (
+    <div className="min-h-screen bg-background text-foreground transition-all duration-500 overflow-x-hidden bg-noise">
+      
       {showVideoModal && <DemoModal onClose={() => setShowVideoModal(false)} />}
 
-      {/* Navbar */}
-      <nav className="fixed w-full z-50 backdrop-blur-md border-b border-border bg-background/90 transition-colors">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
+      <nav className="fixed w-full z-[100] top-0 pt-4 md:pt-6 px-4 md:px-6 pointer-events-none">
+        <div className="max-w-7xl mx-auto flex items-center justify-between pointer-events-auto bg-black/40 dark:bg-black/40 light:bg-white/95 backdrop-blur-2xl border border-white/10 dark:border-white/10 light:border-black/5 rounded-2xl md:rounded-3xl px-4 md:px-8 h-18 shadow-2xl transition-all duration-500 hover:border-brand-red/20 group">
+          <Link href="/" className="flex items-center gap-3">
             <div className="relative">
-              <Image src="/logo.svg" alt="Logo de Rival" width={40} height={40} className="w-10 h-10 group-hover:scale-110 transition-transform duration-500" />
-              <div className="absolute inset-0 bg-brand-red blur-lg opacity-20 group-hover:opacity-40 transition-opacity" />
+              <Image src="/logo.svg" alt="Rival" width={40} height={40} className="w-8 h-8 md:w-11 md:h-11 group-hover:rotate-[15deg] transition-transform duration-500" />
+              <div className="absolute inset-0 bg-brand-red blur-xl opacity-40 group-hover:opacity-60 transition-opacity" />
             </div>
-            <span className="font-heading font-black text-3xl tracking-[-0.05em] italic group-hover:text-brand-red transition-all text-foreground drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]">RIVAL</span>
+            <span className="font-heading font-black text-xl md:text-3xl tracking-tighter italic text-black dark:text-white uppercase transition-colors">RIVAL<span className="text-brand-red">FIT</span></span>
           </Link>
-          <div className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-            <a href="#features" className="hover:text-brand-red transition-colors">{t.nav.features}</a>
-            <a href="#stats" className="hover:text-brand-red transition-colors">{t.nav.whyRival}</a>
-            <Link href="/for-centers" className="text-red-600 hover:text-red-400 transition-colors font-bold">{t.nav.forCenters}</Link>
-          </div>
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
 
-            <Link href="/login" className="hidden sm:block text-sm font-medium hover:text-brand-red transition-colors text-muted-foreground">
-              {t.nav.login}
-            </Link>
-            <Link href="/signup" className="bg-brand-red hover:bg-brand-accent text-white px-5 py-2.5 rounded-full font-bold text-sm transition-all transform hover:scale-105 shadow-[0_0_20px_rgba(220,38,38,0.4)]">
-              {t.nav.join}
+          <div className="hidden lg:flex items-center gap-10 text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground transition-colors group-hover:text-foreground">
+            <a href="#features" className="hover:text-brand-red transition-all font-black italic">{t.nav.features}</a>
+            {viewMode === 'business' ? (
+              <button onClick={() => setViewMode('athlete')} className="text-brand-red hover:tracking-[0.3em] transition-all font-black italic uppercase">PARA ATLETAS</button>
+            ) : (
+              <button onClick={() => setViewMode('business')} className="text-brand-orange hover:tracking-[0.3em] transition-all font-black italic uppercase">{t.nav.forCenters}</button>
+            )}
+            <Link href="/login" className="hover:text-brand-red transition-all font-black italic">{t.nav.login}</Link>
+          </div>
+
+          <div className="flex items-center gap-3 md:gap-4">
+            <ThemeToggle />
+            <Link href="/signup" className="relative group">
+              <div className="absolute inset-0 bg-brand-red blur-md opacity-50 group-hover:opacity-80 transition-opacity rounded-full" />
+              <div className="relative bg-brand-red text-white px-5 md:px-7 py-2 md:py-3.5 rounded-full font-black text-[10px] md:text-xs uppercase tracking-widest transition-all group-hover:scale-105 active:scale-95 flex items-center gap-2 shadow-glow">
+                 {t.nav.join} <ArrowRight className="w-4 h-4" />
+              </div>
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* Mobile Choice Overlay */}
-      {mounted && viewMode === 'choice' && !isDesktop && (
-        <div className={`lg:hidden fixed inset-0 z-[60] bg-black transition-all duration-1000 ${viewMode !== 'choice' ? 'translate-y-[-100%] pointer-events-none opacity-0' : 'opacity-100'}`}>
-          <div className="absolute inset-0">
-            <video autoPlay loop muted playsInline className="w-full h-full object-cover grayscale opacity-60">
-              <source src="https://assets.mixkit.co/videos/preview/mixkit-boxer-training-with-a-punching-bag-in-a-dark-gym-40537-large.mp4" type="video/mp4" />
-            </video>
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
-          </div>
-
-          <div className="relative h-full flex flex-col items-center justify-center px-8 text-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mb-12"
-            >
-              <div className="flex items-center gap-3 justify-center mb-6">
-                <Image src="/logo.svg" alt="Logo" width={60} height={60} className="w-16 h-16 drop-shadow-[0_0_20px_rgba(239,68,68,0.5)]" />
-                <span className="font-heading font-black text-5xl tracking-tighter italic text-white drop-shadow-[0_0_30px_rgba(239,68,68,0.5)]">RIVAL</span>
+      <AnimatePresence mode="wait">
+        {viewMode === 'choice' ? (
+          <motion.div key="choice" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, scale: 1.05 }} className="fixed inset-0 z-[110] flex flex-col md:flex-row bg-background overflow-hidden">
+             <div className="relative flex-1 group cursor-pointer overflow-hidden border-b md:border-b-0 md:border-r border-border" onClick={() => setViewMode('athlete')}>
+              <div className="absolute inset-0 grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-1000"><Image src="https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2069" alt="Athlete" fill className="object-cover opacity-60 dark:opacity-40" /></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+              <div className="relative h-full flex flex-col items-center justify-center p-8 md:p-12 text-center">
+                <Dumbbell className="w-12 h-12 md:w-16 md:h-16 text-brand-red mb-6 mx-auto animate-float" />
+                <h2 className="text-4xl md:text-8xl font-heading font-black italic text-foreground leading-none mb-4 uppercase tracking-tighter">ATLETA</h2>
+                <div className="mt-8 px-8 py-4 rounded-full border border-border bg-card/10 backdrop-blur-md text-foreground font-black text-[10px] md:text-xs uppercase tracking-widest transition-all group-hover:scale-105 shadow-lg shadow-white/5">Entrar como Atleta_</div>
               </div>
-              <h2 className="text-xl font-bold text-white/80 uppercase tracking-[0.2em] mb-2 px-4 italic">{t.choice.title}</h2>
-              <div className="h-0.5 w-12 bg-brand-red mx-auto mt-4" />
-            </motion.div>
-
-            <div className="w-full max-w-sm space-y-4">
-              <button
-                onClick={() => setViewMode('athlete')}
-                className="w-full py-6 rounded-2xl bg-brand-red text-white font-black text-xl uppercase tracking-widest shadow-[0_0_40px_rgba(239,68,68,0.4)] active:scale-95 transition-all flex items-center justify-center gap-3 group"
-              >
-                <Dumbbell className="w-6 h-6 group-hover:rotate-12 transition-transform" />
-                {t.choice.athlete}
+            </div>
+            <div className="relative flex-1 group cursor-pointer overflow-hidden" onClick={() => setViewMode('business')}>
+              <div className="absolute inset-0 grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-1000"><Image src="https://images.unsplash.com/photo-1549476464-37392f717541?q=80&w=2070" alt="Gym" fill className="object-cover opacity-60 dark:opacity-40" /></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+               <div className="relative h-full flex flex-col items-center justify-center p-8 md:p-12 text-center">
+                <Building2 className="w-12 h-12 md:w-16 md:h-16 text-brand-orange mb-6 mx-auto animate-float" />
+                <h2 className="text-4xl md:text-8xl font-heading font-black italic text-foreground leading-none mb-4 uppercase tracking-tighter">CENTRO</h2>
+                <div className="mt-8 px-8 py-4 rounded-full border border-border bg-card/10 backdrop-blur-md text-foreground font-black text-[10px] md:text-xs uppercase tracking-widest transition-all group-hover:scale-105 shadow-lg shadow-white/5">Registrar mi Centro_</div>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.main key={viewMode} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="relative">
+             <button onClick={() => setViewMode(viewMode === 'business' ? 'athlete' : 'business')} className="lg:hidden fixed bottom-10 left-1/2 -translate-x-1/2 z-[110] bg-brand-red text-white px-8 py-4 rounded-full font-black text-[10px] md:text-xs uppercase tracking-widest shadow-2xl flex items-center gap-2">
+                <Zap className="w-3 h-3 fill-white" /> {viewMode === 'business' ? 'MODO ATLETA' : 'MODO CENTRO'}
               </button>
-              <button
-                onClick={() => setViewMode('business')}
-                className="w-full py-6 rounded-2xl bg-white/5 border border-white/20 text-white font-black text-xl uppercase tracking-widest backdrop-blur-md active:scale-95 transition-all flex items-center justify-center gap-3 group"
-              >
-                <Building2 className="w-6 h-6 group-hover:scale-110 transition-transform" />
-                {t.choice.business}
-              </button>
-            </div>
 
-            <div className="mt-8 animate-pulse">
-              <Link href="/login" className="text-white/60 text-sm font-medium hover:text-white transition-colors">
-                {t.choice.alreadyMember} <span className="text-brand-red font-bold underline underline-offset-4">{t.choice.login}</span>
-              </Link>
-            </div>
-
-            <p className="absolute bottom-12 text-white/40 text-xs font-bold uppercase tracking-widest">
-              {t.choice.footer}
-            </p>
-          </div>
-        </div>
-      )}
-      {/* Hero Section Athlete / Desktop */}
-      <div className={(viewMode === 'athlete' || isDesktop) ? 'block' : 'lg:block hidden'}>
-        <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden flex items-center min-h-[90vh]">
-
-
-          {/* Cinematic Background Video */}
-          <div className="absolute inset-0 z-0">
-            <video
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="w-full h-full object-cover grayscale opacity-40"
-            >
-              <source src="https://assets.mixkit.co/videos/preview/mixkit-boxer-training-with-a-punching-bag-in-a-dark-gym-40537-large.mp4" type="video/mp4" />
-            </video>
-            <div className="absolute inset-0 bg-black/60" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-          </div>
-
-          <div className="max-w-7xl mx-auto px-6 relative z-10 grid lg:grid-cols-2 gap-16 items-center">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8 }}
-              className="max-w-2xl"
-            >
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-xs font-bold mb-8 animate-pulse">
-                <Zap className="w-4 h-4 fill-brand-red" />
-                {t.hero.future}
-              </div>
-              <h1 className="font-heading text-4xl sm:text-7xl lg:text-8xl font-black leading-[0.9] mb-8 tracking-tighter text-white break-words sm:break-normal">
-                {t.hero.title} <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-red via-brand-orange to-brand-neon-orange drop-shadow-[0_0_20px_rgba(239,68,68,0.4)]">
-                  {t.hero.subtitle}
-                </span>
-              </h1>
-              <p className="text-muted-foreground text-lg lg:text-xl mb-8 leading-relaxed max-w-lg">
-                {t.hero.descPrefix}
-                {t.hero.descHighlight && <span className="text-brand-red font-bold">{t.hero.descHighlight}</span>}
-                {t.hero.descSuffix}
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link
-                  href="/signup"
-                  aria-label={t.hero.ctaStart}
-                  className="bg-brand-red hover:bg-brand-accent text-white px-8 py-4 rounded-full font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-[0_0_30px_rgba(220,38,38,0.3)] hover:shadow-[0_0_50px_rgba(220,38,38,0.5)] transform hover:scale-105 active:scale-95"
-                >
-                  {t.hero.ctaStart} <ArrowRight className="w-5 h-5" />
-                </Link>
-                <button
-                  onClick={() => setShowVideoModal(true)}
-                  aria-label={t.hero.ctaDemo}
-                  className="px-8 py-4 rounded-full font-bold text-lg border hover:bg-foreground/5 transition-all flex items-center justify-center gap-2 transform hover:scale-105 active:scale-95 border-border text-foreground"
-                >
-                  <Play className="w-5 h-5 fill-current" /> {t.hero.ctaDemo}
-                </button>
+            <section className={clsx("relative min-h-[90vh] md:min-h-screen flex items-center px-4 md:px-6 overflow-hidden transition-all duration-700 pb-20 pt-24 md:pt-32", viewMode === 'business' ? "bg-noise" : "bg-black")}>
+              <div className="absolute inset-0 z-0">
+                <div className={clsx("absolute inset-0 z-10 transition-colors", viewMode === 'business' ? "bg-background/95" : "bg-black/70")} />
+                <video autoPlay loop muted playsInline className={clsx("w-full h-full object-cover transition-opacity", viewMode === 'business' ? "grayscale opacity-5" : "grayscale opacity-40")}>
+                  <source src="https://assets.mixkit.co/videos/preview/mixkit-boxer-training-with-a-punching-bag-in-a-dark-gym-40537-large.mp4" type="video/mp4" />
+                </video>
               </div>
 
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1, delay: 0.2 }}
-              className="relative"
-            >
-              {/* App UI Concept */}
-              <div className="relative z-10 w-full max-w-[320px] sm:max-w-md mx-auto aspect-[9/16] bg-black rounded-[2.5rem] sm:rounded-[3rem] border-4 sm:border-8 shadow-2xl overflow-hidden ring-1 ring-white/10 border-gray-900">
-                {/* Background training image */}
-                <img
-                  src="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1000&auto=format&fit=crop"
-                  alt="Background workout"
-                  className="absolute inset-0 w-full h-full object-cover opacity-60 z-0"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-black/30 flex flex-col justify-end p-6">
-                  <div className="mb-4">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-12 h-12 rounded-full border-2 border-brand-red overflow-hidden relative">
-                        <img
-                          src="https://images.unsplash.com/photo-1568602471122-7832951cc4c5?q=80&w=200&auto=format&fit=crop"
-                          alt="User"
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                      <div>
-                        <p className="font-bold text-white text-lg">Alex Sterling</p>
-                        <p className="text-xs text-brand-red font-bold uppercase tracking-wider">Nuevo PR • Cross Training</p>
-                      </div>
+              <div className="container max-w-7xl mx-auto relative z-30">
+                <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-12 md:gap-24 items-center">
+                  <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }} className="max-w-2xl text-center lg:text-left">
+                    <div className={clsx("inline-flex items-center gap-3 px-4 md:px-5 py-2 md:py-2.5 rounded-full border text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] mb-6 md:mb-10 animate-pulse mx-auto lg:mx-0", viewMode === 'business' ? "text-brand-orange border-brand-orange/20" : "text-brand-red glass-red")}>
+                      <Sparkles className="w-3 h-3 md:w-4 md:h-4" /> {viewMode === 'business' ? 'PARTNER ECOSYSTEM 2026' : t.hero.future}
                     </div>
-                  </div>
-
-                  <div className="bg-white/10 backdrop-blur-md p-3 sm:p-4 rounded-2xl border border-white/10 mb-4 sm:mb-6">
-                    <div className="flex justify-between items-end mb-2">
-                      <div>
-                        <span className="text-gray-400 text-[10px] font-bold uppercase">Ejercicio</span>
-                        <div className="text-xl sm:text-2xl font-heading font-bold text-white whitespace-nowrap">Back Squat</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-2xl sm:text-3xl font-heading font-bold text-brand-red">140kg</div>
-                      </div>
+                    <h1 className={clsx("font-heading font-black italic leading-[0.85] tracking-tighter mb-8 md:mb-10 transition-all uppercase", viewMode === 'business' ? "text-5xl md:text-7xl lg:text-8xl text-foreground" : "text-5xl md:text-8xl lg:text-9xl text-white")}>
+                      {viewMode === 'business' ? <>GESTIÓN <br className="hidden md:block" /> <span className="text-brand-orange">INTELIGENTE.</span></> : 
+                      <>{t.hero.title} <br className="hidden md:block" /> <span className="text-gradient-red drop-shadow-glow">{t.hero.subtitle}</span></>}
+                    </h1>
+                    <p className="text-muted-foreground text-sm md:text-lg lg:text-xl font-medium max-w-xl mb-10 md:mb-12 border-l-2 md:border-l-4 border-current pl-5 md:pl-8 uppercase tracking-tight mx-auto lg:mx-0">
+                        {viewMode === 'business' ? 'Gestiona tu comunidad, centraliza tus pagos y posiciona tu centro frente a miles de atletas competitivos. Todo en un solo ecosistema.' : t.hero.description}
+                    </p>
+                    <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4 md:gap-6">
+                      <Link href={viewMode === 'business' ? '/center-signup' : '/signup'} className="w-full sm:w-auto relative group">
+                        <div className={clsx("absolute inset-0 blur-2xl opacity-40 group-hover:opacity-100 transition-all", viewMode === 'business' ? "bg-brand-orange" : "bg-brand-red")} />
+                        <div className={clsx("relative px-8 md:px-10 py-4 md:py-5 rounded-2xl md:rounded-3xl font-black text-sm md:text-base uppercase tracking-widest flex items-center justify-center gap-4 transition-all hover:scale-105 shadow-glow", viewMode === 'business' ? "bg-brand-orange text-white" : "bg-brand-red text-white")}>
+                          {viewMode === 'business' ? 'COMENZAR AHORA' : t.hero.ctaStart} <ArrowRight className="w-4 h-4 md:w-6 md:h-6" />
+                        </div>
+                      </Link>
+                      <button onClick={() => setShowVideoModal(true)} className="w-full sm:w-auto glass-dark hover:bg-muted/10 text-foreground px-8 md:px-10 py-4 md:py-5 rounded-2xl md:rounded-3xl font-black text-sm md:text-base uppercase tracking-widest flex items-center justify-center gap-4 transition-all hover:scale-105 border border-border">VER DEMO</button>
                     </div>
-                    <div className="w-full bg-white/20 h-1.5 rounded-full overflow-hidden">
-                      <div className="bg-gradient-to-r from-brand-neon-green to-emerald-400 h-full w-[85%] shadow-[0_0_10px_rgba(57,255,20,0.5)]"></div>
+                  </motion.div>
+
+                  <motion.div initial={{ opacity: 0, scale: 0.9, x: 50 }} animate={{ opacity: 1, scale: 1, x: 0 }} transition={{ duration: 1, delay: 0.2 }} className="relative hidden lg:block">
+                    {viewMode === 'athlete' ? (
+                      <div className="w-full max-w-sm aspect-[9/16] glass-dark rounded-[3.5rem] border-2 border-white/10 overflow-hidden relative group ml-auto shadow-2xl">
+                          <Image src="https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=2069" alt="App" fill className="object-cover opacity-60" />
+                          <div className="absolute inset-0 bg-black/40 p-10 flex flex-col justify-end">
+                             <div className="flex items-center gap-4 mb-4"><div className="w-12 h-12 rounded-full border-2 border-brand-red p-1"><div className="w-full h-full bg-brand-red rounded-full" /></div><div><p className="text-white font-black italic">ALEX STERLING</p><p className="text-brand-red text-[10px] font-bold">RANK #42</p></div></div>
+                             <div className="glass-red p-4 rounded-2xl"><p className="text-[10px] uppercase font-bold text-white/40">BACK SQUAT</p><h4 className="text-2xl font-black text-white italic">140<span className="text-sm">KG</span></h4></div>
+                          </div>
+                      </div>
+                    ) : (
+                      <div className="relative w-full group">
+                         <div className="absolute -inset-10 bg-brand-orange/20 blur-[120px] rounded-full opacity-50 transition-opacity group-hover:opacity-80" />
+                         <div className="relative w-full max-w-lg mx-auto glass-dark rounded-[2.5rem] border border-white/5 overflow-hidden shadow-[0_50px_100px_rgba(0,0,0,0.4)] backdrop-blur-3xl animate-float">
+                            <div className="bg-white/5 px-8 py-5 border-b border-white/5 flex items-center justify-between">
+                               <div className="flex gap-2"><div className="w-3 h-3 rounded-full bg-red-500/30" /><div className="w-3 h-3 rounded-full bg-yellow-500/30" /><div className="w-3 h-3 rounded-full bg-green-500/30" /></div>
+                               <div className="flex items-center gap-3 px-3 py-1 bg-brand-orange/10 border border-brand-orange/20 rounded-full">
+                                  <div className="w-1.5 h-1.5 rounded-full bg-brand-orange animate-pulse" />
+                                  <span className="text-[9px] font-black text-brand-orange uppercase tracking-widest uppercase">RIVAL CMS LIVE</span>
+                               </div>
+                            </div>
+                            
+                            <div className="p-10 space-y-10">
+                               <div className="grid grid-cols-3 gap-6">
+                                  <div className="space-y-2">
+                                     <div className="flex items-center gap-2 text-white/40"><Users className="w-4 h-4" /><span className="text-[8px] font-black uppercase tracking-widest">SOCIOS</span></div>
+                                     <p className="text-3xl font-heading font-black italic text-white tracking-tighter">1,240</p>
+                                     <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden"><div className="h-full bg-brand-orange w-[85%]" /></div>
+                                  </div>
+                                  <div className="space-y-2">
+                                     <div className="flex items-center gap-2 text-white/40"><Activity className="w-4 h-4" /><span className="text-[8px] font-black uppercase tracking-widest">RETENCIÓN</span></div>
+                                     <p className="text-3xl font-heading font-black italic text-emerald-400 tracking-tighter">88%</p>
+                                     <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden"><div className="h-full bg-emerald-400 w-[92%]" /></div>
+                                  </div>
+                                  <div className="space-y-2">
+                                     <div className="flex items-center gap-2 text-white/40"><DollarSign className="w-4 h-4" /><span className="text-[8px] font-black uppercase tracking-widest">REVENUE</span></div>
+                                     <p className="text-3xl font-heading font-black italic text-white tracking-tighter">+12K€</p>
+                                     <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden"><div className="h-full bg-white/20 w-[60%]" /></div>
+                                  </div>
+                               </div>
+
+                               <div className="space-y-6">
+                                  <div className="flex justify-between items-center"><h5 className="text-[10px] font-black uppercase text-white/60 tracking-widest italic tracking-widest">PRÓXIMAS CLASES_</h5><MoreVertical className="w-4 h-4 text-white/20" /></div>
+                                  <div className="space-y-3">
+                                     {[
+                                        { t: 'WOD MAÑERO', time: '07:30h', cap: '18/20' },
+                                        { t: 'OPEN GYM', time: '11:00h', cap: '5/12' },
+                                        { t: 'PRO SERIES', time: '18:00h', cap: '14/15' }
+                                     ].map((cl, i) => (
+                                       <div key={i} className="flex items-center justify-between p-4 glass rounded-2xl border border-white/5 hover:bg-white/5 transition-all group/item cursor-pointer">
+                                          <div className="flex items-center gap-4">
+                                             <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-brand-orange group-hover/item:scale-110 transition-transform"><Calendar className="w-4 h-4" /></div>
+                                             <div><p className="text-[11px] font-black text-white uppercase tracking-tighter">{cl.t}</p><p className="text-[8px] font-bold text-white/30 uppercase tracking-widest">{cl.time}</p></div>
+                                          </div>
+                                          <div className="text-[9px] font-black text-brand-orange/80 tabular-nums">{cl.cap}</div>
+                                       </div>
+                                     ))}
+                                  </div>
+                               </div>
+                            </div>
+                         </div>
+                      </div>
+                    )}
+                  </motion.div>
+                </div>
+              </div>
+            </section>
+
+            <section id="features" className="py-24 md:py-40 bg-background relative overflow-hidden transition-colors duration-500">
+               <div className="max-w-7xl mx-auto px-4 md:px-6">
+                  <div className="text-center mb-16 md:mb-24">
+                     <motion.div whileInView={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 20 }} className={clsx("inline-flex items-center gap-3 px-4 md:px-5 py-2 md:py-2.5 rounded-full border text-[8px] md:text-[10px] font-black uppercase tracking-[0.4em] mb-6", viewMode === 'business' ? "border-brand-orange/20 text-brand-orange" : "border-border text-muted-foreground")}>
+                       {viewMode === 'business' ? 'PLATAFORMA INTEGRADA' : 'ECOSISTEMA ELITE'}
+                     </motion.div>
+                     <h2 className="text-4xl md:text-7xl lg:text-8xl font-heading font-black italic tracking-tighter uppercase mb-8 text-foreground leading-tight">
+                        {viewMode === 'business' ? <>TU CENTRO <span className="text-brand-orange">POTENCIADO.</span></> : <>PARA LOS <span className="text-brand-red text-shadow-red">OBSESIONADOS.</span></>}
+                     </h2>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8 auto-rows-auto md:auto-rows-[340px]">
+                      {viewMode === 'athlete' ? (
+                        <>
+                          <BentoCard className="md:col-span-8 md:row-span-2 min-h-[400px] md:min-h-0" tag="Social" title="Red Social Vertical" desc="Feed libre de ruido. Comparte tus entrenos con atletas reales."
+                            visual={<div className="absolute inset-0 bg-black/40 z-[-1] flex items-center justify-center scale-90 md:scale-100"><div className="relative w-48 h-80 rounded-3xl overflow-hidden border-2 border-white/20 rotate-[-12deg] z-10"><Image src="https://images.unsplash.com/photo-1549476464-37392f717541?q=80&w=2070" fill alt="W1" className="object-cover" /></div><div className="absolute w-48 h-80 rounded-3xl overflow-hidden border-2 border-white/20 rotate-[12deg] translate-x-12"><Image src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070" fill alt="W2" className="object-cover" /></div></div>}
+                          />
+                          <BentoCard className="md:col-span-4" tag="Logbook" title="Registro Elite" desc="WODs, AMRAPs, EMOMs. Herramientas profesionales." visual={<Dumbbell className="absolute -bottom-10 -right-10 w-48 h-48 opacity-10 text-brand-red rotate-45" />} />
+                          <BentoCard className="md:col-span-4" tag="Competición" title="Líder Global" desc="Escala en los Leaderboards mundiales cada semana." visual={<Trophy className="absolute -bottom-10 -right-10 w-48 h-48 opacity-10 text-yellow-500" />} />
+                          <BentoCard className="md:col-span-4" tag="Duelos" title="Batallas 1v1" desc="Desafía a cualquier rival a una batalla de volumen." visual={<Flame className="absolute -bottom-10 -right-10 w-48 h-48 opacity-10 text-brand-orange animate-pulse" />} />
+                          <BentoCard className="md:col-span-8" tag="IA Analytical" title="Rival Insight" desc="Visualiza tu volumen y estimación de 1RM." visual={<div className="absolute inset-x-12 bottom-0 h-32 flex items-end justify-between gap-1 overflow-hidden">{[30, 60, 45, 90, 70, 100, 40, 80].map((h, i) => <div key={i} className="flex-1 bg-brand-red/40 rounded-t-lg" style={{ height: `${h}%` }} />)}</div>} />
+                        </>
+                      ) : (
+                        <>
+                          <BentoCard className="md:col-span-8 md:row-span-2 min-h-[400px] md:min-h-0 overflow-hidden" theme="orange" tag="Visibilidad" title="Gana Visibilidad" desc="Atrae clientes y posiciona tu centro frente a miles de atletas competitivos." 
+                            visual={
+                               <div className="absolute inset-0 bg-black overflow-hidden">
+                                  <div className="absolute inset-0 opacity-20">
+                                     <div className="absolute top-1/4 left-1/4 w-1 h-1 bg-brand-orange rounded-full animate-ping shadow-[0_0_20px_white]" />
+                                     <div className="absolute top-1/2 left-3/4 w-1 h-1 bg-brand-orange rounded-full animate-ping delay-700 shadow-[0_0_20px_white]" />
+                                     <div className="absolute top-3/4 left-1/3 w-1 h-1 bg-brand-orange rounded-full animate-ping delay-1000 shadow-[0_0_20px_white]" />
+                                     <div className="absolute top-1/2 left-1/2 w-80 h-80 border border-brand-orange/20 rounded-full -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                                     <div className="absolute top-1/2 left-1/2 w-[500px] h-[500px] border border-brand-orange/10 rounded-full -translate-x-1/2 -translate-y-1/2 animate-pulse delay-500" />
+                                  </div>
+                                  <div className="absolute inset-0 flex items-center justify-center">
+                                     <div className="relative w-64 h-64 opacity-40">
+                                        <Globe2 className="w-full h-full text-brand-orange/20 animate-spin-slow" />
+                                     </div>
+                                  </div>
+                                  <div className="absolute bottom-1/3 left-1/4 flex items-center gap-2 glass-dark p-2 rounded-xl animate-float border border-white/5 active:scale-95 transition-all">
+                                     <div className="w-6 h-6 rounded-lg bg-emerald-500/20 flex items-center justify-center"><Check className="w-3 h-3 text-emerald-500" /></div>
+                                     <span className="text-[8px] font-black text-white/60 tracking-widest uppercase">+1,420 ATLETAS</span>
+                                  </div>
+                                  <div className="absolute top-1/3 right-1/4 flex items-center gap-2 glass-dark p-2 rounded-xl animate-float delay-700 border border-white/5 active:scale-95 transition-all">
+                                     <div className="w-6 h-6 rounded-lg bg-brand-orange/20 flex items-center justify-center"><Activity className="w-3 h-3 text-brand-orange" /></div>
+                                     <span className="text-[8px] font-black text-white/60 tracking-widest uppercase">VIRAL GROWTH</span>
+                                  </div>
+                               </div>
+                            } 
+                          />
+                          <BentoCard className="md:col-span-4" theme="orange" tag="Control" title="Gestiona tu Box" desc="Organiza WODs, controla reservas y haz crecer tu comunidad." visual={<CalendarCheck className="absolute -bottom-10 -right-10 w-48 h-48 opacity-20 text-brand-orange" />} />
+                          <BentoCard className="md:col-span-4" theme="orange" tag="Insights" title="Analíticas" desc="Analiza el rendimiento y optimiza tus clases basadas en datos." visual={<BarChart3 className="absolute -bottom-10 -right-10 w-48 h-48 opacity-20 text-brand-orange" />} />
+                          <BentoCard className="md:col-span-4" theme="orange" tag="Pagos" title="Facturación" desc="Automatiza tus cobros mensuales y suscripciones vía Stripe." visual={<DollarSign className="absolute -bottom-10 -right-10 w-48 h-48 opacity-20 text-brand-orange" />} />
+                          <BentoCard className="md:col-span-8" theme="orange" tag="Support" title="Soporte VIP" desc="Importa tus datos fácilmente con asistencia personalizada." visual={<Monitor className="absolute -bottom-10 -right-10 w-64 h-64 opacity-10 text-white" />} />
+                        </>
+                      )}
+                  </div>
+               </div>
+            </section>
+
+            <section className={clsx("relative py-12 md:py-16 overflow-hidden z-40 transform rotate-[-1deg] scale-[1.05] shadow-2xl transition-colors duration-700", viewMode === 'business' ? "bg-brand-orange" : "bg-brand-red")}>
+               <div className="flex animate-marquee-slow whitespace-nowrap items-center font-heading font-black italic text-3xl md:text-5xl uppercase tracking-tighter text-black">
+                  {[1, 2, 3, 4].map(set => (
+                    <div key={set} className="flex items-center">
+                       <span className="mx-8 md:mx-12">{viewMode === 'business' ? 'CENTRO DE MANDO LÍDER' : 'EL FUTURO DEL FITNESS'}</span>
+                       <div className="w-3 h-3 rounded-full bg-black mx-6" />
+                       <span className="mx-8 md:mx-12">{viewMode === 'business' ? 'PARTNER NETWORK' : 'JOIN THE 1%'}</span>
+                       <div className="w-3 h-3 rounded-full bg-black mx-6" />
                     </div>
-                  </div>
+                  ))}
+               </div>
+            </section>
 
-                  <div className="flex gap-3 sm:gap-4">
-                    <button className="flex-1 bg-brand-red text-white py-2 sm:py-3 rounded-xl font-bold text-[10px] sm:text-sm">Chocala 👊</button>
-                    <button className="flex-1 bg-white/10 text-white py-2 sm:py-3 rounded-xl font-bold text-[10px] sm:text-sm backdrop-blur-md">Comentar</button>
-                  </div>
+            <section id="pricing" className="py-24 md:py-40 bg-background relative flex flex-col items-center justify-center">
+               <div className="max-w-4xl w-full px-4 md:px-6 text-center">
+                  <motion.div whileInView={{ scale: 1, opacity: 1 }} initial={{ scale: 0.95, opacity: 0 }} className={clsx("p-10 md:p-20 rounded-[3rem] border-2 relative overflow-hidden transition-all", viewMode === 'business' ? "border-brand-orange/30 bg-brand-orange/5 shadow-[0_0_100px_rgba(255,100,0,0.1)]" : "glass-red border-brand-red/40")}>
+                    <div className="relative z-10">
+                      <div className={clsx("w-16 h-16 rounded-2xl mx-auto flex items-center justify-center mb-8 shadow-glow", viewMode === 'business' ? "bg-brand-orange" : "bg-brand-red")}><Flame className="w-8 h-8 text-white fill-current" /></div>
+                      <h2 className="text-4xl md:text-7xl font-heading font-black italic text-foreground tracking-tighter uppercase mb-6 leading-tight">
+                        {viewMode === 'business' ? <>PRECIOS <br/> <span className="text-brand-orange">SOCIOS.</span></> : <>PARA ATLETAS: <br/> <span className="text-brand-red">100% GRATIS.</span></>}
+                      </h2>
+                      <p className="text-muted-foreground text-sm md:text-xl font-medium max-w-2xl mx-auto mb-10 md:mb-16 uppercase tracking-tight">
+                        {viewMode === 'business' ? 'Planes escalables para tu box. Agenda una demo hoy mismo.' : 'Regístrate hoy y domina la arena global.'}
+                      </p>
+                      <Link href={viewMode === 'business' ? '/center-signup' : '/signup'} className={clsx("w-full sm:w-auto inline-flex items-center justify-center gap-4 px-10 py-5 rounded-2xl md:rounded-3xl font-black text-sm md:text-base uppercase tracking-widest hover:scale-105 shadow-2xl transition-all", viewMode === 'business' ? "bg-brand-orange text-white" : "bg-brand-red text-white")}>
+                        {viewMode === 'business' ? 'VER DEMO PERSONALIZADA' : 'EMPEZAR GRATIS'} <ArrowRight className="w-5 h-5 md:w-6 md:h-6" />
+                      </Link>
+                    </div>
+                  </motion.div>
+               </div>
+            </section>
+
+            <footer className="bg-black py-24 md:py-40 border-t border-white/5 relative z-50">
+               <div className="max-w-7xl mx-auto px-6 font-bold">
+                 <div className="grid grid-cols-1 md:grid-cols-4 gap-12 md:gap-20 mb-20 text-center md:text-left">
+                   <div className="md:col-span-1 flex flex-col items-center md:items-start"><Link href="/" className="flex items-center gap-4 mb-8"><Image src="/logo.svg" alt="Rival" width={44} height={44} className="w-11 h-11" /><span className="font-heading font-black text-3xl tracking-tighter text-white uppercase italic">RIVAL<span className="text-brand-red">FIT</span></span></Link></div>
+                   {[ 
+                      { t: 'SOLUCIONES', l: ['Arena Feed', 'Leaderboard', 'Coaching'] }, 
+                      { t: 'BUSINESS', l: ['Para Centros', 'Partners', 'Developer API'] }, 
+                      { t: 'LEGAL', l: ['Privacy', 'Terms', 'Cookies'] } 
+                   ].map((g, i) => (
+                     <div key={i}><h4 className="text-white font-black text-xs uppercase tracking-[0.2em] mb-8 italic">{g.t}</h4><ul className="space-y-4">{g.l.map((link, j) => <li key={j} className="text-white/20 hover:text-brand-red text-[10px] font-black uppercase tracking-widest cursor-pointer transition-colors">{link}</li>)}</ul></div>))}
+                 </div>
                 </div>
-              </div>
-
-              {/* Floating Stats */}
-              <motion.div
-                animate={{ y: [0, -15, 0] }}
-                transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-                className="absolute top-4 -right-2 sm:top-20 sm:-right-4 border p-3 sm:p-5 rounded-xl sm:rounded-2xl shadow-xl z-20 w-28 sm:w-48 bg-card/90 backdrop-blur-md border-border scale-90 sm:scale-100"
-              >
-                <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2 text-brand-neon-orange">
-                  <Trophy className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
-                  <span className="font-bold text-[8px] sm:text-xs uppercase tracking-widest whitespace-nowrap">Rango Global</span>
-                </div>
-                <div className="text-2xl sm:text-3xl font-heading font-black text-white italic">#42</div>
-                <div className="text-[10px] sm:text-xs text-brand-neon-green font-bold mt-0.5 sm:mt-1 flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" /> ▲ 3 lugares
-                </div>
-              </motion.div>
-            </motion.div>
-          </div>
-        </section>
-      </div>
-
-      {/* Hero Section Business (Mobile Only) */}
-      <div className={(viewMode === 'business') ? 'block lg:hidden' : 'hidden'}>
-        <section className="relative pt-32 pb-20 overflow-hidden flex items-center min-h-[90vh] bg-black">
-          <div className="absolute inset-0 z-0">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-brand-red/20 via-transparent to-transparent opacity-50" />
-            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1540497077202-7c8a3999166f?q=80&w=2070&auto=format&fit=crop')] bg-cover bg-center grayscale opacity-20" />
-          </div>
-
-          <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="max-w-2xl"
-            >
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-[10px] font-bold mb-8 uppercase tracking-widest leading-none">
-                <Building2 className="w-3 h-3" /> Partner Program 2026
-              </div>
-              <h1 className="font-heading text-5xl font-black leading-[0.9] mb-8 tracking-tighter text-white uppercase italic">
-                DOMINA TU <br />
-                <span className="text-brand-red drop-shadow-[0_0_20px_rgba(239,68,68,0.4)]">
-                  CIUDAD.
-                </span>
-              </h1>
-              <p className="text-muted-foreground text-lg mb-10 leading-relaxed">
-                Convierte tu box o gimnasio en una potencia digital. Atrae nuevos leads, automatiza tus clases y fideliza a tu comunidad con la tecnología de <span className="text-white font-bold tracking-tight italic">RIVAL</span>.
-              </p>
-              <div className="flex flex-col gap-4">
-                <Link
-                  href="/center-signup"
-                  className="bg-white text-black px-8 py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-2 transition-all transform active:scale-95 shadow-[0_10px_40px_rgba(255,255,255,0.1)]"
-                >
-                  Registra tu centro <ArrowRight className="w-5 h-5" />
-                </Link>
-                <div className="flex items-center gap-4 py-4 px-6 rounded-2xl bg-white/5 border border-white/10">
-                  <div className="flex -space-x-3">
-                    {[1, 2, 3, 4].map(i => (
-                      <div key={i} className="w-8 h-8 rounded-full border-2 border-black bg-gray-800" />
-                    ))}
-                  </div>
-                  <p className="text-xs text-white/60 font-medium">+150 Centros ya están escalando</p>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-      </div>
-
-      {/* Secciones de Atleta (Visibles en desktop o cuando se elige Athlete en móvil) */}
-
-      <div className={(viewMode === 'athlete' || isDesktop) ? 'block' : 'lg:block hidden'}>
-        {/* Sección de Estadísticas */}
-        <section id="stats" className="py-12 sm:py-20 border-y border-border bg-gradient-to-b from-background to-card/50">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-center">
-              {[
-                { val: "100+", label: "Atletas activos" },
-                { val: "45M+", label: "Entrenamientos" },
-                { val: "180+", label: "Países" },
-                { val: "4.9⭐", label: "Valoración" }
-              ].map((stat, i) => (
-                <motion.div
-                  key={i}
-                  whileInView={{ scale: 1, opacity: 1 }}
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  transition={{ duration: 0.5, delay: i * 0.1 }}
-                >
-                  <div className="text-4xl lg:text-5xl font-heading font-bold text-brand-red mb-2">{stat.val}</div>
-                  <p className="text-muted-foreground">{stat.label}</p>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Cuadrícula de Características */}
-        <section id="features" className="py-32 border-t border-border bg-background">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center mb-12 sm:mb-20">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold mb-4 sm:mb-6 text-foreground">Hecho para los <span className="text-brand-red">Obsesionados</span></h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg px-4 sm:px-0">Deja de usar 5 apps distintas. Rival combina registro, comunidad y coaching en un solo ecosistema poderoso.</p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              <FeatureCard icon={<Globe className="w-6 h-6 text-brand-red" />} title="Red Social Vertical" desc="Un feed libre de ruido. Solo sudor, PRs y motivación real. Sube fotos de tus entrenos y comparte tu historia con atletas que te entienden." />
-              <FeatureCard icon={<Dumbbell className="w-6 h-6 text-brand-red" />} title="Registro de Élite" desc="WODs, AMRAPs, EMOMs, Fuerza y Running. Herramientas profesionales de logging para Cross Training, Hyrox, Powerlifting y más." />
-              <FeatureCard icon={<Trophy className="w-6 h-6 text-brand-red" />} title="Competición Global" desc="No entrenes solo. Escala en los Leaderboards mundiales cada semana y demuestra tu nivel ante toda la comunidad." />
-              <FeatureCard icon={<Zap className="w-6 h-6 text-brand-red" />} title="Duelos 1vs1" desc="¿Quién ha entrenado más fuerte esta semana? Desafía a un amigo a un Duelo de 7 días y dejad que los números hablen." />
-              <FeatureCard icon={<Building2 className="w-6 h-6 text-brand-red" />} title="Conexión con tu Box" desc="Tu gimnasio en tu bolsillo. Reserva clases, consulta la pizarra del WOD del día y conecta con tus compañeros de entreno." />
-              <FeatureCard icon={<BarChart3 className="w-6 h-6 text-brand-red" />} title="Analíticas de Progreso" desc="Visualiza tu evolución real. Gráficas de volumen, frecuencia cardiaca, estimación de 1RM y consistencia mensual." />
-            </div>
-          </div>
-        </section>
-
-        {/* Sección de Testimonios */}
-        <section className="py-32 border-y border-border bg-card/30">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center mb-12 sm:mb-16">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold mb-4 sm:mb-6 text-foreground">Amado por <span className="text-brand-red">Atletas de Élite</span></h2>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              <TestimonialCard name="Marcus Johnson" role="Powerlifter Competitivo" avatar="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&q=80" text="Rival cambió cómo registro mi progreso. La comunidad me mantiene motivado. He logrado 3 PRs desde que me uní." rating={5} />
-              <TestimonialCard name="Sofía Rodríguez" role="Coach de Cross Training" avatar="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&q=80" text="A mis atletas les encanta el aspecto competitivo. Los rankings los motivan como nada más." rating={5} />
-              <TestimonialCard name="Alex Chen" role="Influencer Fitness" avatar="https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&q=80" text="Por fin una plataforma que combina analíticas, comunidad y competencia. Esto es otro nivel." rating={5} />
-            </div>
-          </div>
-        </section>
-
-        {/* Sección - 100% Gratis para Siempre */}
-        <section id="pricing" className="py-32 border-t border-border bg-background">
-          <div className="max-w-5xl mx-auto px-6">
-            <motion.div
-              whileInView={{ opacity: 1, y: 0 }}
-              initial={{ opacity: 0, y: 30 }}
-              transition={{ duration: 0.6 }}
-              className="text-center mb-16"
-            >
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-xs font-bold mb-8 uppercase tracking-widest">
-                <Zap className="w-3 h-3 fill-brand-red" /> Sin tarjeta. Sin trucos. Sin límites.
-              </div>
-              <h2 className="text-3xl sm:text-5xl lg:text-6xl font-heading font-black mb-6 text-foreground tracking-tighter">Todo <span className="text-brand-red">100% Gratis</span></h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto text-lg leading-relaxed">
-                Rival es una red social de atletas. Aquí todo el mundo compite en igualdad de condiciones.
-                No hay paywalls, no hay ventajas de pago, no hay membresías. Solo rendimiento real.
-              </p>
-            </motion.div>
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-              {[
-                { icon: <Users className="w-6 h-6" />, title: "Red Social Real", desc: "Feed, stories, comentarios, duelos. Conecta con atletas que te entienden, sin fricciones." },
-                { icon: <Dumbbell className="w-6 h-6" />, title: "Registro Elite", desc: "WODs, Fuerza, Running, Calistenia. Herramientas profesionales para todo tipo de atleta." },
-                { icon: <Trophy className="w-6 h-6" />, title: "Rankings Globales", desc: "Compite en los leaderboards mundiales. Tu posición depende de tu sudor, no de tu wallet." },
-                { icon: <Zap className="w-6 h-6" />, title: "Duelos 1vs1", desc: "Desafía a cualquier atleta. Sin límites de duelos activos. La batalla es plana." },
-                { icon: <BarChart3 className="w-6 h-6" />, title: "Analytics Completo", desc: "Gráficas de volumen, distribución muscular, fatiga, PRs. Todo visible desde el día 1." },
-                { icon: <Activity className="w-6 h-6" />, title: "Coach IA", desc: "Programación personalizada con inteligencia artificial. Para todos, no solo para premium." },
-              ].map((f, i) => (
-                <motion.div
-                  key={i}
-                  whileHover={{ translateY: -6 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  initial={{ opacity: 0, y: 20 }}
-                  transition={{ duration: 0.4, delay: i * 0.1 }}
-                  className="p-6 rounded-2xl border border-border bg-card hover:border-brand-red/30 transition-all group"
-                >
-                  <div className="text-brand-red mb-4 group-hover:scale-110 transition-transform">{f.icon}</div>
-                  <h3 className="font-bold text-lg mb-2 text-foreground">{f.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
-                </motion.div>
-              ))}
-            </div>
-
-            <motion.div
-              whileInView={{ opacity: 1, scale: 1 }}
-              initial={{ opacity: 0, scale: 0.97 }}
-              transition={{ duration: 0.5 }}
-              className="bg-gradient-to-br from-brand-red/10 via-card to-card border border-brand-red/20 rounded-3xl p-10 text-center relative overflow-hidden"
-            >
-              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(220,38,38,0.08)_0%,transparent_70%)]" />
-              <div className="relative z-10">
-                <div className="text-6xl mb-4">🔥</div>
-                <h3 className="text-3xl font-heading font-black text-foreground mb-3 tracking-tighter">Únete. Entrena. Domina.</h3>
-                <p className="text-muted-foreground text-lg mb-8 max-w-xl mx-auto">
-                  Más de 100+ atletas ya compiten en Rival. Sin comisiones, sin membresías.
-                  El único precio que pagamos es el de entrenar duro.
-                </p>
-                <Link href="/signup" className="bg-brand-red hover:bg-brand-accent text-white px-10 py-4 rounded-full font-bold text-lg transition-all shadow-[0_0_30px_rgba(220,38,38,0.4)] transform hover:scale-105 inline-flex items-center gap-2">
-                  Crear cuenta gratis <ArrowRight className="w-5 h-5" />
-                </Link>
-                <p className="mt-4 text-xs text-muted-foreground">Sin tarjeta de crédito · Cancela cuando quieras (aunque no tendrás que hacerlo)</p>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Sección CTA Final para Atleta */}
-        <section className="py-20 border-t border-border bg-gradient-to-b from-transparent to-brand-red/5">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <motion.div
-              whileInView={{ opacity: 1, y: 0 }}
-              initial={{ opacity: 0, y: 20 }}
-              transition={{ duration: 0.5 }}
-            >
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold mb-4 sm:mb-6 text-foreground">¿Listo para <span className="text-brand-red">Enfrentarte a Ti Mismo?</span></h2>
-              <p className="text-muted-foreground text-base sm:text-lg mb-8 px-4 sm:px-0">Únete a más de 100+ atletas que superan sus límites cada día.</p>
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Link href="/signup" className="bg-brand-red hover:bg-brand-accent text-white px-10 py-4 rounded-full font-bold text-lg transition-all shadow-[0_0_30px_rgba(220,38,38,0.3)] transform hover:scale-105 active:scale-95">
-                  Comienza tu viaje <ArrowRight className="w-5 h-5 inline ml-2" />
-                </Link>
-                <Link href="/login" className="border border-border hover:border-brand-red/50 px-10 py-4 rounded-full font-bold text-lg transition-all transform hover:scale-105 active:scale-95 text-foreground hover:bg-foreground/5">
-                  Iniciar sesión
-                </Link>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-      </div>
-
-      {/* Secciones de B2B (Visibles en desktop o cuando se elige Business en móvil) */}
-      <div className={(viewMode === 'business' || isDesktop) ? 'block' : 'lg:block hidden'}>
-        <section className="py-32 border-t border-border bg-gradient-to-b from-card/50 to-background relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-brand-red/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2" />
-
-          <div className="max-w-7xl mx-auto px-6 relative z-10">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold mb-4 text-foreground">
-                Para <span className="text-brand-red">Centros, Boxes y Coaches</span>
-              </h2>
-              <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto">
-                La herramienta todo-en-uno que hace crecer tu negocio mientras tus alumnos se obsesionan.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
-              <FeatureCard
-                icon={<Layout className="w-6 h-6 text-brand-red" />}
-                title="Perfiles Red Social"
-                desc="Tu gimnasio no es solo un local, es una comunidad. Sube fotos, vídeos, comparte la bio de tus coaches y consigue seguidores que se conviertan en leads."
-              />
-              <FeatureCard
-                icon={<CalendarCheck className="w-6 h-6 text-brand-red" />}
-                title="Reserva de Pruebas"
-                desc="Automatización total: el alumno solicita una clase de prueba, el sistema agenda el hueco y tú recibes la notificación al instante."
-              />
-              <FeatureCard
-                icon={<UploadCloud className="w-6 h-6 text-brand-red" />}
-                title="Importación Instantánea"
-                desc="Cámbiate en minutos. Importa tu base de datos actual desde un archivo CSV o si ya usas otro software de gestión, sin perder un solo dato."
-              />
-              <FeatureCard
-                icon={<Building2 className="w-6 h-6 text-brand-red" />}
-                title="Gestión Multicentro"
-                desc="¿Tienes varias sedes? Controla el rendimiento, los pagos y los socios de todos tus centros desde un panel de control unificado."
-              />
-              <FeatureCard
-                icon={<Trophy className="w-6 h-6 text-brand-red" />}
-                title="WODs y Eventos"
-                desc="Publica programaciones grupales, organiza competencias internas y gestiona inscripciones directas desde la app de tus alumnos."
-              />
-              <FeatureCard
-                icon={<ShoppingBag className="w-6 h-6 text-brand-red" />}
-                title="Tienda con Stripe"
-                desc="Vende merch, suplementos y bonos de clases extra. Pagos seguros integrados para que nunca dejes de facturar."
-              />
-              <FeatureCard
-                icon={<TrendingUp className="w-6 h-6 text-brand-red" />}
-                title="Embudos de Conversión"
-                desc="Tracking real de leads: desde la clase de prueba hasta el primer mes pagado. Visualiza tu funnel y optimiza tus ventas."
-              />
-            </div>
-
-            <div className="max-w-3xl mx-auto bg-muted/30 backdrop-blur-sm border border-border p-8 rounded-3xl text-center">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-[10px] font-bold mb-4 uppercase tracking-widest">
-                <Zap className="w-3 h-3" /> Ecosistema Profesional
-              </div>
-              <p className="text-lg text-foreground font-medium mb-8">
-                Escala tu negocio con la tecnología de la élite fitness. Gestiona tu comunidad, aumenta tus ingresos y digitaliza tu centro en un solo lugar.
-              </p>
-              <Link
-                href="/center-signup"
-                className="bg-brand-red hover:bg-brand-accent text-white px-10 py-5 rounded-full font-bold text-xl transition-all shadow-[0_0_30px_rgba(220,38,38,0.3)] transform hover:scale-105 inline-flex items-center gap-2 group"
-              >
-                Registra tu centro gratis
-                <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        {/* Sección de Precios para Centros */}
-        <section className="py-32 border-t border-border bg-background">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center mb-12 sm:mb-16">
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold mb-4 sm:mb-6 text-foreground">Precios para <span className="text-brand-red">Centros</span></h2>
-              <p className="text-muted-foreground max-w-2xl mx-auto text-base sm:text-lg px-4 sm:px-0">Escala tu negocio con planes flexibles. Sin permanencia.</p>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-6">
-              <PricingCard
-                name="FREE"
-                price="€0"
-                description="Ideal para empezar"
-                features={["Perfil público", "Hasta 10 clases/semana", "Check-in manual", "Hasta 50 miembros", "Chat básico"]}
-                cta="Empezar Gratis"
-                ctaHref="/center-signup"
-              />
-              <PricingCard
-                name="STARTER"
-                price="€49.99"
-                period="por mes"
-                description="Oferta Lanzamiento: Primeros 50 centros"
-                features={["Todo de Free", "Clases ilimitadas", "Sistema de pruebas", "Tienda básica", "Google Calendar sync"]}
-                cta="Prueba Gratis"
-                ctaHref="/center-signup"
-                featured
-              />
-              <PricingCard
-                name="PRO"
-                price="€99.99"
-                period="por mes"
-                description="Oferta Lanzamiento: Primeros 50 centros"
-                features={["Todo de Starter", "WOD Generator", "Churn Prediction", "Tienda avanzada", "Reportes automáticos"]}
-                cta="Hablar con Ventas"
-                ctaHref="/center-signup"
-              />
-            </div>
-          </div>
-        </section>
-      </div>
-
-      {/* Botón flotante para cambiar de modo en móvil */}
-      {viewMode !== 'choice' && (
-        <motion.button
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          onClick={() => setViewMode('choice')}
-          className="lg:hidden fixed bottom-6 right-6 z-[70] bg-white text-black p-4 rounded-full shadow-2xl border border-white/20 font-bold text-xs uppercase tracking-tighter"
-        >
-          Cambiar Modo
-        </motion.button>
-      )}
-
-      {/* Pie de página */}
-      <footer className="border-t border-border py-12 bg-card">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center gap-2">
-            <Image src="/logo.svg" alt="Logo de Rival" width={24} height={24} className="w-6 h-6 grayscale hover:grayscale-0 transition-all" />
-            <span className="font-heading font-bold text-lg cursor-pointer text-muted-foreground hover:text-foreground">RIVAL</span>
-          </div>
-          <div className="text-sm flex gap-6 text-muted-foreground">
-            <a href="#features" className="hover:text-brand-red transition-colors">Características</a>
-            <Link href="/legal/terms" className="hover:text-brand-red transition-colors">Términos</Link>
-            <Link href="/legal/privacy" className="hover:text-brand-red transition-colors">Privacidad</Link>
-          </div>
-          <div className="text-sm text-muted-foreground">
-            © 2026 Rival Inc. Todos los derechos reservados.
-          </div>
-          <div className="flex gap-4 items-center order-first md:order-last">
-            <a href="https://instagram.com/rivalfit.app" target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-white/5 hover:bg-brand-red text-white transition-all transform hover:scale-110">
-              <Instagram className="w-4 h-4" />
-            </a>
-            <a href="mailto:rival.app.official@gmail.com" className="p-2 rounded-full bg-white/5 hover:bg-brand-red text-white transition-all transform hover:scale-110">
-              <Mail className="w-4 h-4" />
-            </a>
-          </div>
-        </div>
-      </footer>
+            </footer>
+          </motion.main>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
 
-function FeatureCard({ icon, title, desc }: any) {
+function BentoCard({ tag, title, desc, visual, className, theme = 'red' }: any) {
   return (
-    <motion.div
-      whileHover={{ translateY: -8 }}
-      className="p-8 rounded-2xl border border-border bg-card transition-all group cursor-pointer hover:border-brand-red/30 shadow-sm"
-    >
-      <div className="mb-6 p-4 rounded-xl w-fit group-hover:bg-brand-red/10 transition-colors border border-border bg-muted">{icon}</div>
-      <h3 className="text-xl font-bold mb-3 font-heading text-foreground">{title}</h3>
-      <p className="leading-relaxed text-sm text-muted-foreground">{desc}</p>
-    </motion.div>
-  )
-}
-
-function TestimonialCard({ name, role, avatar, text, rating }: any) {
-  return (
-    <motion.div
-      whileHover={{ translateY: -4 }}
-      className="p-8 rounded-2xl border border-border bg-card/50 transition-all backdrop-blur-sm hover:border-brand-red/20"
-    >
-      <div className="flex gap-1 mb-4">
-        {[...Array(rating)].map((_, i) => (
-          <Star key={i} className="w-4 h-4 text-yellow-500 fill-current" />
-        ))}
-      </div>
-      <p className="mb-6 italic text-muted-foreground">"{text}"</p>
-      <div className="flex items-center gap-3">
-        <div className="w-12 h-12 rounded-full overflow-hidden relative">
-          <Image src={avatar} alt={name} fill className="object-cover" />
-        </div>
-        <div>
-          <p className="font-bold text-sm text-foreground">{name}</p>
-          <p className="text-xs text-muted-foreground">{role}</p>
-        </div>
+    <motion.div whileInView={{ opacity: 1, y: 0 }} initial={{ opacity: 0, y: 30 }} viewport={{ once: true }} className={clsx("relative rounded-[2rem] md:rounded-[3.5rem] overflow-hidden border border-border bg-card/40 backdrop-blur-sm group cursor-pointer transition-all hover:-translate-y-2", className, theme === 'orange' ? "hover:border-brand-orange/40" : "hover:border-brand-red/40")}>
+      <div className="absolute inset-0 z-0">{visual}<div className="absolute inset-0 bg-gradient-to-t from-black via-black/10 to-transparent opacity-80" /></div>
+      <div className="absolute inset-x-0 bottom-0 p-8 md:p-12 z-10 w-full">
+        <div className={clsx("inline-flex items-center gap-2 px-3 py-1 rounded-full glass border border-white/10 text-[8px] md:text-[9px] font-black uppercase tracking-widest mb-4", theme === 'orange' ? "text-brand-orange" : "text-brand-red")}><Sparkles className="w-3.5 h-3.5" /> {tag}</div>
+        <h3 className="text-2xl md:text-3xl font-heading font-black text-foreground italic uppercase tracking-tighter mb-2 leading-none">{title}</h3>
+        <p className="text-muted-foreground text-[10px] md:text-sm font-bold uppercase tracking-tight">{desc}</p>
       </div>
     </motion.div>
-  )
-}
-
-function PricingCard({ name, price, period, description, features, cta, ctaHref, featured }: any) {
-  return (
-    <motion.div
-      whileHover={{ translateY: -8 }}
-      className={`rounded-2xl p-6 sm:p-8 transition-all border ${featured
-        ? "bg-gradient-to-b from-brand-red/20 to-card border-brand-red/50 ring-2 ring-brand-red/20 relative"
-        : "bg-card border-border hover:border-brand-red/30"
-        }`}
-    >
-      {featured && (
-        <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10">
-          <span className="bg-brand-red text-white px-4 py-1 rounded-full text-[10px] sm:text-xs font-bold uppercase tracking-wider">Más Popular</span>
-        </div>
-      )}
-
-      <h3 className="text-2xl font-heading font-bold mb-2 text-foreground">{name}</h3>
-      <p className="text-sm mb-4 text-muted-foreground">{description}</p>
-
-      <div className="mb-6">
-        <span className="text-4xl font-heading font-bold text-foreground">{price}</span>
-        {period && <span className="ml-2 text-muted-foreground">/{period}</span>}
-      </div>
-
-      <ul className="space-y-3 mb-8">
-        {features.map((feature: string, i: number) => (
-          <li key={i} className="flex items-center gap-3 text-sm text-muted-foreground">
-            <Check className="w-4 h-4 text-brand-red flex-shrink-0" />
-            {feature}
-          </li>
-        ))}
-      </ul>
-
-      <Link
-        href={ctaHref}
-        className={`w-full py-3 rounded-xl font-bold text-center transition-all transform hover:scale-105 active:scale-95 ${featured
-          ? "bg-brand-red text-white hover:bg-brand-accent shadow-[0_0_20px_rgba(220,38,38,0.3)]"
-          : "border border-border text-foreground hover:bg-muted"
-          }`}
-      >
-        {cta}
-      </Link>
-    </motion.div>
-  )
+  );
 }
