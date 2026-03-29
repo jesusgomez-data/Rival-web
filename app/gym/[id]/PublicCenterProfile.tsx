@@ -606,16 +606,22 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                     {org.city && <span className={`flex items-center gap-1.5 transition-colors cursor-pointer ${theme === 'dark' ? 'hover:text-white' : 'hover:text-black'}`}><MapPin className="w-4 h-4 text-brand-red" /> {org.city}, {org.country}</span>}
                                     {org.website && (
                                         <a
-                                            href={org.website.startsWith('http') ? org.website : (org.website.startsWith('@') ? `https://instagram.com/${org.website.substring(1)}` : `https://${org.website}`)}
+                                            href={org.website.startsWith('http') ? org.website : `https://${org.website}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="flex items-center gap-1.5 hover:text-brand-red transition-colors"
+                                            className={`flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-black'}`}
                                         >
                                             <Globe className="w-4 h-4" />
-                                            {(() => {
-                                                try { return new URL(org.website).hostname; }
-                                                catch { return org.website; }
-                                            })()}
+                                            <span>
+                                                {(() => {
+                                                    try {
+                                                        const urlStr = org.website.startsWith('http') ? org.website : `https://${org.website}`;
+                                                        return new URL(urlStr).hostname;
+                                                    } catch (e) {
+                                                        return org.website;
+                                                    }
+                                                })()}
+                                            </span>
                                         </a>
                                     )}
                                 </div>
@@ -1855,7 +1861,9 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                     <Trophy className="w-6 h-6" />
                                     Leaderboard
                                 </h3>
-                                <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em]">{isMounted ? new Date(scheduleDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '...'}</p>
+                                <p className="text-gray-500 text-[10px] uppercase font-bold tracking-[0.2em]">
+                                    {isMounted && scheduleDate ? new Date(scheduleDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '...'}
+                                </p>
                             </div>
 
                             <div className="flex-1 overflow-y-auto custom-scrollbar space-y-8 pr-2">
