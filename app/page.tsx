@@ -109,7 +109,7 @@ export default function LandingPage() {
                         ))}
                     </div>
                     <div className="italic flex items-center gap-2">
-                        <Globe className="w-3 h-3" /> COMUNIDAD_GLOBAL
+                        <Globe className="w-3 h-3" /> COMUNIDAD GLOBAL
                     </div>
                 </div>
             </footer>
