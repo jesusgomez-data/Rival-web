@@ -523,12 +523,35 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
 
                 // --- Pre-load images for this export session to avoid 'new Image()' every frame ---
                 const loadedImages = await Promise.all(imageOverlays.map(img => {
-                    return new Promise<HTMLImageElement>((resolve) => {
-                        const el = new Image(); el.crossOrigin = 'anonymous'; el.onload = () => resolve(el); el.src = img.src
+                    return new Promise<HTMLImageElement | null>((resolve) => {
+                        const el = new Image(); el.crossOrigin = 'anonymous'; 
+                        el.onload = () => resolve(el); 
+                        el.onerror = () => { console.warn("Failed to load overlay image:", img.src); resolve(null); }
+                        el.src = img.src
+                        // Safety timeout 5s
+                        setTimeout(() => resolve(null), 5000)
                     })
                 }))
 
+                // --- Pre-load tag avatars ---
+                const tagAvatars = await Promise.all(tagOverlays.map(tag => {
+                    if (!tag.avatarUrl) return Promise.resolve(null)
+                    return new Promise<HTMLImageElement | null>((resolve) => {
+                        const el = new Image(); el.crossOrigin = 'anonymous';
+                        el.onload = () => resolve(el);
+                        el.onerror = () => resolve(null);
+                        el.src = tag.avatarUrl!
+                        setTimeout(() => resolve(null), 5000)
+                    })
+                }))
+
+                // --- Optimized Render Loop ---
+                let lastFrameTime = -1;
+                let frameCount = 0;
+                
                 const renderLoop = () => {
+                    if (!isExportingActive || video.paused) return; // Prevent drawing if stopped
+                    
                     if (video.currentTime >= trimRange.end || video.ended) {
                         clearTimeout(timeoutId)
                         if (recorder.state === 'recording') recorder.stop()
@@ -536,60 +559,149 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                         if (musicRef.current) musicRef.current.pause()
                         return
                     }
+
+                    // Only draw if the video has actually progressed to a new frame
+                    // This prevents redundant expensive draws and "jumps"
+                    if (video.currentTime === lastFrameTime) {
+                        if (recorder.state === 'recording') {
+                            if ('requestVideoFrameCallback' in video) {
+                                (video as any).requestVideoFrameCallback(renderLoop);
+                            } else {
+                                requestAnimationFrame(renderLoop);
+                            }
+                        }
+                        return;
+                    }
+                    lastFrameTime = video.currentTime;
+
                     setSaveProgress(Math.min(99, Math.round(((video.currentTime - trimRange.start) / durationToRecord) * 100)))
-                    ctx.filter = computedFilter
+                    
+                    // Optimization: Only apply filter if it's not 'none'
+                    if (computedFilter !== 'none') {
+                        ctx.filter = computedFilter
+                    }
+                    
                     ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
-                    ctx.filter = 'none'
+                    
+                    if (computedFilter !== 'none') {
+                        ctx.filter = 'none'
+                    }
+
                     if (adjustments.vignette > 0) {
+                        // Reuse or cache gradient if possible, but for now ensure it's centered
                         const g = ctx.createRadialGradient(canvas.width/2, canvas.height/2, canvas.height*0.3, canvas.width/2, canvas.height/2, canvas.height*0.9)
                         g.addColorStop(0, 'rgba(0,0,0,0)')
                         g.addColorStop(1, `rgba(0,0,0,${adjustments.vignette/100})`)
                         ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height)
                     }
-                    imageOverlays.forEach((img, i) => {
-                        const el = loadedImages[i]
-                        if (el) ctx.drawImage(el, (img.x/100)*canvas.width - img.width/2, (img.y/100)*canvas.height - img.height/2, img.width, img.height)
-                    })
-                    stickerOverlays.forEach(so => {
-                        ctx.save(); ctx.translate((so.x/100)*canvas.width, (so.y/100)*canvas.height)
-                        ctx.font = `${so.size*(canvas.height/800)}px Arial`; ctx.textAlign = 'center'
-                        ctx.fillText(so.emoji, 0, 0); ctx.restore()
-                    })
-                    textOverlays.forEach(to => {
-                        ctx.save(); ctx.translate((to.x/100)*canvas.width, (to.y/100)*canvas.height)
-                        if (to.style === 'neon') { ctx.shadowColor = to.color; ctx.shadowBlur = 30*(canvas.height/800) }
-                        ctx.font = `${to.style === 'script' ? 'normal' : 'italic'} 950 ${to.fontSize*(canvas.height/800)}px ${to.fontFamily}`
-                        ctx.textAlign = 'center'; ctx.fillStyle = to.color
-                        ctx.fillText(to.style === 'script' ? to.text : to.text.toUpperCase(), 0, 0); ctx.restore()
-                    })
-                    tagOverlays.forEach(tag => {
-                        const scale = canvas.height / 800
-                        const cx = (tag.x/100)*canvas.width
-                        const cy = (tag.y/100)*canvas.height
-                        const text = `@${tag.username}`
-                        const fs = 14 * scale
-                        ctx.font = `800 ${fs}px Inter, sans-serif`
-                        const tw = ctx.measureText(text).width
-                        const pad = 10 * scale
-                        const bh = (fs + pad * 2)
-                        const bw = tw + pad * 2 + (tag.avatarUrl ? bh + 4*scale : 0)
-                        ctx.save()
-                        ctx.fillStyle = 'rgba(0,0,0,0.65)'
-                        ctx.beginPath()
-                        if (ctx.roundRect) {
-                            ctx.roundRect(cx - bw/2, cy - bh/2, bw, bh, bh/2)
+
+                    // --- Overlay Rendering ---
+                    if (imageOverlays.length > 0) {
+                        imageOverlays.forEach((img, i) => {
+                            const el = loadedImages[i]
+                            if (el) ctx.drawImage(el, (img.x/100)*canvas.width - img.width/2, (img.y/100)*canvas.height - img.height/2, img.width, img.height)
+                        })
+                    }
+
+                    if (stickerOverlays.length > 0) {
+                        const stickerScale = canvas.height / 800;
+                        stickerOverlays.forEach(so => {
+                            ctx.save();
+                            ctx.translate((so.x/100)*canvas.width, (so.y/100)*canvas.height)
+                            ctx.font = `${so.size * stickerScale}px Arial`;
+                            ctx.textAlign = 'center'
+                            ctx.fillText(so.emoji, 0, 0); 
+                            ctx.restore()
+                        })
+                    }
+
+                    if (textOverlays.length > 0) {
+                        const textScale = canvas.height / 800;
+                        textOverlays.forEach(to => {
+                            ctx.save();
+                            ctx.translate((to.x/100)*canvas.width, (to.y/100)*canvas.height)
+                            if (to.style === 'neon') { 
+                                ctx.shadowColor = to.color; 
+                                ctx.shadowBlur = 25 * textScale; // Slightly reduced blur for performance
+                            }
+                            ctx.font = `${to.style === 'script' ? 'normal' : 'italic'} 950 ${to.fontSize * textScale}px ${to.fontFamily}`
+                            ctx.textAlign = 'center'; 
+                            ctx.fillStyle = to.color
+                            ctx.fillText(to.style === 'script' ? to.text : to.text.toUpperCase(), 0, 0); 
+                            ctx.restore()
+                        })
+                    }
+
+                    if (tagOverlays.length > 0) {
+                        const tagScale = canvas.height / 800
+                        tagOverlays.forEach((tag, idx) => {
+                            const cx = (tag.x/100)*canvas.width
+                            const cy = (tag.y/100)*canvas.height
+                            const text = `@${tag.username}`
+                            const fs = 14 * tagScale
+                            ctx.font = `800 ${fs}px Inter, sans-serif`
+                            const tw = ctx.measureText(text).width
+                            const pad = 10 * tagScale
+                            const bh = (fs + pad * 2)
+                            const avatar = tagAvatars[idx]
+                            const bw = tw + pad * 2 + (avatar ? bh + 4*tagScale : 0)
+                            
+                            ctx.save()
+                            ctx.fillStyle = 'rgba(0,0,0,0.65)'
+                            ctx.beginPath()
+                            if (ctx.roundRect) {
+                                ctx.roundRect(cx - bw/2, cy - bh/2, bw, bh, bh/2)
+                            } else {
+                                const r = bh/2;
+                                const tx = cx - bw/2, ty = cy - bh/2;
+                                ctx.moveTo(tx + r, ty);
+                                ctx.lineTo(tx + bw - r, ty);
+                                ctx.quadraticCurveTo(tx + bw, ty, tx + bw, ty + r);
+                                ctx.lineTo(tx + bw, ty + bh - r);
+                                ctx.quadraticCurveTo(tx + bw, ty + bh, tx + bw - r, ty + bh);
+                                ctx.lineTo(tx + r, ty + bh);
+                                ctx.quadraticCurveTo(tx, ty + bh, tx, ty + bh - r);
+                                ctx.lineTo(tx, ty + r);
+                                ctx.quadraticCurveTo(tx, ty, tx + r, ty);
+                            }
+                            ctx.fill()
+
+                            if (avatar) {
+                                const size = bh - 4*tagScale
+                                ctx.save()
+                                ctx.beginPath()
+                                ctx.arc(cx - bw/2 + bh/2, cy, size/2, 0, Math.PI * 2)
+                                ctx.clip()
+                                ctx.drawImage(avatar, cx - bw/2 + (bh - size)/2, cy - size/2, size, size)
+                                ctx.restore()
+                            }
+
+                            ctx.fillStyle = '#ffffff'
+                            ctx.textAlign = 'left'
+                            const textX = cx - bw/2 + (avatar ? bh + pad/2 : pad)
+                            ctx.fillText(text, textX, cy + fs*0.35)
+                            ctx.restore()
+                        })
+                    }
+
+                    frameCount++;
+                    if (recorder.state === 'recording') {
+                        // Use modern API if available for sub-frame precision
+                        if ('requestVideoFrameCallback' in video) {
+                            (video as any).requestVideoFrameCallback(renderLoop);
                         } else {
-                            ctx.rect(cx - bw/2, cy - bh/2, bw, bh)
+                            requestAnimationFrame(renderLoop);
                         }
-                        ctx.fill()
-                        ctx.fillStyle = '#ffffff'
-                        ctx.textAlign = 'right'
-                        ctx.fillText(text, cx + bw/2 - pad, cy + fs*0.35)
-                        ctx.restore()
-                    })
-                    if (recorder.state === 'recording') requestAnimationFrame(renderLoop)
+                    }
                 }
-            renderLoop()
+                
+                // Start the loop
+                if ('requestVideoFrameCallback' in video) {
+                    (video as any).requestVideoFrameCallback(renderLoop);
+                } else {
+                    requestAnimationFrame(renderLoop);
+                }
+
         } catch (err) {
             console.error('Video export failed, uploading original:', err)
             onSave(videoFile, durationToRecord)

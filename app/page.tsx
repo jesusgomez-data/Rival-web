@@ -22,6 +22,27 @@ export default function LandingPage() {
     const { language, setLanguage } = useLanguage();
     const t = translations[language];
 
+    // Scroll state for hiding navbar
+    const [isVisible, setIsVisible] = useState(true);
+    const [lastScrollY, setLastScrollY] = useState(0);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const currentScrollY = window.scrollY;
+            if (currentScrollY < 50) {
+                setIsVisible(true);
+            } else if (currentScrollY > lastScrollY) {
+                setIsVisible(false);
+            } else {
+                setIsVisible(true);
+            }
+            setLastScrollY(currentScrollY);
+        };
+
+        window.addEventListener("scroll", handleScroll, { passive: true });
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, [lastScrollY]);
+
     useEffect(() => {
         setIsMounted(true);
     }, []);
@@ -37,7 +58,12 @@ export default function LandingPage() {
             <div className="fixed inset-0 z-0 scanline opacity-[0.03] pointer-events-none" />
 
             {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 p-4 md:px-12 md:py-8 flex justify-between items-center bg-transparent backdrop-blur-md border-b border-white/[0.03]">
+            <motion.nav 
+                initial={{ y: 0 }}
+                animate={{ y: isVisible ? 0 : -100 }}
+                transition={{ duration: 0.3 }}
+                className="fixed top-0 left-0 right-0 z-50 p-4 md:px-12 md:py-8 flex justify-between items-center bg-transparent backdrop-blur-md border-b border-white/[0.03]"
+            >
                 <div className="flex items-center gap-12">
                     <button
                         onClick={() => setViewMode('choice')}
@@ -88,7 +114,7 @@ export default function LandingPage() {
                         </div>
                     </Link>
                 </div>
-            </nav>
+            </motion.nav>
 
             <AnimatePresence mode="wait">
                 {viewMode === 'choice' && <ChoiceView key="choice" onSelect={setViewMode} />}
@@ -104,9 +130,10 @@ export default function LandingPage() {
                         <span className="italic">RIVAL FIT © 2026</span>
                     </div>
                     <div className="flex gap-10">
-                        {['LEGAL', 'PRIVACIDAD', 'SOPORTE', 'TERMINOS'].map(l => (
-                            <Link key={l} href="#" className="text-white/30 hover:text-white transition-all">{l}</Link>
-                        ))}
+                        <Link href="/legal/notice" className="text-white/30 hover:text-white transition-all">LEGAL</Link>
+                        <Link href="/legal/privacy" className="text-white/30 hover:text-white transition-all">PRIVACIDAD</Link>
+                        <Link href="/legal/support" className="text-white/30 hover:text-white transition-all">SOPORTE</Link>
+                        <Link href="/legal/terms" className="text-white/30 hover:text-white transition-all">TERMINOS</Link>
                     </div>
                     <div className="italic flex items-center gap-2">
                         <Globe className="w-3 h-3" /> COMUNIDAD GLOBAL
@@ -153,10 +180,10 @@ function ChoiceView({ onSelect }: { onSelect: (mode: 'athlete' | 'business') => 
                     <h2 className="text-4xl lg:text-[100px] font-black italic uppercase tracking-tighter leading-[0.85] text-white">
                         SOY <br /><span className="text-brand-red">ATLETA.</span>
                     </h2>
-                    <p className="max-w-xs lg:max-w-md text-white/50 font-bold uppercase tracking-widest text-[10px] lg:text-xs italic leading-relaxed">
+                    <p className="max-w-xs lg:max-w-md text-white/70 font-medium font-inter tracking-wide text-sm lg:text-base leading-relaxed">
                         Registra tus entrenamientos, compite en leaderboards globales y conecta con tu comunidad.
                     </p>
-                    <div className="flex items-center gap-4 text-white font-black uppercase tracking-[0.3em] text-[10px] pt-4 group-hover:translate-x-4 transition-transform">
+                    <div className="flex items-center gap-4 text-white font-black uppercase tracking-[0.3em] text-[10px] pt-4 group-hover:translate-x-4 transition-transform font-outfit">
                         <span className="w-12 h-px bg-brand-red" /> ACCEDER A MI PERFIL
                     </div>
                 </div>
@@ -185,10 +212,10 @@ function ChoiceView({ onSelect }: { onSelect: (mode: 'athlete' | 'business') => 
                     <h2 className="text-4xl lg:text-[100px] font-black italic uppercase tracking-tighter leading-[0.85] text-white">
                         SOY <br /><span className="text-brand-orange">CENTRO.</span>
                     </h2>
-                    <p className="max-w-xs lg:max-w-md text-white/50 font-bold uppercase tracking-widest text-[10px] lg:text-xs italic leading-relaxed">
+                    <p className="max-w-xs lg:max-w-md text-white/70 font-medium font-inter tracking-wide text-sm lg:text-base leading-relaxed">
                         Gestiona tu box, monitorea métricas en tiempo real y potencia tu marca.
                     </p>
-                    <div className="flex items-center gap-4 text-white font-black uppercase tracking-[0.3em] text-[10px] pt-4 group-hover:-translate-x-4 transition-transform">
+                    <div className="flex items-center gap-4 text-white font-black uppercase tracking-[0.3em] text-[10px] pt-4 group-hover:-translate-x-4 transition-transform font-outfit">
                         GESTIONAR MI CENTRO <span className="w-12 h-px bg-brand-orange" />
                     </div>
                 </div>
@@ -219,11 +246,11 @@ function AthleteLanding({ onGoBack, onOpenDemo }: { onGoBack: () => void, onOpen
                             <Flame className="text-brand-red w-5 h-5 animate-pulse" />
                             <span className="text-brand-red font-black uppercase tracking-[0.4em] text-[10px]">SUPERA TU AYER</span>
                         </div>
-                        <h1 className="text-6xl lg:text-[140px] font-black italic uppercase tracking-tighter leading-[0.8] text-white">
+                        <h1 className="text-6xl lg:text-[140px] font-black italic uppercase tracking-tighter leading-[0.8] text-white font-outfit">
                             TU ARENA. <br /><span className="text-brand-red text-neon-red">TU RIVAL.</span>
                         </h1>
                     </div>
-                    <p className="max-w-xl text-lg lg:text-xl text-white/50 font-bold uppercase tracking-tight leading-relaxed italic">
+                    <p className="max-w-xl text-lg lg:text-2xl text-white/70 font-medium font-inter tracking-tight leading-relaxed">
                         La red social definitiva para atletas. Registra tus WODs, compite en los leaderboards globales y conecta con centros de élite.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 lg:gap-6">
@@ -632,11 +659,11 @@ function BusinessLanding({ onGoBack, onOpenDemo }: { onGoBack: () => void, onOpe
                             <Rocket className="text-brand-orange w-4 h-4 group-hover:rotate-12 transition-transform" />
                             <span className="text-brand-orange font-black uppercase tracking-[0.5em] text-[10px]">REVOLUCIÓN_EN_TU_NEGOCIO</span>
                         </div>
-                        <h1 className="text-6xl lg:text-[140px] font-black italic uppercase tracking-tighter leading-[0.8] text-white">
+                        <h1 className="text-6xl lg:text-[140px] font-black italic uppercase tracking-tighter leading-[0.8] text-white font-outfit">
                             POTENCIA <br /><span className="text-brand-orange shadow-glow-orange">TU BOX.</span>
                         </h1>
                     </div>
-                    <p className="max-w-xl text-lg lg:text-xl text-white/40 font-bold uppercase tracking-tight leading-relaxed italic">
+                    <p className="max-w-xl text-lg lg:text-2xl text-white/70 font-medium font-inter tracking-tight leading-relaxed">
                         La herramienta definitiva para la gestión de centros deportivos. CRM integrado, gestión de cuotas automática y visibilidad global para atraer más atletas.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 lg:gap-6">

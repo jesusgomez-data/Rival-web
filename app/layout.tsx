@@ -16,6 +16,31 @@ const outfit = Outfit({
   subsets: ["latin"],
 });
 
+import { Bungee, Montserrat, Anton, Sacramento } from "next/font/google";
+
+const bungee = Bungee({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-bungee",
+});
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-montserrat",
+});
+
+const anton = Anton({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-anton",
+});
+
+const sacramento = Sacramento({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-sacramento",
+});
+
 
 export const viewport = {
   width: "device-width",
@@ -66,7 +91,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${outfit.variable} antialiased bg-background text-foreground transition-colors duration-300`}
+        className={`${inter.variable} ${outfit.variable} ${bungee.variable} ${montserrat.variable} ${anton.variable} ${sacramento.variable} antialiased bg-background text-foreground transition-colors duration-300`}
         suppressHydrationWarning
       >
         <LanguageProvider>
