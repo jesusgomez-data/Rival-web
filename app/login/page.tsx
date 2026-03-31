@@ -20,9 +20,11 @@ export default function LoginPage() {
 
     // If user already has an active session, redirect to dashboard immediately
     useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session) router.replace('/dashboard');
-        });
+        async function checkSession() {
+            const { data } = await supabase.auth.getSession();
+            if (data.session) router.replace('/dashboard');
+        }
+        checkSession();
     }, []);
 
     const handleOAuthLogin = async (provider: 'google' | 'apple') => {

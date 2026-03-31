@@ -43,7 +43,7 @@ export default function SessionPage() {
     );
 }
 
-type SportMode = 'gym' | 'running' | 'cross_training' | 'hybrid' | 'calisthenics' | 'ocr' | 'other' | null;
+type SportMode = 'gym' | 'running' | 'cross_training' | 'hybrid' | 'calisthenics' | 'ocr' | 'other' | 'cycling' | 'swimming' | null;
 
 function SessionContent() {
     const [mounted, setMounted] = useState(false);
@@ -1320,7 +1320,7 @@ function SessionContent() {
                         blocks={blocks}
                         workoutTitle={workoutTitle}
                         sportType={sportMode === 'hybrid' ? 'Hybrid Training' : sportMode === 'ocr' ? 'OCR' : sportMode === 'running' ? 'Running' : sportMode === 'gym' ? 'Gym' : 'Cross Training'}
-                        category={sportMode === 'running' ? 'RUNNING' : sportMode === 'cycling' ? 'CYCLING' : sportMode === 'swimming' ? 'SWIMMING' : undefined}
+                        category={(sportMode as string) === 'running' ? 'RUNNING' : (sportMode as string) === 'cycling' ? 'CYCLING' : (sportMode as string) === 'swimming' ? 'SWIMMING' : undefined}
                         runMetrics={sportMode === 'running' ? {
                             distance: runDistance > 0 ? `${(runDistance / 1000).toFixed(2)} KM` : undefined,
                             pace: (() => {

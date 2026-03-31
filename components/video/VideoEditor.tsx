@@ -483,13 +483,6 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
             const chunks: Blob[] = []
             recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data) }
             
-            recorder.onstop = () => {
-                const blob = new Blob(chunks, { type: supportedMime })
-                const ext  = supportedMime.includes('mp4') ? 'mp4' : 'webm'
-                onSave(new File([blob], `rival_video.${ext}`, { type: supportedMime }), durationToRecord)
-                setIsSaving(false)
-            }
-            
             recorder.onerror = () => {
                 onSave(videoFile, durationToRecord)
                 setIsSaving(false)
@@ -548,7 +541,16 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                 // --- Optimized Render Loop ---
                 let lastFrameTime = -1;
                 let frameCount = 0;
-                
+                let isExportingActive = true;
+
+                recorder.onstop = () => {
+                    isExportingActive = false;
+                    const blob = new Blob(chunks, { type: supportedMime })
+                    const ext  = supportedMime.includes('mp4') ? 'mp4' : 'webm'
+                    onSave(new File([blob], `rival_video.${ext}`, { type: supportedMime }), durationToRecord)
+                    setIsSaving(false)
+                }
+
                 const renderLoop = () => {
                     if (!isExportingActive || video.paused) return; // Prevent drawing if stopped
                     
