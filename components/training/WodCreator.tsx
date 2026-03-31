@@ -155,8 +155,12 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
 
     useEffect(() => {
         const loadExercises = async () => {
-            const data = await getExercises('cross_training');
-            setCatalog(data || []);
+            try {
+                const data = await getExercises('all');
+                setCatalog(data || []);
+            } catch (e) {
+                console.error('Error loading exercises catalog:', e);
+            }
         };
         loadExercises();
     }, []);
@@ -277,7 +281,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
         setIsSavingNew(true);
         const res = await addNewExercise({ name });
         if (res.success) {
-            const data = await getExercises('cross_training');
+            const data = await getExercises('all');
             setCatalog(data || []);
         }
         setIsSavingNew(false);

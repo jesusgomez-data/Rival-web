@@ -695,25 +695,35 @@ export async function getExercises(sport: string | null | undefined = 'gym') {
         { name: 'Chin Up', muscle_group: 'Back', video_url: 'https://www.youtube.com/watch?v=brhRXlOhsAM' },
     ];
 
-    let targetList = [];
-    if (sport === 'ocr') targetList = ocrExercises;
-    else if (sport === 'hybrid') targetList = hybridExercises;
-    else if (sport === 'cross_training') targetList = crossTrainingExercises;
-    else if (sport === 'calisthenics') targetList = calisthenicsExercises;
-    else targetList = gymExercises;
+    // 'all' mode: merge every static list for the WOD creator search
+    const allStaticLists = sport === 'all'
+        ? [...gymExercises, ...crossTrainingExercises, ...calisthenicsExercises, ...ocrExercises, ...hybridExercises]
+        : sport === 'ocr' ? ocrExercises
+        : sport === 'hybrid' ? hybridExercises
+        : sport === 'cross_training' ? crossTrainingExercises
+        : sport === 'calisthenics' ? calisthenicsExercises
+        : gymExercises;
+
+    // Deduplicate static list by name
+    const seenNames = new Set<string>();
+    const targetList = allStaticLists.filter(ex => {
+        const key = ex.name.toLowerCase();
+        if (seenNames.has(key)) return false;
+        seenNames.add(key);
+        return true;
+    });
 
     if (error) {
         console.error('Error fetching exercises:', error)
         return targetList.map((dummy, index) => ({ id: `static-${sport}-${index}`, ...dummy }));
     }
 
-    // Merge and Deduplicate
     // Merge and Deduplicate with Fallback for video_url
     const dbData = data || [];
-    const dbNames = new Set(dbData.map(e => e.name.toLowerCase()));
+    const dbNames = new Set(dbData.map((e: any) => e.name.toLowerCase()));
 
     // 1. Process DB Data, enriching with video_url if missing in DB but present in Static
-    const enrichedDbData = dbData.map(dbEx => {
+    const enrichedDbData = dbData.map((dbEx: any) => {
         const staticEx = targetList.find(t => t.name.toLowerCase() === dbEx.name.toLowerCase());
         return {
             ...dbEx,
@@ -729,7 +739,7 @@ export async function getExercises(sport: string | null | undefined = 'gym') {
         }
     });
 
-    return merged.sort((a, b) => a.name.localeCompare(b.name));
+    return merged.sort((a: any, b: any) => a.name.localeCompare(b.name));
 }
 
 // 8. Get Recent PRs (Unified)
