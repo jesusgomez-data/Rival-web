@@ -57,7 +57,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
 
     const stats = {
         wods: workouts.length,
-        prs: (posts || []).filter(p => p.media_type === 'pr').length,
+        prs: ((posts || []).filter(p => p.media_type === 'pr').length) + (profile.featured_rms?.length || 0),
         retos: combatStats.total,
         followers: profile.followers_count
     };
@@ -272,6 +272,57 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                     </p>
                                 </div>
 
+                                {/* Competition Medal Shelf */}
+                                {!profile.is_official && medals && medals.length > 0 && (
+                                    <div className="mb-10 bg-brand-gray/30 border border-white/5 p-6 rounded-[32px] backdrop-blur-xl">
+                                        <MedalShelf medals={medals} />
+                                    </div>
+                                )}
+
+                                {/* Badges Section */}
+                                {!profile.is_official && badges.length > 0 && (
+                                    <div className="mb-10 animate-fade-in">
+                                        <div className="flex items-center justify-between mb-6 ml-4">
+                                            <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.4em] flex items-center gap-2">
+                                                <Award className="w-4 h-4 text-brand-red" /> Medallas y Logros
+                                            </h3>
+                                            <span className="text-[10px] font-black text-brand-red bg-brand-red/10 px-3 py-1 rounded-full border border-brand-red/20 shadow-glow uppercase tracking-widest leading-none">
+                                                {badges.length} Desbloqueados
+                                            </span>
+                                        </div>
+                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-2">
+                                            {badges.map((ub: any) => (
+                                                <div key={ub.id} className="bg-brand-gray/30 border border-white/5 p-4 rounded-3xl backdrop-blur-xl relative overflow-hidden group hover:border-brand-red/30 transition-all duration-500 hover:scale-105">
+                                                    <div className="absolute top-0 right-0 w-16 h-16 bg-brand-red/5 blur-2xl -mr-8 -mt-8 group-hover:bg-brand-red/10 transition-colors" />
+                                                    <div className="w-12 h-12 bg-black/40 rounded-2xl flex items-center justify-center mb-3 border border-white/5 group-hover:border-brand-red/50 group-hover:shadow-glow transition-all">
+                                                        {ub.badges.icon_name === 'Sunrise' && <Sunrise className="w-6 h-6 text-brand-red" />}
+                                                        {ub.badges.icon_name === 'Flame' && <Flame className="w-6 h-6 text-orange-500" />}
+                                                        {ub.badges.icon_name === 'Award' && <Award className="w-6 h-6 text-yellow-500" />}
+                                                        {ub.badges.icon_name === 'MessageSquare' && <MessageSquare className="w-6 h-6 text-blue-500" />}
+                                                        {ub.badges.icon_name === 'Trophy' && <Trophy className="w-6 h-6 text-brand-red" />}
+                                                    </div>
+                                                    <h4 className="text-[10px] font-black text-white uppercase tracking-wider mb-1 leading-tight">{ub.badges.name}</h4>
+                                                    <p className="text-[8px] text-gray-400 font-bold uppercase tracking-tight line-clamp-2 leading-tight">{ub.badges.description}</p>
+                                                    <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between">
+                                                        <span className="text-[7px] text-brand-red font-black tracking-widest">+{ub.badges.xp_reward} XP</span>
+                                                        <span className="text-[7px] text-gray-500 font-bold uppercase tracking-widest">{new Date(ub.awarded_at).toLocaleDateString()}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Trophy Cabinet */}
+                                {!profile.is_official && (
+                                    <div className="mb-10">
+                                        <h3 className="font-heading font-black text-white italic tracking-wider mb-6 flex items-center gap-3 ml-4">
+                                            <Trophy className="w-5 h-5 text-yellow-500" /> VITRINA DE TROFEOS
+                                        </h3>
+                                        <TrophyCabinet combatStats={combatStats} profileLevel={profile.level} />
+                                    </div>
+                                )}
+
                                 {/* Feed de Actividad */}
                                 <div className="pt-0 md:pt-8">
                                     <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.4em] mb-6 ml-4 flex items-center gap-2">
@@ -343,7 +394,29 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                     </div>
                                 </div>
                             )}
-                            <ActivityHeatmap workouts={workouts} userId={profile.id} />
+                             <ActivityHeatmap workouts={workouts} userId={profile.id} />
+                            
+                            {/* Featured RMs / PRs Section */}
+                            {profile.featured_rms && profile.featured_rms.length > 0 && (
+                                <div className="bg-brand-gray/30 border border-white/10 rounded-[40px] p-8 backdrop-blur-md animate-fade-in">
+                                    <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+                                        <Dumbbell className="w-4 h-4 text-brand-red" /> RÉCORDS PERSONALES (PRs)
+                                    </h3>
+                                    <div className="space-y-4">
+                                        {profile.featured_rms.map((rm: any) => (
+                                            <div key={rm.id} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors rounded-lg px-2 -mx-2 group">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 bg-brand-red/10 rounded-lg flex items-center justify-center text-brand-red shrink-0 group-hover:scale-110 transition-transform">
+                                                        <Dumbbell className="w-4 h-4" />
+                                                    </div>
+                                                    <span className="text-[11px] md:text-xs font-black uppercase text-gray-300 tracking-wide">{rm.exercise}</span>
+                                                </div>
+                                                <span className="text-sm md:text-base font-black text-white italic tracking-tighter">{rm.weight} {rm.unit}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </>
                     )}
                 </div>
