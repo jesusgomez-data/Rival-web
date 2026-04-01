@@ -44,6 +44,7 @@ import SupportModal from "./gyms/SupportModal";
 import AnalyticsTracker from "./admin/AnalyticsTracker";
 import { playNotificationSound } from "@/app/utils/audio";
 import { VideoProvider } from "./VideoContext";
+import OnboardingTour from "@/components/OnboardingTour";
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -578,6 +579,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
 
             <PendingReviewPrompt />
+            <OnboardingTour />
         </div>
     );
 }

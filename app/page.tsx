@@ -551,6 +551,51 @@ function AthleteLanding({ onGoBack, onOpenDemo }: { onGoBack: () => void, onOpen
                     </div>
                 </div>
             </section>
+
+            {/* Athlete Testimonials */}
+            <section className="py-24 border-t border-white/5 bg-[#080808]">
+                <div className="container mx-auto px-6">
+                    <div className="text-center mb-16 space-y-4">
+                        <span className="text-brand-red font-black uppercase tracking-[0.4em] text-[10px]">VOCES DE LA ARENA</span>
+                        <h2 className="text-4xl lg:text-5xl font-black italic uppercase tracking-tighter text-white font-outfit">TESTIMONIALES <span className="text-brand-red">DE ÉLITE.</span></h2>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {[
+                            {
+                                name: "MARCUS TORRES",
+                                role: "ATLETA SEMIFINALIST",
+                                quote: "Rival Fit cambió como comparto mi progreso. El editor de video con overlays de KG es lo que siempre necesité para Instagram.",
+                                img: "https://images.unsplash.com/photo-1541534741688-6078c6bfb5c5?q=80&w=200&h=200&auto=format&fit=crop"
+                            },
+                            {
+                                name: "ELENA ROVIRA",
+                                role: "COACH PRO GENESIS",
+                                quote: "La competencia en los leaderboards globales de Rival mantiene a mis atletas motivados incluso en los días de descarga.",
+                                img: "https://images.unsplash.com/photo-1548690312-e3b507d17a47?q=80&w=200&h=200&auto=format&fit=crop"
+                            },
+                            {
+                                name: "DAVID 'TANK' MORA",
+                                role: "MASTER 40+ RIVAL",
+                                quote: "No es solo una app, es una comunidad de gente que se toma esto en serio. Si no registras tu WOD, no existes.",
+                                img: "https://images.unsplash.com/photo-1594381898411-846e7d193883?q=80&w=200&h=200&auto=format&fit=crop"
+                            }
+                        ].map((t, i) => (
+                            <div key={i} className="bg-white/5 border border-white/10 p-8 rounded-[40px] space-y-6 hover:border-brand-red/30 transition-all duration-500 group">
+                                <p className="text-lg text-white/70 italic leading-relaxed font-inter italic group-hover:text-white transition-colors">"{t.quote}"</p>
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-brand-red shadow-glow-sm">
+                                        <img src={t.img} alt={t.name} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div>
+                                        <h4 className="text-sm font-black text-white italic font-outfit uppercase tracking-tighter">{t.name}</h4>
+                                        <p className="text-[9px] font-black text-brand-red uppercase tracking-widest">{t.role}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
         </motion.div>
     );
 }
@@ -734,6 +779,51 @@ function BusinessLanding({ onGoBack, onOpenDemo }: { onGoBack: () => void, onOpe
                         <Globe className="text-brand-orange w-16 h-16 opacity-10 group-hover:opacity-40 transition-opacity" />
                     </div>
                 </div>
+
+                {/* Business Testimonials */}
+                <section className="py-24 border-t border-white/5 bg-[#080808]">
+                    <div className="container mx-auto px-6">
+                        <div className="text-center mb-16 space-y-4">
+                            <span className="text-brand-orange font-black uppercase tracking-[0.4em] text-[10px]">RED DE CENTROS RIVAL</span>
+                            <h2 className="text-4xl lg:text-5xl font-black italic uppercase tracking-tighter text-white font-outfit">HABLEMOS DE <span className="text-brand-orange">RESULTADOS.</span></h2>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            {[
+                                {
+                                    name: "CARLOS ORTIZ",
+                                    role: "DUEÑO IRON BOX",
+                                    quote: "Desde que implementamos Rival en el Box, la retención ha subido un 20%. Los atletas aman comparar sus tiempos.",
+                                    img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&h=200&auto=format&fit=crop"
+                                },
+                                {
+                                    name: "SARA MÉNDEZ",
+                                    role: "GERENTE TITAN",
+                                    quote: "El sistema de cuotas automáticas nos ahorra 10 horas de administración. Ahora nos centramos en entrenar.",
+                                    img: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&h=200&auto=format&fit=crop"
+                                },
+                                {
+                                    name: "JAVIER VALLS",
+                                    role: "OWNER ELITE WOD",
+                                    quote: "Rival Fit no es solo gestión, es marketing. Mi box aparece en el mapa y atrae atletas de paso cada semana.",
+                                    img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&h=200&auto=format&fit=crop"
+                                }
+                            ].map((t, i) => (
+                                <div key={i} className="bg-white/5 border border-white/10 p-10 rounded-[40px] space-y-6 hover:border-brand-orange/30 transition-all duration-500 group">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-brand-orange shadow-glow-orange">
+                                            <img src={t.img} alt={t.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
+                                        </div>
+                                        <div>
+                                            <h4 className="text-sm font-black text-white italic font-outfit uppercase tracking-tighter">{t.name}</h4>
+                                            <p className="text-[9px] font-black text-brand-orange uppercase tracking-widest leading-none mt-1">{t.role}</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-lg text-white/70 italic leading-relaxed font-inter italic group-hover:text-white transition-colors">"{t.quote}"</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
             </section>
         </motion.div>
     );

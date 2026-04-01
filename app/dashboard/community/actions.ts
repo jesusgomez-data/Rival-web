@@ -241,7 +241,7 @@ export async function createWodPost(formData: FormData) {
             .from('posts')
             .insert({
                 user_id: user.id,
-                caption: content || title || 'ENTRENAMIENTO COMPLETADO',
+                caption: content || title || '',
                 media_url: wodDataJson,
                 media_type: 'wod',
                 created_at: createdAt,

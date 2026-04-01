@@ -37,7 +37,7 @@ export default function DynamicWODGenerator() {
                     },
                     {
                         id: "b2",
-                        title: "METCON",
+                        title: "BLOCK 2",
                         format: "AMRAP",
                         config: { timecap: "15:00" },
                         content: "As many rounds as possible in 15 mins",

@@ -544,7 +544,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 title: parsedWodData?.title || resolvedWorkoutData?.title || "WOD",
                 blocks: parsedWodData?.blocks || resolvedWorkoutData?.blocks || (resolvedWorkoutData?.metrics?.blocks) || [],
                 summary: parsedWodData?.summary || resolvedWorkoutData?.summary || {
-                    scoreLabel: resolvedWorkoutData?.metrics?.score || 'COMPLETADO',
+                    scoreLabel: resolvedWorkoutData?.metrics?.score || 'FINALIZADO',
                     scoreType: resolvedWorkoutData?.metrics?.type || 'WORKOUT',
                     totalTime: resolvedWorkoutData?.metrics?.duration || resolvedWorkoutData?.metrics?.time || '--:--'
                 },
@@ -1201,7 +1201,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 title: w.title || (w.sport_type && w.sport_type !== 'Entrenamiento Libre' ? w.sport_type : 'WORKOUT OF THE DAY'),
                                 blocks: blocks,
                                 summary: w.summary || {
-                                    scoreLabel: w.metrics?.score || 'COMPLETADO',
+                                    scoreLabel: w.metrics?.score || 'FINALIZADO',
                                     scoreType: w.metrics?.type || 'WORKOUT',
                                     totalTime: w.metrics?.duration || w.metrics?.time || '--:--'
                                 },
@@ -1756,7 +1756,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                         })() : (wd as any)?.metrics?.blocks?.map((b: any) => ({
                                             label: b.type?.toUpperCase(),
                                             value: b.result?.time || `${b.result?.rounds || 0} RDS`
-                                        })).slice(0, 3) || [{ label: "DISCIPLINA", value: (wd?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "COMPLETADO" }],
+                                        })).slice(0, 3) || [{ label: "DISCIPLINA", value: (wd?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "FINALIZADO" }],
                                         image: (!isVideo && isImageUrl(image)) ? image : undefined
                                     }}
                                 />

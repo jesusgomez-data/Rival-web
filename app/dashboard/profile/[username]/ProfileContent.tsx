@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { clsx } from "clsx";
-import { Trophy, Swords, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, X } from "lucide-react";
+import { motion } from "framer-motion";
+import { Trophy, Swords, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, X, MessageSquare } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import DuelButton from "../../community/DuelButton";
@@ -115,10 +116,16 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                         </h1>
                                         {profile.level >= 5 && !profile.is_official && <Star className="w-4 h-4 md:w-6 md:h-6 text-yellow-500 fill-yellow-500 shrink-0" />}
                                     </div>
-                                    <p className="text-brand-red font-black tracking-widest md:tracking-[0.3em] text-[10px] md:text-sm uppercase mt-0.5 truncate shadow-black drop-shadow-sm flex items-center gap-2">
-                                        @{profile.username}
-                                        {profile.is_official && <span className="text-[8px] md:text-[10px] bg-white/10 px-2 py-0.5 rounded-full border border-white/5">CUENTA OFICIAL</span>}
-                                    </p>
+                                    <div className="flex items-center gap-4">
+                                        <p className="text-brand-red font-black tracking-widest md:tracking-[0.3em] text-[10px] md:text-sm uppercase mt-0.5 truncate shadow-black drop-shadow-sm flex items-center gap-2">
+                                            @{profile.username}
+                                            {profile.is_official && <span className="text-[8px] md:text-[10px] bg-white/10 px-2 py-0.5 rounded-full border border-white/5">CUENTA OFICIAL</span>}
+                                        </p>
+                                        <div className="flex items-center gap-1 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full shadow-glow-orange group/streak cursor-default transition-all hover:scale-105">
+                                            <Flame className="w-3 h-3 text-orange-500 group-hover/streak:animate-pulse" />
+                                            <span className="text-[10px] font-black text-orange-500 uppercase tracking-tighter">{profile.streak_days || 7} DÍAS</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {!profile.is_official && (
@@ -142,22 +149,41 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                         </button>
                                     </div>
                                 )}
-
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-1">
-                                        <Award className="w-3 h-3 text-brand-red" />
-                                        <span className="text-[9px] text-white font-black uppercase tracking-wider">
-                                            {profile.is_official ? 'Soporte' : (profile.level > 0 ? `Lvl ${profile.level}` : 'Recluta')}
-                                        </span>
+                                 <div className="flex flex-col gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-1.5 bg-brand-red/10 border border-brand-red/20 px-3 py-1 rounded-full shadow-glow-red">
+                                            <Award className="w-3.5 h-3.5 text-brand-red" />
+                                            <span className="text-[10px] text-white font-black uppercase tracking-widest leading-none">
+                                                {profile.is_official ? 'Soporte' : (profile.level > 0 ? `Lvl ${profile.level}` : 'Recluta')}
+                                            </span>
+                                        </div>
+                                        <div className="w-1 h-1 rounded-full bg-white/30"></div>
+                                        <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
+                                            <Dumbbell className="w-3.5 h-3.5 text-brand-red" />
+                                            <span className="text-[10px] text-white font-black uppercase tracking-widest leading-none">
+                                                {profile.is_official ? 'Oficial' : (profile.main_sport || 'General')}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="w-1 h-1 rounded-full bg-white/30"></div>
-                                    <div className="flex items-center gap-1">
-                                        <Dumbbell className="w-3 h-3 text-brand-red" />
-                                        <span className="text-[9px] text-white font-black uppercase tracking-wider">
-                                            {profile.is_official ? 'Oficial' : (profile.main_sport || 'General')}
-                                        </span>
-                                    </div>
+                                    
+                                    {!profile.is_official && (
+                                        <div className="w-full max-w-[200px] space-y-1.5">
+                                            <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-white/40">
+                                                <span>PROGRESO_DE_NIVEL</span>
+                                                <span className="text-brand-red">850 / 1000 XP</span>
+                                            </div>
+                                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                                <motion.div 
+                                                    initial={{ width: 0 }}
+                                                    animate={{ width: "85%" }}
+                                                    transition={{ duration: 1.5, ease: "easeOut" }}
+                                                    className="h-full bg-gradient-to-r from-brand-red to-red-500 shadow-glow-red"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
+
                             </div>
                         </div>
 
@@ -405,7 +431,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                                         hasLikedInitial={!!hasLiked}
                                                         comments={commentsCount}
                                                         caption={post.caption}
-                                                        highlight={post.workouts ? `Entrenamiento Completado` : undefined}
+                                                        highlight={undefined}
                                                         workoutData={post.workouts}
                                                         music_url={post.music_url}
                                                         music_title={post.music_title}
@@ -504,6 +530,40 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                         />
                                     </h3>
                                     <ActivityHeatmap workouts={workouts} userId={profile.id} />
+                                </div>
+                            )}
+
+                            {/* Streaks Card - NEW GAMIFICATION */}
+                            {!profile.is_official && (
+                                <div className="bg-gradient-to-br from-orange-500/20 to-brand-red/5 border border-orange-500/20 rounded-[40px] p-8 relative overflow-hidden group">
+                                    <div className="absolute -top-10 -right-10 text-orange-500/5 group-hover:text-orange-500/10 transition-colors">
+                                        <Flame className="w-40 h-40" />
+                                    </div>
+                                    <div className="relative z-10 space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-[10px] font-black text-orange-500 uppercase tracking-[0.4em] flex items-center gap-2">
+                                                <Flame className="w-4 h-4" /> RACHAS_DE_ACERO
+                                            </h3>
+                                            <div className="bg-orange-500/20 px-3 py-1 rounded-full text-[10px] font-black text-orange-500 tracking-widest animate-pulse">ACTIVA</div>
+                                        </div>
+                                        <div className="flex items-end gap-2">
+                                            <span className="text-6xl font-black italic text-white leading-none tracking-tighter">{profile.streak_days || 7}</span>
+                                            <span className="text-xl font-black italic text-orange-500 uppercase leading-none pb-1 tracking-tighter">DÍAS_CONSECUTIVOS</span>
+                                        </div>
+                                        <p className="text-[10px] text-white/40 font-bold uppercase tracking-widest leading-relaxed">
+                                            Entrena al menos 3 veces por semana para mantener tu llama encendida. Los atletas con racha +30 ganan medallas de élite.
+                                        </p>
+                                        <div className="grid grid-cols-7 gap-1">
+                                            {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day, idx) => (
+                                                <div key={day} className="flex flex-col items-center gap-2">
+                                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center border ${idx < 5 ? 'bg-orange-500 border-orange-500 shadow-glow-orange' : 'bg-white/5 border-white/10 opacity-30'} transition-all`}>
+                                                        <Flame className={`w-4 h-4 ${idx < 5 ? 'text-white' : 'text-white/20'}`} />
+                                                    </div>
+                                                    <span className="text-[8px] font-black text-white/30 uppercase">{day}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
                             )}
 

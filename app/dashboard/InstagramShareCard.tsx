@@ -185,7 +185,7 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                                     <div className="space-y-6">
                                         <div className="pb-4 border-b border-white/5">
                                             <p className="text-brand-red font-black text-[10px] uppercase tracking-[0.3em] mb-2">RESULTADOS</p>
-                                            <h3 className="text-white font-black text-3xl italic uppercase leading-tight tracking-tighter">{content.highlight || 'COMPLETADO'}</h3>
+                                            <h3 className="text-white font-black text-3xl italic uppercase leading-tight tracking-tighter">{content.highlight || 'FINALIZADO'}</h3>
                                         </div>
                                         <div className="grid grid-cols-2 gap-6">
                                             {content.stats?.slice(0, 4).map((stat, i) => (

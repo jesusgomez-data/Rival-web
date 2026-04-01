@@ -984,7 +984,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                                     <div key={idx} className="bg-white/[0.04] border border-white/5 p-2.5 rounded-xl">
                                                         <div className="flex items-center justify-between mb-1.5">
                                                             <span className="text-[8px] font-black text-brand-red uppercase tracking-widest">{block.format || block.type || 'LIBRE'}</span>
-                                                            {block.title && block.title !== 'METCON' && !block.title.startsWith('BLOCK') && (
+                                                            {block.title && !block.title.startsWith('BLOCK') && (
                                                                 <span className="text-[7px] font-bold text-gray-500 uppercase tracking-wider">{block.title}</span>
                                                             )}
                                                         </div>
@@ -1815,7 +1815,9 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                                             <Trophy className="w-3.5 h-3.5 text-brand-red" />
                                                             <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Status</p>
                                                         </div>
-                                                        <p className="text-sm font-black text-white italic">COMPLETADO</p>
+                                                        <p className="text-sm font-black text-white italic whitespace-nowrap overflow-hidden text-ellipsis mb-1">
+                                                            {resolvedWorkoutData?.title || (wd?.id ? 'Sesión de Entrenamiento' : 'Actividad')}
+                                                        </p>
                                                     </div>
                                                 )}
                                             </div>
@@ -2062,7 +2064,9 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                                                     </div>
                                                                 ) : (
                                                                     <div className="bg-white/5 p-3 rounded-xl border border-white/5 text-center">
-                                                                        <p className="text-white/60 text-xs italic">¡Entrenamiento completado!</p>
+                                                                        <p className="text-white/60 text-xs italic">
+                                                                            {resolvedWorkoutData?.title || (wd?.id ? 'Sesión de Entrenamiento' : 'Actividad')}
+                                                                        </p>
                                                                     </div>
                                                                 )}
                                                             </div>

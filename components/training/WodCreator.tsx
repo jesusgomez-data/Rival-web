@@ -125,7 +125,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
     const [blocks, setBlocks] = useState<WodBlock[]>(initialData?.blocks || [
         {
             id: '1',
-            title: 'METCON',
+            title: 'BLOCK 1',
             format: 'AMRAP',
             config: { timecap: '20:00' },
             exercises: [
@@ -366,7 +366,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                     else if (cat.id === 'SWIMMING') newTitle = 'SESIÓN DE NATACIÓN';
                                     else if (cat.id === 'YOGA') newTitle = 'YOGA / MOVILIDAD';
                                     else if (cat.id === 'BOXING') newTitle = 'SESIÓN DE BOXEO';
-                                    else newTitle = 'WORKOUT OF THE DAY';
+                                    else newTitle = '';
                                     setTitle(newTitle);
                                 }
 
@@ -374,7 +374,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                     if (cat.id === 'RUNNING') {
                                         newBlocks = [{
                                             ...blocks[0],
-                                            title: 'CARRERA',
+                                            title: 'BLOCK 1',
                                             format: 'CARRERA LIBRE',
                                             config: { distance: '', pace: '', timecap: '' },
                                             exercises: [{ id: 'run1', name: 'Notas / Descripción', reps: '', detail: '' }]
@@ -382,17 +382,19 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                     } else if (cat.id === 'GYM') {
                                         newBlocks = [{
                                             ...blocks[0],
-                                            title: 'FUERZA',
+                                            title: 'BLOCK 1',
                                             format: 'FUERZA',
                                             exercises: [{ id: 'gym1', name: 'Ejercicio principal', reps: '4 x 10', detail: '' }]
                                         }];
                                     } else if (cat.id === 'HYROX') {
                                         newBlocks = [{
                                             ...blocks[0],
-                                            title: 'SIMULACIÓN',
+                                            title: 'BLOCK 1',
                                             format: 'FOR TIME',
                                             exercises: [{ id: 'hy1', name: 'Carrera (km)', reps: '1', detail: '' }, { id: 'hy2', name: 'Burpee broad jump (m)', reps: '80', detail: '' }]
                                         }];
+                                    } else {
+                                        newBlocks = [{ ...blocks[0], title: 'BLOCK 1' }];
                                     }
                                     setBlocks(newBlocks);
                                 }
@@ -485,7 +487,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                 </div>
                 <input
                     type="text"
-                    placeholder="TÍTULO DEL WOD (Ej: THE CHIEF, MURPH...)"
+                    placeholder="TÍTULO (OPCIONAL)"
                     value={title}
                     onChange={(e) => {
                         const val = e.target.value.toUpperCase();
@@ -583,7 +585,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                         <ConfigInput label="MINS" value={block.config.minutes === undefined ? '' : block.config.minutes.toString()} onChange={(v) => updateBlock(block.id, { config: { ...block.config, minutes: v === '' ? undefined : (parseInt(v) || 0) } })} />
                                         <div className="flex flex-col justify-center px-4 border-l border-white/10">
                                             <span className="text-xs font-black text-brand-red uppercase tracking-widest leading-none">
-                                                {block.config.minutes && block.config.frequency ? Math.floor(block.config.minutes / (parseInt(block.config.frequency) || 1)) : 0}
+                                                {block.config.minutes && block.config.frequency ? Math.floor(block.config.minutes / ((parseInt(block.config.frequency) || 1) * (block.exercises.length || 1))) : 0}
                                             </span>
                                             <span className="text-[8px] font-bold text-gray-500 uppercase tracking-widest mt-1">RONDAS TOTALES</span>
                                         </div>
@@ -866,7 +868,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
 
                                     {ex.showRounds && (block.format === 'EMOM' || block.format === 'DEATH BY') && (
                                         <div className="ml-7 grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 p-3 bg-black/40 rounded-2xl border border-white/5 animate-in fade-in slide-in-from-top-2 duration-300">
-                                            {Array.from({ length: Math.floor((block.config.minutes || 15) / (parseInt(block.config.frequency || '1') || 1)) }).map((_, rIdx) => (
+                                            {Array.from({ length: Math.floor((block.config.minutes || 15) / ((parseInt(block.config.frequency || '1') || 1) * (block.exercises.length || 1))) }).map((_, rIdx) => (
                                                 <div key={rIdx} className="flex flex-col gap-1">
                                                     <span className="text-[7px] font-bold text-gray-600 uppercase text-center">R{rIdx + 1}</span>
                                                     <input

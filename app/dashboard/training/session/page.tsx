@@ -2888,7 +2888,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
         const newBlock = {
             id: Math.random().toString(36).substr(2, 9),
             type: 'fortime',
-            title: `Bloque ${blocks.length + 1}`,
+            title: `BLOCK ${blocks.length + 1}`,
             duration: 0,
             exercises: [],
             result: { rounds: 0, time: '' }
@@ -4722,7 +4722,7 @@ function FreeTrainingWizard({ onComplete }: { onComplete: (block: WorkoutBlock) 
         const newBlock = {
             id: Math.random().toString(36).substr(2, 9),
             type: type,
-            title: duration > 0 ? `${typeLabel} (${duration} min)` : typeLabel,
+            title: `BLOCK 1`,
             duration: duration,
             exercises: [],
             result: { rounds: 0, time: '' }

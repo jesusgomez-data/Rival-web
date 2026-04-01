@@ -109,8 +109,19 @@ function getExerciseDetail(ex: any): string {
 
 // ─── Helper: resolve block type label & color ─────────────────────────────────
 function getBlockStyle(block: any): { label: string; color: string } {
-    const key = (block.type || block.blockType || '').toLowerCase().replace(/[\s_-]/g, '');
-    return BLOCK_STYLES[key] ?? { label: (block.type || 'BLOCK').toUpperCase(), color: '#ffffff' };
+    const rawType = (block.format || block.type || block.blockType || '').toLowerCase().replace(/[\s_-]/g, '');
+    let style = BLOCK_STYLES[rawType] ?? { label: (block.format || block.type || 'BLOCK').toUpperCase(), color: '#ffffff' };
+    
+    // Add duration if available (e.g., "EMOM 12'")
+    const duration = block.duration || block.config?.minutes || block.config?.timecap;
+    if (duration) {
+        const durStr = String(duration).replace(/min|'/gi, '').trim();
+        style = { ...style, label: `${style.label} ${durStr}'` };
+    } else if (block.rounds) {
+        style = { ...style, label: `${style.label} ${block.rounds} RDS` };
+    }
+    
+    return style;
 }
 
 // ─── Background pattern ───────────────────────────────────────────────────────
@@ -469,7 +480,7 @@ export default function WorkoutShareCard({
             const blob = await (await fetch(dataUrl)).blob();
             const file = new File([blob], 'rival-workout.png', { type: 'image/png' });
             if (navigator.share && navigator.canShare({ files: [file] })) {
-                await navigator.share({ files: [file], title: workoutTitle || 'Mi entrenamiento', text: '¡Entrenamiento completado con Rival Fit!' });
+                await navigator.share({ files: [file], title: workoutTitle || 'Mi entrenamiento', text: '¡Mira mi entrenamiento en Rival Fit! 🔥' });
             } else {
                 const link = document.createElement('a');
                 link.download = 'rival-workout.png';
