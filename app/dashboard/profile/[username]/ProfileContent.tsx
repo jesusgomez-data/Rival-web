@@ -76,15 +76,15 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:20px_20px]" />
                 </div>
 
-                <div className="relative z-10 p-6 md:p-12">
-                    <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-8">
-                        <div className="flex flex-col md:flex-row items-center md:items-start gap-8 flex-1">
+                <div className="relative z-10 p-4 md:p-12">
+                    <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 md:gap-8">
+                        <div className="flex flex-row md:flex-col lg:flex-row items-center md:items-start gap-4 md:gap-8 flex-1 w-full">
                             {/* Avatar Cell */}
-                            <div className="relative group">
+                            <div className="relative group shrink-0">
                                 <div className="absolute inset-0 bg-gradient-to-br from-brand-red to-purple-600 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity" />
                                 <button 
                                     onClick={() => setAvatarModalOpen(true)}
-                                    className="w-24 h-24 md:w-36 md:h-36 rounded-full border-4 border-white/10 bg-gradient-to-br from-brand-red to-purple-600 p-1 relative z-10 overflow-hidden transition-transform active:scale-95"
+                                    className="w-20 h-20 md:w-36 md:h-36 rounded-full border-2 md:border-4 border-white/10 bg-gradient-to-br from-brand-red to-purple-600 p-0.5 md:p-1 relative z-10 overflow-hidden transition-transform active:scale-95"
                                 >
                                     <div className="w-full h-full rounded-full overflow-hidden bg-black relative">
                                         {profile.avatar_url ? (
@@ -95,7 +95,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                                 className="object-cover"
                                             />
                                         ) : (
-                                            <div className="flex items-center justify-center w-full h-full text-4xl font-black text-white italic">
+                                            <div className="flex items-center justify-center w-full h-full text-2xl md:text-4xl font-black text-white italic">
                                                 {profile.full_name?.charAt(0)}
                                             </div>
                                         )}
@@ -103,34 +103,51 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                 </button>
                             </div>
 
-                            {/* Info Cell */}
-                            <div className="text-center md:text-left space-y-4 pt-2">
+                            {/* Info & Buttons Cell */}
+                            <div className="flex-1 text-left space-y-2 md:space-y-4 pt-1">
                                 <div>
-                                    <h1 className="text-3xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none mb-1">
+                                    <h1 className="text-2xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none mb-1">
                                         {profile.full_name}
                                     </h1>
-                                    <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] md:text-xs">
+                                    <p className="text-gray-500 font-bold uppercase tracking-widest text-[9px] md:text-xs">
                                         @{profile.username} • {profile.main_sport || 'CROSSFIT ATHLETE'}
                                     </p>
                                 </div>
 
-                                {/* Badge Cell */}
-                                <div className="flex justify-center md:justify-start items-center gap-3">
-                                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-brand-red/30 bg-brand-red/5 text-brand-red">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-brand-red animate-pulse" />
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">PRO MEMBER</span>
+                                {/* Badge & Streak — COMPACT ON MOBILE */}
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full border border-brand-red/30 bg-brand-red/5 text-brand-red">
+                                        <div className="w-1 h-1 rounded-full bg-brand-red animate-pulse" />
+                                        <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.1em]">PRO</span>
                                     </div>
-                                    <div className="flex items-center gap-1 bg-orange-500/10 border border-orange-500/20 px-3 py-1.5 rounded-full shadow-glow-orange group/streak cursor-default transition-all hover:scale-105">
-                                        <Flame className="w-3.5 h-3.5 text-orange-500 group-hover/streak:animate-pulse" />
-                                        <span className="text-[10px] font-black text-orange-500 uppercase tracking-tighter">{profile.streak_days || 7} DÍAS</span>
+                                    <div className="flex items-center gap-1 bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded-full shadow-glow-orange cursor-default">
+                                        <Flame className="w-3 h-3 text-orange-500" />
+                                        <span className="text-[8px] md:text-[10px] font-black text-orange-500 uppercase tracking-tighter">{profile.streak_days || 7} DÍAS</span>
                                     </div>
+                                </div>
+                                
+                                {/* Header Actions — INTEGRATED FOR MOBILE */}
+                                <div className="flex md:hidden items-center gap-2 pt-1">
+                                    {user?.id === profile.id ? (
+                                        <Link
+                                            href="/dashboard/settings/profile"
+                                            className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-white text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                                        >
+                                            Editar Perfil
+                                        </Link>
+                                    ) : (
+                                        <>
+                                            <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
+                                            <DuelButton targetId={profile.id} isRival={isFollowing} hasActiveDuel={hasActiveDuel} />
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
 
-                        {/* Action Buttons */}
+                        {/* Action Buttons — DESKTOP */}
                         {user?.id !== profile.id && !profile.is_official && (
-                            <div className="flex md:flex-col items-center gap-3 shrink-0">
+                            <div className="hidden md:flex flex-col items-center gap-3 shrink-0">
                                 {isFollowing && (
                                     <Link
                                         href={`/dashboard/messages?userId=${profile.id}`}
@@ -183,25 +200,6 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                 </p>
             )}
 
-            {/* Action Buttons (Repetidos para mobile/flujo) */}
-            {user?.id !== profile.id && !profile.is_official && (
-                <div className="flex items-center gap-3 w-full">
-                    <div className="flex-1">
-                        <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
-                    </div>
-                    {isFollowing && (
-                        <Link
-                            href={`/dashboard/messages?userId=${profile.id}`}
-                            className="py-3 px-4 bg-white/5 border border-white/10 rounded-xl text-white hover:bg-brand-red hover:border-brand-red transition-all group flex justify-center items-center gap-2"
-                        >
-                            <MessageCircle className="w-4 h-4 text-brand-red group-hover:text-white transition-colors" />
-                        </Link>
-                    )}
-                    <div className="shrink-0">
-                        <DuelButton targetId={profile.id} isRival={isFollowing} hasActiveDuel={hasActiveDuel} />
-                    </div>
-                </div>
-            )}
 
             {/* Medal Shelf — mobile */}
             {medals && medals.length > 0 && (
