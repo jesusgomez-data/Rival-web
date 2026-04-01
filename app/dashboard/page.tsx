@@ -184,7 +184,8 @@ export default function DashboardHome() {
         missionGoal: 5,
         duels: [],
         activeCenterIds: new Set<string>(),
-        workoutStreak: 0
+        workoutStreak: 0,
+        myGyms: []
     });
     const [activeTab, setActiveTab] = useState('following');
     const [refreshKey, setRefreshKey] = useState(0);
@@ -461,7 +462,7 @@ export default function DashboardHome() {
                 <div className="lg:col-span-7 space-y-8">
 
                     {/* 1. My Gyms Section (Moved here) */}
-                    {data.myGyms.length > 0 && (
+                    {data.myGyms?.length > 0 && (
                         <div className="mb-8">
                             <h2 className="text-xl font-black text-foreground italic uppercase tracking-tighter mb-4 flex items-center gap-2">
                                 <Dumbbell className="w-5 h-5 text-brand-red" /> {t.dashboard.myGyms}

@@ -30,7 +30,24 @@ import { useVideo } from "./VideoContext";
 
 const InstagramShareCard = dynamic(() => import("./InstagramShareCard"), { ssr: false });
 
-function ShareButton({ image, workoutData, mediaType, postId, className, iconClassName = "w-5 h-5", onInstagramShare, onOpenShareCard, onDownloadMedia, isDownloadingVideo, downloadProgress, isVideo }: {
+
+function ShareButton({ 
+    image, 
+    workoutData, 
+    mediaType, 
+    postId, 
+    className, 
+    iconClassName = "w-5 h-5", 
+    onInstagramShare, 
+    onOpenShareCard, 
+    onDownloadMedia, 
+    isDownloadingVideo, 
+    downloadProgress, 
+    isVideo,
+    highlight,
+    caption,
+    photoUrl
+}: {
     image?: string,
     workoutData?: any,
     mediaType?: string,
@@ -42,7 +59,10 @@ function ShareButton({ image, workoutData, mediaType, postId, className, iconCla
     onDownloadMedia?: () => void,
     isDownloadingVideo?: boolean,
     downloadProgress?: number,
-    isVideo?: boolean
+    isVideo?: boolean,
+    highlight?: string,
+    caption?: string,
+    photoUrl?: string
 }) {
     const [isOpen, setIsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -74,17 +94,53 @@ function ShareButton({ image, workoutData, mediaType, postId, className, iconCla
             } catch (e) {
                 console.error("Error parsing class result", e);
             }
+
+
         } else if (mediaType === 'pr' && image) {
             try {
-                const data = JSON.parse(image);
-                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'pr', data, postId } }));
+                // Try to parse JSON if image is data
+                const isJson = (image || '').trim().startsWith('{');
+                let prData: any = null;
+
+                if (isJson) {
+                    const parsed = JSON.parse(image);
+                    prData = {
+                        exerciseName: parsed.exerciseName,
+                        weight: parsed.weight,
+                        unit: parsed.unit,
+                        sport: parsed.sport || 'Cross Training'
+                    };
+                } else {
+                    // Fallback to title parsing
+                    const text = highlight || workoutData?.title || caption || '';
+                    const weightMatch = text.match(/(\d+(?:\.\d+)?)\s*(kg|lbs|lb)/i);
+                    const exerciseMatch = text.split(/[:!]/).pop()?.split(weightMatch?.[0] || '')[0]?.trim();
+                    prData = {
+                        exerciseName: exerciseMatch || 'Personal Record',
+                        weight: weightMatch?.[0]?.replace(/[a-zA-Z]/g, '') || '0',
+                        unit: weightMatch?.[1] || 'kg',
+                        sport: 'Cross Training'
+                    };
+                }
+
+
+                window.dispatchEvent(new CustomEvent('share-to-story', { 
+                    detail: { 
+                        type: 'pr', 
+                        data: prData, 
+                        backgroundImage: photoUrl,
+                        postId 
+                    } 
+                }));
             } catch (e) {
-                console.error("Error parsing PR", e);
+                console.error("Error sharing PR to story", e);
+                // Fallback to simple image
+                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'image', url: photoUrl, postId } }));
             }
+
         } else {
-            const isImageUrl = image && !image.startsWith('{') && !image.startsWith('[');
-            if (isImageUrl) {
-                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'image', url: image, postId } }));
+            if (photoUrl) {
+                window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'image', url: photoUrl, postId } }));
             } else {
                 alert("Este contenido no se puede convertir a historia automáticamente.");
             }
@@ -198,6 +254,26 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const [showShareCard, setShowShareCard] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [commentList, setCommentList] = useState<Comment[]>([]);
+    
+    // Robustly resolve the photo/media URL
+    const photoUrl = useMemo(() => {
+        if (!image && !workoutData?.image) return undefined;
+        
+        let targetMedia = image;
+        
+        // If image is JSON, try to extract the URL
+        if (targetMedia && targetMedia.trim().startsWith('{')) {
+            try { 
+                const parsed = JSON.parse(targetMedia.trim());
+                targetMedia = parsed.image || parsed.backgroundImage || parsed.media_url || parsed.mediaUrl || parsed.url;
+            } catch(e) { targetMedia = undefined; }
+        }
+        
+        // Final fallback to workout media if still nothing
+        const finalUrl = targetMedia || workoutData?.image || workoutData?.metrics?.image;
+        
+        return isImageUrl(finalUrl) ? finalUrl : undefined;
+    }, [image, workoutData]);
     const [commentTree, setCommentTree] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState("");
     const [commentsCount, setCommentsCount] = useState(initialCommentsCount);
@@ -858,7 +934,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 exerciseName={prData.exerciseName || "Ejercicio"}
                                 weight={prData.weight || "0"}
                                 unit={prData.unit || "kg"}
-                                backgroundImage={prData.backgroundImage || (/\.(jpg|jpeg|png|webp|gif)$/i.test(image) ? image : undefined)}
+                                backgroundImage={photoUrl}
                             />
                         );
                     })()}
@@ -1455,6 +1531,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             onDownloadMedia={handleDownloadMedia}
                             isDownloadingVideo={isDownloadingVideo}
                             isVideo={(isVideo || isImageUrl(image)) as boolean}
+                            highlight={highlight}
+                            caption={caption}
+                            photoUrl={photoUrl}
                         />
                     </>
                 ) : (
@@ -1506,6 +1585,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 isDownloadingVideo={isDownloadingVideo}
                                 downloadProgress={downloadProgress}
                                 isVideo={(isVideo || isImageUrl(image)) as boolean}
+                                highlight={highlight}
+                                caption={caption}
+                                photoUrl={photoUrl}
                             />
                         </div>
                     </div>
@@ -1655,12 +1737,25 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                         if (mediaType === 'pr') {
                                             try {
                                                 const d = JSON.parse(image);
-                                                return [{ label: d.exerciseName?.toUpperCase(), value: `${d.weight}${d.unit}` }];
-                                            } catch (e) { return []; }
+                                                return [
+                                                    { label: 'EJERCICIO', value: d.exerciseName?.toUpperCase() },
+                                                    { label: 'PESO', value: `${d.weight}${d.unit}` }
+                                                ];
+                                            } catch (e) {
+                                                // Fallback: Parse from title "Back Squat : 180kg"
+                                                const text = highlight || wodTitle || '';
+                                                const weightMatch = text.match(/(\d+(?:\.\d+)?)\s*(kg|lbs|lb)/i);
+                                                const exerciseMatch = text.split(/[:!]/).pop()?.split(weightMatch?.[0] || '')[0]?.trim();
+                                                
+                                                return [
+                                                    { label: 'EJERCICIO', value: exerciseMatch?.toUpperCase() || 'PERSONAL RECORD' },
+                                                    { label: 'PESO', value: weightMatch?.[0] || '0' }
+                                                ];
+                                            }
                                         }
                                         return [];
                                     })(),
-                                image: isImageUrl(image) ? image : undefined,
+                                image: photoUrl,
                                 mapData: (resolvedWorkoutData as any)?.metrics?.path ? 'GPS_PATH_ACTIVE' : undefined
                             }}
                             onClose={() => setShowInstagramCard(false)}
@@ -1752,12 +1847,28 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                         title: (wd?.sport_type && wd.sport_type !== 'fitness') ? wd.sport_type.toUpperCase() : (highlight || wd?.title || 'ENTRENAMIENTO'),
                                         date: time,
                                         stats: mediaType === 'pr' ? (() => {
-                                            try { const d = JSON.parse(image); return [{ label: "PESO", value: `${d.weight}${d.unit}` }, { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }]; } catch (e) { return [] }
+                                            try { 
+                                                const d = JSON.parse(image); 
+                                                return [
+                                                    { label: "PESO", value: `${d.weight}${d.unit}` }, 
+                                                    { label: "EJERCICIO", value: d.exerciseName?.toUpperCase() }
+                                                ]; 
+                                            } catch (e) { 
+                                                const text = highlight || wd?.title || '';
+                                                const weightMatch = text.match(/(\d+(?:\.\d+)?)\s*(kg|lbs|lb)/i);
+                                                const exerciseMatch = text.split(/[:!]/).pop()?.split(weightMatch?.[0] || '')[0]?.trim();
+                                                return [
+                                                    { label: "PESO", value: weightMatch?.[0] || '0' },
+                                                    { label: "EJERCICIO", value: exerciseMatch?.toUpperCase() || 'PR' }
+                                                ];
+                                            }
                                         })() : (wd as any)?.metrics?.blocks?.map((b: any) => ({
                                             label: b.type?.toUpperCase(),
                                             value: b.result?.time || `${b.result?.rounds || 0} RDS`
                                         })).slice(0, 3) || [{ label: "DISCIPLINA", value: (wd?.sport_type || "FITNESS").toUpperCase() }, { label: "ESTADO", value: "FINALIZADO" }],
-                                        image: (!isVideo && isImageUrl(image)) ? image : undefined
+                                        image: isImageUrl(image) ? image : (() => {
+                                            try { return JSON.parse(image).image; } catch(e) { return undefined; }
+                                        })()
                                     }}
                                 />
                             </div>

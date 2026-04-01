@@ -281,10 +281,17 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                     }
 
                     // Add the sticker
+                    const finalData = typeof data === 'object' ? { ...data, image: backgroundImage } : (() => {
+                        try {
+                            const parsed = JSON.parse(data);
+                            return { ...parsed, image: backgroundImage };
+                        } catch(e) { return { image: backgroundImage }; }
+                    })();
+
                     const stickerOverlay: OverlayElement = {
                         id: Date.now().toString(),
                         type: type === 'pr' ? 'pr_sticker' : 'workout_sticker',
-                        content: typeof data === 'string' ? data : JSON.stringify(data),
+                        content: JSON.stringify(finalData),
                         x: 50,
                         y: 55,
                         scale: 1,
@@ -1056,27 +1063,32 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                             )
                         } catch (e) { return null }
                     })()
+
                 ) : overlay.type === 'pr_sticker' ? (
                     (() => {
                         try {
                             const prData = JSON.parse(overlay.content);
+                            const displayUser = currentUser?.full_name || currentUser?.user_metadata?.full_name || currentUser?.user_metadata?.name || 'Usuario';
+                            const displayAvatar = currentUser?.avatar_url || currentUser?.user_metadata?.avatar_url || '';
+                            
                             return (
                                 <div className="relative group">
                                     <PRCard
-                                        userName={currentUser?.full_name || 'Usuario'}
-                                        avatarUrl={currentUser?.avatar_url || ''}
-                                        sport={prData.sport}
+                                        userName={displayUser}
+                                        avatarUrl={displayAvatar}
+                                        sport={prData.sport || 'Cross Training'}
                                         exerciseName={prData.exerciseName}
                                         weight={prData.weight}
                                         unit={prData.unit}
+                                        backgroundImage={prData.image || prData.backgroundImage || previewUrl || ''}
                                         isStory={true}
                                     />
                                     {previewUrl && (
                                         <button
                                             onClick={(e) => removeOverlay(overlay.id, e)}
-                                            className="absolute -top-3 -right-3 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                            className="absolute -top-4 -right-4 bg-red-600/80 backdrop-blur-md text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-[100]"
                                         >
-                                            <X className="w-3 h-3" />
+                                            <X className="w-4 h-4" />
                                         </button>
                                     )}
                                 </div>

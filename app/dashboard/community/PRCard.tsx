@@ -1,19 +1,17 @@
 
 "use client";
 
+import { Trophy, ShieldCheck } from "lucide-react";
 import Image from "next/image";
-import { Trophy, Dumbbell, MessageCircle } from "lucide-react";
 import { clsx } from "clsx";
-import { useTheme } from "../../ThemeContext";
-import { isImageUrl, cn } from "@/lib/utils";
 
 interface PRCardProps {
     userName: string;
     avatarUrl: string;
-    sport: string; // e.g., 'Cross Training'
-    exerciseName: string; // e.g., 'Back Squat'
-    weight: string; // e.g., '140'
-    unit?: string; // e.g., 'kg'
+    sport: string;
+    exerciseName: string;
+    weight: string;
+    unit?: string;
     backgroundImage?: string;
     isStory?: boolean;
 }
@@ -28,98 +26,99 @@ export default function PRCard({
     backgroundImage,
     isStory = false
 }: PRCardProps) {
-    const { theme } = useTheme();
-
     return (
         <div className={clsx(
-            "relative overflow-hidden group shadow-2xl transition-all",
-            isStory ? "w-full h-full dark-section" : "w-full aspect-square md:aspect-video rounded-[32px] border border-white/5 bg-black dark-section"
+            "relative overflow-hidden group shadow-2xl transition-all h-full w-full bg-[#050505] flex flex-col font-sans",
+            !isStory && "rounded-[32px] sm:rounded-[48px] border border-white/5"
         )}>
-            {/* Background Image with Overlay */}
-            {backgroundImage && isImageUrl(backgroundImage) ? (
-                <Image
-                    src={backgroundImage}
-                    alt="PR Background"
-                    fill
-                    className="object-cover opacity-60 transition-transform duration-700 group-hover:scale-105"
-                />
-            ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-brand-gray to-black opacity-80" />
-            )}
-
-            {/* Cinematic Gradient Overlays */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex flex-col justify-end p-6 md:p-10 pointer-events-none">
-
-                {/* Floating Rank Mockup (Top Right) - Optional and just for aesthetic if needed */}
-                {!isStory && (
-                    <div className="absolute top-6 right-6 border p-4 rounded-2xl shadow-xl z-20 w-32 md:w-40 bg-black/60 backdrop-blur-md border-white/10 hidden sm:block">
-                        <div className="flex items-center gap-2 mb-1">
-                            <Trophy className="w-4 h-4 text-yellow-500" />
-                            <span className="font-bold text-[8px] md:text-[10px] uppercase tracking-widest text-gray-400 whitespace-nowrap">RANGO GLOBAL</span>
-                        </div>
-                        <div className="text-xl md:text-2xl font-heading font-black italic text-white leading-none">#42</div>
-                        <div className="text-[9px] md:text-[10px] text-green-500 font-bold mt-1 uppercase tracking-tighter">▲ 3 LUGARES</div>
+            {/* Background Image / Photo */}
+            <div className="absolute inset-0 z-0">
+                {backgroundImage ? (
+                    <div 
+                        className="w-full h-full bg-cover bg-center opacity-80" 
+                        style={{ 
+                            backgroundImage: `url(${backgroundImage})`,
+                        }}
+                    >
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30" />
                     </div>
+                ) : (
+                    <div className="absolute inset-0 bg-gradient-to-br from-brand-red/10 via-black to-black" />
                 )}
+            </div>
 
-                {/* User Info Section */}
-                <div className="flex items-center gap-4 mb-6 md:mb-8 animate-in slide-in-from-left-4 duration-500">
-                    <div className="w-12 h-12 md:w-16 md:h-16 rounded-full p-0.5 bg-gradient-to-tr from-brand-red to-orange-500 shrink-0">
-                        <div className="w-full h-full rounded-full overflow-hidden relative border-2 border-black bg-gray-800">
-                            {avatarUrl && isImageUrl(avatarUrl) ? (
-                                <Image
-                                    src={avatarUrl}
-                                    alt={userName}
-                                    fill
-                                    className="object-cover"
-                                />
+            {/* Technical grid - Very subtle */}
+            <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
+                 style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
+
+            {/* Content Layer */}
+            <div className={clsx(
+                "relative z-10 w-full h-full flex flex-col justify-between",
+                isStory ? "p-6 sm:p-10 pt-16 sm:pt-20 pb-16 sm:pb-20" : "p-5 sm:p-8"
+            )}>
+                
+                {/* Header: User Profile (Top Left) */}
+                <div className="flex items-center gap-3 sm:gap-4 animate-in fade-in slide-in-from-top-2 duration-700">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-2 sm:border-4 border-[#FF3B3B]/50 p-0.5 sm:p-1 bg-black/20 backdrop-blur-md overflow-hidden relative shadow-xl">
+                        <div className="w-full h-full rounded-full overflow-hidden relative">
+                            {avatarUrl ? (
+                                <Image src={avatarUrl} alt={userName} fill className="object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-500 bg-black uppercase">
-                                    {userName?.substring(0, 2) || "?"}
+                                <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-gray-500 bg-gray-900 uppercase">
+                                    {userName.substring(0, 2)}
                                 </div>
                             )}
                         </div>
                     </div>
-                    <div>
-                        <h3 className="text-xl md:text-3xl font-heading font-black italic text-white leading-none uppercase tracking-tighter drop-shadow-lg">
+                    <div className="flex flex-col">
+                        <h2 className="text-white font-black text-lg sm:text-3xl italic uppercase tracking-tighter leading-none drop-shadow-2xl">
                             {userName}
-                        </h3>
-                        <p className="text-[10px] md:text-xs text-brand-red font-black uppercase tracking-[0.2em] mt-1 md:mt-2 drop-shadow-md">
-                            NUEVO PR • {sport.toUpperCase()}
+                        </h2>
+                        <p className="text-[8px] sm:text-[10px] font-black text-[#FF3B3B] uppercase tracking-[0.2em] mt-1 sm:mt-1.5 drop-shadow-lg italic flex items-center gap-1">
+                            <Trophy className="w-2.5 h-2.5 sm:w-3 sm:h-3 fill-current" /> ¡NUEVO PR! • {sport.toUpperCase()}
                         </p>
                     </div>
                 </div>
 
-                {/* Exercise PR Box */}
-                <div className="bg-white/10 backdrop-blur-md p-6 md:p-8 rounded-[24px] md:rounded-[32px] border border-white/10 relative overflow-hidden animate-in slide-in-from-bottom-4 duration-700 delay-100">
-                    {/* Interior Glow */}
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/10 blur-3xl -mr-10 -mt-10" />
-
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-end gap-4">
-                            <div className="min-w-0 flex-1">
-                                <span className="text-gray-400 text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em] mb-1 block italic opacity-70">EJERCICIO</span>
-                                <h4 className="text-2xl md:text-4xl font-heading font-black italic text-white uppercase tracking-tighter leading-tight break-words whitespace-normal pr-2">
-                                    {exerciseName}
-                                </h4>
+                {/* Compact Information Box (Bottom) */}
+                <div className={clsx(
+                    "w-full bg-[#121212]/70 backdrop-blur-2xl rounded-[24px] sm:rounded-[40px] p-5 sm:p-8 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all animate-in slide-in-from-bottom-4 duration-700",
+                    isStory && "mb-4 sm:mb-8"
+                )}>
+                    <div className="space-y-4 sm:space-y-6">
+                        <div className="flex justify-between items-end gap-3">
+                            <div className="flex-1 min-w-0">
+                                <span className="text-[7px] sm:text-[9px] font-black text-gray-500 uppercase tracking-[0.3em] mb-1.5 block opacity-70 italic font-mono">EJERCICIO</span>
+                                <h3 className="text-xl sm:text-4xl font-heading font-black text-white italic uppercase tracking-tighter leading-none truncate pr-2">
+                                    {exerciseName.replace(/\s/g, '').toUpperCase()}
+                                </h3>
                             </div>
-                            <div className="text-right shrink-0">
-                                <span className="text-3xl md:text-5xl font-heading font-black italic text-brand-red leading-none drop-shadow-[0_0_15px_rgba(220,38,38,0.4)]">
+                            <div className="flex items-baseline gap-0.5 sm:gap-1 shrink-0">
+                                <span className="text-2xl sm:text-5xl font-heading font-black text-[#FF3B3B] italic tracking-tighter leading-none drop-shadow-glow">
                                     {weight}
                                 </span>
-                                <span className="text-[10px] md:text-xs font-black text-brand-red ml-1 uppercase">{unit}</span>
+                                <span className="text-[10px] sm:text-lg font-black text-[#FF3B3B] italic uppercase tracking-tighter">{unit}</span>
                             </div>
                         </div>
 
-                        {/* Progress Bar Line */}
-                        <div className="w-full bg-white/10 h-1.5 md:h-2 rounded-full overflow-hidden mt-6 md:mt-8 border border-white/5">
-                            <div className="bg-brand-red h-full w-[85%] rounded-full shadow-[0_0_15px_rgba(220,38,38,0.6)]"></div>
+                        {/* Minimal Progress Bar */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center px-0.5">
+                                <span className="text-[7px] sm:text-[8px] font-black text-gray-500 uppercase tracking-widest italic">INTENSIDAD</span>
+                                <span className="text-[8px] sm:text-[9px] font-black text-[#FF3B3B] italic">95% RPE</span>
+                            </div>
+                            <div className="h-1.5 sm:h-2.5 w-full bg-white/10 rounded-full overflow-hidden border border-white/5">
+                                <div className="h-full bg-[#FF3B3B] rounded-full shadow-[0_0_15px_rgba(255,59,59,0.5)] transition-all duration-1000" style={{ width: '95%' }} />
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Action Suggestions (Only for feed, usually not rendered here but we can add placeholders if needed) */}
+
             </div>
+            
+            {/* Ambient Ambient Glows */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-brand-red/[0.01] blur-[100px] pointer-events-none" />
         </div>
     );
 }
