@@ -76,7 +76,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:20px_20px]" />
                 </div>
 
-                <div className="relative z-10 p-8 md:p-12">
+                <div className="relative z-10 p-6 md:p-12">
                     <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-8">
                         <div className="flex flex-col md:flex-row items-center md:items-start gap-8 flex-1">
                             {/* Avatar Cell */}
@@ -84,7 +84,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                 <div className="absolute inset-0 bg-gradient-to-br from-brand-red to-purple-600 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity" />
                                 <button 
                                     onClick={() => setAvatarModalOpen(true)}
-                                    className="w-32 h-32 md:w-36 md:h-36 rounded-full border-4 border-white/10 bg-gradient-to-br from-brand-red to-purple-600 p-1 relative z-10 overflow-hidden transition-transform active:scale-95"
+                                    className="w-24 h-24 md:w-36 md:h-36 rounded-full border-4 border-white/10 bg-gradient-to-br from-brand-red to-purple-600 p-1 relative z-10 overflow-hidden transition-transform active:scale-95"
                                 >
                                     <div className="w-full h-full rounded-full overflow-hidden bg-black relative">
                                         {profile.avatar_url ? (
@@ -106,7 +106,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             {/* Info Cell */}
                             <div className="text-center md:text-left space-y-4 pt-2">
                                 <div>
-                                    <h1 className="text-4xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none mb-1">
+                                    <h1 className="text-3xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none mb-1">
                                         {profile.full_name}
                                     </h1>
                                     <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] md:text-xs">
@@ -152,24 +152,24 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                 {/* Bottom Stats Section — MATCHING SCREENSHOT */}
                 <div className="relative z-10 border-t border-white/5 bg-white/[0.02] backdrop-blur-sm">
                     <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/5">
-                        <div className="p-6 md:p-8 flex flex-col items-center justify-center gap-1 hover:bg-white/[0.02] transition-colors group cursor-default">
-                            <span className="text-3xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.wods}</span>
+                        <div className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.02] transition-colors group cursor-default">
+                            <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.wods}</span>
                             <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">WODS</span>
                         </div>
-                        <div className="p-6 md:p-8 flex flex-col items-center justify-center gap-1 hover:bg-white/[0.02] transition-colors group cursor-default">
-                            <span className="text-3xl md:text-5xl font-black text-brand-red italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.prs}</span>
+                        <div className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.02] transition-colors group cursor-default">
+                            <span className="text-2xl md:text-5xl font-black text-brand-red italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.prs}</span>
                             <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">PRS</span>
                         </div>
-                        <div className="p-6 md:p-8 flex flex-col items-center justify-center gap-1 hover:bg-white/[0.02] transition-colors group cursor-default">
-                            <span className="text-3xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.retos}</span>
+                        <div className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.02] transition-colors group cursor-default">
+                            <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.retos}</span>
                             <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">RETOS</span>
                         </div>
                         <button 
                             onClick={() => handleOpenModal('followers')}
                             disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                            className="p-6 md:p-8 flex flex-col items-center justify-center gap-1 hover:bg-white/[0.02] transition-colors group disabled:opacity-50"
+                            className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.02] transition-colors group disabled:opacity-50"
                         >
-                            <span className="text-3xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.followers}</span>
+                            <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.followers}</span>
                             <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">SEGUIDORES</span>
                         </button>
                     </div>
