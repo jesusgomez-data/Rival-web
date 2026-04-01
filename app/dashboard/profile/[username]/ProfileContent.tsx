@@ -62,6 +62,16 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
         followers: profile.followers_count
     };
 
+    const scrollToSection = (id: string, tab?: 'activity' | 'gallery' | 'stats') => {
+        if (tab) setMobileTab(tab);
+        setTimeout(() => {
+            const element = document.getElementById(id);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 100);
+    };
+
     return (
         <div className="max-w-5xl mx-auto space-y-6 md:space-y-12 animate-fade-in pb-20 px-4 md:px-0">
             <StoryBar currentUser={user} hideBar={true} />
@@ -169,22 +179,31 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                 {/* Bottom Stats Section — MATCHING SCREENSHOT */}
                 <div className="relative z-10 border-t border-white/5 bg-white/[0.02] backdrop-blur-sm">
                     <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/5">
-                        <div className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.02] transition-colors group cursor-default">
+                        <button 
+                            onClick={() => scrollToSection('activity-feed', 'activity')}
+                            className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                        >
                             <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.wods}</span>
                             <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">WODS</span>
-                        </div>
-                        <div className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.02] transition-colors group cursor-default">
+                        </button>
+                        <button 
+                            onClick={() => scrollToSection('personal-records', 'stats')}
+                            className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                        >
                             <span className="text-2xl md:text-5xl font-black text-brand-red italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.prs}</span>
                             <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">PRS</span>
-                        </div>
-                        <div className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.02] transition-colors group cursor-default">
+                        </button>
+                        <button 
+                            onClick={() => scrollToSection('combat-history', 'stats')}
+                            className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                        >
                             <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.retos}</span>
                             <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">RETOS</span>
-                        </div>
+                        </button>
                         <button 
                             onClick={() => handleOpenModal('followers')}
                             disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                            className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.02] transition-colors group disabled:opacity-50"
+                            className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group disabled:opacity-50 cursor-pointer"
                         >
                             <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.followers}</span>
                             <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">SEGUIDORES</span>
@@ -324,7 +343,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                 )}
 
                                 {/* Feed de Actividad */}
-                                <div className="pt-0 md:pt-8">
+                                <div id="activity-feed" className="pt-0 md:pt-8">
                                     <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.4em] mb-6 ml-4 flex items-center gap-2">
                                         <ImageIcon className="w-4 h-4" /> Feed de Actividad
                                     </h3>
@@ -369,7 +388,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     {canViewContent && (
                         <>
                             {!profile.is_official && (
-                                <div className="bg-black/60 border border-brand-red/20 rounded-[40px] p-8 relative overflow-hidden group shadow-2xl shadow-brand-red/5">
+                                <div id="combat-history" className="bg-black/60 border border-brand-red/20 rounded-[40px] p-8 relative overflow-hidden group shadow-2xl shadow-brand-red/5">
                                     <div className="absolute top-0 right-0 p-8 text-brand-red/5 group-hover:text-brand-red/10 transition-colors">
                                         <Swords className="w-32 h-32 rotate-12" />
                                     </div>
@@ -398,7 +417,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             
                             {/* Featured RMs / PRs Section */}
                             {profile.featured_rms && profile.featured_rms.length > 0 && (
-                                <div className="bg-brand-gray/30 border border-white/10 rounded-[40px] p-8 backdrop-blur-md animate-fade-in">
+                                <div id="personal-records" className="bg-brand-gray/30 border border-white/10 rounded-[40px] p-8 backdrop-blur-md animate-fade-in">
                                     <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
                                         <Dumbbell className="w-4 h-4 text-brand-red" /> RÉCORDS PERSONALES (PRs)
                                     </h3>
