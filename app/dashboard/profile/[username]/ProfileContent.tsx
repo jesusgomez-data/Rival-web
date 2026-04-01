@@ -59,185 +59,129 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
         <div className="max-w-5xl mx-auto space-y-6 md:space-y-12 animate-fade-in pb-20 px-4 md:px-0">
             {/* StoryBar must be mounted to handle share-to-story events from FeedPost */}
             <StoryBar currentUser={user} hideBar={true} />
-            {/* Tactical Banner */}
-            <div className={clsx(
-                "relative group rounded-[40px] overflow-hidden border shadow-2xl dark-section transition-all duration-500",
-                profile.is_official ? "border-brand-red/30 shadow-[0_0_50px_rgba(220,38,38,0.15)]" : "border-white/5"
-            )}>
-                <div className={clsx(
-                    "h-48 md:h-64 relative",
-                    profile.is_official ? "bg-gradient-to-br from-brand-red via-black to-red-950" : "bg-gradient-to-br from-brand-red via-black to-brand-gray"
-                )}>
-                    {profile.cover_url ? (
-                        <>
-                            <Image
-                                src={profile.cover_url}
-                                alt="Cover"
-                                fill
-                                className="object-cover"
-                                style={{ objectPosition: `center ${profile.cover_position || 50}%` }}
-                            />
-                            {/* Red transparent overlay */}
-                            <div className="absolute inset-0 bg-brand-red/10 mix-blend-multiply"></div>
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
-                        </>
-                    ) : (
-                        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-30 grayscale mix-blend-overlay"></div>
-                    )}
+    const stats = {
+        wods: workouts.length,
+        prs: posts.filter(p => p.media_type === 'pr').length,
+        retos: combatStats.total,
+        followers: profile.followers_count
+    };
+
+    return (
+        <div className="max-w-5xl mx-auto space-y-6 md:space-y-12 animate-fade-in pb-20 px-4 md:px-0">
+            <StoryBar currentUser={user} hideBar={true} />
+            
+            {/* New Premium Profile Header */}
+            <div className="relative group rounded-[48px] overflow-hidden border border-white/5 bg-[#050505] shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-500">
+                {/* Background Decor */}
+                <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+                    <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-brand-red/10 blur-[120px] -ml-40 -mt-40 rounded-full" />
+                    <div className="absolute bottom-0 right-0 w-[500px] h-[500px] bg-purple-600/5 blur-[120px] -mr-40 -mb-40 rounded-full" />
+                    {/* Subtle grid pattern */}
+                    <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:20px_20px]" />
                 </div>
 
-                {/* Header Content Container - FIXED LAYOUT */}
-                <div className="absolute inset-x-0 bottom-0 p-3 md:p-10 z-20">
-                    <div className="flex flex-col md:flex-row items-end justify-between gap-6 w-full">
-                        {/* Left Side: Avatar & Info */}
-                        <div className="flex items-end gap-3 md:gap-6 min-w-0 flex-1">
-                            <button
-                                onClick={() => setAvatarModalOpen(true)}
-                                className="w-20 h-20 md:w-36 md:h-36 rounded-full border-2 md:border-8 border-black bg-brand-gray overflow-hidden relative shadow-2xl shrink-0 z-10"
-                            >
-                                <Image
-                                    src={profile.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.full_name || 'User')}&background=random`}
-                                    alt={profile.full_name}
-                                    fill
-                                    className="object-cover"
-                                />
-                            </button>
+                <div className="relative z-10 p-8 md:p-12">
+                    <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-8">
+                        <div className="flex flex-col md:flex-row items-center md:items-start gap-8 flex-1">
+                            {/* Avatar Cell */}
+                            <div className="relative group">
+                                <div className="absolute inset-0 bg-gradient-to-br from-brand-red to-purple-600 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity" />
+                                <button 
+                                    onClick={() => setAvatarModalOpen(true)}
+                                    className="w-32 h-32 md:w-36 md:h-36 rounded-full border-4 border-white/10 bg-gradient-to-br from-brand-red to-purple-600 p-1 relative z-10 overflow-hidden transition-transform active:scale-95"
+                                >
+                                    <div className="w-full h-full rounded-full overflow-hidden bg-black relative">
+                                        {profile.avatar_url ? (
+                                            <Image
+                                                src={profile.avatar_url}
+                                                alt={profile.full_name}
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        ) : (
+                                            <div className="flex items-center justify-center w-full h-full text-4xl font-black text-white italic">
+                                                {profile.full_name?.charAt(0)}
+                                            </div>
+                                        )}
+                                    </div>
+                                </button>
+                            </div>
 
-                            <div className="pb-1 md:pb-4 min-w-0 transform translate-y-2 md:translate-y-0 z-20">
-                                <div className="mb-1">
-                                    <div className="flex items-center gap-1.5 md:gap-3">
-                                        <h1 className="text-xl md:text-4xl font-heading font-black text-white italic uppercase tracking-tight md:tracking-tighter truncate leading-none shadow-black drop-shadow-md max-w-[200px] md:max-w-md">
-                                            {profile.full_name}
-                                            {profile.is_official && (
-                                                <span className="ml-2 bg-brand-red p-1 rounded-full inline-flex shadow-[0_0_15px_rgba(220,38,38,0.5)] border border-white/20">
-                                                    <Trophy className="w-3 h-3 md:w-5 md:h-5 text-white" />
-                                                </span>
-                                            )}
-                                        </h1>
-                                        {profile.level >= 5 && !profile.is_official && <Star className="w-4 h-4 md:w-6 md:h-6 text-yellow-500 fill-yellow-500 shrink-0" />}
-                                    </div>
-                                    <div className="flex items-center gap-4">
-                                        <p className="text-brand-red font-black tracking-widest md:tracking-[0.3em] text-[10px] md:text-sm uppercase mt-0.5 truncate shadow-black drop-shadow-sm flex items-center gap-2">
-                                            @{profile.username}
-                                            {profile.is_official && <span className="text-[8px] md:text-[10px] bg-white/10 px-2 py-0.5 rounded-full border border-white/5">CUENTA OFICIAL</span>}
-                                        </p>
-                                        <div className="flex items-center gap-1 bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 rounded-full shadow-glow-orange group/streak cursor-default transition-all hover:scale-105">
-                                            <Flame className="w-3 h-3 text-orange-500 group-hover/streak:animate-pulse" />
-                                            <span className="text-[10px] font-black text-orange-500 uppercase tracking-tighter">{profile.streak_days || 7} DÍAS</span>
-                                        </div>
-                                    </div>
+                            {/* Info Cell */}
+                            <div className="text-center md:text-left space-y-4 pt-2">
+                                <div>
+                                    <h1 className="text-4xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none mb-1">
+                                        {profile.full_name}
+                                    </h1>
+                                    <p className="text-gray-500 font-bold uppercase tracking-widest text-[10px] md:text-xs">
+                                        @{profile.username} • {profile.main_sport || 'CROSSFIT ATHLETE'}
+                                    </p>
                                 </div>
 
-                                {!profile.is_official && (
-                                    <div className="hidden md:flex gap-4 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 w-fit shadow-2xl mb-2">
-                                        <button
-                                            onClick={() => handleOpenModal('followers')}
-                                            className="flex items-center gap-2 hover:opacity-80 transition-opacity disabled:opacity-50"
-                                            disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                                        >
-                                            <span className="text-white font-black text-xs md:text-lg leading-none">{profile.followers_count || 0}</span>
-                                            <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidores</span>
-                                        </button>
-                                        <div className="w-px h-4 bg-white/10"></div>
-                                        <button
-                                            onClick={() => handleOpenModal('following')}
-                                            className="flex items-center gap-2 hover:opacity-80 transition-opacity disabled:opacity-50"
-                                            disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                                        >
-                                            <span className="text-white font-black text-xs md:text-lg leading-none">{profile.following_count || 0}</span>
-                                            <span className="text-gray-400 text-[8px] md:text-xs uppercase font-bold tracking-widest">Seguidos</span>
-                                        </button>
+                                {/* Badge Cell */}
+                                <div className="flex justify-center md:justify-start items-center gap-3">
+                                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-brand-red/30 bg-brand-red/5 text-brand-red">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-brand-red animate-pulse" />
+                                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">PRO MEMBER</span>
                                     </div>
-                                )}
-                                 <div className="flex flex-col gap-3">
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex items-center gap-1.5 bg-brand-red/10 border border-brand-red/20 px-3 py-1 rounded-full shadow-glow-red">
-                                            <Award className="w-3.5 h-3.5 text-brand-red" />
-                                            <span className="text-[10px] text-white font-black uppercase tracking-widest leading-none">
-                                                {profile.is_official ? 'Soporte' : (profile.level > 0 ? `Lvl ${profile.level}` : 'Recluta')}
-                                            </span>
-                                        </div>
-                                        <div className="w-1 h-1 rounded-full bg-white/30"></div>
-                                        <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 px-3 py-1 rounded-full">
-                                            <Dumbbell className="w-3.5 h-3.5 text-brand-red" />
-                                            <span className="text-[10px] text-white font-black uppercase tracking-widest leading-none">
-                                                {profile.is_official ? 'Oficial' : (profile.main_sport || 'General')}
-                                            </span>
-                                        </div>
+                                    <div className="flex items-center gap-1 bg-orange-500/10 border border-orange-500/20 px-3 py-1.5 rounded-full shadow-glow-orange group/streak cursor-default transition-all hover:scale-105">
+                                        <Flame className="w-3.5 h-3.5 text-orange-500 group-hover/streak:animate-pulse" />
+                                        <span className="text-[10px] font-black text-orange-500 uppercase tracking-tighter">{profile.streak_days || 7} DÍAS</span>
                                     </div>
-                                    
-                                    {!profile.is_official && (
-                                        <div className="w-full max-w-[200px] space-y-1.5">
-                                            <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest text-white/40">
-                                                <span>PROGRESO_DE_NIVEL</span>
-                                                <span className="text-brand-red">850 / 1000 XP</span>
-                                            </div>
-                                            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                                <motion.div 
-                                                    initial={{ width: 0 }}
-                                                    animate={{ width: "85%" }}
-                                                    transition={{ duration: 1.5, ease: "easeOut" }}
-                                                    className="h-full bg-gradient-to-r from-brand-red to-red-500 shadow-glow-red"
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
                                 </div>
-
                             </div>
                         </div>
 
-                        {/* Right Side: Desktop Buttons */}
-                        <div className="hidden md:flex items-center gap-3 shrink-0 mb-4 h-full">
-                            {user?.id !== profile.id && !profile.is_official && (
-                                <>
-                                    {isFollowing && (
-                                        <Link
-                                            href={`/dashboard/messages?userId=${profile.id}`}
-                                            className="p-4 bg-black/60 border border-white/10 rounded-2xl text-white hover:bg-brand-red hover:border-brand-red hover:text-white transition-all group flex items-center gap-2 shadow-2xl backdrop-blur-xl shrink-0"
-                                        >
-                                            <MessageCircle className="w-5 h-5 text-brand-red group-hover:text-white transition-colors" />
-                                            <span className="hidden lg:inline text-[10px] font-black uppercase tracking-widest">Mensaje</span>
-                                        </Link>
-                                    )}
-                                    <div className="shrink-0">
-                                        <DuelButton targetId={profile.id} isRival={isFollowing} hasActiveDuel={hasActiveDuel} />
-                                    </div>
-                                    <div className="min-w-[140px] shrink-0">
-                                        <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
-                                    </div>
-                                </>
-                            )}
+                        {/* Action Buttons */}
+                        {user?.id !== profile.id && !profile.is_official && (
+                            <div className="flex md:flex-col items-center gap-3 shrink-0">
+                                {isFollowing && (
+                                    <Link
+                                        href={`/dashboard/messages?userId=${profile.id}`}
+                                        className="p-4 bg-white/5 border border-white/10 rounded-2xl text-white hover:bg-brand-red hover:border-brand-red hover:text-white transition-all group flex items-center gap-2 shadow-2xl backdrop-blur-xl"
+                                    >
+                                        <MessageCircle className="w-5 h-5 text-brand-red group-hover:text-white transition-colors" />
+                                        <span className="hidden md:inline text-[10px] font-black uppercase tracking-widest">Chat</span>
+                                    </Link>
+                                )}
+                                <div className="flex items-center gap-2">
+                                    <DuelButton targetId={profile.id} isRival={isFollowing} hasActiveDuel={hasActiveDuel} />
+                                    <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Bottom Stats Section — MATCHING SCREENSHOT */}
+                <div className="relative z-10 border-t border-white/5 bg-white/[0.02] backdrop-blur-sm">
+                    <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/5">
+                        <div className="p-6 md:p-8 flex flex-col items-center justify-center gap-1 hover:bg-white/[0.02] transition-colors group cursor-default">
+                            <span className="text-3xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.wods}</span>
+                            <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">WODS</span>
                         </div>
+                        <div className="p-6 md:p-8 flex flex-col items-center justify-center gap-1 hover:bg-white/[0.02] transition-colors group cursor-default">
+                            <span className="text-3xl md:text-5xl font-black text-brand-red italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.prs}</span>
+                            <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">PRS</span>
+                        </div>
+                        <div className="p-6 md:p-8 flex flex-col items-center justify-center gap-1 hover:bg-white/[0.02] transition-colors group cursor-default">
+                            <span className="text-3xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.retos}</span>
+                            <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">RETOS</span>
+                        </div>
+                        <button 
+                            onClick={() => handleOpenModal('followers')}
+                            disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
+                            className="p-6 md:p-8 flex flex-col items-center justify-center gap-1 hover:bg-white/[0.02] transition-colors group disabled:opacity-50"
+                        >
+                            <span className="text-3xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.followers}</span>
+                            <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">SEGUIDORES</span>
+                        </button>
                     </div>
                 </div>
             </div>
 
 
-            {/* Mobile Profile Info — Instagram/TikTok style */}
-            <div className="flex md:hidden flex-col px-4 gap-3 -mt-2">
-                {/* Followers / Following stats */}
-                {!profile.is_official && (
-                    <div className="flex gap-6">
-                        <button
-                            onClick={() => handleOpenModal('followers')}
-                            className="flex flex-col items-center hover:opacity-80 transition-opacity disabled:opacity-50"
-                            disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                        >
-                            <span className="text-white font-black text-xl leading-none">{profile.followers_count || 0}</span>
-                            <span className="text-gray-400 text-[10px] uppercase font-bold tracking-widest mt-0.5">Seguidores</span>
-                        </button>
-                        <div className="w-px bg-white/10 self-stretch" />
-                        <button
-                            onClick={() => handleOpenModal('following')}
-                            className="flex flex-col items-center hover:opacity-80 transition-opacity disabled:opacity-50"
-                            disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                        >
-                            <span className="text-white font-black text-xl leading-none">{profile.following_count || 0}</span>
-                            <span className="text-gray-400 text-[10px] uppercase font-bold tracking-widest mt-0.5">Seguidos</span>
-                        </button>
-                    </div>
-                )}
+
 
                 {/* Bio / Manifiesto */}
                 {!profile.is_official && profile.bio && (
