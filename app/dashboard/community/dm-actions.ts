@@ -3,7 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 
 export async function sharePostViaMessage(postId: string, receiverId: string, message: string) {
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) return { error: "Unauthenticated" };
