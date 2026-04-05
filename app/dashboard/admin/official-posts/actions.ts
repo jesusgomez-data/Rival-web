@@ -165,3 +165,51 @@ export async function publishOfficialStory(formData: FormData) {
         return { error: `Error interno: ${e.message}` };
     }
 }
+
+// ─── IN-APP OFFICIAL POST (Canal Oficial) ────────────────────────────────────
+
+export async function publishInAppOfficialPost(data: {
+    caption: string;
+    media_url?: string;
+    media_type?: string;
+    post_type?: string;
+}) {
+    const supabase = createAdminClient();
+    const { data: officialProfile } = await supabase
+        .from('profiles').select('id').eq('is_official', true).limit(1).maybeSingle();
+    if (!officialProfile) throw new Error('Perfil @rivalfit no encontrado');
+
+    const { data: post, error } = await supabase.from('posts').insert({
+        user_id: officialProfile.id,
+        caption: data.caption,
+        media_url: data.media_url || null,
+        media_type: data.media_type || 'text',
+        created_at: new Date().toISOString(),
+    }).select().single();
+
+    if (error) throw error;
+    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/profile/rivalfit');
+    return post;
+}
+
+export async function deleteOfficialPost(postId: string) {
+    const supabase = createAdminClient();
+    await supabase.from('posts').delete().eq('id', postId);
+    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/profile/rivalfit');
+}
+
+export async function updateOfficialProfile(data: { bio?: string; avatar_url?: string; cover_url?: string; full_name?: string }) {
+    const supabase = createAdminClient();
+    await supabase.from('profiles').update({ ...data, updated_at: new Date().toISOString() }).eq('is_official', true);
+    revalidatePath('/dashboard/profile/rivalfit');
+}
+
+export async function getOfficialPosts() {
+    const supabase = createAdminClient();
+    const { data: profile } = await supabase.from('profiles').select('id').eq('is_official', true).limit(1).maybeSingle();
+    if (!profile) return [];
+    const { data } = await supabase.from('posts').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(50);
+    return data || [];
+}

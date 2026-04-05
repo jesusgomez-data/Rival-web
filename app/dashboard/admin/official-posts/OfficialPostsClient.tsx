@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
-import { publishOfficialPost, deleteOfficialPost, updateOfficialProfile } from './actions';
+import { publishInAppOfficialPost, deleteOfficialPost, updateOfficialProfile } from './actions';
 import { Trophy, Plus, Trash2, Image, FileText, Megaphone, Dumbbell, Loader2, CheckCircle, X, Edit3, Eye, Users, Heart, MessageCircle, ExternalLink } from 'lucide-react';
 import NextImage from 'next/image';
 import Link from 'next/link';
@@ -95,7 +95,7 @@ export default function OfficialPostsClient({ rivalfitProfile, posts: initialPos
         if (!caption.trim()) return;
         startTransition(async () => {
             try {
-                const post = await publishOfficialPost({
+                const post = await publishInAppOfficialPost({
                     caption: caption.trim(),
                     media_url: mediaUrl || undefined,
                     media_type: postType === 'image' && mediaUrl ? 'image' : postType === 'wod' ? 'wod' : 'text',

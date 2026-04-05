@@ -123,7 +123,7 @@ export default function OfficialPostsAdmin() {
     )
 
     const groups = Object.keys(assets)
-    const currentAssets = selectedGroup ? assets[selectedGroup] : []
+    const currentAssets: { files: string[]; description: string } = (selectedGroup && assets[selectedGroup] && 'files' in assets[selectedGroup]) ? assets[selectedGroup] as { files: string[]; description: string } : { files: [], description: '' }
 
     return (
         <div className="min-h-screen bg-[#050505] text-white p-4 md:p-8">

@@ -129,6 +129,8 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
 
         try {
             const finalMediaUrl = mediaType === 'carousel' ? JSON.stringify(mediaUrls) : mediaUrls[0];
+            const formData = new FormData();
+            let res: any;
 
             if (postType === 'pr') {
                 formData.append("exercise", exercise);

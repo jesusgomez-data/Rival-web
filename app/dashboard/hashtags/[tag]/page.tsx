@@ -119,8 +119,9 @@ export default function HashtagPage({ params }: { params: Promise<{ tag: string 
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.1 }}
                             >
-                                <FeedPost 
+                                <FeedPost
                                     postId={post.id}
+                                    action="publicó"
                                     time={formatTimeAgo(post.created_at)}
                                     user={post.profiles?.full_name || post.profiles?.username || 'Atleta Rival'}
                                     username={post.profiles?.username}
@@ -139,7 +140,6 @@ export default function HashtagPage({ params }: { params: Promise<{ tag: string 
                                     music_artist={post.music_artist}
                                     isOfficial={post.profiles?.is_official}
                                     highlight={post.workouts?.title}
-                                    index={index}
                                 />
                             </motion.div>
                         ))

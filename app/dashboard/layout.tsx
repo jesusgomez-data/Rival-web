@@ -28,7 +28,8 @@ import {
     ChevronLeft,
     Flag,
     Zap,
-    Activity
+    Activity,
+    Instagram
 } from "lucide-react";
 import clsx from "clsx";
 import { useRouter, usePathname } from "next/navigation";
@@ -275,6 +276,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         ...(isAdmin === true ? [
             { name: "RIVAL COMMAND", href: "/dashboard/admin", icon: Shield },
             { name: "Canal Oficial", href: "/dashboard/admin/official-posts", icon: Trophy },
+            { name: "Social Media", href: "/dashboard/admin/social-media", icon: Instagram },
         ] : []),
         // eslint-disable-next-line react-hooks/exhaustive-deps
     ], [isAdmin, t]);
