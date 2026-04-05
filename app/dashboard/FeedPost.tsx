@@ -1149,14 +1149,17 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         </AnimatePresence>
 
                         {/* Navigation Arrows */}
-                        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none opacity-0 group-hover/carousel:opacity-100 transition-opacity">
+                        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none opacity-100 md:opacity-0 md:group-hover/carousel:opacity-100 transition-opacity z-10">
                             <button
                                 onClick={(e) => {
                                     e.stopPropagation();
                                     setCarouselIndex(prev => Math.max(0, prev - 1));
                                 }}
                                 disabled={carouselIndex === 0}
-                                className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 text-white pointer-events-auto disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/60 transition-all"
+                                className={clsx(
+                                    "w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 text-white pointer-events-auto transition-all",
+                                    carouselIndex === 0 ? "opacity-0 cursor-default" : "hover:bg-black/80 hover:scale-110 active:scale-90 shadow-lg"
+                                )}
                             >
                                 <ChevronLeft className="w-6 h-6" />
                             </button>
@@ -1166,7 +1169,11 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     setCarouselIndex(prev => Math.min(carouselItems.length - 1, prev + 1));
                                 }}
                                 disabled={carouselIndex === carouselItems.length - 1}
-                                className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 text-white pointer-events-auto disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/60 transition-all"
+                                className={clsx(
+                                    "w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 text-white pointer-events-auto transition-all",
+                                    carouselIndex === carouselItems.length - 1 ? "opacity-0 cursor-default" : "hover:bg-black/80 hover:scale-110 active:scale-90 shadow-lg",
+                                    (carouselIndex === 0 && carouselItems.length > 1) && "animate-pulse ring-2 ring-brand-red/50 shadow-glow"
+                                )}
                             >
                                 <ChevronRight className="w-6 h-6" />
                             </button>
