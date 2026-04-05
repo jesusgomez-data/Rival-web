@@ -269,6 +269,50 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const [showShareCard, setShowShareCard] = useState(false);
     const [showComments, setShowComments] = useState(false);
     const [commentList, setCommentList] = useState<Comment[]>([]);
+    const [isReposting, setIsReposting] = useState(false);
+    const [repostCaption, setRepostCaption] = useState("");
+    const [showRepostModal, setShowRepostModal] = useState(false);
+    const [showDMModal, setShowDMModal] = useState(false);
+    const [dmMessage, setDmMessage] = useState("");
+    const [dmFollows, setDmFollows] = useState<any[]>([]);
+    const [selectedDmUser, setSelectedDmUser] = useState<string | null>(null);
+    const [isSendingDM, setIsSendingDM] = useState(false);
+
+    const handleRepost = async () => {
+        if (!postId) return;
+        setIsReposting(true);
+        const res = await createRepost(postId, repostCaption);
+        if (res.error) {
+            alert("Error al repostear: " + res.error);
+        } else {
+            alert("¡Reposteado con éxito en tu perfil!");
+            setShowRepostModal(false);
+            setRepostCaption("");
+        }
+        setIsReposting(false);
+    };
+
+    const loadDMFollows = async () => {
+        if (currentUserId) {
+            const data = await getFollows(currentUserId, 'following');
+            setDmFollows(data || []);
+        }
+    };
+
+    const handleSendDM = async () => {
+        if (!postId || !selectedDmUser) return;
+        setIsSendingDM(true);
+        const res = await sharePostViaMessage(postId, selectedDmUser, dmMessage);
+        if (res.error) {
+            alert(res.error);
+        } else {
+            alert("¡Mensaje enviado a tu amigo con éxito!");
+            setShowDMModal(false);
+            setDmMessage("");
+            setSelectedDmUser(null);
+        }
+        setIsSendingDM(false);
+    };
     
     // Robustly resolve the photo/media URL
     const photoUrl = useMemo(() => {
