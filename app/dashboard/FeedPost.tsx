@@ -278,7 +278,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const [selectedDmUser, setSelectedDmUser] = useState<string | null>(null);
     const [isSendingDM, setIsSendingDM] = useState(false);
 
-    const handleRepost = async () => {
+    const handleShareRepost = async () => {
         if (!postId) return;
         setIsReposting(true);
         const res = await createRepost(postId, repostCaption);
@@ -2078,7 +2078,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             />
                             <div className="flex justify-end pt-2">
                                 <button
-                                    onClick={handleRepost}
+                                    onClick={handleShareRepost}
                                     disabled={isReposting}
                                     className="px-6 py-2 bg-brand-red text-white font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2"
                                 >
