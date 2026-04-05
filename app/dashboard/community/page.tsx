@@ -15,6 +15,7 @@ import SidebarAd from "./SidebarAd";
 import FeedAd from "./FeedAd";
 import clsx from "clsx";
 import InfoTooltip from "@/components/InfoTooltip";
+import VerifiedBadge from "@/components/VerifiedBadge";
 
 export default function CommunityPage({
     searchParams
@@ -266,11 +267,7 @@ export default function CommunityPage({
                                                 <div>
                                                     <p className="text-sm text-white font-bold group-hover:text-brand-red transition-colors flex items-center gap-1.5">
                                                         {profile.full_name}
-                                                        {profile.is_official && (
-                                                            <div className="bg-brand-red p-0.5 rounded-full inline-flex">
-                                                                <Trophy className="w-2.5 h-2.5 text-white" />
-                                                            </div>
-                                                        )}
+                                                        {profile.is_official && <VerifiedBadge size="sm" />}
                                                     </p>
                                                     <p className="text-xs text-gray-500 font-bold uppercase tracking-widest text-[8px]">@{profile.username}</p>
                                                 </div>

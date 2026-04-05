@@ -272,7 +272,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         { name: t.navDashboard.leaderboard, href: "/dashboard/leaderboard", icon: Trophy },
         { name: t.navDashboard.analytics, href: "/dashboard/analytics", icon: BarChart2 },
         { name: t.navDashboard.profile, href: "/dashboard/profile", icon: Settings },
-        ...(isAdmin === true ? [{ name: "RIVAL COMMAND", href: "/dashboard/admin", icon: Shield }] : []),
+        ...(isAdmin === true ? [
+            { name: "RIVAL COMMAND", href: "/dashboard/admin", icon: Shield },
+            { name: "Canal Oficial", href: "/dashboard/admin/official-posts", icon: Trophy },
+        ] : []),
         // eslint-disable-next-line react-hooks/exhaustive-deps
     ], [isAdmin, t]);
 

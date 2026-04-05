@@ -8,25 +8,23 @@ interface MentionTextProps {
 }
 
 /**
- * Renders text with clickable @mentions
+ * Renders text with clickable @mentions and #hashtags
  */
 export default function MentionText({ text, className, mentionClassName }: MentionTextProps) {
     if (!text) return null;
 
-    // Improved regex to avoid capturing trailing punctuation like . , ! ?
-    // Matches @ followed by word chars, dashes or dots, but dots/dashes must be followed by word chars
-    const mentionRegex = /((?:^|\s)@[\w-]+(?:[.-][\w-]+)*)/g;
+    // Combined regex for mentions (@user) and hashtags (#tag)
+    // Supports Spanish accents and special characters common in usernames/tags
+    const combinedRegex = /((?:^|\s)[@#][\wñáéíóúü-]+(?:[.-][\wñáéíóúü-]+)*)/gi;
 
     return (
         <span className={className}>
-            {text.split(mentionRegex).map((part, i) => {
-                if (part && part.trim().startsWith('@')) {
-                    const mention = part.trim();
-                    const space = part.startsWith(' ') ? ' ' : '';
+            {text.split(combinedRegex).map((part, i) => {
+                const trimmed = part.trim();
+                const space = part.startsWith(' ') ? ' ' : '';
 
-                    // Slugify for URL safety, but keep display text as is
-                    const username = mention.slice(1).toLowerCase();
-
+                if (trimmed.startsWith('@')) {
+                    const username = trimmed.slice(1).toLowerCase();
                     return (
                         <span key={i}>
                             {space}
@@ -38,11 +36,31 @@ export default function MentionText({ text, className, mentionClassName }: Menti
                                 )}
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                {mention}
+                                {trimmed}
                             </Link>
                         </span>
                     );
                 }
+
+                if (trimmed.startsWith('#')) {
+                    const tag = trimmed.slice(1).toLowerCase();
+                    return (
+                        <span key={i}>
+                            {space}
+                            <Link
+                                href={`/dashboard/hashtags/${tag}`}
+                                className={clsx(
+                                    "text-brand-red font-black italic hover:underline hover:scale-105 inline-block transition-all",
+                                    mentionClassName
+                                )}
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {trimmed}
+                            </Link>
+                        </span>
+                    );
+                }
+
                 return part;
             })}
         </span>

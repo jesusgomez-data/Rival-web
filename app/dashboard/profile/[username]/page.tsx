@@ -107,6 +107,10 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
     const privacy = profile.privacy_setting || 'public';
     const canViewContent = profile.is_official || privacy === 'public' || (user && user.id === profile.id) || isFollowing;
 
+    // Admin Check Logic
+    const ADMIN_EMAILS = ['rival.app.official@gmail.com', 'jesusgomez.s@hotmail.com'];
+    const isActuallyAdmin = user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
+    
     let currentUserProfile = null;
     if (user) {
         const { data: p } = await supabase.from('profiles').select('is_official').eq('id', user.id).single();
@@ -140,7 +144,7 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
             workouts={allActivities}
             badges={userBadges || []}
             gear={userGear || []}
-            isAdminUser={currentUserProfile?.is_official === true}
+            isAdminUser={isActuallyAdmin === true || currentUserProfile?.is_official === true}
             hasActiveDuel={!!activeDuel}
             medals={competitionMedals}
         />

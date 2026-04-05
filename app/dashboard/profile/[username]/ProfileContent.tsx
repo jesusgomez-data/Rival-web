@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { clsx } from "clsx";
 import { motion } from "framer-motion";
-import { Trophy, Swords, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, X, MessageSquare } from "lucide-react";
+import { Trophy, Swords, ShieldCheck, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, X, MessageSquare } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import DuelButton from "../../community/DuelButton";
@@ -17,6 +17,7 @@ import InfoTooltip from "@/components/InfoTooltip";
 import { getFollows } from "../../community/follows-actions";
 import StoryBar from "../../stories/StoryBar";
 import MedalShelf from "./MedalShelf";
+import VerifiedBadge from "@/components/VerifiedBadge";
 
 interface ProfileContentProps {
     profile: any;
@@ -56,8 +57,8 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
     };
 
     const stats = {
-        wods: workouts.length,
-        prs: ((posts || []).filter(p => p.media_type === 'pr').length) + (profile.featured_rms?.length || 0),
+        wods: profile.is_official ? (posts || []).filter(p => p.media_type === 'wod').length : workouts.length,
+        prs: profile.is_official ? (posts || []).length : (((posts || []).filter(p => p.media_type === 'pr').length) + (profile.featured_rms?.length || 0)),
         retos: combatStats.total,
         followers: profile.followers_count
     };
@@ -94,7 +95,12 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                 <div className="absolute inset-0 bg-gradient-to-br from-brand-red to-purple-600 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity" />
                                 <button 
                                     onClick={() => setAvatarModalOpen(true)}
-                                    className="w-20 h-20 md:w-36 md:h-36 rounded-full border-2 md:border-4 border-white/10 bg-gradient-to-br from-brand-red to-purple-600 p-0.5 md:p-1 relative z-10 overflow-hidden transition-transform active:scale-95"
+                                    className={clsx(
+                                        "w-20 h-20 md:w-36 md:h-36 rounded-full border-2 md:border-4 relative z-10 overflow-hidden transition-transform active:scale-95",
+                                        profile.is_official 
+                                            ? "border-brand-red bg-white p-2 md:p-3 shadow-[0_0_40px_rgba(220,38,38,0.3)]" 
+                                            : "border-white/10 bg-gradient-to-br from-brand-red to-purple-600 p-0.5 md:p-1"
+                                    )}
                                 >
                                     <div className="w-full h-full rounded-full overflow-hidden bg-black relative">
                                         {profile.avatar_url ? (
@@ -102,7 +108,9 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                                 src={profile.avatar_url}
                                                 alt={profile.full_name}
                                                 fill
-                                                className="object-cover"
+                                                className={clsx(
+                                                    profile.is_official ? "object-contain p-2 md:p-3 bg-white" : "object-cover"
+                                                )}
                                             />
                                         ) : (
                                             <div className="flex items-center justify-center w-full h-full text-2xl md:text-4xl font-black text-white italic">
@@ -116,41 +124,51 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             {/* Info & Buttons Cell */}
                             <div className="flex-1 text-left space-y-2 md:space-y-4 pt-1">
                                 <div>
-                                    <h1 className="text-2xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none mb-1">
+                                    <h1 className="text-2xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none mb-1 flex items-center gap-3">
                                         {profile.full_name}
+                                        {profile.is_official && <VerifiedBadge size="lg" className="translate-y-[-2px]" />}
                                     </h1>
-                                    <p className="text-gray-500 font-bold uppercase tracking-widest text-[9px] md:text-xs">
-                                        @{profile.username} • {profile.main_sport || 'CROSSFIT ATHLETE'}
+                                    <p className="text-gray-500 font-bold uppercase tracking-widest text-[9px] md:text-xs flex items-center gap-2">
+                                        @{profile.username} • {profile.is_official ? 'PLATAFORMA OFICIAL' : (profile.main_sport || 'CROSSFIT ATHLETE')}
                                     </p>
                                 </div>
 
                                 {/* Badge & Streak — COMPACT ON MOBILE */}
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full border border-brand-red/30 bg-brand-red/5 text-brand-red">
-                                        <div className="w-1 h-1 rounded-full bg-brand-red animate-pulse" />
-                                        <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.1em]">PRO</span>
-                                    </div>
-                                    <div className="flex items-center gap-1 bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded-full shadow-glow-orange cursor-default">
-                                        <Flame className="w-3 h-3 text-orange-500" />
-                                        <span className="text-[8px] md:text-[10px] font-black text-orange-500 uppercase tracking-tighter">{profile.streak_days || 7} DÍAS</span>
-                                    </div>
+                                    {profile.is_official ? (
+                                        <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-blue-500/30 bg-blue-500/10 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
+                                            <ShieldCheck className="w-3.5 h-3.5" strokeWidth={3} />
+                                            <span className="text-[9px] md:text-[11px] font-black uppercase tracking-[0.15em]">PERFIL VERIFICADO</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full border border-brand-red/30 bg-brand-red/5 text-brand-red">
+                                                <div className="w-1 h-1 rounded-full bg-brand-red animate-pulse" />
+                                                <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.1em]">PRO</span>
+                                            </div>
+                                            <div className="flex items-center gap-1 bg-orange-500/10 border border-orange-500/20 px-2 py-1 rounded-full shadow-glow-orange cursor-default">
+                                                <Flame className="w-3 h-3 text-orange-500" />
+                                                <span className="text-[8px] md:text-[10px] font-black text-orange-500 uppercase tracking-tighter">{profile.streak_days || 7} DÍAS</span>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                                 
                                 {/* Header Actions — INTEGRATED FOR MOBILE */}
                                 <div className="flex md:hidden items-center gap-2 pt-1">
-                                    {user?.id === profile.id ? (
+                                    {(user?.id === profile.id || isAdminUser) ? (
                                         <Link
-                                            href="/dashboard/settings/profile"
-                                            className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-white text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                                            href="/dashboard/profile"
+                                            className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-full text-white text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all font-accent flex items-center gap-2"
                                         >
-                                            Editar Perfil
+                                            <Edit2 className="w-3 h-3 text-brand-red" /> Editar {isAdminUser && user?.id !== profile.id ? 'Marca' : 'Perfil'}
                                         </Link>
-                                    ) : (
+                                    ) : !profile.is_official ? (
                                         <>
                                             <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
                                             <DuelButton targetId={profile.id} isRival={isFollowing} hasActiveDuel={hasActiveDuel} />
                                         </>
-                                    )}
+                                    ) : null}
                                 </div>
                             </div>
                         </div>
@@ -176,44 +194,87 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     </div>
                 </div>
 
-                {/* Bottom Stats Section — MATCHING SCREENSHOT */}
+                {/* Bottom Stats Section — CONDITIONAL FOR OFFICIAL */}
                 <div className="relative z-10 border-t border-white/5 bg-white/[0.02] backdrop-blur-sm">
-                    <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/5">
-                        <button 
-                            onClick={() => scrollToSection('activity-feed', 'activity')}
-                            className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
-                        >
-                            <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.wods}</span>
-                            <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">WODS</span>
-                        </button>
-                        <button 
-                            onClick={() => scrollToSection('personal-records', 'stats')}
-                            className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
-                        >
-                            <span className="text-2xl md:text-5xl font-black text-brand-red italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.prs}</span>
-                            <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">PRS</span>
-                        </button>
-                        <button 
-                            onClick={() => scrollToSection('combat-history', 'stats')}
-                            className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
-                        >
-                            <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.retos}</span>
-                            <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">RETOS</span>
-                        </button>
-                        <button 
-                            onClick={() => handleOpenModal('followers')}
-                            disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                            className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group disabled:opacity-50 cursor-pointer"
-                        >
-                            <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.followers}</span>
-                            <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">SEGUIDORES</span>
-                        </button>
-                    </div>
+                    {profile.is_official ? (
+                        <div className="grid grid-cols-3 divide-x divide-white/5">
+                            <button 
+                                onClick={() => scrollToSection('activity-feed', 'activity')}
+                                className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                            >
+                                <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.prs}</span>
+                                <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">POSTS</span>
+                            </button>
+                            <button 
+                                onClick={() => scrollToSection('activity-feed', 'activity')}
+                                className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                            >
+                                <span className="text-2xl md:text-5xl font-black text-brand-red italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.wods}</span>
+                                <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">WODS PROPUESTOS</span>
+                            </button>
+                            <button 
+                                onClick={() => handleOpenModal('followers')}
+                                className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                            >
+                                <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.followers}</span>
+                                <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">COMUNIDAD</span>
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/5">
+                            <button 
+                                onClick={() => scrollToSection('activity-feed', 'activity')}
+                                className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                            >
+                                <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.wods}</span>
+                                <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">WODS</span>
+                            </button>
+                            <button 
+                                onClick={() => scrollToSection('personal-records', 'stats')}
+                                className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                            >
+                                <span className="text-2xl md:text-5xl font-black text-brand-red italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.prs}</span>
+                                <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">PRS</span>
+                            </button>
+                            <button 
+                                onClick={() => scrollToSection('combat-history', 'stats')}
+                                className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                            >
+                                <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.retos}</span>
+                                <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">RETOS</span>
+                            </button>
+                            <button 
+                                onClick={() => handleOpenModal('followers')}
+                                disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
+                                className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group disabled:opacity-50 cursor-pointer"
+                            >
+                                <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.followers}</span>
+                                <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">SEGUIDORES</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Bio / Manifiesto */}
-            {!profile.is_official && profile.bio && (
+            {/* Bio / Manifiesto — IMPROVED FOR OFFICIAL */}
+            {profile.is_official ? (
+                 <div className="bg-white/5 border border-white/10 rounded-[32px] p-6 md:p-12 backdrop-blur-md relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-8 text-white/[0.02] pointer-events-none">
+                        <ShieldCheck className="w-48 h-48 -rotate-12" />
+                    </div>
+                    <div className="relative z-10">
+                        <h3 className="text-[10px] font-black text-brand-red uppercase tracking-[0.6em] mb-6 flex items-center gap-2 opacity-80">
+                            <ShieldCheck className="w-3 h-3" /> COMUNICADO OFICIAL
+                        </h3>
+                        <div className="space-y-4 max-w-3xl">
+                            <p className="text-lg md:text-2xl font-bold text-gray-200 leading-relaxed italic tracking-tight">
+                                {profile.bio || "Bienvenidos a la plataforma oficial de Rival Fit. Aquí encontrarás toda la información, retos y motivación para llevar tu entrenamiento al siguiente nivel."}
+                            </p>
+                            <div className="h-0.5 w-12 bg-brand-red/40 rounded-full" />
+                        </div>
+                    </div>
+                </div>
+            ) : profile.bio && (
                 <p className="text-sm text-gray-200 font-medium italic leading-relaxed border-l-2 border-brand-red/60 pl-3">
                     "{profile.bio}"
                 </p>
@@ -387,53 +448,78 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                 <div className={clsx("lg:col-span-4 space-y-8", mobileTab !== 'stats' && "hidden md:block")}>
                     {canViewContent && (
                         <>
-                            {!profile.is_official && (
-                                <div id="combat-history" className="bg-black/60 border border-brand-red/20 rounded-[40px] p-8 relative overflow-hidden group shadow-2xl shadow-brand-red/5">
-                                    <div className="absolute top-0 right-0 p-8 text-brand-red/5 group-hover:text-brand-red/10 transition-colors">
-                                        <Swords className="w-32 h-32 rotate-12" />
-                                    </div>
-                                    <div className="relative z-10">
-                                        <h3 className="font-heading font-black text-white italic tracking-wider mb-8 flex items-center gap-3">
-                                            <TrendingUp className="w-5 h-5 text-brand-red" /> REGISTRO DE COMBATE
-                                        </h3>
-                                        <div className="grid grid-cols-3 gap-2">
-                                            <div className="text-center">
-                                                <p className="text-3xl font-black text-white italic">{combatStats.wins}</p>
-                                                <p className="text-[8px] font-black uppercase text-green-500 tracking-widest mt-1">Wins</p>
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="text-3xl font-black text-white italic">{combatStats.losses}</p>
-                                                <p className="text-[8px] font-black uppercase text-brand-red tracking-widest mt-1">Losses</p>
-                                            </div>
-                                            <div className="text-center">
-                                                <p className="text-3xl font-black text-white italic">{combatStats.draws}</p>
-                                                <p className="text-[8px] font-black uppercase text-gray-500 tracking-widest mt-1">Draws</p>
+                            {!profile.is_official ? (
+                                <>
+                                    <div id="combat-history" className="bg-black/60 border border-brand-red/20 rounded-[40px] p-8 relative overflow-hidden group shadow-2xl shadow-brand-red/5">
+                                        <div className="absolute top-0 right-0 p-8 text-brand-red/5 group-hover:text-brand-red/10 transition-colors">
+                                            <Swords className="w-32 h-32 rotate-12" />
+                                        </div>
+                                        <div className="relative z-10">
+                                            <h3 className="font-heading font-black text-white italic tracking-wider mb-8 flex items-center gap-3">
+                                                <TrendingUp className="w-5 h-5 text-brand-red" /> REGISTRO DE COMBATE
+                                            </h3>
+                                            <div className="grid grid-cols-3 gap-2">
+                                                <div className="text-center">
+                                                    <p className="text-3xl font-black text-white italic">{combatStats.wins}</p>
+                                                    <p className="text-[8px] font-black uppercase text-green-500 tracking-widest mt-1">Wins</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-3xl font-black text-white italic">{combatStats.losses}</p>
+                                                    <p className="text-[8px] font-black uppercase text-brand-red tracking-widest mt-1">Losses</p>
+                                                </div>
+                                                <div className="text-center">
+                                                    <p className="text-3xl font-black text-white italic">{combatStats.draws}</p>
+                                                    <p className="text-[8px] font-black uppercase text-gray-500 tracking-widest mt-1">Draws</p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
-                             <ActivityHeatmap workouts={workouts} userId={profile.id} />
-                            
-                            {/* Featured RMs / PRs Section */}
-                            {profile.featured_rms && profile.featured_rms.length > 0 && (
-                                <div id="personal-records" className="bg-brand-gray/30 border border-white/10 rounded-[40px] p-8 backdrop-blur-md animate-fade-in">
-                                    <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
-                                        <Dumbbell className="w-4 h-4 text-brand-red" /> RÉCORDS PERSONALES (PRs)
-                                    </h3>
-                                    <div className="space-y-4">
-                                        {profile.featured_rms.map((rm: any) => (
-                                            <div key={rm.id} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors rounded-lg px-2 -mx-2 group">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-brand-red/10 rounded-lg flex items-center justify-center text-brand-red shrink-0 group-hover:scale-110 transition-transform">
-                                                        <Dumbbell className="w-4 h-4" />
+                                    <ActivityHeatmap workouts={workouts} userId={profile.id} />
+                                    
+                                    {/* Featured RMs / PRs Section */}
+                                    {profile.featured_rms && profile.featured_rms.length > 0 && (
+                                        <div id="personal-records" className="bg-brand-gray/30 border border-white/10 rounded-[40px] p-8 backdrop-blur-md animate-fade-in">
+                                            <h3 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
+                                                <Dumbbell className="w-4 h-4 text-brand-red" /> RÉCORDS PERSONALES (PRs)
+                                            </h3>
+                                            <div className="space-y-4">
+                                                {profile.featured_rms.map((rm: any) => (
+                                                    <div key={rm.id} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors rounded-lg px-2 -mx-2 group">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 bg-brand-red/10 rounded-lg flex items-center justify-center text-brand-red shrink-0 group-hover:scale-110 transition-transform">
+                                                                <Dumbbell className="w-4 h-4" />
+                                                            </div>
+                                                            <span className="text-[11px] md:text-xs font-black uppercase text-gray-300 tracking-wide">{rm.exercise}</span>
+                                                        </div>
+                                                        <span className="text-sm md:text-base font-black text-white italic tracking-tighter">{rm.weight} {rm.unit}</span>
                                                     </div>
-                                                    <span className="text-[11px] md:text-xs font-black uppercase text-gray-300 tracking-wide">{rm.exercise}</span>
-                                                </div>
-                                                <span className="text-sm md:text-base font-black text-white italic tracking-tighter">{rm.weight} {rm.unit}</span>
+                                                ))}
                                             </div>
-                                        ))}
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="bg-gradient-to-br from-brand-red/10 to-purple-600/10 border border-white/5 rounded-[40px] p-8 backdrop-blur-xl relative overflow-hidden group">
+                                    <div className="absolute -right-8 -top-8 w-32 h-32 text-brand-red opacity-10 group-hover:rotate-12 transition-transform duration-700">
+                                        <Activity className="w-full h-full" />
                                     </div>
+                                    <h3 className="text-xs font-black text-white uppercase tracking-[0.4em] mb-6 flex items-center gap-2">
+                                        Explora el Ecosistema
+                                    </h3>
+                                    <ul className="space-y-4">
+                                        <li className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/5 hover:border-brand-red/30 transition-all cursor-pointer">
+                                            <LayoutGrid className="w-4 h-4 text-brand-red" />
+                                            <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">WODs del Día</span>
+                                        </li>
+                                        <li className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/5 hover:border-brand-red/30 transition-all cursor-pointer">
+                                            <Trophy className="w-4 h-4 text-purple-500" />
+                                            <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Retos Globales</span>
+                                        </li>
+                                        <li className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/5 hover:border-brand-red/30 transition-all cursor-pointer">
+                                            <TrendingUp className="w-4 h-4 text-green-500" />
+                                            <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Ranking Élite</span>
+                                        </li>
+                                    </ul>
                                 </div>
                             )}
                         </>

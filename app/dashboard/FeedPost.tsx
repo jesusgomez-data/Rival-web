@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, Volume2, VolumeX } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, Volume2, VolumeX, ChevronLeft, ChevronRight } from "lucide-react";
 import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
@@ -27,6 +27,7 @@ import MentionText from "@/components/MentionText";
 import MentionInput from "@/components/MentionInput";
 import WodCard from "@/components/community/WodCard";
 import { useVideo } from "./VideoContext";
+import VerifiedBadge from "@/components/VerifiedBadge";
 
 const InstagramShareCard = dynamic(() => import("./InstagramShareCard"), { ssr: false });
 
@@ -219,6 +220,7 @@ interface FeedPostProps {
         location_name?: string;
         sport_type?: string;
         metrics?: any;
+        image?: string;
     };
     music_url?: string | null;
     music_title?: string | null;
@@ -259,11 +261,11 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     const photoUrl = useMemo(() => {
         if (!image && !workoutData?.image) return undefined;
         
-        let targetMedia = image;
-        
+        let targetMedia: string | undefined = image;
+
         // If image is JSON, try to extract the URL
         if (targetMedia && targetMedia.trim().startsWith('{')) {
-            try { 
+            try {
                 const parsed = JSON.parse(targetMedia.trim());
                 targetMedia = parsed.image || parsed.backgroundImage || parsed.media_url || parsed.mediaUrl || parsed.url;
             } catch(e) { targetMedia = undefined; }
@@ -274,6 +276,19 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         
         return isImageUrl(finalUrl) ? finalUrl : undefined;
     }, [image, workoutData]);
+
+    const isCarousel = mediaType === 'carousel';
+    const [carouselIndex, setCarouselIndex] = useState(0);
+    const carouselItems = useMemo(() => {
+        if (!isCarousel) return [];
+        try {
+            const parsed = JSON.parse(image);
+            return Array.isArray(parsed) ? parsed : [parsed];
+        } catch (e) {
+            return [image];
+        }
+    }, [image, isCarousel]);
+
     const [commentTree, setCommentTree] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState("");
     const [commentsCount, setCommentsCount] = useState(initialCommentsCount);
@@ -718,7 +733,15 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 >
                     <div className="w-full h-full rounded-full overflow-hidden relative bg-gray-800 border-2 border-black">
                         {avatar && isImageUrl(avatar) ? (
-                            <Image src={avatar} alt={user} fill className="object-cover" />
+                            <Image 
+                                src={avatar} 
+                                alt={user} 
+                                fill 
+                                className={clsx(
+                                    "object-cover",
+                                    isOfficial && "object-contain bg-white p-1"
+                                )} 
+                            />
                         ) : (
                             <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase">
                                 {user?.substring(0, 2) || "?"}
@@ -731,9 +754,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         <p className="text-base font-black group-hover:opacity-80 transition-opacity leading-tight uppercase font-heading italic tracking-tight flex items-center gap-1.5 text-brand-red">
                             {user}
                             {isOfficial && (
-                                <span className="bg-brand-red p-0.5 rounded-full inline-flex shadow-[0_0_10px_rgba(220,38,38,0.5)] border border-white/20">
-                                    <Trophy className="w-2.5 h-2.5 text-white" />
-                                </span>
+                                <VerifiedBadge size="sm" />
                             )}
                         </p>
                         <p className="text-[10px] text-brand-red font-black uppercase tracking-[0.2em] mt-0.5">
@@ -1092,6 +1113,64 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             </div>
                         );
                     })()}
+                </div>
+            ) : isCarousel ? (
+                <div className="px-2 pb-4">
+                    <div className="relative aspect-[4/5] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/5 group/carousel">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={carouselIndex}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                className="relative w-full h-full"
+                            >
+                                <Image
+                                    src={carouselItems[carouselIndex]}
+                                    alt={`Slide ${carouselIndex + 1}`}
+                                    fill
+                                    className="object-cover"
+                                />
+                            </motion.div>
+                        </AnimatePresence>
+
+                        {/* Navigation Arrows */}
+                        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none opacity-0 group-hover/carousel:opacity-100 transition-opacity">
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCarouselIndex(prev => Math.max(0, prev - 1));
+                                }}
+                                disabled={carouselIndex === 0}
+                                className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 text-white pointer-events-auto disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/60 transition-all"
+                            >
+                                <ChevronLeft className="w-6 h-6" />
+                            </button>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCarouselIndex(prev => Math.min(carouselItems.length - 1, prev + 1));
+                                }}
+                                disabled={carouselIndex === carouselItems.length - 1}
+                                className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 text-white pointer-events-auto disabled:opacity-30 disabled:cursor-not-allowed hover:bg-black/60 transition-all"
+                            >
+                                <ChevronRight className="w-6 h-6" />
+                            </button>
+                        </div>
+
+                        {/* Indicators */}
+                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 px-3 py-2 bg-black/30 backdrop-blur-xl rounded-full border border-white/5">
+                            {carouselItems.map((_, i) => (
+                                <div
+                                    key={i}
+                                    className={clsx(
+                                        "w-1.5 h-1.5 rounded-full transition-all duration-300",
+                                        carouselIndex === i ? "bg-brand-red w-4" : "bg-white/30"
+                                    )}
+                                />
+                            ))}
+                        </div>
+                    </div>
                 </div>
             ) : mediaType === 'membership_activation' ? (
                 <div className="px-4 pb-6">

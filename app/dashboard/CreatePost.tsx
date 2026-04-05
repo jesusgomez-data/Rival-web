@@ -19,7 +19,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const { language } = useLanguage();
     const [content, setContent] = useState(initialData?.caption || initialData?.content || "");
     const [isPosting, setIsPosting] = useState(false);
-    const [preview, setPreview] = useState<string | null>(initialData?.media_url || null);
+    const [previews, setPreviews] = useState<string[]>(initialData?.media_url ? (initialData.media_url.startsWith('[') ? JSON.parse(initialData.media_url) : [initialData.media_url]) : []);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [postType, setPostType] = useState<'standard' | 'pr' | 'wod'>(initialPostType || 'standard');
     const [wodData, setWodData] = useState<{ title: string, blocks: WodBlock[], summary: WodSummary, category?: WorkoutCategory, originalWodPostId?: string } | null>(
@@ -41,7 +41,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const [isVideoEditing, setIsVideoEditing] = useState(false);
     const [editorVideoFile, setEditorVideoFile] = useState<File | null>(null);
     const [videoDuration, setVideoDuration] = useState(0);
-    const [pendingFile, setPendingFile] = useState<File | null>(null);
+    const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const trimmerVideoRef = useRef<HTMLVideoElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -51,7 +51,18 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     useEffect(() => {
         if (initialData) {
             setContent(initialData.caption || initialData.content || "");
-            setPreview(initialData.media_url || null);
+            const initialMedia = initialData.media_url;
+            if (initialMedia) {
+                try {
+                    const parsed = JSON.parse(initialMedia);
+                    setPreviews(Array.isArray(parsed) ? parsed : [initialMedia]);
+                } catch(e) {
+                    setPreviews([initialMedia]);
+                }
+            } else {
+                setPreviews([]);
+            }
+
             if (initialPostType === 'wod') {
                 setWodData(initialData);
             }
@@ -73,102 +84,67 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
 
     async function handlePost(e: React.FormEvent) {
         e.preventDefault();
-        // Use pendingFile (trimmed or original) if available, otherwise check input
-        let file = pendingFile || fileInputRef.current?.files?.[0];
+        let mediaUrls: string[] = [];
+        let mediaType: string | null = null;
 
-        if (postType === 'standard' && !content.trim() && !file) return;
-        if (postType === 'pr' && (!exercise || !weight)) return;
-        if (postType === 'wod' && !wodData) return;
-
-        setIsPosting(true);
-        setUploadProgress(10);
-
-        const formData = new FormData();
-
-        if (selectedTrack) {
-            formData.append("music_url", selectedTrack.url);
-            formData.append("music_title", selectedTrack.title);
-            formData.append("music_artist", selectedTrack.artist);
-        }
-
-        let mediaUrl = null;
-        let mediaType = null;
-
-        // DIRECT CLIENT UPLOAD for larger files and reliability
-        if (file && file.size > 0) {
-            // Warn if file is very large (common on iPhone .MOV files)
-            const MAX_SIZE_MB = 200;
-            if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-                alert(`El archivo es muy grande (${(file.size / 1024 / 1024).toFixed(0)}MB). Máximo ${MAX_SIZE_MB}MB. En iPhone, usa el modo "Alta Eficiencia" en Ajustes > Cámara > Formatos para reducir el tamaño.`);
-                setIsPosting(false);
-                setUploadProgress(0);
-                return;
-            }
-
+        // MULTIPLE FILES UPLOAD
+        if (pendingFiles.length > 0) {
             try {
-                const fileExt = (file.name.split('.').pop() || 'mp4').toLowerCase();
-                const fileName = `${currentUser.id}/${Date.now()}.${fileExt}`;
+                for (let i = 0; i < pendingFiles.length; i++) {
+                    const file = pendingFiles[i];
+                    
+                    // Progress for individual file
+                    const fileExt = (file.name.split('.').pop() || 'mp4').toLowerCase();
+                    const fileName = `${currentUser.id}/${Date.now()}-${i}.${fileExt}`;
 
-                setUploadProgress(20);
+                    const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                        .from('posts')
+                        .upload(fileName, file, { cacheControl: '3600', upsert: true });
 
-                // Upload with real progress tracking and 3-minute timeout
-                const TIMEOUT_MS = 3 * 60 * 1000;
-                const uploadPromise = supabaseClient.storage
-                    .from('posts')
-                    .upload(fileName, file, {
-                        cacheControl: '3600',
-                        upsert: true,
-                        onUploadProgress: (progress: { loaded: number; total: number }) => {
-                            if (progress.total > 0) {
-                                // Map upload progress to 20-80% range
-                                const pct = Math.round(20 + (progress.loaded / progress.total) * 60);
-                                setUploadProgress(Math.min(pct, 79));
-                            }
-                        },
-                    } as any);
+                    if (uploadError) throw uploadError;
 
-                const timeoutPromise = new Promise<never>((_, reject) =>
-                    setTimeout(() => reject(new Error('La subida tardó demasiado. Revisa tu conexión e inténtalo de nuevo.')), TIMEOUT_MS)
-                );
+                    const { data: { publicUrl } } = supabaseClient.storage
+                        .from('posts')
+                        .getPublicUrl(fileName);
 
-                const result = await Promise.race([uploadPromise, timeoutPromise]) as any;
-                if (result?.error) throw result.error;
+                    mediaUrls.push(publicUrl);
+                    if (!mediaType) {
+                        mediaType = file.type.startsWith('video/') ? 'video' : 'image';
+                    }
+                    
+                    setUploadProgress(Math.round(((i + 1) / pendingFiles.length) * 80));
+                }
 
-                const { data: { publicUrl } } = supabaseClient.storage
-                    .from('posts')
-                    .getPublicUrl(fileName);
-
-                mediaUrl = publicUrl;
-                mediaType = file.type.startsWith('video/') ? 'video' : 'image';
-                setUploadProgress(80);
+                if (pendingFiles.length > 1) {
+                    mediaType = 'carousel';
+                }
             } catch (error: any) {
-                console.error("Direct upload failed:", error);
-                alert(error?.message || "Error al subir el archivo. Revisa tu conexión e inténtalo de nuevo.");
+                console.error("Batch upload failed:", error);
+                alert(error?.message || "Error al subir los archivos.");
                 setIsPosting(false);
                 setUploadProgress(0);
                 return;
             }
         }
 
-        let res;
         try {
+            const finalMediaUrl = mediaType === 'carousel' ? JSON.stringify(mediaUrls) : mediaUrls[0];
+
             if (postType === 'pr') {
                 formData.append("exercise", exercise);
                 formData.append("weight", weight);
                 formData.append("sport", sport);
-                if (mediaUrl) formData.append("media_url", mediaUrl);
-                else if (file) formData.append("media", file);
+                if (finalMediaUrl) formData.append("media_url", finalMediaUrl);
                 res = await createPRPost(formData);
             } else if (postType === 'wod' && wodData) {
                 const finalWodData = {
                     ...wodData,
-                    media_url: mediaUrl || (wodData as any).media_url || null,
+                    media_url: finalMediaUrl || (wodData as any).media_url || null,
                     original_wod_post_id: originalWodPostId
                 };
                 const finalCaption = showWodFooter && content.trim() ? content.trim() : '';
 
                 if (editingPostId) {
-                    // Don't pass scheduledFor when editing — avoids changing the post's created_at date
                     res = await updatePost(editingPostId, finalCaption, JSON.stringify(finalWodData));
                 } else {
                     formData.append("content", finalCaption);
@@ -179,15 +155,12 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                 }
             } else {
                 if (editingPostId) {
-                    // editing a standard post
-                    res = await updatePost(editingPostId, content, mediaUrl || undefined, undefined, mediaType || undefined);
+                    res = await updatePost(editingPostId, content, finalMediaUrl || undefined, undefined, mediaType || undefined);
                 } else {
                     formData.append("content", content);
-                    if (mediaUrl) {
-                        formData.append("media_url", mediaUrl);
+                    if (finalMediaUrl) {
+                        formData.append("media_url", finalMediaUrl);
                         formData.append("media_type", mediaType!);
-                    } else if (file) {
-                        formData.append("media", file);
                     }
                     res = await createUserPost(formData);
                 }
@@ -201,9 +174,9 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                 setContent("");
                 setExercise("");
                 setWeight("");
-                setPreview(null);
+                setPreviews([]);
                 setDuration(null);
-                setPendingFile(null);
+                setPendingFiles([]);
                 setWodData(null);
                 setShowEmojiPicker(false);
                 setPostType('standard');
@@ -221,35 +194,27 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     }
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            if (file.type.startsWith('video/') || file.name.toLowerCase().match(/\.(mov|mp4|m4v|webm|ogg)$/)) {
-                // Set preview and pendingFile immediately — don't block on metadata
-                // (iOS Safari with .MOV files often never fires onloadedmetadata)
-                const url = URL.createObjectURL(file);
-                setPreview(url);
-                setPendingFile(file);
-                setDuration(null);
-
-                // Try to get duration in the background — non-blocking
+        const files = Array.from(e.target.files || []);
+        if (files.length > 0) {
+            const newPreviews = files.map(file => URL.createObjectURL(file));
+            setPreviews(newPreviews);
+            setPendingFiles(files);
+            
+            // For video duration (only check first if multiple, or iterate)
+            const firstVideo = files.find(f => f.type.startsWith('video/'));
+            if (firstVideo) {
                 const docVideo = document.createElement('video');
                 docVideo.preload = 'metadata';
                 docVideo.onloadedmetadata = () => {
-                    const dur = docVideo.duration;
-                    setVideoDuration(dur);
-                    setDuration(dur);
+                    setVideoDuration(docVideo.duration);
+                    setDuration(docVideo.duration);
                     URL.revokeObjectURL(docVideo.src);
                 };
-                docVideo.src = URL.createObjectURL(file);
-            } else {
-                const url = URL.createObjectURL(file);
-                setPreview(url);
-                setPendingFile(file);
-                setDuration(null);
+                docVideo.src = URL.createObjectURL(firstVideo);
             }
         } else {
-            setPreview(null);
-            setPendingFile(null);
+            setPreviews([]);
+            setPendingFiles([]);
             setDuration(null);
         }
     };
@@ -406,9 +371,39 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                         </div>
 
                         {/* Media Preview */}
-                        {preview && (
+                        {previews.length > 0 && (
                             <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/60 shadow-inner group transition-all w-full">
-                                <div className="flex items-center justify-center bg-black/20 min-h-[120px] max-h-[300px]">
+                                <div className="flex flex-col">
+                                    {/* Grid for multiple previews */}
+                                    <div className={clsx(
+                                        "grid gap-1 bg-black/20",
+                                        previews.length === 1 ? "grid-cols-1" : 
+                                        previews.length === 2 ? "grid-cols-2" : 
+                                        "grid-cols-2 md:grid-cols-3"
+                                    )}>
+                                        {previews.map((url, idx) => (
+                                            <div key={idx} className="relative aspect-square bg-gray-900 group/item">
+                                                {pendingFiles[idx]?.type.startsWith('video/') ? (
+                                                    <video src={url} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <img src={url} alt="Preview" className="w-full h-full object-cover" />
+                                                )}
+                                                {!isPosting && (
+                                                    <button 
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const nP = [...previews]; nP.splice(idx, 1); setPreviews(nP);
+                                                            const nF = [...pendingFiles]; nF.splice(idx, 1); setPendingFiles(nF);
+                                                        }}
+                                                        className="absolute top-2 right-2 p-1 bg-black/40 rounded-full text-white opacity-0 group-hover/item:opacity-100 transition-opacity"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+
                                     {isPosting && (
                                         <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center gap-3">
                                             <div className="w-32 h-1 bg-white/10 rounded-full overflow-hidden">
@@ -420,40 +415,20 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                             <span className="text-xl font-black text-white italic">{uploadProgress}%</span>
                                         </div>
                                     )}
-                                    {fileInputRef.current?.files?.[0]?.type.startsWith('video/') || (pendingFile?.type.startsWith('video/')) ? (
-                                        <video src={preview} controls className="max-h-[300px] w-full object-contain" />
-                                    ) : (
-                                        <img src={preview} alt="Preview" className="max-h-[300px] w-full object-contain" />
-                                    )}
                                 </div>
 
-                                {/* Remove Button */}
+                                {/* Global Remove Button */}
                                 {!isPosting && (
                                     <button
                                         type="button"
                                         onClick={() => {
-                                            setPreview(null);
-                                            setDuration(null);
-                                            setPendingFile(null);
+                                            setPreviews([]);
+                                            setPendingFiles([]);
                                             if (fileInputRef.current) fileInputRef.current.value = "";
                                         }}
                                         className="absolute top-3 right-3 bg-black/60 text-white p-2 rounded-full hover:bg-brand-red transition-all z-10 backdrop-blur-md border border-white/10"
                                     >
                                         <X className="w-4 h-4" />
-                                    </button>
-                                )}
-                                {/* Edit Button */}
-                                {!isPosting && (fileInputRef.current?.files?.[0]?.type.startsWith('video/') || pendingFile?.type.startsWith('video/')) && (
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setEditorVideoFile(pendingFile || fileInputRef.current?.files?.[0] || null);
-                                            setIsVideoEditing(true);
-                                        }}
-                                        className="absolute bottom-3 right-3 bg-brand-red text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest backdrop-blur-md shadow-glow transition-all flex items-center gap-2 hover:scale-105 active:scale-95"
-                                    >
-                                        <Sparkles className="w-4 h-4" />
-                                        EDITAR VIDEO PRO
                                     </button>
                                 )}
                             </div>
@@ -476,6 +451,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                     ref={fileInputRef}
                                     type="file"
                                     accept="image/*,video/*"
+                                    multiple
                                     onChange={handleFileChange}
                                     className="hidden"
                                 />
@@ -517,7 +493,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                             {/* Submit Button */}
                             <button
                                 type="submit"
-                                disabled={isPosting || (postType === 'standard' && !content.trim() && !preview) || (postType === 'pr' && (!exercise || !weight)) || (postType === 'wod' && false)}
+                                disabled={isPosting || (postType === 'standard' && !content.trim() && previews.length === 0) || (postType === 'pr' && (!exercise || !weight)) || (postType === 'wod' && false)}
                                 className="bg-brand-red text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-glow-sm hover:shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed flex items-center gap-3 ml-auto"
                             >
                                 {isPosting ? (
@@ -542,9 +518,9 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                     videoFile={editorVideoFile}
                     onSave={(editedFile, dur) => {
                         const url = URL.createObjectURL(editedFile);
-                        setPreview(url);
+                        setPreviews([url]);
                         setDuration(dur);
-                        setPendingFile(editedFile);
+                        setPendingFiles([editedFile]);
                         setIsVideoEditing(false);
                         setEditorVideoFile(null);
                     }}

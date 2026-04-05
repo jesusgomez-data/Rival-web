@@ -1828,7 +1828,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                                             <p className="text-[8px] text-gray-400 font-bold uppercase tracking-widest leading-none">Status</p>
                                                         </div>
                                                         <p className="text-sm font-black text-white italic whitespace-nowrap overflow-hidden text-ellipsis mb-1">
-                                                            {resolvedWorkoutData?.title || (wd?.id ? 'Sesión de Entrenamiento' : 'Actividad')}
+                                                            {(currentStory.metadata?.summary?.title) || 'Sesión de Entrenamiento'}
                                                         </p>
                                                     </div>
                                                 )}
@@ -2077,7 +2077,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                                                 ) : (
                                                                     <div className="bg-white/5 p-3 rounded-xl border border-white/5 text-center">
                                                                         <p className="text-white/60 text-xs italic">
-                                                                            {resolvedWorkoutData?.title || (wd?.id ? 'Sesión de Entrenamiento' : 'Actividad')}
+                                                                            {(currentStory.metadata?.summary?.title) || 'Sesión de Entrenamiento'}
                                                                         </p>
                                                                     </div>
                                                                 )}
