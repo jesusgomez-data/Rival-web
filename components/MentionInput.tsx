@@ -12,6 +12,7 @@ interface MentionInputProps {
     className?: string;
     containerClassName?: string;
     autoFocus?: boolean;
+    id?: string;
     as?: 'input' | 'textarea';
 }
 
@@ -30,6 +31,7 @@ export default function MentionInput({
     className,
     containerClassName,
     autoFocus = false,
+    id,
     as = 'input'
 }: MentionInputProps) {
     const [suggestions, setSuggestions] = useState<UserProfile[]>([]);
@@ -107,6 +109,7 @@ export default function MentionInput({
     return (
         <div className={clsx("relative flex-1", containerClassName)}>
             <InputComponent
+                id={id}
                 ref={inputRef as React.RefObject<HTMLInputElement & HTMLTextAreaElement>}
                 value={value}
                 onChange={handleChange}

@@ -165,6 +165,12 @@ function ShareButton({
                     <button onClick={handleShareToStory} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5">
                         <Plus className="w-4 h-4" /> Enviar a Mis Historias
                     </button>
+                    <button onClick={() => {/* Lógica Repost */}} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5">
+                        <Repeat className="w-4 h-4" /> Repostear
+                    </button>
+                    <button onClick={() => {/* Lógica DM */}} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5">
+                        <MessageSquare className="w-4 h-4" /> Enviar Mensaje
+                    </button>
                     <button
                         onClick={(e) => { e.stopPropagation(); onInstagramShare?.(); setIsOpen(false); }}
                         className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5"
@@ -647,6 +653,10 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
     if (isDeleting) return null;
 
+    const onEmojiClick = (emojiData: EmojiClickData) => {
+        setNewComment(prev => prev + emojiData.emoji);
+    };
+
     const CommentNode = ({ comment, depth = 0 }: { comment: Comment, depth?: number }) => (
         <div className={clsx("flex gap-3", depth > 0 && "mt-3")}>
             <div className="flex flex-col items-center">
@@ -654,7 +664,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                     {comment.user?.avatar_url && isImageUrl(comment.user.avatar_url) ? (
                         <Image src={comment.user.avatar_url} alt={comment.user.username} width={32} height={32} className="object-cover w-full h-full" />
                     ) : (
-                        <div className="w-full h-full flex items-center justify-center text-[10px] bg-brand-red/10 font-bold text-gray-400 capitalize whitespace-nowrap overflow-hidden">
+                        <div className="w-full h-full flex items-center justify-center text-[10px] bg-brand-red/10 font-bold text-brand-red capitalize whitespace-nowrap overflow-hidden">
                             {comment.user?.username?.substring(0, 2) || "?"}
                         </div>
                     )}
@@ -672,7 +682,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                     <div className="absolute right-2 bottom-1 flex items-center gap-3">
                         <button
                             onClick={() => handleCommentLike(comment.id)}
-                            className={clsx("flex items-center gap-1 text-[10px] font-bold transition-colors", comment.has_liked ? "text-red-500" : "text-gray-500 hover:text-red-500")}
+                            className={clsx("flex items-center gap-1 text-[10px] font-bold transition-colors", comment.has_liked ? "text-brand-red" : "text-gray-500 hover:text-brand-red")}
                         >
                             <Heart className={clsx("w-3 h-3", comment.has_liked && "fill-current")} />
                             {comment.likes_count > 0 && comment.likes_count}
@@ -689,7 +699,11 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             if (!newComment.includes(mention)) {
                                 setNewComment(prev => mention + prev);
                             }
-                            setTimeout(() => commentInputRef.current?.focus(), 100);
+                            // Focus input
+                            setTimeout(() => {
+                                const inputElement = document.getElementById(`comment-input-${postId}`);
+                                if (inputElement) inputElement.focus();
+                            }, 100);
                         }}
                         className="text-gray-500 hover:text-brand-red"
                     >
@@ -1693,25 +1707,45 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                     <button type="button" onClick={() => setReplyingTo(null)}><X className="w-3 h-3" /></button>
                                 </div>
                             )}
-                            <div className="flex gap-2 items-center">
-                                <MentionInput
-                                    value={newComment}
-                                    onChange={setNewComment}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            handleAddComment(e, replyingTo?.id);
-                                        }
-                                    }}
-                                    placeholder="Escribe un comentario..."
-                                    className={clsx(
-                                        "flex-1 border rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-brand-red/50",
-                                        theme === 'dark' ? "bg-black/40 border-white/10 text-white" : "bg-gray-100 border-gray-200 text-gray-900"
-                                    )}
-                                />
-                                <button type="submit" disabled={!newComment.trim() || isPostingComment} className="p-2 bg-brand-red text-white rounded-xl hover:bg-red-600 transition-colors shadow-glow">
-                                    <Send className="w-4 h-4" />
+                            <div className="flex gap-2 items-center relative">
+                                <div className="relative flex-1 flex items-center">
+                                    <MentionInput
+                                        id={`comment-input-${postId}`}
+                                        value={newComment}
+                                        onChange={setNewComment}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleAddComment(e, replyingTo?.id);
+                                            }
+                                        }}
+                                        placeholder="Escribe un comentario..."
+                                        className={clsx(
+                                            "flex-1 border rounded-xl pl-4 pr-10 py-2.5 text-sm focus:outline-none focus:border-brand-red/50 transition-all",
+                                            theme === 'dark' ? "bg-black/40 border-white/10 text-white" : "bg-gray-100 border-gray-200 text-gray-900"
+                                        )}
+                                    />
+                                    <button 
+                                        type="button"
+                                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                        className="absolute right-3 text-gray-500 hover:text-brand-red transition-colors"
+                                    >
+                                        <Smile className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <button type="submit" disabled={!newComment.trim() || isPostingComment} className="p-2.5 bg-brand-red text-white rounded-xl hover:bg-red-600 transition-colors shadow-glow disabled:opacity-50 disabled:shadow-none">
+                                    {isPostingComment ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                                 </button>
+
+                                {showEmojiPicker && (
+                                    <div className="absolute bottom-full right-0 mb-4 z-[60]" ref={emojiPickerRef}>
+                                        <EmojiPicker 
+                                            theme={theme as any}
+                                            onEmojiClick={onEmojiClick}
+                                            autoFocusSearch={false}
+                                        />
+                                    </div>
+                                )}
                             </div>
                         </form>
                     </div>
