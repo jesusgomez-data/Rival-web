@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     chat_id UUID REFERENCES user_chats(id) ON DELETE CASCADE,
     sender_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     content TEXT,
-    shared_post_id UUID REFERENCES community_posts(id) ON DELETE SET NULL,
+    shared_post_id UUID REFERENCES posts(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     read_at TIMESTAMP WITH TIME ZONE
 );

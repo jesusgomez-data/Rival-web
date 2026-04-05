@@ -22,12 +22,12 @@ export async function createRepost(originalPostId: string, caption: string) {
         };
 
         const { data, error } = await supabase
-            .from('community_posts')
+            .from('posts')
             .insert({
                 user_id: user.id,
-                content: caption,
+                caption: caption,
                 media_type: 'repost',
-                image: JSON.stringify(repostData),
+                media_url: JSON.stringify(repostData),
                 likes_count: 0,
                 comments_count: 0
             })
