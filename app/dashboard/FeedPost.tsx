@@ -9,6 +9,9 @@ import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
 import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike } from "./community/actions";
+import { createRepost } from "./community/repost-actions";
+import { sharePostViaMessage } from "./community/dm-actions";
+import { getFollows } from "./community/follows-actions";
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
 import { clsx } from "clsx";
 import { useTheme } from "../ThemeContext";
@@ -42,6 +45,8 @@ function ShareButton({
     onInstagramShare, 
     onOpenShareCard, 
     onDownloadMedia, 
+    onRepostClick,
+    onMessageClick,
     isDownloadingVideo, 
     downloadProgress, 
     isVideo,
@@ -58,6 +63,8 @@ function ShareButton({
     onInstagramShare?: () => void,
     onOpenShareCard?: () => void,
     onDownloadMedia?: () => void,
+    onRepostClick?: () => void,
+    onMessageClick?: () => void,
     isDownloadingVideo?: boolean,
     downloadProgress?: number,
     isVideo?: boolean,
@@ -165,10 +172,10 @@ function ShareButton({
                     <button onClick={handleShareToStory} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5">
                         <Plus className="w-4 h-4" /> Enviar a Mis Historias
                     </button>
-                    <button onClick={() => {/* Lógica Repost */}} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5">
+                    <button onClick={() => { setIsOpen(false); onRepostClick?.(); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5">
                         <Repeat className="w-4 h-4" /> Repostear
                     </button>
-                    <button onClick={() => {/* Lógica DM */}} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5">
+                    <button onClick={() => { setIsOpen(false); onMessageClick?.(); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5">
                         <MessageSquare className="w-4 h-4" /> Enviar Mensaje
                     </button>
                     <button
@@ -1693,6 +1700,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 onInstagramShare={() => setShowInstagramCard(true)}
                                 onOpenShareCard={() => setShowShareCard(true)}
                                 onDownloadMedia={handleDownloadMedia}
+                                onRepostClick={() => setShowRepostModal(true)}
+                                onMessageClick={() => { setShowDMModal(true); loadDMFollows(); }}
                                 isDownloadingVideo={isDownloadingVideo}
                                 downloadProgress={downloadProgress}
                                 isVideo={(isVideo || isImageUrl(image)) as boolean}
@@ -2007,6 +2016,92 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                     );
                 })()
             }
+
+            {/* Repost Modal */}
+            {showRepostModal && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
+                    <div className="bg-zinc-950 border border-white/10 rounded-2xl w-full max-w-md overflow-hidden flex flex-col shadow-2xl">
+                        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/50">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2"><Repeat className="w-4 h-4 text-brand-red" /> Repostear Publicación</h3>
+                            <button onClick={() => setShowRepostModal(false)} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
+                        </div>
+                        <div className="p-4 flex flex-col gap-4">
+                            <textarea
+                                value={repostCaption}
+                                onChange={(e) => setRepostCaption(e.target.value)}
+                                placeholder="Escribe un comentario sobre esta publicación..."
+                                className="w-full bg-black/40 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-brand-red/50 focus:outline-none min-h-[100px] resize-none"
+                            />
+                            <div className="flex justify-end pt-2">
+                                <button
+                                    onClick={handleRepost}
+                                    disabled={isReposting}
+                                    className="px-6 py-2 bg-brand-red text-white font-black uppercase tracking-widest text-[10px] rounded-xl hover:bg-red-600 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                >
+                                    {isReposting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Repeat className="w-4 h-4" />}
+                                    {isReposting ? 'Publicando...' : 'Compartir ahora'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Send DM Modal */}
+            {showDMModal && (
+                <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in slide-in-from-bottom-full sm:slide-in-from-bottom-0">
+                    <div className="bg-zinc-950 border border-white/10 rounded-t-3xl sm:rounded-2xl w-full max-w-md flex flex-col shadow-2xl h-[80vh] sm:h-auto">
+                        <div className="p-4 border-b border-white/10 flex items-center justify-between sticky top-0 bg-zinc-950 z-10 rounded-t-3xl sm:rounded-2xl">
+                            <h3 className="text-sm font-black uppercase tracking-widest text-white flex items-center gap-2"><MessageSquare className="w-4 h-4 text-gray-300" /> Enviar por DM</h3>
+                            <button onClick={() => setShowDMModal(false)} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
+                        </div>
+                        <div className="p-4 overflow-y-auto custom-scrollbar flex-1">
+                            <p className="text-xs text-gray-400 font-bold uppercase tracking-wider mb-3">Buscar amigos</p>
+                            <div className="space-y-2">
+                                {dmFollows.map(friend => (
+                                    <button 
+                                        key={friend.id} 
+                                        onClick={() => setSelectedDmUser(friend.id)}
+                                        className={clsx(
+                                            "w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left",
+                                            selectedDmUser === friend.id ? "bg-brand-red/10 border-brand-red" : "bg-black/20 border-white/5 hover:border-white/20"
+                                        )}
+                                    >
+                                        <img src={friend.avatar_url || '/default-avatar.png'} alt={friend.username} className="w-10 h-10 rounded-full object-cover bg-gray-800" />
+                                        <div className="flex-1">
+                                            <p className="text-sm font-bold text-white">@{friend.username}</p>
+                                            <p className="text-[10px] text-gray-500 uppercase tracking-widest">{friend.full_name}</p>
+                                        </div>
+                                        {selectedDmUser === friend.id && <CheckCircle2 className="w-5 h-5 text-brand-red" />}
+                                    </button>
+                                ))}
+                                {dmFollows.length === 0 && (
+                                    <div className="text-center py-8 text-gray-500 text-xs italic">Aún no sigues a nadie.</div>
+                                )}
+                            </div>
+                        </div>
+                        {selectedDmUser && (
+                            <div className="p-4 border-t border-white/10 bg-black/50 animate-in slide-in-from-bottom-5">
+                                <textarea
+                                    value={dmMessage}
+                                    onChange={(e) => setDmMessage(e.target.value)}
+                                    placeholder="Añade un mensaje opcional..."
+                                    className="w-full bg-black/40 border border-white/5 rounded-xl p-3 text-sm text-white focus:border-brand-red/50 focus:outline-none min-h-[60px] resize-none mb-3"
+                                />
+                                <button
+                                    onClick={handleSendDM}
+                                    disabled={isSendingDM}
+                                    className="w-full py-3 bg-white text-black font-black uppercase tracking-widest text-[11px] rounded-xl hover:bg-gray-200 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {isSendingDM ? <Loader2 className="w-4 h-4 animate-spin text-black" /> : <Send className="w-4 h-4" />}
+                                    {isSendingDM ? 'Enviando...' : 'Enviar mensaje'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
         </div >
     );
 }
