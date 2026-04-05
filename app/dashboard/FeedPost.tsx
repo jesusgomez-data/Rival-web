@@ -277,11 +277,22 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             } catch(e) { targetMedia = undefined; }
         }
         
+        // If image is JSON array (carousel), get first image
+        if (targetMedia && targetMedia.trim().startsWith('[')) {
+            try {
+                const parsed = JSON.parse(targetMedia.trim());
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    targetMedia = parsed[0];
+                }
+            } catch(e) { }
+        }
+
         // Final fallback to workout media if still nothing
         const finalUrl = targetMedia || workoutData?.image || workoutData?.metrics?.image;
         
         return isImageUrl(finalUrl) ? finalUrl : undefined;
     }, [image, workoutData]);
+
 
     const isCarousel = mediaType === 'carousel';
     const [carouselIndex, setCarouselIndex] = useState(0);
