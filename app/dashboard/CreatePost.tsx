@@ -386,7 +386,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                         {previews.map((url, idx) => (
                                             <div key={idx} className="relative aspect-square bg-gray-900 group/item">
                                                 {pendingFiles[idx]?.type.startsWith('video/') ? (
-                                                    <video src={url} className="w-full h-full object-cover" />
+                                                    <video src={url} className="w-full h-full object-cover" autoPlay muted playsInline loop />
                                                 ) : (
                                                     <img src={url} alt="Preview" className="w-full h-full object-cover" />
                                                 )}
@@ -434,6 +434,21 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                     </button>
                                 )}
                             </div>
+                        )}
+
+                        {/* Edit Video Button — shown when first selected file is a video */}
+                        {previews.length > 0 && pendingFiles[0]?.type.startsWith('video/') && !isVideoEditing && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setEditorVideoFile(pendingFiles[0]);
+                                    setIsVideoEditing(true);
+                                }}
+                                className="w-full mt-3 py-3 border border-brand-red/40 rounded-2xl text-brand-red font-black uppercase tracking-widest text-[10px] hover:bg-brand-red/10 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                Editar Video (filtros, trim, efectos)
+                            </button>
                         )}
 
                         {/* Actions Bar */}

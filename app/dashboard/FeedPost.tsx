@@ -1255,6 +1255,33 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         </div>
                     </div>
                 </div>
+            ) : mediaType === 'repost' ? (() => {
+                let repostMeta: any = {};
+                try { repostMeta = JSON.parse(image || '{}'); } catch(e) {}
+                const originalPostId = repostMeta.originalPostId;
+                return (
+                    <div className="px-4 pb-4">
+                        {caption && (
+                            <p className="text-sm text-white mb-3 leading-relaxed">{caption}</p>
+                        )}
+                        <a
+                            href={originalPostId ? `/dashboard#post-${originalPostId}` : '/dashboard'}
+                            className="block border border-brand-red/30 rounded-2xl p-4 bg-brand-red/5 hover:bg-brand-red/10 transition-all group relative overflow-hidden"
+                        >
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-brand-red/10 blur-2xl -mr-8 -mt-8 group-hover:opacity-150 transition-opacity" />
+                            <div className="flex items-center gap-3 relative z-10">
+                                <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shrink-0">
+                                    <Repeat className="w-5 h-5 text-brand-red" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-black uppercase tracking-widest text-brand-red">Publicación Reposteada</p>
+                                    <p className="text-[10px] text-gray-400 font-bold mt-0.5">Toca para ver el post original →</p>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
+                );
+            })()
             ) : mediaType === 'membership_activation' ? (
                 <div className="px-4 pb-6">
                     <div className={clsx(
