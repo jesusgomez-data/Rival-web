@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Layers, Sparkles, Download, ExternalLink, Copy, Check, Loader2 } from 'lucide-react'
-import { generateCarouselHTML } from '../actions'
+import { Layers, Sparkles, Download, ExternalLink, Copy, Check, Loader2, Trophy, ArrowRight } from 'lucide-react'
+import { generateCarouselHTML, saveContentDraft } from '../actions'
 
 export default function CarouselsPage() {
     const [topic, setTopic] = useState('')
@@ -12,6 +12,8 @@ export default function CarouselsPage() {
     const [result, setResult] = useState<{ html: string; slides: any[]; caption: string; title: string } | null>(null)
     const [error, setError] = useState('')
     const [copied, setCopied] = useState(false)
+    const [saving, setSaving] = useState(false)
+    const [saved, setSaved] = useState(false)
 
     async function handleGenerate(e: React.FormEvent) {
         e.preventDefault()
@@ -45,6 +47,20 @@ export default function CarouselsPage() {
         const blob = new Blob([result.html], { type: 'text/html;charset=utf-8' })
         const url = URL.createObjectURL(blob)
         window.open(url, '_blank')
+    }
+
+    async function handleSaveToQueue() {
+        if (!result) return
+        setSaving(true)
+        try {
+            await saveContentDraft({ title: result.title, caption: result.caption, post_type: 'carousel' })
+            setSaved(true)
+            setTimeout(() => setSaved(false), 4000)
+        } catch {
+            alert('Error al guardar en cola')
+        } finally {
+            setSaving(false)
+        }
     }
 
     function copyCaption() {
@@ -144,6 +160,25 @@ export default function CarouselsPage() {
                                     <Download className="w-4 h-4" /> Guardar HTML
                                 </button>
                             </div>
+
+                            {/* Save to Canal Oficial queue */}
+                            <button
+                                onClick={handleSaveToQueue}
+                                disabled={saving || saved}
+                                className={`w-full py-3.5 rounded-xl font-black text-sm transition-all flex items-center justify-center gap-2 border ${
+                                    saved
+                                        ? 'bg-green-500/10 border-green-500/40 text-green-400'
+                                        : 'bg-[#C9A84C]/8 border-[#C9A84C]/30 text-[#C9A84C] hover:bg-[#C9A84C]/15'
+                                }`}
+                            >
+                                {saving ? (
+                                    <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</>
+                                ) : saved ? (
+                                    <><Check className="w-4 h-4" /> Guardado en Canal Oficial</>
+                                ) : (
+                                    <><Trophy className="w-4 h-4" /> Guardar en Cola — Canal Oficial <ArrowRight className="w-3.5 h-3.5" /></>
+                                )}
+                            </button>
 
                             <p className="text-gray-700 text-xs text-center">
                                 El HTML se abre en el navegador con el diseño completo RivalFit (1080×1350px) listo para descargar como PNG

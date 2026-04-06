@@ -213,3 +213,51 @@ export async function getOfficialPosts() {
     const { data } = await supabase.from('posts').select('*').eq('user_id', profile.id).order('created_at', { ascending: false }).limit(50);
     return data || [];
 }
+
+// ─── CONTENT QUEUE (from Social Media) ───────────────────────────────────────
+
+export async function getQueuedContent() {
+    const supabase = createAdminClient();
+    const { data } = await supabase
+        .from('social_posts')
+        .select('*')
+        .in('status', ['draft', 'ready', 'scheduled'])
+        .order('created_at', { ascending: false })
+        .limit(100);
+    return data || [];
+}
+
+export async function publishFromQueue(postId: string) {
+    const supabase = createAdminClient();
+    const { data: draft } = await supabase.from('social_posts').select('*').eq('id', postId).single();
+    if (!draft) throw new Error('Borrador no encontrado');
+    const { data: profile } = await supabase.from('profiles').select('id').eq('is_official', true).limit(1).maybeSingle();
+    if (!profile) throw new Error('Perfil @rivalfit no encontrado');
+    const { error } = await supabase.from('posts').insert({
+        user_id: profile.id,
+        caption: draft.caption,
+        media_type: 'text',
+        created_at: new Date().toISOString(),
+    });
+    if (error) throw new Error(error.message);
+    await supabase.from('social_posts').update({ status: 'published', updated_at: new Date().toISOString() }).eq('id', postId);
+    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/profile/rivalfit');
+    revalidatePath('/dashboard/admin/official-posts');
+}
+
+export async function scheduleQueueItem(postId: string, scheduledFor: string) {
+    const supabase = createAdminClient();
+    await supabase.from('social_posts').update({
+        status: 'scheduled',
+        scheduled_for: new Date(scheduledFor).toISOString(),
+        updated_at: new Date().toISOString(),
+    }).eq('id', postId);
+    revalidatePath('/dashboard/admin/official-posts');
+}
+
+export async function deleteQueueItem(postId: string) {
+    const supabase = createAdminClient();
+    await supabase.from('social_posts').delete().eq('id', postId);
+    revalidatePath('/dashboard/admin/official-posts');
+}

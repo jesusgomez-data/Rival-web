@@ -1,12 +1,14 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
-import { getMarketingAssets, publishOfficialPost, publishOfficialStory } from './actions'
+import { getMarketingAssets, publishOfficialPost, publishOfficialStory, getQueuedContent, publishFromQueue, scheduleQueueItem, deleteQueueItem } from './actions'
 import Image from 'next/image'
-import { Calendar, Send, Clock, ChevronLeft, ChevronRight, CheckCircle2, Instagram, LayoutGrid, FileText, Loader2, Zap, ShieldAlert } from 'lucide-react'
+import { Calendar, Send, Clock, ChevronLeft, ChevronRight, CheckCircle2, Instagram, LayoutGrid, FileText, Loader2, Zap, ShieldAlert, Trophy, Layers, Trash2, Check, ArrowRight, RefreshCw } from 'lucide-react'
 import { clsx } from "clsx"
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import { formatDistanceToNow } from 'date-fns'
+import { es } from 'date-fns/locale'
 
 type AssetGroups = Record<string, { files: string[], description: string }>
 
@@ -24,6 +26,14 @@ export default function OfficialPostsAdmin() {
     const [storySuccess, setStorySuccess] = useState(false)
     const [authorized, setAuthorized] = useState<boolean | null>(null)
     const router = useRouter()
+
+    // Queue state
+    const [queue, setQueue] = useState<any[]>([])
+    const [queueLoading, setQueueLoading] = useState(false)
+    const [schedulingId, setSchedulingId] = useState<string | null>(null)
+    const [scheduleDate, setScheduleDate] = useState('')
+    const [publishingId, setPublishingId] = useState<string | null>(null)
+    const [deletingId, setDeletingId] = useState<string | null>(null)
     
     // Admin Whitelist
     const ADMIN_EMAILS = useMemo(() => ['rival.app.official@gmail.com', 'jesusgomez.s@hotmail.com'], [])
@@ -49,7 +59,6 @@ export default function OfficialPostsAdmin() {
         const res = await getMarketingAssets()
         if (res.assets) {
             setAssets(res.assets)
-            // Select first group by default and set its description
             const firstGroup = Object.keys(res.assets)[0]
             if (firstGroup) {
                 setSelectedGroup(firstGroup)
@@ -57,6 +66,52 @@ export default function OfficialPostsAdmin() {
             }
         }
         setLoading(false)
+        loadQueue()
+    }
+
+    async function loadQueue() {
+        setQueueLoading(true)
+        try {
+            const data = await getQueuedContent()
+            setQueue(data)
+        } finally {
+            setQueueLoading(false)
+        }
+    }
+
+    async function handlePublishFromQueue(postId: string) {
+        setPublishingId(postId)
+        try {
+            await publishFromQueue(postId)
+            setQueue(prev => prev.filter(p => p.id !== postId))
+        } catch (e: any) {
+            alert(e.message || 'Error al publicar')
+        } finally {
+            setPublishingId(null)
+        }
+    }
+
+    async function handleSchedule(postId: string) {
+        if (!scheduleDate) return
+        try {
+            await scheduleQueueItem(postId, scheduleDate)
+            setQueue(prev => prev.map(p => p.id === postId ? { ...p, status: 'scheduled', scheduled_for: scheduleDate } : p))
+            setSchedulingId(null)
+            setScheduleDate('')
+        } catch (e: any) {
+            alert(e.message || 'Error al programar')
+        }
+    }
+
+    async function handleDeleteQueue(postId: string) {
+        if (!confirm('¿Eliminar este borrador?')) return
+        setDeletingId(postId)
+        try {
+            await deleteQueueItem(postId)
+            setQueue(prev => prev.filter(p => p.id !== postId))
+        } finally {
+            setDeletingId(null)
+        }
     }
 
     const handlePublish = async () => {
@@ -309,6 +364,153 @@ export default function OfficialPostsAdmin() {
                         )}
                     </div>
                 </div>
+            </div>
+
+            {/* ── COLA DE CONTENIDO (from Social Media) ─────────────────────── */}
+            <div className="mt-16 border-t border-white/5 pt-12">
+                <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#C9A84C]/10 flex items-center justify-center">
+                            <Layers className="w-5 h-5 text-[#C9A84C]" />
+                        </div>
+                        <div>
+                            <h2 className="text-white font-black text-xl uppercase tracking-tight italic">Cola de Contenido</h2>
+                            <p className="text-gray-600 text-xs mt-0.5">Borradores creados en Social Media · listos para publicar como @rivalfit</p>
+                        </div>
+                        {queue.length > 0 && (
+                            <span className="ml-2 bg-[#C9A84C] text-black text-xs font-black px-2.5 py-1 rounded-full">{queue.length}</span>
+                        )}
+                    </div>
+                    <button
+                        onClick={loadQueue}
+                        disabled={queueLoading}
+                        className="flex items-center gap-2 text-xs text-gray-500 hover:text-white transition-colors font-bold uppercase tracking-widest"
+                    >
+                        <RefreshCw className={clsx('w-3.5 h-3.5', queueLoading && 'animate-spin')} /> Actualizar
+                    </button>
+                </div>
+
+                {queueLoading ? (
+                    <div className="flex items-center justify-center py-16">
+                        <Loader2 className="w-8 h-8 animate-spin text-[#C9A84C]" />
+                    </div>
+                ) : queue.length === 0 ? (
+                    <div className="border border-dashed border-white/8 rounded-3xl py-16 flex flex-col items-center gap-4 text-center">
+                        <Trophy className="w-10 h-10 text-gray-700" />
+                        <div>
+                            <p className="text-gray-600 font-black uppercase tracking-widest text-sm">Cola vacía</p>
+                            <p className="text-gray-700 text-xs mt-1">Genera carruseles en Social Media y guárdalos aquí</p>
+                        </div>
+                        <button
+                            onClick={() => router.push('/dashboard/admin/social-media/carousels')}
+                            className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-[#C9A84C] hover:underline mt-2"
+                        >
+                            Ir a Carruseles <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {queue.map(item => {
+                            const isPublishing = publishingId === item.id
+                            const isDeleting = deletingId === item.id
+                            const isScheduling = schedulingId === item.id
+                            const isScheduled = item.status === 'scheduled'
+                            const timeAgo = formatDistanceToNow(new Date(item.created_at), { addSuffix: true, locale: es })
+
+                            return (
+                                <div key={item.id} className="bg-black/50 border border-white/8 rounded-2xl overflow-hidden hover:border-white/15 transition-all flex flex-col">
+                                    {/* Type badge bar */}
+                                    <div className={clsx(
+                                        'px-4 py-2 flex items-center justify-between',
+                                        isScheduled ? 'bg-blue-600/20' : 'bg-[#C9A84C]/8'
+                                    )}>
+                                        <div className="flex items-center gap-2">
+                                            <Layers className="w-3.5 h-3.5 text-[#C9A84C]" />
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-[#C9A84C]">{item.post_type || 'carousel'}</span>
+                                        </div>
+                                        <span className={clsx(
+                                            'text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full',
+                                            isScheduled ? 'bg-blue-500/20 text-blue-400' : 'bg-white/5 text-gray-500'
+                                        )}>
+                                            {isScheduled ? '📅 Programado' : '⏳ Borrador'}
+                                        </span>
+                                    </div>
+
+                                    <div className="p-4 flex-1 flex flex-col gap-3">
+                                        {/* Title */}
+                                        <div>
+                                            <p className="text-white font-black text-sm leading-tight line-clamp-2">{item.title}</p>
+                                            <p className="text-gray-600 text-[10px] mt-1">{timeAgo}</p>
+                                        </div>
+
+                                        {/* Caption preview */}
+                                        {item.caption && (
+                                            <p className="text-gray-400 text-xs leading-relaxed line-clamp-3">{item.caption}</p>
+                                        )}
+
+                                        {/* Scheduled date */}
+                                        {isScheduled && item.scheduled_for && (
+                                            <div className="flex items-center gap-1.5 text-blue-400 text-xs font-bold">
+                                                <Clock className="w-3.5 h-3.5" />
+                                                {new Date(item.scheduled_for).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                            </div>
+                                        )}
+
+                                        {/* Schedule form (inline) */}
+                                        {isScheduling && (
+                                            <div className="flex gap-2">
+                                                <input
+                                                    type="datetime-local"
+                                                    value={scheduleDate}
+                                                    onChange={e => setScheduleDate(e.target.value)}
+                                                    className="flex-1 bg-black border border-white/10 rounded-xl px-3 py-2 text-white text-xs focus:border-blue-500 outline-none"
+                                                />
+                                                <button
+                                                    onClick={() => handleSchedule(item.id)}
+                                                    disabled={!scheduleDate}
+                                                    className="px-3 py-2 bg-blue-600 rounded-xl text-white text-xs font-black disabled:opacity-40"
+                                                >
+                                                    <Check className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => { setSchedulingId(null); setScheduleDate('') }}
+                                                    className="px-3 py-2 bg-white/5 rounded-xl text-gray-400 text-xs"
+                                                >✕</button>
+                                            </div>
+                                        )}
+
+                                        {/* Actions */}
+                                        <div className="flex gap-2 mt-auto pt-2 border-t border-white/5">
+                                            <button
+                                                onClick={() => handlePublishFromQueue(item.id)}
+                                                disabled={isPublishing || isDeleting}
+                                                className="flex-1 flex items-center justify-center gap-1.5 py-2 bg-brand-red hover:bg-red-600 text-white text-xs font-black rounded-xl transition-all disabled:opacity-50"
+                                            >
+                                                {isPublishing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                                                {isPublishing ? 'Publicando...' : 'Publicar'}
+                                            </button>
+                                            {!isScheduling && (
+                                                <button
+                                                    onClick={() => { setSchedulingId(item.id); setScheduleDate('') }}
+                                                    className="flex items-center gap-1.5 px-3 py-2 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 text-xs font-bold rounded-xl transition-all border border-blue-500/20"
+                                                >
+                                                    <Clock className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => handleDeleteQueue(item.id)}
+                                                disabled={isDeleting || isPublishing}
+                                                className="flex items-center gap-1.5 px-3 py-2 bg-red-500/8 hover:bg-red-500/15 text-red-500 text-xs rounded-xl transition-all"
+                                            >
+                                                {isDeleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
             </div>
         </div>
     )
