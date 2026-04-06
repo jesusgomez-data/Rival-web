@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
@@ -13,6 +13,7 @@ import { createRepost } from "./community/repost-actions";
 import { sharePostViaMessage } from "./community/dm-actions";
 import { getFollows } from "./community/follows-actions";
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
+import { createClient } from "@/utils/supabase/client";
 import { clsx } from "clsx";
 import { useTheme } from "../ThemeContext";
 import { isImageUrl } from "@/lib/utils"; import { useStories } from "./stories/StoryContext";
@@ -209,31 +210,103 @@ function ShareButton({
 }
 
 function RepostCard({ image, caption }: { image?: string; caption?: string }) {
+    const [originalPost, setOriginalPost] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
     let originalPostId: string | null = null;
     try {
         const meta = JSON.parse(image || '{}');
         originalPostId = meta.originalPostId || null;
     } catch (e) {}
 
+    useEffect(() => {
+        if (!originalPostId) { setLoading(false); return; }
+        const supabase = createClient();
+        supabase
+            .from('posts')
+            .select('*, profiles:user_id(username, full_name, avatar_url, is_official)')
+            .eq('id', originalPostId)
+            .single()
+            .then(({ data }) => {
+                setOriginalPost(data);
+                setLoading(false);
+            });
+    }, [originalPostId]);
+
     return (
         <div className="px-4 pb-4">
+            {/* Reposter's own caption */}
             {caption && (
                 <p className="text-sm text-white mb-3 leading-relaxed">{caption}</p>
             )}
+
+            {/* Embedded original post */}
             <a
                 href={originalPostId ? `/dashboard#post-${originalPostId}` : '/dashboard'}
-                className="block border border-brand-red/30 rounded-2xl p-4 bg-brand-red/5 hover:bg-brand-red/10 transition-all group relative overflow-hidden"
+                className="block border border-white/10 rounded-2xl overflow-hidden bg-white/[0.03] hover:bg-white/[0.06] hover:border-brand-red/30 transition-all group"
             >
-                <div className="absolute top-0 right-0 w-24 h-24 bg-brand-red/10 blur-2xl -mr-8 -mt-8" />
-                <div className="flex items-center gap-3 relative z-10">
-                    <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center border border-brand-red/20 shrink-0">
-                        <Repeat className="w-5 h-5 text-brand-red" />
+                {loading ? (
+                    <div className="p-4 flex items-center gap-3 animate-pulse">
+                        <div className="w-9 h-9 rounded-full bg-white/10 shrink-0" />
+                        <div className="flex-1 space-y-2">
+                            <div className="h-3 bg-white/10 rounded w-28" />
+                            <div className="h-2 bg-white/5 rounded w-20" />
+                        </div>
                     </div>
-                    <div>
-                        <p className="text-xs font-black uppercase tracking-widest text-brand-red">Publicación Reposteada</p>
-                        <p className="text-[10px] text-gray-400 font-bold mt-0.5">Toca para ver el post original →</p>
+                ) : originalPost ? (
+                    <>
+                        {/* Original post header */}
+                        <div className="flex items-center gap-2.5 p-3 border-b border-white/5">
+                            <div className="w-8 h-8 rounded-full bg-gray-800 border border-white/10 overflow-hidden relative shrink-0">
+                                {originalPost.profiles?.avatar_url ? (
+                                    <Image src={originalPost.profiles.avatar_url} alt={originalPost.profiles.username} fill className="object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-gray-500 uppercase">
+                                        {(originalPost.profiles?.full_name || 'U').substring(0, 2)}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-black text-brand-red uppercase italic leading-none truncate">
+                                    {originalPost.profiles?.full_name || originalPost.profiles?.username}
+                                    {originalPost.profiles?.is_official && <span className="ml-1">✓</span>}
+                                </p>
+                                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">
+                                    @{originalPost.profiles?.username}
+                                </p>
+                            </div>
+                            <Repeat className="w-3.5 h-3.5 text-brand-red/50 shrink-0" />
+                        </div>
+
+                        {/* Original post caption */}
+                        {originalPost.caption && (
+                            <p className="text-sm text-gray-300 px-3 py-2.5 leading-relaxed line-clamp-3">
+                                {originalPost.caption}
+                            </p>
+                        )}
+
+                        {/* Original post media */}
+                        {isImageUrl(originalPost.media_url) && (
+                            <div className="relative aspect-video w-full bg-black overflow-hidden">
+                                {originalPost.media_type === 'video' ? (
+                                    <video src={originalPost.media_url} className="w-full h-full object-cover" muted playsInline />
+                                ) : (
+                                    <Image src={originalPost.media_url} alt="Post original" fill className="object-cover" />
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                            </div>
+                        )}
+
+                        <div className="px-3 py-2 text-[9px] text-gray-600 font-bold uppercase tracking-widest flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" /> Ver publicación original
+                        </div>
+                    </>
+                ) : (
+                    <div className="p-4 flex items-center gap-3 text-gray-600">
+                        <Repeat className="w-4 h-4" />
+                        <span className="text-xs font-bold uppercase tracking-widest">Publicación no disponible</span>
                     </div>
-                </div>
+                )}
             </a>
         </div>
     );
