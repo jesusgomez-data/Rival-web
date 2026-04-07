@@ -296,7 +296,7 @@ export default function DashboardHome() {
         try {
             setFeedLoading(true);
 
-            // Optimized select: skip workout_sets (heavy), explicit field list
+            // Optimized select: skip workout_sets (heavy), explicit field list for main posts
             let query = supabase
                 .from('posts')
                 .select(`
@@ -304,7 +304,7 @@ export default function DashboardHome() {
                     wod_data, workout_id, music_url, music_title, music_artist,
                     likes_count, comments_count, created_at,
                     profiles:user_id (id, username, full_name, avatar_url, level, is_official),
-                    workouts:workout_id (id, title, description, duration, wod_type, category),
+                    workouts:workout_id (*),
                     likes (user_id)
                 `)
                 .order('created_at', { ascending: false })
