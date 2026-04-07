@@ -286,8 +286,8 @@ function RepostCard({ image, caption, prefetchedPost }: { image?: string; captio
                             </p>
                         )}
 
-                        {/* Original post media */}
-                        {isImageUrl(originalPost.media_url) && (
+                        {/* Original post media or WOD content */}
+                        {isImageUrl(originalPost.media_url) ? (
                             <div className="relative aspect-video w-full bg-black overflow-hidden">
                                 {originalPost.media_type === 'video' ? (
                                     <video src={originalPost.media_url} className="w-full h-full object-cover" muted playsInline />
@@ -296,9 +296,26 @@ function RepostCard({ image, caption, prefetchedPost }: { image?: string; captio
                                 )}
                                 <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
                             </div>
-                        )}
+                        ) : (originalPost.media_type === 'wod' || originalPost.media_type === 'workout') ? (
+                            <div className="px-3 pb-3">
+                                <div className="p-3 bg-white/5 border border-white/5 rounded-xl border-dashed">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                        <Trophy className="w-3.5 h-3.5 text-brand-red" />
+                                        <span className="text-[10px] font-black text-white uppercase italic tracking-tighter">Entrenamiento de Fuerza/WOD</span>
+                                    </div>
+                                    <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest line-clamp-1">
+                                        {(() => {
+                                            try {
+                                                const wod = JSON.parse(originalPost.media_url);
+                                                return wod.title || "WOD DETECTADO";
+                                            } catch { return "ENTRENAMIENTO"; }
+                                        })()}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : null}
 
-                        <div className="px-3 py-2 text-[9px] text-gray-600 font-bold uppercase tracking-widest flex items-center gap-1">
+                        <div className="px-3 py-2 text-[9px] text-gray-600 font-bold uppercase tracking-widest flex items-center gap-1 group-hover:text-brand-red transition-colors">
                             <ExternalLink className="w-3 h-3" /> Ver publicación original
                         </div>
                     </>
@@ -801,22 +818,14 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         }
     };
 
+    const openRepostModal = () => {
+        setRepostCaption("");
+        setShowRepostModal(true);
+    };
+
     const handleRepost = () => {
-        const originalWodId = (parsedWodData as any)?.original_wod_post_id || (resolvedWorkoutData as any)?.original_wod_post_id || postId;
-        
-        window.dispatchEvent(new CustomEvent('repost-wod', {
-            detail: {
-                title: parsedWodData?.title || resolvedWorkoutData?.title || "WOD",
-                blocks: parsedWodData?.blocks || resolvedWorkoutData?.blocks || (resolvedWorkoutData?.metrics?.blocks) || [],
-                summary: parsedWodData?.summary || resolvedWorkoutData?.summary || {
-                    scoreLabel: resolvedWorkoutData?.metrics?.score || 'FINALIZADO',
-                    scoreType: resolvedWorkoutData?.metrics?.type || 'WORKOUT',
-                    totalTime: resolvedWorkoutData?.metrics?.duration || resolvedWorkoutData?.metrics?.time || '--:--'
-                },
-                postId: postId,
-                original_wod_post_id: originalWodId
-            }
-        }));
+        // Fallback or legacy handler for backward compatibility in some events
+        openRepostModal();
     };
 
     if (isDeleting) return null;
@@ -977,8 +986,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                             >
                                 <MoreHorizontal className="w-5 h-5" />
                             </button>
-                            {showMenu && (
-                                <div className="absolute right-0 top-full mt-2 w-40 bg-brand-gray border border-white/10 rounded-2xl shadow-2xl z-20 overflow-hidden backdrop-blur-xl">
+                             {showMenu && (
+                                <div className="absolute right-0 top-full mt-2 w-56 bg-zinc-900/90 border border-white/10 rounded-2xl shadow-2xl z-20 backdrop-blur-xl overflow-hidden">
                                     <button
                                         onClick={() => {
                                             const eventData: any = {
@@ -1002,15 +1011,15 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                             }));
                                             setShowMenu(false);
                                         }}
-                                        className="w-full text-left px-5 py-3 text-sm text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 transition-colors"
+                                        className="w-full text-left px-5 py-4 text-sm text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 transition-colors border-b border-white/5"
                                     >
-                                        <Edit2 className="w-4 h-4" /> {mediaType === 'wod' ? 'Editar Entrenamiento / Post' : 'Editar Publicación'}
+                                        <Edit2 className="w-4 h-4 text-brand-red" /> {mediaType === 'wod' ? 'Editar Entrenamiento / Post' : 'Editar Publicación'}
                                     </button>
                                     <button
                                         onClick={() => { handleDelete(); setShowMenu(false); }}
-                                        className="w-full text-left px-5 py-3 text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-3 transition-colors"
+                                        className="w-full text-left px-5 py-4 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-3 transition-colors"
                                     >
-                                        <Trash2 className="w-4 h-4" /> Eliminar
+                                        <Trash2 className="w-4 h-4" /> Eliminar Publicación
                                     </button>
                                 </div>
                             )}

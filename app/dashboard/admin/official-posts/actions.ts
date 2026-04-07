@@ -67,6 +67,7 @@ export async function publishOfficialPost(formData: FormData) {
         const isCarousel = assets.length > 1;
 
         // 1. Identify the Official Account
+        console.log('[publishOfficialPost] Hunting for official profile...');
         const { data: officialProfile, error: profileError } = await supabase
             .from('profiles')
             .select('id')
@@ -74,40 +75,53 @@ export async function publishOfficialPost(formData: FormData) {
             .limit(1)
             .maybeSingle();
 
-        if (profileError || !officialProfile) {
+        if (profileError) {
+            console.error('[publishOfficialPost] Profile query error:', profileError);
+            return { error: `Error buscando perfil: ${profileError.message}` };
+        }
+        if (!officialProfile) {
+            console.error('[publishOfficialPost] No official profile found');
             return { error: 'No se encontró el perfil oficial' };
         }
 
+        console.log('[publishOfficialPost] Official Profile found:', officialProfile.id);
+
         // 2. Insert the post
-        const createdAt = scheduledFor ? new Date(`${scheduledFor}T${new Date().toISOString().split('T')[1]}`).toISOString() : new Date().toISOString();
+        let createdAt: string;
+        try {
+            createdAt = scheduledFor ? new Date(`${scheduledFor}T${new Date().toISOString().split('T')[1]}`).toISOString() : new Date().toISOString();
+        } catch (dateErr) {
+            console.error('[publishOfficialPost] Date parse error:', dateErr);
+            createdAt = new Date().toISOString();
+        }
+
+        console.log('[publishOfficialPost] Inserting post with media_type:', isCarousel ? 'carousel' : (assets[0].endsWith('.mp4') ? 'video' : 'image'));
 
         const { error: insertError } = await supabase
             .from('posts')
             .insert({
                 user_id: officialProfile.id,
-                caption: caption,
+                caption: caption || '',
                 media_url: isCarousel ? JSON.stringify(assets) : assets[0],
                 media_type: isCarousel ? 'carousel' : (assets[0].endsWith('.mp4') ? 'video' : 'image'),
                 created_at: createdAt
             });
 
         if (insertError) {
-            console.error('Insert error:', insertError);
-            return { error: `Error al publicar: ${insertError.message}` };
+            console.error('[publishOfficialPost] Insert error:', insertError);
+            return { error: `Error al insertar post: ${insertError.message}` };
         }
 
-        // 3. CLEANUP: Deactivated for now to avoid broken images in the feed
-        // In the future, these will be uploaded to Supabase Storage before deletion
-        /*
-        try {
-            const dirPath = path.join(process.cwd(), 'public', 'instagram');
-            ...
-        } catch (cleanupErr) { ... }
-        */
+        console.log('[publishOfficialPost] Insert successful, revalidating paths...');
 
-        revalidatePath('/dashboard/community');
-        revalidatePath('/dashboard/profile/rivalfit');
-        revalidatePath('/dashboard/admin/official-posts');
+        try {
+            revalidatePath('/dashboard/community');
+            revalidatePath('/dashboard/profile/rivalfit');
+            revalidatePath('/dashboard/admin/official-posts');
+        } catch (revErr) {
+            console.warn('[publishOfficialPost] Revalidation warn:', revErr);
+        }
+
         return { success: true };
 
     } catch (e: any) {
