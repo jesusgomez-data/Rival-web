@@ -209,9 +209,9 @@ function ShareButton({
     );
 }
 
-function RepostCard({ image, caption }: { image?: string; caption?: string }) {
-    const [originalPost, setOriginalPost] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+function RepostCard({ image, caption, prefetchedPost }: { image?: string; caption?: string; prefetchedPost?: any }) {
+    const [originalPost, setOriginalPost] = useState<any>(prefetchedPost || null);
+    const [loading, setLoading] = useState(!prefetchedPost);
 
     let originalPostId: string | null = null;
     try {
@@ -220,18 +220,19 @@ function RepostCard({ image, caption }: { image?: string; caption?: string }) {
     } catch (e) {}
 
     useEffect(() => {
-        if (!originalPostId) { setLoading(false); return; }
+        // Only fetch if the post wasn't pre-loaded by the parent (fallback for direct renders)
+        if (prefetchedPost || !originalPostId) { setLoading(false); return; }
         const supabase = createClient();
         supabase
             .from('posts')
-            .select('*, profiles:user_id(username, full_name, avatar_url, is_official)')
+            .select('id, caption, media_url, media_type, profiles:user_id(username, full_name, avatar_url, is_official)')
             .eq('id', originalPostId)
             .single()
             .then(({ data }) => {
                 setOriginalPost(data);
                 setLoading(false);
             });
-    }, [originalPostId]);
+    }, [originalPostId, prefetchedPost]);
 
     return (
         <div className="px-4 pb-4">
@@ -346,8 +347,9 @@ interface FeedPostProps {
     context?: 'following' | 'global';
     isAdminUser?: boolean;
     hasActiveDuel?: boolean;
-    post_type?: string; // Tipo de post: 'standard', 'wod', etc.
-    wod_data?: any; // Datos del WOD generado (JSON)
+    post_type?: string;
+    wod_data?: any;
+    repostOriginalPost?: any; // Pre-fetched original post for repost cards (avoids N+1)
 }
 
 interface Comment {
@@ -365,7 +367,7 @@ interface Comment {
 }
 
 export default function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId, centerName,
-    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global', isAdminUser, hasActiveDuel, post_type, wod_data
+    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global', isAdminUser, hasActiveDuel, post_type, wod_data, repostOriginalPost
 }: FeedPostProps) {
     const { theme } = useTheme();
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -1360,7 +1362,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                     </div>
                 </div>
             ) : mediaType === 'repost' ? (
-                <RepostCard image={image} caption={caption} />
+                <RepostCard image={image} caption={caption} prefetchedPost={repostOriginalPost} />
             ) : mediaType === 'membership_activation' ? (
                 <div className="px-4 pb-6">
                     <div className={clsx(

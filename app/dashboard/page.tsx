@@ -185,7 +185,8 @@ export default function DashboardHome() {
         duels: [],
         activeCenterIds: new Set<string>(),
         workoutStreak: 0,
-        myGyms: []
+        myGyms: [],
+        repostMap: {} as Record<string, any>,
     });
     const [activeTab, setActiveTab] = useState('following');
     const [refreshKey, setRefreshKey] = useState(0);
@@ -290,33 +291,29 @@ export default function DashboardHome() {
     // Memoized feed fetcher: reuses cached user, skips follows query on global tab
     const fetchFeed = useCallback(async () => {
         const user = data.currentUser || currentUserRef.current;
-        if (!user) {
-            console.log("[fetchFeed] No user yet, skipping...");
-            return;
-        }
+        if (!user) return;
 
         try {
             setFeedLoading(true);
-            console.log(`[fetchFeed] Fetching for tab: ${activeTab}, User: ${user.id}`);
 
-            // Reduced select for better performance and reliability
+            // Optimized select: skip workout_sets (heavy), explicit field list
             let query = supabase
                 .from('posts')
                 .select(`
-                    *,
+                    id, user_id, caption, media_url, media_type, post_type,
+                    wod_data, workout_id, music_url, music_title, music_artist,
+                    likes_count, comments_count, created_at,
                     profiles:user_id (id, username, full_name, avatar_url, level, is_official),
-                    workouts:workout_id (*, workout_sets(*)),
+                    workouts:workout_id (id, title, description, duration, wod_type, category),
                     likes (user_id)
                 `)
                 .order('created_at', { ascending: false })
                 .limit(20);
 
             if (activeTab === 'following') {
-                // Reuse cached follows from loadData — skip extra DB roundtrip
                 let followedIds = followedIdsRef.current;
                 let officialIds = officialIdsRef.current;
 
-                // Only fetch if cache is empty (e.g. direct navigation before loadData finishes)
                 if (followedIds.length === 0) {
                     const [{ data: myFollows }, { data: officialProfiles }] = await Promise.all([
                         supabase.from('follows').select('following_id').eq('follower_id', user.id),
@@ -333,13 +330,24 @@ export default function DashboardHome() {
             }
 
             const { data: posts, error } = await query;
-            
-            if (error) {
-                console.error("[fetchFeed] Query error:", error);
+            if (error) console.error("[fetchFeed] Query error:", error);
+
+            // Batch-fetch original posts for reposts — single query, avoids N+1
+            const repostIds = (posts || [])
+                .filter((p: any) => p.media_type === 'repost')
+                .map((p: any) => { try { return JSON.parse(p.media_url || '{}').originalPostId; } catch { return null; } })
+                .filter(Boolean);
+
+            let repostMap: Record<string, any> = {};
+            if (repostIds.length > 0) {
+                const { data: originals } = await supabase
+                    .from('posts')
+                    .select('id, caption, media_url, media_type, profiles:user_id(username, full_name, avatar_url, is_official)')
+                    .in('id', repostIds);
+                for (const orig of (originals || [])) repostMap[orig.id] = orig;
             }
 
-            console.log(`[fetchFeed] Received ${posts?.length || 0} posts`);
-            setData((prev: any) => ({ ...prev, feedPosts: posts || [] }));
+            setData((prev: any) => ({ ...prev, feedPosts: posts || [], repostMap }));
         } catch (e) {
             console.error("[fetchFeed] Catch error:", e);
         } finally {
@@ -644,7 +652,15 @@ export default function DashboardHome() {
                                 {(() => {
                                     const activeDuelUserIds = new Set(data.duels.filter((d: any) => d.status === 'active' || d.status === 'pending').map((d: any) => d.challenger_id === data.currentUser?.id ? d.opponent_id : d.challenger_id));
 
-                                    return data.feedPosts.map((post: any) => (
+                                    return data.feedPosts.map((post: any) => {
+                                        let repostOriginalPost: any = undefined;
+                                        if (post.media_type === 'repost') {
+                                            try {
+                                                const meta = JSON.parse(post.media_url || '{}');
+                                                if (meta.originalPostId) repostOriginalPost = data.repostMap?.[meta.originalPostId];
+                                            } catch {}
+                                        }
+                                        return (
                                         <div key={post.id} id={`post-${post.id}`} className="scroll-mt-24 transition-all duration-300">
                                             <FeedPost
                                                 postId={post.id}
@@ -673,9 +689,10 @@ export default function DashboardHome() {
                                                 hasActiveDuel={activeDuelUserIds.has(post.user_id)}
                                                 post_type={post.post_type}
                                                 wod_data={post.wod_data}
+                                                repostOriginalPost={repostOriginalPost}
                                             />
                                         </div>
-                                    ));
+                                    )});
                                 })()}
                             </div>
                         ) : (
