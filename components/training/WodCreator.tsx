@@ -53,6 +53,7 @@ export interface ExerciseEntry {
     unit?: string;
     showRounds?: boolean;
     roundDetails?: string[];
+    type?: 'exercise' | 'scheme' | 'separator';
 }
 
 export type ScoreType = 'TIME' | 'REPS' | 'WEIGHT' | 'ROUNDS' | 'CALORIES' | 'DISTANCE' | 'PACE' | 'WATTS' | 'OTHER' | 'NONE';
@@ -231,7 +232,35 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
             if (b.id === blockId) {
                 return {
                     ...b,
-                    exercises: [...b.exercises, { id: Math.random().toString(36).substring(7), name: '', reps: '', detail: '' }]
+                    exercises: [...b.exercises, { id: Math.random().toString(36).substring(7), name: '', reps: '', detail: '', type: 'exercise' as const }]
+                };
+            }
+            return b;
+        });
+        setBlocks(updated);
+        updateWod(title, updated, summary, date, category);
+    };
+
+    const addScheme = (blockId: string) => {
+        const updated = blocks.map(b => {
+            if (b.id === blockId) {
+                return {
+                    ...b,
+                    exercises: [...b.exercises, { id: Math.random().toString(36).substring(7), name: '', reps: '21-15-9', detail: '', type: 'scheme' as const }]
+                };
+            }
+            return b;
+        });
+        setBlocks(updated);
+        updateWod(title, updated, summary, date, category);
+    };
+
+    const addSeparator = (blockId: string) => {
+        const updated = blocks.map(b => {
+            if (b.id === blockId) {
+                return {
+                    ...b,
+                    exercises: [...b.exercises, { id: Math.random().toString(36).substring(7), name: 'INTO:', reps: '', detail: '', type: 'separator' as const }]
                 };
             }
             return b;
@@ -674,11 +703,65 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
 
                         {/* Exercises List */}
                         <div className="p-4 space-y-4">
-                            {block.exercises.map((ex, eIdx) => (
+                            {block.exercises.map((ex, eIdx) => {
+                                // ── SEPARATOR row (INTO: / REST: / THEN:) ──────────────────
+                                if (ex.type === 'separator') {
+                                    return (
+                                        <div key={ex.id} className="flex items-center gap-2 py-1">
+                                            <div className="flex-1 h-px bg-white/8" />
+                                            <input
+                                                className="bg-transparent border-0 outline-none text-[11px] font-black text-brand-red uppercase tracking-widest text-center w-20"
+                                                value={ex.name}
+                                                onChange={e => updateExercise(block.id, ex.id, { name: e.target.value.toUpperCase() })}
+                                                placeholder="INTO:"
+                                            />
+                                            <div className="flex-1 h-px bg-white/8" />
+                                            <button type="button" onClick={() => removeExercise(block.id, ex.id)} className="text-gray-700 hover:text-brand-red transition-colors shrink-0">
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    )
+                                }
+                                // ── SCHEME row (21-15-9 / 15-12-9 / custom) ───────────────
+                                if (ex.type === 'scheme') {
+                                    const PRESETS = ['21-15-9', '15-12-9', '10-8-6', '5-3-1', '3-3-3', '5-4-3-2-1']
+                                    return (
+                                        <div key={ex.id} className="flex items-center gap-2 flex-wrap bg-brand-red/5 border border-brand-red/15 rounded-xl px-3 py-2">
+                                            <span className="text-[9px] font-black text-brand-red/50 uppercase tracking-widest shrink-0">ESQUEMA</span>
+                                            <div className="flex flex-wrap gap-1.5 flex-1">
+                                                {PRESETS.map(p => (
+                                                    <button key={p} type="button"
+                                                        onClick={() => updateExercise(block.id, ex.id, { reps: p })}
+                                                        className={cn(
+                                                            "px-2.5 py-1 rounded-lg text-[10px] font-black transition-all",
+                                                            ex.reps === p ? 'bg-brand-red text-white' : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white'
+                                                        )}
+                                                    >{p}</button>
+                                                ))}
+                                                <input
+                                                    className="w-24 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[10px] font-black text-brand-red placeholder:text-gray-700 focus:outline-none focus:border-brand-red/30 uppercase"
+                                                    placeholder="CUSTOM…"
+                                                    value={PRESETS.includes(ex.reps) ? '' : ex.reps}
+                                                    onChange={e => updateExercise(block.id, ex.id, { reps: e.target.value.toUpperCase() })}
+                                                />
+                                            </div>
+                                            <button type="button" onClick={() => removeExercise(block.id, ex.id)} className="text-gray-700 hover:text-brand-red transition-colors shrink-0">
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    )
+                                }
+                                // ── Default EXERCISE row ───────────────────────────────────
+                                return (
                                 <React.Fragment key={ex.id}>
                                     <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 group/ex border-b border-white/5 sm:border-0 pb-4 sm:pb-0">
                                         <div className="flex items-center gap-2 w-full sm:w-auto">
-                                            <div className="text-[10px] font-black text-gray-700 w-4 shrink-0">{eIdx + 1}</div>
+                                            <div className={cn(
+                                                "text-[10px] font-black w-6 shrink-0 text-center",
+                                                block.format === 'EMOM' ? "text-brand-red/60" : "text-gray-700"
+                                            )}>
+                                                {block.format === 'EMOM' ? `${eIdx + 1}'` : eIdx + 1}
+                                            </div>
                                             <div className="flex-[2] relative sm:hidden">
                                                 <input
                                                     placeholder="EJERCICIO"
@@ -887,15 +970,24 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                         </div>
                                     )}
                                 </React.Fragment>
-                            ))}
+                                )
+                            })}
 
-                            <button
-                                type="button"
-                                onClick={() => addExercise(block.id)}
-                                className="w-full py-3 border border-dashed border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:border-brand-red/30 hover:text-brand-red transition-all mt-2"
-                            >
-                                <Plus className="w-3 h-3 inline-block mr-1" /> AÑADIR LÍNEA
-                            </button>
+                            {/* Add buttons */}
+                            <div className="flex gap-2 mt-2 flex-wrap">
+                                <button type="button" onClick={() => addExercise(block.id)}
+                                    className="flex-1 py-2.5 border border-dashed border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:border-brand-red/30 hover:text-brand-red transition-all flex items-center justify-center gap-1">
+                                    <Plus className="w-3 h-3" /> Ejercicio
+                                </button>
+                                <button type="button" onClick={() => addScheme(block.id)}
+                                    className="flex-1 py-2.5 border border-dashed border-brand-red/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-brand-red/60 hover:border-brand-red hover:text-brand-red transition-all flex items-center justify-center gap-1">
+                                    <Plus className="w-3 h-3" /> 15-12-9
+                                </button>
+                                <button type="button" onClick={() => addSeparator(block.id)}
+                                    className="py-2.5 px-4 border border-dashed border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-gray-500 hover:border-white/30 hover:text-white transition-all">
+                                    INTO:
+                                </button>
+                            </div>
                         </div>
                     </div>
                 ))}

@@ -2,7 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { publishInAppOfficialPost, deleteOfficialPost, updateOfficialProfile } from './actions';
-import { Trophy, Plus, Trash2, Image, FileText, Megaphone, Dumbbell, Loader2, CheckCircle, X, Edit3, Eye, Users, Heart, MessageCircle, ExternalLink } from 'lucide-react';
+import { Trophy, Plus, Trash2, Image, FileText, Megaphone, Dumbbell, Loader2, CheckCircle, X, Edit3, Eye, Users, Heart, MessageCircle, ExternalLink } from 'lucide-react'
+import WodCreator, { WodBlock, WodSummary, WorkoutCategory } from '@/components/training/WodCreator';
 import NextImage from 'next/image';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
@@ -80,6 +81,37 @@ export default function OfficialPostsClient({ rivalfitProfile, posts: initialPos
     const [postType, setPostType] = useState<'text' | 'image' | 'wod' | 'announcement'>('text');
     const [caption, setCaption] = useState('');
     const [mediaUrl, setMediaUrl] = useState('');
+    const [wodData, setWodData] = useState<{ title: string; date: string; blocks: WodBlock[]; summary: WodSummary; category?: WorkoutCategory } | null>(null);
+
+    function wodToCaption(data: { title: string; date: string; blocks: WodBlock[]; summary: WodSummary }): string {
+        const lines: string[] = []
+        if (data.title) lines.push(`💪 ${data.title.toUpperCase()}`)
+        if (data.date) {
+            const d = new Date(data.date)
+            lines.push(`📅 ${d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase()}`)
+        }
+        lines.push('')
+        data.blocks.forEach(block => {
+            const cfg = block.config
+            let header: string = block.format
+            if (block.format === 'AMRAP' && cfg.timecap) header = `AMRAP ${cfg.timecap}'`
+            else if (block.format === 'FOR TIME' && cfg.timecap) header = `FOR TIME (${cfg.timecap}')`
+            else if (block.format === 'EMOM' && cfg.timecap) header = `EMOM ${cfg.timecap}'`
+            else if (block.format === 'ROUNDS FOR TIME' && cfg.rounds) header = `${cfg.rounds} ROUNDS FOR TIME`
+            else if (block.format === 'INTERVALS' && cfg.work) header = `${cfg.work}' WORK / ${cfg.rest || cfg.work}' REST`
+            else if (cfg.rounds) header = `${block.format} x${cfg.rounds}`
+            lines.push(header)
+            block.exercises.forEach(ex => {
+                const reps = ex.reps ? `${ex.reps} ` : ''
+                const detail = ex.detail ? ` · ${ex.detail}` : ''
+                lines.push(`${reps}${ex.name}${detail}`)
+            })
+            lines.push('')
+        })
+        if (data.summary?.totalTime) lines.push(`⏱ TC: ${data.summary.totalTime}'`)
+        while (lines.length > 0 && lines[lines.length - 1] === '') lines.pop()
+        return lines.join('\n')
+    }
 
     // Profile edit state
     const [profileBio, setProfileBio] = useState(rivalfitProfile?.bio || '');
@@ -237,12 +269,17 @@ export default function OfficialPostsClient({ rivalfitProfile, posts: initialPos
             {/* Create post modal */}
             {showCreate && (
                 <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-                    <div className="bg-[#111] border border-white/10 rounded-[32px] w-full max-w-lg shadow-2xl">
-                        <div className="flex items-center justify-between px-8 pt-8 pb-4 border-b border-white/5">
-                            <h2 className="text-lg font-heading font-black text-white italic uppercase">Nuevo Post Oficial</h2>
+                    <div className={clsx(
+                        "bg-[#111] border border-white/10 rounded-[32px] w-full shadow-2xl flex flex-col",
+                        postType === 'wod' ? 'max-w-2xl max-h-[90vh]' : 'max-w-lg'
+                    )}>
+                        <div className="flex items-center justify-between px-8 pt-8 pb-4 border-b border-white/5 flex-shrink-0">
+                            <h2 className="text-lg font-heading font-black text-white italic uppercase">
+                                {postType === 'wod' ? '💪 Constructor de WOD' : 'Nuevo Post Oficial'}
+                            </h2>
                             <button onClick={() => setShowCreate(false)} className="text-gray-500 hover:text-white p-2"><X className="w-5 h-5" /></button>
                         </div>
-                        <div className="p-8 space-y-5">
+                        <div className={clsx('p-8 space-y-5', postType === 'wod' && 'overflow-y-auto flex-1')}>
                             {/* Post type */}
                             <div>
                                 <label className="block text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Tipo de Post</label>
@@ -250,7 +287,7 @@ export default function OfficialPostsClient({ rivalfitProfile, posts: initialPos
                                     {POST_TYPES.map(pt => (
                                         <button
                                             key={pt.id}
-                                            onClick={() => setPostType(pt.id as any)}
+                                            onClick={() => { setPostType(pt.id as any); if (pt.id !== 'wod') setWodData(null); setCaption('') }}
                                             className={clsx(
                                                 'flex items-center gap-2 p-3 rounded-xl border text-left transition-all',
                                                 postType === pt.id ? pt.bg + ' ' + pt.color : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/8'
@@ -263,17 +300,27 @@ export default function OfficialPostsClient({ rivalfitProfile, posts: initialPos
                                 </div>
                             </div>
 
-                            {/* Caption */}
-                            <div>
-                                <label className="block text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Texto del Post *</label>
-                                <textarea
-                                    className={clsx(inputCls, 'resize-none h-32')}
-                                    placeholder="Escribe el contenido del post..."
-                                    value={caption}
-                                    onChange={e => setCaption(e.target.value)}
+                            {/* Caption / WOD Builder */}
+                            {postType === 'wod' ? (
+                                <WodCreator
+                                    onUpdate={(data) => {
+                                        setWodData(data)
+                                        setCaption(wodToCaption(data))
+                                    }}
+                                    initialData={wodData ?? undefined}
                                 />
-                                <p className="text-[10px] text-gray-600 mt-1 text-right">{caption.length} caracteres</p>
-                            </div>
+                            ) : (
+                                <div>
+                                    <label className="block text-[9px] font-black text-gray-500 uppercase tracking-[0.2em] mb-2">Texto del Post *</label>
+                                    <textarea
+                                        className={clsx(inputCls, 'resize-none h-32')}
+                                        placeholder="Escribe el contenido del post..."
+                                        value={caption}
+                                        onChange={e => setCaption(e.target.value)}
+                                    />
+                                    <p className="text-[10px] text-gray-600 mt-1 text-right">{caption.length} caracteres</p>
+                                </div>
+                            )}
 
                             {/* Media URL (for image posts) */}
                             {postType === 'image' && (
