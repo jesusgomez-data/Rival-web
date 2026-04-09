@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown } from 'lucide-react'
-import { createStory, createPRStory, toggleStoryLike, recordStoryView, deleteStory } from './actions'
+import { createStory, createPRStory, toggleStoryLike, recordStoryView, deleteStory, getStoryViewers } from './actions'
 import { clsx } from 'clsx'
 import PRCard from '../community/PRCard'
 import { Trophy, Activity } from 'lucide-react'
@@ -157,6 +157,26 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
         setStoryError(msg)
         setTimeout(() => setStoryError(null), 5000)
     }
+
+    // On-demand viewer fetching
+    const currentUserStories = selectedUserIndex !== null ? userStories[selectedUserIndex] : null
+    const currentStory = currentUserStories?.stories?.[activeStoryIndex] || null
+    const isOwner = currentUserStories?.user?.id === currentUser?.id
+
+    useEffect(() => {
+        const fetchViewers = async () => {
+            if (showViewers && currentStory?.id && isOwner) {
+                const res = await getStoryViewers(currentStory.id);
+                if (res.viewers) {
+                    const updatedUserStories = [...userStories];
+                    const targetStory = updatedUserStories[selectedUserIndex as number].stories[activeStoryIndex];
+                    (targetStory as any).viewer_details = res.viewers;
+                    setUserStories(updatedUserStories);
+                }
+            }
+        };
+        fetchViewers();
+    }, [showViewers, currentStory?.id, isOwner]);
 
     useEffect(() => {
         // Poll for stories every 30 seconds to catch new ones
@@ -783,9 +803,6 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
         }
     }
 
-    const currentUserStories = selectedUserIndex !== null ? userStories[selectedUserIndex] : null
-    const currentStory = currentUserStories?.stories?.[activeStoryIndex] || null
-    const isOwner = currentUserStories?.user?.id === currentUser?.id
 
     useEffect(() => {
         if (selectedUserIndex !== null && currentStory?.music_url && !showViewers && !previewUrl && !isPaused) {
@@ -2152,7 +2169,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                                 <div className="flex -space-x-2">
                                                     {(currentStory as any).viewer_details?.slice(0, 3).map((v: any, i: number) => (
                                                         <div key={i} className="w-5 h-5 rounded-full border border-black overflow-hidden relative">
-                                                            <Image src={v.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${v.profiles?.full_name}`} fill alt="v" className="object-cover" />
+                                                            <Image src={v.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${v.profiles?.full_name || 'User'}`} fill alt="v" className="object-cover" />
                                                         </div>
                                                     ))}
                                                 </div>

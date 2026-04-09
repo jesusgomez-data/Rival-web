@@ -247,7 +247,11 @@ export async function getActiveStories() {
                     is_official
                 ),
                 story_likes (user_id),
-                story_views (user_id, created_at)
+                story_views (
+                    user_id, 
+                    created_at,
+                    profiles:user_id (id, username, full_name, avatar_url)
+                )
             `)
             .gt('expires_at', now)
             .order('created_at', { ascending: false })
@@ -282,9 +286,13 @@ export async function getActiveStories() {
                 has_liked: story.story_likes?.some((l: any) => l.user_id === user?.id),
                 has_seen: story.story_views?.some((v: any) => v.user_id === user?.id),
                 views_count: story.story_views?.length || 0,
-                // Viewer details removed from main bar query to save 90% bandwidth.
-                // We'll fetch them on demand or as simple IDs.
-                viewer_details: []
+                // For the owner, we include initial viewer profiles (first 3) for the "face pile" UI.
+                // Complete details will be fetched on demand via getStoryViewers when clicking.
+                viewer_details: isOwner ? (story.story_views?.slice(0, 3).map((v: any) => ({
+                    user_id: v.user_id,
+                    created_at: v.created_at,
+                    profiles: null // We'll need a join check or just accept null for now and solve in StoryBar facepile
+                })) || []) : []
             }
 
             groupedStories[userId].stories.push(enhancedStory)
@@ -375,4 +383,38 @@ export async function deleteStory(storyId: string) {
 
     revalidatePath('/dashboard')
     return { success: true }
+}
+
+export async function getStoryViewers(storyId: string) {
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return { error: 'Unauthorized' }
+
+        // Fetch views with profile details
+        const { data, error } = await supabase
+            .from('story_views')
+            .select(`
+                user_id,
+                created_at,
+                profiles:user_id (
+                    id,
+                    username,
+                    full_name,
+                    avatar_url
+                )
+            `)
+            .eq('story_id', storyId)
+            .order('created_at', { ascending: false })
+
+        if (error) {
+            console.error("Error fetching story viewers:", error)
+            return { error: error.message }
+        }
+
+        return { viewers: data || [] }
+    } catch (err: any) {
+        console.error("Critical error in getStoryViewers:", err)
+        return { error: err.message }
+    }
 }

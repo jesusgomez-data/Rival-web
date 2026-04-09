@@ -138,7 +138,7 @@ export async function createPRPost(formData: FormData) {
     }
 }
 
-async function syncWodCompletion(supabase: any, user: any, postId: string, wodDataJson: string) {
+export async function syncWodCompletion(supabase: any, user: any, postId: string, wodDataJson: string) {
     try {
         const wodObj = JSON.parse(wodDataJson);
         const w = Array.isArray(wodObj) ? wodObj[0] : wodObj;
@@ -172,49 +172,58 @@ async function syncWodCompletion(supabase: any, user: any, postId: string, wodDa
         } else if (scoreType === 'WEIGHT' && scoreStr) {
             completionType = 'weight';
             weightKg = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
-        } else if (scoreType === 'DISTANCE' && scoreStr) {
-            completionType = 'distance';
-            // Simple parsing for KM or M
-            const val = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
-            if (scoreStr.toUpperCase().includes('KM')) score = val; // KM as base score
-            else score = val / 1000; // M converted to KM for standardization
-        } else if (scoreType === 'PACE' && scoreStr) {
-            completionType = 'pace';
-            // Parse MM:SS or float
-            const paceMatch = scoreStr.match(/(\d+):(\d+)/);
-            if (paceMatch) score = parseInt(paceMatch[1]) * 60 + parseInt(paceMatch[2]);
-            else score = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
-        } else if (scoreType === 'WATTS' && scoreStr) {
-            completionType = 'watts';
-            score = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
-        } else if (scoreType === 'CALORIES' && scoreStr) {
-            completionType = 'calories';
-            score = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
         } else if (scoreStr) {
+            // DISTANCE, PACE, WATTS, CALORIES → map to 'score' (valid CHECK values: time/rounds/reps/weight/score)
             completionType = 'score';
             score = parseFloat(scoreStr.replace(/[^0-9.]/g, '')) || 0;
         }
 
+        const finalOriginalId = originalWodPostId || postId;
+
         const completionData = {
             user_id: user.id,
-            original_wod_post_id: originalWodPostId || postId,
+            original_wod_post_id: finalOriginalId,
             completion_post_id: postId,
             completion_type: completionType,
             completion_time_seconds: completionTimeSeconds,
             rounds_completed: roundsCompleted,
             total_reps: totalReps,
             weight_kg: weightKg,
-            score: score,
+            score: score !== null ? Math.round(score) : null,
             rx: true,
             completed_at: new Date().toISOString()
         };
 
-        // Upsert based on completion_post_id
-        const { error: upsertError } = await supabase
+        // Check if a completion already exists for this user + original WOD
+        const { data: existing } = await supabase
             .from('wod_completions')
-            .upsert(completionData, { onConflict: 'completion_post_id' });
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('original_wod_post_id', finalOriginalId)
+            .maybeSingle();
 
-        if (upsertError) console.error("WOD completion sync error:", upsertError);
+        let syncError;
+        if (existing) {
+            const { error } = await supabase
+                .from('wod_completions')
+                .update({
+                    completion_post_id: postId,
+                    completion_type: completionData.completion_type,
+                    completion_time_seconds: completionData.completion_time_seconds,
+                    rounds_completed: completionData.rounds_completed,
+                    total_reps: completionData.total_reps,
+                    weight_kg: completionData.weight_kg,
+                    score: completionData.score,
+                    completed_at: completionData.completed_at,
+                })
+                .eq('id', existing.id);
+            syncError = error;
+        } else {
+            const { error } = await supabase.from('wod_completions').insert(completionData);
+            syncError = error;
+        }
+
+        if (syncError) console.error("WOD completion sync error:", syncError);
     } catch (e) {
         console.error("WOD completion sync catch:", e);
     }
@@ -237,6 +246,14 @@ export async function createWodPost(formData: FormData) {
         const dateStr = formData.get('scheduled_for') as string;
         const createdAt = dateStr ? new Date(`${dateStr}T${new Date().toISOString().split('T')[1]}`).toISOString() : undefined;
 
+        // Extract original_wod_post_id from the WOD data JSON to store as a real column
+        let parsedOriginalId: string | null = null;
+        try {
+            const wodObj = JSON.parse(wodDataJson);
+            const w = Array.isArray(wodObj) ? wodObj[0] : wodObj;
+            parsedOriginalId = w.original_wod_post_id || null;
+        } catch (_) {}
+
         const { data: newPost, error: insertError } = await supabase
             .from('posts')
             .insert({
@@ -245,6 +262,7 @@ export async function createWodPost(formData: FormData) {
                 media_url: wodDataJson,
                 media_type: 'wod',
                 created_at: createdAt,
+                original_wod_post_id: parsedOriginalId,
                 music_url: formData.get('music_url') as string || null,
                 music_title: formData.get('music_title') as string || null,
                 music_artist: formData.get('music_artist') as string || null

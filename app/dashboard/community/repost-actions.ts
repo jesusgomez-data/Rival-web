@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { syncWodCompletion } from "./actions";
 
 export async function createRepost(originalPostId: string, caption: string) {
     const supabase = await createClient();
@@ -35,6 +36,21 @@ export async function createRepost(originalPostId: string, caption: string) {
             .single();
 
         if (error) throw error;
+
+        // --- NEW: Sync WOD completion if the original is a WOD ---
+        const { data: originalPost } = await supabase
+            .from('posts')
+            .select('media_type, media_url, original_wod_post_id')
+            .eq('id', originalPostId)
+            .single();
+
+        if (originalPost && originalPost.media_type === 'wod' && data) {
+            const wodData = originalPost.media_url;
+            if (wodData) {
+                // Sincronizamos los resultados del WOD original con el usuario actual
+                await syncWodCompletion(supabase, user, originalPostId, wodData);
+            }
+        }
         
         revalidatePath('/dashboard');
         return { data };
