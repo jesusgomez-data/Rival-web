@@ -4,14 +4,9 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import Groq from 'groq-sdk'
-import Anthropic from '@anthropic-ai/sdk'
 
 function getGroq() {
     return new Groq({ apiKey: process.env.GROQ_API_KEY })
-}
-
-function getAnthropic() {
-    return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 }
 
 // ─── POSTS ───────────────────────────────────────────────────────────────────
@@ -116,42 +111,47 @@ export async function getScripts() {
     return data || []
 }
 
+function parseGroqJSON(content: string): any {
+    // 1. Try direct parse
+    try { return JSON.parse(content.trim()) } catch {}
+    // 2. Extract first {...} block (handles markdown code fences and surrounding text)
+    const match = content.match(/\{[\s\S]*\}/)
+    if (match) {
+        try { return JSON.parse(match[0]) } catch {}
+        // 3. Remove trailing commas before } or ] and retry
+        const cleaned = match[0]
+            .replace(/,\s*([}\]])/g, '$1')   // trailing commas
+            .replace(/[\x00-\x1F\x7F]/g, ' ') // control characters
+        try { return JSON.parse(cleaned) } catch {}
+    }
+    throw new Error('No se pudo procesar la respuesta de IA. Intenta de nuevo.')
+}
+
 export async function generateScript(topic: string, format?: string, tone?: string) {
-    const anthropic = getAnthropic()
+    const message = await getGroq().chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 1500,
+        response_format: { type: 'json_object' },
+        messages: [
+            {
+                role: 'system',
+                content: 'Eres un experto en contenido para redes sociales fitness. Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin bloques de código markdown.'
+            },
+            {
+                role: 'user',
+                content: `Genera un guion completo en español para un video de redes sociales sobre: "${topic}".
+Formato: ${format || 'reel/video corto'}
+Tono: ${tone || 'profesional pero cercano, como hablando con un amigo'}
 
-    const response = await anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 2000,
-        tools: [{
-            name: 'generate_script',
-            description: 'Genera un guion estructurado para video de redes sociales',
-            input_schema: {
-                type: 'object' as const,
-                properties: {
-                    title: { type: 'string', description: 'Título atractivo del video' },
-                    hook: { type: 'string', description: 'Gancho inicial poderoso (primeros 3 segundos)' },
-                    key_points: { type: 'array', items: { type: 'string' }, description: '3-5 puntos clave del contenido' },
-                    call_to_action: { type: 'string', description: 'Llamada a la acción al final' },
-                    suggested_duration: { type: 'string', description: 'Duración sugerida (ej: "30-60s", "2-3 min")' },
-                    suggested_format: { type: 'string', enum: ['reel', 'corto', 'video largo', 'historia', 'carrusel'] },
-                    full_script: { type: 'string', description: 'Guion completo con pausas e indicaciones de énfasis' },
-                },
-                required: ['title', 'hook', 'key_points', 'call_to_action', 'suggested_duration', 'suggested_format', 'full_script'],
+Responde con este JSON exacto:
+{"title":"...","hook":"...","key_points":["...","...","..."],"call_to_action":"...","suggested_duration":"...","suggested_format":"reel","full_script":"..."}`
             }
-        }],
-        tool_choice: { type: 'tool', name: 'generate_script' },
-        messages: [{
-            role: 'user',
-            content: `Eres un experto en contenido para redes sociales fitness y entrenamiento deportivo. Genera un guion completo en español para un video de redes sociales sobre: "${topic}".
-
-Formato preferido: ${format || 'reel/video corto'}
-Tono: ${tone || 'profesional pero cercano, como hablando con un amigo'}`
-        }]
+        ]
     })
 
-    const toolUse = response.content.find(b => b.type === 'tool_use')
-    if (!toolUse || toolUse.type !== 'tool_use') throw new Error('No se pudo generar el guion')
-    const parsed = toolUse.input as any
+    const content = message.choices[0]?.message?.content
+    if (!content) throw new Error('Respuesta vacía del modelo')
+    const parsed = parseGroqJSON(content)
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -185,65 +185,33 @@ export async function deleteScript(id: string) {
 // ─── CAROUSELS ────────────────────────────────────────────────────────────────
 
 export async function generateCarouselHTML(topic: string, slideCount: number): Promise<{ html: string; slides: any[]; caption: string; title: string }> {
-    const anthropic = getAnthropic()
+    const message = await getGroq().chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 3500,
+        response_format: { type: 'json_object' },
+        messages: [
+            {
+                role: 'system',
+                content: 'Eres el director de contenido de RivalFit, red social fitness de élite. Responde ÚNICAMENTE con JSON válido, sin texto adicional, sin bloques de código markdown.'
+            },
+            {
+                role: 'user',
+                content: `Crea un carrusel de Instagram PROFESIONAL en español sobre: "${topic}".
+Total: ${slideCount} slides. Primera: portada (cover). Última: CTA. Las del medio: contenido rico.
 
-    const response = await anthropic.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 4000,
-        tools: [{
-            name: 'generate_carousel',
-            description: 'Genera un carrusel estructurado para Instagram',
-            input_schema: {
-                type: 'object' as const,
-                properties: {
-                    title: { type: 'string' },
-                    caption: { type: 'string', description: 'Caption completo para Instagram con emojis y hashtags' },
-                    slides: {
-                        type: 'array',
-                        items: {
-                            type: 'object',
-                            properties: {
-                                type: { type: 'string', enum: ['cover', 'anatomy', 'data_grid', 'list', 'errors', 'tips', 'statement', 'cta'] },
-                                eyebrow: { type: 'string' },
-                                headline: { type: 'string' },
-                                subheadline: { type: 'string' },
-                                body: { type: 'string' },
-                                section: { type: 'string' },
-                                body_part: { type: 'string' },
-                                caption: { type: 'string' },
-                                sub: { type: 'string' },
-                                items: { type: 'array', items: { type: 'object' } },
-                            },
-                            required: ['type', 'headline']
-                        }
-                    }
-                },
-                required: ['title', 'slides', 'caption']
+Tipos de slide: cover, anatomy (biomecánica/músculos), data_grid (4 estadísticas), list (lista numerada), errors (errores comunes), tips (consejos), statement (frase impactante), cta.
+
+Responde con este JSON exacto:
+{"title":"...","caption":"caption para Instagram con emojis y hashtags","slides":[{"type":"cover","eyebrow":"...","headline":"...","subheadline":"...","body":"..."},{"type":"list","section":"...","headline":"...","items":[{"num":"01","title":"...","desc":"...","detail":"..."}]},{"type":"cta","headline":"...","sub":"..."}]}
+
+Genera exactamente ${slideCount} slides. Contenido TÉCNICO y EDUCATIVO.`
             }
-        }],
-        tool_choice: { type: 'tool', name: 'generate_carousel' },
-        messages: [{
-            role: 'user',
-            content: `Eres el director de contenido de RivalFit, red social fitness de élite con enfoque técnico y científico. Crea un carrusel de Instagram PROFESIONAL y DETALLADO en español sobre: "${topic}".
-Total: ${slideCount} slides. La primera es portada (type: "cover"). La última es CTA (type: "cta"). Las del medio son contenido rico y específico.
-
-Tipos disponibles:
-- "cover": portada impactante (campos: eyebrow, headline, subheadline, body)
-- "anatomy": cuando el tema sea biomecánica/músculos/lesiones (campos: section, headline, body_part: "hombro"|"rodilla"|"columna"|"cadera"|"codo", caption)
-- "data_grid": grid de 4 estadísticas (campos: section, headline, items: [{value, label, note}])
-- "list": lista numerada (campos: section, headline, items: [{num, title, desc, detail}])
-- "errors": errores comunes (campos: section, headline, items: [{num, title, desc, risk}])
-- "tips": consejos prácticos (campos: section, headline, items: [{icon, title, desc}])
-- "statement": frase impactante (campos: headline, body)
-- "cta": llamada a acción (campos: headline, sub)
-
-IMPORTANTE: contenido TÉCNICO, ESPECÍFICO y EDUCATIVO. Genera exactamente ${slideCount} slides.`
-        }]
+        ]
     })
 
-    const toolUse = response.content.find(b => b.type === 'tool_use')
-    if (!toolUse || toolUse.type !== 'tool_use') throw new Error('No se pudo generar el carrusel')
-    const data = toolUse.input as any
+    const raw = message.choices[0]?.message?.content
+    if (!raw) throw new Error('Respuesta vacía del modelo')
+    const data = parseGroqJSON(raw)
 
     const slides: any[] = data.slides || []
     const html = buildRivalFitCarouselHTML(data.title || topic, topic, slides)
