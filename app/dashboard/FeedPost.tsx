@@ -553,7 +553,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             if (document.hidden && videoRef.current) {
                 videoRef.current.pause();
             } else if (!document.hidden && isVisible && videoRef.current) {
-                videoRef.current.play().catch(() => {});
+                videoRef.current.play().catch(() => {
+                    // Silently fail — onCanPlay/onError handlers manage the UI state
+                });
             }
         };
 
@@ -566,7 +568,10 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         if (!videoRef.current) return;
 
         if (isVisible) {
-            videoRef.current.play().catch(() => {});
+            setIsBuffering(true);
+            videoRef.current.play().catch(() => {
+                // Silently fail — onCanPlay/onError handlers manage the UI state
+            });
         } else {
             videoRef.current.pause();
         }
@@ -1415,11 +1420,11 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                             ref={videoRef}
                                             src={image}
                                             className="w-full h-full object-cover"
-                                            autoPlay
                                             loop
                                             playsInline
                                             muted={isMuted || !isVisible || (typeof document !== 'undefined' && document.hidden)}
-                                            preload="auto"
+                                            preload="metadata"
+                                            onCanPlay={() => { if (isVisible && videoRef.current) videoRef.current.play().catch(() => { setLoadError(true); setIsBuffering(false); }); }}
                                             onWaiting={() => setIsBuffering(true)}
                                             onPlaying={() => { setIsBuffering(false); setIsActuallyPlaying(true); setLoadError(false); }}
                                             onPause={() => setIsActuallyPlaying(false)}
@@ -1459,8 +1464,8 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                                 <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md z-10 p-6 text-center">
                                                     <X className="w-12 h-12 text-brand-red mb-3" />
                                                     <p className="text-white text-xs font-black uppercase tracking-widest">Error al cargar video</p>
-                                                    <button 
-                                                        onClick={(e) => { e.stopPropagation(); setLoadError(false); setIsBuffering(true); if(videoRef.current) { videoRef.current.load(); videoRef.current.play(); } }}
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); setLoadError(false); setIsBuffering(true); if(videoRef.current) { videoRef.current.load(); videoRef.current.play().catch(() => { setLoadError(true); setIsBuffering(false); }); } }}
                                                         className="mt-4 px-4 py-2 bg-brand-red text-white text-[10px] font-black rounded-lg"
                                                     >
                                                         REINTENTAR

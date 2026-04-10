@@ -514,6 +514,14 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                 }
             }, durationToRecord * 3000 + 10000)
 
+            // KEY FIX: when video ends naturally, video.paused becomes true which would
+            // block the render loop from calling recorder.stop(). Handle it here instead.
+            video.onended = () => {
+                clearTimeout(timeoutId)
+                if (recorder.state === 'recording') recorder.stop()
+                if (musicRef.current) musicRef.current.pause()
+            }
+
                 // --- Pre-load images for this export session to avoid 'new Image()' every frame ---
                 const loadedImages = await Promise.all(imageOverlays.map(img => {
                     return new Promise<HTMLImageElement | null>((resolve) => {
@@ -552,14 +560,25 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                 }
 
                 const renderLoop = () => {
-                    if (!isExportingActive || video.paused) return; // Prevent drawing if stopped
-                    
-                    if (video.currentTime >= trimRange.end || video.ended) {
+                    if (!isExportingActive) return;
+                    // Stop if video ended or reached trim end (onended handler also covers this,
+                    // but keep this as a belt-and-suspenders check)
+                    if (video.ended || video.currentTime >= trimRange.end) {
                         clearTimeout(timeoutId)
                         if (recorder.state === 'recording') recorder.stop()
-                        video.pause()
                         if (musicRef.current) musicRef.current.pause()
                         return
+                    }
+                    // Skip drawing if paused but NOT ended (e.g. user interaction)
+                    if (video.paused) {
+                        if (recorder.state === 'recording') {
+                            if ('requestVideoFrameCallback' in video) {
+                                (video as any).requestVideoFrameCallback(renderLoop);
+                            } else {
+                                requestAnimationFrame(renderLoop);
+                            }
+                        }
+                        return;
                     }
 
                     // Only draw if the video has actually progressed to a new frame
