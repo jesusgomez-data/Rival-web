@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,900;1,900&family=Anton&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; }
+
+  .slide {
+    width: 1080px;
+    height: 1350px;
+    background: #0a0a0a;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+    font-family: 'Montserrat', sans-serif;
+  }
+
+  /* ─── SLIDE 1: COVER ─────────────────────────────── */
+  .s1 {
+    background: #000;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .s1-bg {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 60%, #DC262640 0%, transparent 70%);
+  }
+  .s1-line {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 6px;
+    background: #DC2626;
+  }
+  .s1-tag {
+    background: #DC2626;
+    color: #fff;
+    font-size: 22px;
+    font-weight: 900;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    padding: 10px 28px;
+    margin-bottom: 40px;
+  }
+  .s1-title {
+    font-family: 'Anton', sans-serif;
+    font-size: 200px;
+    color: #fff;
+    letter-spacing: -4px;
+    line-height: 0.9;
+    text-transform: uppercase;
+  }
+  .s1-sub {
+    font-size: 28px;
+    font-weight: 700;
+    color: #DC2626;
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    margin-top: 30px;
+  }
+  .s1-desc {
+    font-size: 20px;
+    color: #666;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 16px;
+  }
+  .s1-logo {
+    position: absolute;
+    bottom: 40px;
+    font-size: 18px;
+    font-weight: 900;
+    color: #DC2626;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+  }
+  .s1-swipe {
+    position: absolute;
+    bottom: 40px;
+    right: 50px;
+    font-size: 16px;
+    color: #444;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* ─── SHARED STYLES ──────────────────────────────── */
+  .slide-header {
+    padding: 50px 70px 30px;
+    border-bottom: 2px solid #1a1a1a;
+  }
+  .slide-number {
+    font-size: 13px;
+    color: #DC2626;
+    font-weight: 700;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .slide-title {
+    font-family: 'Anton', sans-serif;
+    font-size: 72px;
+    color: #fff;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+  }
+  .slide-title span { color: #DC2626; }
+  .slide-body { flex: 1; padding: 50px 70px; display: flex; flex-direction: column; gap: 30px; }
+  .brand-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 70px;
+    background: #DC2626;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 70px;
+  }
+  .brand-bar span { font-size: 16px; font-weight: 900; color: #fff; letter-spacing: 4px; text-transform: uppercase; }
+
+  /* ─── ANATOMY SLIDE ──────────────────────────────── */
+  .anatomy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    flex: 1;
+  }
+  .muscle-card {
+    background: #111;
+    border: 1px solid #1f1f1f;
+    border-radius: 4px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+  .muscle-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 4px;
+    height: 100%;
+    background: #DC2626;
+  }
+  .muscle-num {
+    font-family: 'Anton', sans-serif;
+    font-size: 64px;
+    color: #1f1f1f;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .muscle-name {
+    font-size: 20px;
+    font-weight: 900;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+  }
+  .muscle-detail {
+    font-size: 15px;
+    color: #888;
+    line-height: 1.6;
+  }
+  .muscle-tag {
+    display: inline-block;
+    background: #DC262620;
+    color: #DC2626;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 4px 10px;
+    text-transform: uppercase;
+    margin-top: 12px;
+  }
+
+  /* ─── BIOMECHANICS SLIDE ─────────────────────────── */
+  .bio-item {
+    background: #111;
+    border-left: 4px solid #DC2626;
+    padding: 28px 32px;
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+  }
+  .bio-icon {
+    font-family: 'Anton', sans-serif;
+    font-size: 48px;
+    color: #DC2626;
+    line-height: 1;
+    min-width: 60px;
+  }
+  .bio-content {}
+  .bio-title {
+    font-size: 22px;
+    font-weight: 900;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .bio-text { font-size: 16px; color: #777; line-height: 1.7; }
+
+  /* ─── ERRORS SLIDE ───────────────────────────────── */
+  .error-item {
+    background: #110000;
+    border: 1px solid #DC262630;
+    padding: 28px 32px;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  .error-x {
+    font-size: 32px;
+    font-weight: 900;
+    color: #DC2626;
+    min-width: 40px;
+    line-height: 1;
+  }
+  .error-title { font-size: 20px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .error-text { font-size: 15px; color: #666; line-height: 1.6; }
+
+  /* ─── EXERCISES SLIDE ────────────────────────────── */
+  .exercise-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    flex: 1;
+  }
+  .exercise-card {
+    background: #111;
+    padding: 36px 30px;
+    border-radius: 4px;
+    border-bottom: 4px solid #DC2626;
+  }
+  .exercise-num {
+    font-family: 'Anton', sans-serif;
+    font-size: 56px;
+    color: #DC2626;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+  .exercise-name { font-size: 22px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .exercise-sets { font-size: 14px; color: #DC2626; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
+  .exercise-tip { font-size: 14px; color: #666; line-height: 1.5; }
+
+  /* ─── TIPS SLIDE ─────────────────────────────────── */
+  .tip-item {
+    background: #111;
+    padding: 32px;
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    border-radius: 4px;
+  }
+  .tip-num {
+    font-family: 'Anton', sans-serif;
+    font-size: 72px;
+    color: #DC2626;
+    line-height: 0.9;
+    min-width: 70px;
+  }
+  .tip-title { font-size: 22px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .tip-text { font-size: 16px; color: #777; line-height: 1.6; }
+
+  /* ─── CTA SLIDE ──────────────────────────────────── */
+  .s7 {
+    background: #000;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .s7-bg {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 50%, #DC262625 0%, transparent 65%);
+  }
+  .cta-label { font-size: 16px; color: #DC2626; font-weight: 700; letter-spacing: 6px; text-transform: uppercase; margin-bottom: 30px; }
+  .cta-main {
+    font-family: 'Anton', sans-serif;
+    font-size: 96px;
+    color: #fff;
+    line-height: 1;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .cta-main span { color: #DC2626; }
+  .cta-sub { font-size: 28px; color: #fff; font-weight: 700; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 60px; }
+  .cta-url {
+    background: #DC2626;
+    color: #fff;
+    font-size: 26px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    padding: 24px 60px;
+    margin-bottom: 40px;
+  }
+  .cta-tagline { font-size: 18px; color: #444; font-style: italic; letter-spacing: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 1: COVER -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide s1">
+  <div class="s1-bg"></div>
+  <div class="s1-line"></div>
+  <div class="s1-tag">Guía Completa</div>
+  <div class="s1-title">BÍ<br>CEPS</div>
+  <div class="s1-sub">Anatomía · Biomecánica · Ejercicios</div>
+  <div class="s1-desc">Todo lo que necesitas saber</div>
+  <div class="s1-logo">RIVALFIT.APP</div>
+  <div class="s1-swipe">Desliza →</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 2: ANATOMÍA -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide" style="padding-bottom:70px">
+  <div class="slide-header">
+    <div class="slide-number">02 / 07 — Anatomía</div>
+    <div class="slide-title">Los <span>músculos</span><br>del brazo</div>
+  </div>
+  <div class="slide-body">
+    <div class="anatomy-grid">
+      <div class="muscle-card">
+        <div class="muscle-num">01</div>
+        <div class="muscle-name">Bíceps Braquial</div>
+        <div class="muscle-detail">Músculo biarticular con dos cabezas. La cabeza larga estabiliza el hombro; la corta genera mayor fuerza de flexión.</div>
+        <div class="muscle-tag">Protagonista</div>
+      </div>
+      <div class="muscle-card">
+        <div class="muscle-num">02</div>
+        <div class="muscle-name">Braquial</div>
+        <div class="muscle-detail">El flexor más potente del codo. No interviene en la supinación — trabaja igual en pronación o neutro.</div>
+        <div class="muscle-tag">El más fuerte</div>
+      </div>
+      <div class="muscle-card">
+        <div class="muscle-num">03</div>
+        <div class="muscle-name">Braquiorradial</div>
+        <div class="muscle-detail">Músculo del antebrazo que asiste la flexión especialmente en agarre neutro (martillo).</div>
+        <div class="muscle-tag">Sinergista</div>
+      </div>
+      <div class="muscle-card">
+        <div class="muscle-num">04</div>
+        <div class="muscle-name">Supinador</div>
+        <div class="muscle-detail">Trabaja con el bíceps en la rotación del antebrazo. Maximizarlo: rota la muñeca al subir el peso.</div>
+        <div class="muscle-tag">Rotación</div>
+      </div>
+    </div>
+  </div>
+  <div class="brand-bar"><span>RivalFit.app</span><span>@rivalfit.app</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 3: BIOMECÁNICA -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide" style="padding-bottom:70px">
+  <div class="slide-header">
+    <div class="slide-number">03 / 07 — Biomecánica</div>
+    <div class="slide-title">Cómo<br><span>funciona</span></div>
+  </div>
+  <div class="slide-body" style="gap:20px">
+    <div class="bio-item">
+      <div class="bio-icon">01</div>
+      <div class="bio-content">
+        <div class="bio-title">Flexión del Codo</div>
+        <div class="bio-text">El movimiento principal. El bíceps genera el mayor torque entre los 80-100° de flexión. Es donde más carga debes sentir.</div>
+      </div>
+    </div>
+    <div class="bio-item">
+      <div class="bio-icon">02</div>
+      <div class="bio-content">
+        <div class="bio-title">Supinación del Antebrazo</div>
+        <div class="bio-text">El bíceps es el supinador más potente del brazo. Girar la muñeca hacia afuera en el punto máximo activa ~30% más fibras musculares.</div>
+      </div>
+    </div>
+    <div class="bio-item">
+      <div class="bio-icon">03</div>
+      <div class="bio-content">
+        <div class="bio-title">Tensión en Estiramiento</div>
+        <div class="bio-text">La fase excéntrica (bajada) crea más daño muscular y adaptación. Baja en 3-4 segundos controlados para maximizar el crecimiento.</div>
+      </div>
+    </div>
+    <div class="bio-item">
+      <div class="bio-icon">04</div>
+      <div class="bio-content">
+        <div class="bio-title">Rango Completo</div>
+        <div class="bio-text">Extiende completamente el codo al bajar. El músculo crece más en el rango estirado — no acortes el movimiento.</div>
+      </div>
+    </div>
+  </div>
+  <div class="brand-bar"><span>RivalFit.app</span><span>@rivalfit.app</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 4: ERRORES COMUNES -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide" style="padding-bottom:70px">
+  <div class="slide-header">
+    <div class="slide-number">04 / 07 — Errores</div>
+    <div class="slide-title"><span>Errores</span><br>que frenan<br>tu progreso</div>
+  </div>
+  <div class="slide-body" style="gap:20px">
+    <div class="error-item">
+      <div class="error-x">✕</div>
+      <div>
+        <div class="error-title">Usar el impulso del torso</div>
+        <div class="error-text">Balancear el cuerpo reduce la tensión en el bíceps hasta un 60%. El codo debe permanecer fijo como un pivote.</div>
+      </div>
+    </div>
+    <div class="error-item">
+      <div class="error-x">✕</div>
+      <div>
+        <div class="error-title">No llegar al rango completo</div>
+        <div class="error-text">Acortar el movimiento elimina el estiramiento — la zona de mayor crecimiento muscular. Extiende siempre.</div>
+      </div>
+    </div>
+    <div class="error-item">
+      <div class="error-x">✕</div>
+      <div>
+        <div class="error-title">Subir demasiado rápido</div>
+        <div class="error-text">Si subes en menos de 1 segundo, el impulso hace el trabajo, no el músculo. Sube en 2s, baja en 3s.</div>
+      </div>
+    </div>
+    <div class="error-item">
+      <div class="error-x">✕</div>
+      <div>
+        <div class="error-title">Siempre el mismo ejercicio</div>
+        <div class="error-text">El curl barra solo trabaja un ángulo. Necesitas variedad: inclinado, predicador, martillo para estimular todas las fibras.</div>
+      </div>
+    </div>
+  </div>
+  <div class="brand-bar"><span>RivalFit.app</span><span>@rivalfit.app</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 5: EJERCICIOS -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide" style="padding-bottom:70px">
+  <div class="slide-header">
+    <div class="slide-number">05 / 07 — Ejercicios</div>
+    <div class="slide-title">Top <span>4</span><br>ejercicios</div>
+  </div>
+  <div class="slide-body" style="padding-top:30px">
+    <div class="exercise-grid">
+      <div class="exercise-card">
+        <div class="exercise-num">01</div>
+        <div class="exercise-name">Curl Barra</div>
+        <div class="exercise-sets">4 × 8-10 reps</div>
+        <div class="exercise-tip">Movimiento base de masa. Agarre supino, codos fijos, fuerza desde el bíceps.</div>
+      </div>
+      <div class="exercise-card">
+        <div class="exercise-num">02</div>
+        <div class="exercise-name">Curl Inclinado</div>
+        <div class="exercise-sets">3 × 10-12 reps</div>
+        <div class="exercise-tip">Máximo estiramiento de la cabeza larga. Banco a 45°, deja caer el brazo completamente.</div>
+      </div>
+      <div class="exercise-card">
+        <div class="exercise-num">03</div>
+        <div class="exercise-name">Curl Predicador</div>
+        <div class="exercise-sets">3 × 12 reps</div>
+        <div class="exercise-tip">Aísla el bíceps eliminando el impulso. Enfócate en la contracción total en el pico.</div>
+      </div>
+      <div class="exercise-card">
+        <div class="exercise-num">04</div>
+        <div class="exercise-name">Curl Martillo</div>
+        <div class="exercise-sets">3 × 12-15 reps</div>
+        <div class="exercise-tip">Trabaja braquial y braquiorradial. Agarre neutro, ideal para grosor de brazo.</div>
+      </div>
+    </div>
+  </div>
+  <div class="brand-bar"><span>RivalFit.app</span><span>@rivalfit.app</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 6: TIPS PRO -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide" style="padding-bottom:70px">
+  <div class="slide-header">
+    <div class="slide-number">06 / 07 — Tips Pro</div>
+    <div class="slide-title">3 tips para<br><span>crecer más</span><br>rápido</div>
+  </div>
+  <div class="slide-body" style="gap:24px">
+    <div class="tip-item">
+      <div class="tip-num">01</div>
+      <div>
+        <div class="tip-title">Supina al máximo en el pico</div>
+        <div class="tip-text">En el punto más alto del curl, gira el meñique hacia arriba. Este movimiento de supinación activa hasta un 30% más de fibras del bíceps braquial.</div>
+      </div>
+    </div>
+    <div class="tip-item">
+      <div class="tip-num">02</div>
+      <div>
+        <div class="tip-title">Frecuencia 2x por semana</div>
+        <div class="tip-text">El bíceps se recupera en 48-72h. Entrenar dos veces por semana con intensidad moderada produce más crecimiento que una sesión de alto volumen.</div>
+      </div>
+    </div>
+    <div class="tip-item">
+      <div class="tip-num">03</div>
+      <div>
+        <div class="tip-title">Progresión de carga constante</div>
+        <div class="tip-text">Añade 1-2 kg cada 2-3 semanas o una repetición por serie. Sin progresión no hay estímulo nuevo y el músculo no crece.</div>
+      </div>
+    </div>
+  </div>
+  <div class="brand-bar"><span>RivalFit.app</span><span>@rivalfit.app</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<!-- SLIDE 7: CTA -->
+<!-- ═══════════════════════════════════════════════════════ -->
+<div class="slide s7">
+  <div class="s7-bg"></div>
+  <div class="s1-line"></div>
+  <div class="cta-label">Registra tu progreso</div>
+  <div class="cta-main">Trackea<br>tus <span>PRs</span></div>
+  <div class="cta-sub">Compite. Evoluciona. Domina.</div>
+  <div class="cta-url">RIVALFIT.APP</div>
+  <div class="cta-tagline">Face Yourself. Conquer All.</div>
+</div>
+
+</body>
+</html>

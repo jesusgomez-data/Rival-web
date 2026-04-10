@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,900;1,900&family=Anton&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; }
+  .slide { width:1080px; height:1350px; background:#0a0a0a; display:flex; flex-direction:column; position:relative; overflow:hidden; page-break-after:always; font-family:'Montserrat',sans-serif; }
+  .red-line { position:absolute; top:0; left:0; right:0; height:6px; background:#DC2626; }
+  .brand-bar { position:absolute; bottom:0; left:0; right:0; height:70px; background:#DC2626; display:flex; align-items:center; justify-content:space-between; padding:0 70px; }
+  .brand-bar span { font-size:16px; font-weight:900; color:#fff; letter-spacing:4px; text-transform:uppercase; }
+
+  /* COVER */
+  .cover { background:#000; justify-content:center; align-items:center; text-align:center; }
+  .cover-glow { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 50%, #DC262630 0%, transparent 65%); }
+  .cover-eyebrow { font-size:16px; color:#DC2626; font-weight:700; letter-spacing:6px; text-transform:uppercase; margin-bottom:30px; border:1px solid #DC2626; padding:10px 30px; }
+  .cover-title { font-family:'Anton',sans-serif; font-size:120px; color:#fff; line-height:0.95; text-transform:uppercase; margin-bottom:20px; }
+  .cover-title span { color:#DC2626; }
+  .cover-sub { font-size:26px; color:#888; font-weight:700; letter-spacing:4px; text-transform:uppercase; margin-bottom:50px; }
+  .cover-stats { display:flex; gap:60px; }
+  .stat-num { font-family:'Anton',sans-serif; font-size:56px; color:#DC2626; line-height:1; }
+  .stat-label { font-size:13px; color:#555; letter-spacing:3px; text-transform:uppercase; font-weight:700; }
+
+  /* FEATURE SLIDES */
+  .feat-header { padding:50px 70px 30px; border-bottom:2px solid #1a1a1a; }
+  .feat-num { font-size:13px; color:#DC2626; font-weight:700; letter-spacing:4px; text-transform:uppercase; margin-bottom:10px; }
+  .feat-title { font-family:'Anton',sans-serif; font-size:72px; color:#fff; line-height:1; text-transform:uppercase; }
+  .feat-title span { color:#DC2626; }
+  .feat-body { flex:1; padding:40px 70px; display:flex; flex-direction:column; gap:22px; }
+
+  .feat-card { background:#111; border-left:4px solid #DC2626; padding:30px; }
+  .feat-card-title { font-size:22px; font-weight:900; color:#fff; text-transform:uppercase; letter-spacing:2px; margin-bottom:10px; }
+  .feat-card-text { font-size:16px; color:#777; line-height:1.7; }
+  .feat-card-tag { display:inline-block; margin-top:12px; background:#DC262620; color:#DC2626; font-size:11px; font-weight:700; letter-spacing:3px; padding:5px 12px; text-transform:uppercase; }
+
+  .big-stat { font-family:'Anton',sans-serif; font-size:120px; color:#DC2626; line-height:1; }
+  .big-stat-label { font-size:20px; font-weight:900; color:#fff; text-transform:uppercase; letter-spacing:3px; margin-bottom:8px; }
+  .big-stat-sub { font-size:16px; color:#555; }
+
+  /* CTA FINAL */
+  .cta-final { background:#000; justify-content:center; align-items:center; text-align:center; }
+  .cta-glow { position:absolute; inset:0; background:radial-gradient(ellipse at 50% 50%, #DC262622 0%, transparent 60%); }
+  .cta-free { background:#DC2626; color:#fff; font-size:16px; font-weight:900; letter-spacing:8px; text-transform:uppercase; padding:12px 36px; margin-bottom:40px; }
+  .cta-big { font-family:'Anton',sans-serif; font-size:96px; color:#fff; line-height:0.9; text-transform:uppercase; margin-bottom:20px; }
+  .cta-big span { color:#DC2626; }
+  .cta-sub { font-size:24px; color:#777; font-weight:700; text-transform:uppercase; letter-spacing:3px; margin-bottom:60px; }
+  .cta-url { border:3px solid #DC2626; color:#fff; font-size:30px; font-weight:900; letter-spacing:5px; padding:28px 80px; text-transform:uppercase; margin-bottom:30px; display:inline-block; }
+  .cta-tagline { font-size:18px; color:#333; font-style:italic; letter-spacing:2px; }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: COVER -->
+<div class="slide cover">
+  <div class="cover-glow"></div>
+  <div class="red-line"></div>
+  <div class="cover-eyebrow">La App Fitness #1</div>
+  <div class="cover-title">RIVAL<span>FIT</span></div>
+  <div class="cover-sub">Red Social · Gestión · IA</div>
+  <div class="cover-stats">
+    <div style="text-align:center">
+      <div class="stat-num">100%</div>
+      <div class="stat-label">Gratis</div>
+    </div>
+    <div style="text-align:center">
+      <div class="stat-num">IA</div>
+      <div class="stat-label">Programación</div>
+    </div>
+    <div style="text-align:center">
+      <div class="stat-num">∞</div>
+      <div class="stat-label">Comunidad</div>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 2: RED SOCIAL FITNESS -->
+<div class="slide" style="padding-bottom:70px">
+  <div class="red-line"></div>
+  <div class="feat-header">
+    <div class="feat-num">01 / 05 — Red Social</div>
+    <div class="feat-title">Tu <span>comunidad</span><br>fitness</div>
+  </div>
+  <div class="feat-body">
+    <div class="feat-card">
+      <div class="feat-card-title">Feed de Entrenamientos</div>
+      <div class="feat-card-text">Comparte tus WODs, PRs y transformaciones con atletas de todo el mundo. No es un feed de fotos bonitas — es un feed de resultados reales.</div>
+      <div class="feat-card-tag">Social</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-card-title">Rankings Globales</div>
+      <div class="feat-card-text">Compite contra atletas de tu nivel en ejercicios específicos. Sube en el ranking cada semana superando tus marcas personales.</div>
+      <div class="feat-card-tag">Competición</div>
+    </div>
+    <div class="feat-card">
+      <div class="feat-card-title">Seguimiento de PRs</div>
+      <div class="feat-card-text">Registra cada récord personal. La app calcula tu progreso, te notifica cuando estás cerca de un PR y celebra cada logro.</div>
+      <div class="feat-card-tag">Progreso</div>
+    </div>
+    <div style="background:#DC2626; padding:28px 30px; text-align:center">
+      <div style="font-size:20px; font-weight:900; color:#fff; letter-spacing:3px; text-transform:uppercase">GRATIS EN RIVALFIT.APP</div>
+    </div>
+  </div>
+  <div class="brand-bar"><span>RivalFit.app</span><span>@rivalfit.app</span></div>
+</div>
+
+<!-- SLIDE 3: GESTIÓN DE CENTROS -->
+<div class="slide" style="padding-bottom:70px">
+  <div class="red-line"></div>
+  <div class="feat-header">
+    <div class="feat-num">02 / 05 — Para Gyms y Boxes</div>
+    <div class="feat-title">Gestiona tu<br><span>centro</span><br>de élite</div>
+  </div>
+  <div class="feat-body">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px; flex:1">
+      <div style="background:#111; padding:30px; border-bottom:3px solid #DC2626">
+        <div style="font-family:'Anton',sans-serif; font-size:48px; color:#DC2626; margin-bottom:10px">WOD</div>
+        <div style="font-size:18px; font-weight:900; color:#fff; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px">Programación IA</div>
+        <div style="font-size:14px; color:#666; line-height:1.5">WODs generados con inteligencia artificial adaptados al nivel de tu box.</div>
+      </div>
+      <div style="background:#111; padding:30px; border-bottom:3px solid #DC2626">
+        <div style="font-family:'Anton',sans-serif; font-size:48px; color:#DC2626; margin-bottom:10px">📋</div>
+        <div style="font-size:18px; font-weight:900; color:#fff; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px">Gestión Miembros</div>
+        <div style="font-size:14px; color:#666; line-height:1.5">Control de membresías, pagos, check-in y comunicaciones desde un panel.</div>
+      </div>
+      <div style="background:#111; padding:30px; border-bottom:3px solid #DC2626">
+        <div style="font-family:'Anton',sans-serif; font-size:48px; color:#DC2626; margin-bottom:10px">📊</div>
+        <div style="font-size:18px; font-weight:900; color:#fff; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px">Analytics</div>
+        <div style="font-size:14px; color:#666; line-height:1.5">Métricas de retención, asistencia y crecimiento de tu negocio en tiempo real.</div>
+      </div>
+      <div style="background:#111; padding:30px; border-bottom:3px solid #DC2626">
+        <div style="font-family:'Anton',sans-serif; font-size:48px; color:#DC2626; margin-bottom:10px">🏪</div>
+        <div style="font-size:18px; font-weight:900; color:#fff; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px">Tienda Online</div>
+        <div style="font-size:14px; color:#666; line-height:1.5">Vende membresías, suplementos y merchandise directamente desde la plataforma.</div>
+      </div>
+    </div>
+  </div>
+  <div class="brand-bar"><span>RivalFit.app</span><span>Gyms · Boxes · PTs</span></div>
+</div>
+
+<!-- SLIDE 4: POR QUÉ RIVALFIT -->
+<div class="slide" style="padding-bottom:70px">
+  <div class="red-line"></div>
+  <div class="feat-header">
+    <div class="feat-num">03 / 05 — Por Qué Nosotros</div>
+    <div class="feat-title">No somos<br>otra <span>app</span></div>
+  </div>
+  <div class="feat-body">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; flex:1">
+      <div style="text-align:center; padding:40px 20px; background:#111">
+        <div class="big-stat">🏆</div>
+        <div class="big-stat-label" style="margin-top:16px">Competición Real</div>
+        <div class="big-stat-sub">Rankings semanales vs atletas de tu nivel</div>
+      </div>
+      <div style="text-align:center; padding:40px 20px; background:#111">
+        <div class="big-stat" style="font-size:80px">IA</div>
+        <div class="big-stat-label" style="margin-top:16px">Inteligencia</div>
+        <div class="big-stat-sub">Programación y WODs generados por IA</div>
+      </div>
+      <div style="text-align:center; padding:40px 20px; background:#111">
+        <div class="big-stat" style="font-size:80px">0€</div>
+        <div class="big-stat-label" style="margin-top:16px">Gratis</div>
+        <div class="big-stat-sub">Regístrate y empieza sin pagar nada</div>
+      </div>
+      <div style="text-align:center; padding:40px 20px; background:#111">
+        <div class="big-stat" style="font-size:80px">🌍</div>
+        <div class="big-stat-label" style="margin-top:16px">Global</div>
+        <div class="big-stat-sub">Comunidad de atletas en todo el mundo</div>
+      </div>
+    </div>
+  </div>
+  <div class="brand-bar"><span>RivalFit.app</span><span>@rivalfit.app</span></div>
+</div>
+
+<!-- SLIDE 5: CTA FINAL -->
+<div class="slide cta-final">
+  <div class="cta-glow"></div>
+  <div class="red-line"></div>
+  <div class="cta-free">REGISTRO GRATUITO</div>
+  <div class="cta-big">ÚNETE<br>A LA <span>ÉLITE</span></div>
+  <div class="cta-sub">La arena te espera</div>
+  <div class="cta-url">RIVALFIT.APP</div>
+  <div class="cta-tagline">Face Yourself. Conquer All.</div>
+</div>
+
+</body>
+</html>

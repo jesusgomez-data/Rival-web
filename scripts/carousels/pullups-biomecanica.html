@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,900;1,900&family=Anton&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; }
+
+  .slide {
+    width: 1080px;
+    height: 1350px;
+    background: #0a0a0a;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+    font-family: 'Montserrat', sans-serif;
+  }
+  .red-line { position: absolute; top: 0; left: 0; right: 0; height: 6px; background: #DC2626; }
+  .brand-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 70px;
+    background: #DC2626;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 70px;
+  }
+  .brand-bar span { font-size: 16px; font-weight: 900; color: #fff; letter-spacing: 4px; text-transform: uppercase; }
+  .slide-header { padding: 50px 70px 30px; border-bottom: 2px solid #1a1a1a; }
+  .slide-number { font-size: 13px; color: #DC2626; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 10px; }
+  .slide-title { font-family: 'Anton', sans-serif; font-size: 72px; color: #fff; line-height: 1; text-transform: uppercase; }
+  .slide-title span { color: #DC2626; }
+  .slide-body { flex: 1; padding: 40px 70px; display: flex; flex-direction: column; gap: 24px; }
+
+  /* ─── COVER ───────────────── */
+  .cover {
+    background: #000;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .cover-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 40%, #DC262635 0%, transparent 65%); }
+  .cover-tag { background: #DC2626; color: #fff; font-size: 20px; font-weight: 900; letter-spacing: 6px; text-transform: uppercase; padding: 10px 32px; margin-bottom: 50px; }
+  .cover-title { font-family: 'Anton', sans-serif; font-size: 160px; color: #fff; line-height: 0.9; letter-spacing: -2px; }
+  .cover-title span { color: #DC2626; display: block; font-size: 100px; }
+  .cover-sub { font-size: 24px; color: #999; letter-spacing: 5px; text-transform: uppercase; margin-top: 40px; }
+  .cover-discipline { font-size: 16px; color: #DC2626; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; margin-top: 16px; }
+  .cover-logo { position: absolute; bottom: 40px; font-size: 16px; font-weight: 900; color: #DC2626; letter-spacing: 4px; text-transform: uppercase; }
+
+  /* ─── MUSCLES ─────────────── */
+  .muscle-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    background: #111;
+    padding: 24px 30px;
+    border-left: 4px solid #DC2626;
+  }
+  .muscle-pct { font-family: 'Anton', sans-serif; font-size: 52px; color: #DC2626; min-width: 100px; line-height: 1; }
+  .muscle-name { font-size: 20px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 6px; }
+  .muscle-role { font-size: 14px; color: #666; line-height: 1.5; }
+
+  /* ─── PHASES ──────────────── */
+  .phase-item { background: #111; padding: 28px 32px; border-radius: 2px; position: relative; overflow: hidden; }
+  .phase-item::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: #DC2626; }
+  .phase-label { font-size: 12px; color: #DC2626; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 8px; }
+  .phase-name { font-size: 24px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+  .phase-desc { font-size: 15px; color: #777; line-height: 1.6; }
+
+  /* ─── TECHNIQUE ───────────── */
+  .tech-item { display: flex; gap: 24px; align-items: flex-start; padding: 20px 0; border-bottom: 1px solid #1a1a1a; }
+  .tech-check { font-size: 28px; color: #DC2626; font-weight: 900; min-width: 40px; }
+  .tech-title { font-size: 20px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .tech-text { font-size: 15px; color: #666; line-height: 1.6; }
+
+  /* ─── ERRORS ──────────────── */
+  .err-item { background: #0d0000; border: 1px solid #DC262625; padding: 28px; display: flex; gap: 20px; }
+  .err-x { font-size: 36px; color: #DC2626; font-weight: 900; min-width: 44px; line-height: 1; }
+  .err-title { font-size: 20px; font-weight: 900; color: #fff; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .err-text { font-size: 15px; color: #666; line-height: 1.5; }
+
+  /* ─── CTA ─────────────────── */
+  .cta-slide {
+    background: #000;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .cta-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, #DC262620 0%, transparent 60%); }
+  .cta-eyebrow { font-size: 14px; color: #DC2626; font-weight: 700; letter-spacing: 6px; text-transform: uppercase; margin-bottom: 30px; }
+  .cta-main { font-family: 'Anton', sans-serif; font-size: 110px; color: #fff; line-height: 1; text-transform: uppercase; margin-bottom: 20px; }
+  .cta-main span { color: #DC2626; }
+  .cta-sub { font-size: 22px; color: #999; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 60px; }
+  .cta-btn { background: #DC2626; color: #fff; font-size: 28px; font-weight: 900; letter-spacing: 4px; padding: 26px 70px; text-transform: uppercase; margin-bottom: 30px; display: inline-block; }
+  .cta-tagline { font-size: 16px; color: #333; font-style: italic; letter-spacing: 2px; }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: COVER -->
+<div class="slide cover">
+  <div class="cover-bg"></div>
+  <div class="red-line"></div>
+  <div class="cover-tag">Biomecánica</div>
+  <div class="cover-title">PULL<span>UPS</span></div>
+  <div class="cover-sub">Técnica · Músculos · Fases</div>
+  <div class="cover-discipline">CrossFit · Calistenia · Halterofilia</div>
+  <div class="cover-logo">RIVALFIT.APP</div>
+</div>
+
+<!-- SLIDE 2: MÚSCULOS INVOLUCRADOS -->
+<div class="slide" style="padding-bottom:70px">
+  <div class="red-line"></div>
+  <div class="slide-header">
+    <div class="slide-number">02 / 06 — Músculos</div>
+    <div class="slide-title">¿Qué trabaja<br>el <span>pull-up</span>?</div>
+  </div>
+  <div class="slide-body" style="gap:16px">
+    <div class="muscle-row">
+      <div class="muscle-pct">45%</div>
+      <div>
+        <div class="muscle-name">Dorsal Ancho (Latissimus Dorsi)</div>
+        <div class="muscle-role">Músculo primario. La extensión y aducción del húmero son su dominio. Si no lo sientes, no estás haciendo el pull-up correctamente.</div>
+      </div>
+    </div>
+    <div class="muscle-row">
+      <div class="muscle-pct">20%</div>
+      <div>
+        <div class="muscle-name">Bíceps Braquial</div>
+        <div class="muscle-role">Sinergista principal. Flexiona el codo durante el tirón. Se activa más con agarre supino (chin-up).</div>
+      </div>
+    </div>
+    <div class="muscle-row">
+      <div class="muscle-pct">15%</div>
+      <div>
+        <div class="muscle-name">Romboides y Trapecio</div>
+        <div class="muscle-role">Retraen y deprimen las escápulas. Fundamentales para la estabilidad y no lesionarse los hombros.</div>
+      </div>
+    </div>
+    <div class="muscle-row">
+      <div class="muscle-pct">12%</div>
+      <div>
+        <div class="muscle-name">Redondo Mayor y Pectoral</div>
+        <div class="muscle-role">Asistentes en la aducción y extensión del brazo. Más activos en el rango completo de movimiento.</div>
+      </div>
+    </div>
+    <div class="muscle-row">
+      <div class="muscle-pct">8%</div>
+      <div>
+        <div class="muscle-name">Core y Estabilizadores</div>
+        <div class="muscle-role">El core isométrico evita el balanceo. Sin core activado, pierdes eficiencia y arriesgas la columna.</div>
+      </div>
+    </div>
+  </div>
+  <div class="brand-bar"><span>RivalFit.app</span><span>@rivalfit.app</span></div>
+</div>
+
+<!-- SLIDE 3: FASES DEL MOVIMIENTO -->
+<div class="slide" style="padding-bottom:70px">
+  <div class="red-line"></div>
+  <div class="slide-header">
+    <div class="slide-number">03 / 06 — Fases</div>
+    <div class="slide-title">Las <span>4 fases</span><br>del movimiento</div>
+  </div>
+  <div class="slide-body" style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; padding-top:30px">
+    <div class="phase-item">
+      <div class="phase-label">Fase 01</div>
+      <div class="phase-name">Colgado Activo</div>
+      <div class="phase-desc">Escápulas deprimidas, core activado, cuerpo en línea recta. NO te cuegues muerto — mantén tensión desde el inicio.</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-label">Fase 02</div>
+      <div class="phase-name">Iniciación del Tirón</div>
+      <div class="phase-desc">Deprime las escápulas ANTES de doblar los codos. El dorsal inicia el movimiento, no los brazos. Piensa en "meter los codos hacia las caderas".</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-label">Fase 03</div>
+      <div class="phase-name">Pico de Contracción</div>
+      <div class="phase-desc">La barbilla supera la barra. Codosapuntan hacia el suelo, pecho al frente. Mantén 1 segundo para maximizar la activación del dorsal.</div>
+    </div>
+    <div class="phase-item">
+      <div class="phase-label">Fase 04</div>
+      <div class="phase-name">Descenso Excéntrico</div>
+      <div class="phase-desc">Baja en 3-4 segundos controlados. El excéntrico es donde ocurre la mayor parte del daño muscular y el crecimiento posterior.</div>
+    </div>
+  </div>
+  <div class="brand-bar"><span>RivalFit.app</span><span>@rivalfit.app</span></div>
+</div>
+
+<!-- SLIDE 4: TÉCNICA PERFECTA -->
+<div class="slide" style="padding-bottom:70px">
+  <div class="red-line"></div>
+  <div class="slide-header">
+    <div class="slide-number">04 / 06 — Técnica</div>
+    <div class="slide-title">Técnica<br><span>perfecta</span></div>
+  </div>
+  <div class="slide-body" style="gap:0; padding-top:20px">
+    <div class="tech-item">
+      <div class="tech-check">✓</div>
+      <div>
+        <div class="tech-title">Agarre ligeramente más ancho que los hombros</div>
+        <div class="tech-text">Ni muy abierto (lesión de hombro) ni muy cerrado (pierde activación de dorsal). Agarre pronado para pull-up clásico.</div>
+      </div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-check">✓</div>
+      <div>
+        <div class="tech-title">Escápulas deprimidas y retraídas antes de subir</div>
+        <div class="tech-text">Este "set" de hombros protege el manguito rotador y activa el dorsal. Es el paso que más gente omite.</div>
+      </div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-check">✓</div>
+      <div>
+        <div class="tech-title">Pecho hacia la barra, no cabeza hacia arriba</div>
+        <div class="tech-text">Inclina levemente el torso atrás (~15°) y lleva el pecho hacia la barra. Activa más el dorsal y menos los bíceps.</div>
+      </div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-check">✓</div>
+      <div>
+        <div class="tech-title">Core apretado y piernas juntas</div>
+        <div class="tech-text">Evita el balanceo que roba energía y reduce la tensión en el dorsal. Glúteos contraídos, pies juntos o cruzados.</div>
+      </div>
+    </div>
+    <div class="tech-item">
+      <div class="tech-check">✓</div>
+      <div>
+        <div class="tech-title">Extiende completamente al bajar</div>
+        <div class="tech-text">El rango completo garantiza el máximo estiramiento del dorsal — la zona de mayor crecimiento muscular.</div>
+      </div>
+    </div>
+  </div>
+  <div class="brand-bar"><span>RivalFit.app</span><span>@rivalfit.app</span></div>
+</div>
+
+<!-- SLIDE 5: ERRORES COMUNES -->
+<div class="slide" style="padding-bottom:70px">
+  <div class="red-line"></div>
+  <div class="slide-header">
+    <div class="slide-number">05 / 06 — Errores</div>
+    <div class="slide-title">Estos errores<br>te <span>frenan</span></div>
+  </div>
+  <div class="slide-body" style="gap:18px">
+    <div class="err-item">
+      <div class="err-x">✕</div>
+      <div>
+        <div class="err-title">Kipping sin base de fuerza</div>
+        <div class="err-text">El kipping requiere movilidad de hombro y fuerza de core avanzada. Sin eso, es una fórmula para lesionarse. Primero 10 pull-ups strict.</div>
+      </div>
+    </div>
+    <div class="err-item">
+      <div class="err-x">✕</div>
+      <div>
+        <div class="err-title">Encogerse de hombros en el colgado</div>
+        <div class="err-text">Colgarse con los hombros levantados hacia las orejas desactiva el dorsal y sobrecarga el manguito. Deprime siempre las escápulas.</div>
+      </div>
+    </div>
+    <div class="err-item">
+      <div class="err-x">✕</div>
+      <div>
+        <div class="err-title">Solo tirar con los brazos</div>
+        <div class="err-text">Si solo sientes los bíceps y no el dorsal, estás haciendo un curl en barra. Piensa en los codos bajando hacia las caderas.</div>
+      </div>
+    </div>
+    <div class="err-item">
+      <div class="err-x">✕</div>
+      <div>
+        <div class="err-title">No controlar el excéntrico</div>
+        <div class="err-text">Soltarse rápido al bajar elimina la mitad del estímulo de crecimiento y aumenta el riesgo de lesión en el hombro.</div>
+      </div>
+    </div>
+  </div>
+  <div class="brand-bar"><span>RivalFit.app</span><span>@rivalfit.app</span></div>
+</div>
+
+<!-- SLIDE 6: CTA -->
+<div class="slide cta-slide">
+  <div class="cta-bg"></div>
+  <div class="red-line"></div>
+  <div class="cta-eyebrow">Registra cada pull-up</div>
+  <div class="cta-main">SUPERA<br>TU <span>MAX</span></div>
+  <div class="cta-sub">Trackea · Compite · Domina</div>
+  <div class="cta-btn">RIVALFIT.APP</div>
+  <div class="cta-tagline">Face Yourself. Conquer All.</div>
+</div>
+
+</body>
+</html>
