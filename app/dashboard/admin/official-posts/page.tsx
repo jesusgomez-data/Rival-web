@@ -300,7 +300,7 @@ export default function OfficialPostsAdmin() {
                         </div>
                         <div className="relative group">
                             <input
-                                type="date"
+                                type="datetime-local"
                                 value={scheduledDate}
                                 onChange={(e) => setScheduledDate(e.target.value)}
                                 className="w-full bg-black border border-white/10 rounded-2xl p-4 pl-12 text-sm font-black focus:border-brand-red outline-none appearance-none"

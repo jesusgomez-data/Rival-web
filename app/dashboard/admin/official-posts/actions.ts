@@ -89,7 +89,7 @@ export async function publishOfficialPost(formData: FormData) {
         // 2. Insert the post
         let createdAt: string;
         try {
-            createdAt = scheduledFor ? new Date(`${scheduledFor}T${new Date().toISOString().split('T')[1]}`).toISOString() : new Date().toISOString();
+            createdAt = scheduledFor ? new Date(scheduledFor).toISOString() : new Date().toISOString();
         } catch (dateErr) {
             console.error('[publishOfficialPost] Date parse error:', dateErr);
             createdAt = new Date().toISOString();
