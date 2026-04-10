@@ -4,9 +4,14 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import Groq from 'groq-sdk'
+import Anthropic from '@anthropic-ai/sdk'
 
 function getGroq() {
     return new Groq({ apiKey: process.env.GROQ_API_KEY })
+}
+
+function getAnthropic() {
+    return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 }
 
 // ─── POSTS ───────────────────────────────────────────────────────────────────
@@ -112,39 +117,41 @@ export async function getScripts() {
 }
 
 export async function generateScript(topic: string, format?: string, tone?: string) {
-    const message = await getGroq().chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 1500,
+    const anthropic = getAnthropic()
+
+    const response = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 2000,
+        tools: [{
+            name: 'generate_script',
+            description: 'Genera un guion estructurado para video de redes sociales',
+            input_schema: {
+                type: 'object' as const,
+                properties: {
+                    title: { type: 'string', description: 'Título atractivo del video' },
+                    hook: { type: 'string', description: 'Gancho inicial poderoso (primeros 3 segundos)' },
+                    key_points: { type: 'array', items: { type: 'string' }, description: '3-5 puntos clave del contenido' },
+                    call_to_action: { type: 'string', description: 'Llamada a la acción al final' },
+                    suggested_duration: { type: 'string', description: 'Duración sugerida (ej: "30-60s", "2-3 min")' },
+                    suggested_format: { type: 'string', enum: ['reel', 'corto', 'video largo', 'historia', 'carrusel'] },
+                    full_script: { type: 'string', description: 'Guion completo con pausas e indicaciones de énfasis' },
+                },
+                required: ['title', 'hook', 'key_points', 'call_to_action', 'suggested_duration', 'suggested_format', 'full_script'],
+            }
+        }],
+        tool_choice: { type: 'tool', name: 'generate_script' },
         messages: [{
             role: 'user',
             content: `Eres un experto en contenido para redes sociales fitness y entrenamiento deportivo. Genera un guion completo en español para un video de redes sociales sobre: "${topic}".
 
 Formato preferido: ${format || 'reel/video corto'}
-Tono: ${tone || 'profesional pero cercano, como hablando con un amigo'}
-
-Responde SOLO con un JSON válido con esta estructura exacta:
-{
-  "title": "título atractivo del video",
-  "hook": "gancho inicial poderoso (primeros 3 segundos)",
-  "key_points": ["punto clave 1", "punto clave 2", "punto clave 3"],
-  "call_to_action": "llamada a la acción al final",
-  "suggested_duration": "duración sugerida en segundos o minutos",
-  "suggested_format": "reel | corto | video largo | historia",
-  "full_script": "guion completo con pausas y énfasis indicados"
-}`
+Tono: ${tone || 'profesional pero cercano, como hablando con un amigo'}`
         }]
     })
 
-    const content = message.choices[0]?.message?.content
-    if (!content) throw new Error('Invalid response')
-
-    let parsed
-    try {
-        const jsonMatch = content.match(/\{[\s\S]*\}/)
-        parsed = JSON.parse(jsonMatch?.[0] || content)
-    } catch {
-        throw new Error('Error parsing AI response')
-    }
+    const toolUse = response.content.find(b => b.type === 'tool_use')
+    if (!toolUse || toolUse.type !== 'tool_use') throw new Error('No se pudo generar el guion')
+    const parsed = toolUse.input as any
 
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -178,95 +185,65 @@ export async function deleteScript(id: string) {
 // ─── CAROUSELS ────────────────────────────────────────────────────────────────
 
 export async function generateCarouselHTML(topic: string, slideCount: number): Promise<{ html: string; slides: any[]; caption: string; title: string }> {
-    const message = await getGroq().chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
-        max_tokens: 3500,
+    const anthropic = getAnthropic()
+
+    const response = await anthropic.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 4000,
+        tools: [{
+            name: 'generate_carousel',
+            description: 'Genera un carrusel estructurado para Instagram',
+            input_schema: {
+                type: 'object' as const,
+                properties: {
+                    title: { type: 'string' },
+                    caption: { type: 'string', description: 'Caption completo para Instagram con emojis y hashtags' },
+                    slides: {
+                        type: 'array',
+                        items: {
+                            type: 'object',
+                            properties: {
+                                type: { type: 'string', enum: ['cover', 'anatomy', 'data_grid', 'list', 'errors', 'tips', 'statement', 'cta'] },
+                                eyebrow: { type: 'string' },
+                                headline: { type: 'string' },
+                                subheadline: { type: 'string' },
+                                body: { type: 'string' },
+                                section: { type: 'string' },
+                                body_part: { type: 'string' },
+                                caption: { type: 'string' },
+                                sub: { type: 'string' },
+                                items: { type: 'array', items: { type: 'object' } },
+                            },
+                            required: ['type', 'headline']
+                        }
+                    }
+                },
+                required: ['title', 'slides', 'caption']
+            }
+        }],
+        tool_choice: { type: 'tool', name: 'generate_carousel' },
         messages: [{
             role: 'user',
             content: `Eres el director de contenido de RivalFit, red social fitness de élite con enfoque técnico y científico. Crea un carrusel de Instagram PROFESIONAL y DETALLADO en español sobre: "${topic}".
-Total: ${slideCount} slides. La primera es portada. La última es CTA. Las del medio son contenido rico y específico.
+Total: ${slideCount} slides. La primera es portada (type: "cover"). La última es CTA (type: "cta"). Las del medio son contenido rico y específico.
 
-Usa estos tipos de slide según el tema:
-- "cover": portada impactante
-- "anatomy": ilustración anatómica SVG profesional — USA ESTE TIPO cuando el tema sea biomecánica, articulaciones, músculos, lesiones o anatomía. Especifica body_part: "hombro"|"rodilla"|"columna"|"cadera"|"codo"
-- "data_grid": grid de 4 estadísticas/datos numéricos (ángulos, porcentajes, rangos, tiempos, etc.)
-- "list": lista numerada de 3-4 ítems técnicos (músculos, ejercicios, pasos, beneficios)
-- "errors": lista de 3 errores comunes con su riesgo/consecuencia
-- "tips": 3-4 consejos prácticos con icono emoji
-- "statement": slide tipográfico con frase impactante + dato o explicación
-- "cta": llamada a la acción final
+Tipos disponibles:
+- "cover": portada impactante (campos: eyebrow, headline, subheadline, body)
+- "anatomy": cuando el tema sea biomecánica/músculos/lesiones (campos: section, headline, body_part: "hombro"|"rodilla"|"columna"|"cadera"|"codo", caption)
+- "data_grid": grid de 4 estadísticas (campos: section, headline, items: [{value, label, note}])
+- "list": lista numerada (campos: section, headline, items: [{num, title, desc, detail}])
+- "errors": errores comunes (campos: section, headline, items: [{num, title, desc, risk}])
+- "tips": consejos prácticos (campos: section, headline, items: [{icon, title, desc}])
+- "statement": frase impactante (campos: headline, body)
+- "cta": llamada a acción (campos: headline, sub)
 
-Responde SOLO con JSON válido con esta estructura EXACTA (adapta los tipos al tema):
-{
-  "title": "Título del carrusel",
-  "slides": [
-    {
-      "type": "cover",
-      "eyebrow": "Rival Biomecánica · 01",
-      "headline": "HEADLINE IMPACTANTE EN MAYÚSCULAS",
-      "subheadline": "segunda línea en rojo (opcional)",
-      "body": "subtítulo descriptivo breve"
-    },
-    {
-      "type": "anatomy",
-      "section": "Biomecánica · Vista Anterior",
-      "headline": "ANATOMÍA DEL HOMBRO",
-      "body_part": "hombro",
-      "caption": "Articulación glenohumeral — vista anterior"
-    },
-    {
-      "type": "data_grid",
-      "section": "Categoría · Subcategoría",
-      "headline": "TÍTULO DE LA SLIDE",
-      "items": [
-        { "value": "180°", "label": "Flexión", "note": "descripción técnica breve" },
-        { "value": "60°", "label": "Extensión", "note": "descripción técnica breve" },
-        { "value": "90°", "label": "Abducción", "note": "descripción técnica breve" },
-        { "value": "30°", "label": "Rotación", "note": "descripción técnica breve" }
-      ]
-    },
-    {
-      "type": "list",
-      "section": "Categoría · Subcategoría",
-      "headline": "TÍTULO DE LA SLIDE",
-      "items": [
-        { "num": "01", "title": "Nombre técnico", "desc": "Descripción específica y técnica del elemento", "detail": "→ dato clave o consecuencia" },
-        { "num": "02", "title": "Nombre técnico", "desc": "Descripción específica y técnica del elemento", "detail": "→ dato clave o consecuencia" },
-        { "num": "03", "title": "Nombre técnico", "desc": "Descripción específica y técnica del elemento", "detail": "→ dato clave o consecuencia" }
-      ]
-    },
-    {
-      "type": "errors",
-      "section": "Categoría · Errores",
-      "headline": "ERRORES QUE LESIONAN",
-      "items": [
-        { "num": "01", "title": "Nombre del error", "desc": "Qué ocurre biomecánicamente", "risk": "Riesgo: consecuencia específica" },
-        { "num": "02", "title": "Nombre del error", "desc": "Qué ocurre biomecánicamente", "risk": "Riesgo: consecuencia específica" },
-        { "num": "03", "title": "Nombre del error", "desc": "Qué ocurre biomecánicamente", "risk": "Riesgo: consecuencia específica" }
-      ]
-    },
-    {
-      "type": "cta",
-      "headline": "¿LISTO PARA COMPETIR?",
-      "sub": "Frase motivacional breve"
-    }
-  ],
-  "caption": "Caption completo para Instagram con emojis, texto educativo y hashtags relevantes"
-}
-IMPORTANTE: El contenido debe ser TÉCNICO, ESPECÍFICO y EDUCATIVO. Datos reales. Nombres correctos. Genera exactamente ${slideCount} slides. Si el tema es biomecánica/anatomía, INCLUYE OBLIGATORIAMENTE al menos una slide tipo "anatomy".`
+IMPORTANTE: contenido TÉCNICO, ESPECÍFICO y EDUCATIVO. Genera exactamente ${slideCount} slides.`
         }]
     })
 
-    const raw = message.choices[0]?.message?.content
-    if (!raw) throw new Error('Invalid response')
-
-    let data: any
-    try {
-        const match = raw.match(/\{[\s\S]*\}/)
-        data = JSON.parse(match?.[0] || raw)
-    } catch {
-        throw new Error('Error parsing AI response')
-    }
+    const toolUse = response.content.find(b => b.type === 'tool_use')
+    if (!toolUse || toolUse.type !== 'tool_use') throw new Error('No se pudo generar el carrusel')
+    const data = toolUse.input as any
 
     const slides: any[] = data.slides || []
     const html = buildRivalFitCarouselHTML(data.title || topic, topic, slides)
