@@ -303,9 +303,10 @@ export default function OfficialPostsAdmin() {
                                 type="datetime-local"
                                 value={scheduledDate}
                                 onChange={(e) => setScheduledDate(e.target.value)}
-                                className="w-full bg-black border border-white/10 rounded-2xl p-4 pl-12 text-sm font-black focus:border-brand-red outline-none appearance-none"
+                                className="w-full bg-black border border-white/10 rounded-2xl p-4 pl-12 text-sm font-black focus:border-brand-red outline-none text-white [color-scheme:dark]"
+                                style={{ colorScheme: 'dark' }}
                             />
-                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-hover:text-brand-red transition-colors" />
+                            <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-hover:text-brand-red transition-colors pointer-events-none" />
                         </div>
                         <p className="text-[9px] font-medium text-gray-500 mt-2 italic">* Si lo dejas vacío, se publicará instantáneamente.</p>
                     </div>
