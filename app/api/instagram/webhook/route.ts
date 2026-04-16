@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const INSTAGRAM_ACCESS_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN
 const INSTAGRAM_USER_ID = process.env.INSTAGRAM_USER_ID
-const WEBHOOK_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN || 'rivalfit_webhook_2026'
+const WEBHOOK_VERIFY_TOKEN = process.env.WEBHOOK_VERIFY_TOKEN
 
 const WELCOME_MESSAGE = `👋 ¡Bienvenido/a a RivalFit!
 
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ status: 'ok' })
   } catch (error: any) {
     console.error('[webhook] Error procesando evento:', error)
-    return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
 

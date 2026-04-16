@@ -7,7 +7,6 @@ import { createClient } from "@/utils/supabase/client";
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { playNotificationSound } from "@/app/utils/audio";
 
 interface Notification {
     id: string;
@@ -82,9 +81,10 @@ export default function NotificationBell() {
     }, []);
 
     const handleMarkAllAsRead = async () => {
-        await markAllAsRead();
+        // Optimistic update first — feels instant like Instagram/TikTok
         setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
         setUnreadCount(0);
+        await markAllAsRead();
     };
 
     const handleMarkAsRead = async (id: string) => {
@@ -112,7 +112,10 @@ export default function NotificationBell() {
     return (
         <div className="relative">
             <button
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => {
+                    if (!isOpen && unreadCount > 0) handleMarkAllAsRead();
+                    setIsOpen(prev => !prev);
+                }}
                 className="relative p-2 text-gray-400 hover:text-white transition-colors"
             >
                 <Bell className="w-6 h-6" />

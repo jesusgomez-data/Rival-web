@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 import { createNotification } from '../notifications-actions'
 
@@ -10,72 +11,52 @@ export async function getConversations() {
     if (!user) return []
 
     try {
-        // 1. Obtener participaciones de forma simple
+        // 1. Participations + conversation details in one query
         const { data: participations, error } = await supabase
             .from('conversation_participants')
-            .select('conversation_id, last_read_at')
+            .select(`
+                conversation_id,
+                last_read_at,
+                conversations ( id, last_message_text, last_message_at, updated_at )
+            `)
             .eq('user_id', user.id)
 
-        if (error || !participations) return []
+        if (error || !participations?.length) return []
 
-        // 2. Cargar detalles de cada conversación por separado (más lento pero infalible)
-        const conversationsWithDetails = await Promise.all(participations.map(async (p) => {
-            const { data: conv } = await supabase
-                .from('conversations')
-                .select('*')
-                .eq('id', p.conversation_id)
-                .single()
+        const convIds = participations.map(p => p.conversation_id)
 
-            if (!conv) return null
+        // 2. All other participants + profiles in one query
+        const { data: otherParts } = await supabase
+            .from('conversation_participants')
+            .select(`
+                conversation_id,
+                profiles:user_id ( id, username, full_name, avatar_url )
+            `)
+            .in('conversation_id', convIds)
+            .neq('user_id', user.id)
 
-            // Buscar al otro usuario
-            const { data: otherParts } = await supabase
-                .from('conversation_participants')
-                .select(`
-                    user_id,
-                    profiles:user_id ( id, username, full_name, avatar_url )
-                `)
-                .eq('conversation_id', p.conversation_id)
-                .neq('user_id', user.id)
-                .maybeSingle()
+        const otherPartsMap: Record<string, any> = {}
+        for (const p of otherParts || []) {
+            otherPartsMap[p.conversation_id] = p.profiles
+        }
 
-            // Buscar el último mensaje real para saber quién lo envió
-            const { data: lastMsg } = await supabase
-                .from('messages')
-                .select('sender_id, created_at')
-                .eq('conversation_id', p.conversation_id)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle()
-
-            // Cálculo ROBUSTO de no leídos por diferencia de tiempo
-            const lastMsgAt = lastMsg?.created_at || conv.last_message_at || conv.updated_at
-            const lastReadAt = p.last_read_at
-            let isUnread = false
-
-            // Solo es unread si el último mensaje NO es mío
-            if (lastMsgAt && lastMsg && lastMsg.sender_id !== user.id) {
-                if (!lastReadAt || new Date(lastMsgAt).getTime() > new Date(lastReadAt).getTime()) {
-                    isUnread = true
+        return participations
+            .map(p => {
+                const conv = p.conversations as any
+                if (!conv) return null
+                const lastMsgAt = conv.last_message_at || conv.updated_at
+                const lastReadAt = p.last_read_at
+                const isUnread = !!(lastMsgAt && (!lastReadAt || new Date(lastMsgAt) > new Date(lastReadAt)))
+                return {
+                    id: conv.id,
+                    last_message_text: conv.last_message_text,
+                    last_message_at: lastMsgAt,
+                    other_person: otherPartsMap[p.conversation_id] || { full_name: 'Usuario Rival', username: 'rival' },
+                    unread_count: isUnread ? 1 : 0
                 }
-            }
-
-            return {
-                id: conv.id,
-                last_message_text: conv.last_message_text,
-                last_message_at: lastMsgAt,
-                other_person: otherParts?.profiles || { full_name: 'Usuario Rival', username: 'rival' },
-                unread_count: isUnread ? 1 : 0
-            }
-        }))
-
-        return conversationsWithDetails
-            .filter(Boolean)
-            .sort((a: any, b: any) => {
-                const dateA = new Date(a.last_message_at || 0).getTime()
-                const dateB = new Date(b.last_message_at || 0).getTime()
-                return dateB - dateA
             })
+            .filter(Boolean)
+            .sort((a: any, b: any) => new Date(b.last_message_at || 0).getTime() - new Date(a.last_message_at || 0).getTime())
     } catch (err) {
         console.error("Critical error fetching conversations:", err)
         return []
@@ -87,48 +68,25 @@ export async function getUnreadMessageCount() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return 0
 
+    // Single query — check if last_message_at is newer than last_read_at
     const { data: participations } = await supabase
         .from('conversation_participants')
         .select(`
             conversation_id,
             last_read_at,
-            conversations (
-                id,
-                last_message_at,
-                updated_at
-            )
+            conversations ( last_message_at, updated_at )
         `)
         .eq('user_id', user.id)
 
     if (!participations) return 0
 
-    let unreadCount = 0
-    for (const p of participations) {
+    return participations.filter(p => {
         const conv = p.conversations as any
-        if (!conv) continue
-
+        if (!conv) return false
         const lastMsgAt = conv.last_message_at || conv.updated_at
         const lastReadAt = p.last_read_at
-
-        if (lastMsgAt) {
-            // Verificar quién envió el último mensaje
-            const { data: lastMsg } = await supabase
-                .from('messages')
-                .select('sender_id')
-                .eq('conversation_id', (p as any).conversation_id || (p as any).conversations?.id)
-                .order('created_at', { ascending: false })
-                .limit(1)
-                .maybeSingle()
-
-            if (lastMsg && lastMsg.sender_id !== user.id) {
-                if (!lastReadAt || new Date(lastMsgAt).getTime() > new Date(lastReadAt).getTime()) {
-                    unreadCount++
-                }
-            }
-        }
-    }
-
-    return unreadCount
+        return lastMsgAt && (!lastReadAt || new Date(lastMsgAt) > new Date(lastReadAt))
+    }).length
 }
 
 export async function getMessages(conversationId: string) {
@@ -275,7 +233,8 @@ export async function deleteConversation(id: string) {
 }
 
 export async function toggleMessageLike(id: string, currentStatus: boolean) {
-    const supabase = await createClient()
+    // Use admin client — RLS blocks users from updating rows they don't own
+    const supabase = createAdminClient()
     const { error } = await supabase
         .from('messages')
         .update({ is_liked: !currentStatus })

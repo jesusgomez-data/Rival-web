@@ -4,7 +4,7 @@ import { createAdminClient } from '@/utils/supabase/admin';
 // CONFIGURATION (Add these to your .env)
 const INSTAGRAM_ACCESS_TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
 const INSTAGRAM_USER_ID = process.env.INSTAGRAM_USER_ID;
-const SYNC_SECRET = process.env.SYNC_SECRET || 'rival_sync_2024';
+const SYNC_SECRET = process.env.SYNC_SECRET;
 
 /**
  * Automates syncing Instagram posts to the Rival Fit official profile.
@@ -14,6 +14,10 @@ const SYNC_SECRET = process.env.SYNC_SECRET || 'rival_sync_2024';
 export async function POST(req: NextRequest) {
     const authHeader = req.headers.get('x-sync-secret');
     
+    if (!SYNC_SECRET) {
+        console.error('SYNC_SECRET environment variable is not set');
+        return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
+    }
     if (authHeader !== SYNC_SECRET) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -120,6 +124,6 @@ export async function POST(req: NextRequest) {
 
     } catch (error: any) {
         console.error('Sync Error:', error);
-        return NextResponse.json({ error: 'Internal Server Error', details: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
 }

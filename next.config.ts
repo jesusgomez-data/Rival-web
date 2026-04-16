@@ -7,12 +7,26 @@ const securityHeaders = [
   { key: 'X-DNS-Prefetch-Control', value: 'on' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
-  { key: 'X-XSS-Protection', value: '1; mode=block' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
   {
     key: 'Strict-Transport-Security',
     value: 'max-age=63072000; includeSubDomains; preload',
+  },
+  {
+    key: 'Content-Security-Policy',
+    value: [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob: https://images.unsplash.com https://ui-avatars.com https://ralskslspvskjqqgzbiv.supabase.co https://rivalfit.app https://randomuser.me",
+      "font-src 'self'",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.groq.com https://api.stripe.com https://api.resend.com",
+      "frame-src 'none'",
+      "frame-ancestors 'none'",
+      "object-src 'none'",
+      "base-uri 'self'",
+    ].join('; '),
   },
 ];
 
@@ -55,7 +69,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      bodySizeLimit: '50mb',
+      bodySizeLimit: '5mb',
     },
     // Enable optimistic client cache for faster navigations
     staleTimes: {
@@ -69,9 +83,7 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  // typescript.ignoreBuildErrors removed — fix TS errors instead of hiding them
   reactStrictMode: true,
 };
 

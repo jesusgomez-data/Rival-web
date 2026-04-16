@@ -41,13 +41,6 @@ function MessagesContent() {
 
     const supabase = createClient()
 
-    // Sound effect for new messages
-    const playNotificationSound = useCallback(() => {
-        const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3')
-        audio.volume = 0.5
-        audio.play().catch(e => console.log('Audio play blocked:', e))
-    }, [])
-
     const loadConversations = useCallback(async () => {
         const data = await getConversations()
         setConversations(data)
@@ -116,7 +109,9 @@ function MessagesContent() {
     useEffect(() => {
         if (!currentUserId) return
 
-        // Global Updates & Sound
+        // Subscribe only to changes in THIS user's conversation_participants rows.
+        // This fires when: a new conversation is created, last_read_at changes, etc.
+        // Removed the global messages INSERT (no filter = every message in the app).
         const updatesChannel = supabase
             .channel(`user-updates-${currentUserId}`)
             .on('postgres_changes', {
@@ -127,25 +122,12 @@ function MessagesContent() {
             }, async () => {
                 await loadConversations()
             })
-            .on('postgres_changes', {
-                event: 'INSERT',
-                schema: 'public',
-                table: 'messages'
-            }, async (payload: any) => {
-                const newMessage = payload.new
-                // Solo sonar si el mensaje pertenece a una conversación del usuario
-                // y no es un mensaje enviado por él mismo
-                if (newMessage.sender_id !== currentUserId) {
-                    playNotificationSound()
-                }
-                await loadConversations()
-            })
             .subscribe()
 
         return () => {
             supabase.removeChannel(updatesChannel)
         }
-    }, [currentUserId, loadConversations, playNotificationSound])
+    }, [currentUserId, loadConversations])
 
     // ACTUALIZACIÓN DE LA VENTANA DE CHAT ACTIVA
     useEffect(() => {

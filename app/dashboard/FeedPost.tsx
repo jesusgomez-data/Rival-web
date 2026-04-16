@@ -228,7 +228,7 @@ function RepostCard({ image, caption, prefetchedPost }: { image?: string; captio
             .select('id, caption, media_url, media_type, profiles:user_id(username, full_name, avatar_url, is_official)')
             .eq('id', originalPostId)
             .single()
-            .then(({ data }) => {
+            .then(({ data }: { data: typeof originalPost }) => {
                 setOriginalPost(data);
                 setLoading(false);
             });

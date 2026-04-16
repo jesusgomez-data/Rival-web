@@ -2,9 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import WODGenerator, { WODRequest } from "@/lib/wod-generator";
 import { rateLimiters, getClientIdentifier, setRateLimitHeaders } from "@/lib/rate-limit";
 import { checkAndRecordDailyUsage } from "@/lib/ai-usage";
+import { createClient } from "@/utils/supabase/server";
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar autenticación antes de consumir créditos de IA
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+
     // 🚦 Rate limiting (máximo 10 generaciones por hora)
     const identifier = getClientIdentifier(request);
     const rateLimit = await rateLimiters.classes.limit(identifier); // Reusing classes limiter

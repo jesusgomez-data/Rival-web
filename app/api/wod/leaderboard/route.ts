@@ -4,6 +4,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createClient as createSessionClient } from "@/utils/supabase/server";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -12,6 +13,13 @@ const supabaseAdmin = createClient(
 
 export async function GET(request: NextRequest) {
   try {
+    // Verify the requester is authenticated
+    const supabase = await createSessionClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const wodPostId = searchParams.get("wodPostId");
     const limit = parseInt(searchParams.get("limit") || "50");
@@ -207,7 +215,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ success: true, leaderboard, stats, total: leaderboard.length, creator });
   } catch (error: any) {
     console.error("Leaderboard error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
 
