@@ -256,11 +256,11 @@ function CenterListPageContent() {
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div>
                         <h1 className={`text-3xl font-heading font-black italic uppercase ${textHeading}`}>
-                            {filterType === 'personal_trainer' ? 'Entrenadores' : 'Centros'}
+                            {filterType === 'personal_trainer' ? 'Profesionales' : 'Centros'}
                         </h1>
                         <p className={textMuted}>
                             {filterType === 'personal_trainer'
-                                ? 'Gestiona tus alumnos o descubre nuevos entrenadores personales.'
+                                ? 'Gestiona tus clientes o descubre nuevos profesionales del sector.'
                                 : 'Gestiona tus centros o explora nuevos campos de batalla cercanos.'}
                         </p>
                     </div>
@@ -276,7 +276,7 @@ function CenterListPageContent() {
                             href="/dashboard/gyms?type=personal_trainer"
                             className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${filterType === 'personal_trainer' ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}
                         >
-                            Entrenadores Personales
+                            Profesionales
                         </Link>
                     </div>
 
@@ -343,7 +343,7 @@ function CenterListPageContent() {
                                     <h2 className={`text-2xl font-black italic uppercase italic tracking-tight ${textHeading}`}>
                                         {step === 1 && (filterType === 'personal_trainer' ? "Identidad Profesional" : "Identidad del Centro")}
                                         {step === 2 && (filterType === 'personal_trainer' ? "Zona de Operaciones" : "Ubicación e Impacto")}
-                                        {step === 3 && (filterType === 'personal_trainer' ? "Tu Plan de Entrenador" : "Selecciona tu Arsenal")}
+                                        {step === 3 && (filterType === 'personal_trainer' ? "Tu Plan Profesional" : "Selecciona tu Arsenal")}
                                     </h2>
                                     <p className={textMuted}>
                                         {step === 1 && (filterType === 'personal_trainer' ? "Define tu marca personal y especialidad." : "Cuéntanos sobre tu marca y visión.")}
@@ -367,14 +367,14 @@ function CenterListPageContent() {
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
                                                     {filterType === 'personal_trainer' ? 'Tu especialidad (Bio)' : 'Manifiesto / Bio'}
                                                 </label>
-                                                <textarea name="bio" placeholder={filterType === 'personal_trainer' ? "Cuéntanos en qué te especializas (CrossFit, Powerlifting, Nutrición...)" : "Describe la esencia de tu centro..."} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 h-20 resize-none ${bgInput}`} />
+                                                <textarea name="bio" placeholder={filterType === 'personal_trainer' ? "Cuéntanos en qué te especializas (Fisioterapia, Nutrición, Psicología, Entrenamiento...)" : "Describe la esencia de tu centro..."} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 h-20 resize-none ${bgInput}`} />
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Tipo de Perfil</label>
                                                     <select name="type" defaultValue={filterType === 'personal_trainer' ? 'personal_trainer' : 'cross_training'} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 appearance-none ${bgInput}`}>
                                                         {filterType === 'personal_trainer' ? (
-                                                            <option value="personal_trainer">Entrenador Personal</option>
+                                                            <option value="personal_trainer">Perfil Profesional</option>
                                                         ) : (
                                                             <>
                                                                 <option value="cross_training">Box de Cross Training</option>
@@ -629,7 +629,7 @@ function CenterListPageContent() {
                     <div className="flex items-center gap-2 mb-6">
                         {filterType === 'personal_trainer' ? <User className={`w-4 h-4 ${textMuted}`} /> : <Building2 className={`w-4 h-4 ${textMuted}`} />}
                         <h2 className={`text-sm font-black uppercase tracking-widest ${textMuted}`}>
-                            {filterType === 'personal_trainer' ? 'Mis Perfiles de Entrenador' : 'Mis Centros'}
+                            {filterType === 'personal_trainer' ? 'Mis Perfiles Profesionales' : 'Mis Centros'}
                         </h2>
                     </div>
 
@@ -637,11 +637,11 @@ function CenterListPageContent() {
                         <div className={`text-center py-20 border-2 border-dashed rounded-3xl ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-200 bg-gray-50'}`}>
                             {filterType === 'personal_trainer' ? <User className={`w-16 h-16 mx-auto mb-4 ${textMuted}`} /> : <Building2 className={`w-16 h-16 mx-auto mb-4 ${textMuted}`} />}
                             <h3 className={`text-xl font-bold mb-2 ${textHeading}`}>
-                                {filterType === 'personal_trainer' ? '¿Eres entrenador personal?' : '¿Eres dueño de un centro deportivo?'}
+                                {filterType === 'personal_trainer' ? '¿Eres un profesional?' : '¿Eres dueño de un centro deportivo?'}
                             </h3>
                             <p className={`mb-8 ${textMuted}`}>
                                 {filterType === 'personal_trainer'
-                                    ? 'Gestiona a tus alumnos de forma profesional y automatiza su programación con RIVAL.'
+                                    ? 'Gestiona a tus clientes de forma profesional y automatiza tu servicio con RIVAL.'
                                     : 'Únete a nosotros y lleva el rendimiento de tus atletas al próximo nivel con RIVAL.'}
                             </p>
                             <button
@@ -722,7 +722,7 @@ function CenterListPageContent() {
                         <div className="flex items-center gap-2">
                             {filterType === 'personal_trainer' ? <User className="w-4 h-4 text-brand-red" /> : <MapPin className="w-4 h-4 text-brand-red" />}
                             <h2 className={`text-sm font-black uppercase tracking-widest ${textHeading}`}>
-                                {filterType === 'personal_trainer' ? 'Entrenadores Cercanos' : 'Centros Cercanos'}
+                                {filterType === 'personal_trainer' ? 'Profesionales Cercanos' : 'Centros Cercanos'}
                             </h2>
                         </div>
                         {!userLocation && (

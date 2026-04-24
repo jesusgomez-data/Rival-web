@@ -24,6 +24,7 @@ const securityHeaders = [
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.groq.com https://api.stripe.com https://api.resend.com",
       "frame-src 'none'",
       "frame-ancestors 'none'",
+      "media-src 'self' https://*.supabase.co blob: data:",
       "object-src 'none'",
       "base-uri 'self'",
     ].join('; '),

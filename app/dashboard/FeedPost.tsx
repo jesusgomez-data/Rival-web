@@ -498,6 +498,11 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     };
 
     const [showMenu, setShowMenu] = useState(false);
+    const [isCaptionExpanded, setIsCaptionExpanded] = useState(false);
+    const [completionsCountWod, setCompletionsCountWod] = useState(0);
+    const [hasCompletedWod, setHasCompletedWod] = useState(false);
+    const [manualOriginalId, setManualOriginalId] = useState<string | null>(null);
+
     const [isDeleting, setIsDeleting] = useState(false);
     const [isDownloadingVideo, setIsDownloadingVideo] = useState(false);
     const [downloadProgress, setDownloadProgress] = useState(0);
@@ -507,9 +512,6 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
     // Estados para modales de WOD
     const [showWODTracker, setShowWODTracker] = useState(false);
     const [showWODLeaderboard, setShowWODLeaderboard] = useState(false);
-    const [completionsCountWod, setCompletionsCountWod] = useState(0);
-    const [hasCompletedWod, setHasCompletedWod] = useState(false);
-    const [manualOriginalId, setManualOriginalId] = useState<string | null>(null);
     const postRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const { isMuted, toggleMute, setLastActiveVideoId, setIsMuted } = useVideo();
@@ -528,6 +530,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
         image.includes('.mov?') ||
         image.includes('.mp4?')
     ));
+    
+    // Check if post actually has visual media to display in the main container
+    const hasMedia = !!(photoUrl || isVideo || isCarousel);
 
     // Intersection Observer to detect if post is in view
     useEffect(() => {
@@ -644,25 +649,16 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
     
     useEffect(() => {
-        if (showComments && commentList.length === 0) {
-            setIsLoadingComments(true);
-            getComments(postId).then((data) => {
-                const list = data || [];
-                setCommentList(list);
-                setCommentTree(buildTree(list));
-                setIsLoadingComments(false);
-            });
-        }
-    }, [showComments, postId]);
-
-    useEffect(() => {
         // Fetch completion data if it's a WOD post OR a post with resolved workout data that looks like a WOD
         const isWodData = resolvedWorkoutData && (resolvedWorkoutData.blocks || (resolvedWorkoutData.metrics && resolvedWorkoutData.metrics.blocks));
         if ((post_type === 'wod' || isWodData) && targetWodId) {
             fetchCompletionsCount(targetWodId);
-            checkUserCompletion(targetWodId);
+            // Only check if we don't have a manual ID set yet to avoid loops
+            if (!hasCompletedWod) {
+                checkUserCompletion(targetWodId);
+            }
         }
-    }, [post_type, targetWodId, resolvedWorkoutData]);
+    }, [post_type, targetWodId, hasCompletedWod]);
 
     const fetchCompletionsCount = async (targetWodId: string) => {
         try {
@@ -691,6 +687,20 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             console.error("Error checking user completion:", e);
         }
     };
+
+    useEffect(() => {
+
+        if (showComments && commentList.length === 0) {
+            setIsLoadingComments(true);
+            getComments(postId).then((data) => {
+                const list = data || [];
+                setCommentList(list);
+                setCommentTree(buildTree(list));
+                setIsLoadingComments(false);
+            });
+        }
+    }, [showComments, postId]);
+
 
     useEffect(() => {
         setCommentTree(buildTree(commentList));
@@ -908,977 +918,388 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
             ref={postRef}
             id={`post-${postId}`}
             className={clsx(
-                "md:border md:rounded-2xl overflow-hidden transition-all mb-4 md:mb-6",
-                "rounded-none md:rounded-2xl", // Flush on mobile, rounded on desktop
-                theme === 'dark' ? "bg-brand-gray md:border-white/5 border-y-white/5" : "bg-white md:border-gray-200 border-y-gray-200 shadow-sm"
+                "md:mb-10 transition-all relative group/post",
+                "rounded-none md:rounded-[48px] overflow-hidden shadow-2xl", // Premium rounded look
+                theme === 'dark' ? "bg-black border border-white/5" : "bg-white border border-gray-100"
             )}
         >
-            {/* Header */}
-            <div className="p-4 flex items-center justify-between">
-                <div
-                    onClick={handleAvatarClick}
-                    className={clsx(
-                        "w-12 h-12 rounded-full p-0.5 relative transition-all shrink-0 cursor-pointer",
-                        hasStory
-                            ? (allSeen
-                                ? "ring-2 ring-gray-500" // Seen stories = Gray Ring
-                                : "ring-2 ring-brand-red bg-gradient-to-tr from-brand-red to-orange-500 shadow-glow animate-pulse" // Unseen = Red Ring
-                            )
-                            : "bg-transparent" // No stories = No Ring (just default image border)
-                    )}
-                >
-                    <div className="w-full h-full rounded-full overflow-hidden relative bg-gray-800 border-2 border-black">
-                        {avatar && isImageUrl(avatar) ? (
-                            <Image 
-                                src={avatar} 
-                                alt={user} 
-                                fill 
-                                className={clsx(
-                                    "object-cover",
-                                    isOfficial && "object-contain bg-white p-1"
-                                )} 
-                            />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[10px] font-bold text-gray-400 uppercase">
-                                {user?.substring(0, 2) || "?"}
-                            </div>
+            {/* CLASSIC HEADER: Always at the top */}
+            <div className="px-6 py-5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div
+                        onClick={handleAvatarClick}
+                        className={clsx(
+                            "w-11 h-11 rounded-full p-0.5 relative transition-all shrink-0 cursor-pointer",
+                            hasStory ? "ring-2 ring-brand-red shadow-glow animate-pulse" : "ring-1 ring-white/10"
                         )}
+                    >
+                        <div className="w-full h-full rounded-full overflow-hidden relative bg-zinc-900 border border-white/10">
+                            {avatar && isImageUrl(avatar) ? (
+                                <Image src={avatar} alt={user} fill className="object-cover" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[10px] font-black text-white uppercase bg-brand-red">
+                                    {user?.substring(0, 2) || "?"}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                    <div>
+                        <Link href={username ? `/dashboard/profile/${username}` : `/dashboard`} className="flex items-center gap-1.5 group">
+                            <span className={clsx(
+                                "font-black italic uppercase text-base tracking-tighter transition-colors group-hover:text-brand-red",
+                                theme === 'dark' ? "text-white" : "text-zinc-900"
+                            )}>
+                                {user}
+                            </span>
+                            {isOfficial && <VerifiedBadge size="sm" />}
+                        </Link>
+                        <div className="flex items-center gap-2">
+                            <span className="text-gray-500 text-[9px] font-black uppercase tracking-widest">{time}</span>
+                        </div>
                     </div>
                 </div>
-                <Link href={username ? `/dashboard/profile/${username}` : `/dashboard`} className="flex-1 group">
-                    <div>
-                        <p className="text-base font-black group-hover:opacity-80 transition-opacity leading-tight uppercase font-heading italic tracking-tight flex items-center gap-1.5 text-brand-red">
-                            {user}
-                            {isOfficial && (
-                                <VerifiedBadge size="sm" />
-                            )}
-                        </p>
-                        <p className="text-[10px] text-brand-red font-black uppercase tracking-[0.2em] mt-0.5">
-                            {action.includes('PR') || highlight?.includes('PR') ? 'NUEVO PR • ' : ''}
-                            {time.toUpperCase()}
-                        </p>
-                        {music_url && (
-                            <div className="flex items-center gap-2 mt-1">
-                                <button
-                                    onClick={toggleMusic}
-                                    className="flex items-center gap-1.5 bg-black/40 hover:bg-black/60 px-2 py-0.5 rounded-full border border-white/10 transition-colors group"
-                                >
-                                    <Music className={clsx("w-3 h-3 text-brand-red", isPlaying && "animate-bounce")} />
-                                    <span className="text-[9px] font-bold text-gray-300 uppercase tracking-widest max-w-[120px] truncate">
-                                        {music_title} • {music_artist}
-                                    </span>
-                                </button>
-                                <audio
-                                    ref={audioRef}
-                                    src={music_url}
-                                    loop
-                                    className="hidden"
-                                    onPlay={() => setIsPlaying(true)}
-                                    onPause={() => setIsPlaying(false)}
-                                />
-                            </div>
+
+                <div className="relative" ref={menuRef}>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+                        className={clsx(
+                            "w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90 border",
+                            theme === 'dark' ? "bg-white/5 text-white border-white/10 hover:bg-brand-red" : "bg-gray-100 text-zinc-900 border-gray-200 hover:bg-zinc-200"
                         )}
-                    </div>
-                </Link>
-
-                <div className="flex items-center gap-4">
-                    <p className="hidden sm:block text-[10px] text-gray-500 font-bold uppercase tracking-widest">{time}</p>
-                    {(isOwner || isAdminUser) && (
-                        <div className="relative" ref={menuRef}>
-                            <button
-                                onClick={() => setShowMenu(!showMenu)}
-                                className="text-gray-500 hover:text-white transition-colors p-2 bg-white/5 rounded-xl border border-white/5"
-                            >
-                                <MoreHorizontal className="w-5 h-5" />
+                    >
+                        <MoreHorizontal className="w-5 h-5" />
+                    </button>
+                    {showMenu && (
+                        <div className="absolute right-0 top-full mt-2 w-52 bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in zoom-in-95">
+                            <button onClick={() => { window.dispatchEvent(new CustomEvent('edit-post', { detail: { postId, content: caption || '', mediaType } })); setShowMenu(false); }} className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-brand-red flex items-center gap-3 border-b border-white/5">
+                                <Edit2 className="w-4 h-4" /> EDITAR
                             </button>
-                             {showMenu && (
-                                <div className="absolute right-0 top-full mt-2 w-56 bg-zinc-900/90 border border-white/10 rounded-2xl shadow-2xl z-20 backdrop-blur-xl overflow-hidden">
-                                    <button
-                                        onClick={() => {
-                                            const eventData: any = {
-                                                postId,
-                                                content: caption || '',
-                                                mediaType: mediaType
-                                            };
-
-                                            if (mediaType === 'wod') {
-                                                let parsedWodData = wod_data;
-                                                if (!parsedWodData && image) {
-                                                    try { parsedWodData = JSON.parse(image); } catch (e) { }
-                                                }
-                                                eventData.wodData = parsedWodData;
-                                            } else {
-                                                eventData.mediaUrl = image && isImageUrl(image) ? image : null;
-                                            }
-
-                                            window.dispatchEvent(new CustomEvent('edit-post', {
-                                                detail: eventData
-                                            }));
-                                            setShowMenu(false);
-                                        }}
-                                        className="w-full text-left px-5 py-4 text-sm text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 transition-colors border-b border-white/5"
-                                    >
-                                        <Edit2 className="w-4 h-4 text-brand-red" /> {mediaType === 'wod' ? 'Editar Entrenamiento / Post' : 'Editar Publicación'}
-                                    </button>
-                                    <button
-                                        onClick={() => { handleDelete(); setShowMenu(false); }}
-                                        className="w-full text-left px-5 py-4 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-3 transition-colors"
-                                    >
-                                        <Trash2 className="w-4 h-4" /> Eliminar Publicación
-                                    </button>
-                                </div>
+                            <button onClick={handleDownloadMedia} className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-brand-red flex items-center gap-3 border-b border-white/5">
+                                <Download className="w-4 h-4" /> DESCARGAR
+                            </button>
+                            {(isOwner || isAdminUser) && (
+                                <button onClick={handleDelete} className="w-full px-5 py-4 text-left text-[11px] font-black text-red-500 hover:bg-red-600 hover:text-white flex items-center gap-3">
+                                    <Trash2 className="w-4 h-4" /> ELIMINAR
+                                </button>
                             )}
                         </div>
                     )}
                 </div>
             </div>
 
-            {/* Caption or WOD Display - Only show if not a class_result */}
-            {((caption && mediaType !== 'class_result') || (post_type === 'wod' && wod_data)) && (
-                <div className={post_type === 'wod' && wod_data ? "px-4 pb-3" : "px-4 pb-3"}>
-                    {post_type === 'wod' && wod_data ? (
-                        // Renderizar WOD con diseño especial
-                        <WODPostDisplay wod={wod_data} compact={false} />
-                    ) : (
-                        // Renderizar caption normal
-                        <MentionText
-                            text={caption || ''}
-                            className={clsx(
-                                "text-sm sm:text-base whitespace-pre-wrap font-accent font-medium tracking-tight leading-relaxed",
-                                theme === 'dark' ? "text-gray-100" : "text-black",
-                                (isOfficial && workoutData && !isMember && username?.toLowerCase() !== 'rivalfit' && username?.toLowerCase() !== 'rival') && "blur-[2px] select-none pointer-events-none opacity-50"
-                            )}
-                            mentionClassName="font-black"
-                        />
-                    )}
-                </div>
-            )}
+            {/* Main Content Area (Media protagonism) - Only shown if there is photo/video/carousel */}
+            {hasMedia && (
+                <div className="relative w-full overflow-hidden bg-black aspect-[4/5] md:aspect-[4/5]"> 
+                    {/* Media rendering */}
+                    <div 
+                        className="relative w-full h-full cursor-pointer overflow-hidden"
+                        onClick={() => { 
+                            if (isVideo) {
+                                toggleMute();
+                                setShowMuteHint(false);
+                            } else {
+                                setIsLightboxOpen(true);
+                            }
+                        }}
+                    >
+                        {isVideo && (
+                            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.5 }}
+                                    animate={{ 
+                                        opacity: showMuteHint ? 1 : 0, 
+                                        scale: showMuteHint ? 1 : 0.5 
+                                    }}
+                                    className="bg-black/40 backdrop-blur-xl p-4 rounded-full border border-white/20"
+                                >
+                                    {isMuted ? <VolumeX className="w-8 h-8 text-white" /> : <Volume2 className="w-8 h-8 text-white" />}
+                                </motion.div>
+                            </div>
+                        )}
 
-            {/* WOD Action Buttons - Hacer WOD y Ver Ranking */}
-            {post_type === 'wod' && wod_data && (
-                <div className="px-4 pb-4 space-y-3">
-                    {/* Badge de cuántas personas lo completaron */}
-                    <div className="flex items-center gap-2 text-sm text-gray-400">
-                        <Trophy className="w-4 h-4 text-brand-red" />
-                        <span>
-                            <span className="font-bold text-white">{completionsCountWod} atletas</span> han completado este WOD
-                        </span>
-                    </div>
-
-                    {/* Botones de acción */}
-                    <div className="flex flex-col sm:flex-row gap-3">
-                        {hasCompletedWod && (
-                            <button
-                                className="flex-1 bg-gradient-to-r from-brand-red to-orange-600 hover:from-brand-accent hover:to-orange-700 text-white font-black uppercase tracking-widest text-[10px] md:text-sm py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-brand-red/50 active:scale-95"
-                                onClick={() => setShowWODTracker(true)}
+                        {isVideo && (
+                            <button 
+                                onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    toggleMute(); 
+                                    setLastActiveVideoId(postId);
+                                }}
+                                className="absolute bottom-6 left-6 w-10 h-10 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/10 z-40 transition-all active:scale-90"
                             >
-                                <Edit2 className="w-5 h-5" />
-                                Editar mi resultado
+                                {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                             </button>
                         )}
-                        <div className="flex gap-3 flex-1">
-                            <button
-                                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black uppercase tracking-widest text-[10px] md:text-sm py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95"
-                                onClick={() => setShowWODLeaderboard(true)}
-                            >
-                                <Trophy className="w-5 h-5 text-brand-yellow" />
-                                Ranking
-                            </button>
-                            <button
-                                className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black uppercase tracking-widest text-[10px] md:text-sm py-3.5 rounded-xl flex items-center justify-center gap-2 transition-all active:scale-95 group"
-                                onClick={handleRepost}
-                            >
-                                <Repeat className="w-5 h-5 text-brand-red group-hover:rotate-180 transition-transform duration-500" />
-                                Repostear
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Modales */}
-                    <WODTrackerModal
-                        wodPostId={targetWodId}
-                        wodTitle={parsedWodData?.title || "WOD"}
-                        wodType="rounds"
-                        isOpen={showWODTracker}
-                        onClose={() => setShowWODTracker(false)}
-                        onSuccess={() => window.location.reload()}
-                    />
-                    <WODLeaderboardModal
-                        wodPostId={targetWodId}
-                        wodTitle={parsedWodData?.title || "WOD"}
-                        isOpen={showWODLeaderboard}
-                        onClose={() => setShowWODLeaderboard(false)}
-                    />
-                </div>
-            )}
-
-            {/* Media Content - RESTRICTED IF OFFICIAL AND NO MEMBER */}
-            {(isOfficial && resolvedWorkoutData && !isMember && username?.toLowerCase() !== 'rivalfit' && username?.toLowerCase() !== 'rival') ? (
-                <div className="px-4 pb-6">
-                    <div className="bg-muted/10 border border-white/5 border-dashed rounded-[32px] p-8 flex flex-col items-center justify-center text-center gap-4 relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
-                        <div className="w-16 h-16 rounded-full bg-brand-red/10 flex items-center justify-center mb-1 shadow-glow border border-brand-red/20 relative z-10">
-                            <Dumbbell className="w-8 h-8 text-brand-red" />
-                        </div>
-                        <div className="relative z-10">
-                            <h3 className={clsx(
-                                "font-heading font-black italic uppercase text-lg mb-2 leading-none",
-                                theme === 'dark' ? "text-white" : "text-gray-900"
-                            )}>
-                                Entrenamiento Exclusivo
-                            </h3>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest max-w-[250px] mx-auto">
-                                Este entrenamiento es solo para atletas de este centro. ¡Inscríbete para verlo!
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            ) : mediaType === 'pr' ? (
-                <div className="px-4 pb-6 mt-2">
-                    {(() => {
-                        let prData: any = {};
-                        try {
-                            if (typeof image === 'string' && image.startsWith('{')) {
-                                prData = JSON.parse(image);
-                            }
-                        } catch (e) { }
-
-                        return (
-                            <PRCard
-                                userName={user}
-                                avatarUrl={avatar}
-                                sport={prData.sport || "Cross Training"}
-                                exerciseName={prData.exerciseName || "Ejercicio"}
-                                weight={prData.weight || "0"}
-                                unit={prData.unit || "kg"}
-                                backgroundImage={photoUrl}
+                        {isVideo ? (
+                            <video
+                                ref={videoRef}
+                                src={image}
+                                className="w-full h-full object-cover"
+                                loop
+                                playsInline
+                                muted={isMuted || !isVisible || (typeof document !== 'undefined' && document.hidden)}
+                                preload="metadata"
+                                onCanPlay={() => { if (isVisible && videoRef.current) videoRef.current.play().catch(() => { setLoadError(true); setIsBuffering(false); }); }}
+                                onWaiting={() => setIsBuffering(true)}
+                                onPlaying={() => { setIsBuffering(false); setIsActuallyPlaying(true); setLoadError(false); }}
+                                onPause={() => setIsActuallyPlaying(false)}
+                                onEnded={() => setIsActuallyPlaying(false)}
+                                onError={() => { setLoadError(true); setIsBuffering(false); }}
                             />
-                        );
-                    })()}
-                </div>
-            ) : mediaType === 'class_result' ? (
-                <div className="px-4 pb-6">
-                    {(() => {
-                        let blocks: any[] = [];
-                        let centerName = "Centro Deportivo";
-                        try {
-                            const parsed = JSON.parse(image);
-                            if (Array.isArray(parsed)) {
-                                blocks = parsed.filter(b => {
-                                    if (b.type === 'metadata') {
-                                        if (b.centerName) centerName = b.centerName;
-                                        return false;
-                                    }
-                                    return true;
-                                });
-                            }
-                        } catch (e) {
-                            blocks = [];
-                        }
-
-                        const summary = blocks.length > 1 ? `${blocks.length} EJERCICIOS` : (blocks[0]?.title || 'EJERCICIO');
-                        const displayCenterName = centerName && !['Centro Deportivo', 'Gimnasio'].includes(centerName) ? ` @ ${centerName}` : '';
-
-                        if (!isExpanded) {
-                            return (
-                                <button
-                                    onClick={() => setIsExpanded(true)}
-                                    className={clsx(
-                                        "w-full border rounded-[18px] md:rounded-[24px] p-3 md:p-4 flex items-center justify-between hover:border-brand-red/50 transition-all group shadow-2xl relative overflow-hidden",
-                                        theme === 'dark' ? "bg-[#121212] border-white/5 hover:bg-white/[0.04]" : "bg-gray-50 border-gray-100 hover:bg-white shadow-md"
-                                    )}
-                                >
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
-                                    <div className="flex items-center gap-3 md:gap-4 relative z-10 w-full overflow-hidden">
-                                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 group-hover:scale-110 transition-transform shrink-0">
-                                            <Dumbbell className="w-4 h-4 md:w-5 md:h-5" />
-                                        </div>
-                                        <div className="text-left flex-1 min-w-0">
-                                            <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] mb-0.5 italic">RESUMEN</p>
-                                            <h4 className={clsx(
-                                                "text-sm md:text-lg font-accent font-bold uppercase tracking-tight group-hover:text-brand-red transition-colors leading-none truncate pr-2",
-                                                theme === 'dark' ? "text-white" : "text-gray-900"
-                                            )}>
-                                                ENTRENAMIENTO DEL DÍA
-                                            </h4>
-                                            <p className="text-[8px] md:text-[9px] text-brand-red/70 font-bold uppercase tracking-widest mt-1 flex items-center gap-2 truncate">
-                                                <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red animate-pulse"></span>
-                                                {summary}{displayCenterName}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="hidden sm:flex bg-white/5 rounded-xl p-2.5 group-hover:bg-brand-red group-hover:text-white transition-all border border-white/5 shrink-0">
-                                        <ChevronDown className="w-4 h-4" />
-                                    </div>
-                                </button>
-                            );
-                        }
-
-                        return (
-                            <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-top-4 duration-300">
-                                <div className="flex items-center justify-between px-2 mb-2">
-                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">ENTRENAMIENTO COMPLETO</p>
-                                    <button
-                                        onClick={() => setIsExpanded(false)}
-                                        className="text-[10px] text-brand-red font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
+                        ) : isCarousel ? (
+                            <div className="relative w-full h-full group/carousel">
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={carouselIndex}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -20 }}
+                                        className="relative w-full h-full"
                                     >
-                                        CONTRAER <ChevronUp className="w-3 h-3" />
-                                    </button>
-                                </div>
-                                {blocks.map((block: any, idx: number) => {
-                                    const title = (block.title || 'Ejercicio').toUpperCase();
-                                    const value = block.value || '';
-                                    const exercises = block.exercises || [];
-
-                                    const valMatch = value.match(/^([0-9.]+)\s*(.*)$/);
-                                    const valNum = valMatch ? valMatch[1] : value;
-                                    const valUnit = valMatch ? valMatch[2] : '';
-
-                                    const isInnerExpanded = expandedInnerBlocks.includes(idx);
-
-                                    return (
-
-                                        <div key={idx} className={clsx(
-                                            "border rounded-xl md:rounded-2xl relative overflow-hidden group/card transition-all",
-                                            theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-sm",
-                                            isInnerExpanded ? "p-3 md:p-4" : "p-2 md:p-3 hover:bg-white/[0.02] cursor-pointer"
-                                        )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx)}>
-                                            <div className="relative z-10 space-y-1 md:space-y-2">
-                                                <div className="flex items-center justify-between gap-3">
-                                                    <div className="min-w-0 flex-1">
-                                                        <h3 className={clsx(
-                                                            "text-sm md:text-lg font-accent font-semibold tracking-tighter leading-none truncate pr-2",
-                                                            theme === 'dark' ? "text-white" : "text-gray-900"
-                                                        )}>
-                                                            {title}
-                                                        </h3>
-                                                    </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="text-right shrink-0">
-                                                            <span className="text-xl md:text-3xl font-accent font-bold text-brand-red tracking-tighter leading-none">
-                                                                {valNum}
-                                                            </span>
-                                                            {valUnit && <span className="text-[9px] md:text-xs font-black text-brand-red ml-1 uppercase">{valUnit}</span>}
-                                                        </div>
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx); }}
-                                                            className="p-1 hover:bg-white/5 rounded-lg transition-colors"
-                                                        >
-                                                            {isInnerExpanded ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                {isInnerExpanded && (
-                                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-2">
-                                                        <div className="w-full h-1 md:h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                                            <div className="bg-brand-red h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(220,38,38,0.5)]" style={{ width: '75%' }}></div>
-                                                        </div>
-
-                                                        {exercises.length > 0 && (
-                                                            <div className="grid grid-cols-2 gap-2">
-                                                                {exercises.map((ex: any, eIdx: number) => (
-                                                                    <div key={eIdx} className="bg-white/5 rounded-xl px-3 py-2 border border-white/5">
-                                                                        <p className="text-[8px] md:text-[9px] text-gray-500 font-black uppercase tracking-wider truncate">{ex.name}</p>
-                                                                        <p className={clsx(
-                                                                            "text-[10px] md:text-xs font-bold",
-                                                                            theme === 'dark' ? "text-white" : "text-black"
-                                                                        )}>{ex.value} {ex.reps ? `x ${ex.reps}` : ''}</p>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </div>
-                                    );
-
-                                })}
-
-                                {caption && caption.includes('📝 COMENTARIO:') && (
-                                    <div className="mt-2 p-6 bg-brand-red/5 border border-brand-red/10 rounded-[24px] relative overflow-hidden group shadow-lg">
-                                        <div className="absolute top-0 right-0 p-6 opacity-5">
-                                            <MessageCircle className="w-16 h-16 text-brand-red" />
-                                        </div>
-                                        <p className="text-brand-red font-accent font-semibold text-sm md:text-base relative z-10 leading-relaxed border-l-4 border-brand-red pl-6 py-2">
-                                            {caption.split('📝 COMENTARIO:')[1].trim()}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })()}
-                </div>
-            ) : isCarousel ? (
-                <div className="px-2 pb-4">
-                    <div className="relative aspect-[4/5] bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/5 group/carousel">
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={carouselIndex}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -20 }}
-                                className="relative w-full h-full"
-                            >
-                                <Image
-                                    src={carouselItems[carouselIndex]}
-                                    alt={`Slide ${carouselIndex + 1}`}
-                                    fill
-                                    className="object-cover"
-                                />
-                            </motion.div>
-                        </AnimatePresence>
-
-                        {/* Navigation Arrows */}
-                        <div className="absolute inset-x-4 top-1/2 -translate-y-1/2 flex justify-between pointer-events-none opacity-100 md:opacity-0 md:group-hover/carousel:opacity-100 transition-opacity z-10">
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setCarouselIndex(prev => Math.max(0, prev - 1));
-                                }}
-                                disabled={carouselIndex === 0}
-                                className={clsx(
-                                    "w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 text-white pointer-events-auto transition-all",
-                                    carouselIndex === 0 ? "opacity-0 cursor-default" : "hover:bg-black/80 hover:scale-110 active:scale-90 shadow-lg"
-                                )}
-                            >
-                                <ChevronLeft className="w-6 h-6" />
-                            </button>
-                            <button
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    setCarouselIndex(prev => Math.min(carouselItems.length - 1, prev + 1));
-                                }}
-                                disabled={carouselIndex === carouselItems.length - 1}
-                                className={clsx(
-                                    "w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10 text-white pointer-events-auto transition-all",
-                                    carouselIndex === carouselItems.length - 1 ? "opacity-0 cursor-default" : "hover:bg-black/80 hover:scale-110 active:scale-90 shadow-lg",
-                                    (carouselIndex === 0 && carouselItems.length > 1) && "animate-pulse ring-2 ring-brand-red/50 shadow-glow"
-                                )}
-                            >
-                                <ChevronRight className="w-6 h-6" />
-                            </button>
-                        </div>
-
-                        {/* Indicators */}
-                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 px-3 py-2 bg-black/30 backdrop-blur-xl rounded-full border border-white/5">
-                            {carouselItems.map((_, i) => (
-                                <div
-                                    key={i}
-                                    className={clsx(
-                                        "w-1.5 h-1.5 rounded-full transition-all duration-300",
-                                        carouselIndex === i ? "bg-brand-red w-4" : "bg-white/30"
-                                    )}
-                                />
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            ) : mediaType === 'repost' ? (
-                <RepostCard image={image} caption={caption} prefetchedPost={repostOriginalPost} />
-            ) : mediaType === 'membership_activation' ? (
-                <div className="px-4 pb-6">
-                    <div className={clsx(
-                        "rounded-[28px] p-6 md:p-8 flex flex-col items-center justify-center text-center gap-4 relative overflow-hidden border shadow-xl shadow-brand-red/10",
-                        theme === 'dark' ? "bg-black/40 border-brand-red/30" : "bg-white border-brand-red/20 shadow-lg"
-                    )}>
-                        {/* Animated background elements */}
-                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10 animate-pulse" />
-                        <div className="absolute bottom-0 left-0 w-32 h-32 bg-brand-red/5 blur-2xl -ml-10 -mb-10 animate-pulse" />
-
-                        <div className="w-20 h-20 rounded-full bg-brand-red/10 flex items-center justify-center mb-1 shadow-glow border border-brand-red/20 relative z-10 animate-in zoom-in duration-500">
-                            <CheckCircle2 className="w-10 h-10 text-brand-red" />
-                        </div>
-                        <div className="relative z-10 space-y-2">
-                            <h3 className="font-heading font-black italic uppercase text-xl md:text-2xl text-white tracking-tighter leading-none">¡MEMBRESÍA ACTIVADA!</h3>
-                            <p className="text-[10px] md:text-xs text-gray-400 font-bold uppercase tracking-[0.2em] max-w-[300px] mx-auto leading-relaxed">
-                                {caption || `¡Ha comenzado una nueva etapa de entrenamiento!`}
-                            </p>
-                        </div>
-
-                        <div className="relative z-10 flex items-center gap-2 mt-2">
-                            <span className="h-px w-8 bg-brand-red/30" />
-                            <Trophy className="w-4 h-4 text-brand-red" />
-                            <span className="h-px w-8 bg-brand-red/30" />
-                        </div>
-                    </div>
-                </div>
-            ) : (isImageUrl(image) || resolvedWorkoutData) ? (
-                <div className="flex flex-col gap-4">
-                    {isImageUrl(image) && (
-                        <div className={isVideo ? "flex justify-center px-2" : "px-2"}>
-                            <div className={`relative bg-black cursor-pointer group shadow-2xl overflow-hidden ${isVideo ? "aspect-[9/16] max-h-[80vh] w-full max-w-[480px] rounded-[24px] md:rounded-[32px] border border-white/10" : "aspect-video rounded-xl"}`} 
-                                onClick={() => { 
-                                    setIsLightboxOpen(true); 
-                                    if (isVideo) setIsMuted(false);
-                                }}
-                            >
-                                {isVideo ? (
-                                    <div className="relative w-full h-full">
-                                        <video
-                                            ref={videoRef}
-                                            src={image}
-                                            className="w-full h-full object-cover"
-                                            loop
-                                            playsInline
-                                            muted={isMuted || !isVisible || (typeof document !== 'undefined' && document.hidden)}
-                                            preload="metadata"
-                                            onCanPlay={() => { if (isVisible && videoRef.current) videoRef.current.play().catch(() => { setLoadError(true); setIsBuffering(false); }); }}
-                                            onWaiting={() => setIsBuffering(true)}
-                                            onPlaying={() => { setIsBuffering(false); setIsActuallyPlaying(true); setLoadError(false); }}
-                                            onPause={() => setIsActuallyPlaying(false)}
-                                            onEnded={() => setIsActuallyPlaying(false)}
-                                            onError={() => { setLoadError(true); setIsBuffering(false); }}
-                                        />
-                                        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/20 pointer-events-none" />
-                                        
-                                        {/* Buffering Indicator */}
-                                        <AnimatePresence>
-                                            {isBuffering && !loadError && (
-                                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/30 backdrop-blur-[2px] z-10 gap-3">
-                                                    <Loader2 className="w-10 h-10 text-brand-red animate-spin shadow-glow" />
-                                                    <span className="text-white text-[10px] font-black uppercase tracking-[0.2em] drop-shadow-lg">Cargando Video...</span>
-                                                </div>
-                                            )}
-                                        </AnimatePresence>
-
-                                        {/* Play Overlay (If paused but visible) */}
-                                        <AnimatePresence>
-                                            {isVisible && !isActuallyPlaying && !isBuffering && !loadError && (
-                                                <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-10 pointer-events-none">
-                                                    <motion.div 
-                                                        initial={{ scale: 0.5, opacity: 0 }}
-                                                        animate={{ scale: 1, opacity: 1 }}
-                                                        className="bg-brand-red p-4 rounded-full shadow-glow"
-                                                    >
-                                                        <Play className="w-8 h-8 text-white fill-current" />
-                                                    </motion.div>
-                                                </div>
-                                            )}
-                                        </AnimatePresence>
-
-                                        {/* Error Overlay */}
-                                        <AnimatePresence>
-                                            {loadError && (
-                                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md z-10 p-6 text-center">
-                                                    <X className="w-12 h-12 text-brand-red mb-3" />
-                                                    <p className="text-white text-xs font-black uppercase tracking-widest">Error al cargar video</p>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); setLoadError(false); setIsBuffering(true); if(videoRef.current) { videoRef.current.load(); videoRef.current.play().catch(() => { setLoadError(true); setIsBuffering(false); }); } }}
-                                                        className="mt-4 px-4 py-2 bg-brand-red text-white text-[10px] font-black rounded-lg"
-                                                    >
-                                                        REINTENTAR
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </AnimatePresence>
-                                        
-                                        {/* Mute Hint Overlay */}
-                                        <AnimatePresence>
-                                            {showMuteHint && isMuted && (
-                                                <motion.div 
-                                                    initial={{ opacity: 0, scale: 0.8 }}
-                                                    animate={{ opacity: 1, scale: 1 }}
-                                                    exit={{ opacity: 0, scale: 0.8 }}
-                                                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 bg-black/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 flex items-center gap-2 pointer-events-none"
-                                                >
-                                                    <VolumeX className="w-4 h-4 text-white" />
-                                                    <span className="text-white text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Video silenciado</span>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                        
-                                        {/* Mute/Unmute Button */}
-                                        <button 
-                                            onClick={(e) => { 
-                                                e.stopPropagation(); 
-                                                toggleMute(); 
-                                            }}
-                                            className="absolute bottom-4 right-4 z-20 bg-black/40 hover:bg-black/60 backdrop-blur-md p-2.5 rounded-full border border-white/10 transition-all active:scale-90 group/mute keep-all"
-                                        >
-                                            {isMuted ? (
-                                                <VolumeX className="w-4 h-4 text-white/90 group-hover/mute:text-white keep-white" />
-                                            ) : (
-                                                <Volume2 className="w-4 h-4 text-white/90 group-hover/mute:text-white keep-white" />
-                                            )}
-                                        </button>
-
-                                        {/* Play/Pause Indicator (Mobile centered feedback) */}
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                                            <div className="bg-black/50 backdrop-blur-sm p-4 rounded-full keep-all">
-                                                <Play className="w-8 h-8 text-white keep-white" fill="white" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div className="relative w-full h-full">
-                                        {isImageUrl(image) && (
-                                            <Image
-                                                src={image}
-                                                alt="Post content"
-                                                fill
-                                                className="object-cover group-hover:scale-110 transition-transform duration-700"
-                                                unoptimized={image.startsWith('data:')}
-                                            />
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {resolvedWorkoutData && ((() => {
-                        const w = Array.isArray(resolvedWorkoutData) ? resolvedWorkoutData[0] : resolvedWorkoutData;
-                        if (!w) return null;
-
-                        // CHECK FOR MULTI-BLOCK METRICS (WOD)
-                        if (w.blocks || (w.metrics && w.metrics.blocks && w.metrics.blocks.length > 0)) {
-                            // Normalize data for WodCard if it's in the old metrics.blocks format
-                            const blocks = (w.blocks || w.metrics.blocks).map((b: any) => ({
-                                ...b,
-                                config: b.config || {}
-                            }));
-
-                            // Derive category from sport_type when category is not explicitly set
-                            const derivedCategory = (() => {
-                                if (w.category) return w.category;
-                                const st = (w.sport_type || '').toLowerCase();
-                                if (st === 'running') return 'RUNNING';
-                                if (st === 'cycling' || st === 'ciclismo') return 'CYCLING';
-                                if (st === 'swimming' || st === 'natación') return 'SWIMMING';
-                                if (st === 'fitness' || st === 'gym') return 'GYM';
-                                if (st === 'ocr') return 'OCR';
-                                if (st === 'hyrox') return 'HYROX';
-                                if (st === 'yoga' || st.includes('mobil')) return 'YOGA';
-                                if (st === 'boxing' || st === 'boxeo') return 'BOXING';
-                                return 'CROSS_TRAINING';
-                            })();
-
-                            const embeddedPhotoUrl = w.media_url && isImageUrl(w.media_url) ? w.media_url : null;
-
-                            const normalizedWodData = {
-                                title: w.title || (w.sport_type && w.sport_type !== 'Entrenamiento Libre' ? w.sport_type : 'WORKOUT OF THE DAY'),
-                                blocks: blocks,
-                                summary: w.summary || {
-                                    scoreLabel: w.metrics?.score || 'FINALIZADO',
-                                    scoreType: w.metrics?.type || 'WORKOUT',
-                                    totalTime: w.metrics?.duration || w.metrics?.time || '--:--'
-                                },
-                                media_url: embeddedPhotoUrl,
-                                original_wod_post_id: (w as any).original_wod_post_id || null,
-                                category: derivedCategory,
-                                // Pass session metrics so WodCard can show distance/pace for endurance sessions
-                                metrics: w.metrics || null,
-                            };
-
-                            return (
-                                <div className="w-full mt-2 flex flex-col">
-                                    {/* Photo embedded in WOD post — show above the workout card */}
-                                    {embeddedPhotoUrl && (
-                                        <div className="px-2 mb-2">
-                                            <div
-                                                className="relative w-full rounded-xl overflow-hidden cursor-pointer group shadow-2xl bg-black"
-                                                style={{ maxHeight: '60vh' }}
-                                                onClick={() => setIsLightboxOpen(true)}
+                                        <Image src={carouselItems[carouselIndex]} alt="Slide" fill className="object-cover" />
+                                    </motion.div>
+                                </AnimatePresence>
+                                
+                                {/* Carousel Navigation Arrows */}
+                                {carouselItems.length > 1 && (
+                                    <>
+                                        {carouselIndex > 0 && (
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); setCarouselIndex(carouselIndex - 1); }}
+                                                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 hover:bg-black/60 backdrop-blur-md flex items-center justify-center text-white z-40 transition-all opacity-0 group-hover/carousel:opacity-100"
                                             >
-                                                <Image
-                                                    src={embeddedPhotoUrl}
-                                                    alt="Foto del entreno"
-                                                    width={800}
-                                                    height={600}
-                                                    className="w-full object-cover group-hover:scale-105 transition-transform duration-700"
-                                                    style={{ maxHeight: '60vh', objectFit: 'cover' }}
-                                                    unoptimized={embeddedPhotoUrl.startsWith('data:')}
-                                                />
-                                            </div>
-                                        </div>
-                                    )}
-                                    <WodCard
-                                        completionsCount={completionsCountWod}
-                                        hasCompleted={hasCompletedWod}
-                                        data={normalizedWodData as any}
-                                        userName={username || user}
-                                        publishDate={time}
-                                        postId={postId}
-                                    />
-                                </div>
-                            );
-                        }
-
-                        const sets = w.workout_sets || [];
-                        const centerName = w.location_name || 'Gimnasio';
-                        const isRun = w.metrics?.type === 'running' || w.sport_type?.toLowerCase() === 'running' || (w.metrics?.path && w.metrics.path.length > 0);
-
-                        // Group by exercise name
-                        const grouped: { [key: string]: any } = {};
-                        sets.forEach((s: any) => {
-                            const name = s.exercise_name || 'Ejercicio';
-                            if (!grouped[name]) {
-                                grouped[name] = {
-                                    name: name,
-                                    maxWeight: 0,
-                                    totalReps: 0,
-                                    allSets: []
-                                };
-                            }
-                            grouped[name].allSets.push(s);
-                            if ((s.weight_kg || 0) > (grouped[name].maxWeight || 0)) {
-                                grouped[name].maxWeight = s.weight_kg;
-                            }
-                            grouped[name].totalReps += (s.reps || 0);
-                        });
-
-                        const exercises = Object.values(grouped);
-                        if (exercises.length === 0 && !image) return null;
-
-                        const summary = exercises.length > 1 ? `${exercises.length} EJERCICIOS` : (exercises[0]?.name || 'ENTRENAMIENTO');
-                        const displayCenterName = centerName && !['Centro Deportivo', 'Gimnasio', 'Gimnasio RIVAL HQ'].includes(centerName) ? ` @ ${centerName}` : '';
-
-                        return (
-                            <div className="w-full">
-                                {!isExpanded ? (
-                                    <button
-                                        onClick={() => setIsExpanded(true)}
-                                        className={clsx(
-                                            "w-full border rounded-xl md:rounded-2xl p-2 md:p-3 flex items-center justify-between hover:border-brand-red/50 transition-all group shadow-xl relative overflow-hidden",
-                                            theme === 'dark' ? "bg-[#121212] border-white/5 hover:bg-white/[0.04]" : "bg-gray-50 border-gray-100 hover:bg-white shadow-md"
+                                                <ChevronLeft className="w-6 h-6" />
+                                            </button>
                                         )}
-                                    >
-                                        <div className="absolute top-0 right-0 w-24 h-24 bg-brand-red/5 blur-3xl -mr-8 -mt-8" />
-                                        <div className="flex items-center gap-2 md:gap-3 relative z-10 w-full overflow-hidden">
-                                            <div className="w-7 h-7 md:w-8 md:h-8 rounded-lg bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 group-hover:scale-110 transition-transform shrink-0">
-                                                {isRun ? <Activity className="w-3.5 h-3.5 md:w-4 md:h-4" /> : <Trophy className="w-3.5 h-3.5 md:w-4 md:h-4" />}
-                                            </div>
-                                            <div className="text-left flex-1 min-w-0">
-                                                <h4 className={clsx(
-                                                    "text-xs md:text-sm font-heading font-black italic uppercase tracking-tighter group-hover:text-brand-red transition-colors leading-none truncate pr-2",
-                                                    theme === 'dark' ? "text-white" : "text-gray-900"
-                                                )}>
-                                                    {isRun ? "CARRERA COMPLETADA" : ((!w.sport_type || w.sport_type === 'Entrenamiento Libre') ? (summary || 'ENTRENAMIENTO HÍBRIDO') : w.sport_type)}
-                                                </h4>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <p className="text-[7px] md:text-[8px] text-brand-red/70 font-bold uppercase tracking-widest flex items-center gap-1.5 truncate">
-                                                        <span className="w-1 h-1 shrink-0 rounded-full bg-brand-red"></span>
-                                                        {isRun ? `${(w.metrics?.distance / 1000).toFixed(2)} KM • ${w.metrics?.pace || '0:00'}/KM` : (displayCenterName || 'ENTRENAMIENTO')}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {isRun && w.metrics?.path && (
-                                                <div className="shrink-0 w-10 h-10 bg-black/40 rounded-lg p-1 border border-white/10 group-hover:border-brand-red/50 transition-colors">
-                                                    <RouteMap path={w.metrics.path} className="w-full h-full" color="#DC2626" />
-                                                </div>
-                                            )}
+                                        {carouselIndex < carouselItems.length - 1 && (
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); setCarouselIndex(carouselIndex + 1); }}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 hover:bg-black/60 backdrop-blur-md flex items-center justify-center text-white z-40 transition-all opacity-0 group-hover/carousel:opacity-100"
+                                            >
+                                                <ChevronRight className="w-6 h-6" />
+                                            </button>
+                                        )}
+                                        
+                                        {/* Dots Indicator */}
+                                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-40">
+                                            {carouselItems.map((_, i) => (
+                                                <div 
+                                                    key={i} 
+                                                    className={clsx(
+                                                        "w-1.5 h-1.5 rounded-full transition-all",
+                                                        i === carouselIndex ? "bg-brand-red w-4 shadow-glow" : "bg-white/40"
+                                                    )}
+                                                />
+                                            ))}
                                         </div>
-                                        <div className="flex bg-white/5 rounded-lg p-1.5 group-hover:bg-brand-red group-hover:text-white transition-all border border-white/5 shrink-0 ml-2">
-                                            <ChevronDown className="w-3 h-3" />
-                                        </div>
-                                    </button>
-                                ) : (
-                                    <div className={clsx(
-                                        "border rounded-2xl md:rounded-3xl p-3 md:p-4 relative overflow-hidden group/card shadow-xl animate-in fade-in slide-in-from-top-4 duration-300",
-                                        theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-md"
-                                    )}>
-                                        {/* Accent Background Glow */}
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
-
-                                        <div className="relative z-10">
-                                            <div className="flex items-center justify-between mb-3 md:mb-4">
-                                                <p className="text-[7px] md:text-[8px] text-gray-500 font-black uppercase tracking-[0.3em] italic">RESULTADOS</p>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); setIsExpanded(false); }}
-                                                    className="text-[7px] md:text-[8px] text-brand-red font-black uppercase tracking-widest hover:text-white transition-colors flex items-center gap-1"
-                                                >
-                                                    CERRAR <ChevronUp className="w-3 h-3" />
-                                                </button>
-                                            </div>
-
-                                            <div className="relative z-10 space-y-4 md:space-y-6">
-                                                {exercises.map((ex: any, idx) => {
-                                                    const isInnerExpanded = expandedInnerBlocks.includes(idx + 100); // Offset for personal workouts
-
-                                                    return (
-                                                        <div key={idx} className={clsx(
-                                                            "border rounded-xl md:rounded-2xl relative overflow-hidden group/card transition-all",
-                                                            theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-sm",
-                                                            isInnerExpanded ? "p-3 md:p-4" : "p-2 md:p-3 hover:bg-white/[0.02] cursor-pointer"
-                                                        )} onClick={() => !isInnerExpanded && toggleInnerBlock(idx + 100)}>
-                                                            <div className="relative z-10 space-y-1 md:space-y-2">
-                                                                <div className="flex items-start justify-between gap-3">
-                                                                    <div className="min-w-0 flex-1">
-                                                                        <h3 className={clsx(
-                                                                            "text-sm md:text-lg font-heading font-black italic uppercase tracking-tighter leading-tight pr-2",
-                                                                            theme === 'dark' ? "text-white" : "text-gray-900"
-                                                                        )}>
-                                                                            {ex.name}
-                                                                        </h3>
-                                                                    </div>
-                                                                    <div className="flex items-center gap-2">
-                                                                        {ex.maxWeight > 0 && (
-                                                                            <div className="text-right shrink-0">
-                                                                                <span className="text-sm md:text-xl font-heading font-black text-brand-red italic tracking-tighter leading-none">
-                                                                                    {ex.maxWeight}
-                                                                                </span>
-                                                                                <span className="text-[7px] md:text-[9px] font-black text-brand-red ml-0.5 uppercase">KG</span>
-                                                                            </div>
-                                                                        )}
-                                                                        <button
-                                                                            onClick={(e) => { e.stopPropagation(); toggleInnerBlock(idx + 100); }}
-                                                                            className="p-1 hover:bg-white/5 rounded-lg transition-colors"
-                                                                        >
-                                                                            {isInnerExpanded ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />}
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
-
-                                                                {isInnerExpanded && (
-                                                                    <div className="animate-in fade-in slide-in-from-top-2 duration-300 space-y-3 pt-2">
-                                                                        <div className="w-full h-1 md:h-1.5 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                                                            <div className="bg-brand-red h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(220,38,38,0.5)]" style={{ width: '85%' }}></div>
-                                                                        </div>
-
-                                                                        <div className="space-y-2 mt-4">
-                                                                            {ex.allSets.map((set: any, sIdx: number) => (
-                                                                                <div key={sIdx} className="flex justify-between items-center bg-white/5 rounded-xl px-4 py-2.5 border border-white/5 group/set hover:border-brand-red/30 transition-colors">
-                                                                                    <div className="flex items-center gap-2">
-                                                                                        <span className="text-[9px] font-black text-brand-red uppercase tracking-widest bg-brand-red/10 px-2 py-0.5 rounded border border-brand-red/10 group-hover/set:bg-brand-red group-hover/set:text-white transition-colors">SET {sIdx + 1}</span>
-                                                                                    </div>
-                                                                                    <p className={clsx(
-                                                                                        "text-xs md:text-sm font-bold tracking-tight",
-                                                                                        theme === 'dark' ? "text-white" : "text-black"
-                                                                                    )}>
-                                                                                        {set.weight_kg > 0 && <span className="text-brand-red mr-1">{set.weight_kg}KG</span>}
-                                                                                        <span className="opacity-60">x</span> {set.reps > 0 ? (set.reps > 500 ? `${set.reps} M/CAL` : `${set.reps} REPS`) : "COMPLETADO"}
-                                                                                    </p>
-                                                                                </div>
-                                                                            ))}
-                                                                        </div>
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </div>
-                                    </div>
+                                    </>
                                 )}
                             </div>
-                        );
-                    })()
-                    )}
-                </div>
-            ) : null}
-
-            {/* Actions */}
-            <div className="px-4 pb-4 pt-4 flex items-center gap-4 border-t border-white/5 mt-2">
-                {(resolvedWorkoutData || mediaType === 'class_result') ? (
-                    <>
-                        <div className="flex-1 flex gap-2">
-                            <div className="flex-1">
-                                <LikeButtonWithText postId={postId} initialLikes={initialLikes} hasLikedInitial={hasLikedInitial} text="Chocala 👊" />
-                            </div>
-                            <button
-                                onClick={() => setShowComments(!showComments)}
-                                className="flex-1 bg-white/5 hover:bg-white/10 text-white py-3 md:py-4 rounded-xl md:rounded-2xl flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[10px] md:text-xs transition-all active:scale-95 border border-white/5"
-                            >
-                                Comentar
-                            </button>
-                        </div>
-                        {(isVideo || isImageUrl(image)) && (
-                            <button
-                                onClick={(e) => { e.stopPropagation(); handleDownloadMedia(); }}
-                                disabled={isDownloadingVideo}
-                                className={clsx(
-                                    "p-3 md:p-4 bg-white/5 hover:bg-white/10 rounded-xl md:rounded-2xl border border-white/5 transition-all active:scale-95 group",
-                                    isDownloadingVideo ? "text-brand-red animate-pulse" : "text-gray-400 hover:text-brand-red"
-                                )}
-                                title="Descargar contenido con branding"
-                            >
-                                {isDownloadingVideo ? (
-                                    <div className="flex flex-col items-center gap-1">
-                                        <Loader2 className="w-5 h-5 animate-spin" />
-                                        <span className="text-[7px] font-black">{downloadProgress}%</span>
-                                    </div>
-                                ) : <Download className="w-5 h-5" />}
-                            </button>
-                        )}
-                        <ShareButton
-                            image={image}
-                            workoutData={resolvedWorkoutData}
-                            mediaType={mediaType}
-                            postId={postId}
-                            className="p-3 md:p-4 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white rounded-xl md:rounded-2xl border border-white/5 transition-all"
-                            iconClassName="w-5 h-5"
-                            onInstagramShare={() => setShowInstagramCard(true)}
-                            onOpenShareCard={() => setShowShareCard(true)}
-                            onDownloadMedia={handleDownloadMedia}
-                            isDownloadingVideo={isDownloadingVideo}
-                            isVideo={(isVideo || isImageUrl(image)) as boolean}
-                            highlight={highlight}
-                            caption={caption}
-                            photoUrl={photoUrl}
-                        />
-                    </>
-                ) : (
-                    <div className="flex items-center gap-6 w-full">
-                        <LikeButton postId={postId} initialLikes={initialLikes} hasLikedInitial={hasLikedInitial} />
-                        <button
-                            onClick={() => setShowComments(!showComments)}
-                            className={clsx("flex items-center gap-2 transition-colors", showComments ? 'text-blue-400' : 'text-gray-400 hover:text-blue-400')}
-                        >
-                            <MessageCircle className="w-6 h-6" />
-                            <span className="font-bold text-sm">{commentsCount}</span>
-                        </button>
-
-                        {/* Quick Duel Button */}
-                        {authorId && postId && authorId !== currentUserId && !isOfficial && (
-                            <div className="scale-75 origin-left h-auto -my-2">
-                                <DuelButton targetId={authorId as string} postId={postId} type="quick" isRival={true} />
-                            </div>
-                        )}
-                        <div className="ml-auto flex items-center gap-4">
-                            {(isVideo || isImageUrl(image)) && (
-                                <button
-                                    onClick={(e) => { e.stopPropagation(); handleDownloadMedia(); }}
-                                    disabled={isDownloadingVideo}
-                                    className={clsx(
-                                        "transition-all active:scale-95",
-                                        isDownloadingVideo ? "text-brand-red animate-pulse" : "text-gray-400 hover:text-brand-red"
-                                    )}
-                                    title="Descargar contenido con branding"
-                                >
-                                    {isDownloadingVideo ? (
-                                        <div className="flex flex-col items-center gap-1">
-                                            <Loader2 className="w-6 h-6 animate-spin" />
-                                            <span className="text-[7px] font-black">{downloadProgress}%</span>
-                                        </div>
-                                    ) : <Download className="w-6 h-6" />}
-                                </button>
-                            )}
-                            <ShareButton
-                                image={image}
-                                workoutData={resolvedWorkoutData}
-                                mediaType={mediaType}
-                                postId={postId}
-                                className="text-gray-400 hover:text-white"
-                                iconClassName="w-6 h-6"
-                                onInstagramShare={() => setShowInstagramCard(true)}
-                                onOpenShareCard={() => setShowShareCard(true)}
-                                onDownloadMedia={handleDownloadMedia}
-                                onRepostClick={() => setShowRepostModal(true)}
-                                onMessageClick={() => { setShowDMModal(true); loadDMFollows(); }}
-                                isDownloadingVideo={isDownloadingVideo}
-                                downloadProgress={downloadProgress}
-                                isVideo={(isVideo || isImageUrl(image)) as boolean}
-                                highlight={highlight}
-                                caption={caption}
-                                photoUrl={photoUrl}
+                        ) : (
+                            <Image 
+                                src={photoUrl || '/placeholder.png'} 
+                                alt="Post Media" 
+                                fill 
+                                className="object-cover hover:scale-105 transition-transform duration-1000" 
+                                unoptimized={photoUrl?.startsWith('data:')}
                             />
-                        </div>
+                        )}
+
                     </div>
+                </div>
+            )}
+
+            {/* ACTION BAR: Horizontal layout below media */}
+            <div className="px-6 pt-4 pb-2 flex items-center justify-between">
+                <div className="flex items-center gap-5">
+                    <LikeButton postId={postId} initialLikes={initialLikes} hasLikedInitial={hasLikedInitial} />
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} 
+                        className="flex flex-col items-center gap-1 group text-zinc-400 hover:text-white transition-colors"
+                    >
+                        <MessageCircle className={clsx("w-7 h-7 transition-all active:scale-90", showComments && "fill-brand-red text-brand-red")} />
+                        <span className="text-[10px] font-black">{commentsCount}</span>
+                    </button>
+                    <ShareButton
+                        image={image}
+                        workoutData={resolvedWorkoutData}
+                        mediaType={mediaType}
+                        postId={postId}
+                        className="text-zinc-400 hover:text-white transition-colors"
+                        iconClassName="w-7 h-7"
+                        onInstagramShare={() => setShowInstagramCard(true)}
+                        onOpenShareCard={() => setShowShareCard(true)}
+                        onDownloadMedia={handleDownloadMedia}
+                        isVideo={(isVideo || isImageUrl(image)) as boolean}
+                        onRepostClick={() => setShowRepostModal(true)}
+                        onMessageClick={() => { setShowDMModal(true); loadDMFollows(); }}
+                    />
+                </div>
+
+                {music_url && (
+                    <button 
+                        onClick={toggleMusic}
+                        className={clsx(
+                            "w-10 h-10 rounded-full border-2 border-brand-red/50 p-1 relative transition-all group active:scale-90 bg-black shadow-glow",
+                            isPlaying && "animate-[spin_4s_linear_infinite]"
+                        )}
+                    >
+                        <Image src="/logo.svg" alt="Music" fill className="object-contain p-2" />
+                    </button>
                 )}
             </div>
+
+            {/* CAPTION: Classic Instagram style below actions */}
+            {caption && (
+                <div className="px-6 pb-4">
+                    <div className="text-[13px] leading-relaxed">
+                        <span className="font-black uppercase italic tracking-tighter text-brand-red mr-2">{username || user}</span>
+                        <div className={clsx(
+                            "inline transition-all duration-300",
+                            theme === 'dark' ? "text-white/90" : "text-zinc-900"
+                        )}>
+                            <MentionText text={caption} />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* SECONDARY SECTION: WODs, PRs & Supplementary Data */}
+            {(resolvedWorkoutData || wod_data || post_type === 'wod' || mediaType === 'pr' || mediaType === 'class_result' || mediaType === 'membership_activation' || mediaType === 'repost') && (
+                <div className={clsx(
+                    "p-4 md:p-8 border-t border-white/5",
+                    theme === 'dark' ? "bg-zinc-950" : "bg-gray-50"
+                )}>
+                    {/* WOD Display (WOD of the Day type) */}
+                    {post_type === 'wod' && wod_data && (
+                        <div className="space-y-6">
+                            <WODPostDisplay wod={wod_data} compact={false} />
+                            <div className="flex flex-col sm:flex-row gap-4">
+                                <button
+                                    className="flex-1 bg-gradient-to-r from-brand-red to-orange-600 text-white font-black uppercase tracking-widest text-xs py-4 rounded-2xl flex items-center justify-center gap-2 shadow-glow active:scale-95 transition-all"
+                                    onClick={() => setShowWODTracker(true)}
+                                >
+                                    <Trophy className="w-5 h-5" /> {hasCompletedWod ? 'EDITAR MI RESULTADO' : 'REGISTRAR RESULTADO'}
+                                </button>
+                                <div className="flex gap-4 flex-1">
+                                    <button
+                                        className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black uppercase tracking-widest text-xs py-4 rounded-2xl flex items-center justify-center gap-2 transition-all"
+                                        onClick={() => setShowWODLeaderboard(true)}
+                                    >
+                                        <Trophy className="w-5 h-5 text-brand-yellow" /> RANKING
+                                    </button>
+                                    <button
+                                        className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black uppercase tracking-widest text-xs py-4 rounded-2xl flex items-center justify-center gap-2 transition-all group"
+                                        onClick={handleRepost}
+                                    >
+                                        <Repeat className="w-5 h-5 text-brand-red group-hover:rotate-180 transition-transform duration-500" /> REPOST
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PR Card */}
+                    {mediaType === 'pr' && (
+                        <div className="animate-in fade-in zoom-in-95 duration-500">
+                             {(() => {
+                                let prData: any = {};
+                                try { if (typeof image === 'string' && image.startsWith('{')) prData = JSON.parse(image); } catch (e) { }
+                                return (
+                                    <PRCard
+                                        userName={user}
+                                        avatarUrl={avatar}
+                                        sport={prData.sport || "Cross Training"}
+                                        exerciseName={prData.exerciseName || "Ejercicio"}
+                                        weight={prData.weight || "0"}
+                                        unit={prData.unit || "kg"}
+                                        backgroundImage={photoUrl}
+                                    />
+                                );
+                            })()}
+                        </div>
+                    )}
+
+                    {/* Class Result / Multi-exercise workout */}
+                    {mediaType === 'class_result' && (
+                        <div className="space-y-4">
+                            {(() => {
+                                let blocks: any[] = [];
+                                try {
+                                    const parsed = JSON.parse(image);
+                                    if (Array.isArray(parsed)) blocks = parsed.filter(b => b.type !== 'metadata');
+                                } catch (e) { }
+
+                                if (!isExpanded) {
+                                    return (
+                                        <button onClick={() => setIsExpanded(true)} className="w-full border rounded-3xl p-6 bg-white/5 border-white/10 hover:border-brand-red/50 transition-all flex items-center justify-between group">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 group-hover:scale-110 transition-all">
+                                                    <Dumbbell className="w-6 h-6" />
+                                                </div>
+                                                <div className="text-left">
+                                                    <h4 className="text-lg font-black italic uppercase text-white leading-none">ENTRENAMIENTO COMPLETADO</h4>
+                                                    <p className="text-[10px] text-brand-red font-bold uppercase tracking-widest mt-1">{blocks.length} EJERCICIOS REGISTRADOS</p>
+                                                </div>
+                                            </div>
+                                            <ChevronDown className="w-5 h-5 text-gray-500" />
+                                        </button>
+                                    );
+                                }
+
+                                return (
+                                    <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
+                                        <div className="flex justify-between items-center px-1">
+                                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">DESGLOSE</span>
+                                            <button onClick={() => setIsExpanded(false)} className="text-[10px] font-black text-brand-red uppercase flex items-center gap-1">CERRAR <ChevronUp className="w-3 h-3" /></button>
+                                        </div>
+                                        {blocks.map((block: any, idx: number) => {
+                                            const isInnerExpanded = expandedInnerBlocks.includes(idx);
+                                            return (
+                                                <div key={idx} className="bg-white/5 border border-white/10 rounded-2xl p-4 cursor-pointer" onClick={() => toggleInnerBlock(idx)}>
+                                                    <div className="flex justify-between items-center">
+                                                        <h5 className="text-sm font-black text-white italic uppercase">{block.title}</h5>
+                                                        <span className="text-xl font-black text-brand-red italic">{block.value}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    )}
+
+                    {/* Repost Card */}
+                    {mediaType === 'repost' && (
+                        <RepostCard image={image} caption={caption} prefetchedPost={repostOriginalPost} />
+                    )}
+
+                    {/* Membership Activation */}
+                    {mediaType === 'membership_activation' && (
+                        <div className="rounded-[40px] p-10 bg-brand-red/5 border border-brand-red/20 text-center space-y-6 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-40 h-40 bg-brand-red/10 blur-3xl animate-pulse" />
+                            <div className="w-24 h-24 rounded-full bg-brand-red/10 flex items-center justify-center mx-auto border border-brand-red/30 shadow-glow">
+                                <CheckCircle2 className="w-12 h-12 text-brand-red" />
+                            </div>
+                            <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">¡MEMBRESÍA ACTIVA!</h3>
+                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{caption || 'Iniciando una nueva etapa de alto rendimiento.'}</p>
+                        </div>
+                    )}
+
+                    {/* Normalized Workout Card (Endurance or Lift) */}
+                    {resolvedWorkoutData && !['pr', 'class_result', 'membership_activation'].includes(mediaType) && (
+                        <WodCard
+                            completionsCount={completionsCountWod}
+                            hasCompleted={hasCompletedWod}
+                            data={resolvedWorkoutData as any}
+                            userName={username || user}
+                            publishDate={time}
+                            postId={postId}
+                        />
+                    )}
+                </div>
+            )}
+
 
             {/* Comments Section */}
             {
@@ -1964,7 +1385,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                 <X className="w-8 h-8 md:w-10 md:h-10" />
                             </button>
                             <div className="relative w-full max-w-5xl max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                                <img src={image} alt="Full size" className="max-w-full max-h-[90vh] object-contain rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)]" />
+                                <img src={photoUrl} alt="Full size" className="max-w-full max-h-[90vh] object-contain rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)]" />
                             </div>
                         </div>
                     )
@@ -2268,7 +1689,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                 </div>
             )}
 
-        </div >
+        </div>
     );
 }
 

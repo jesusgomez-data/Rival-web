@@ -267,7 +267,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         { name: "Nutrición", href: "/dashboard/nutrition", icon: Zap },
         { name: "Body Stats", href: "/dashboard/body-stats", icon: Activity },
         { name: t.navDashboard.affiliateGym, href: "/dashboard/gyms", icon: Building2 },
-        { name: "Entrenadores", href: "/dashboard/gyms?type=personal_trainer", icon: User },
+        { name: "Profesionales", href: "/dashboard/gyms?type=personal_trainer", icon: User },
         { name: t.navDashboard.community, href: "/dashboard/community", icon: Users },
         { name: "Competiciones", href: "/dashboard/competitions", icon: Flag },
         { name: t.navDashboard.leaderboard, href: "/dashboard/leaderboard", icon: Trophy },
