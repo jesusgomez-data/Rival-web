@@ -238,7 +238,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             </button>
                             <button 
                                 onClick={() => scrollToSection('combat-history', 'stats')}
-                                className="p-3 md:p-6 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer border-t border-white/5 md:border-t-0"
+                                className="p-3 md:p-6 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
                             >
                                 <span className="text-xl md:text-4xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.retos}</span>
                                 <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">RETOS</span>
@@ -246,7 +246,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             <button 
                                 onClick={() => handleOpenModal('followers')}
                                 disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                                className="p-3 md:p-6 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group disabled:opacity-50 cursor-pointer border-t border-white/5 md:border-t-0"
+                                className="p-3 md:p-6 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group disabled:opacity-50 cursor-pointer"
                             >
                                 <span className="text-xl md:text-4xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.followers}</span>
                                 <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">SEGUIDORES</span>
