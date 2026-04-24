@@ -74,11 +74,11 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
     };
 
     return (
-        <div className="max-w-5xl mx-auto space-y-6 md:space-y-12 animate-fade-in pb-20 px-4 md:px-0">
+        <div className="max-w-5xl mx-auto space-y-6 md:space-y-12 animate-fade-in pb-20 px-0 md:px-4">
             <StoryBar currentUser={user} hideBar={true} />
             
             {/* New Premium Profile Header */}
-            <div className="relative group rounded-[48px] overflow-hidden border border-white/5 bg-[#050505] shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-500">
+            <div className="relative group rounded-none md:rounded-[48px] overflow-hidden border-b md:border border-white/5 bg-[#050505] shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-500">
                 {/* Background Decor */}
                 <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                     <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-brand-red/10 blur-[120px] -ml-40 -mt-40 rounded-full" />
@@ -87,18 +87,18 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     <div className="absolute inset-0 opacity-[0.03] bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:20px_20px]" />
                 </div>
 
-                <div className="relative z-10 p-4 md:p-12">
-                    <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 md:gap-8">
-                        <div className="flex flex-row md:flex-col lg:flex-row items-center md:items-start gap-4 md:gap-8 flex-1 w-full">
+                <div className="relative z-10 p-4 md:p-8">
+                    <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-4 md:gap-6">
+                        <div className="flex flex-row md:flex-col lg:flex-row items-center md:items-start gap-4 md:gap-6 flex-1 w-full">
                             {/* Avatar Cell */}
                             <div className="relative group shrink-0">
                                 <div className="absolute inset-0 bg-gradient-to-br from-brand-red to-purple-600 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity" />
                                 <button 
                                     onClick={() => setAvatarModalOpen(true)}
                                     className={clsx(
-                                        "w-20 h-20 md:w-36 md:h-36 rounded-full border-2 md:border-4 relative z-10 overflow-hidden transition-transform active:scale-95",
+                                        "w-20 h-20 md:w-32 md:h-32 rounded-full border-2 md:border-4 relative z-10 overflow-hidden transition-transform active:scale-95",
                                         profile.is_official 
-                                            ? "border-brand-red bg-white p-2 md:p-3 shadow-[0_0_40px_rgba(220,38,38,0.3)]" 
+                                            ? "border-brand-red bg-white p-2 md:p-2.5 shadow-[0_0_30px_rgba(220,38,38,0.2)]" 
                                             : "border-white/10 bg-gradient-to-br from-brand-red to-purple-600 p-0.5 md:p-1"
                                     )}
                                 >
@@ -124,7 +124,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             {/* Info & Buttons Cell */}
                             <div className="flex-1 text-left space-y-2 md:space-y-4 pt-1">
                                 <div>
-                                    <h1 className="text-2xl md:text-5xl font-black text-white italic uppercase tracking-tighter leading-none mb-1 flex items-center gap-3">
+                                    <h1 className="text-2xl md:text-4xl font-black text-white italic uppercase tracking-tighter leading-none mb-1 flex items-center gap-3">
                                         {profile.full_name}
                                         {profile.is_official && <VerifiedBadge size="lg" className="translate-y-[-2px]" />}
                                     </h1>
@@ -221,34 +221,34 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             </button>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-white/5">
+                        <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-white/5">
                             <button 
                                 onClick={() => scrollToSection('activity-feed', 'activity')}
-                                className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                                className="p-3 md:p-6 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
                             >
-                                <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.wods}</span>
+                                <span className="text-xl md:text-4xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.wods}</span>
                                 <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">WODS</span>
                             </button>
                             <button 
                                 onClick={() => scrollToSection('personal-records', 'stats')}
-                                className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                                className="p-3 md:p-6 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
                             >
-                                <span className="text-2xl md:text-5xl font-black text-brand-red italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.prs}</span>
+                                <span className="text-xl md:text-4xl font-black text-brand-red italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.prs}</span>
                                 <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">PRS</span>
                             </button>
                             <button 
                                 onClick={() => scrollToSection('combat-history', 'stats')}
-                                className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer"
+                                className="p-3 md:p-6 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group cursor-pointer border-t border-white/5 md:border-t-0"
                             >
-                                <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.retos}</span>
+                                <span className="text-xl md:text-4xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.retos}</span>
                                 <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">RETOS</span>
                             </button>
                             <button 
                                 onClick={() => handleOpenModal('followers')}
                                 disabled={!canViewContent && privacy === 'private' && !isFollowing && user?.id !== profile.id}
-                                className="p-4 md:p-8 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group disabled:opacity-50 cursor-pointer"
+                                className="p-3 md:p-6 flex flex-col items-center justify-center gap-0.5 hover:bg-white/[0.03] transition-colors group disabled:opacity-50 cursor-pointer border-t border-white/5 md:border-t-0"
                             >
-                                <span className="text-2xl md:text-5xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.followers}</span>
+                                <span className="text-xl md:text-4xl font-black text-white italic tracking-tighter tabular-nums group-hover:scale-110 transition-transform">{stats.followers}</span>
                                 <span className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.2em]">SEGUIDORES</span>
                             </button>
                         </div>

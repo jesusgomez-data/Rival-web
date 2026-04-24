@@ -517,9 +517,9 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-10 animate-fade-in pb-20">
+        <div className="max-w-7xl mx-auto pb-20 px-0 md:px-8 space-y-8 animate-fade-in">
             {/* Header / Banner */}
-            <div className={`relative group rounded-[40px] overflow-hidden border border-white/5 shadow-2xl dark-section ${isRepositioning ? 'cursor-ns-resize' : ''}`}>
+            <div className={`relative group rounded-none md:rounded-[40px] overflow-hidden border-b md:border border-white/5 shadow-2xl dark-section ${isRepositioning ? 'cursor-ns-resize' : ''}`}>
                 <div
                     className="h-64 bg-gradient-to-r from-brand-red via-brand-red/80 to-brand-gray relative group/cover select-none"
                     onMouseDown={handleMouseDown}
@@ -603,12 +603,12 @@ export default function ProfilePage() {
                     />
 
                     {/* Avatar and Profile Info INSIDE cover */}
-                    <div className="absolute bottom-0 left-0 right-0 p-8 flex items-end gap-6 z-10">
+                    <div className="absolute bottom-0 left-0 right-0 p-6 flex items-end gap-5 z-10">
                         <div className="relative group/avatar">
                             <div
                                 onClick={handleAvatarClick}
                                 className={clsx(
-                                    "w-32 h-32 rounded-3xl border-4 bg-brand-gray overflow-hidden relative shadow-2xl transition-all cursor-pointer",
+                                    "w-24 h-24 rounded-3xl border-4 bg-brand-gray overflow-hidden relative shadow-2xl transition-all cursor-pointer",
                                     hasActiveStory ? "border-brand-red shadow-glow" : "border-black group-hover/avatar:scale-[1.02]"
                                 )}
                             >
@@ -661,8 +661,8 @@ export default function ProfilePage() {
 
                         <div className="pb-2 flex flex-col sm:flex-row sm:items-end justify-between flex-1 gap-4">
                             <div>
-                                <h1 className="text-3xl font-heading font-black text-white keep-white italic uppercase tracking-tighter drop-shadow-lg">{profile?.full_name || 'Anonymous Athlete'}</h1>
-                                <p className="text-brand-red font-black tracking-widest text-xs uppercase mt-1 drop-shadow-md keep-white">@{profile?.username || 'user'}</p>
+                                <h1 className="text-2xl font-heading font-black text-white keep-white italic uppercase tracking-tighter drop-shadow-lg">{profile?.full_name || 'Anonymous Athlete'}</h1>
+                                <p className="text-brand-red font-black tracking-widest text-[10px] uppercase mt-0.5 drop-shadow-md keep-white">@{profile?.username || 'user'}</p>
                             </div>
                             <div className="flex gap-2 mb-2">
                                 {profile?.username && (
