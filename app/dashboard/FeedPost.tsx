@@ -1065,7 +1065,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                         {carouselIndex > 0 && (
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); setCarouselIndex(carouselIndex - 1); }}
-                                                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 hover:bg-black/60 backdrop-blur-md flex items-center justify-center text-white z-40 transition-all opacity-0 group-hover/carousel:opacity-100"
+                                                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md flex items-center justify-center text-white z-40 transition-all active:scale-90 shadow-lg border border-white/10"
                                             >
                                                 <ChevronLeft className="w-6 h-6" />
                                             </button>
@@ -1073,7 +1073,7 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                                         {carouselIndex < carouselItems.length - 1 && (
                                             <button 
                                                 onClick={(e) => { e.stopPropagation(); setCarouselIndex(carouselIndex + 1); }}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/30 hover:bg-black/60 backdrop-blur-md flex items-center justify-center text-white z-40 transition-all opacity-0 group-hover/carousel:opacity-100"
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 hover:bg-black/60 backdrop-blur-md flex items-center justify-center text-white z-40 transition-all active:scale-90 shadow-lg border border-white/10"
                                             >
                                                 <ChevronRight className="w-6 h-6" />
                                             </button>
