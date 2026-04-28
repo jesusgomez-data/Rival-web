@@ -1307,7 +1307,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     )}
 
                     {/* Normalized Workout Card (Endurance or Lift) */}
-                    {resolvedWorkoutData && !['pr', 'class_result', 'membership_activation'].includes(mediaType) && (
+                    {resolvedWorkoutData && !['pr', 'class_result', 'membership_activation'].includes(mediaType ?? '') && (
                         <WodCard
                             completionsCount={completionsCountWod}
                             hasCompleted={hasCompletedWod}

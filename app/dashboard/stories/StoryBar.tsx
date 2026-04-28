@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import MusicPicker from '../MusicPicker'
 import { MusicTrack } from '../music-data'
 import type { EmojiClickData, Theme } from 'emoji-picker-react'
+import dynamic from 'next/dynamic'
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false })
 import { createClient } from '@/utils/supabase/client'
 import VideoEditor from '@/components/video/VideoEditor'

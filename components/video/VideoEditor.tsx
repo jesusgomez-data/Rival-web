@@ -4,7 +4,9 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { X, Type, Smile, Loader2, Sparkles, ChevronRight, Music as MusicIcon, Scissors, Image as ImageIcon, Volume2, VolumeX, Zap, Play, Pause, SlidersHorizontal, Gauge, UserPlus, Search } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import clsx from 'clsx'
-import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react'
+import type { EmojiClickData } from 'emoji-picker-react'
+import dynamic from 'next/dynamic'
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false })
 import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
 
@@ -15,7 +17,23 @@ interface TextOverlay {
 interface StickerOverlay { id: string; emoji: string; x: number; y: number; size: number; }
 interface ImageOverlay { id: string; src: string; x: number; y: number; width: number; height: number; }
 interface TagOverlay { id: string; username: string; fullName: string; avatarUrl: string | null; x: number; y: number; }
+interface StatOverlay { id: string; template: string; value: string; label: string; unit: string; icon: string; x: number; y: number; style: 'dark'|'red'|'gold' }
 interface Adjustments { brightness: number; contrast: number; saturation: number; warmth: number; vignette: number; }
+
+const FITNESS_STATS = [
+    { id: 'kg',    label: 'KG LEVANTADOS', placeholder: '100', icon: '🏋️', unit: 'KG'   },
+    { id: 'rpe',   label: 'RPE',           placeholder: '9',   icon: '🔥', unit: '/10'  },
+    { id: 'sets',  label: 'SETS × REPS',   placeholder: '5×5', icon: '💪', unit: ''     },
+    { id: 'speed', label: 'VELOCIDAD',      placeholder: '8.5', icon: '⚡', unit: 'km/h' },
+    { id: 'pr',    label: 'NUEVO PR',       placeholder: '142', icon: '🏆', unit: 'KG'   },
+    { id: 'wod',   label: 'WOD SCORE',      placeholder: '245', icon: '⏱️', unit: 'pts'  },
+]
+
+const STAT_STYLES = [
+    { id: 'dark', label: 'DARK',  bg: 'rgba(0,0,0,0.75)', text: '#FFFFFF', accent: '#FF4C4C' },
+    { id: 'red',  label: 'RIVAL', bg: 'rgba(220,38,38,0.9)', text: '#FFFFFF', accent: '#FFD700' },
+    { id: 'gold', label: 'GOLD',  bg: 'rgba(180,130,0,0.9)', text: '#FFFFFF', accent: '#FFFFFF' },
+]
 
 interface UserProfile { id: string; username: string; full_name?: string; avatar_url?: string | null; }
 
@@ -135,11 +153,16 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const [imageOverlays, setImageOverlays] = useState<ImageOverlay[]>([])
     const [isSaving, setIsSaving]           = useState(false)
     const [saveProgress, setSaveProgress]   = useState(0)
-    const [activeTool, setActiveTool]       = useState<'filter'|'fx'|'adjust'|'speed'|'format'|'text'|'sticker'|'trim'|'image'|'music'|'tag'|'none'>('none')
+    const [activeTool, setActiveTool]       = useState<'filter'|'fx'|'adjust'|'speed'|'format'|'text'|'sticker'|'trim'|'image'|'music'|'tag'|'stats'|'fade'|'none'>('none')
     const [tagOverlays, setTagOverlays]     = useState<TagOverlay[]>([])
     const [tagSearch, setTagSearch]         = useState('')
     const [tagResults, setTagResults]       = useState<UserProfile[]>([])
     const [tagLoading, setTagLoading]       = useState(false)
+    const [statOverlays, setStatOverlays]   = useState<StatOverlay[]>([])
+    const [pendingStatStyle, setPendingStatStyle] = useState<'dark'|'red'|'gold'>('dark')
+    const [pendingFontSize, setPendingFontSize]   = useState(48)
+    const [fadeIn, setFadeIn]               = useState(false)
+    const [fadeOut, setFadeOut]             = useState(false)
     const [videoDuration, setVideoDuration] = useState(0)
     const [currentTime, setCurrentTime]     = useState(0)
     const [trimRange, setTrimRange]         = useState({ start: 0, end: 0 })
@@ -364,10 +387,24 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
         if (!pendingText.trim()) return
         setTextOverlays(prev => [...prev, {
             id: Date.now().toString(), text: pendingText, x: 50, y: 40,
-            fontSize: 48, color: activeTextColor, fontFamily: activeFont.family,
+            fontSize: pendingFontSize, color: activeTextColor, fontFamily: activeFont.family,
             style: activeFont.style, animation: pendingTextAnim
         }])
         setPendingText(''); setPendingTextAnim('none'); setActiveTool('none')
+    }
+
+    const addStatOverlay = (stat: typeof FITNESS_STATS[0]) => {
+        setStatOverlays(prev => [...prev, {
+            id: Date.now().toString(),
+            template: stat.id,
+            value: stat.placeholder,
+            label: stat.label,
+            unit: stat.unit,
+            icon: stat.icon,
+            x: 50, y: 35,
+            style: pendingStatStyle,
+        }])
+        setActiveTool('none')
     }
 
     const addSticker = (emojiData: EmojiClickData) => {
@@ -705,6 +742,61 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                         })
                     }
 
+                    if (statOverlays.length > 0) {
+                        const sc = canvas.height / 800
+                        statOverlays.forEach(so => {
+                            const ss = STAT_STYLES.find(s => s.id === so.style) || STAT_STYLES[0]
+                            const cx = (so.x/100)*canvas.width
+                            const cy = (so.y/100)*canvas.height
+                            const labelFs = 11 * sc
+                            const valueFs = 32 * sc
+                            const pad = 14 * sc
+                            const boxW = 130 * sc
+                            const boxH = 58 * sc
+                            ctx.save()
+                            ctx.globalAlpha = 0.92
+                            ctx.fillStyle = ss.bg
+                            ctx.beginPath()
+                            if (ctx.roundRect) {
+                                ctx.roundRect(cx - boxW/2, cy - boxH/2, boxW, boxH, 12*sc)
+                            } else {
+                                ctx.rect(cx - boxW/2, cy - boxH/2, boxW, boxH)
+                            }
+                            ctx.fill()
+                            ctx.globalAlpha = 1
+                            // Label row
+                            ctx.font = `800 ${labelFs}px Inter, sans-serif`
+                            ctx.fillStyle = ss.accent
+                            ctx.textAlign = 'left'
+                            ctx.fillText(`${so.icon} ${so.label}`, cx - boxW/2 + pad, cy - boxH/2 + pad + labelFs)
+                            // Value row
+                            ctx.font = `900 ${valueFs}px Inter, sans-serif`
+                            ctx.fillStyle = ss.text
+                            const displayVal = so.unit ? `${so.value} ${so.unit}` : so.value
+                            ctx.fillText(displayVal, cx - boxW/2 + pad, cy - boxH/2 + pad + labelFs + valueFs + 2*sc)
+                            ctx.restore()
+                        })
+                    }
+
+                    // Fade in/out overlays on canvas
+                    if (fadeIn || fadeOut) {
+                        const progress = (video.currentTime - trimRange.start) / durationToRecord
+                        if (fadeIn && progress < 0.2) {
+                            const alpha = 1 - (progress / 0.2)
+                            const g = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.35)
+                            g.addColorStop(0, `rgba(0,0,0,${alpha * 0.8})`)
+                            g.addColorStop(1, 'rgba(0,0,0,0)')
+                            ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height * 0.35)
+                        }
+                        if (fadeOut && progress > 0.8) {
+                            const alpha = (progress - 0.8) / 0.2
+                            const g = ctx.createLinearGradient(0, canvas.height, 0, canvas.height * 0.65)
+                            g.addColorStop(0, `rgba(0,0,0,${alpha * 0.8})`)
+                            g.addColorStop(1, 'rgba(0,0,0,0)')
+                            ctx.fillStyle = g; ctx.fillRect(0, canvas.height * 0.65, canvas.width, canvas.height * 0.35)
+                        }
+                    }
+
                     frameCount++;
                     if (recorder.state === 'recording') {
                         // Use modern API if available for sub-frame precision
@@ -747,7 +839,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     }
 
     // Called every frame during drag: moves element to pointer minus grab offset
-    const onOverlayDrag = (id: string, info: any, type: 'text'|'sticker'|'image'|'tag') => {
+    const onOverlayDrag = (id: string, info: any, type: 'text'|'sticker'|'image'|'tag'|'stat') => {
         if (!containerRef.current || dragState.current.id !== id) return
         const rect = containerRef.current.getBoundingClientRect()
         const xPct = clamp(((info.point.x - rect.left - dragState.current.ox) / rect.width)  * 100)
@@ -756,6 +848,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
         if (type === 'sticker') setStickerOverlays(p => p.map(s => s.id === id ? { ...s, x: xPct, y: yPct } : s))
         if (type === 'image')   setImageOverlays(p   => p.map(i => i.id === id ? { ...i, x: xPct, y: yPct } : i))
         if (type === 'tag')     setTagOverlays(p     => p.map(t => t.id === id ? { ...t, x: xPct, y: yPct } : t))
+        if (type === 'stat')    setStatOverlays(p    => p.map(s => s.id === id ? { ...s, x: xPct, y: yPct } : s))
     }
 
     // ── Trim handles ──────────────────────────────────────────────────────────
@@ -915,8 +1008,46 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                                     {selectedId===tag.id && <DeleteBtn small onClick={e => { e.stopPropagation(); setTagOverlays(p=>p.filter(t=>t.id!==tag.id)); setSelectedId(null) }} />}
                                 </motion.div>
                             ))}
+                            {statOverlays.map(so => {
+                                const ss = STAT_STYLES.find(s => s.id === so.style) || STAT_STYLES[0]
+                                return (
+                                    <motion.div key={so.id} drag dragMomentum={false} dragElastic={0}
+                                        dragConstraints={{ left:0, right:0, top:0, bottom:0 }}
+                                        onDragStart={(_, info) => onOverlayDragStart(so.id, so.x, so.y, info)}
+                                        onDrag={(_, info) => onOverlayDrag(so.id, info, 'stat')}
+                                        onClick={() => setSelectedId(so.id)}
+                                        className="absolute pointer-events-auto cursor-grab active:cursor-grabbing overflow-visible"
+                                        style={{ left:`${so.x}%`, top:`${so.y}%`, translateX:'-50%', translateY:'-50%' }}
+                                    >
+                                        <div className={clsx("rounded-2xl px-3 py-2 backdrop-blur-md border-2 shadow-2xl transition-all min-w-[90px]", selectedId===so.id ? "border-white" : "border-transparent")}
+                                            style={{ background: ss.bg }}>
+                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                                <span className="text-lg leading-none">{so.icon}</span>
+                                                <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: ss.accent }}>{so.label}</span>
+                                            </div>
+                                            <div className="flex items-baseline gap-1">
+                                                <input
+                                                    className="bg-transparent font-black text-2xl w-20 outline-none leading-none pointer-events-auto"
+                                                    style={{ color: ss.text }}
+                                                    value={so.value}
+                                                    onChange={e => setStatOverlays(p => p.map(s => s.id===so.id ? {...s, value: e.target.value} : s))}
+                                                    onClick={e => e.stopPropagation()}
+                                                    onPointerDown={e => e.stopPropagation()}
+                                                />
+                                                {so.unit && <span className="text-[9px] font-black" style={{ color: ss.accent }}>{so.unit}</span>}
+                                            </div>
+                                        </div>
+                                        {selectedId===so.id && <DeleteBtn small onClick={e => { e.stopPropagation(); setStatOverlays(p=>p.filter(s=>s.id!==so.id)); setSelectedId(null) }} />}
+                                    </motion.div>
+                                )
+                            })}
+
                         </AnimatePresence>
                     </div>
+
+                    {/* Fade overlays */}
+                    {fadeIn && <div className="absolute inset-0 pointer-events-none z-10" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 35%)' }}/>}
+                    {fadeOut && <div className="absolute inset-0 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 35%)' }}/>}
                 </div>
 
                 {/* Top bar */}
@@ -945,6 +1076,8 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                         <NavBtn icon={<ImageIcon size={17}/>}       onClick={() => { setActiveTool('image'); imageInputRef.current?.click() }} active={activeTool==='image'} title="Imagen" />
                         <NavBtn icon={<Type size={17}/>}            onClick={() => setActiveTool('text')}   active={activeTool==='text'}   title="Texto" />
                         <NavBtn icon={<UserPlus size={17}/>}        onClick={() => { setActiveTool('tag'); setTagSearch(''); setTagResults([]) }} active={activeTool==='tag'} title="Etiquetar" />
+                        <NavBtn icon={<span className="text-[11px] font-black leading-none">KG</span>} onClick={() => setActiveTool('stats')} active={activeTool==='stats'} title="Stats" />
+                        <NavBtn icon={<span className="text-[11px] font-black leading-none">✦</span>} onClick={() => setActiveTool('fade')} active={activeTool==='fade'} title="Fade" />
                     </div>
                     <button onClick={handleExport} disabled={isSaving}
                         className="w-14 h-14 bg-white text-black rounded-full shadow-2xl pointer-events-auto flex items-center justify-center hover:scale-110 active:scale-90 transition-all group"
@@ -1192,6 +1325,24 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                                 ))}
                             </div>
                         </div>
+                        <div className="mt-4 w-full max-w-sm flex items-center gap-3 px-2">
+                            <span className="text-[8px] font-black uppercase text-white/25 tracking-widest shrink-0">TAMAÑO</span>
+                            <input type="range" min={20} max={120} step={2} value={pendingFontSize}
+                                onChange={e => setPendingFontSize(parseInt(e.target.value))}
+                                className="flex-1 accent-brand-red h-1 cursor-pointer"
+                            />
+                            <span className="text-[10px] font-black text-white/40 w-8 shrink-0">{pendingFontSize}</span>
+                        </div>
+                        <div className="mt-4 w-full max-w-sm">
+                            <p className="text-[8px] font-black uppercase text-white/25 tracking-widest mb-2 text-center px-2">PLANTILLAS FITNESS</p>
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar px-2">
+                                {['PR NUEVO 🏆', 'DÍA DE PECHO 💪', 'MODO BESTIA 🔥', 'WOD COMPLETO ⚡', 'DEADLIFT DAY 🏋️', 'NO PAIN NO GAIN'].map(tmpl => (
+                                    <button key={tmpl} onClick={() => setPendingText(tmpl)}
+                                        className="px-3 py-2 rounded-full border border-white/10 text-[8px] font-black uppercase tracking-widest shrink-0 text-white/40 hover:text-white hover:border-white/30 transition-all whitespace-nowrap"
+                                    >{tmpl}</button>
+                                ))}
+                            </div>
+                        </div>
                         <div className="flex gap-8 mt-8">
                             <button onClick={() => { setPendingText(''); setActiveTool('none') }} className="text-white/30 font-black text-[10px] uppercase tracking-widest">ATRÁS</button>
                             <button onClick={addText} className="bg-white text-black px-10 py-4 rounded-full font-black text-[10px] uppercase shadow-2xl">AÑADIR</button>
@@ -1276,6 +1427,67 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                     </motion.div>
                 )}
 
+                {/* FITNESS STATS */}
+                {activeTool === 'stats' && (
+                    <motion.div initial={{y:300}} animate={{y:0}} exit={{y:300}} className="absolute bottom-0 left-0 right-0 z-[600] bg-black/95 pt-5 pb-20 border-t border-white/10 pointer-events-auto px-5">
+                        <p className="text-[9px] font-black italic uppercase tracking-[0.5em] text-white/30 mb-4 text-center">ESTADÍSTICAS FITNESS</p>
+                        <p className="text-[8px] font-black uppercase text-white/20 tracking-widest mb-3 text-center">ESTILO DE TARJETA</p>
+                        <div className="flex gap-2 justify-center mb-5">
+                            {STAT_STYLES.map(ss => (
+                                <button key={ss.id} onClick={() => setPendingStatStyle(ss.id as any)}
+                                    className={clsx("px-4 py-2 rounded-full border text-[9px] font-black uppercase tracking-widest transition-all", pendingStatStyle===ss.id ? "border-white text-white scale-110" : "border-white/10 text-white/30")}
+                                    style={{ background: pendingStatStyle===ss.id ? ss.bg : undefined }}
+                                >{ss.label}</button>
+                            ))}
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                            {FITNESS_STATS.map(stat => (
+                                <button key={stat.id} onClick={() => addStatOverlay(stat)}
+                                    className="flex flex-col items-center gap-1.5 p-3 rounded-2xl border border-white/10 bg-white/5 hover:border-white/30 active:scale-95 transition-all"
+                                >
+                                    <span className="text-2xl">{stat.icon}</span>
+                                    <span className="text-[8px] font-black uppercase tracking-widest text-white/50">{stat.label}</span>
+                                    <span className="text-xs font-black text-brand-red">{stat.placeholder}{stat.unit ? ` ${stat.unit}` : ''}</span>
+                                </button>
+                            ))}
+                        </div>
+                        <p className="text-[8px] text-white/20 text-center mt-3 font-bold">Toca para añadir · Edita el valor directamente en el video</p>
+                        <button onClick={() => setActiveTool('none')} className="w-full mt-3 py-4 bg-white/5 text-white/40 font-black text-[10px] uppercase tracking-widest rounded-full border border-white/5">LISTO</button>
+                    </motion.div>
+                )}
+
+                {/* FADE */}
+                {activeTool === 'fade' && (
+                    <motion.div initial={{y:250}} animate={{y:0}} exit={{y:250}} className="absolute bottom-0 left-0 right-0 z-[600] bg-black/95 pt-5 pb-20 border-t border-white/10 pointer-events-auto px-5">
+                        <p className="text-[9px] font-black italic uppercase tracking-[0.5em] text-white/30 mb-5 text-center">TRANSICIONES</p>
+                        <div className="space-y-3">
+                            <button onClick={() => setFadeIn(p => !p)}
+                                className={clsx("w-full flex items-center justify-between p-4 rounded-2xl border transition-all", fadeIn ? "bg-brand-red/20 border-brand-red" : "bg-white/5 border-white/10")}
+                            >
+                                <div className="text-left">
+                                    <p className={clsx("font-black text-sm", fadeIn ? "text-brand-red" : "text-white")}>FADE IN</p>
+                                    <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest">Oscurecer inicio del video</p>
+                                </div>
+                                <div className={clsx("w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all", fadeIn ? "bg-brand-red border-brand-red" : "border-white/20 bg-transparent")}>
+                                    {fadeIn && <span className="text-white font-black text-sm">✓</span>}
+                                </div>
+                            </button>
+                            <button onClick={() => setFadeOut(p => !p)}
+                                className={clsx("w-full flex items-center justify-between p-4 rounded-2xl border transition-all", fadeOut ? "bg-brand-red/20 border-brand-red" : "bg-white/5 border-white/10")}
+                            >
+                                <div className="text-left">
+                                    <p className={clsx("font-black text-sm", fadeOut ? "text-brand-red" : "text-white")}>FADE OUT</p>
+                                    <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest">Oscurecer final del video</p>
+                                </div>
+                                <div className={clsx("w-8 h-8 rounded-full flex items-center justify-center border-2 transition-all", fadeOut ? "bg-brand-red border-brand-red" : "border-white/20 bg-transparent")}>
+                                    {fadeOut && <span className="text-white font-black text-sm">✓</span>}
+                                </div>
+                            </button>
+                        </div>
+                        <button onClick={() => setActiveTool('none')} className="w-full mt-5 py-4 bg-white/5 text-white/40 font-black text-[10px] uppercase tracking-widest rounded-full border border-white/5">LISTO</button>
+                    </motion.div>
+                )}
+
             </AnimatePresence>
 
             {/* Saving overlay */}
@@ -1302,7 +1514,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                     <div className="fixed inset-0 z-[1000] flex items-end justify-center">
                         <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={() => setActiveTool('none')} className="absolute inset-0 bg-black/70 backdrop-blur-sm"/>
                         <motion.div initial={{y:"100%"}} animate={{y:0}} exit={{y:"100%"}} transition={{type:"spring",damping:30}} className="w-full max-w-5xl bg-[#111] rounded-t-[40px] p-8 h-[80vh] relative border-t border-white/5 pointer-events-auto">
-                            <EmojiPicker theme={Theme.DARK} width="100%" height="90%" skinTonesDisabled onEmojiClick={addSticker}/>
+                            <EmojiPicker theme={"dark" as any} width="100%" height="90%" skinTonesDisabled onEmojiClick={addSticker}/>
                         </motion.div>
                     </div>
                 )}
