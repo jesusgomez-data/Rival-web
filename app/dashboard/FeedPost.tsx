@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,11 +12,12 @@ import { addComment, getComments, deletePost, updatePost, toggleCommentLike, tog
 import { createRepost } from "./community/repost-actions";
 import { sharePostViaMessage } from "./community/dm-actions";
 import { getFollows } from "./community/follows-actions";
-import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
+import type { EmojiClickData } from 'emoji-picker-react';
 import { createClient } from "@/utils/supabase/client";
 import { clsx } from "clsx";
 import { useTheme } from "../ThemeContext";
-import { isImageUrl } from "@/lib/utils"; import { useStories } from "./stories/StoryContext";
+import { isImageUrl } from "@/lib/utils";
+import { useStories } from "./stories/StoryContext";
 import PRCard from "./community/PRCard";
 import VideoReelsModal from "./VideoReelsModal";
 import dynamic from 'next/dynamic';
@@ -33,6 +34,7 @@ import WodCard from "@/components/community/WodCard";
 import { useVideo } from "./VideoContext";
 import VerifiedBadge from "@/components/VerifiedBadge";
 
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 const InstagramShareCard = dynamic(() => import("./InstagramShareCard"), { ssr: false });
 
 
@@ -147,6 +149,11 @@ function ShareButton({
                 window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'image', url: photoUrl, postId } }));
             }
 
+        } else if (isVideo && image) {
+            // Share reel/video directly to story
+            window.dispatchEvent(new CustomEvent('share-to-story', {
+                detail: { type: 'video', url: image, postId }
+            }));
         } else {
             if (photoUrl) {
                 window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'image', url: photoUrl, postId } }));
@@ -394,7 +401,7 @@ interface Comment {
     replies?: Comment[];
 }
 
-export default function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId, centerName,
+const FeedPost = memo(function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId, centerName,
     workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global', isAdminUser, hasActiveDuel, post_type, wod_data, repostOriginalPost
 }: FeedPostProps) {
     const { theme } = useTheme();
@@ -1135,12 +1142,14 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
                         workoutData={resolvedWorkoutData}
                         mediaType={mediaType}
                         postId={postId}
+                        photoUrl={photoUrl}
+                        caption={caption}
                         className="text-zinc-400 hover:text-white transition-colors"
                         iconClassName="w-7 h-7"
                         onInstagramShare={() => setShowInstagramCard(true)}
                         onOpenShareCard={() => setShowShareCard(true)}
                         onDownloadMedia={handleDownloadMedia}
-                        isVideo={(isVideo || isImageUrl(image)) as boolean}
+                        isVideo={isVideo}
                         onRepostClick={() => setShowRepostModal(true)}
                         onMessageClick={() => { setShowDMModal(true); loadDMFollows(); }}
                     />
@@ -1702,7 +1711,9 @@ export default function FeedPost({ postId, username, user, action, time, avatar,
 
         </div>
     );
-}
+});
+
+export default FeedPost;
 
 function LikeButtonWithText({ postId, initialLikes, hasLikedInitial, text }: { postId: string, initialLikes: number, hasLikedInitial: boolean, text: string }) {
     const [likes, setLikes] = useState(initialLikes);

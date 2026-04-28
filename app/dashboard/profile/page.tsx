@@ -69,7 +69,14 @@ export default function ProfilePage() {
 
     useEffect(() => {
         async function loadProfile() {
-            const data = await getUserProfile();
+            // Fetch profile, trial, and stats in parallel
+            const [data, trial] = await Promise.all([
+                getUserProfile(),
+                getUpcomingTrial().catch(() => null)
+            ]);
+
+            if (trial) setUpcomingTrial(trial);
+
             if (data) {
                 setProfile(data);
                 setFormData({
@@ -86,19 +93,8 @@ export default function ProfilePage() {
                     birth_date_public: data.birth_date_public !== false,
                 });
 
-                // Load Combat Stats
                 const stats = await getCombatStats(data.id);
                 setCombatStats(stats);
-
-                // Load Upcoming Trial Request via Server Action (Bypassing RLS)
-                try {
-                    const trial = await getUpcomingTrial();
-                    if (trial) {
-                        setUpcomingTrial(trial);
-                    }
-                } catch (e) {
-                    console.error("Error loading trial:", e);
-                }
 
                 // Load Workouts
                 const { data: userWorkouts, error: workoutError } = await supabase

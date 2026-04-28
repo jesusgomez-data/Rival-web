@@ -7,13 +7,16 @@ import MentionInput from "@/components/MentionInput";
 import { createClient } from "@/utils/supabase/client";
 import { Trophy, Activity, AlertCircle, Dumbbell } from "lucide-react";
 import Image from "next/image";
-import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';
+import type { Theme, EmojiClickData } from 'emoji-picker-react';
+import dynamic from 'next/dynamic';
 import MusicPicker from "./MusicPicker";
 import { MusicTrack } from "./music-data";
 import WodCreator, { WodBlock, WodSummary, WorkoutCategory } from "@/components/training/WodCreator";
 import { useLanguage } from "@/app/LanguageContext";
 import VideoEditor from "@/components/video/VideoEditor";
 import clsx from "clsx";
+
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
 export default function CreatePost({ currentUser, onSuccess, initialPostType, initialData, editingPostId }: { currentUser: any, onSuccess?: () => void, initialPostType?: 'standard' | 'pr' | 'wod', initialData?: any, editingPostId?: string }) {
     const { language } = useLanguage();
@@ -489,7 +492,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                                 <div className="relative">
                                                     <div className="absolute -top-2 left-4 w-4 h-4 bg-[#1e1e1e] rotate-45 border-l border-t border-white/10" />
                                                     <EmojiPicker
-                                                        theme={Theme.DARK}
+                                                        theme={"dark" as any}
                                                         onEmojiClick={onEmojiClick}
                                                         width={320}
                                                         height={400}

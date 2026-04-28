@@ -13,7 +13,8 @@ import { useVideo } from '../VideoContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import MusicPicker from '../MusicPicker'
 import { MusicTrack } from '../music-data'
-import EmojiPicker, { EmojiClickData, Theme } from 'emoji-picker-react'
+import type { EmojiClickData, Theme } from 'emoji-picker-react'
+const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false })
 import { createClient } from '@/utils/supabase/client'
 import VideoEditor from '@/components/video/VideoEditor'
 import { Sparkles } from 'lucide-react'
@@ -233,7 +234,35 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
             const customEvent = e as CustomEvent;
             const { type, url } = customEvent.detail;
 
-            if (type === 'image' && url) {
+            if (type === 'video' && url) {
+                // Share reel directly to story as video
+                setIsUploading(true);
+                try {
+                    const response = await fetch(url);
+                    const blob = await response.blob();
+                    const file = new File([blob], "shared_reel.mp4", { type: blob.type || 'video/mp4' });
+                    setupPreview(file);
+
+                    if (customEvent.detail.postId) {
+                        const linkOverlay: OverlayElement = {
+                            id: Date.now().toString(),
+                            type: 'text',
+                            content: '🎬 VER REEL',
+                            x: 50,
+                            y: 85,
+                            scale: 1,
+                            rotation: 0,
+                            color: '#FFFFFF',
+                            link: `/dashboard`
+                        };
+                        setTimeout(() => setOverlays([linkOverlay]), 100);
+                    }
+                } catch (err) {
+                    console.error("Error preparing video story:", err);
+                } finally {
+                    setIsUploading(false);
+                }
+            } else if (type === 'image' && url) {
                 setIsUploading(true);
                 try {
                     // Fetch the image to use as the main story file (full screen background)
@@ -1555,7 +1584,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                         <button onClick={() => setShowEmojiPicker(false)} className="absolute -top-2 -right-2 bg-black/50 text-white rounded-full p-1 z-10"><X className="w-4 h-4" /></button>
                                         <EmojiPicker
                                             onEmojiClick={addEmojiOverlay}
-                                            theme={Theme.DARK}
+                                            theme={"dark" as any}
                                             lazyLoadEmojis={true}
                                             width={300}
                                             height={400}
