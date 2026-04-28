@@ -11,16 +11,24 @@ export async function getConversations() {
     if (!user) return []
 
     try {
-        const { data: participations, error } = await supabase
+        // Try with new group columns; fall back if migration hasn't run
+        let participations: any[] | null = null
+        const { data: p1, error: e1 } = await supabase
             .from('conversation_participants')
-            .select(`
-                conversation_id,
-                last_read_at,
-                conversations ( id, last_message_text, last_message_at, updated_at, is_group, group_name, group_avatar )
-            `)
+            .select(`conversation_id, last_read_at, conversations ( id, last_message_text, last_message_at, updated_at, is_group, group_name, group_avatar )`)
             .eq('user_id', user.id)
 
-        if (error || !participations?.length) return []
+        if (e1) {
+            const { data: p2 } = await supabase
+                .from('conversation_participants')
+                .select(`conversation_id, last_read_at, conversations ( id, last_message_text, last_message_at, updated_at )`)
+                .eq('user_id', user.id)
+            participations = p2
+        } else {
+            participations = p1
+        }
+
+        if (!participations?.length) return []
 
         const convIds = participations.map(p => p.conversation_id)
 
@@ -278,12 +286,27 @@ export async function getFriendsToChat() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
 
-    const { data: follows } = await supabase
+    // People I follow
+    const { data: following } = await supabase
         .from('follows')
         .select('profiles!following_id(id, username, full_name, avatar_url)')
         .eq('follower_id', user.id)
 
-    return follows?.map((f: any) => f.profiles).filter(Boolean) || []
+    // People who follow me
+    const { data: followers } = await supabase
+        .from('follows')
+        .select('profiles!follower_id(id, username, full_name, avatar_url)')
+        .eq('following_id', user.id)
+
+    const followingList = following?.map((f: any) => f.profiles).filter(Boolean) || []
+    const followersList = followers?.map((f: any) => f.profiles).filter(Boolean) || []
+
+    // Combine and remove duplicates
+    const combined = [...followingList, ...followersList]
+    const uniqueMap = new Map()
+    combined.forEach(p => uniqueMap.set(p.id, p))
+
+    return Array.from(uniqueMap.values())
 }
 
 export async function getOrCreateConversation(otherUserId: string) {
@@ -292,20 +315,56 @@ export async function getOrCreateConversation(otherUserId: string) {
     if (!user) return { error: 'Unauthorized' }
 
     try {
-        const { data: existing } = await supabase.rpc('get_conversation_between_users', {
+        // 1. Intentar con RPC (más eficiente)
+        const { data: existing, error: rpcError } = await supabase.rpc('get_conversation_between_users', {
             user_a: user.id,
             user_b: otherUserId
         })
 
-        if (existing && existing.length > 0) return { conversationId: existing[0].id }
+        if (!rpcError && existing && existing.length > 0) {
+            return { conversationId: existing[0].id }
+        }
 
+        // 2. Fallback manual si el RPC falla o no devuelve nada
+        const { data: myPartics } = await supabase
+            .from('conversation_participants')
+            .select('conversation_id')
+            .eq('user_id', user.id)
+
+        if (myPartics && myPartics.length > 0) {
+            const convIds = myPartics.map(p => p.conversation_id)
+            const { data: commonPartics } = await supabase
+                .from('conversation_participants')
+                .select('conversation_id')
+                .in('conversation_id', convIds)
+                .eq('user_id', otherUserId)
+                .limit(1)
+
+            if (commonPartics && commonPartics.length > 0) {
+                // Verificar que no sea un grupo
+                const { data: convInfo } = await supabase
+                    .from('conversations')
+                    .select('is_group')
+                    .eq('id', commonPartics[0].conversation_id)
+                    .single()
+                
+                if (convInfo && !convInfo.is_group) {
+                    return { conversationId: commonPartics[0].conversation_id }
+                }
+            }
+        }
+
+        // 3. Crear nueva si no existe
         const { data: newConv, error: convError } = await supabase
             .from('conversations')
             .insert({ is_group: false })
             .select()
             .single()
 
-        if (convError || !newConv) return { error: 'No se pudo crear la conversación.' }
+        if (convError || !newConv) {
+            console.error("Error creating conversation:", convError)
+            return { error: `No se pudo crear: ${convError?.message || 'Error desconocido'}` }
+        }
 
         const { error: participantsError } = await supabase
             .from('conversation_participants')
@@ -315,13 +374,15 @@ export async function getOrCreateConversation(otherUserId: string) {
             ])
 
         if (participantsError) {
+            console.error("Error adding participants:", participantsError)
             await supabase.from('conversations').delete().eq('id', newConv.id)
-            return { error: 'No se pudieron añadir los participantes.' }
+            return { error: `Error participantes: ${participantsError.message}` }
         }
 
         return { conversationId: newConv.id }
-    } catch (err) {
-        return { error: 'Error al crear la conversación.' }
+    } catch (err: any) {
+        console.error("Critical error in getOrCreateConversation:", err)
+        return { error: `Crisis: ${err.message || 'Error crítico'}` }
     }
 }
 

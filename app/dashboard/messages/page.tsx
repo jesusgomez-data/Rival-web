@@ -16,7 +16,7 @@ import { useSearchParams } from 'next/navigation'
 import { clsx } from 'clsx'
 import { Suspense } from 'react'
 import { usePresence } from '../PresenceContext'
-import { AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function MessagesPage() {
     return (
@@ -43,7 +43,15 @@ function MessagesContent() {
     const [currentUserId, setCurrentUserId] = useState<string>('')
     const [searchQuery, setSearchQuery] = useState('')
     const [isMobileListVisible, setIsMobileListVisible] = useState(true)
+    const [errorMsg, setErrorMsg] = useState<string | null>(null)
     const { onlineUsers } = usePresence()
+
+    useEffect(() => {
+        if (errorMsg) {
+            const t = setTimeout(() => setErrorMsg(null), 4000)
+            return () => clearTimeout(t)
+        }
+    }, [errorMsg])
 
     const supabase = createClient()
 
@@ -186,6 +194,7 @@ function MessagesContent() {
 
         if (result.error) {
             setMessages(prev => prev.filter(m => m.id !== tempId))
+            setErrorMsg("No se pudo enviar el mensaje")
         } else {
             setMessages(prev => {
                 if (prev.find(m => m.id === result.message.id)) return prev.filter(m => m.id !== tempId)
@@ -202,6 +211,8 @@ function MessagesContent() {
             await loadConversations()
             const person = friends.find(f => f.id === userId)
             handleSelectConversation(result.conversationId, person || { full_name: 'Nuevo Rival' })
+        } else {
+            setErrorMsg(result.error || "No se pudo iniciar el chat")
         }
     }
 
@@ -212,6 +223,8 @@ function MessagesContent() {
             await loadConversations()
             const members = friends.filter(f => memberIds.includes(f.id))
             handleSelectConversation(result.conversationId, { isGroup: true, groupName: name, members })
+        } else {
+            setErrorMsg(result.error || "No se pudo crear el grupo")
         }
     }
 
@@ -296,6 +309,21 @@ function MessagesContent() {
                         onClose={() => setIsGroupModalOpen(false)}
                         onCreate={handleCreateGroup}
                     />
+                )}
+            </AnimatePresence>
+
+            {/* Error Message */}
+            <AnimatePresence>
+                {errorMsg && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 50 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-red-500 text-white px-6 py-3 rounded-2xl shadow-2xl font-bold uppercase italic text-xs tracking-widest border border-white/20 flex items-center gap-3"
+                    >
+                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                        {errorMsg}
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>

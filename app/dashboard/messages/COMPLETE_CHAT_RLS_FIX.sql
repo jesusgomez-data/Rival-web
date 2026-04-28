@@ -13,7 +13,7 @@ BEGIN
         AND user_id = auth.uid()
     );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;OS 
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- 2. Update policies for conversation_participants
 ALTER TABLE public.conversation_participants ENABLE ROW LEVEL SECURITY;
