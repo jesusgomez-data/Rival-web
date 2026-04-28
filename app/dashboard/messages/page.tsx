@@ -5,17 +5,22 @@ import { createClient } from '@/utils/supabase/client'
 import ChatList from './ChatList'
 import ChatWindow from './ChatWindow'
 import NewChatModal from './NewChatModal'
-import { getConversations, getMessages, sendMessage, getOrCreateConversation, getFriendsToChat, deleteMessage, editMessage, uploadChatImage, toggleMessageLike, deleteConversation, markConversationAsRead } from './actions'
+import GroupChatModal from './GroupChatModal'
+import {
+    getConversations, getMessages, sendMessage, getOrCreateConversation,
+    getFriendsToChat, deleteMessage, editMessage, uploadChatImage, uploadChatVideo,
+    toggleMessageLike, deleteConversation, markConversationAsRead, createGroupConversation
+} from './actions'
 import { Loader2 } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 import { clsx } from 'clsx'
 import { Suspense } from 'react'
 import { usePresence } from '../PresenceContext'
-
+import { AnimatePresence } from 'framer-motion'
 
 export default function MessagesPage() {
     return (
-        <Suspense fallback={<div className="h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-brand-red w-10 h-10" /></div>}>
+        <Suspense fallback={<div className="h-screen flex items-center justify-center bg-[#060606]"><Loader2 className="animate-spin text-brand-red w-10 h-10" /></div>}>
             <MessagesContent />
         </Suspense>
     )
@@ -33,6 +38,7 @@ function MessagesContent() {
     const [isLoadingMessages, setIsLoadingMessages] = useState(false)
     const [otherParticipantLastRead, setOtherParticipantLastRead] = useState<string | null>(null)
     const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false)
+    const [isGroupModalOpen, setIsGroupModalOpen] = useState(false)
     const [friends, setFriends] = useState<any[]>([])
     const [currentUserId, setCurrentUserId] = useState<string>('')
     const [searchQuery, setSearchQuery] = useState('')
@@ -55,24 +61,20 @@ function MessagesContent() {
     }, [])
 
     const handleDeleteConversation = async () => {
-        if (!activeConversationId) return;
-
-        const result = await deleteConversation(activeConversationId);
+        if (!activeConversationId) return
+        const result = await deleteConversation(activeConversationId)
         if (result.success) {
-            setActiveConversationId(null);
-            setOtherPerson(null);
-            setMessages([]);
-            setIsMobileListVisible(true);
-            await loadConversations();
-        } else {
-            console.error('Error deleting conversation:', result.error)
+            setActiveConversationId(null)
+            setOtherPerson(null)
+            setMessages([])
+            setIsMobileListVisible(true)
+            await loadConversations()
         }
     }
 
     useEffect(() => {
         const init = async () => {
             try {
-
                 const { data: authData } = await supabase.auth.getUser()
                 const user = authData?.user
                 if (user) {
@@ -81,14 +83,12 @@ function MessagesContent() {
                     const friendsData = await getFriendsToChat()
                     setFriends(friendsData)
 
-                    // Si hay un userId en la URL, cargar esa conversación automáticamente
                     if (targetUserId) {
                         const result = await getOrCreateConversation(targetUserId)
                         if (result.conversationId) {
                             setActiveConversationId(result.conversationId)
-                            // Buscar a la persona en amigos o cargar sus datos básicos
                             const person = friendsData.find(f => f.id === targetUserId)
-                            setOtherPerson(person || { full_name: 'Direct Match' })
+                            setOtherPerson(person || { full_name: 'Rival' })
                             setIsMobileListVisible(false)
                             await loadMessages(result.conversationId)
                             await markConversationAsRead(result.conversationId)
@@ -105,112 +105,47 @@ function MessagesContent() {
         init()
     }, [loadConversations, targetUserId, loadMessages])
 
-    // NOTIFICACIONES EN TIEMPO REAL
+    // Real-time: user's conversations updates
     useEffect(() => {
         if (!currentUserId) return
-
-        // Subscribe only to changes in THIS user's conversation_participants rows.
-        // This fires when: a new conversation is created, last_read_at changes, etc.
-        // Removed the global messages INSERT (no filter = every message in the app).
         const updatesChannel = supabase
             .channel(`user-updates-${currentUserId}`)
-            .on('postgres_changes', {
-                event: '*',
-                schema: 'public',
-                table: 'conversation_participants',
-                filter: `user_id=eq.${currentUserId}`
-            }, async () => {
-                await loadConversations()
-            })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'conversation_participants', filter: `user_id=eq.${currentUserId}` },
+                async () => { await loadConversations() })
             .subscribe()
-
-        return () => {
-            supabase.removeChannel(updatesChannel)
-        }
+        return () => { supabase.removeChannel(updatesChannel) }
     }, [currentUserId, loadConversations])
 
-    // ACTUALIZACIÓN DE LA VENTANA DE CHAT ACTIVA
+    // Real-time: active chat messages
     useEffect(() => {
         if (!activeConversationId) return
 
         const channel = supabase
             .channel(`active-chat-${activeConversationId}`)
-            .on('postgres_changes', {
-                event: 'INSERT',
-                schema: 'public',
-                table: 'messages',
-                filter: `conversation_id=eq.${activeConversationId}`
-            }, (payload: any) => {
-                const newMessage = payload.new
-
-                if (newMessage.sender_id !== currentUserId && activeConversationId) {
-                    markConversationAsRead(activeConversationId).then(() => {
-                        // Actualizar localmente para evitar parpadeos
-                        setConversations(prev => prev.map(c => 
-                            c.id === activeConversationId ? { ...c, unread_count: 0 } : c
-                        ))
-                    })
-                }
-
-                setMessages(prev => {
-                    // 1. Evitar duplicado exacto por ID
-                    if (prev.find(m => m.id === newMessage.id)) return prev
-
-                    // 2. Si es nuestro, buscar el mensaje temporal por contenido reciente
-                    // Esto evita el duplicado instantáneo que ocurre al recibir el evento
-                    // de un mensaje que nosotros mismos acabamos de enviar
-                    if (newMessage.sender_id === currentUserId) {
-                        const tempMsgIndex = prev.findIndex(m =>
-                            m.sender_id === currentUserId &&
-                            m.text === newMessage.text &&
-                            m.id.toString().startsWith('temp-')
-                        )
-
-                        if (tempMsgIndex !== -1) {
-                            const updatedMsgs = [...prev]
-                            updatedMsgs[tempMsgIndex] = newMessage
-                            return updatedMsgs
-                        }
-
-                        // Si ya está el mensaje real pero sin ID temporal (raro pero posible)
-                        // no lo añadimos de nuevo
-                        return prev
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` },
+                (payload: any) => {
+                    const newMessage = payload.new
+                    if (newMessage.sender_id !== currentUserId && activeConversationId) {
+                        markConversationAsRead(activeConversationId).then(() => {
+                            setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, unread_count: 0 } : c))
+                        })
                     }
-
-                    return [...prev, newMessage]
+                    setMessages(prev => {
+                        if (prev.find(m => m.id === newMessage.id)) return prev
+                        if (newMessage.sender_id === currentUserId) {
+                            const tempIdx = prev.findIndex(m => m.sender_id === currentUserId && m.text === newMessage.text && m.id.toString().startsWith('temp-'))
+                            if (tempIdx !== -1) { const u = [...prev]; u[tempIdx] = newMessage; return u }
+                            return prev
+                        }
+                        return [...prev, newMessage]
+                    })
                 })
-            })
-            .on('postgres_changes', {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'messages',
-                filter: `conversation_id=eq.${activeConversationId}`
-            }, (payload: any) => {
-                setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m))
-            })
-            .on('postgres_changes', {
-                event: 'DELETE',
-                schema: 'public',
-                table: 'messages',
-                filter: `conversation_id=eq.${activeConversationId}`
-            }, (payload: any) => {
-                // Nota: DELETE payload.old o payload.new depende de la réplica, usualmente old.id
-                const deletedId = payload.old?.id
-                if (deletedId) {
-                    setMessages(prev => prev.filter(m => m.id !== deletedId))
-                }
-            })
-            .on('postgres_changes', {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'conversation_participants',
-                filter: `conversation_id=eq.${activeConversationId}`
-            }, (payload: any) => {
-                // Si la otra persona ha leído, actualizamos su timestamp
-                if (payload.new.user_id !== currentUserId) {
-                    setOtherParticipantLastRead(payload.new.last_read_at)
-                }
-            })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` },
+                (payload: any) => { setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m)) })
+            .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` },
+                (payload: any) => { const id = payload.old?.id; if (id) setMessages(prev => prev.filter(m => m.id !== id)) })
+            .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'conversation_participants', filter: `conversation_id=eq.${activeConversationId}` },
+                (payload: any) => { if (payload.new.user_id !== currentUserId) setOtherParticipantLastRead(payload.new.last_read_at) })
             .subscribe()
 
         return () => { supabase.removeChannel(channel) }
@@ -223,20 +158,16 @@ function MessagesContent() {
             setIsMobileListVisible(false)
             await loadMessages(id)
             await markConversationAsRead(id)
-            // Actualización optimista inmediata
-            setConversations(prev => prev.map(c => 
-                c.id === id ? { ...c, unread_count: 0 } : c
-            ))
+            setConversations(prev => prev.map(c => c.id === id ? { ...c, unread_count: 0 } : c))
             await loadConversations()
         } catch (err) {
             console.error("Error al seleccionar:", err)
         }
     }
 
-    const handleSendMessage = async (text: string, imageUrl?: string) => {
+    const handleSendMessage = async (text: string, imageUrl?: string, videoUrl?: string, isViewOnce?: boolean) => {
         if (!activeConversationId) return
 
-        // Optimistic UI: Añadir el mensaje localmente rápido
         const tempId = `temp-${Date.now()}-${Math.random()}`
         const tempMsg = {
             id: tempId,
@@ -244,23 +175,20 @@ function MessagesContent() {
             sender_id: currentUserId,
             text,
             image_url: imageUrl,
+            video_url: videoUrl,
+            is_view_once: isViewOnce || false,
+            type: isViewOnce ? (videoUrl ? 'view_once_video' : 'view_once_image') : videoUrl ? 'video' : imageUrl ? 'image' : 'text',
             created_at: new Date().toISOString()
         }
         setMessages(prev => [...prev, tempMsg])
 
-        const result = await sendMessage(activeConversationId, text, imageUrl)
+        const result = await sendMessage(activeConversationId, text, imageUrl, videoUrl, isViewOnce)
 
         if (result.error) {
             setMessages(prev => prev.filter(m => m.id !== tempId))
-            console.error('Error sending message:', result.error)
         } else {
-            // Reemplazar mensaje temporal con el real de forma segura
             setMessages(prev => {
-                // Si el listener ya lo reemplazó o lo añadió por ID real
-                if (prev.find(m => m.id === result.message.id)) {
-                    return prev.filter(m => m.id !== tempId)
-                }
-                // Si no, reemplazamos el temporal
+                if (prev.find(m => m.id === result.message.id)) return prev.filter(m => m.id !== tempId)
                 return prev.map(m => m.id === tempId ? result.message : m)
             })
             await loadConversations()
@@ -274,36 +202,47 @@ function MessagesContent() {
             await loadConversations()
             const person = friends.find(f => f.id === userId)
             handleSelectConversation(result.conversationId, person || { full_name: 'Nuevo Rival' })
-        } else {
-            console.error('Error creating conversation:', result.error)
+        }
+    }
+
+    const handleCreateGroup = async (name: string, memberIds: string[]) => {
+        setIsGroupModalOpen(false)
+        const result = await createGroupConversation(name, memberIds)
+        if (result.conversationId) {
+            await loadConversations()
+            const members = friends.filter(f => memberIds.includes(f.id))
+            handleSelectConversation(result.conversationId, { isGroup: true, groupName: name, members })
         }
     }
 
     const handleToggleLike = async (messageId: string, currentStatus: boolean) => {
-        // Optimistic update
         setMessages(prev => prev.map(m => m.id === messageId ? { ...m, is_liked: !currentStatus } : m))
-
         const result = await toggleMessageLike(messageId, currentStatus)
         if (result.error) {
-            // Revert on error
             setMessages(prev => prev.map(m => m.id === messageId ? { ...m, is_liked: currentStatus } : m))
-            console.error("Error toggling like:", result.error)
         }
     }
 
-    const filteredConversations = conversations.filter(conv =>
-        conv.other_person?.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        conv.other_person?.username?.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const filteredConversations = conversations.filter(conv => {
+        const q = searchQuery.toLowerCase()
+        if (!q) return true
+        if (conv.is_group) return conv.group_name?.toLowerCase().includes(q)
+        return conv.other_person?.full_name?.toLowerCase().includes(q) || conv.other_person?.username?.toLowerCase().includes(q)
+    })
 
     if (isLoadingConversations) {
-        return <div className="h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-brand-red w-10 h-10" /></div>
+        return <div className="h-screen flex items-center justify-center bg-[#060606]"><Loader2 className="animate-spin text-brand-red w-10 h-10" /></div>
     }
 
+    const activeConv = conversations.find(c => c.id === activeConversationId)
+    const isGroupChat = activeConv?.is_group
+
     return (
-        <div className="h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] bg-background flex text-foreground overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-border shadow-2xl mx-auto max-w-[1600px] my-0 md:my-4 transition-all duration-500">
+        <div className="h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] bg-[#060606] flex text-white overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-white/[0.05] shadow-2xl mx-auto max-w-[1600px] my-0 md:my-4">
+
+            {/* Sidebar */}
             <div className={clsx(
-                "w-full md:w-[350px] lg:w-[420px] shrink-0 border-r border-border flex flex-col bg-card",
+                "w-full md:w-[340px] lg:w-[400px] shrink-0 border-r border-white/[0.05] flex flex-col",
                 !isMobileListVisible ? 'hidden md:flex' : 'flex'
             )}>
                 <ChatList
@@ -312,13 +251,15 @@ function MessagesContent() {
                     onSelect={handleSelectConversation}
                     onSearch={setSearchQuery}
                     onNewChat={() => setIsNewChatModalOpen(true)}
+                    onNewGroup={() => setIsGroupModalOpen(true)}
                 />
             </div>
 
+            {/* Chat window */}
             <div className={clsx(
-                "flex-1 flex flex-col transition-all duration-300 bg-background overflow-hidden",
+                "flex-1 flex flex-col overflow-hidden",
                 !isMobileListVisible
-                    ? "fixed inset-0 z-[110] bg-background animate-in slide-in-from-right duration-300 lg:relative lg:inset-auto lg:z-auto lg:animate-none top-0 bottom-0 left-0 right-0"
+                    ? "fixed inset-0 z-[110] bg-[#060606] animate-in slide-in-from-right duration-300 lg:relative lg:inset-auto lg:z-auto lg:animate-none"
                     : "hidden md:flex"
             )}>
                 <ChatWindow
@@ -328,6 +269,7 @@ function MessagesContent() {
                     conversationId={activeConversationId}
                     onSendMessage={handleSendMessage}
                     onUploadImage={uploadChatImage}
+                    onUploadVideo={uploadChatVideo}
                     onDeleteMessage={deleteMessage}
                     onEditMessage={editMessage}
                     onToggleLike={handleToggleLike}
@@ -335,17 +277,27 @@ function MessagesContent() {
                     isLoading={isLoadingMessages}
                     otherParticipantLastRead={otherParticipantLastRead}
                     onBack={() => setIsMobileListVisible(true)}
-                    isOnline={otherPerson ? onlineUsers.has(otherPerson.id) : false}
+                    isOnline={isGroupChat ? false : (otherPerson ? onlineUsers.has(otherPerson.id) : false)}
                 />
             </div>
 
-            {isNewChatModalOpen && (
-                <NewChatModal
-                    friends={friends}
-                    onClose={() => setIsNewChatModalOpen(false)}
-                    onSelect={handleNewChat}
-                />
-            )}
+            {/* Modals */}
+            <AnimatePresence>
+                {isNewChatModalOpen && (
+                    <NewChatModal
+                        friends={friends}
+                        onClose={() => setIsNewChatModalOpen(false)}
+                        onSelect={handleNewChat}
+                    />
+                )}
+                {isGroupModalOpen && (
+                    <GroupChatModal
+                        friends={friends}
+                        onClose={() => setIsGroupModalOpen(false)}
+                        onCreate={handleCreateGroup}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     )
 }
