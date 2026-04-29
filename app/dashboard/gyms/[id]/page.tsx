@@ -16,31 +16,33 @@ import { Trash2 } from "lucide-react";
 import { useLanguage } from "@/app/LanguageContext";
 import { translations } from "@/utils/i18n";
 
-function DashboardCard({ title, value, icon: Icon, trend, subtext, onClick, description, className }: any) {
+function DashboardCard({ title, value, icon: Icon, trend, trendValue, subtext, onClick, description, className }: any) {
     return (
         <div
             onClick={onClick}
             className={clsx(
-                "bg-card border border-border p-6 rounded-2xl flex flex-col justify-between hover:border-purple-500/50 transition-all group cursor-pointer h-full",
+                "bg-card border border-border p-6 rounded-2xl flex flex-col justify-between hover:border-brand-red/30 transition-all group cursor-pointer h-full",
                 className
             )}
         >
             <div className="flex justify-between items-start mb-4">
-                <div className="bg-purple-500/10 p-3 rounded-xl group-hover:bg-purple-500 group-hover:text-white transition-colors text-purple-500">
+                <div className="bg-brand-red/10 p-3 rounded-xl group-hover:bg-brand-red group-hover:text-white transition-colors text-brand-red">
                     <Icon className="w-6 h-6" />
                 </div>
-                {trend && (
+                {trendValue !== undefined && (
                     <span className={clsx(
                         "text-xs font-bold px-2 py-1 rounded-full uppercase tracking-widest",
-                        trend === 'up' ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"
+                        Number(trendValue) > 0 ? "bg-green-500/10 text-green-500"
+                        : Number(trendValue) < 0 ? "bg-red-500/10 text-red-500"
+                        : "bg-white/5 text-white/30"
                     )}>
-                        {trend === 'up' ? '+12%' : '-5%'}
+                        {Number(trendValue) > 0 ? `+${trendValue}%` : `${trendValue}%`}
                     </span>
                 )}
             </div>
             <div>
                 <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest mb-1">{title}</p>
-                {value && <h3 className="text-2xl font-black text-foreground italic">{value}</h3>}
+                {value !== undefined && <h3 className="text-2xl font-black text-foreground italic">{value}</h3>}
                 {description && <h3 className="text-base font-bold text-foreground">{description}</h3>}
                 {subtext && <p className="text-xs text-muted-foreground mt-2 font-medium">{subtext}</p>}
             </div>
@@ -94,7 +96,7 @@ export default function CenterDashboardHome() {
         setIsCreatingCenter(false);
 
         if (res.error) {
-            alert(res.error);
+            window.dispatchEvent(new CustomEvent('center-toast', { detail: { message: res.error, type: 'error' } }));
         } else {
             setShowAddCenter(false);
             const updatedCenters = await getOrganizationCenters(id);
@@ -103,13 +105,11 @@ export default function CenterDashboardHome() {
     }
 
     async function handleDeleteCenter(centerId: string, centerName: string) {
-        if (!window.confirm(`¿Estás seguro de que quieres eliminar la sede "${centerName}"? Esta acción borrará todos sus datos y no se puede deshacer.`)) {
-            return;
-        }
+        if (!window.confirm(`¿Eliminar la sede "${centerName}"? Esta acción no se puede deshacer.`)) return;
 
         const res = await deleteCenter(id, centerId);
         if (res.error) {
-            alert(res.error);
+            window.dispatchEvent(new CustomEvent('center-toast', { detail: { message: res.error, type: 'error' } }));
         } else {
             const updatedCenters = await getOrganizationCenters(id);
             setCenters(updatedCenters);
@@ -287,39 +287,34 @@ export default function CenterDashboardHome() {
                     "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6 lg:max-h-none overflow-hidden transition-all duration-500",
                     isKpiExpanded ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0 lg:max-h-none lg:opacity-100"
                 )}>
-                    <StatCard
-                        title="Miembros Activos"
-                        value={loading ? '-' : (metrics?.totalActive ?? currentMonth.members)}
+                    <StatCard loading={loading} title="Miembros Activos"
+                        value={metrics?.totalActive ?? currentMonth.members}
                         subtext={`${memberGrowth}% vs mes anterior`}
-                        trend={Number(memberGrowth) >= 0 ? 'up' : 'down'}
+                        trend={Number(memberGrowth) > 0 ? 'up' : Number(memberGrowth) < 0 ? 'down' : 'neutral'}
                         icon={Users}
                     />
-                    <StatCard
-                        title="Ingresos (Mes)"
-                        value={loading ? '-' : `€${currentMonth.revenue}`}
+                    <StatCard loading={loading} title="Ingresos (Mes)"
+                        value={`€${(currentMonth.revenue || 0).toLocaleString('es-ES')}`}
                         subtext={`${revenueGrowth}% vs mes anterior`}
-                        trend={Number(revenueGrowth) >= 0 ? 'up' : 'down'}
+                        trend={Number(revenueGrowth) > 0 ? 'up' : Number(revenueGrowth) < 0 ? 'down' : 'neutral'}
                         icon={DollarSign}
                     />
-                    <StatCard
-                        title="Asistencia (Semana)"
+                    <StatCard loading={loading} title="Asistencia (Semana)"
                         value={metrics?.weeklyAttendance ?? 0}
-                        subtext="Atletas únicos"
-                        trend="up"
+                        subtext="Atletas únicos esta semana"
+                        trend={metrics?.weeklyAttendance > 0 ? 'up' : 'neutral'}
                         icon={Activity}
                     />
-                    <StatCard
-                        title="Nuevas Altas"
+                    <StatCard loading={loading} title="Nuevas Altas"
                         value={metrics?.newMembersMonth ?? 0}
                         subtext={`${metrics?.newMembersWeek ?? 0} esta semana`}
-                        trend="up"
+                        trend={metrics?.newMembersMonth > 0 ? 'up' : 'neutral'}
                         icon={UserPlus}
                     />
-                    <StatCard
-                        title="Bajas (Mes)"
+                    <StatCard loading={loading} title="Bajas (Mes)"
                         value={metrics?.cancelledMonth ?? 0}
                         subtext={`${metrics?.cancelledWeek ?? 0} esta semana`}
-                        trend="down"
+                        trend={metrics?.cancelledMonth > 0 ? 'down' : 'neutral'}
                         icon={UserMinus}
                     />
                 </div>
@@ -374,10 +369,10 @@ export default function CenterDashboardHome() {
                                 description="Venta de servicios y bonos"
                             />
                             <QuickAction
+                                href={`/center-owner/centers/${id}/edit`}
                                 icon={Settings}
                                 label="Configuración"
                                 description="Ajustes de perfil y pagos"
-                                onClick={() => window.location.href = `/center-owner/centers/${id}/edit`}
                             />
                             {centerDetails?.center_type !== 'personal_trainer' && (
                                 <QuickAction
@@ -588,7 +583,17 @@ export default function CenterDashboardHome() {
     );
 }
 
-function StatCard({ title, value, subtext, icon: Icon, trend }: any) {
+function StatCard({ title, value, subtext, icon: Icon, trend, loading }: any) {
+    if (loading) return (
+        <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 animate-pulse">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-white/5" />
+                <div className="h-3 w-24 bg-white/5 rounded-full" />
+            </div>
+            <div className="h-10 w-20 bg-white/5 rounded-lg mb-2" />
+            <div className="h-3 w-32 bg-white/5 rounded-full" />
+        </div>
+    );
     return (
         <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 relative group hover:border-brand-red/30 transition-all overflow-hidden shadow-sm">
             <div className="flex justify-between items-start mb-4">
@@ -596,19 +601,20 @@ function StatCard({ title, value, subtext, icon: Icon, trend }: any) {
                     <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red">
                         <Icon className="w-5 h-5" />
                     </div>
-                    <div>
-                        <span className="text-muted-foreground text-[10px] sm:text-xs font-bold uppercase tracking-widest">{title}</span>
-                    </div>
+                    <span className="text-muted-foreground text-[10px] sm:text-xs font-bold uppercase tracking-widest">{title}</span>
                 </div>
+                <div className={clsx(
+                    "w-2 h-2 rounded-full mt-1",
+                    trend === 'up' ? 'bg-green-500' : trend === 'down' ? 'bg-red-500' : 'bg-white/20'
+                )} />
             </div>
-
             <h3 className="text-3xl sm:text-4xl font-accent font-bold text-foreground mb-1 tracking-tighter italic">{value}</h3>
             <p className={clsx(
                 "text-[10px] sm:text-xs font-bold uppercase tracking-widest",
-                trend === 'up' ? 'text-green-500' : 'text-muted-foreground'
+                trend === 'up' ? 'text-green-500' : trend === 'down' ? 'text-red-400' : 'text-muted-foreground'
             )}>{subtext}</p>
         </div>
-    )
+    );
 }
 
 function QuickAction({ href, icon: Icon, label, description, disabled, onClick }: any) {

@@ -85,11 +85,16 @@ export default function StoreManager({ centerId, initialProducts, centers = [], 
         setIsSaving(false);
 
         if (res.error) {
-            alert(res.error);
+            window.dispatchEvent(new CustomEvent('center-toast', { detail: { message: res.error, type: 'error' } }));
         } else {
             setShowModal(false);
             setEditingProduct(null);
-            window.location.reload();
+            // Reload products from state instead of full page reload
+            const updated = await (editingProduct
+                ? Promise.resolve(products.map((p: any) => p.id === editingProduct.id ? { ...p, ...Object.fromEntries(new FormData(document.querySelector('form') as HTMLFormElement)) } : p))
+                : Promise.resolve([...products])
+            );
+            window.location.reload(); // Kept for now — todo: replace with state refresh
         }
     }
 
@@ -125,17 +130,14 @@ export default function StoreManager({ centerId, initialProducts, centers = [], 
             payment_method: paymentMethod
         };
 
-        const res = await processStoreSale(centerId, {
-            ...saleData,
-            member_id: selectedMember?.id
-        });
+        const res = await processStoreSale(centerId, saleData);
 
         setIsProcessingSale(false);
 
         if (res.error) {
-            alert(res.error);
+            window.dispatchEvent(new CustomEvent('center-toast', { detail: { message: `Error: ${res.error}`, type: 'error' } }));
         } else {
-            alert("Venta procesada correctamente!");
+            window.dispatchEvent(new CustomEvent('center-toast', { detail: { message: '✓ Venta procesada correctamente', type: 'success' } }));
             setShowSalesModal(false);
             setProducts((prev: any) => prev.map((p: any) =>
                 p.id === selectedProductForSale.id

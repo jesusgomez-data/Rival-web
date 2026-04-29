@@ -1,12 +1,49 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { LogOut, Menu, X } from 'lucide-react';
+import { LogOut, Menu, X, CheckCircle2, AlertCircle } from 'lucide-react';
 import NotificationBell from '../../NotificationBell';
 import GlobalSearch from '../../GlobalSearch';
 import ThemeToggle from '@/components/ThemeToggle';
 import SidebarNav from './SidebarNav';
+import { motion, AnimatePresence } from 'framer-motion';
+
+function CenterToast() {
+    const [toast, setToast] = useState<{ message: string; type: 'error' | 'success' | 'info' } | null>(null);
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { message, type } = (e as CustomEvent).detail;
+            setToast({ message, type });
+            const t = setTimeout(() => setToast(null), 4500);
+            return () => clearTimeout(t);
+        };
+        window.addEventListener('center-toast', handler);
+        return () => window.removeEventListener('center-toast', handler);
+    }, []);
+    return (
+        <AnimatePresence>
+            {toast && (
+                <motion.div
+                    initial={{ opacity: 0, y: 24, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 24 }}
+                    transition={{ type: 'spring', stiffness: 500, damping: 35 }}
+                    className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl font-bold text-sm whitespace-nowrap max-w-sm text-center ${
+                        toast.type === 'error' ? 'bg-red-500 text-white'
+                        : toast.type === 'success' ? 'bg-green-600 text-white'
+                        : 'bg-zinc-800 text-white border border-white/10'
+                    }`}
+                >
+                    {toast.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" />
+                    : toast.type === 'success' ? <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    : <CheckCircle2 className="w-4 h-4 shrink-0 text-blue-400" />}
+                    {toast.message}
+                </motion.div>
+            )}
+        </AnimatePresence>
+    );
+}
 
 interface GymLayoutClientProps {
     org: any;
@@ -29,6 +66,7 @@ export default function GymLayoutClient({
 
     return (
         <div className="flex h-[100dvh] bg-background overflow-hidden font-sans">
+            <CenterToast />
             {/* Backdrop para móvil */}
             {sidebarOpen && (
                 <div
@@ -123,6 +161,7 @@ export default function GymLayoutClient({
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0">
+                            <NotificationBell />
                             <ThemeToggle className="bg-transparent border-none p-1.5 shadow-none" />
                             {/* User Profile for Mobile */}
                             <Link href="/dashboard/profile" className="w-7 h-7 rounded-full bg-brand-gray border border-white/10 overflow-hidden">
