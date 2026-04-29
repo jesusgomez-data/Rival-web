@@ -31,7 +31,19 @@ CREATE POLICY "Users manage own body stats"
     USING (auth.uid() = user_id)
     WITH CHECK (auth.uid() = user_id);
 
--- 4. Enable realtime for instant UI updates
+-- 4. Add unique constraint to existing table (safe — skips if already exists)
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'body_stats_user_id_recorded_at_key'
+          AND conrelid = 'body_stats'::regclass
+    ) THEN
+        ALTER TABLE body_stats ADD CONSTRAINT body_stats_user_id_recorded_at_key UNIQUE (user_id, recorded_at);
+    END IF;
+END $$;
+
+-- 5. Enable realtime for instant UI updates
 ALTER TABLE body_stats REPLICA IDENTITY FULL;
 
 -- 5. Enable realtime for notifications table (fixes slow notifications)

@@ -26,13 +26,33 @@ export async function logBodyStats(data: {
 
     const today = data.recorded_at || new Date().toISOString().split('T')[0]
 
-    const { error } = await supabase
+    // Check if a row already exists for this user+date
+    const { data: existing } = await supabase
         .from('body_stats')
-        .upsert({
-            user_id: user.id,
-            recorded_at: today,
-            ...data,
-        }, { onConflict: 'user_id,recorded_at' })
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('recorded_at', today)
+        .maybeSingle()
+
+    let error: any
+    if (existing) {
+        // UPDATE — merge with existing row (don't overwrite nulls with empty values)
+        const updatePayload: any = {}
+        Object.entries(data).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && k !== 'recorded_at') updatePayload[k] = v
+        })
+        const res = await supabase
+            .from('body_stats')
+            .update(updatePayload)
+            .eq('id', existing.id)
+        error = res.error
+    } else {
+        // INSERT — new row for today
+        const res = await supabase
+            .from('body_stats')
+            .insert({ user_id: user.id, recorded_at: today, ...data })
+        error = res.error
+    }
 
     if (error) return { error: error.message }
 
