@@ -73,10 +73,24 @@ export async function createNotification({ userId, type, title, content, link }:
         console.error(`[createNotification] Database error:`, error);
         return { error: error.message };
     }
-    console.log(`[createNotification] Success! Inserted:`, insertData);
 
-    // Send Push Notification
-    // Don't await this to avoid slowing down the response
+    const inserted = insertData?.[0];
+
+    // ── Broadcast to user's realtime channel for INSTANT delivery ──────────────
+    // This fires before postgres_changes propagates, so the bell updates immediately
+    if (inserted) {
+        const broadcastClient = createAdminClient();
+        broadcastClient
+            .channel(`notifications-live-${userId}`)
+            .send({
+                type: 'broadcast',
+                event: 'new_notification',
+                payload: inserted,
+            })
+            .catch(() => {}); // fire-and-forget
+    }
+
+    // ── Send Push Notification (background, no await) ──────────────────────────
     sendPushNotification(userId, title, content || '', link || '/')
         .catch(err => console.error("Failed to send push:", err));
 

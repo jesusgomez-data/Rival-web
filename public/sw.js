@@ -1,78 +1,119 @@
+const CACHE_NAME = 'rival-fit-v2';
+const STATIC_ASSETS = ['/', '/manifest.json', '/logo.svg'];
+
 self.addEventListener('install', (event) => {
     self.skipWaiting();
+    event.waitUntil(
+        caches.open(CACHE_NAME).then(cache => cache.addAll(STATIC_ASSETS).catch(() => {}))
+    );
 });
 
 self.addEventListener('activate', (event) => {
-    event.waitUntil(self.clients.claim());
+    event.waitUntil(
+        Promise.all([
+            self.clients.claim(),
+            caches.keys().then(keys =>
+                Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))
+            )
+        ])
+    );
 });
 
+// ── Push notification handler ─────────────────────────────────────────────────
 self.addEventListener('push', function (event) {
-    if (event.data) {
-        const data = event.data.json();
-        const options = {
-            body: data.body,
-            icon: '/logo.svg', // Ensure this exists or use absolute URL
-            badge: '/logo.svg', // Small icon for notification bar
-            vibrate: [100, 50, 100],
-            data: {
-                dateOfArrival: Date.now(),
-                primaryKey: '2',
-                url: data.url || '/'
-            }
-        };
-        event.waitUntil(
-            self.registration.showNotification(data.title, options)
-        );
-    }
+    if (!event.data) return;
+
+    let data = {};
+    try { data = event.data.json(); } catch { return; }
+
+    const { title = 'Rival Fit', body = '', url = '/', type = 'default' } = data;
+
+    // Icon and badge by notification type
+    const iconMap = {
+        message:   '/icons/msg.png',
+        like:      '/icons/like.png',
+        comment:   '/icons/comment.png',
+        follow:    '/icons/follow.png',
+        duel:      '/icons/duel.png',
+        default:   '/logo.svg',
+    };
+    const icon  = iconMap[type] || iconMap.default;
+    const badge = '/logo.svg';
+
+    // Vibration patterns by type
+    const vibrateMap = {
+        message: [200, 100, 200, 100, 200],
+        like:    [100, 50, 100],
+        comment: [150, 100, 150],
+        follow:  [200, 100, 100],
+        duel:    [300, 100, 300],
+        default: [200, 100, 200],
+    };
+    const vibrate = vibrateMap[type] || vibrateMap.default;
+
+    const options = {
+        body,
+        icon,
+        badge,
+        vibrate,
+        tag:             `rival-${type}`,   // groups same-type notifications
+        renotify:        true,              // vibrates even on same tag
+        requireInteraction: type === 'message' || type === 'duel', // stays until tapped
+        silent:          false,
+        data: { url, type, dateOfArrival: Date.now() },
+        actions: type === 'message'
+            ? [{ action: 'reply', title: '💬 Responder' }, { action: 'close', title: 'Cerrar' }]
+            : [{ action: 'open', title: '👁 Ver' }, { action: 'close', title: 'Cerrar' }],
+    };
+
+    event.waitUntil(
+        self.registration.showNotification(title, options)
+    );
 });
 
+// ── Notification click ────────────────────────────────────────────────────────
 self.addEventListener('notificationclick', function (event) {
     event.notification.close();
-    event.waitUntil(
-        clients.matchAll({ type: 'window' }).then(windowClients => {
-            const urlToOpen = event.notification.data.url;
 
-            // Check if there is already a window open
-            for (let i = 0; i < windowClients.length; i++) {
-                let client = windowClients[i];
-                // If so, focus it and navigate
-                if ('focus' in client) {
-                    return client.navigate(urlToOpen).then(c => c.focus());
-                }
-            }
-            // If not, then open the target URL in a new window/tab.
-            if (clients.openWindow) {
-                return clients.openWindow(urlToOpen);
-            }
+    const urlToOpen = event.notification.data?.url || '/';
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(windowClients => {
+            // Try to focus existing window at that URL
+            const match = windowClients.find(c => c.url === urlToOpen && 'focus' in c);
+            if (match) return match.focus();
+            // Focus any open window and navigate
+            const any = windowClients.find(c => 'focus' in c);
+            if (any) return any.focus().then(c => c.navigate ? c.navigate(urlToOpen) : null);
+            // Open new window
+            return clients.openWindow(urlToOpen);
         })
     );
 });
 
-const CACHE_NAME = 'rivalfit-static-v1';
-const STATIC_ASSETS = ['/', '/favicon.ico', '/manifest.json', '/logo.svg'];
-
+// ── Fetch: network-first for pages, cache-first for assets ───────────────────
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Only cache same-origin GET requests for static assets
-    if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+    // Skip non-GET, cross-origin, and API/supabase requests
+    if (request.method !== 'GET') return;
+    if (url.origin !== location.origin) return;
+    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/_next/')) return;
 
-    // Network-first for API routes
-    if (url.pathname.startsWith('/api/')) return;
+    const isAsset = /\.(svg|png|jpg|jpeg|ico|webp|avif|woff|woff2|css)(\?.*)?$/.test(url.pathname);
 
-    // Stale-while-revalidate for static assets
-    if (STATIC_ASSETS.includes(url.pathname) || url.pathname.match(/\.(svg|png|jpg|ico|webp|avif|woff2?)$/)) {
+    if (isAsset) {
+        // Cache-first for static assets
         event.respondWith(
-            caches.open(CACHE_NAME).then(cache =>
-                cache.match(request).then(cached => {
-                    const networkFetch = fetch(request).then(response => {
-                        if (response.ok) cache.put(request, response.clone());
-                        return response;
-                    });
-                    return cached || networkFetch;
-                })
-            )
+            caches.match(request).then(cached => cached || fetch(request).then(res => {
+                if (res.ok) {
+                    const clone = res.clone();
+                    caches.open(CACHE_NAME).then(c => c.put(request, clone));
+                }
+                return res;
+            }))
         );
     }
+    // Let everything else go to network normally
 });

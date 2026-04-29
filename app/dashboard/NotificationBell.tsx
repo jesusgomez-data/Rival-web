@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Bell, X, CheckCircle2, Swords, UserPlus, Zap, MessageSquare, Heart, BookmarkCheck } from "lucide-react";
 import { getNotifications, markAsRead, markAllAsRead } from "./notifications-actions";
 import { createClient } from "@/utils/supabase/client";
@@ -24,64 +24,93 @@ export default function NotificationBell() {
     const [isOpen, setIsOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
 
+    const loadNotifications = useCallback(async () => {
+        const data = await getNotifications();
+        setNotifications(data);
+        setUnreadCount(data.filter((n: any) => !n.is_read).length);
+    }, []);
+
     useEffect(() => {
         const supabase = createClient();
         let channel: any = null;
-
-        async function loadNotifications() {
-            const data = await getNotifications();
-            setNotifications(data);
-            setUnreadCount(data.filter((n: any) => !n.is_read).length);
-        }
-
 
         async function setupRealtime() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            console.log(`[NotificationBell] Activando radar para el usuario: ${user.id}`);
-
-            // Unlocking AudioContext on first interaction
-            const unlockAudio = () => {
-                // playNotificationSound(); // Disabled auto-play sound on unlock
-                console.log("[NotificationBell] Sistema de audio desbloqueado.");
-                window.removeEventListener('click', unlockAudio);
-            };
-            window.addEventListener('click', unlockAudio);
-
+            // ── 1. postgres_changes for reliable delivery ──────────────────
             channel = supabase
-                .channel(`notifications-realtime-${user.id}`)
+                .channel(`notifications-live-${user.id}`)
                 .on(
                     'postgres_changes',
                     {
-                        event: '*',
+                        event: 'INSERT',
                         schema: 'public',
                         table: 'notifications',
                         filter: `user_id=eq.${user.id}`
                     },
                     (payload: any) => {
-                        console.log(`[NotificationBell] Cambio detectado en señales:`, payload);
-                        loadNotifications();
+                        const n = payload.new as Notification;
+                        setNotifications(prev => {
+                            if (prev.find(x => x.id === n.id)) return prev;
+                            return [n, ...prev];
+                        });
+                        setUnreadCount(prev => prev + 1);
                     }
                 )
-                .subscribe((status: string) => {
-                    console.log(`[NotificationBell] Estado de la conexión (${user.id}):`, status);
-                    if (status === 'CHANNEL_ERROR') {
-                        console.error("[NotificationBell] Error crítico en el canal de señales. Intentando reconectar...");
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'notifications',
+                        filter: `user_id=eq.${user.id}`
+                    },
+                    (payload: any) => {
+                        setNotifications(prev =>
+                            prev.map(n => n.id === payload.new.id ? { ...n, ...payload.new } : n)
+                        );
+                        setUnreadCount(prev => {
+                            // payload.new.is_read became true → one less unread
+                            if (payload.new.is_read && !payload.old?.is_read) return Math.max(0, prev - 1);
+                            return prev;
+                        });
                     }
-                });
+                )
+                // ── 2. Broadcast channel — instant server-push (no RLS delay) ──
+                .on('broadcast', { event: 'new_notification' }, ({ payload }: any) => {
+                    if (!payload?.id) return;
+                    setNotifications(prev => {
+                        if (prev.find(x => x.id === payload.id)) return prev;
+                        return [payload, ...prev];
+                    });
+                    setUnreadCount(prev => prev + 1);
+                })
+                .subscribe();
         }
 
         loadNotifications();
         setupRealtime();
 
+        // ── 3. Fallback: refresh on tab focus ──────────────────────────────
+        const onVisible = () => {
+            if (document.visibilityState === 'visible') loadNotifications();
+        };
+        document.addEventListener('visibilitychange', onVisible);
+
+        // ── 4. Fallback: poll every 30s while tab is active ───────────────
+        const poll = setInterval(() => {
+            if (document.visibilityState === 'visible') loadNotifications();
+        }, 30_000);
+
         return () => {
             if (channel) supabase.removeChannel(channel);
+            document.removeEventListener('visibilitychange', onVisible);
+            clearInterval(poll);
         };
-    }, []);
+    }, [loadNotifications]);
 
     const handleMarkAllAsRead = async () => {
-        // Optimistic update first — feels instant like Instagram/TikTok
         setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
         setUnreadCount(0);
         await markAllAsRead();
@@ -96,16 +125,16 @@ export default function NotificationBell() {
     const getTypeIcon = (type: string) => {
         switch (type) {
             case 'duel_challenge': return <Swords className="w-4 h-4 text-brand-red" />;
-            case 'follow': return <UserPlus className="w-4 h-4 text-blue-500" />;
-            case 'mission_complete': return <CheckCircle2 className="w-4 h-4 text-green-500" />;
-            case 'class_reservation': return <BookmarkCheck className="w-4 h-4 text-purple-500" />;
+            case 'follow': return <UserPlus className="w-4 h-4 text-blue-400" />;
+            case 'mission_complete': return <CheckCircle2 className="w-4 h-4 text-green-400" />;
+            case 'class_reservation': return <BookmarkCheck className="w-4 h-4 text-purple-400" />;
             case 'like':
             case 'post_like':
-            case 'comment_like': return <Heart className="w-4 h-4 text-rose-500" />;
+            case 'comment_like': return <Heart className="w-4 h-4 text-rose-400 fill-current" />;
             case 'comment':
             case 'message':
-            case 'post_comment': return <MessageSquare className="w-4 h-4 text-sky-500" />;
-            default: return <Zap className="w-4 h-4 text-yellow-500" />;
+            case 'post_comment': return <MessageSquare className="w-4 h-4 text-sky-400" />;
+            default: return <Zap className="w-4 h-4 text-yellow-400" />;
         }
     };
 
@@ -120,93 +149,91 @@ export default function NotificationBell() {
             >
                 <Bell className="w-6 h-6" />
                 {unreadCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-brand-red text-white text-[10px] font-bold rounded-full flex items-center justify-center border-2 border-black">
-                        {unreadCount}
+                    <span className="absolute top-1 right-1 min-w-[18px] h-[18px] bg-brand-red text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-black px-0.5 shadow-[0_0_8px_rgba(220,38,38,0.6)] animate-pulse">
+                        {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                 )}
             </button>
 
             {isOpen && (
                 <>
-                    <div
-                        className="fixed inset-0 z-[200]"
-                        onClick={() => setIsOpen(false)}
-                    />
-                    <div className="absolute -left-16 md:left-auto md:right-0 top-full mt-2 w-[280px] sm:w-[320px] bg-card border border-border rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-[210] overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-left md:origin-top-right">
-                        <div className="p-4 border-b border-border bg-muted flex items-center justify-between">
+                    <div className="fixed inset-0 z-[200]" onClick={() => setIsOpen(false)} />
+                    <div className="absolute -left-16 md:left-auto md:right-0 top-full mt-2 w-[300px] sm:w-[340px] bg-[#0E0E0E] border border-white/[0.07] rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.7)] z-[210] overflow-hidden">
+                        {/* Header */}
+                        <div className="px-4 py-3 border-b border-white/[0.05] bg-white/[0.02] flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Zap className="w-4 h-4 text-brand-red animate-pulse" />
-                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-foreground">Centro de Señales</h3>
+                                <Zap className="w-4 h-4 text-brand-red" />
+                                <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/80">Notificaciones</h3>
                             </div>
                             <div className="flex items-center gap-3">
                                 {unreadCount > 0 && (
                                     <button
                                         onClick={handleMarkAllAsRead}
-                                        className="text-[8px] font-black text-muted-foreground hover:text-brand-red uppercase tracking-widest transition-colors"
+                                        className="text-[8px] font-black text-white/25 hover:text-brand-red uppercase tracking-widest transition-colors"
                                     >
                                         Limpiar Todo
                                     </button>
                                 )}
-                                <button onClick={() => setIsOpen(false)} className="text-gray-500 hover:text-white transition-colors">
-                                    <X className="w-5 h-5" />
+                                <button onClick={() => setIsOpen(false)} className="text-white/20 hover:text-white transition-colors">
+                                    <X className="w-4 h-4" />
                                 </button>
                             </div>
                         </div>
-                        <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+
+                        {/* List */}
+                        <div className="max-h-[420px] overflow-y-auto custom-scrollbar">
                             {notifications.length > 0 ? (
                                 notifications.map((n) => (
                                     <div
                                         key={n.id}
                                         className={clsx(
-                                            "p-4 border-b border-border hover:bg-muted transition-all cursor-pointer relative group",
-                                            !n.is_read ? "bg-brand-red/[0.05]" : ""
+                                            "px-4 py-3.5 border-b border-white/[0.04] hover:bg-white/[0.03] transition-colors cursor-pointer relative group",
+                                            !n.is_read && "bg-brand-red/[0.04]"
                                         )}
                                         onClick={async () => {
                                             if (!n.is_read) await handleMarkAsRead(n.id);
                                             setIsOpen(false);
-                                            if (n.link) {
-                                                // If it's a post link, we can go directly to the detail page
-                                                router.push(n.link);
-                                            }
+                                            if (n.link) router.push(n.link);
                                         }}
                                     >
-                                        <div className="flex gap-4">
-                                            <div className="mt-1 flex-shrink-0 w-8 h-8 rounded-full bg-background flex items-center justify-center border border-border group-hover:scale-110 transition-transform">
+                                        <div className="flex gap-3">
+                                            <div className="mt-0.5 flex-shrink-0 w-8 h-8 rounded-2xl bg-white/[0.04] border border-white/[0.06] flex items-center justify-center group-hover:scale-110 transition-transform">
                                                 {getTypeIcon(n.type)}
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <p className={clsx("text-xs text-foreground leading-tight", !n.is_read ? "font-black" : "font-medium")}>
+                                                <p className={clsx("text-xs text-white leading-tight", !n.is_read ? "font-black" : "font-medium text-white/70")}>
                                                     {n.title}
                                                 </p>
-                                                <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2 leading-relaxed font-medium">{n.content}</p>
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    <p className="text-[8px] text-muted-foreground/60 font-bold uppercase tracking-widest">
-                                                        {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • {new Date(n.created_at).toLocaleDateString()}
-                                                    </p>
-                                                </div>
+                                                {n.content && (
+                                                    <p className="text-[10px] text-white/30 mt-0.5 line-clamp-2 leading-relaxed">{n.content}</p>
+                                                )}
+                                                <p className="text-[8px] text-white/15 font-bold uppercase tracking-widest mt-1.5">
+                                                    {new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {new Date(n.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                                                </p>
                                             </div>
                                             {!n.is_read && (
-                                                <div className="w-2 h-2 rounded-full bg-brand-red mt-1 shadow-[0_0_8px_rgba(220,38,38,0.5)]" />
+                                                <div className="w-2 h-2 rounded-full bg-brand-red mt-1 shadow-[0_0_6px_rgba(220,38,38,0.6)] shrink-0" />
                                             )}
                                         </div>
                                     </div>
                                 ))
                             ) : (
                                 <div className="p-12 text-center">
-                                    <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-white/5">
-                                        <Bell className="w-6 h-6 text-gray-700" />
+                                    <div className="w-12 h-12 bg-white/[0.03] rounded-full flex items-center justify-center mx-auto mb-4 border border-white/[0.05]">
+                                        <Bell className="w-6 h-6 text-white/10" />
                                     </div>
-                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-600 italic">Sin señales en el radar</p>
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/15">Sin notificaciones</p>
                                 </div>
                             )}
                         </div>
+
                         {notifications.length > 0 && (
                             <Link
                                 href="/dashboard/notifications"
                                 onClick={() => setIsOpen(false)}
-                                className="block p-4 text-center bg-muted text-[10px] font-black text-brand-red uppercase tracking-[0.3em] hover:bg-brand-red hover:text-white transition-all border-t border-border"
+                                className="block py-3 text-center bg-white/[0.02] text-[10px] font-black text-brand-red uppercase tracking-[0.3em] hover:bg-brand-red hover:text-white transition-all border-t border-white/[0.05]"
                             >
-                                VER TODAS LAS SEÑALES
+                                Ver todas
                             </Link>
                         )}
                     </div>
