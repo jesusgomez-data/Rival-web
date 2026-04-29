@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { UserPlus, UserCheck, MapPin, Globe, CheckCircle2, Grid, Dumbbell, ShoppingBag, X, CreditCard, Check, Lock, Calendar, Moon, Sun, ArrowRight, ArrowLeft, Trophy, List, LayoutGrid, ChevronRight, ChevronLeft, Clock, ChevronDown, Zap, Flame, TrendingUp, Info, Play, Banknote } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { UserPlus, UserCheck, MapPin, Globe, CheckCircle2, Grid, Dumbbell, ShoppingBag, X, CreditCard, Check, Lock, Calendar, ArrowRight, ArrowLeft, Trophy, ChevronRight, ChevronLeft, Clock, ChevronDown, Zap, Flame, TrendingUp, Info, Play, Banknote, Instagram, Youtube, Facebook, Hash, Navigation, Image as ImageIcon, Star, Users, Building2, List, LayoutGrid } from "lucide-react";
 import { toggleFollow, requestTrial, purchaseProduct, getClassesForDate, getClassesRange, enrollInClass, getClassAttendees, saveClassResult, getDayRankings, requestMemberPayment } from "../../dashboard/gyms/management-actions";
 import { bookTrialClass } from "../../dashboard/gyms/trial-booking-actions";
 import GymPostCard from "../../dashboard/gyms/GymPostCard";
@@ -84,6 +84,12 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
     const [showLeaderboard, setShowLeaderboard] = useState(false);
     const [leaderboardData, setLeaderboardData] = useState<any>(null);
     const [isLoadingLeaderboard, setIsLoadingLeaderboard] = useState(false);
+
+    // Toast notification
+    const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+    const showToast = useCallback((msg: string, ok = true) => {
+        setToast({ msg, ok }); setTimeout(() => setToast(null), 4000);
+    }, []);
 
     // WOD Expansion State
     const [expandedWods, setExpandedWods] = useState<Set<string>>(new Set());
@@ -201,7 +207,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
         if (res?.error) {
             setFollowing(following);
             setCount(count);
-            alert("Inicia sesión para seguir.");
+            showToast("Inicia sesión para seguir", false);
         }
         setLoading(false);
     }
@@ -223,13 +229,10 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
         const res = await requestTrial(org.id, trialDate, selectedClass || undefined);
         setIsSubmittingTrial(false);
         if (res.error) {
-            alert(res.error);
+            showToast(res.error, false);
         } else {
-            alert("¡Solicitud enviada! El centro te contactará pronto.");
-            setShowTrialModal(false);
-            setTrialStep(1);
-            setTrialDate("");
-            setSelectedClass(null);
+            showToast("¡Solicitud enviada! El centro te contactará pronto.");
+            setShowTrialModal(false); setTrialStep(1); setTrialDate(""); setSelectedClass(null);
         }
     };
 
@@ -249,17 +252,12 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
         setIsPurchasing(false);
 
         if (res.error) {
-            alert(res.error);
+            showToast(res.error, false);
         } else if (res.checkoutUrl) {
-            // Redirect to Stripe Checkout or SCA Action
             window.location.href = res.checkoutUrl as string;
         } else {
-            alert(method === 'card'
-                ? "¡Compra exitosa! El artículo se ha añadido a tu cuenta."
-                : "¡Pedido registrado! Por favor realiza el pago en efectivo en el mostrador para retirar tu producto."
-            );
+            showToast(method === 'card' ? "¡Compra exitosa!" : "¡Pedido registrado! Paga en recepción.");
             setSelectedProduct(null);
-            window.location.reload();
         }
     }
 
@@ -275,10 +273,9 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
         setBookingClassId(null);
 
         if (res.error) {
-            alert(res.error);
+            showToast(res.error, false);
         } else {
-            alert((res as any).message || (isMember ? "¡Reserva confirmada!" : "¡Clase de prueba reservada!"));
-            // Reload schedule to show updated availability
+            showToast((res as any).message || (isMember ? "¡Reserva confirmada!" : "¡Clase de prueba reservada!"));
             loadSchedule(scheduleDate);
         }
     }
@@ -293,16 +290,8 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
 
     // Membership Subscription Handler
     async function handleSubscribeMembership(plan: any) {
-        if (!currentUserId) {
-            alert("Por favor, inicia sesión para suscribirte a una membresía.");
-            return;
-        }
-
-        // Check if already a member (Trial users CAN subscribe)
-        if (memberStatus?.status === 'active') {
-            alert("Ya eres miembro de este centro.");
-            return;
-        }
+        if (!currentUserId) { showToast("Inicia sesión para suscribirte", false); return; }
+        if (memberStatus?.status === 'active') { showToast("Ya eres miembro de este centro"); return; }
 
         setSelectedMembership(plan);
         setShowMembershipModal(true);
@@ -321,14 +310,12 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
         setIsProcessingMembership(false);
 
         if (res.error) {
-            alert(res.error);
+            showToast(res.error, false);
         } else if (res.checkoutUrl) {
-            // Redirect to Stripe Checkout
             window.location.href = res.checkoutUrl as string;
         } else {
-            alert("¡Solicitud procesada! El centro te contactará pronto.");
-            setShowMembershipModal(false);
-            setSelectedMembership(null);
+            showToast("¡Solicitud procesada! El centro te contactará pronto.");
+            setShowMembershipModal(false); setSelectedMembership(null);
         }
     }
 
@@ -504,10 +491,21 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
     const textMuted = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
     const textContrast = theme === 'dark' ? 'text-white' : 'text-gray-900';
 
+    const DAYS_FULL = ['lun', 'mar', 'mie', 'jue', 'vie', 'sab', 'dom'];
+    const DAYS_LABEL = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+
     return (
         <div className={`min-h-screen font-sans pb-20 relative transition-colors duration-300 ${bgMain}`}>
 
-            {/* Theme Toggle (Fixed) */}
+            {/* Toast */}
+            {toast && (
+                <div className={`fixed bottom-8 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl font-bold text-sm text-white max-w-xs text-center ${toast.ok ? 'bg-green-600' : 'bg-red-500'}`}>
+                    {toast.ok ? <Check className="w-4 h-4 shrink-0" /> : <X className="w-4 h-4 shrink-0" />}
+                    {toast.msg}
+                </div>
+            )}
+
+            {/* Back button */}
             <Link
                 href={isOwner ? `/dashboard/gyms/${org.id}` : "/dashboard"}
                 className={`fixed top-4 left-4 z-50 p-3 rounded-full shadow-xl transition-all group flex items-center gap-2 ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}
@@ -623,6 +621,44 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                                 })()}
                                             </span>
                                         </a>
+                                    )}
+                                </div>
+
+                                {/* Social media & extra info */}
+                                <div className="flex flex-wrap items-center gap-3 pt-1">
+                                    {org.instagram && (
+                                        <a href={`https://instagram.com/${org.instagram.replace('@','')}`} target="_blank" rel="noopener noreferrer"
+                                            className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${textMuted} hover:text-pink-400`}>
+                                            <Instagram className="w-3.5 h-3.5" /> {org.instagram}
+                                        </a>
+                                    )}
+                                    {org.tiktok && (
+                                        <a href={`https://tiktok.com/${org.tiktok.replace('@','')}`} target="_blank" rel="noopener noreferrer"
+                                            className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${textMuted} hover:text-white`}>
+                                            <Hash className="w-3.5 h-3.5" /> TikTok
+                                        </a>
+                                    )}
+                                    {org.youtube && (
+                                        <a href={`https://youtube.com/@${org.youtube.replace('@','')}`} target="_blank" rel="noopener noreferrer"
+                                            className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${textMuted} hover:text-red-400`}>
+                                            <Youtube className="w-3.5 h-3.5" /> YouTube
+                                        </a>
+                                    )}
+                                    {org.latitude && org.longitude && (
+                                        <a href={`https://maps.google.com/?q=${org.latitude},${org.longitude}`} target="_blank" rel="noopener noreferrer"
+                                            className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${textMuted} hover:text-brand-red`}>
+                                            <Navigation className="w-3.5 h-3.5" /> Ver en Maps
+                                        </a>
+                                    )}
+                                    {org.founded_year && (
+                                        <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>
+                                            <Star className="w-3.5 h-3.5" /> Desde {org.founded_year}
+                                        </span>
+                                    )}
+                                    {org.capacity && (
+                                        <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>
+                                            <Users className="w-3.5 h-3.5" /> Hasta {org.capacity} personas
+                                        </span>
                                     )}
                                 </div>
 
@@ -748,22 +784,177 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                         >
                             <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4" /> Horario
                         </button>
+                        <button
+                            onClick={() => setActiveTab('info')}
+                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[9px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'info' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                        >
+                            <Info className="w-3.5 h-3.5 md:w-4 md:h-4" /> Info
+                        </button>
                     </div>
                 </div>
 
                 {/* Content Sections */}
                 {activeTab === 'feed' && (
                     <div className="space-y-6 max-w-3xl mx-auto">
-                        {initialPosts.filter((p: any) => p.post_type === 'post' || p.post_type === 'wod').map((post: any) => (
-                            <GymPostCard
-                                key={post.id}
-                                post={post}
-                                centerId={org.id}
-                                isAdmin={false}
-                                currentUserId={currentUserId}
-                                isMember={hasAccess}
-                            />
+                        {initialPosts.filter((p: any) => p.post_type === 'post' || p.post_type === 'wod').length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-20 text-center">
+                                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4 border border-white/5">
+                                    <Grid className="w-7 h-7 text-white/20" />
+                                </div>
+                                <p className={`font-black text-sm uppercase tracking-widest ${textMuted}`}>Sin publicaciones todavía</p>
+                            </div>
+                        ) : initialPosts.filter((p: any) => p.post_type === 'post' || p.post_type === 'wod').map((post: any) => (
+                            <GymPostCard key={post.id} post={post} centerId={org.id} isAdmin={false} currentUserId={currentUserId} isMember={hasAccess} />
                         ))}
+                    </div>
+                )}
+
+                {/* ── INFO TAB ── */}
+                {activeTab === 'info' && (
+                    <div className="max-w-4xl mx-auto space-y-8">
+
+                        {/* Map */}
+                        {org.latitude && org.longitude && (
+                            <div className={`rounded-2xl overflow-hidden border ${theme === 'dark' ? 'border-white/5' : 'border-gray-200'}`}>
+                                <div className="h-64 relative">
+                                    <iframe
+                                        src={`https://www.openstreetmap.org/export/embed.html?bbox=${org.longitude-0.01}%2C${org.latitude-0.008}%2C${org.longitude+0.01}%2C${org.latitude+0.008}&layer=mapnik&marker=${org.latitude}%2C${org.longitude}`}
+                                        className="w-full h-full border-0" title="Mapa del centro" />
+                                </div>
+                                <div className={`flex items-center justify-between px-4 py-3 ${theme === 'dark' ? 'bg-zinc-900' : 'bg-gray-50'}`}>
+                                    <div>
+                                        <p className={`font-bold text-sm ${textContrast}`}>{org.address || 'Ver ubicación'}</p>
+                                        {org.city && <p className={`text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>{org.city}{org.country && `, ${org.country}`}</p>}
+                                    </div>
+                                    <a href={`https://maps.google.com/?q=${org.latitude},${org.longitude}`} target="_blank" rel="noopener noreferrer"
+                                        className="flex items-center gap-1.5 bg-brand-red text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-xl hover:bg-red-600 transition-all">
+                                        <Navigation className="w-3.5 h-3.5" /> Google Maps
+                                    </a>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="grid md:grid-cols-2 gap-6">
+                            {/* Opening Hours */}
+                            {org.opening_hours && Object.keys(org.opening_hours).length > 0 && (
+                                <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                                    <h3 className={`text-[10px] font-black uppercase tracking-[0.25em] mb-4 flex items-center gap-2 ${textMuted}`}>
+                                        <Clock className="w-3.5 h-3.5 text-brand-red" /> Horario de Apertura
+                                    </h3>
+                                    <div className="space-y-2">
+                                        {DAYS_FULL.map((key, i) => {
+                                            const h = org.opening_hours[key];
+                                            if (!h) return null;
+                                            const today = new Date().toLocaleDateString('en', { weekday: 'short' }).toLowerCase().slice(0,3);
+                                            const isToday = key === today || (key === 'mie' && today === 'wed') || (key === 'sab' && today === 'sat') || (key === 'dom' && today === 'sun');
+                                            return (
+                                                <div key={key} className={`flex items-center justify-between py-1.5 border-b last:border-0 ${theme === 'dark' ? 'border-white/5' : 'border-gray-100'} ${isToday ? 'opacity-100' : 'opacity-60'}`}>
+                                                    <span className={`text-[11px] font-black uppercase tracking-widest ${isToday ? (theme === 'dark' ? 'text-white' : 'text-black') : textMuted}`}>
+                                                        {DAYS_LABEL[i]} {isToday && '●'}
+                                                    </span>
+                                                    {h.closed
+                                                        ? <span className="text-[11px] font-bold text-red-400">Cerrado</span>
+                                                        : <span className={`text-[11px] font-bold ${textContrast}`}>{h.open} — {h.close}</span>
+                                                    }
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Center Info */}
+                            <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                                <h3 className={`text-[10px] font-black uppercase tracking-[0.25em] mb-4 flex items-center gap-2 ${textMuted}`}>
+                                    <Building2 className="w-3.5 h-3.5 text-brand-red" /> Información del Centro
+                                </h3>
+                                <div className="space-y-3">
+                                    {org.founded_year && (
+                                        <div className="flex items-center justify-between">
+                                            <span className={`text-[11px] font-black uppercase tracking-widest ${textMuted}`}>Fundado</span>
+                                            <span className={`text-[11px] font-bold ${textContrast}`}>{org.founded_year}</span>
+                                        </div>
+                                    )}
+                                    {org.capacity && (
+                                        <div className="flex items-center justify-between">
+                                            <span className={`text-[11px] font-black uppercase tracking-widest ${textMuted}`}>Capacidad</span>
+                                            <span className={`text-[11px] font-bold ${textContrast}`}>{org.capacity} personas</span>
+                                        </div>
+                                    )}
+                                    {org.phone && (
+                                        <div className="flex items-center justify-between">
+                                            <span className={`text-[11px] font-black uppercase tracking-widest ${textMuted}`}>Teléfono</span>
+                                            <a href={`tel:${org.phone}`} className={`text-[11px] font-bold ${textContrast} hover:text-brand-red transition-colors`}>{org.phone}</a>
+                                        </div>
+                                    )}
+                                    {org.email && (
+                                        <div className="flex items-center justify-between">
+                                            <span className={`text-[11px] font-black uppercase tracking-widest ${textMuted}`}>Email</span>
+                                            <a href={`mailto:${org.email}`} className={`text-[11px] font-bold ${textContrast} hover:text-brand-red transition-colors`}>{org.email}</a>
+                                        </div>
+                                    )}
+                                    {/* Social links */}
+                                    <div className="flex flex-wrap gap-2 pt-2 border-t border-white/5">
+                                        {org.instagram && <a href={`https://instagram.com/${org.instagram.replace('@','')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 bg-white/5 hover:bg-pink-500/20 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"><Instagram className="w-3 h-3" /> Instagram</a>}
+                                        {org.tiktok && <a href={`https://tiktok.com/${org.tiktok.replace('@','')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"><Hash className="w-3 h-3" /> TikTok</a>}
+                                        {org.youtube && <a href={`https://youtube.com/@${org.youtube.replace('@','')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 bg-white/5 hover:bg-red-500/20 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"><Youtube className="w-3 h-3" /> YouTube</a>}
+                                        {org.facebook && <a href={`https://facebook.com/${org.facebook}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 bg-white/5 hover:bg-blue-500/20 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all"><Facebook className="w-3 h-3" /> Facebook</a>}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Amenities */}
+                        {org.amenities && Object.values(org.amenities).some(Boolean) && (
+                            <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                                <h3 className={`text-[10px] font-black uppercase tracking-[0.25em] mb-4 flex items-center gap-2 ${textMuted}`}>
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-brand-red" /> Instalaciones y Servicios
+                                </h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                                    {[
+                                        { key: 'parking', label: 'Parking', icon: '🅿️' },
+                                        { key: 'lockers', label: 'Taquillas', icon: '🔐' },
+                                        { key: 'showers', label: 'Duchas', icon: '🚿' },
+                                        { key: 'water', label: 'Agua Gratuita', icon: '💧' },
+                                        { key: 'wifi', label: 'WiFi', icon: '📶' },
+                                        { key: 'cafeteria', label: 'Cafetería', icon: '☕' },
+                                        { key: 'ac', label: 'Aire Acond.', icon: '❄️' },
+                                        { key: 'heating', label: 'Calefacción', icon: '🔥' },
+                                        { key: 'music', label: 'Música', icon: '🎵' },
+                                        { key: 'crossfit_box', label: 'Box CrossFit', icon: '🏋️' },
+                                        { key: 'cardio', label: 'Cardio', icon: '🏃' },
+                                        { key: 'free_weights', label: 'Pesas Libres', icon: '🏋️' },
+                                        { key: 'sauna', label: 'Sauna', icon: '🧖' },
+                                        { key: 'pool', label: 'Piscina', icon: '🏊' },
+                                        { key: 'physio', label: 'Fisioterapia', icon: '🩺' },
+                                        { key: 'nutrition', label: 'Nutrición', icon: '🥗' },
+                                    ].filter(a => org.amenities[a.key]).map(a => (
+                                        <div key={a.key} className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border ${theme === 'dark' ? 'bg-white/[0.03] border-white/[0.06]' : 'bg-gray-50 border-gray-200'}`}>
+                                            <span className="text-lg">{a.icon}</span>
+                                            <span className={`text-[10px] font-bold uppercase tracking-wide leading-tight ${textContrast}`}>{a.label}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Gallery */}
+                        {org.gallery_urls && org.gallery_urls.length > 0 && (
+                            <div className={`rounded-2xl border p-5 ${bgCard}`}>
+                                <h3 className={`text-[10px] font-black uppercase tracking-[0.25em] mb-4 flex items-center gap-2 ${textMuted}`}>
+                                    <ImageIcon className="w-3.5 h-3.5 text-brand-red" /> Galería de Instalaciones
+                                </h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    {org.gallery_urls.map((url: string, i: number) => (
+                                        <div key={i} className="aspect-square rounded-xl overflow-hidden relative group cursor-pointer border border-white/5"
+                                            onClick={() => setExerciseMedia({ url, type: 'image' })}>
+                                            <img src={url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
 

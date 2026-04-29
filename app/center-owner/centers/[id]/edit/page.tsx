@@ -238,7 +238,7 @@ export default function EditCenter({ params }: { params: Promise<{ id: string }>
         const { error } = await supabase.from('organizations').update({
             name: formData.name, email: formData.email, phone: formData.phone,
             address: formData.address, city: formData.city, country: formData.country,
-            zip_code: formData.zipCode, description: formData.description, bio: formData.description,
+            zip_code: formData.zipCode, bio: formData.description,
             website: formData.website, instagram: formData.instagram,
             tiktok: formData.tiktok, youtube: formData.youtube, facebook: formData.facebook, twitter: formData.twitter,
             head_coach_id: formData.headCoachId || null,
