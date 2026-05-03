@@ -316,33 +316,70 @@ export class VideoProcessor {
 
         const cycle = (time % 3000) / 3000;
         const pulse = Math.sin(cycle * Math.PI * 2);
-        const alpha = 0.6 + (pulse * 0.15);
-        const scale = 0.98 + (pulse * 0.04);
+        const alpha = 0.5 + (pulse * 0.1);
+        const scale = 0.98 + (pulse * 0.02);
 
-        const baseSize = width * 0.14;
-        const logoSize = baseSize * scale;
-        const padding = width * 0.05;
+        // Responsive sizing
+        const padding = width * 0.04;
+        const logoSize = width * 0.04 * scale;
+        const fontSize = width * 0.025;
+        const boxPaddingH = width * 0.02;
+        const boxPaddingV = width * 0.012;
+        
+        ctx.font = `italic 900 ${fontSize}px Inter, sans-serif`;
+        const text = "rivalfit.app";
+        const textWidth = ctx.measureText(text).width;
+        
+        const boxWidth = logoSize + textWidth + (boxPaddingH * 3);
+        const boxHeight = Math.max(logoSize, fontSize) + (boxPaddingV * 2);
 
         let finalX = 0;
         let finalY = 0;
 
         if (corner.x === 'right') {
-            finalX = width - baseSize - padding + (baseSize - logoSize) / 2;
+            finalX = width - boxWidth - padding;
         } else {
-            finalX = padding + (baseSize - logoSize) / 2;
+            finalX = padding;
         }
 
         if (corner.y === 'bottom') {
-            finalY = height - baseSize - padding + (baseSize - logoSize) / 2;
+            finalY = height - boxHeight - padding;
         } else {
-            finalY = padding + (baseSize - logoSize) / 2;
+            finalY = padding;
         }
 
         ctx.save();
         ctx.globalAlpha = alpha;
+        
+        // Draw Glassmorphic Box
+        ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
         ctx.shadowColor = 'rgba(0,0,0,0.5)';
-        ctx.shadowBlur = 10;
-        ctx.drawImage(this.logoImage, finalX, finalY, logoSize, logoSize);
+        ctx.shadowBlur = 15;
+        
+        // Round Rect implementation
+        const r = 8;
+        ctx.beginPath();
+        ctx.moveTo(finalX + r, finalY);
+        ctx.lineTo(finalX + boxWidth - r, finalY);
+        ctx.quadraticCurveTo(finalX + boxWidth, finalY, finalX + boxWidth, finalY + r);
+        ctx.lineTo(finalX + boxWidth, finalY + boxHeight - r);
+        ctx.quadraticCurveTo(finalX + boxWidth, finalY + boxHeight, finalX + boxWidth - r, finalY + boxHeight);
+        ctx.lineTo(finalX + r, finalY + boxHeight);
+        ctx.quadraticCurveTo(finalX, finalY + boxHeight, finalX, finalY + boxHeight - r);
+        ctx.lineTo(finalX, finalY + r);
+        ctx.quadraticCurveTo(finalX, finalY, finalX + r, finalY);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Draw Logo
+        ctx.drawImage(this.logoImage, finalX + boxPaddingH, finalY + (boxHeight - logoSize) / 2, logoSize, logoSize);
+        
+        // Draw Text
+        ctx.fillStyle = "#FFFFFF";
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(text, finalX + logoSize + (boxPaddingH * 1.5), finalY + boxHeight / 2);
+        
         ctx.restore();
     }
 

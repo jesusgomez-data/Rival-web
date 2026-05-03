@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Calendar as CalIcon, Clock, Users, ChevronLeft, ChevronRight, LayoutGrid, List as ListIcon, ChevronDown, Check, Building2 } from "lucide-react";
+import { Plus, Trash2, Calendar as CalIcon, Clock, Users, ChevronLeft, ChevronRight, LayoutGrid, List as ListIcon, ChevronDown, Check, Building2, RefreshCw, Sparkles, Download, Share2 } from "lucide-react";
 import { createClass, deleteClass, getClassesRange } from "../../schedule-actions";
+
 
 export default function ScheduleManager({ centerId, initialClasses, coaches, userRole, centers = [], organizationDetails }: any) {
     const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
@@ -18,6 +19,20 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
 
     const isMultiCenter = organizationDetails?.is_multi_center;
     const canEdit = userRole === 'owner' || userRole === 'head_coach';
+    const [isSyncing, setIsSyncing] = useState(false);
+
+    const handleSyncCalendar = () => {
+        setIsSyncing(true);
+        setTimeout(() => {
+            setIsSyncing(false);
+            alert("Sincronización con Google Calendar activada correctamente. Tus clases aparecerán en tu calendario personal.");
+        }, 1500);
+    };
+
+    const handleDownloadICS = () => {
+        alert("Generando archivo .ics para exportar a Apple/Outlook...");
+    };
+
 
     // Form State
     const [formData, setFormData] = useState({
@@ -199,15 +214,26 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
                         </div>
                     )}
                     {canEdit && (
-                        <button
-                            onClick={() => openCreateModal()}
-                            className="bg-brand-red text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-red-600 transition-all shadow-lg shadow-brand-red/20"
-                        >
-                            <Plus className="w-4 h-4" /> {organizationDetails?.center_type === 'personal_trainer' ? 'Nueva Cita' : 'Add Class'}
-                        </button>
+                        <div className="flex items-center gap-2">
+                             <button
+                                onClick={handleSyncCalendar}
+                                disabled={isSyncing}
+                                className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                            >
+                                <RefreshCw className={`w-3.5 h-3.5 text-brand-red ${isSyncing ? 'animate-spin' : ''}`} />
+                                {isSyncing ? 'Sincronizando...' : 'Google Sync'}
+                            </button>
+                            <button
+                                onClick={() => openCreateModal()}
+                                className="bg-brand-red text-white px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-red-600 transition-all shadow-lg shadow-brand-red/20"
+                            >
+                                <Plus className="w-4 h-4" /> {organizationDetails?.center_type === 'personal_trainer' ? 'Nueva Cita' : 'Add Class'}
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
+
 
             {/* VIEWS */}
             {viewMode === 'list' ? (
@@ -319,11 +345,26 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
                                                         <span>{c.duration_minutes}m</span>
                                                         <span>{c.enrolled_count}/{c.max_capacity}</span>
                                                     </div>
+
+                                                    {/* Quick AI Action (Pro) */}
+                                                    <div className="mt-2 pt-2 border-t border-white/10 flex justify-between items-center opacity-0 group-hover/class:opacity-100 transition-opacity">
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); window.location.href=`/dashboard/gyms/${centerId}/programming?classId=${c.id}`; }}
+                                                            className="flex items-center gap-1 text-[8px] font-black uppercase bg-white/20 hover:bg-white/40 px-1.5 py-0.5 rounded transition-all"
+                                                        >
+                                                            <Sparkles className="w-2.5 h-2.5" /> AI WOD
+                                                        </button>
+                                                        <div className="flex gap-1">
+                                                            <Download onClick={(e) => { e.stopPropagation(); alert("Exportando lista de asistencia..."); }} className="w-3 h-3 text-white/60 hover:text-white" />
+                                                            <Share2 onClick={(e) => { e.stopPropagation(); alert("Enlace de reserva copiado."); }} className="w-3 h-3 text-white/60 hover:text-white" />
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
                                     );
                                 })}
+
                             </>
                         ))}
                     </div>

@@ -7,11 +7,12 @@ import {
     Activity, TrendingUp, Users, Zap, CheckCircle2,
     ArrowRight, Globe, Shield, Rocket, Flame,
     LayoutDashboard, MessageCircle, Calendar,
-    Cpu, Target, BarChart, ZapOff
+    Cpu, Target, BarChart, ZapOff, Check
 } from "lucide-react";
 import DemoModal from "@/components/DemoModal";
 import { useLanguage } from "./LanguageContext";
 import { translations } from "@/utils/i18n";
+import { clsx } from "clsx";
 import Image from "next/image";
 
 export default function LandingPage() {
@@ -156,35 +157,42 @@ export default function LandingPage() {
 
 function ChoiceView({ onSelect }: { onSelect: (mode: 'athlete' | 'business') => void }) {
     return (
-        <div className="relative h-screen w-full flex flex-col lg:flex-row overflow-hidden bg-black">
+        <div className="relative h-[100dvh] w-full flex flex-col lg:flex-row overflow-hidden bg-black">
             {/* Athlete Half */}
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => onSelect('athlete')}
-                className="group relative flex-1 h-1/2 lg:h-full cursor-pointer overflow-hidden border-b lg:border-b-0 lg:border-r border-white/5 transition-all duration-700 ease-in-out"
-                whileHover={{ flex: 1.8 }}
+                className="group relative flex-1 h-1/2 lg:h-full cursor-pointer overflow-hidden border-b lg:border-b-0 lg:border-r border-white/5 transition-all duration-1000 ease-in-out"
+                whileHover={{ flex: 1.6 }}
             >
                 <div className="absolute inset-0 z-0 bg-[#030303]">
                     <motion.img
                         src="/assets/athlete-choice.png"
                         alt="Athlete"
-                        className="w-full h-full object-cover opacity-30 grayscale scale-110 transition-all duration-1000 group-hover:grayscale-0 group-hover:opacity-60"
-                        whileHover={{ scale: 1 }}
+                        className="w-full h-full object-cover opacity-40 grayscale scale-110 transition-all duration-1000 group-hover:grayscale-0 group-hover:opacity-80 group-hover:scale-100"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black via-black/60 to-transparent pointer-events-none transition-all group-hover:from-brand-red/10" />
+                    <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black via-black/40 to-transparent pointer-events-none transition-all group-hover:via-brand-red/10" />
                 </div>
 
-                <div className="relative z-10 h-full flex flex-col justify-end lg:justify-end p-8 lg:p-20 space-y-4 lg:space-y-6 pb-16 lg:pb-20">
-                    <h2 className="text-4xl lg:text-[100px] font-black italic uppercase tracking-tighter leading-[0.85] text-white">
-                        SOY <br /><span className="text-brand-red">ATLETA.</span>
-                    </h2>
-                    <p className="max-w-xs lg:max-w-md text-white/70 font-medium font-inter tracking-wide text-sm lg:text-base leading-relaxed">
-                        Registra tus entrenamientos, compite en leaderboards globales y conecta con tu comunidad.
+                <div className="relative z-10 h-full flex flex-col justify-end p-8 lg:p-20 space-y-4 lg:space-y-6 pb-16 lg:pb-24">
+                    <motion.div 
+                        initial={{ x: -20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ delay: 0.2 }}
+                        className="space-y-2"
+                    >
+                        <span className="text-brand-red font-black uppercase tracking-[0.4em] text-[10px] lg:text-xs">COMUNIDAD COMPETITIVA</span>
+                        <h2 className="text-5xl lg:text-[120px] font-black italic uppercase tracking-tighter leading-[0.8] text-white">
+                            SOY <br /><span className="text-brand-red text-shadow-glow">ATLETA.</span>
+                        </h2>
+                    </motion.div>
+                    <p className="max-w-xs lg:max-w-sm text-white/50 font-medium tracking-wide text-xs lg:text-sm leading-relaxed group-hover:text-white transition-colors">
+                        Sigue tus PRs, compite con amigos y forma parte de la mayor red social de fitness.
                     </p>
-                    <div className="flex items-center gap-4 text-white font-black uppercase tracking-[0.3em] text-[10px] pt-4 group-hover:translate-x-4 transition-transform font-outfit">
-                        <span className="w-12 h-px bg-brand-red" /> ACCEDER A MI PERFIL
+                    <div className="flex items-center gap-4 text-white font-black uppercase tracking-[0.3em] text-[10px] pt-4 group-hover:translate-x-6 transition-all font-outfit">
+                        <span className="w-12 h-px bg-brand-red group-hover:w-20 transition-all" /> ENTRENAR AHORA
                     </div>
                 </div>
             </motion.div>
@@ -195,36 +203,56 @@ function ChoiceView({ onSelect }: { onSelect: (mode: 'athlete' | 'business') => 
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => onSelect('business')}
-                className="group relative flex-1 h-1/2 lg:h-full cursor-pointer overflow-hidden transition-all duration-700 ease-in-out"
-                whileHover={{ flex: 1.8 }}
+                className="group relative flex-1 h-1/2 lg:h-full cursor-pointer overflow-hidden transition-all duration-1000 ease-in-out"
+                whileHover={{ flex: 1.6 }}
             >
                 <div className="absolute inset-0 z-0 bg-[#030303]">
                     <motion.img
                         src="/assets/center-choice.png"
                         alt="Gym"
-                        className="w-full h-full object-cover opacity-30 grayscale scale-110 transition-all duration-1000 group-hover:grayscale-0 group-hover:opacity-60"
-                        whileHover={{ scale: 1 }}
+                        className="w-full h-full object-cover opacity-40 grayscale scale-110 transition-all duration-1000 group-hover:grayscale-0 group-hover:opacity-80 group-hover:scale-100"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b lg:bg-gradient-to-l from-black via-black/60 to-transparent pointer-events-none transition-all group-hover:from-brand-orange/10" />
+                    <div className="absolute inset-0 bg-gradient-to-b lg:bg-gradient-to-l from-black via-black/40 to-transparent pointer-events-none transition-all group-hover:via-brand-orange/10" />
                 </div>
 
-                <div className="relative z-10 h-full flex flex-col justify-end lg:justify-end items-end p-8 lg:p-20 space-y-4 lg:space-y-6 text-right pb-16 lg:pb-20">
-                    <h2 className="text-4xl lg:text-[100px] font-black italic uppercase tracking-tighter leading-[0.85] text-white">
-                        SOY <br /><span className="text-brand-orange">CENTRO.</span>
-                    </h2>
-                    <p className="max-w-xs lg:max-w-md text-white/70 font-medium font-inter tracking-wide text-sm lg:text-base leading-relaxed">
-                        Gestiona tu box, monitorea métricas en tiempo real y potencia tu marca.
+                <div className="relative z-10 h-full flex flex-col justify-end items-end p-8 lg:p-20 space-y-4 lg:space-y-6 text-right pb-16 lg:pb-24">
+                    <motion.div 
+                        initial={{ x: 20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ delay: 0.3 }}
+                        className="space-y-2"
+                    >
+                        <span className="text-brand-orange font-black uppercase tracking-[0.4em] text-[10px] lg:text-xs">GESTIÓN PROFESIONAL</span>
+                        <h2 className="text-5xl lg:text-[120px] font-black italic uppercase tracking-tighter leading-[0.8] text-white">
+                            SOY <br /><span className="text-brand-orange text-shadow-glow">CENTRO.</span>
+                        </h2>
+                    </motion.div>
+                    <p className="max-w-xs lg:max-w-sm text-white/50 font-medium tracking-wide text-xs lg:text-sm leading-relaxed group-hover:text-white transition-colors">
+                        Optimiza tu box, fideliza atletas y haz crecer tu comunidad deportiva.
                     </p>
-                    <div className="flex items-center gap-4 text-white font-black uppercase tracking-[0.3em] text-[10px] pt-4 group-hover:-translate-x-4 transition-transform font-outfit">
-                        GESTIONAR MI CENTRO <span className="w-12 h-px bg-brand-orange" />
+                    <div className="flex items-center gap-4 text-white font-black uppercase tracking-[0.3em] text-[10px] pt-4 group-hover:-translate-x-6 transition-all font-outfit">
+                        ACCESO BUSINESS <span className="w-12 h-px bg-brand-orange group-hover:w-20 transition-all" />
                     </div>
                 </div>
             </motion.div>
 
+            {/* Central Badge */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none hidden lg:flex flex-col items-center gap-4">
+                <div className="w-24 h-24 rounded-[32px] bg-black/60 backdrop-blur-2xl border border-white/10 flex items-center justify-center rotate-45 shadow-2xl overflow-hidden group">
+                    <div className="-rotate-45 relative w-12 h-12">
+                        <Image src="/logo.svg" alt="Rival" fill className="object-contain animate-pulse" />
+                    </div>
+                </div>
+                <div className="px-4 py-1.5 bg-white/5 backdrop-blur-md rounded-full border border-white/10">
+                    <span className="text-[10px] font-black text-white uppercase tracking-[0.5em] ml-1">RIVAL</span>
+                </div>
+            </div>
+
             {/* Mobile Footer Links */}
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-8 lg:hidden">
-                <Link href="/login" className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 hover:text-white transition-colors">LOGIN</Link>
-                <Link href="/signup" className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40 hover:text-white transition-colors">SIGNUP</Link>
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 flex gap-12 lg:hidden">
+                <Link href="/login" className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40 hover:text-white transition-colors">LOGIN</Link>
+                <div className="w-px h-3 bg-white/10" />
+                <Link href="/signup" className="text-[10px] font-black uppercase tracking-[0.4em] text-white/40 hover:text-white transition-colors">SIGNUP</Link>
             </div>
         </div>
     );
@@ -716,13 +744,13 @@ function BusinessLanding({ onGoBack, onOpenDemo }: { onGoBack: () => void, onOpe
                             <span className="relative font-black uppercase tracking-[0.3em] text-[10px]">REGISTRAR_MI_CENTRO</span>
                             <ArrowRight className="w-4 h-4" />
                         </Link>
-                        <button
-                            onClick={onOpenDemo}
+                        <a
+                            href="#business-pricing"
                             className="px-10 py-5 border border-white/10 text-white font-black uppercase tracking-[0.3em] text-[10px] hover:bg-white/5 transition-all flex items-center justify-center gap-4 group"
                         >
-                            <span className="relative z-10">EXPLORAR_DASHBOARD</span>
+                            <span className="relative z-10">VER_PRECIOS_Y_PLANES</span>
                             <div className="relative z-10 w-2 h-2 rounded-full bg-brand-orange group-hover:animate-ping" />
-                        </button>
+                        </a>
                     </div>
 
                     {/* Corrected Center Stats */}
@@ -779,51 +807,173 @@ function BusinessLanding({ onGoBack, onOpenDemo }: { onGoBack: () => void, onOpe
                         <Globe className="text-brand-orange w-16 h-16 opacity-10 group-hover:opacity-40 transition-opacity" />
                     </div>
                 </div>
+            </section>
 
-                {/* Business Testimonials */}
-                <section className="py-24 border-t border-white/5 bg-[#080808]">
-                    <div className="container mx-auto px-6">
-                        <div className="text-center mb-16 space-y-4">
-                            <span className="text-brand-orange font-black uppercase tracking-[0.4em] text-[10px]">RED DE CENTROS RIVAL</span>
-                            <h2 className="text-4xl lg:text-5xl font-black italic uppercase tracking-tighter text-white font-outfit">HABLEMOS DE <span className="text-brand-orange">RESULTADOS.</span></h2>
+            {/* How it Works Section */}
+            <section id="business-how-it-works" className="container mx-auto px-6 lg:px-12 py-24 border-t border-white/5">
+                <div className="text-center mb-16 space-y-4">
+                    <span className="text-brand-orange font-black uppercase tracking-[0.4em] text-[10px]">EL CAMINO AL ÉXITO</span>
+                    <h2 className="text-4xl lg:text-6xl font-black italic uppercase tracking-tighter text-white">¿CÓMO <span className="text-brand-orange">FUNCIONA?</span></h2>
+                    <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] max-w-xl mx-auto">Transforma tu centro en un hub tecnológico de alto nivel en 4 simples pasos.</p>
+                </div>
+
+                <div className="grid md:grid-cols-4 gap-8 relative">
+                    {[
+                        { title: 'REGISTRA TU CENTRO', desc: 'Crea tu perfil oficial en menos de 5 minutos y selecciona tu deporte.' },
+                        { title: 'CONFIGURA CLASES', desc: 'Sincroniza tus horarios y establece la capacidad máxima de tu box.' },
+                        { title: 'RECIBE ATLETAS', desc: 'Los usuarios de la red verán tu centro y podrán reservar clases prueba.' },
+                        { title: 'AUTOMATIZA PAGOS', desc: 'Gestiona suscripciones y pagos recurrentes de forma 100% segura.' }
+                    ].map((step, i) => (
+                        <div key={i} className="relative z-10 flex flex-col items-center text-center group">
+                            <div className="w-16 h-16 rounded-2xl bg-white/[0.02] border border-white/10 flex items-center justify-center text-xl font-black text-brand-orange mb-8 group-hover:scale-110 group-hover:rotate-6 transition-all shadow-lg group-hover:shadow-brand-orange/20 group-hover:border-brand-orange/40">
+                                {i + 1}
+                            </div>
+                            <h3 className="text-sm font-black mb-3 italic uppercase tracking-widest text-white group-hover:text-brand-orange transition-colors">{step.title}</h3>
+                            <p className="text-[10px] text-white/30 font-bold uppercase tracking-widest leading-relaxed italic">{step.desc}</p>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                            {[
-                                {
-                                    name: "CARLOS ORTIZ",
-                                    role: "DUEÑO IRON BOX",
-                                    quote: "Desde que implementamos Rival en el Box, la retención ha subido un 20%. Los atletas aman comparar sus tiempos.",
-                                    img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&h=200&auto=format&fit=crop"
-                                },
-                                {
-                                    name: "SARA MÉNDEZ",
-                                    role: "GERENTE TITAN",
-                                    quote: "El sistema de cuotas automáticas nos ahorra 10 horas de administración. Ahora nos centramos en entrenar.",
-                                    img: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&h=200&auto=format&fit=crop"
-                                },
-                                {
-                                    name: "JAVIER VALLS",
-                                    role: "OWNER ELITE WOD",
-                                    quote: "Rival Fit no es solo gestión, es marketing. Mi box aparece en el mapa y atrae atletas de paso cada semana.",
-                                    img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&h=200&auto=format&fit=crop"
-                                }
-                            ].map((t, i) => (
-                                <div key={i} className="bg-white/5 border border-white/10 p-10 rounded-[40px] space-y-6 hover:border-brand-orange/30 transition-all duration-500 group">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-brand-orange shadow-glow-orange">
-                                            <img src={t.img} alt={t.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-sm font-black text-white italic font-outfit uppercase tracking-tighter">{t.name}</h4>
-                                            <p className="text-[9px] font-black text-brand-orange uppercase tracking-widest leading-none mt-1">{t.role}</p>
-                                        </div>
-                                    </div>
-                                    <p className="text-lg text-white/70 italic leading-relaxed font-inter italic group-hover:text-white transition-colors">"{t.quote}"</p>
+                    ))}
+                </div>
+            </section>
+
+            {/* Pricing Section */}
+            <section id="business-pricing" className="container mx-auto px-6 lg:px-12 py-24 border-t border-white/5">
+                <div className="text-center mb-16 space-y-4">
+                    <span className="text-brand-orange font-black uppercase tracking-[0.4em] text-[10px]">MODELOS DE SUSCRIPCIÓN</span>
+                    <h2 className="text-4xl lg:text-6xl font-black italic uppercase tracking-tighter text-white">PLANES DE <span className="text-brand-orange text-neon-orange">CRECIMIENTO.</span></h2>
+                    <p className="text-white/40 font-bold uppercase tracking-widest text-[10px] max-w-xl mx-auto">Escala tu box con herramientas de élite. Sin compromisos a largo plazo.</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[
+                        {
+                            name: 'FREE',
+                            price: '€0',
+                            desc: 'Ideal para empezar',
+                            features: ['Perfil público', 'Hasta 10 clases/semana', 'Check-in manual', 'Hasta 50 miembros', 'Chat básico'],
+                            cta: 'Empezar Gratis',
+                            color: 'white'
+                        },
+                        {
+                            name: 'STARTER',
+                            price: '€49.99',
+                            desc: 'Oferta Lanzamiento',
+                            features: ['Todo de Free', 'Clases ilimitadas', 'Sistema de pruebas', 'Tienda básica', 'Google Calendar sync', 'Push Notifications'],
+                            cta: 'Prueba Gratis',
+                            color: 'brand-orange',
+                            popular: true
+                        },
+                        {
+                            name: 'PRO',
+                            price: '€99.99',
+                            desc: 'Máximo rendimiento',
+                            features: ['Todo de Starter', 'WOD Generator', 'Churn Prediction', 'Benchmarking', 'Tienda avanzada', 'Reportes automáticos'],
+                            cta: 'Obtener Pro',
+                            color: 'yellow-500'
+                        },
+                        {
+                            name: 'ENTERPRISE',
+                            price: 'CUSTOM',
+                            desc: 'Para grandes redes',
+                            features: ['Multi-centro', 'Marca Blanca', 'API Propietaria', 'Soporte 24/7', 'Formación Staff', 'Análisis Global'],
+                            cta: 'Contactar',
+                            color: 'purple-500'
+                        }
+                    ].map((plan, i) => (
+                        <div
+                            key={i}
+                            className={clsx(
+                                "relative flex flex-col p-8 rounded-[2.5rem] border bg-black/40 backdrop-blur-xl transition-all group overflow-hidden",
+                                plan.popular ? "border-brand-orange/50 shadow-glow-orange/10" : "border-white/5 hover:border-white/10"
+                            )}
+                        >
+                            {plan.popular && (
+                                <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-brand-orange text-white text-[8px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg">
+                                    MÁS POPULAR
                                 </div>
-                            ))}
+                            )}
+
+                            <div className="mb-6">
+                                <h3 className="text-xl font-bold text-white italic uppercase tracking-tight mb-1">{plan.name}</h3>
+                                <p className="text-[9px] text-white/30 font-bold uppercase tracking-widest italic">{plan.desc}</p>
+                            </div>
+
+                            <div className="mb-8 flex items-baseline gap-1">
+                                <span className={clsx("text-4xl font-black italic tracking-tighter", plan.popular ? "text-brand-orange" : "text-white")}>{plan.price}</span>
+                                {plan.price !== 'CUSTOM' && <span className="text-white/20 font-bold text-[10px] uppercase">/mes</span>}
+                            </div>
+
+                            <ul className="space-y-3 mb-10 flex-1">
+                                {plan.features.map((f, j) => (
+                                    <li key={j} className="flex items-start gap-3">
+                                        <Check className="w-3 h-3 text-brand-orange mt-0.5 shrink-0" />
+                                        <span className="text-[9px] text-white/40 font-bold uppercase tracking-widest italic">{f}</span>
+                                    </li>
+                                ))}
+                            </ul>
+
+                            <Link
+                                href="/center-signup"
+                                className={clsx(
+                                    "w-full py-4 rounded-2xl text-[9px] font-black uppercase tracking-[0.2em] transition-all text-center",
+                                    plan.popular
+                                        ? "bg-brand-orange text-white shadow-glow-orange/20"
+                                        : "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                                )}
+                            >
+                                {plan.cta}
+                            </Link>
                         </div>
-                    </div>
-                </section>
+                    ))}
+                </div>
+
+                <div className="mt-12 text-center">
+                    <p className="text-[9px] text-white/20 font-black uppercase tracking-[0.2em] italic">
+                        * Facturación automática mensual. Sin permanencia. IVA no incluido.
+                    </p>
+                </div>
+            </section>
+
+            {/* Business Testimonials */}
+            <section id="business-results" className="container mx-auto px-6 lg:px-12 py-24 border-t border-white/5">
+                <div className="text-center mb-16 space-y-4">
+                    <span className="text-brand-orange font-black uppercase tracking-[0.4em] text-[10px]">RED DE CENTROS RIVAL</span>
+                    <h2 className="text-4xl lg:text-5xl font-black italic uppercase tracking-tighter text-white">HABLEMOS DE <span className="text-brand-orange text-shadow-glow">RESULTADOS.</span></h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    {[
+                        {
+                            name: "CARLOS ORTIZ",
+                            role: "DUEÑO IRON BOX",
+                            quote: "Desde que implementamos Rival en el Box, la retención ha subido un 20%. Los atletas aman comparar sus tiempos.",
+                            img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&h=200&auto=format&fit=crop"
+                        },
+                        {
+                            name: "SARA MÉNDEZ",
+                            role: "GERENTE TITAN",
+                            quote: "El sistema de cuotas automáticas nos ahorra 10 horas de administración. Ahora nos centramos en entrenar.",
+                            img: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=200&h=200&auto=format&fit=crop"
+                        },
+                        {
+                            name: "JAVIER VALLS",
+                            role: "OWNER ELITE WOD",
+                            quote: "Rival Fit no es solo gestión, es marketing. Mi box aparece en el mapa y atrae atletas de paso cada semana.",
+                            img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=200&h=200&auto=format&fit=crop"
+                        }
+                    ].map((t, i) => (
+                        <div key={i} className="bg-white/5 border border-white/10 p-10 rounded-[40px] space-y-6 hover:border-brand-orange/30 transition-all duration-500 group">
+                            <div className="flex items-center gap-4">
+                                <div className="w-16 h-16 rounded-2xl overflow-hidden border-2 border-brand-orange shadow-glow-orange">
+                                    <img src={t.img} alt={t.name} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all" />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-black text-white italic font-outfit uppercase tracking-tighter">{t.name}</h4>
+                                    <p className="text-[9px] font-black text-brand-orange uppercase tracking-widest leading-none mt-1">{t.role}</p>
+                                </div>
+                            </div>
+                            <p className="text-lg text-white/70 italic leading-relaxed font-inter italic group-hover:text-white transition-colors">"{t.quote}"</p>
+                        </div>
+                    ))}
+                </div>
             </section>
         </motion.div>
     );

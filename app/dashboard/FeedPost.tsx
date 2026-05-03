@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo, memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink, ZapOff } from "lucide-react";
 import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
@@ -533,12 +533,12 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const postRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const { isMuted, toggleMute, setLastActiveVideoId, setIsMuted } = useVideo();
+
     const [isVisible, setIsVisible] = useState(false);
     const [showMuteHint, setShowMuteHint] = useState(false);
     const [isBuffering, setIsBuffering] = useState(true);
     const [isActuallyPlaying, setIsActuallyPlaying] = useState(false);
     const [loadError, setLoadError] = useState(false);
-
     // Video detection (moved up to avoid TDZ ReferenceError)
     const isVideo = !!(image && (
         /\.(mp4|webm|ogg|mov|m4v)$/i.test(image) ||
@@ -548,6 +548,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
         image.includes('.mov?') ||
         image.includes('.mp4?')
     ));
+
     
     // Check if post actually has visual media to display in the main container
     const hasMedia = !!(photoUrl || isVideo || isCarousel);
@@ -1047,6 +1048,40 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                             </button>
                         )}
+
+                        {loadError && (
+                            <div className="absolute inset-0 z-[45] flex flex-col items-center justify-center bg-black/80 backdrop-blur-md p-8 text-center animate-in fade-in duration-500">
+                                <div className="w-20 h-20 rounded-full bg-brand-red/10 flex items-center justify-center mb-6 border border-brand-red/20">
+                                    <ZapOff className="w-10 h-10 text-brand-red" />
+                                </div>
+                                <h4 className="text-lg font-black uppercase italic text-white mb-2 tracking-tighter">VIDEO_NO_DISPONIBLE</h4>
+                                <p className="text-xs text-white/40 uppercase font-bold tracking-widest leading-relaxed mb-8 max-w-[200px]">EL FORMATO NO ES COMPATIBLE O EL ARCHIVO ESTÁ DAÑADO.</p>
+                                <button 
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        setLoadError(false); 
+                                        setIsBuffering(true); 
+                                        if (videoRef.current) {
+                                            videoRef.current.load();
+                                            videoRef.current.play().catch(() => {});
+                                        }
+                                    }}
+                                    className="px-8 py-4 bg-brand-red text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl shadow-glow active:scale-95 transition-all"
+                                >
+                                    REINTENTAR CARGA
+                                </button>
+                            </div>
+                        )}
+
+                        {isBuffering && !loadError && (
+                            <div className="absolute inset-0 z-[45] flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+                                <div className="flex flex-col items-center gap-4">
+                                    <div className="w-12 h-12 border-4 border-brand-red/20 border-t-brand-red rounded-full animate-spin" />
+                                    <span className="text-[10px] font-black text-white/50 uppercase tracking-[0.3em] animate-pulse">CARGANDO...</span>
+                                </div>
+                            </div>
+                        )}
+
                         {isVideo ? (
                             <video
                                 ref={videoRef}
@@ -1055,13 +1090,25 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 loop
                                 playsInline
                                 muted={isMuted || !isVisible || (typeof document !== 'undefined' && document.hidden)}
-                                preload="metadata"
-                                onCanPlay={() => { if (isVisible && videoRef.current) videoRef.current.play().catch(() => { setLoadError(true); setIsBuffering(false); }); }}
+                                preload="auto"
+                                onCanPlay={() => { 
+                                    if (isVisible && videoRef.current) {
+                                        videoRef.current.play().catch((err) => { 
+                                            console.warn("[FeedPost] Video play failed:", err);
+                                            setLoadError(true); 
+                                            setIsBuffering(false); 
+                                        });
+                                    }
+                                }}
                                 onWaiting={() => setIsBuffering(true)}
                                 onPlaying={() => { setIsBuffering(false); setIsActuallyPlaying(true); setLoadError(false); }}
                                 onPause={() => setIsActuallyPlaying(false)}
                                 onEnded={() => setIsActuallyPlaying(false)}
-                                onError={() => { setLoadError(true); setIsBuffering(false); }}
+                                onError={(e) => { 
+                                    console.error("[FeedPost] Video load error:", e);
+                                    setLoadError(true); 
+                                    setIsBuffering(false); 
+                                }}
                             />
                         ) : isCarousel ? (
                             <div className="relative w-full h-full group/carousel">

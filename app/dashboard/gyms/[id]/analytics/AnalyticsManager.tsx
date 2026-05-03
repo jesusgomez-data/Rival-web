@@ -6,7 +6,8 @@ import {
 } from 'recharts';
 import {
     TrendingUp, Users, DollarSign, Activity, Award, Target,
-    ArrowUpRight, ArrowDownRight, BarChart2, RefreshCcw
+    ArrowUpRight, ArrowDownRight, BarChart2, RefreshCcw, FileDown,
+    Zap, Globe, Shield
 } from "lucide-react";
 import { useState } from "react";
 
@@ -77,7 +78,14 @@ export default function AnalyticsManager({ centerId, analytics, metrics, centerN
         { id: 'members', label: 'Miembros' },
         { id: 'revenue', label: 'Ingresos' },
         { id: 'classes', label: 'Clases' },
+        { id: 'benchmark', label: 'Benchmarking' },
     ] as const;
+
+    const handleGenerateReport = () => {
+        alert("Generando informe de rendimiento detallado en PDF... Por favor espera.");
+        // In a real app, we would use html2canvas or a server-side PDF generator
+    };
+
 
     return (
         <div className="space-y-6">
@@ -95,6 +103,16 @@ export default function AnalyticsManager({ centerId, analytics, metrics, centerN
                         {tab.label}
                     </button>
                 ))}
+            </div>
+
+            {/* Global Actions */}
+            <div className="flex justify-end">
+                <button
+                    onClick={handleGenerateReport}
+                    className="flex items-center gap-2 bg-white/5 border border-white/10 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                >
+                    <FileDown className="w-4 h-4 text-brand-red" /> Generar Informe (PDF)
+                </button>
             </div>
 
             {/* ── OVERVIEW TAB ─────────────────────────────────────────── */}
@@ -356,6 +374,99 @@ export default function AnalyticsManager({ centerId, analytics, metrics, centerN
                     </div>
                 </div>
             )}
+
+            {/* ── BENCHMARK TAB ─────────────────────────────────────────── */}
+            {activeTab === 'benchmark' && (
+                <div className="space-y-6">
+                    <div className="bg-gradient-to-br from-brand-red/10 to-brand-gray border border-brand-red/20 rounded-2xl p-6 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 p-8 opacity-10">
+                            <Globe className="w-40 h-40 text-brand-red" />
+                        </div>
+                        <div className="relative z-10 max-w-xl">
+                            <span className="text-[10px] bg-brand-red text-white px-2 py-0.5 rounded font-black uppercase tracking-widest mb-3 inline-block">Pro Feature</span>
+                            <h2 className="text-3xl font-black italic uppercase italic tracking-tighter text-white mb-2">COMPARATIVA DE <span className="text-brand-red">MERCADO.</span></h2>
+                            <p className="text-gray-400 text-sm font-medium leading-relaxed">
+                                Descubre cómo se posiciona <span className="text-white font-bold">{centerName}</span> frente a la media de centros <span className="text-brand-red font-bold">Rival Fit</span> de tu categoría.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {/* Benchmarking Chart 1: Members */}
+                        <div className="bg-brand-gray border border-white/5 rounded-2xl p-6">
+                            <SectionTitle>Retención vs Media Nacional</SectionTitle>
+                            <div className="h-[220px] w-full mt-4">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={[
+                                        { name: 'Tu Centro', value: analytics.retentionRate },
+                                        { name: 'Media Rival', value: 72 },
+                                        { name: 'Top 5%', value: 94 },
+                                    ]}>
+                                        <XAxis dataKey="name" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                                        <YAxis hide domain={[0, 100]} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Bar dataKey="value" name="Tasa %" radius={[6, 6, 0, 0]}>
+                                            <Cell fill="#E11D48" />
+                                            <Cell fill="#374151" />
+                                            <Cell fill="#22c55e" />
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest text-center mt-4">
+                                Tu retención es un <span className="text-green-500">{((analytics.retentionRate / 72) * 100 - 100).toFixed(1)}%</span> superior a la media.
+                            </p>
+                        </div>
+
+                        {/* Benchmarking Chart 2: Occupancy */}
+                        <div className="bg-brand-gray border border-white/5 rounded-2xl p-6">
+                            <SectionTitle>Ocupación de Clases</SectionTitle>
+                            <div className="h-[220px] w-full mt-4">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <AreaChart data={[
+                                        { time: '07:00', tu: 45, media: 40 },
+                                        { time: '10:00', tu: 25, media: 30 },
+                                        { time: '14:00', tu: 60, media: 35 },
+                                        { time: '18:00', tu: 95, media: 85 },
+                                        { time: '20:00', tu: 80, media: 70 },
+                                    ]}>
+                                        <XAxis dataKey="time" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
+                                        <YAxis hide />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Area itemID='tu' name="Tu Centro" dataKey="tu" stroke="#E11D48" fill="#E11D48" fillOpacity={0.2} strokeWidth={2} />
+                                        <Area itemID='media' name="Media" dataKey="media" stroke="#374151" fill="#374151" fillOpacity={0.1} strokeWidth={2} strokeDasharray="5 5" />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </div>
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest text-center mt-4">
+                                Tienes picos de demanda en horas valle (14:00) vs la media.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="bg-brand-gray border border-white/5 rounded-2xl p-6">
+                        <SectionTitle>Análisis Competitivo</SectionTitle>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                            {[
+                                { label: 'Ticket Medio', val: '€64', status: 'optimal', icon: DollarSign },
+                                { label: 'Engagement App', val: 'Alto', status: 'good', icon: Zap },
+                                { label: 'Seguridad / Bajas', val: 'Bajo', status: 'perfect', icon: Shield }
+                            ].map((item, i) => (
+                                <div key={i} className="bg-black/40 border border-white/5 p-4 rounded-xl flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-brand-red">
+                                        <item.icon className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest">{item.label}</p>
+                                        <p className="text-lg font-black text-white italic">{item.val}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
+

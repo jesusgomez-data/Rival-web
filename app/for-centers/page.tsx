@@ -99,6 +99,41 @@ const plans = [
     ctaLink: 'mailto:sales@rival.app',
     highlight: false,
   },
+  {
+    name: 'ESTHER / ENTERPRISE',
+    price: 'Custom',
+    description: 'Para cadenas y grandes redes de centros',
+    features: [
+      'Todo de Pro',
+      'API de integración propia',
+      'Marca Blanca (app personalizada)',
+      'Soporte Prioritario 24/7',
+      'Formación presencial para staff',
+      'Multi-centro centralizado',
+    ],
+    cta: 'Contactar con Ventas',
+    ctaLink: 'mailto:sales@rivalfit.app',
+    highlight: false,
+  },
+];
+
+const steps = [
+  {
+    title: 'Registra tu Centro',
+    description: 'Crea tu perfil oficial en menos de 5 minutos y selecciona tu deporte.',
+  },
+  {
+    title: 'Configura tus Clases',
+    description: 'Sincroniza tus horarios y establece la capacidad máxima de tu box.',
+  },
+  {
+    title: 'Recibe Atletas',
+    description: 'Los usuarios de la red social verán tu centro y podrán reservar clases prueba.',
+  },
+  {
+    title: 'Automatiza tus Pagos',
+    description: 'Gestiona suscripciones y pagos recurrentes de forma 100% segura.',
+  },
 ];
 
 export default function ForCenters() {
@@ -196,6 +231,35 @@ export default function ForCenters() {
         </div>
       </section>
 
+      {/* How it Works Section */}
+      <section className="py-32 bg-muted/30">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-20">
+            <h2 className="text-4xl lg:text-5xl font-heading font-bold mb-6 text-foreground text-center">
+              ¿Cómo <span className="text-brand-red">funciona?</span>
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+              Simplificamos el proceso para que puedas centrarte en lo que importa: tus atletas.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-4 gap-8 relative">
+            {/* Connection Line (Desktop) */}
+            <div className="hidden md:block absolute top-12 left-0 right-0 h-0.5 bg-gradient-to-r from-brand-red/0 via-brand-red/20 to-brand-red/0" />
+            
+            {steps.map((step, i) => (
+              <div key={i} className="relative z-10 flex flex-col items-center text-center group">
+                <div className="w-16 h-16 rounded-2xl bg-card border border-border flex items-center justify-center text-xl font-black text-brand-red mb-8 group-hover:scale-110 group-hover:rotate-6 transition-all shadow-lg group-hover:shadow-brand-red/20 group-hover:border-brand-red/50">
+                  {i + 1}
+                </div>
+                <h3 className="text-xl font-bold mb-4 font-heading text-foreground">{step.title}</h3>
+                <p className="text-muted-foreground leading-relaxed text-sm">{step.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Features Grid */}
       <section id="features" className="py-32 bg-background border-y border-border">
         <div className="max-w-7xl mx-auto px-6">
@@ -233,7 +297,7 @@ export default function ForCenters() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {plans.map((plan, i) => (
               <motion.div
                 key={i}

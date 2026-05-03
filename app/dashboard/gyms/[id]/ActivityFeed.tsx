@@ -14,9 +14,14 @@ export default function ActivityFeed({ centerId }: { centerId: string }) {
     }, [centerId]);
 
     const load = async () => {
-        const data = await getCenterActivity(centerId);
-        setActivities(data);
-        setLoading(false);
+        try {
+            const data = await getCenterActivity(centerId);
+            setActivities(data);
+        } catch (error) {
+            console.error("[ActivityFeed] Failed to load activities:", error);
+        } finally {
+            setLoading(false);
+        }
     }
 
     if (loading) return <div className="p-4 text-center text-xs text-muted-foreground animate-pulse">Loading feed...</div>;

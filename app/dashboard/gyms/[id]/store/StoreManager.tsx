@@ -345,6 +345,133 @@ export default function StoreManager({ centerId, initialProducts, centers = [], 
                     </div>
                 </div>
             )}
+            {/* Sales Modal */}
+            {showSalesModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+                    <div className="bg-brand-gray border border-white/10 rounded-[2rem] p-6 sm:p-8 w-full max-w-lg animate-in fade-in zoom-in duration-200 shadow-2xl">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-xl font-black text-white italic uppercase tracking-tighter">Procesar Venta</h3>
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1">
+                                    {selectedProductForSale?.name} — <span className="text-brand-red">€{selectedProductForSale?.price}</span>
+                                </p>
+                            </div>
+                            <button onClick={() => setShowSalesModal(false)} className="p-2 hover:bg-white/5 rounded-full transition-colors text-muted-foreground">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {salesStep === 1 ? (
+                            <div className="space-y-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-1">Vincular a Atleta (Opcional)</label>
+                                    <div className="relative">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+                                        <input
+                                            type="text"
+                                            value={memberSearchQuery}
+                                            onChange={(e) => handleMemberSearch(e.target.value)}
+                                            placeholder="Buscar por nombre o @usuario..."
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl py-3.5 pl-12 pr-4 text-white text-sm focus:outline-none focus:border-brand-red transition-all"
+                                        />
+                                        {isSearchingMember && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-red animate-spin" />}
+                                    </div>
+
+                                    {memberSearchResults.length > 0 && (
+                                        <div className="mt-2 bg-black/60 border border-white/10 rounded-2xl overflow-hidden divide-y divide-white/5 max-h-48 overflow-y-auto custom-scrollbar">
+                                            {memberSearchResults.map((m) => (
+                                                <button
+                                                    key={m.id}
+                                                    onClick={() => {
+                                                        setSelectedMember(m);
+                                                        setMemberSearchResults([]);
+                                                        setMemberSearchQuery(m.full_name || m.username);
+                                                        setSalesStep(2);
+                                                    }}
+                                                    className="w-full flex items-center gap-3 px-4 py-3 hover:bg-brand-red/10 transition-all text-left"
+                                                >
+                                                    <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 shrink-0">
+                                                        {m.avatar_url ? <img src={m.avatar_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-brand-red/10 flex items-center justify-center text-brand-red font-black text-[10px]">{(m.full_name || 'A')[0]}</div>}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-bold text-white">{m.full_name}</p>
+                                                        <p className="text-[9px] text-muted-foreground uppercase font-black">@{m.username}</p>
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-col gap-3">
+                                    <button
+                                        onClick={() => setSalesStep(2)}
+                                        className="w-full bg-white text-black py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all flex items-center justify-center gap-2 shadow-lg"
+                                    >
+                                        Continuar como Venta Anónima <ChevronDown className="w-3 h-3 -rotate-90" />
+                                    </button>
+                                    <p className="text-[9px] text-center text-muted-foreground uppercase font-bold tracking-widest">Registrar al atleta permite enviarle un recibo y actualizar sus analíticas.</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="space-y-8">
+                                {selectedMember && (
+                                    <div className="bg-brand-red/5 border border-brand-red/10 rounded-2xl p-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl overflow-hidden border border-brand-red/20 shrink-0">
+                                                {selectedMember.avatar_url ? <img src={selectedMember.avatar_url} alt="" className="w-full h-full object-cover" /> : <div className="w-full h-full bg-brand-red/10 flex items-center justify-center text-brand-red font-black text-xs">{(selectedMember.full_name || 'A')[0]}</div>}
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-bold text-white">{selectedMember.full_name}</p>
+                                                <p className="text-[9px] text-brand-red font-black uppercase tracking-widest">Atleta Vinculado</p>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => { setSelectedMember(null); setSalesStep(1); }} className="text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-white underline">Cambiar</button>
+                                    </div>
+                                )}
+
+                                <div className="space-y-4">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-white/30 ml-1">Método de Pago</label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <button
+                                            onClick={() => setPaymentMethod('cash')}
+                                            className={clsx(
+                                                "flex flex-col items-center gap-3 p-6 rounded-3xl border transition-all",
+                                                paymentMethod === 'cash' ? "bg-brand-red/10 border-brand-red text-white" : "bg-black/20 border-white/5 text-muted-foreground hover:border-white/10"
+                                            )}
+                                        >
+                                            <Banknote className={clsx("w-8 h-8", paymentMethod === 'cash' ? "text-brand-red" : "text-white/10")} />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Efectivo</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setPaymentMethod('card')}
+                                            className={clsx(
+                                                "flex flex-col items-center gap-3 p-6 rounded-3xl border transition-all",
+                                                paymentMethod === 'card' ? "bg-blue-500/10 border-blue-500 text-white" : "bg-black/20 border-white/5 text-muted-foreground hover:border-white/10"
+                                            )}
+                                        >
+                                            <CreditCard className={clsx("w-8 h-8", paymentMethod === 'card' ? "text-blue-500" : "text-white/10")} />
+                                            <span className="text-[10px] font-black uppercase tracking-widest">Tarjeta (POS)</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex gap-3 mt-8">
+                                    <button onClick={() => setSalesStep(1)} className="flex-1 bg-white/5 border border-white/10 text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10">Atrás</button>
+                                    <button
+                                        onClick={handleProcessSale}
+                                        disabled={isProcessingSale}
+                                        className="flex-[2] bg-brand-red text-white py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(220,38,38,0.3)]"
+                                    >
+                                        {isProcessingSale ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShoppingBag className="w-4 h-4" />}
+                                        Finalizar Venta — €{selectedProductForSale?.price}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
