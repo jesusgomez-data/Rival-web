@@ -571,181 +571,95 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
 
             <div className="max-w-5xl mx-auto px-4 md:px-8 relative -mt-24 md:-mt-32">
                 <div className="flex flex-col md:flex-row md:items-start md:gap-10 gap-6">
-                    {/* Avatar */}
-                    <div className={`w-32 h-32 md:w-48 md:h-48 rounded-3xl border-[6px] shadow-2xl relative z-10 shrink-0 overflow-hidden group ${theme === 'dark' ? 'border-black bg-gray-800' : 'border-gray-50 bg-white'}`}>
+                    {/* --- Avatar --- */}
+                    <div className={`w-32 h-32 md:w-52 md:h-52 rounded-[3rem] border-[8px] shadow-[0_20px_50px_rgba(0,0,0,0.5)] relative z-10 shrink-0 overflow-hidden group transition-all duration-700 hover:scale-[1.03] ${theme === 'dark' ? 'border-zinc-950 bg-zinc-900' : 'border-white bg-white'}`}>
                         {org.logo_url ? (
-                            <img src={org.logo_url} alt={org.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                            <img src={org.logo_url} alt={org.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
                         ) : (
-                            <div className="w-full h-full flex items-center justify-center font-black text-5xl text-gray-600 select-none">
+                            <div className="w-full h-full flex items-center justify-center font-black text-6xl text-brand-red select-none">
                                 {org.name[0]}
                             </div>
                         )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
 
-                    {/* Info Section */}
-                    <div className="flex-1 pt-2 md:pt-36 w-full">
-                        <div className="flex flex-col md:flex-row justify-between gap-6 md:items-start">
-                            <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                    <h1 className={`text-3xl md:text-5xl font-black italic uppercase tracking-tighter ${textContrast}`}>
+                    {/* --- Info Section --- */}
+                    <div className="flex-1 pt-2 md:pt-32 w-full">
+                        <div className="flex flex-col gap-5">
+                            {/* Title & Actions */}
+                            <div className="flex flex-wrap items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <h1 className={`text-3xl md:text-5xl font-black italic uppercase tracking-tighter leading-none ${textContrast}`}>
                                         {org.name}
                                     </h1>
                                     {org.plan && org.plan !== 'free' && (
-                                        <CheckCircle2 className="w-6 h-6 text-blue-500 fill-blue-500/10" />
+                                        <div className="bg-blue-500/10 p-1 rounded-full border border-blue-500/20">
+                                            <CheckCircle2 className="w-4 h-4 text-blue-500 fill-blue-500/10" />
+                                        </div>
                                     )}
                                 </div>
 
-                                {/* Bio */}
-                                <p className={`text-sm md:text-base leading-relaxed max-w-2xl font-medium ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>
-                                    {org.bio || org.description || (isTrainer ? "Entrenador dedicado a maximizar tu rendimiento." : "Centro de entrenamiento dedicado a forjar fitness de élite. Únete a nuestra comunidad y libera tu potencial.")}
-                                </p>
-
-                                <div className={`flex flex-wrap items-center gap-4 text-sm pt-2 ${textMuted}`}>
-                                    {org.city && <span className={`flex items-center gap-1.5 transition-colors cursor-pointer ${theme === 'dark' ? 'hover:text-white' : 'hover:text-black'}`}><MapPin className="w-4 h-4 text-brand-red" /> {org.city}, {org.country}</span>}
-                                    {org.website && (
-                                        <a
-                                            href={org.website.startsWith('http') ? org.website : `https://${org.website}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className={`flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors ${theme === 'dark' ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-black'}`}
-                                        >
-                                            <Globe className="w-4 h-4" />
-                                            <span>
-                                                {(() => {
-                                                    try {
-                                                        const urlStr = org.website.startsWith('http') ? org.website : `https://${org.website}`;
-                                                        return new URL(urlStr).hostname;
-                                                    } catch (e) {
-                                                        return org.website;
-                                                    }
-                                                })()}
-                                            </span>
-                                        </a>
-                                    )}
-                                </div>
-
-                                {/* Social media & extra info */}
-                                <div className="flex flex-wrap items-center gap-3 pt-1">
-                                    {org.instagram && (
-                                        <a href={`https://instagram.com/${org.instagram.replace('@','')}`} target="_blank" rel="noopener noreferrer"
-                                            className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${textMuted} hover:text-pink-400`}>
-                                            <Instagram className="w-3.5 h-3.5" /> {org.instagram}
-                                        </a>
-                                    )}
-                                    {org.tiktok && (
-                                        <a href={`https://tiktok.com/${org.tiktok.replace('@','')}`} target="_blank" rel="noopener noreferrer"
-                                            className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${textMuted} hover:text-white`}>
-                                            <Hash className="w-3.5 h-3.5" /> TikTok
-                                        </a>
-                                    )}
-                                    {org.youtube && (
-                                        <a href={`https://youtube.com/@${org.youtube.replace('@','')}`} target="_blank" rel="noopener noreferrer"
-                                            className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${textMuted} hover:text-red-400`}>
-                                            <Youtube className="w-3.5 h-3.5" /> YouTube
-                                        </a>
-                                    )}
-                                    {org.latitude && org.longitude && (
-                                        <a href={`https://maps.google.com/?q=${org.latitude},${org.longitude}`} target="_blank" rel="noopener noreferrer"
-                                            className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest transition-colors ${textMuted} hover:text-brand-red`}>
-                                            <Navigation className="w-3.5 h-3.5" /> Ver en Maps
-                                        </a>
-                                    )}
-                                    {org.founded_year && (
-                                        <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>
-                                            <Star className="w-3.5 h-3.5" /> Desde {org.founded_year}
-                                        </span>
-                                    )}
-                                    {org.capacity && (
-                                        <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest ${textMuted}`}>
-                                            <Users className="w-3.5 h-3.5" /> Hasta {org.capacity} personas
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Head Coach Display */}
-                                {org.head_coach && (
-                                    <div className="pt-4 flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-full border overflow-hidden ${theme === 'dark' ? 'bg-gray-800 border-white/10' : 'bg-gray-200 border-gray-300'}`}>
-                                            {org.head_coach.avatar_url ? (
-                                                <img src={org.head_coach.avatar_url} alt="Coach" className="w-full h-full object-cover" />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center bg-brand-red text-white text-[10px] font-black">HC</div>
-                                            )}
-                                        </div>
-                                        <div>
-                                            <p className={`text-[10px] font-black uppercase tracking-widest ${textMuted}`}>Head Coach</p>
-                                            <p className={`text-sm font-bold ${textContrast}`}>{org.head_coach.full_name || org.head_coach.username}</p>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Coaches List */}
-                                {coaches && coaches.length > 0 && (
-                                    <div className="pt-4">
-                                        <p className={`text-[10px] font-black uppercase tracking-widest ${textMuted} mb-2`}>Coaches</p>
-                                        <div className="flex flex-wrap gap-4">
-                                            {coaches.map((coach: any) => (
-                                                <Link key={coach.id} href={`/dashboard/profile/${coach.username}`} className="flex items-center gap-2 group/coach">
-                                                    <div className={`w-6 h-6 rounded-full border overflow-hidden ${theme === 'dark' ? 'bg-gray-800 border-white/10' : 'bg-gray-200 border-gray-300'}`}>
-                                                        {coach.avatar_url ? (
-                                                            <img src={coach.avatar_url} alt={coach.username} className="w-full h-full object-cover" />
-                                                        ) : (
-                                                            <div className="w-full h-full flex items-center justify-center bg-gray-700 text-[8px] font-black">{coach.username[0]}</div>
-                                                        )}
-                                                    </div>
-                                                    <p className={`text-xs font-bold ${textContrast} group-hover/coach:text-brand-red transition-colors`}>{coach.full_name || coach.username}</p>
-                                                </Link>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Actions & Stats */}
-                            <div className="flex flex-col gap-4 md:gap-6 md:items-end w-full md:w-auto mt-4 md:mt-0">
-                                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                                <div className="flex items-center gap-2">
                                     <button
                                         onClick={handleFollow}
                                         disabled={loading}
-                                        className={`h-10 md:h-12 px-4 md:px-8 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg ${following ? (theme === 'dark' ? 'bg-white/10 text-white hover:bg-red-500/10 hover:text-red-500 border border-white/10' : 'bg-gray-200 text-black hover:text-red-600') : 'bg-brand-red text-white hover:bg-red-600 hover:scale-105 hover:shadow-red-900/40'}`}
+                                        className={`h-9 px-5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg ${following ? (theme === 'dark' ? 'bg-white/10 text-white border border-white/10' : 'bg-gray-200 text-black') : 'bg-brand-red text-white hover:bg-red-600 shadow-red-900/20'}`}
                                     >
-                                        {following ? <><UserCheck className="w-4 h-4" /> Siguiendo</> : <><UserPlus className="w-4 h-4" /> Seguir</>}
+                                        {following ? <><UserCheck className="w-3.5 h-3.5" /> Siguiendo</> : <><UserPlus className="w-3.5 h-3.5" /> Seguir</>}
                                     </button>
-
                                     {(!hasAccess && !isTrial) && (
                                         <button
                                             onClick={() => setActiveTab('schedule')}
-                                            className={`h-10 md:h-12 px-4 md:px-8 rounded-xl text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg border ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}
+                                            className={`h-9 px-5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg bg-white text-black hover:bg-gray-100 border border-gray-200`}
                                         >
-                                            {isTrainer ? "Agendar una clase" : "Prueba Gratis"}
+                                            {isTrainer ? "Reservar" : "Prueba Gratis"}
                                         </button>
                                     )}
-                                    {isMember && (
-                                        <div className="h-10 md:h-12 px-4 md:px-8 rounded-xl bg-green-500/10 text-green-500 border border-green-500/20 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                                            <CheckCircle2 className="w-4 h-4" /> Miembro Activo
-                                        </div>
-                                    )}
-                                    {isTrial && (
-                                        <div className="h-10 md:h-12 px-4 md:px-8 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[10px] md:text-xs font-black uppercase tracking-widest flex items-center gap-2">
-                                            <Calendar className="w-4 h-4" /> Reserva Realizada
-                                        </div>
-                                    )}
+                                </div>
+                            </div>
+
+                            {/* Stats & Metadata Row */}
+                            <div className="flex flex-wrap items-center gap-x-8 gap-y-3 pb-3 border-b border-white/5">
+                                <div className="flex gap-5 items-center">
+                                    <div className="flex items-baseline gap-1">
+                                        <span className={`font-black text-lg italic ${textContrast}`}>{initialPosts.length}</span>
+                                        <span className={`uppercase text-[8px] font-black tracking-[0.2em] ${textMuted}`}>Posts</span>
+                                    </div>
+                                    <div className="flex items-baseline gap-1 text-center cursor-pointer hover:opacity-80 transition-opacity">
+                                        <span className={`font-black text-lg italic ${textContrast}`}>{count}</span>
+                                        <span className={`uppercase text-[8px] font-black tracking-[0.2em] ${textMuted}`}>Seguidores</span>
+                                    </div>
                                 </div>
 
-                                <div className="flex gap-8 text-sm">
-                                    <div className="text-center md:text-right">
-                                        <span className={`block font-black text-xl ${textContrast}`}>{initialPosts.length}</span>
-                                        <span className={`uppercase text-[10px] font-bold tracking-widest ${textMuted}`}>Posts</span>
-                                    </div>
-                                    <div className="text-center md:text-right cursor-pointer hover:opacity-80 transition-opacity">
-                                        <span className={`block font-black text-xl ${textContrast}`}>{count}</span>
-                                        <span className={`uppercase text-[10px] font-bold tracking-widest ${textMuted}`}>Seguidores</span>
-                                    </div>
+                                <div className={`flex flex-wrap items-center gap-4 text-[9px] font-black uppercase tracking-widest ${textMuted}`}>
+                                    {org.city && (
+                                        <span className="flex items-center gap-1.5">
+                                            <MapPin className="w-3 h-3 text-brand-red" /> {org.city}
+                                        </span>
+                                    )}
+                                    {org.website && (
+                                        <a href={org.website.startsWith('http') ? org.website : `https://${org.website}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-white transition-colors">
+                                            <Globe className="w-3 h-3" /> {(() => { try { return new URL(org.website.startsWith('http') ? org.website : `https://${org.website}`).hostname; } catch (e) { return org.website; } })()}
+                                        </a>
+                                    )}
+                                    {org.instagram && (
+                                        <a href={`https://instagram.com/${org.instagram.replace('@','')}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 hover:text-pink-400 transition-colors">
+                                            <Instagram className="w-3 h-3" /> @{org.instagram.replace('@','')}
+                                        </a>
+                                    )}
                                 </div>
+                            </div>
+
+                            {/* Bio - Compacted */}
+                            <div className="max-w-2xl">
+                                <p className={`text-sm md:text-[15px] leading-snug font-bold italic opacity-75 ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                                    {org.bio || org.description || (isTrainer ? "Entrenador dedicado a maximizar tu rendimiento." : "Centro de entrenamiento de élite.")}.
+                                </p>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
                 {/* Navigation Tabs */}
                 <div className={`mt-8 md:mt-16 border-t mb-8 sticky top-0 backdrop-blur-md z-40 dark-section ${theme === 'dark' ? 'border-white/10 bg-black/95' : 'border-gray-200 bg-gray-50/95'}`}>
@@ -755,6 +669,12 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                             className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[9px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'feed' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
                         >
                             <Grid className="w-4 h-4" /> Feed
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('gallery')}
+                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[9px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'gallery' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                        >
+                            <ImageIcon className="w-3.5 h-3.5 md:w-4 md:h-4" /> Instalaciones
                         </button>
                         {!isTrainer && (
                             <button
@@ -938,23 +858,6 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                             </div>
                         )}
 
-                        {/* Gallery */}
-                        {org.gallery_urls && org.gallery_urls.length > 0 && (
-                            <div className={`rounded-2xl border p-5 ${bgCard}`}>
-                                <h3 className={`text-[10px] font-black uppercase tracking-[0.25em] mb-4 flex items-center gap-2 ${textMuted}`}>
-                                    <ImageIcon className="w-3.5 h-3.5 text-brand-red" /> Galería de Instalaciones
-                                </h3>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                    {org.gallery_urls.map((url: string, i: number) => (
-                                        <div key={i} className="aspect-square rounded-xl overflow-hidden relative group cursor-pointer border border-white/5"
-                                            onClick={() => setExerciseMedia({ url, type: 'image' })}>
-                                            <img src={url} alt="" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
                     </div>
                 )}
 
@@ -1589,6 +1492,87 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                     </div>
                 )}
 
+                {/* ── GALLERY TAB ── */}
+                {activeTab === 'gallery' && (
+                    <div className="max-w-5xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                        <div className="text-center space-y-4">
+                            <h2 className={`text-3xl md:text-5xl font-black italic uppercase tracking-tighter ${textContrast}`}>Nuestras Instalaciones</h2>
+                            <p className={`text-sm md:text-base font-bold uppercase tracking-[0.2em] ${textMuted}`}>Equipamiento de Élite para Atletas que No Se Detienen</p>
+                            <div className="w-20 h-1 bg-brand-red mx-auto rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]" />
+                        </div>
+
+                        {org.gallery_urls && org.gallery_urls.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                                {org.gallery_urls.map((url: string, i: number) => (
+                                    <div 
+                                        key={url} 
+                                        onClick={() => setExerciseMedia({ url, type: 'image' })}
+                                        className={clsx(
+                                            "group relative rounded-[3rem] overflow-hidden cursor-pointer shadow-2xl transition-all duration-700 hover:scale-[1.02] border-[10px]",
+                                            theme === 'dark' ? "border-zinc-900 bg-zinc-900" : "border-white bg-gray-100"
+                                        )}
+                                    >
+                                        <div className="aspect-[16/11] overflow-hidden">
+                                            <img 
+                                                src={url} 
+                                                alt={`Instalación ${i + 1}`} 
+                                                className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
+                                            />
+                                        </div>
+                                        {/* Premium Overlay */}
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent flex flex-col justify-end p-8 opacity-90 group-hover:opacity-100 transition-opacity">
+                                            <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                                                <p className="text-white font-black italic uppercase text-2xl tracking-tighter">Área de Élite {i + 1}</p>
+                                                <div className="flex items-center gap-3 mt-2">
+                                                    <span className="w-8 h-[2px] bg-brand-red rounded-full" />
+                                                    <p className="text-white/70 font-bold uppercase tracking-[0.2em] text-[10px]">High Performance</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="absolute top-6 right-6 w-12 h-12 rounded-2xl bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-all duration-500 scale-75 group-hover:scale-100">
+                                            <ImageIcon className="w-5 h-5" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="py-20 text-center space-y-6">
+                                <div className="w-24 h-24 rounded-[2.5rem] bg-white/5 flex items-center justify-center mx-auto border border-dashed border-white/10">
+                                    <ImageIcon className="w-10 h-10 text-white/20" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className={`text-xl font-black italic uppercase ${textContrast}`}>Sin fotos todavía</h3>
+                                    <p className={`text-sm uppercase tracking-widest font-bold ${textMuted}`}>Este centro aún no ha subido fotos de sus instalaciones.</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Stats/Highlights section */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-10">
+                            {[
+                                { label: 'ZONA CROSS', icon: <TrendingUp className="w-6 h-6" />, color: 'from-blue-600 to-blue-400' },
+                                { label: 'FREE WEIGHTS', icon: <Dumbbell className="w-6 h-6" />, color: 'from-brand-red to-red-400' },
+                                { label: 'CAFÉ & SOCIAL', icon: <ShoppingBag className="w-6 h-6" />, color: 'from-orange-600 to-orange-400' },
+                                { label: 'WELLNESS', icon: <Flame className="w-6 h-6" />, color: 'from-green-600 to-green-400' }
+                            ].map((item, i) => (
+                                <div key={i} className={clsx(
+                                    "p-8 rounded-[2.5rem] border transition-all duration-500 hover:-translate-y-2 group/card relative overflow-hidden",
+                                    theme === 'dark' ? "bg-zinc-900/50 border-white/5 hover:border-brand-red/30" : "bg-white border-gray-100 shadow-xl"
+                                )}>
+                                    <div className={clsx(
+                                        "w-14 h-14 rounded-2xl flex items-center justify-center text-white mb-6 shadow-2xl bg-gradient-to-br transition-transform duration-500 group-hover/card:scale-110 rotate-3 group-hover/card:rotate-0",
+                                        item.color
+                                    )}>
+                                        {item.icon}
+                                    </div>
+                                    <p className={`text-[11px] font-black uppercase tracking-[0.2em] ${textContrast}`}>{item.label}</p>
+                                    <p className={`text-[9px] font-bold uppercase tracking-widest mt-1 ${textMuted}`}>Top Quality</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Empty States */}
                 {initialPosts.length === 0 && activeTab !== 'store' && (
                     <div className="py-32 text-center">
@@ -2112,7 +2096,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                         </div>
                     </div>
                 )}
-            </div>
+
 
             {/* Membership Confirmation Modal */}
             {showMembershipModal && selectedMembership && (

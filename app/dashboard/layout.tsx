@@ -572,7 +572,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         {/* Floating Center Button */}
                         <div className="absolute left-1/2 -translate-x-1/2 -top-10">
                             <Link
-                                href="/dashboard/training/session"
+                                href="/dashboard?create=true"
                                 className="flex flex-col items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-brand-red to-[#991b1b] text-white shadow-[0_8px_25px_rgba(220,38,38,0.6)] border-4 border-background hover:scale-110 active:scale-95 transition-all duration-300 group"
                             >
                                 <PlusCircle className="w-8 h-8 group-hover:rotate-90 transition-transform duration-500" />

@@ -18,7 +18,10 @@ import clsx from "clsx";
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
+import { useUploads } from "./UploadContext";
+
 export default function CreatePost({ currentUser, onSuccess, initialPostType, initialData, editingPostId }: { currentUser: any, onSuccess?: () => void, initialPostType?: 'standard' | 'pr' | 'wod', initialData?: any, editingPostId?: string }) {
+    const { startUpload } = useUploads();
     const { language } = useLanguage();
     const [content, setContent] = useState(initialData?.caption || initialData?.content || "");
     const [isPosting, setIsPosting] = useState(false);
@@ -87,6 +90,47 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
 
     async function handlePost(e: React.FormEvent) {
         e.preventDefault();
+        if (isPosting) return;
+        setIsPosting(true);
+
+        // If it's not editing, we can "fire and forget" if desired, 
+        // but let's follow the user's request: "mientras carga... el usuario pueda seguir navegando"
+        // We use startUpload from context for this.
+
+        if (!editingPostId && postType !== 'wod') {
+            // MULTIPLE FILES UPLOAD - we need to adapt startUpload if it doesn't support multiple
+            // For now, let's trigger startUpload for the first file or a customized version
+            
+            // Actually, let's keep the existing loop if it's multiple files or complex,
+            // but we'll show progress and close the modal.
+            
+            // OPTIMIZATION: If it's a single file, use the background uploader context
+            if (pendingFiles.length === 1 || pendingFiles.length === 0) {
+                try {
+                    startUpload({
+                        content,
+                        file: pendingFiles[0] || null,
+                        postType,
+                        exercise,
+                        weight,
+                        sport,
+                        currentUser,
+                        preview: previews[0],
+                        wodData,
+                        scheduledFor
+                    });
+                    
+                    // Immediate success feedback to the parent to close the modal/form
+                    onSuccess?.();
+                    return;
+                } catch (err) {
+                    setIsPosting(false);
+                }
+            }
+        }
+
+        // Fallback for complex posts (reposts, edits, multiple files)
+        // This still runs in the component but we can make it better.
         let mediaUrls: string[] = [];
         let mediaType: string | null = null;
 
@@ -96,7 +140,6 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                 for (let i = 0; i < pendingFiles.length; i++) {
                     const file = pendingFiles[i];
                     
-                    // Progress for individual file
                     const fileExt = (file.name.split('.').pop() || 'mp4').toLowerCase();
                     const fileName = `${currentUser.id}/${Date.now()}-${i}.${fileExt}`;
 

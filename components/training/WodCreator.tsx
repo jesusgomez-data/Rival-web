@@ -15,11 +15,13 @@ import {
     Target,
     RefreshCw,
     Trophy,
-    Calendar
+    Calendar,
+    Scan,
+    Loader2
 } from "lucide-react";
 import { motion, Reorder, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { getExercises, addNewExercise } from "@/app/dashboard/training/actions";
+import { getExercises, addNewExercise, parseWodFromImage } from "@/app/dashboard/training/actions";
 
 export type WodFormat = 'AMRAP' | 'FOR TIME' | 'EMOM' | 'TABATA' | 'INTERVALS' | 'DEATH BY' | 'ROUNDS FOR TIME' | '21-15-9' | 'FUERZA' | 'LIBRE'
     // Endurance formats
@@ -144,6 +146,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
     });
 
     const [category, setCategory] = useState<WorkoutCategory>(initialData?.category || 'CROSS_TRAINING');
+    const [isScanning, setIsScanning] = useState(false);
 
     const [catalog, setCatalog] = useState<any[]>([]);
     const [searchQuery, setSearchQuery] = useState('');
@@ -151,6 +154,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
     const [isSavingNew, setIsSavingNew] = useState(false);
     const [activeUnitPath, setActiveUnitPath] = useState<{ bId: string, exId: string } | null>(null);
     const [showBenchmarks, setShowBenchmarks] = useState(false);
+    const scanInputRef = useRef<HTMLInputElement>(null);
     const dropdownRef = useRef<HTMLDivElement>(null);
     const inputRefs = useRef<Record<string, HTMLInputElement>>({});
 
@@ -178,6 +182,56 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
 
     const updateWod = (newTitle: string, newBlocks: WodBlock[], newSummary: WodSummary = summary, newDate: string = date, newCategory: WorkoutCategory = category) => {
         onUpdate({ title: newTitle, date: newDate, blocks: newBlocks, summary: newSummary, category: newCategory });
+    };
+
+    const handleScanImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsScanning(true);
+        try {
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+                const base64 = reader.result as string;
+                const res = await parseWodFromImage(base64);
+                if (res.success && res.data) {
+                    const data = res.data;
+                    const newTitle = data.title || title;
+                    const newCat = data.category || category;
+                    const newDate = date;
+                    const newSummary = data.summary || summary;
+                    
+                    if (data.title) setTitle(data.title.toUpperCase());
+                    if (data.category) setCategory(data.category);
+                    
+                    if (data.blocks) {
+                        const normalizedBlocks = data.blocks.map((b: any) => ({
+                            ...b,
+                            format: b.format || 'LIBRE',
+                            config: b.config || {},
+                            id: Math.random().toString(36).substring(7),
+                            exercises: b.exercises?.map((ex: any) => ({
+                                id: Math.random().toString(36).substring(7),
+                                name: ex.name || '',
+                                reps: ex.reps || '',
+                                detail: ex.detail || '',
+                                type: ex.type || 'exercise'
+                            })) || []
+                        }));
+                        setBlocks(normalizedBlocks);
+                        if (data.summary) setSummary(data.summary);
+                        updateWod(newTitle, normalizedBlocks, newSummary, newDate, newCat);
+                    }
+                } else {
+                    alert(res.error || 'No se pudo analizar la imagen. Intenta con una foto más clara.');
+                }
+                setIsScanning(false);
+            };
+            reader.readAsDataURL(file);
+        } catch (err) {
+            console.error('Scan error:', err);
+            setIsScanning(false);
+        }
     };
 
     const addBlock = () => {
@@ -462,56 +516,81 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
             <div className="relative group">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 gap-3">
                     <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2">Título del WOD</label>
-                    <div className="relative">
+                    <div className="flex items-center gap-2">
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setShowBenchmarks(!showBenchmarks)}
+                                className="w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-1.5 bg-brand-red/10 border border-brand-red/20 rounded-lg text-[10px] font-black text-brand-red uppercase tracking-wider hover:bg-brand-red hover:text-white transition-all group/btn"
+                            >
+                                <Trophy className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
+                                Benchmark
+                            </button>
+
+                            <AnimatePresence>
+                                {showBenchmarks && (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                        className="absolute right-0 top-full mt-2 w-64 bg-brand-gray border border-white/10 rounded-2xl shadow-2xl z-[200] overflow-hidden backdrop-blur-2xl"
+                                    >
+                                        <div className="p-3 border-b border-white/5 bg-white/5">
+                                            <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest pl-1">CROSSFIT BENCHMARKS</p>
+                                        </div>
+                                        <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                                            {BENCHMARKS.map((bm, i) => (
+                                                <button
+                                                    key={i}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setTitle(bm.name);
+                                                        if (bm.summary) setSummary(bm.summary as any);
+                                                        if (bm.blocks) {
+                                                            const normalizedBlocks = bm.blocks.map(b => ({
+                                                                ...b,
+                                                                id: Math.random().toString(36).substring(7),
+                                                                exercises: b.exercises.map(ex => ({ ...ex, id: Math.random().toString(36).substring(7) }))
+                                                            }));
+                                                            setBlocks(normalizedBlocks as any);
+                                                            updateWod(bm.name, normalizedBlocks as any, bm.summary as any);
+                                                        }
+                                                        setShowBenchmarks(false);
+                                                    }}
+                                                    className="w-full text-left px-4 py-3 text-xs font-bold text-gray-300 hover:text-white hover:bg-brand-red/10 border-b border-white/5 last:border-0 transition-colors uppercase italic flex items-center justify-between"
+                                                >
+                                                    {bm.name}
+                                                    <ChevronDown className="w-3 h-3 -rotate-90 opacity-30" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+                        </div>
+
                         <button
                             type="button"
-                            onClick={() => setShowBenchmarks(!showBenchmarks)}
-                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-1.5 bg-brand-red/10 border border-brand-red/20 rounded-lg text-[10px] font-black text-brand-red uppercase tracking-wider hover:bg-brand-red hover:text-white transition-all group/btn"
+                            disabled={isScanning}
+                            onClick={() => scanInputRef.current?.click()}
+                            className="w-full sm:w-auto flex items-center justify-center gap-2 px-3 py-1.5 bg-brand-blue/10 border border-brand-blue/20 rounded-lg text-[10px] font-black text-blue-400 uppercase tracking-wider hover:bg-brand-blue hover:text-white transition-all group/btn disabled:opacity-50"
                         >
-                            <Trophy className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
-                            Benchmark
+                            {isScanning ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                                <Scan className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
+                            )}
+                            {isScanning ? 'Escaneando...' : 'Escanear Pizarra'}
                         </button>
 
-                        <AnimatePresence>
-                            {showBenchmarks && (
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                                    className="absolute right-0 top-full mt-2 w-64 bg-brand-gray border border-white/10 rounded-2xl shadow-2xl z-[200] overflow-hidden backdrop-blur-2xl"
-                                >
-                                    <div className="p-3 border-b border-white/5 bg-white/5">
-                                        <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest pl-1">CROSSFIT BENCHMARKS</p>
-                                    </div>
-                                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
-                                        {BENCHMARKS.map((bm, i) => (
-                                            <button
-                                                key={i}
-                                                type="button"
-                                                onClick={() => {
-                                                    setTitle(bm.name);
-                                                    if (bm.summary) setSummary(bm.summary as any);
-                                                    if (bm.blocks) {
-                                                        const normalizedBlocks = bm.blocks.map(b => ({
-                                                            ...b,
-                                                            id: Math.random().toString(36).substring(7),
-                                                            exercises: b.exercises.map(ex => ({ ...ex, id: Math.random().toString(36).substring(7) }))
-                                                        }));
-                                                        setBlocks(normalizedBlocks as any);
-                                                        updateWod(bm.name, normalizedBlocks as any, bm.summary as any);
-                                                    }
-                                                    setShowBenchmarks(false);
-                                                }}
-                                                className="w-full text-left px-4 py-3 text-xs font-bold text-gray-300 hover:text-white hover:bg-brand-red/10 border-b border-white/5 last:border-0 transition-colors uppercase italic flex items-center justify-between"
-                                            >
-                                                {bm.name}
-                                                <ChevronDown className="w-3 h-3 -rotate-90 opacity-30" />
-                                            </button>
-                                        ))}
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+                        <input
+                            ref={scanInputRef}
+                            type="file"
+                            accept="image/*"
+                            capture="environment"
+                            onChange={handleScanImage}
+                            className="hidden"
+                        />
                     </div>
                 </div>
                 <input

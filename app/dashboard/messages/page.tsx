@@ -20,7 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 export default function MessagesPage() {
     return (
-        <Suspense fallback={<div className="h-screen flex items-center justify-center bg-[#060606]"><Loader2 className="animate-spin text-brand-red w-10 h-10" /></div>}>
+        <Suspense fallback={<div className="h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-brand-red w-12 h-12" /></div>}>
             <MessagesContent />
         </Suspense>
     )
@@ -244,18 +244,18 @@ function MessagesContent() {
     })
 
     if (isLoadingConversations) {
-        return <div className="h-screen flex items-center justify-center bg-[#060606]"><Loader2 className="animate-spin text-brand-red w-10 h-10" /></div>
+        return <div className="h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-brand-red w-12 h-12" /></div>
     }
 
     const activeConv = conversations.find(c => c.id === activeConversationId)
     const isGroupChat = activeConv?.is_group
 
     return (
-        <div className="h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] bg-[#060606] flex text-white overflow-hidden rounded-2xl md:rounded-[2.5rem] border border-white/[0.05] shadow-2xl mx-auto max-w-[1600px] my-0 md:my-4">
+        <div className="h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] bg-background flex text-foreground overflow-hidden rounded-2xl md:rounded-[3rem] border border-border shadow-[0_20px_50px_rgba(0,0,0,0.1)] mx-auto max-w-[1600px] my-0 md:my-4 transition-colors duration-500">
 
             {/* Sidebar */}
             <div className={clsx(
-                "w-full md:w-[340px] lg:w-[400px] shrink-0 border-r border-white/[0.05] flex flex-col",
+                "w-full md:w-[360px] lg:w-[420px] shrink-0 border-r border-border flex flex-col transition-all duration-300",
                 !isMobileListVisible ? 'hidden md:flex' : 'flex'
             )}>
                 <ChatList
@@ -270,9 +270,9 @@ function MessagesContent() {
 
             {/* Chat window */}
             <div className={clsx(
-                "flex-1 flex flex-col overflow-hidden",
+                "flex-1 flex flex-col overflow-hidden relative",
                 !isMobileListVisible
-                    ? "fixed inset-0 z-[110] bg-[#060606] animate-in slide-in-from-right duration-300 lg:relative lg:inset-auto lg:z-auto lg:animate-none"
+                    ? "fixed inset-0 z-[110] bg-background animate-in slide-in-from-right duration-500 lg:relative lg:inset-auto lg:z-auto lg:animate-none"
                     : "hidden md:flex"
             )}>
                 <ChatWindow

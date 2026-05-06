@@ -455,48 +455,59 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
         setIsSendingDM(false);
     };
     
-    // Robustly resolve the photo/media URL
-    const photoUrl = useMemo(() => {
-        if (!image && !workoutData?.image) return undefined;
-        
-        let targetMedia: string | undefined = image;
+    // Robustly resolve the primary media URL and detection info
+    const { resolvedUrl, resolvedIsVideo, resolvedIsCarousel, resolvedItems } = useMemo(() => {
+        let url: string | undefined = image;
+        let isVid = mediaType === 'video';
+        let isCar = mediaType === 'carousel';
+        let items: string[] = [];
 
-        // If image is JSON, try to extract the URL
-        if (targetMedia && targetMedia.trim().startsWith('{')) {
+        // 1. Extract from workoutData if image is missing
+        if (!url && workoutData?.image) url = workoutData.image;
+        if (!url && workoutData?.metrics?.image) url = workoutData.metrics.image;
+
+        // 2. Handle JSON strings (objects or arrays)
+        if (url && typeof url === 'string' && (url.trim().startsWith('{') || url.trim().startsWith('['))) {
             try {
-                const parsed = JSON.parse(targetMedia.trim());
-                targetMedia = parsed.image || parsed.backgroundImage || parsed.media_url || parsed.mediaUrl || parsed.url;
-            } catch(e) { targetMedia = undefined; }
-        }
-        
-        // If image is JSON array (carousel), get first image
-        if (targetMedia && targetMedia.trim().startsWith('[')) {
-            try {
-                const parsed = JSON.parse(targetMedia.trim());
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    targetMedia = parsed[0];
+                const parsed = JSON.parse(url.trim());
+                if (Array.isArray(parsed)) {
+                    isCar = true;
+                    items = parsed;
+                    url = parsed[0];
+                } else {
+                    url = parsed.image || parsed.backgroundImage || parsed.media_url || parsed.mediaUrl || parsed.url || url;
                 }
-            } catch(e) { }
+            } catch (e) {
+                console.warn("[FeedPost] Error parsing media JSON:", e);
+            }
         }
 
-        // Final fallback to workout media if still nothing
-        const finalUrl = targetMedia || workoutData?.image || workoutData?.metrics?.image;
+        // 3. Precise Video Detection based on resolved URL
+        const videoExtensions = /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i;
+        const videoIndicators = ['/videos/', 'video/upload', '.mov?', '.mp4?'];
         
-        return isImageUrl(finalUrl) ? finalUrl : undefined;
-    }, [image, workoutData]);
-
-
-    const isCarousel = mediaType === 'carousel';
-    const [carouselIndex, setCarouselIndex] = useState(0);
-    const carouselItems = useMemo(() => {
-        if (!isCarousel) return [];
-        try {
-            const parsed = JSON.parse(image);
-            return Array.isArray(parsed) ? parsed : [parsed];
-        } catch (e) {
-            return [image];
+        if (!isVid && url && typeof url === 'string') {
+            isVid = videoExtensions.test(url) || videoIndicators.some(ind => url.includes(ind));
         }
-    }, [image, isCarousel]);
+
+        // Clean up items if it's a carousel
+        if (isCar && items.length === 0 && url) {
+            items = [url];
+        }
+
+        return {
+            resolvedUrl: isImageUrl(url) || isVid ? url : undefined,
+            resolvedIsVideo: isVid,
+            resolvedIsCarousel: isCar,
+            resolvedItems: items
+        };
+    }, [image, workoutData, mediaType]);
+
+    const photoUrl = resolvedUrl;
+    const isVideo = resolvedIsVideo;
+    const isCarousel = resolvedIsCarousel;
+    const carouselItems = resolvedItems;
+    const [carouselIndex, setCarouselIndex] = useState(0);
 
     const [commentTree, setCommentTree] = useState<Comment[]>([]);
     const [newComment, setNewComment] = useState("");
@@ -536,18 +547,17 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
 
     const [isVisible, setIsVisible] = useState(false);
     const [showMuteHint, setShowMuteHint] = useState(false);
+    // Combined state for buffering/loading
     const [isBuffering, setIsBuffering] = useState(true);
     const [isActuallyPlaying, setIsActuallyPlaying] = useState(false);
     const [loadError, setLoadError] = useState(false);
-    // Video detection (moved up to avoid TDZ ReferenceError)
-    const isVideo = !!(image && (
-        /\.(mp4|webm|ogg|mov|m4v)$/i.test(image) ||
-        (mediaType && mediaType === 'video') ||
-        image.includes('/videos/') ||
-        image.includes('video/upload') ||
-        image.includes('.mov?') ||
-        image.includes('.mp4?')
-    ));
+    
+    // Auto-disable buffering if there's no media at all
+    useEffect(() => {
+        if (!image && !workoutData?.image) {
+            setIsBuffering(false);
+        }
+    }, [image, workoutData]);
 
     
     // Check if post actually has visual media to display in the main container
@@ -1120,7 +1130,15 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                         exit={{ opacity: 0, x: -20 }}
                                         className="relative w-full h-full"
                                     >
-                                        <Image src={carouselItems[carouselIndex]} alt="Slide" fill className="object-cover" />
+                                        <div className="relative w-full h-full">
+                                            <Image 
+                                                src={carouselItems[carouselIndex]} 
+                                                alt="Slide" 
+                                                fill 
+                                                className="object-cover"
+                                                onLoadingComplete={() => setIsBuffering(false)}
+                                            />
+                                        </div>
                                     </motion.div>
                                 </AnimatePresence>
                                 
@@ -1166,6 +1184,11 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 fill 
                                 className="object-cover hover:scale-105 transition-transform duration-1000" 
                                 unoptimized={photoUrl?.startsWith('data:')}
+                                onLoadingComplete={() => setIsBuffering(false)}
+                                onError={() => {
+                                    setIsBuffering(false);
+                                    setLoadError(true);
+                                }}
                             />
                         )}
 

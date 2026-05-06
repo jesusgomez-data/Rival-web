@@ -2,6 +2,10 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+const aiModel = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
 
 async function calculateWorkoutStreak(supabase: any, userId: string) {
@@ -1529,4 +1533,65 @@ export async function addNewExercise(exercise: { name: string, muscle_group?: st
     }
 
     return { success: true, data };
+}
+
+export async function parseWodFromImage(base64Image: string) {
+    try {
+        const prompt = `
+            Eres un experto en CrossFit y entrenamiento funcional. Tu tarea es analizar la imagen de una pizarra de entrenamiento (WOD) y extraer la estructura de ejercicios.
+            
+            Reglas de extracción:
+            1. Identifica los bloques (ej. calentamiento, fuerza, WOD principal).
+            2. Para cada bloque, identifica el formato (AMRAP, FOR TIME, EMOM, TABATA, etc).
+            3. Extrae los ejercicios, repeticiones y detalles (pesos, notas).
+            4. Si hay textos de descanso o separadores (como "4 min REST"), inclúyelos como tipo 'separator'.
+            5. Si hay esquemas de reps (como "21-15-9"), inclúyelos como tipo 'scheme'.
+            6. Devuelve la información en un JSON estricto con esta estructura:
+            
+            {
+              "title": "Nombre del entreno",
+              "category": "CROSS_TRAINING",
+              "blocks": [
+                {
+                  "title": "Título del bloque",
+                  "format": "AMRAP",
+                  "config": { "timecap": "20:00", "rounds": null },
+                  "exercises": [
+                    { "name": "Burpees", "reps": "15", "detail": "Rx", "type": "exercise" }
+                  ]
+                }
+              ],
+              "summary": { "totalTime": "45:00", "scoreType": "REPS", "scoreLabel": "" }
+            }
+            
+            Formatos permitidos: 'AMRAP', 'FOR TIME', 'EMOM', 'TABATA', 'INTERVALS', 'DEATH BY', 'ROUNDS FOR TIME', '21-15-9', 'FUERZA', 'LIBRE'.
+            Categorías: 'CROSS_TRAINING', 'RUNNING', 'GYM', 'OCR', 'HYROX', 'CYCLING', 'SWIMMING', 'YOGA', 'BOXING'.
+            
+            Responde ÚNICAMENTE con el objeto JSON, sin markdown, sin texto adicional.
+        `;
+
+        const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
+
+        const result = await aiModel.generateContent([
+            prompt,
+            {
+                inlineData: {
+                    data: base64Data,
+                    mimeType: "image/jpeg"
+                }
+            }
+        ]);
+
+        const response = await result.response;
+        const text = response.text();
+        
+        // Clean markdown if present
+        const jsonString = text.replace(/```json|```/gi, '').trim();
+        const parsed = JSON.parse(jsonString);
+        
+        return { success: true, data: parsed };
+    } catch (e: any) {
+        console.error('Error parsing WOD image with Gemini:', e);
+        return { error: `Error de IA: ${e.message || 'No se pudo analizar la imagen.'}` };
+    }
 }

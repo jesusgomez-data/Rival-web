@@ -64,15 +64,15 @@ function ViewOnceViewer({ msg, onClose, onViewed }: { msg: any; onClose: () => v
         >
             {/* Header */}
             <div className="flex items-center justify-between px-5 pt-12 pb-4 bg-gradient-to-b from-black to-transparent absolute top-0 left-0 right-0 z-10">
-                <button onClick={onClose} className="p-2 bg-white/10 rounded-full">
+                <button onClick={onClose} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors">
                     <X className="w-5 h-5 text-white" />
                 </button>
-                <div className="flex items-center gap-2 bg-black/60 backdrop-blur px-4 py-2 rounded-full border border-white/10">
-                    <Eye className="w-4 h-4 text-purple-400" />
+                <div className="flex items-center gap-2 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10 shadow-2xl">
+                    <Eye className="w-4 h-4 text-brand-red animate-pulse" />
                     <span className="text-white font-black text-sm">{seconds}s</span>
-                    <div className="w-20 h-1 bg-white/20 rounded-full overflow-hidden">
+                    <div className="w-20 h-1 bg-white/20 rounded-full overflow-hidden ml-2">
                         <motion.div
-                            className="h-full bg-purple-500 rounded-full"
+                            className="h-full bg-brand-red rounded-full"
                             style={{ width: `${(seconds / 30) * 100}%` }}
                             transition={{ duration: 1 }}
                         />
@@ -82,25 +82,27 @@ function ViewOnceViewer({ msg, onClose, onViewed }: { msg: any; onClose: () => v
             </div>
 
             {/* Media */}
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center p-4">
                 {isVideo ? (
                     <video
                         src={msg.video_url}
                         autoPlay
                         playsInline
                         controls={false}
-                        className="max-w-full max-h-full object-contain"
+                        className="max-w-full max-h-full object-contain rounded-2xl shadow-[0_0_50px_rgba(220,38,38,0.2)]"
                     />
                 ) : (
-                    <img
+                    <Image
                         src={msg.image_url}
                         alt="Ver una vez"
-                        className="max-w-full max-h-full object-contain"
+                        width={1000}
+                        height={1000}
+                        className="max-w-full max-h-full object-contain rounded-2xl shadow-[0_0_50px_rgba(220,38,38,0.2)]"
                     />
                 )}
             </div>
 
-            <p className="text-center text-white/30 text-[10px] font-black uppercase tracking-widest pb-8">
+            <p className="text-center text-white/30 text-[10px] font-black uppercase tracking-widest pb-8 italic">
                 Solo puedes ver esto una vez
             </p>
         </motion.div>
@@ -330,17 +332,19 @@ export default function ChatWindow({
 
     if (!otherPerson) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-[#060606]">
+            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-background relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-b from-brand-red/[0.03] to-transparent pointer-events-none" />
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="w-28 h-28 rounded-[2.5rem] bg-brand-red/10 flex items-center justify-center border border-brand-red/20 mb-6"
+                    initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                    className="w-32 h-32 rounded-[3rem] bg-brand-red/10 flex items-center justify-center border border-brand-red/20 mb-8 relative shadow-2xl"
                 >
-                    <MessageSquarePlus className="w-12 h-12 text-brand-red/40" />
+                    <div className="absolute inset-0 bg-brand-red/5 blur-2xl rounded-full" />
+                    <MessageSquarePlus className="w-14 h-14 text-brand-red relative" />
                 </motion.div>
-                <h3 className="text-2xl font-black italic text-white mb-2 uppercase tracking-tighter">RIVAL CHAT</h3>
-                <p className="text-white/25 text-sm max-w-xs leading-relaxed font-medium">
-                    Selecciona un chat o inicia una nueva conversación con un rival
+                <h3 className="text-3xl font-black italic text-foreground mb-3 uppercase tracking-tighter mix-blend-difference md:mix-blend-normal">RIVAL CHAT</h3>
+                <p className="text-muted-foreground text-sm max-w-xs leading-relaxed font-bold uppercase tracking-widest opacity-60">
+                    Selecciona un rival para entrar en la arena de mensajes
                 </p>
             </div>
         )
@@ -357,57 +361,54 @@ export default function ChatWindow({
     })
 
     return (
-        <div className="flex-1 flex flex-col bg-[#060606] relative overflow-hidden h-full">
+        <div className="flex-1 flex flex-col bg-background relative overflow-hidden h-full">
 
             {/* ── Header ── */}
-            <header className="px-4 py-3 flex items-center justify-between z-30 shrink-0 bg-[#0C0C0C]/90 backdrop-blur-xl border-b border-white/[0.05]">
+            <header className="px-4 py-3 flex items-center justify-between z-30 shrink-0 bg-background/80 backdrop-blur-2xl border-b border-border shadow-sm">
                 <div className="flex items-center gap-3">
                     {onBack && (
-                        <button onClick={onBack} className="lg:hidden p-2 -ml-1 text-white/40 hover:text-white transition-colors active:scale-90">
+                        <button onClick={onBack} className="lg:hidden p-2.5 -ml-1 text-muted-foreground hover:text-brand-red transition-all active:scale-90 bg-muted/30 rounded-xl">
                             <ChevronLeft className="w-6 h-6" />
                         </button>
                     )}
                     <div className="relative shrink-0">
                         {isGroup ? (
-                            <div className="w-10 h-10 rounded-2xl overflow-hidden bg-gradient-to-br from-brand-red/50 to-orange-500/50 flex items-center justify-center border border-white/10">
-                                <Users className="w-5 h-5 text-white/70" />
+                            <div className="w-11 h-11 rounded-2xl overflow-hidden bg-gradient-to-br from-brand-red to-orange-600 flex items-center justify-center border border-white/10 shadow-lg">
+                                <Users className="w-6 h-6 text-white" />
                             </div>
                         ) : (
                             <>
-                                <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/10 relative">
-                                    <Image
-                                        src={otherPerson.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherPerson.full_name || 'U')}&background=random`}
-                                        alt="" fill className="object-cover"
-                                    />
+                                <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-brand-red/20 p-0.5 relative shadow-md">
+                                    <div className="w-full h-full rounded-full overflow-hidden relative">
+                                        <Image
+                                            src={otherPerson.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherPerson.full_name || 'U')}&background=random`}
+                                            alt="" fill className="object-cover"
+                                        />
+                                    </div>
                                 </div>
                                 {isOnline && (
-                                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-[#0C0C0C] rounded-full shadow-[0_0_6px_rgba(34,197,94,0.7)]" />
+                                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-[#0C0C0C] rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
                                 )}
                             </>
                         )}
                     </div>
                     <div>
-                        <h4 className="font-black italic uppercase text-sm leading-none tracking-tight text-white">
-                            {isGroup ? (groupName || 'Grupo') : otherPerson.full_name}
+                        <h4 className="font-black italic uppercase text-base leading-none tracking-tight text-foreground">
+                            {isGroup ? (groupName || 'Grupo') : (otherPerson.full_name || otherPerson.username)}
                         </h4>
-                        <div className="mt-0.5 h-4 flex items-center">
+                        <div className="mt-1 h-4 flex items-center">
                             {isOtherTyping ? (
-                                <span className="flex items-center gap-1.5 text-[10px] text-brand-red font-bold">
-                                    <span className="flex gap-0.5 items-end">
-                                        {[0, 1, 2].map(i => (
-                                            <motion.span key={i} className="w-1 rounded-full bg-brand-red inline-block"
-                                                animate={{ height: ['3px', '8px', '3px'] }}
-                                                transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }} />
-                                        ))}
-                                    </span>
-                                    escribiendo…
+                                <span className="flex items-center gap-1.5 text-[10px] text-brand-red font-black uppercase tracking-widest animate-pulse">
+                                    Escribiendo…
                                 </span>
                             ) : isGroup ? (
-                                <span className="text-[10px] text-white/25 font-bold">{groupMembers.length + 1} participantes</span>
+                                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{groupMembers.length + 1} atletas</span>
                             ) : isOnline ? (
-                                <span className="text-[10px] text-green-400 font-bold uppercase tracking-widest">En línea</span>
+                                <span className="text-[10px] text-green-500 font-bold uppercase tracking-widest inline-flex items-center gap-1">
+                                    <div className="w-1 h-1 rounded-full bg-green-500" /> En línea
+                                </span>
                             ) : (
-                                <span className="text-[10px] text-white/20 font-bold">Desconectado</span>
+                                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Fuera de combate</span>
                             )}
                         </div>
                     </div>
@@ -417,17 +418,17 @@ export default function ChatWindow({
                     {onDeleteConversation && (
                         confirmDeleteConv ? (
                             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                                className="flex items-center gap-1 bg-red-500/10 border border-red-500/20 rounded-xl px-2 py-1.5">
-                                <span className="text-[10px] text-red-400 font-black uppercase">¿Borrar?</span>
-                                <button onClick={() => { setConfirmDeleteConv(false); onDeleteConversation() }} className="p-1 text-red-400 hover:text-red-300">
+                                className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-1.5">
+                                <span className="text-[10px] text-red-500 font-black uppercase">¿Borrar?</span>
+                                <button onClick={() => { setConfirmDeleteConv(false); onDeleteConversation() }} className="p-1 text-red-500 hover:scale-110">
                                     <Check className="w-4 h-4" />
                                 </button>
-                                <button onClick={() => setConfirmDeleteConv(false)} className="p-1 text-white/30 hover:text-white">
+                                <button onClick={() => setConfirmDeleteConv(false)} className="p-1 text-muted-foreground hover:text-foreground">
                                     <X className="w-4 h-4" />
                                 </button>
                             </motion.div>
                         ) : (
-                            <button onClick={() => setConfirmDeleteConv(true)} className="p-2.5 text-white/20 hover:text-red-400 hover:bg-white/5 rounded-xl transition-all">
+                            <button onClick={() => setConfirmDeleteConv(true)} className="p-3 text-muted-foreground hover:text-red-500 hover:bg-red-500/5 rounded-2xl transition-all">
                                 <Trash2 className="w-5 h-5" />
                             </button>
                         )
@@ -437,7 +438,9 @@ export default function ChatWindow({
 
             {/* ── Messages ── */}
             <div ref={scrollRef} onScroll={handleScroll}
-                className="flex-1 overflow-y-auto px-4 md:px-6 py-4 relative custom-scrollbar bg-[#060606]">
+                className="flex-1 overflow-y-auto px-4 md:px-6 py-6 relative custom-scrollbar bg-background">
+                {/* Visual texture for background */}
+                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
                 {isLoading ? (
                     <div className="flex items-center justify-center h-full">
                         <Loader2 className="w-8 h-8 text-brand-red animate-spin" />
@@ -541,18 +544,18 @@ export default function ChatWindow({
                                             {/* Bubble */}
                                             <div
                                                 className={clsx(
-                                                    'relative transition-colors select-none',
+                                                    'relative transition-all select-none',
                                                     isViewOnce
-                                                        ? 'rounded-2xl overflow-hidden'
+                                                        ? 'rounded-[22px] overflow-hidden'
                                                         : (msg.image_url || msg.video_url)
-                                                            ? 'rounded-2xl p-0.5 bg-white/[0.04] border border-white/[0.07]'
+                                                            ? 'rounded-[22px] p-0.5 bg-muted/40 border border-border shadow-sm'
                                                             : clsx(
-                                                                'px-4 py-2.5 shadow-sm',
+                                                                'px-4 py-3 shadow-md border',
                                                                 isMine
-                                                                    ? 'bg-brand-red text-white rounded-[18px]'
-                                                                    : 'bg-[#1A1A1A] border border-white/[0.05] text-white rounded-[18px]',
-                                                                isLast && isMine && 'rounded-br-[5px]',
-                                                                isLast && !isMine && 'rounded-bl-[5px]'
+                                                                    ? 'bg-brand-red border-brand-red text-white rounded-[22px] shadow-[0_4px_15px_rgba(220,38,38,0.2)]'
+                                                                    : 'bg-muted border-border text-foreground rounded-[22px]',
+                                                                isLast && isMine && 'rounded-br-[4px]',
+                                                                isLast && !isMine && 'rounded-bl-[4px]'
                                                             )
                                                 )}
                                                 onClick={() => handleMessageTap(msg)}
@@ -563,65 +566,62 @@ export default function ChatWindow({
                                             >
                                                 {/* Double-tap heart anim */}
                                                 {likedAnimId === msg.id && (
-                                                    <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: [1, 1.6, 0], opacity: [1, 1, 0] }}
+                                                    <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: [1, 1.8, 0], opacity: [1, 1, 0] }}
                                                         transition={{ duration: 0.8 }}
                                                         className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
-                                                        <Heart className="w-12 h-12 text-white fill-white drop-shadow-2xl" />
+                                                        <Heart className="w-14 h-14 text-white fill-white drop-shadow-2xl" />
                                                     </motion.div>
                                                 )}
 
                                                 {isEditing ? (
-                                                    <div className="flex flex-col gap-2 min-w-[180px]">
+                                                    <div className="flex flex-col gap-2 min-w-[200px]">
                                                         <textarea value={editValue} onChange={e => setEditValue(e.target.value)}
-                                                            className="bg-black/20 border border-white/10 rounded-xl p-2 text-sm text-white focus:outline-none resize-none" rows={2} autoFocus
+                                                            className="bg-background border border-border rounded-xl p-3 text-sm text-foreground focus:ring-2 focus:ring-brand-red/20 outline-none resize-none" rows={3} autoFocus
                                                             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit() } if (e.key === 'Escape') { setEditingId(null); setEditValue('') } }} />
-                                                        <div className="flex justify-end gap-1.5">
-                                                            <button onClick={() => { setEditingId(null); setEditValue('') }} className="p-1.5 rounded-lg bg-white/5 text-white/40 hover:text-white"><X className="w-3.5 h-3.5" /></button>
-                                                            <button onClick={handleSaveEdit} className="p-1.5 rounded-lg bg-white/20 text-white hover:bg-white/30"><Check className="w-3.5 h-3.5" /></button>
+                                                        <div className="flex justify-end gap-2">
+                                                            <button onClick={() => { setEditingId(null); setEditValue('') }} className="px-3 py-1.5 rounded-lg bg-muted text-muted-foreground hover:text-foreground text-[10px] font-black uppercase">Cancelar</button>
+                                                            <button onClick={handleSaveEdit} className="px-3 py-1.5 rounded-lg bg-brand-red text-white text-[10px] font-black uppercase">Guardar</button>
                                                         </div>
                                                     </div>
                                                 ) : isViewOnce ? (
                                                     // View-once bubble
                                                     isMine ? (
-                                                        <div className={clsx("flex items-center gap-3 px-4 py-3 rounded-2xl", "bg-purple-900/40 border border-purple-500/30")}>
-                                                            <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
-                                                                <Eye className="w-5 h-5 text-purple-400" />
+                                                        <div className={clsx("flex items-center gap-4 px-5 py-4 rounded-[22px]", "bg-purple-600/10 border-2 border-dashed border-purple-500/30")}>
+                                                            <div className="w-12 h-12 rounded-full bg-purple-500/20 flex items-center justify-center shadow-inner">
+                                                                <Eye className="w-6 h-6 text-purple-600" />
                                                             </div>
                                                             <div>
-                                                                <p className="text-[10px] font-black uppercase tracking-widest text-purple-300">
-                                                                    {isVideoMsg ? 'Video' : 'Foto'} · Solo 1 vez
+                                                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-purple-600 italic">
+                                                                    {isVideoMsg ? 'Video' : 'Foto'} · 1 VEZ
                                                                 </p>
-                                                                <p className="text-[9px] text-purple-400/60 font-bold mt-0.5">
-                                                                    {isViewed ? 'Visto ✓' : 'Enviado · Esperando...'}
+                                                                <p className="text-[10px] text-muted-foreground font-bold mt-0.5">
+                                                                    {isViewed ? 'ABIERTO ✓' : 'ENVIADO'}
                                                                 </p>
-                                                            </div>
-                                                            <div className="ml-auto flex items-center gap-1 text-[9px] text-white/25 font-bold">
-                                                                {format(new Date(msg.created_at), 'HH:mm')}
                                                             </div>
                                                         </div>
                                                     ) : isViewed ? (
-                                                        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white/[0.04] border border-white/[0.07]">
-                                                            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
-                                                                <EyeOff className="w-5 h-5 text-white/20" />
+                                                        <div className="flex items-center gap-4 px-5 py-4 rounded-[22px] bg-muted/60 border border-border">
+                                                            <div className="w-12 h-12 rounded-full bg-muted/20 flex items-center justify-center opacity-30">
+                                                                <EyeOff className="w-6 h-6" />
                                                             </div>
                                                             <div>
-                                                                <p className="text-[10px] font-black uppercase tracking-widest text-white/25">Expirado</p>
-                                                                <p className="text-[9px] text-white/15 font-bold mt-0.5">Ya no está disponible</p>
+                                                                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground/40 italic">EXPIRADO</p>
+                                                                <p className="text-[10px] text-muted-foreground/20 font-bold mt-0.5">ELIMINADO AUTOMÁTICAMENTE</p>
                                                             </div>
                                                         </div>
                                                     ) : (
                                                         <button
                                                             onClick={e => { e.stopPropagation(); handleViewOnce(msg) }}
-                                                            className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-gradient-to-br from-purple-900/60 to-brand-red/30 border border-purple-500/40 hover:from-purple-800/70 hover:to-brand-red/40 transition-all active:scale-95"
+                                                            className="group flex items-center gap-4 px-5 py-4 rounded-[22px] bg-gradient-to-br from-purple-600 to-brand-red border-none text-white shadow-xl hover:scale-[1.02] active:scale-95 transition-all"
                                                         >
-                                                            <div className="w-10 h-10 rounded-full bg-purple-500/30 flex items-center justify-center">
-                                                                <Eye className="w-5 h-5 text-purple-300" />
+                                                            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center shadow-inner group-hover:rotate-12 transition-transform">
+                                                                <Eye className="w-6 h-6" />
                                                             </div>
                                                             <div className="text-left">
-                                                                <p className="text-[10px] font-black uppercase tracking-widest text-purple-200">
-                                                                    {isVideoMsg ? 'Video' : 'Foto'} · 1 vez
+                                                                <p className="text-[11px] font-black uppercase tracking-[0.2em] italic">
+                                                                    {isVideoMsg ? 'Video' : 'Foto'} · PULVARIZAR
                                                                 </p>
-                                                                <p className="text-[9px] text-purple-300/70 font-bold mt-0.5">Toca para ver · 30s</p>
+                                                                <p className="text-[10px] text-white/70 font-bold mt-0.5">TOCA PARA VER • 30 SEGUNDOS</p>
                                                             </div>
                                                         </button>
                                                     )

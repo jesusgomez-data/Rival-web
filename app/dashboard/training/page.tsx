@@ -4,7 +4,7 @@ import { getMissions, getRecentPRs, getUserProfile, getScheduledWorkouts, getWor
 import { type TrainingPlan } from "./types";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy, X } from "lucide-react";
+import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy, X, Activity } from "lucide-react";
 import Image from "next/image";
 
 export default function TrainingPage() {
@@ -173,24 +173,35 @@ export default function TrainingPage() {
     return (
         <div className="space-y-12 pb-20">
             {/* Hero Header */}
-            <div className="relative h-[300px] rounded-3xl overflow-hidden group">
+            <div className="relative h-[280px] md:h-[350px] rounded-3xl overflow-hidden group shadow-2xl">
                 <Image
                     src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop"
                     alt="Training Hero"
                     fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-1000"
+                    className="object-cover group-hover:scale-105 transition-transform duration-[2000ms]"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
-                <div className="absolute bottom-0 left-0 p-8 w-full flex flex-col md:flex-row justify-between items-end gap-6">
-                    <div className="max-w-xl">
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className="bg-brand-red text-white text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded">Programa Actual</span>
-                            <span className="text-white text-xs font-black uppercase tracking-widest drop-shadow-[0_1px_6px_rgba(0,0,0,1)]">Semana 4 • Bloque de Hipertrofia</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
+                
+                {/* Decorative Elements */}
+                <div className="absolute top-6 left-6 flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-brand-red animate-ping" />
+                    <span className="text-[10px] font-black text-white uppercase tracking-[0.3em] drop-shadow-md">Arena de Entrenamiento</span>
+                </div>
+
+                <div className="absolute bottom-0 left-0 p-6 md:p-10 w-full flex flex-col md:flex-row justify-between items-end gap-6">
+                    <div className="max-w-2xl">
+                        <div className="flex items-center gap-3 mb-3">
+                            <span className="bg-brand-red text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg shadow-lg">Semana 4</span>
+                            <span className="text-white/80 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
+                                <Activity className="w-3.5 h-3.5 text-brand-red" /> Bloque de Hipertrofia & Fuerza
+                            </span>
                         </div>
-                        <h1 className="text-4xl md:text-5xl font-heading font-black !text-white glow-text">CENTRO DE ENTRENAMIENTO</h1>
+                        <h1 className="text-4xl md:text-6xl font-heading font-black !text-white italic uppercase tracking-tighter leading-none drop-shadow-2xl">
+                            CENTRO DE <span className="text-brand-red">COMBATE</span>
+                        </h1>
                     </div>
-                    <Link href="/dashboard/training/session" className="bg-white text-black px-8 py-4 rounded-xl font-bold flex items-center gap-2 hover:bg-brand-red hover:text-white transition-all transform hover:-translate-y-1 shadow-2xl">
-                        <Play className="w-5 h-5 fill-current" /> INICIAR SESIÓN
+                    <Link href="/dashboard/training/session" className="w-full md:w-auto bg-white text-black px-10 py-5 rounded-2xl font-black uppercase italic tracking-widest flex items-center justify-center gap-3 hover:bg-brand-red hover:text-white transition-all transform hover:-translate-y-1 active:scale-95 shadow-[0_15px_30px_rgba(0,0,0,0.4)] group">
+                        <Play className="w-5 h-5 fill-current group-hover:scale-110 transition-transform" /> INICIAR SESIÓN
                     </Link>
                 </div>
             </div>
@@ -200,13 +211,16 @@ export default function TrainingPage() {
                 {/* Left Column (Main Focus) */}
                 <div className="lg:col-span-8 space-y-8">
                     {/* Week Calendar */}
-                    <div className="bg-brand-gray/50 border border-border/10 rounded-3xl p-6 backdrop-blur-sm">
+                    <div className="bg-muted/50 border border-border shadow-sm rounded-3xl p-6 backdrop-blur-sm">
                         <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-heading font-bold text-foreground flex items-center gap-2">
-                                <Calendar className="w-5 h-5 text-brand-red" /> Semana Actual
-                            </h3>
-                            <Link href="/dashboard/training/logs" className="text-xs font-bold text-gray-500 hover:text-white transition-colors flex items-center gap-1">
-                                VER REGISTROS <ChevronRight className="w-4 h-4" />
+                            <div className="flex flex-col gap-1">
+                                <h3 className="font-black italic uppercase text-foreground flex items-center gap-2 tracking-tight">
+                                    <Calendar className="w-5 h-5 text-brand-red" /> Planificación Semanal
+                                </h3>
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest ml-7">Escuadrón RIVAL • Entrenamiento Híbrido</p>
+                            </div>
+                            <Link href="/dashboard/training/logs" className="text-[10px] font-black text-brand-red hover:opacity-80 transition-all flex items-center gap-1 uppercase tracking-widest">
+                                Historial <ChevronRight className="w-3 h-3" />
                             </Link>
                         </div>
                         <div className="grid grid-cols-7 gap-3">
@@ -570,20 +584,20 @@ export default function TrainingPage() {
 function StatItem({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
     return (
         <div className="space-y-1">
-            <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+            <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground font-black uppercase tracking-widest">
                 {icon} {label}
             </div>
-            <p className="!text-white font-black text-lg font-heading">{value}</p>
+            <p className="text-foreground font-black text-xl italic font-heading uppercase tracking-tighter">{value}</p>
         </div>
     )
 }
 
 function WorkoutItem({ name, sets, note }: { name: string, sets: string, note?: string }) {
     return (
-        <div className="bg-white/5 border border-white/5 p-4 rounded-2xl flex items-center justify-between hover:bg-white/10 transition-all hover:translate-x-1">
+        <div className="bg-background border border-border p-4 rounded-2xl flex items-center justify-between hover:bg-muted transition-all hover:translate-x-1 group/item">
             <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-black/40 rounded-xl flex items-center justify-center text-brand-red border border-white/5">
-                    <Dumbbell className="w-5 h-5" />
+                <div className="w-12 h-12 bg-muted rounded-xl flex items-center justify-center text-brand-red border border-border group-hover/item:bg-brand-red group-hover/item:text-white transition-all">
+                    <Dumbbell className="w-6 h-6" />
                 </div>
                 <div>
                     <h4 className="font-bold text-white text-sm">{name}</h4>

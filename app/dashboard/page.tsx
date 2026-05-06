@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
 import clsx from "clsx";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLanguage } from "@/app/LanguageContext";
 import LikeButton from "./community/LikeButton";
 import FollowButton from "./community/FollowButton";
@@ -76,6 +77,16 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
     const [isOpen, setIsOpen] = useState(false);
     const [repostData, setRepostData] = useState<any>(null);
     const [editMode, setEditMode] = useState<{ id: string } | null>(null);
+    const searchParams = useSearchParams();
+    const shouldOpenCreate = searchParams.get('create') === 'true';
+
+    useEffect(() => {
+        if (shouldOpenCreate) {
+            setIsOpen(true);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }, [shouldOpenCreate]);
+
     useEffect(() => {
         const handleRepost = (e: any) => {
             setRepostData(e.detail);
