@@ -25,6 +25,8 @@ import VictoryShareCard from "./community/VictoryShareCard";
 import DailyCheckinWidget from "@/components/wellness/DailyCheckinWidget";
 import { getTodayCheckin } from "./wellness-actions";
 import WODGeneratorUI from "@/components/WODGeneratorUI";
+import VideoReelsViewer, { type ReelPost } from "./VideoReelsViewer";
+import { AnimatePresence } from "framer-motion";
 
 function SuggestedUser({ id, name, username, role, avatar, isFollowing, isOfficial }: { id: string, name: string, username: string, role: string, avatar?: string, isFollowing: boolean, isOfficial?: boolean }) {
     const { t } = useLanguage();
@@ -303,6 +305,9 @@ export default function DashboardHome() {
     const [loading, setLoading] = useState(true);
     const [showStats, setShowStats] = useState(false);
     const [showTour, setShowTour] = useState(false);
+    const [reelsOpen, setReelsOpen] = useState(false);
+    const [reelsPosts, setReelsPosts] = useState<ReelPost[]>([]);
+    const [reelsStartIndex, setReelsStartIndex] = useState(0);
     const [todayCheckin, setTodayCheckin] = useState<any>(undefined);
     const [selectedVictoryDuel, setSelectedVictoryDuel] = useState<any>(null);
     const [data, setData] = useState<any>({
@@ -531,6 +536,50 @@ export default function DashboardHome() {
             return `${Math.floor(hours / 24)}d`;
         } catch (e) { return 'recientemente'; }
     }
+
+    // ── Reels viewer: listen for open-reels events from FeedPost ──────────────
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const detail = (e as CustomEvent).detail as ReelPost
+            if (!detail?.src) return
+
+            // Collect all video posts from the current feed and deduplicate
+            const VIDEO_EXTS = /\.(mp4|webm|mov|m4v)(\?.*)?$/i
+            const videoIndicators = ['/videos/', 'video/upload', '.mov?', '.mp4?']
+            const isVideoUrl = (url: string) => VIDEO_EXTS.test(url) || videoIndicators.some(v => url.includes(v))
+
+            const feedVideos: ReelPost[] = (data.feedPosts || [])
+                .filter((p: any) => {
+                    const url = p.media_url || ''
+                    return p.media_type === 'video' || isVideoUrl(url)
+                })
+                .map((p: any) => ({
+                    postId: p.id,
+                    src: p.media_url,
+                    username: p.profiles?.username || p.profiles?.full_name || 'rival',
+                    userFullName: p.profiles?.full_name,
+                    avatar: p.profiles?.avatar_url,
+                    caption: p.caption,
+                    initialLikes: p.likes_count || 0,
+                    hasLikedInitial: p.has_liked || false,
+                    commentsCount: p.comments_count || 0,
+                    currentUserId: data.currentUser?.id,
+                    authorId: p.user_id,
+                }))
+
+            // Ensure the clicked post is in the list (add if not found in feed)
+            const exists = feedVideos.some(v => v.postId === detail.postId)
+            if (!exists) feedVideos.unshift(detail)
+
+            const idx = feedVideos.findIndex(v => v.postId === detail.postId)
+            setReelsPosts(feedVideos)
+            setReelsStartIndex(idx >= 0 ? idx : 0)
+            setReelsOpen(true)
+        }
+
+        window.addEventListener('open-reels', handler)
+        return () => window.removeEventListener('open-reels', handler)
+    }, [data.feedPosts, data.currentUser])
 
     if (loading) {
         return (
@@ -981,10 +1030,19 @@ export default function DashboardHome() {
             <WODGeneratorUI
                 onWODGenerated={(wod) => {
                     console.log("✅ WOD generado exitosamente:", wod.title);
-                    // El usuario ahora puede revisar el WOD y decidir si publicarlo
-                    // El reload ocurre automáticamente después de publicar
                 }}
             />
+
+            {/* ── Fullscreen Reels Viewer ── */}
+            <AnimatePresence>
+                {reelsOpen && reelsPosts.length > 0 && (
+                    <VideoReelsViewer
+                        posts={reelsPosts}
+                        startIndex={reelsStartIndex}
+                        onClose={() => setReelsOpen(false)}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 }

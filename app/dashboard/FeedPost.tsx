@@ -1032,10 +1032,24 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     {/* Media rendering */}
                     <div 
                         className="relative w-full h-full cursor-pointer overflow-hidden"
-                        onClick={() => { 
+                        onClick={() => {
                             if (isVideo) {
-                                toggleMute();
-                                setShowMuteHint(false);
+                                // Open fullscreen reels viewer
+                                window.dispatchEvent(new CustomEvent('open-reels', {
+                                    detail: {
+                                        postId,
+                                        src: image,
+                                        username: username || user,
+                                        userFullName: user,
+                                        avatar,
+                                        caption,
+                                        initialLikes,
+                                        hasLikedInitial,
+                                        commentsCount: initialCommentsCount,
+                                        currentUserId,
+                                        authorId,
+                                    }
+                                }))
                             } else {
                                 setIsLightboxOpen(true);
                             }
