@@ -121,11 +121,11 @@ function FeedEmptyGuide({ onExplore }: { onExplore: () => void }) {
             </div>
 
             {/* Content type quick guide */}
-            <div className="bg-[#0E0E0E] border border-white/[0.06] rounded-3xl p-5">
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/25 mb-4 flex items-center gap-2">
+            <div className="bg-[#0E0E0E] border border-white/[0.06] rounded-3xl p-4">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/25 mb-3 flex items-center gap-2">
                     <Plus className="w-3.5 h-3.5" /> ¿Qué puedes publicar con el botón ➕?
                 </p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 w-full">
                     {CONTENT_TYPES.map(ct => (
                         <div key={ct.title} className={`flex items-center gap-3 p-3 rounded-2xl border ${ct.bg} ${ct.border}`}>
                             <span className="text-xl">{ct.emoji}</span>
@@ -232,7 +232,7 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
                     </button>
 
                     {/* Content type quick-pick row */}
-                    <div className="grid grid-cols-4 gap-px border-t border-white/[0.05]">
+                    <div className="grid grid-cols-4 border-t border-white/[0.05] divide-x divide-white/[0.05]">
                         {POST_ACTIONS.map(action => (
                             <button
                                 key={action.tab}
@@ -541,9 +541,9 @@ export default function DashboardHome() {
     }
 
     return (
-        <div className="max-w-full mx-auto space-y-8 pb-12 px-0 sm:px-4 lg:px-8">
+        <div className="max-w-full mx-auto space-y-6 pb-12 px-3 sm:px-4 lg:px-8 overflow-x-hidden">
             {/* Hero Welcome Banner */}
-            <div className="relative min-h-[200px] md:h-64 rounded-[32px] md:rounded-[40px] overflow-hidden border border-white/5 shadow-2xl flex flex-col justify-center dark-section">
+            <div className="relative min-h-[180px] md:h-64 rounded-[24px] md:rounded-[40px] overflow-hidden border border-white/5 shadow-2xl flex flex-col justify-center dark-section w-full">
                 <Image
                     src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=60&w=800&auto=format&fit=crop"
                     alt="Training Arena"
@@ -553,27 +553,23 @@ export default function DashboardHome() {
                     priority
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
-                <div className="relative z-10 px-6 sm:px-12 py-8 sm:py-12">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-[10px] sm:text-xs font-black mb-4 w-fit">
+                <div className="relative z-10 px-4 sm:px-10 py-6 sm:py-12">
+                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-[10px] font-black mb-3 w-fit">
                         <Flame className="w-3 h-3 fill-current" />
                         {t.dashboard.liveStatus}
                     </div>
-                    <h1 className="text-3xl sm:text-5xl font-heading font-black !text-white mb-2 md:mb-3 italic uppercase tracking-tight leading-none">
+                    <h1 className="text-2xl sm:text-5xl font-heading font-black !text-white mb-2 italic uppercase tracking-tight leading-none">
                         {t.dashboard.welcome} <span className="text-brand-red">{data.profile?.full_name?.split(' ')[0] || t.dashboard.warrior}</span>
                     </h1>
-                    <p className="!text-gray-300 text-sm sm:text-lg max-w-2xl font-medium">
-                        {language === 'es' ? (
-                            <>Has registrado <span className="text-white font-bold">{data.workoutCount} sesiones</span> y estás siguiendo a <span className="text-white font-bold">{data.rivalsCount} rivales</span>. {t.dashboard.statsTime}</>
-                        ) : (
-                            <>You have logged <span className="text-white font-bold">{data.workoutCount} sessions</span> and are following <span className="text-white font-bold">{data.rivalsCount} rivals</span>. {t.dashboard.statsTime}</>
-                        )}
+                    <p className="!text-gray-300 text-xs sm:text-lg max-w-2xl font-medium leading-snug">
+                        <span className="text-white font-bold">{data.workoutCount}</span> sesiones · <span className="text-white font-bold">{data.rivalsCount}</span> rivales
                     </p>
                 </div>
             </div>
 
             {/* Daily Check-in + Quick Access */}
-            <div className="grid sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2">
+            <div className="grid sm:grid-cols-3 gap-3">
+                <div className="sm:col-span-2 min-w-0">
                     {todayCheckin !== undefined && (
                         <DailyCheckinWidget 
                             existingCheckin={todayCheckin} 
@@ -584,7 +580,7 @@ export default function DashboardHome() {
                         />
                     )}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-1 gap-3">
+                <div className="grid grid-cols-1 gap-3 min-w-0">
                     <Link href="/dashboard/nutrition" className="group bg-black/40 border border-white/5 rounded-[1.5rem] p-4 hover:border-green-500/30 transition-all flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-500 group-hover:bg-green-500/20 transition-all">🥗</div>
                         <div><p className="text-white font-black text-xs uppercase tracking-widest">Nutrición</p><p className="text-[10px] text-gray-600">Macros del día</p></div>
@@ -597,9 +593,9 @@ export default function DashboardHome() {
             </div>
 
             {/* Main Content Grid */}
-            <div className="grid lg:grid-cols-12 gap-12 lg:gap-16">
+            <div className="grid lg:grid-cols-12 gap-6 lg:gap-16">
                 {/* Left Column: Feed */}
-                <div className="lg:col-span-7 space-y-8">
+                <div className="lg:col-span-7 space-y-6 min-w-0 overflow-hidden">
 
                     {/* 1. My Gyms Section (Moved here) */}
                     {data.myGyms?.length > 0 && (
@@ -701,9 +697,9 @@ export default function DashboardHome() {
 
 
                     {/* 4. Feed Header & Feed */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                        <div>
-                            <h2 className="text-2xl md:text-3xl font-heading font-black text-foreground italic tracking-tighter uppercase flex items-center gap-3">
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                        <div className="min-w-0">
+                            <h2 className="text-xl md:text-3xl font-heading font-black text-foreground italic tracking-tighter uppercase flex items-center gap-2 flex-wrap">
                                 {language === 'es' ? 'Feed de ' : 'Activity '}<span className="text-brand-red">{language === 'es' ? 'Actividad' : 'Feed'}</span>
                                 <InfoTooltip
                                     title="Noticias"
@@ -718,11 +714,11 @@ export default function DashboardHome() {
                                 </p>
                             </div>
                         </div>
-                        <div id="activity-feed" className="flex bg-white/5 backdrop-blur-md rounded-2xl p-1.5 border border-white/10 self-start sm:self-auto shadow-2xl">
+                        <div id="activity-feed" className="flex bg-white/5 backdrop-blur-md rounded-2xl p-1 border border-white/10 shadow-2xl shrink-0">
                             <button
                                 onClick={() => setActiveTab('following')}
                                 className={clsx(
-                                    "px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                                    "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                                     activeTab === 'following' ? "bg-brand-red text-white shadow-glow" : "text-gray-500 hover:text-white"
                                 )}
                             >
@@ -731,7 +727,7 @@ export default function DashboardHome() {
                             <button
                                 onClick={() => setActiveTab('global')}
                                 className={clsx(
-                                    "px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all",
+                                    "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
                                     activeTab === 'global' ? "bg-brand-red text-white shadow-glow" : "text-gray-500 hover:text-white"
                                 )}
                             >
@@ -741,7 +737,7 @@ export default function DashboardHome() {
                     </div>
 
                     {/* Social Feed */}
-                    <div className="space-y-8">
+                    <div className="space-y-6">
                         {/* Old StoryBar location removed */}
 
                         <EssentialsHero />
@@ -833,7 +829,7 @@ export default function DashboardHome() {
                     </div>
                 </div>
 
-                <div className="lg:col-span-5 space-y-8 md:space-y-12">
+                <div className="lg:col-span-5 space-y-6 md:space-y-8 min-w-0 overflow-hidden">
                     <UserMediaGallery userId={data.currentUser?.id} />
 
                     {data.duels.length > 0 && (

@@ -218,7 +218,7 @@ export default function EssentialsHero() {
                     </div>
 
                     {/* Content type tabs */}
-                    <div className="flex gap-2 p-4 overflow-x-auto no-scrollbar">
+                    <div className="flex gap-2 p-3 overflow-x-auto no-scrollbar w-full">
                         {cards.map(card => (
                             <button
                                 key={card.id}
@@ -246,7 +246,7 @@ export default function EssentialsHero() {
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -10 }}
                             transition={{ duration: 0.18 }}
-                            className="px-4 pb-5"
+                            className="px-3 pb-4"
                         >
                             <div className={`rounded-2xl border ${active.border} ${active.bg} p-4`}>
                                 <div className="flex gap-4">

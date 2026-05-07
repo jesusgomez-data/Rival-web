@@ -325,7 +325,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const showMobileNav = !isBusinessCenterRoute && (!hideSidebarDefault || isMenuOpen);
 
     return (
-        <div className="min-h-screen bg-background flex font-sans text-foreground selection:bg-brand-red selection:text-white transition-colors duration-300">
+        <div className="min-h-screen bg-background flex font-sans text-foreground selection:bg-brand-red selection:text-white transition-colors duration-300 overflow-x-hidden">
             <AnalyticsTracker />
             {/* Sidebar Toggle Button (Floating) - Only for Admin, not for business centers */}
             {hideSidebarDefault && !isBusinessCenterRoute && (
@@ -544,7 +544,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 )}
 
                 {/* Main Content Area */}
-                <div className={clsx("mx-auto transition-all duration-300",
+                <div className={clsx("mx-auto w-full transition-all duration-300",
                     (hideSidebarDefault || isBusinessCenterRoute) && !isMenuOpen ? "h-full p-0 max-w-none" : "px-0 pt-6 pb-32 lg:p-8 max-w-7xl"
                 )}>
                     {showMobileNav && (
