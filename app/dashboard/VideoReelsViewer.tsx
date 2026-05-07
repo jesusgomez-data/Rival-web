@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import { createClient } from '@/utils/supabase/client'
 import { createPortal } from 'react-dom'
+import { useVideo } from './VideoContext'
 
 export interface ReelPost {
     postId: string
@@ -286,9 +287,18 @@ function ReelItem({
 // ── Main viewer ───────────────────────────────────────────────────────────────
 export default function VideoReelsViewer({ posts, startIndex, onClose }: VideoReelsViewerProps) {
     const [currentIndex, setCurrentIndex] = useState(startIndex)
+    // Reels viewer has its own independent mute state — starts UNMUTED (sound on)
     const [isMuted, setIsMuted] = useState(false)
     const [commentPostId, setCommentPostId] = useState<string | null>(null)
     const [mounted, setMounted] = useState(false)
+
+    // Silence all feed videos while viewer is open, restore when closed
+    const { isMuted: feedMuted, setIsMuted: setFeedMuted } = useVideo()
+    useEffect(() => {
+        const prev = feedMuted
+        setFeedMuted(true)          // mute feed videos instantly
+        return () => setFeedMuted(prev) // restore on close
+    }, [])
     const containerRef = useRef<HTMLDivElement>(null)
     const observerRef = useRef<IntersectionObserver | null>(null)
     const itemRefs = useRef<(HTMLDivElement | null)[]>([])
