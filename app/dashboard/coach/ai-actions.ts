@@ -30,26 +30,34 @@ export async function generateCoachResponse(userMessage: string, userProfile: an
     // Detectar el deporte solicitado en el mensaje del usuario
     const msgLower = userMessage.toLowerCase();
     const detectedSport =
+        msgLower.includes('calistenia') || msgLower.includes('calisthenics') || msgLower.includes('cuerpo') && msgLower.includes('peso') ? 'Calistenia' :
         msgLower.includes('hybrid') || msgLower.includes('híbrido') ? 'Hybrid Training' :
-        msgLower.includes('cross') ? 'Cross Training' :
-        msgLower.includes('fuerza') || msgLower.includes('strength') ? 'Strength' :
+        msgLower.includes('cross') || msgLower.includes('crossfit') ? 'Cross Training' :
+        msgLower.includes('gym') || msgLower.includes('gimnasio') || msgLower.includes('musculacion') || msgLower.includes('musculación') || msgLower.includes('hipertrofia') ? 'Gym/Musculación' :
+        msgLower.includes('fuerza') || msgLower.includes('strength') || msgLower.includes('powerlifting') ? 'Strength' :
         msgLower.includes('cardio') || msgLower.includes('endurance') ? 'Cardio/Endurance' :
         msgLower.includes('natacion') || msgLower.includes('natación') || msgLower.includes('swim') ? 'Swimming' :
-        msgLower.includes('ciclismo') || msgLower.includes('bike') ? 'Cycling' :
-        msgLower.includes('running') || msgLower.includes('correr') ? 'Running' :
+        msgLower.includes('ciclismo') || msgLower.includes('bike') || msgLower.includes('bici') ? 'Cycling' :
+        msgLower.includes('running') || msgLower.includes('correr') || msgLower.includes('carrera') ? 'Running' :
+        msgLower.includes('yoga') || msgLower.includes('movilidad') || msgLower.includes('mobility') ? 'Mobility/Yoga' :
+        msgLower.includes('boxeo') || msgLower.includes('boxing') || msgLower.includes('mma') ? 'Boxing/MMA' :
         main_sport || 'Cross Training';
 
     // Ejercicios específicos por deporte para que la IA no los confunda
     const sportContext: Record<string, string> = {
+        'Calistenia': 'SOLO ejercicios de peso corporal: pull-ups, muscle-ups, dips, push-ups, L-sit, pistol squat, handstand, plancha, front lever, back lever, burpees, jumping jacks. PROHIBIDO usar barras olímpicas, mancuernas o pesas externas. Enfoque en progresiones de habilidades y resistencia corporal.',
         'Hybrid Training': 'Combina fuerza (pesas, barbell) + cardio aeróbico (remo, bici, running). Alterna bloques de potencia muscular con bloques metabólicos. Diferente a CrossFit puro: más volumen de fuerza, menos técnica de gimnasia.',
         'Cross Training': 'Movimientos funcionales de CrossFit: kipping, TTB, HSPU, DU, box jumps, snatches, clean & jerk. Intensidad máxima, tiempo corto.',
+        'Gym/Musculación': 'Entrenamiento de hipertrofia/fuerza en sala de musculación. Máquinas, mancuernas, barbell. Series de 8-15 reps, grupos musculares específicos. Sin cardio metabólico extremo.',
         'Strength': 'Trabajo de fuerza pura: squat, deadlift, press, row. Series de 3-6 reps con descanso largo (2-4 min). Sin cardio metabólico.',
         'Cardio/Endurance': 'Zonas aeróbicas, intervalos de running/remo/bici. Sin pesas pesadas. Frecuencia cardíaca controlada.',
-        'Running': 'Intervalos de velocidad, fartlek, tempo runs. No incluir pesas.',
-        'Cycling': 'Intervalos en bici (Tabata, FTP). No incluir barbell.',
-        'Swimming': 'Series de nado, drills técnicos. No incluir pesas.',
+        'Running': 'Intervalos de velocidad, fartlek, tempo runs, series. No incluir pesas. Distancias y tiempos claros.',
+        'Cycling': 'Intervalos en bici (Tabata, FTP tests). No incluir barbell. Potencia en vatios o RPE.',
+        'Swimming': 'Series de nado, drills técnicos de estilo. No incluir pesas ni ejercicios terrestres.',
+        'Mobility/Yoga': 'Estiramientos dinámicos y estáticos, movilidad articular, respiración. Sin pesas. Posturas yoga y secuencias de movilidad.',
+        'Boxing/MMA': 'Combinaciones de golpes, trabajo de saco, shadow boxing, ejercicios de agilidad y explosividad. Sin barbell.',
     };
-    const sportGuidance = sportContext[detectedSport] || sportContext['Cross Training'];
+    const sportGuidance = sportContext[detectedSport] || sportContext[main_sport] || sportContext['Cross Training'];
 
     const systemPrompt = `Eres RIVAL HEAD COACH, un mentor de élite mundial experto en alto rendimiento deportivo.
 

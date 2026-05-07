@@ -61,7 +61,10 @@ function SessionContent() {
     const editId = searchParams.get('editId');
 
     const [sportMode, setSportMode] = useState<SportMode>(null);
-    const [isLoadingData, setIsLoadingData] = useState(!!wodId || !!editId || searchParams.get('mode') === 'ai-coach');
+    // Only show loading overlay when there's real data to parse from URL
+    const hasAiWorkout = searchParams.get('mode') === 'ai-coach' && !!searchParams.get('workout');
+    const hasPlanData  = searchParams.get('mode') === 'recommendation' && !!searchParams.get('plan');
+    const [isLoadingData, setIsLoadingData] = useState(!!wodId || !!editId || hasAiWorkout || hasPlanData);
 
     // Common State
     const [startTime] = useState(new Date());
@@ -509,6 +512,13 @@ function SessionContent() {
     // Legacy state for backward compatibility or simple views (Removing unused ones)
     const [roundsCompleted, setRoundsCompleted] = useState(0); // Used for Summary only now
     const [emomTotalTime, setEmomTotalTime] = useState(0); // Used for Summary only now
+
+    // Safety timeout: never stay in loading state more than 6s
+    useEffect(() => {
+        if (!isLoadingData) return;
+        const t = setTimeout(() => setIsLoadingData(false), 6000);
+        return () => clearTimeout(t);
+    }, []);
 
     // Data pre-fill effect
     useEffect(() => {

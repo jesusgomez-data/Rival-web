@@ -71,7 +71,7 @@ export default function AnalyticsManager({ centerId, analytics, metrics, centerN
     metrics: any;
     centerName: string;
 }) {
-    const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'revenue' | 'classes'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'revenue' | 'classes' | 'benchmark'>('overview');
 
     const tabs = [
         { id: 'overview', label: 'Resumen' },
@@ -433,8 +433,8 @@ export default function AnalyticsManager({ centerId, analytics, metrics, centerN
                                         <XAxis dataKey="time" tick={{ fill: '#6b7280', fontSize: 11 }} axisLine={false} tickLine={false} />
                                         <YAxis hide />
                                         <Tooltip content={<CustomTooltip />} />
-                                        <Area itemID='tu' name="Tu Centro" dataKey="tu" stroke="#E11D48" fill="#E11D48" fillOpacity={0.2} strokeWidth={2} />
-                                        <Area itemID='media' name="Media" dataKey="media" stroke="#374151" fill="#374151" fillOpacity={0.1} strokeWidth={2} strokeDasharray="5 5" />
+                                        <Area key='tu' name="Tu Centro" dataKey="tu" stroke="#E11D48" fill="#E11D48" fillOpacity={0.2} strokeWidth={2} />
+                                        <Area key='media' name="Media" dataKey="media" stroke="#374151" fill="#374151" fillOpacity={0.1} strokeWidth={2} strokeDasharray="5 5" />
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </div>

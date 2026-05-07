@@ -78,7 +78,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
             <StoryBar currentUser={user} hideBar={true} />
             
             {/* New Premium Profile Header */}
-            <div className="relative group rounded-none md:rounded-[48px] overflow-hidden border-b md:border border-white/5 bg-[#050505] shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-500">
+            <div className="relative group rounded-none md:rounded-[48px] overflow-hidden border-b md:border border-white/5 bg-[#050505] shadow-[0_0_50px_rgba(0,0,0,0.5)] transition-all duration-500 dark-section keep-all">
                 {/* Background Decor */}
                 <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
                     <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-brand-red/10 blur-[120px] -ml-40 -mt-40 rounded-full" />
