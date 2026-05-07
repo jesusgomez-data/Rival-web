@@ -52,7 +52,11 @@ function NewUserHint() {
     const [show, setShow] = useState(false);
     useEffect(() => {
         const seen = localStorage.getItem('rival_plus_hint_seen');
-        if (!seen) { setShow(true); }
+        if (!seen) {
+            // Small delay so it doesn't flash on first render
+            const t = setTimeout(() => setShow(true), 1200);
+            return () => clearTimeout(t);
+        }
     }, []);
     const dismiss = () => {
         setShow(false);
@@ -60,13 +64,23 @@ function NewUserHint() {
     };
     if (!show) return null;
     return (
-        <div className="absolute bottom-[72px] left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-            <div className="relative flex flex-col items-center animate-bounce">
-                <div className="bg-brand-red text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-2xl whitespace-nowrap border border-white/20 pointer-events-auto cursor-pointer" onClick={dismiss}>
-                    📸 WOD · PR · Historia
+        <div
+            onClick={dismiss}
+            className="absolute -top-14 left-1/2 -translate-x-1/2 z-50 cursor-pointer"
+            style={{ animation: 'hint-bounce 1.5s ease-in-out infinite' }}
+        >
+            <div className="flex flex-col items-center gap-0.5">
+                <div className="bg-[#111] border border-brand-red/40 text-white text-[9px] font-black uppercase tracking-widest px-3 py-2 rounded-2xl shadow-2xl whitespace-nowrap shadow-[0_0_20px_rgba(220,38,38,0.25)]">
+                    <span className="text-brand-red">+</span> Post · WOD · PR · Historia
                 </div>
-                <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-brand-red mt-0" />
+                <div className="w-2 h-2 bg-[#111] border-r border-b border-brand-red/40 rotate-45 -mt-1" />
             </div>
+            <style jsx>{`
+                @keyframes hint-bounce {
+                    0%, 100% { transform: translateX(-50%) translateY(0); }
+                    50% { transform: translateX(-50%) translateY(-4px); }
+                }
+            `}</style>
         </div>
     );
 }

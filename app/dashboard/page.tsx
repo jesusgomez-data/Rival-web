@@ -164,13 +164,17 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
     const [isOpen, setIsOpen] = useState(false);
     const [repostData, setRepostData] = useState<any>(null);
     const [editMode, setEditMode] = useState<{ id: string } | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const searchParams = useSearchParams();
     const shouldOpenCreate = searchParams.get('create') === 'true';
 
     useEffect(() => {
         if (shouldOpenCreate) {
             setIsOpen(true);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            // Small delay to let the component expand before scrolling
+            setTimeout(() => {
+                containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 80);
         }
     }, [shouldOpenCreate]);
 
@@ -198,29 +202,59 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
         };
     }, []);
 
+    const POST_ACTIONS = [
+        { emoji: '📸', label: 'Historia', sub: '24 horas', color: 'text-pink-400', bg: 'bg-pink-500/10 border-pink-500/20', tab: 'story' },
+        { emoji: '🎬', label: 'Post',     sub: 'Foto · Video', color: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20',   tab: 'standard' },
+        { emoji: '💪', label: 'WOD',      sub: 'Entrenamiento', color: 'text-brand-red', bg: 'bg-brand-red/10 border-brand-red/20', tab: 'wod' },
+        { emoji: '🏆', label: 'PR',       sub: 'Récord',       color: 'text-yellow-400', bg: 'bg-yellow-500/10 border-yellow-500/20', tab: 'pr' },
+    ];
+
     return (
-        <div className="mb-10">
+        <div ref={containerRef} className="mb-6 scroll-mt-4">
             {!isOpen ? (
-                <button
-                    onClick={() => setIsOpen(true)}
-                    className="w-full bg-brand-gray/30 border border-border/10 rounded-[28px] p-2.5 md:p-3.5 flex items-center justify-between group hover:border-brand-red/50 hover:bg-brand-gray/50 transition-all cursor-pointer shadow-xl backdrop-blur-sm"
-                >
-                    <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full border border-white/10 bg-black/40 overflow-hidden relative shadow-inner">
+                <div className="bg-[#0E0E0E] border border-white/[0.07] rounded-3xl overflow-hidden shadow-2xl">
+                    {/* Top row: avatar + placeholder */}
+                    <button
+                        onClick={() => setIsOpen(true)}
+                        className="w-full flex items-center gap-3 px-4 pt-4 pb-3 hover:bg-white/[0.02] transition-colors"
+                    >
+                        <div className="w-9 h-9 rounded-full border border-white/10 bg-black/40 overflow-hidden relative shrink-0">
                             {currentUser?.user_metadata?.avatar_url ? (
                                 <Image src={currentUser.user_metadata.avatar_url} alt="User" fill className="object-cover" />
                             ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[10px] bg-gray-800 font-black text-gray-500 italic">ME</div>
+                                <div className="w-full h-full flex items-center justify-center text-[10px] bg-zinc-800 font-black text-zinc-500">ME</div>
                             )}
                         </div>
-                        <span className="text-gray-400 text-xs md:text-sm font-bold uppercase tracking-widest group-hover:text-gray-200 transition-colors">
-                            {language === 'es' ? '¿Qué tenemos para hoy?' : 'Share your workout...'}
-                        </span>
+                        <span className="flex-1 text-left text-white/25 text-sm font-medium">¿Qué vas a publicar hoy?</span>
+                        <div className="w-7 h-7 rounded-xl bg-brand-red flex items-center justify-center shadow-[0_0_12px_rgba(220,38,38,0.4)] shrink-0">
+                            <Plus className="w-4 h-4 text-white" />
+                        </div>
+                    </button>
+
+                    {/* Content type quick-pick row */}
+                    <div className="grid grid-cols-4 gap-px border-t border-white/[0.05]">
+                        {POST_ACTIONS.map(action => (
+                            <button
+                                key={action.tab}
+                                onClick={() => {
+                                    if (action.tab === 'story') {
+                                        // Scroll to story bar
+                                        document.getElementById('story-bar')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                        window.dispatchEvent(new CustomEvent('open-story-creator'));
+                                    } else {
+                                        setIsOpen(true);
+                                        setTimeout(() => containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
+                                    }
+                                }}
+                                className="flex flex-col items-center gap-1.5 py-3 px-2 hover:bg-white/[0.04] transition-colors active:bg-white/[0.06]"
+                            >
+                                <span className="text-xl leading-none">{action.emoji}</span>
+                                <span className={`text-[10px] font-black uppercase leading-none ${action.color}`}>{action.label}</span>
+                                <span className="text-[8px] text-white/20 font-medium leading-none">{action.sub}</span>
+                            </button>
+                        ))}
                     </div>
-                    <div id="create-post-btn" className="w-8 h-8 md:w-10 md:h-10 rounded-2xl bg-brand-red/10 border border-brand-red/20 shadow-glow-sm flex items-center justify-center text-brand-red group-hover:bg-brand-red group-hover:text-white transition-all transform group-hover:rotate-90">
-                        <Plus className="w-4 h-4 md:w-5 md:h-5" />
-                    </div>
-                </button>
+                </div>
             ) : (
                 <div className="animate-in fade-in slide-in-from-top-4 duration-500 bg-brand-gray/20 border border-white/5 rounded-[28px] md:rounded-[32px] px-1.5 py-4 md:px-4 md:py-6 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] backdrop-blur-xl relative overflow-hidden">
                     {/* Decorative element */}
@@ -601,7 +635,7 @@ export default function DashboardHome() {
                     )}
 
                     {/* 2. Stories Bar (Moved here as requested) */}
-                    <div>
+                    <div id="story-bar">
                         <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] ml-2 mb-4">{t.dashboard.stories}</h3>
                         <StoryBar currentUser={data.currentUser} />
                     </div>
