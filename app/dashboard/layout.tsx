@@ -47,6 +47,30 @@ import { playNotificationSound } from "@/app/utils/audio";
 import { VideoProvider } from "./VideoContext";
 import OnboardingTour from "@/components/OnboardingTour";
 
+// ── New-user hint above the "+" button ────────────────────────────────────────
+function NewUserHint() {
+    const [show, setShow] = useState(false);
+    useEffect(() => {
+        const seen = localStorage.getItem('rival_plus_hint_seen');
+        if (!seen) { setShow(true); }
+    }, []);
+    const dismiss = () => {
+        setShow(false);
+        localStorage.setItem('rival_plus_hint_seen', 'true');
+    };
+    if (!show) return null;
+    return (
+        <div className="absolute bottom-[72px] left-1/2 -translate-x-1/2 z-50 pointer-events-none">
+            <div className="relative flex flex-col items-center animate-bounce">
+                <div className="bg-brand-red text-white text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-2xl whitespace-nowrap border border-white/20 pointer-events-auto cursor-pointer" onClick={dismiss}>
+                    📸 WOD · PR · Historia
+                </div>
+                <div className="w-0 h-0 border-l-[5px] border-r-[5px] border-t-[5px] border-l-transparent border-r-transparent border-t-brand-red mt-0" />
+            </div>
+        </div>
+    );
+}
+
 function DashboardContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
@@ -570,10 +594,12 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         })}
 
                         {/* Floating Center Button */}
-                        <div className="absolute left-1/2 -translate-x-1/2 -top-10">
+                        <div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center">
+                            {/* Tooltip hint for new users */}
+                            <NewUserHint />
                             <Link
                                 href="/dashboard?create=true"
-                                className="flex flex-col items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-brand-red to-[#991b1b] text-white shadow-[0_8px_25px_rgba(220,38,38,0.6)] border-4 border-background hover:scale-110 active:scale-95 transition-all duration-300 group"
+                                className="flex flex-col items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-brand-red to-[#991b1b] text-white shadow-[0_8px_25px_rgba(220,38,38,0.6)] border-4 border-background hover:scale-110 active:scale-95 transition-all duration-300 group relative"
                             >
                                 <PlusCircle className="w-8 h-8 group-hover:rotate-90 transition-transform duration-500" />
                             </Link>

@@ -57,6 +57,93 @@ function SuggestedUser({ id, name, username, role, avatar, isFollowing, isOffici
     )
 }
 
+// ── Feed Empty State Guide ────────────────────────────────────────────────────
+function FeedEmptyGuide({ onExplore }: { onExplore: () => void }) {
+    const CONTENT_TYPES = [
+        {
+            emoji: '📸', title: 'Historia', desc: '24h · toca el "+" en las historias',
+            color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20',
+        },
+        {
+            emoji: '🎬', title: 'Post', desc: 'Foto o video de tu entreno',
+            color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20',
+        },
+        {
+            emoji: '💪', title: 'WOD', desc: 'Entreno completo con ejercicios',
+            color: 'text-brand-red', bg: 'bg-brand-red/10', border: 'border-brand-red/20',
+        },
+        {
+            emoji: '🏆', title: 'PR', desc: 'Tu récord personal',
+            color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20',
+        },
+    ];
+
+    return (
+        <div className="space-y-6">
+            {/* Ghost post cards — visual preview of what the feed looks like */}
+            <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/90 z-10 rounded-3xl pointer-events-none" />
+                <div className="space-y-4 opacity-25 pointer-events-none select-none">
+                    {[1, 2].map(i => (
+                        <div key={i} className="bg-white/[0.04] border border-white/5 rounded-3xl p-5 space-y-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-white/10 shrink-0" />
+                                <div className="space-y-2 flex-1">
+                                    <div className="h-3 bg-white/15 rounded-full w-28" />
+                                    <div className="h-2 bg-white/8 rounded-full w-16" />
+                                </div>
+                            </div>
+                            <div className="h-48 bg-white/5 rounded-2xl" />
+                            <div className="flex gap-4">
+                                <div className="h-3 bg-white/10 rounded-full w-12" />
+                                <div className="h-3 bg-white/5 rounded-full w-12" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Overlay CTA */}
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-end pb-8 px-6">
+                    <div className="text-center">
+                        <div className="w-16 h-16 rounded-full bg-brand-red/15 border border-brand-red/30 flex items-center justify-center mx-auto mb-4">
+                            <Flame className="w-8 h-8 text-brand-red" />
+                        </div>
+                        <h3 className="text-xl font-black italic uppercase text-white mb-1">Tu Arena está vacía</h3>
+                        <p className="text-white/40 text-sm max-w-xs mx-auto mb-6 font-medium">
+                            Aquí verás los entrenos de los atletas que sigues. Empieza publicando el tuyo.
+                        </p>
+                        <button onClick={onExplore}
+                            className="px-7 py-3 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-2xl">
+                            Explorar comunidad →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Content type quick guide */}
+            <div className="bg-[#0E0E0E] border border-white/[0.06] rounded-3xl p-5">
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/25 mb-4 flex items-center gap-2">
+                    <Plus className="w-3.5 h-3.5" /> ¿Qué puedes publicar con el botón ➕?
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                    {CONTENT_TYPES.map(ct => (
+                        <div key={ct.title} className={`flex items-center gap-3 p-3 rounded-2xl border ${ct.bg} ${ct.border}`}>
+                            <span className="text-xl">{ct.emoji}</span>
+                            <div>
+                                <p className={`text-[11px] font-black uppercase ${ct.color}`}>{ct.title}</p>
+                                <p className="text-[9px] text-white/30 font-medium leading-tight">{ct.desc}</p>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                <p className="text-[9px] text-white/20 text-center mt-4 font-bold uppercase tracking-widest">
+                    Toca el botón ➕ rojo en el feed para comenzar
+                </p>
+            </div>
+        </div>
+    );
+}
+
 function StatCard({ label, value, subtext, icon }: { label: string, value: string, subtext: string, icon: React.ReactNode }) {
     return (
         <div className="bg-brand-gray/40 border border-border/10 p-3 md:p-6 rounded-[24px] backdrop-blur-md hover:border-brand-red/40 hover:bg-brand-gray/60 transition-all group cursor-pointer h-full flex flex-col justify-between overflow-hidden">
@@ -623,7 +710,7 @@ export default function DashboardHome() {
                     <div className="space-y-8">
                         {/* Old StoryBar location removed */}
 
-                        {data.workoutCount === 0 && <EssentialsHero />}
+                        <EssentialsHero />
 
                         <CollapsibleCreatePost 
                             currentUser={data.currentUser} 
@@ -707,26 +794,7 @@ export default function DashboardHome() {
                                 })()}
                             </div>
                         ) : (
-                            <div className="group relative p-12 md:p-20 text-center border-2 border-dashed border-white/5 rounded-[40px] bg-white/[0.02] hover:bg-white/[0.04] transition-all overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-br from-brand-red/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                                <div className="relative z-10">
-                                    <div className="w-20 h-20 rounded-full bg-brand-red/10 flex items-center justify-center mx-auto mb-6 border border-brand-red/20 group-hover:scale-110 transition-transform">
-                                        <Flame className="w-10 h-10 text-brand-red" />
-                                    </div>
-                                    <h3 className="text-xl font-heading font-black italic uppercase text-white mb-2">{language === 'es' ? 'TU ARENA ESTÁ VACÍA' : 'YOUR ARENA IS EMPTY'}</h3>
-                                    <p className="text-gray-500 font-medium max-w-sm mx-auto mb-8">
-                                        {language === 'es' ? 'Sigue a otros atletas o sube tu primer entrenamiento para empezar a ver actividad.' : 'Follow other athletes or upload your first workout to see activity.'}
-                                    </p>
-                                    <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                                        <button
-                                            onClick={() => setActiveTab('global')}
-                                            className="px-8 py-3 bg-white text-black rounded-xl font-black text-xs uppercase tracking-widest hover:scale-105 active:scale-95 transition-all outline-none"
-                                        >
-                                            {language === 'es' ? 'Explorar Rival Fit' : 'Explore Rival Fit'}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+                            <FeedEmptyGuide onExplore={() => setActiveTab('global')} />
                         )}
                     </div>
                 </div>
