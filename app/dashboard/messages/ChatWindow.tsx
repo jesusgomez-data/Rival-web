@@ -7,7 +7,7 @@ import { es } from 'date-fns/locale'
 import {
     Send, Loader2, MessageSquarePlus, ChevronLeft, Trash2, Edit2,
     X, Check, Heart, Copy, Smile, ChevronDown, Film, Eye, EyeOff,
-    Camera, Video, Mic, Users, ImagePlus
+    Camera, Video, Mic, Users, ImagePlus, Search
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -15,8 +15,24 @@ import MentionText from '@/components/MentionText'
 import MentionInput from '@/components/MentionInput'
 import { createClient } from '@/utils/supabase/client'
 import { markViewOnceViewed } from './actions'
+import { playEmojiSound, playSendSound, playReceiveSound, playNudgeSound } from './emojiSounds'
 
 const QUICK_EMOJIS = ['❤️', '🔥', '💪', '😂', '😮', '👏', '🏆', '⚡']
+
+// MSN-style emoji shortcuts → big flying emoji
+const MSN_SHORTCUTS: Record<string, string> = {
+    ':)': '😊', ':D': '😄', ':(': '😢', ';)': '😉', ':P': '😛',
+    ':O': '😮', ":'(": '😭', 'XD': '😆', '<3': '❤️', ':*': '😘',
+}
+
+function isEmojiOnly(text: string): boolean {
+    if (!text?.trim()) return false
+    const t = text.trim()
+    if (t.length > 14) return false
+    // Unicode emoji detection
+    const emojiRegex = /^[\p{Emoji_Presentation}\p{Extended_Pictographic}\s]+$/u
+    return emojiRegex.test(t)
+}
 
 function DateSeparator({ date }: { date: Date }) {
     let label: string
@@ -114,6 +130,7 @@ interface ChatWindowProps {
     otherPerson: any
     currentUserId: string
     conversationId?: string | null
+    myProfile?: any
     onSendMessage: (text: string, imageUrl?: string, videoUrl?: string, isViewOnce?: boolean) => void
     onUploadImage?: (file: File) => Promise<{ url?: string; error?: string }>
     onUploadVideo?: (file: File) => Promise<{ url?: string; error?: string }>
@@ -128,7 +145,7 @@ interface ChatWindowProps {
 }
 
 export default function ChatWindow({
-    messages, otherPerson, currentUserId, conversationId,
+    messages, otherPerson, currentUserId, conversationId, myProfile,
     onSendMessage, onUploadImage, onUploadVideo,
     onDeleteMessage, onEditMessage, onToggleLike, onDeleteConversation,
     isLoading, onBack, isOnline, otherParticipantLastRead,
@@ -162,6 +179,15 @@ export default function ChatWindow({
     const [showMediaPicker, setShowMediaPicker] = useState(false)
     const [pendingMediaPreview, setPendingMediaPreview] = useState<{ url: string; type: 'image' | 'video' } | null>(null)
     const [pendingMediaFile, setPendingMediaFile] = useState<File | null>(null)
+    // ── MSN Search ───────────────────────────────────────────────────────────
+    const [showSearch, setShowSearch] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
+    const searchInputRef = useRef<HTMLInputElement>(null)
+
+    // ── MSN Flying emoji ─────────────────────────────────────────────────────
+    const [flyingEmoji, setFlyingEmoji] = useState<{ text: string; key: number } | null>(null)
+    const [nudging, setNudging] = useState(false)
+    const prevMsgIdsRef = useRef<Set<string>>(new Set())
 
     const supabase = createClient()
 
@@ -248,14 +274,67 @@ export default function ChatWindow({
         return () => document.removeEventListener('mousedown', handle)
     }, [showEmoji])
 
+    // ── Flying emoji: triggers when new emoji-only message arrives ──────────
+    useEffect(() => {
+        if (!messages.length) return
+        const last = messages[messages.length - 1]
+        if (!last?.text || prevMsgIdsRef.current.has(last.id)) return
+        prevMsgIdsRef.current.add(last.id)
+
+        // Check for MSN shortcuts first, then plain emoji
+        let text = last.text.trim()
+        const shortcut = MSN_SHORTCUTS[text]
+        if (shortcut) text = shortcut
+
+        if (isEmojiOnly(text)) {
+            setFlyingEmoji({ text, key: Date.now() })
+            setTimeout(() => setFlyingEmoji(null), 2400)
+            // Play the emoji's themed sound
+            playEmojiSound(text.trim())
+        } else {
+            // Regular incoming message sound
+            playReceiveSound()
+        }
+
+        // Nudge detection: if message is 💥 from other person
+        if (last.text === '💥' && last.sender_id !== currentUserId) {
+            setNudging(true)
+            if ('vibrate' in navigator) navigator.vibrate([60, 40, 60, 40, 120])
+            setTimeout(() => setNudging(false), 900)
+        }
+    }, [messages, currentUserId])
+
+    const sendNudge = useCallback(() => {
+        onSendMessage('💥')
+        setNudging(true)
+        playNudgeSound()
+        if ('vibrate' in navigator) navigator.vibrate([60, 40, 60, 40, 120])
+        setTimeout(() => setNudging(false), 900)
+    }, [onSendMessage])
+
+    const toggleSearch = useCallback(() => {
+        setShowSearch(v => {
+            if (!v) setTimeout(() => searchInputRef.current?.focus(), 80)
+            else setSearchQuery('')
+            return !v
+        })
+    }, [])
+
     const handleSend = useCallback(() => {
         if (pendingMediaFile) {
             handleSendMedia()
             return
         }
         if (!inputValue.trim()) return
-        onSendMessage(inputValue.trim())
+        // Replace MSN shortcuts before sending
+        let text = inputValue.trim()
+        const words = text.split(' ')
+        const converted = words.map(w => MSN_SHORTCUTS[w] || w).join(' ')
+        onSendMessage(converted)
         setInputValue('')
+        // Sound: emoji-specific if emoji-only, otherwise send swoosh
+        if (isEmojiOnly(converted)) playEmojiSound(converted)
+        else playSendSound()
     }, [inputValue, onSendMessage, pendingMediaFile])
 
     const handleSendMedia = useCallback(async () => {
@@ -332,28 +411,43 @@ export default function ChatWindow({
 
     if (!otherPerson) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-background relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-brand-red/[0.03] to-transparent pointer-events-none" />
+            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center relative overflow-hidden"
+            style={{ background: 'radial-gradient(ellipse at center, #1a1a2e 0%, #080810 100%)' }}>
+                <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
+                    style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
-                    animate={{ opacity: 1, scale: 1, rotate: 0 }}
-                    className="w-32 h-32 rounded-[3rem] bg-brand-red/10 flex items-center justify-center border border-brand-red/20 mb-8 relative shadow-2xl"
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="text-7xl mb-6 relative"
                 >
-                    <div className="absolute inset-0 bg-brand-red/5 blur-2xl rounded-full" />
-                    <MessageSquarePlus className="w-14 h-14 text-brand-red relative" />
+                    💬
+                    <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 2.5 }}
+                        className="absolute -top-2 -right-2 text-2xl">✨</motion.div>
                 </motion.div>
-                <h3 className="text-3xl font-black italic text-foreground mb-3 uppercase tracking-tighter mix-blend-difference md:mix-blend-normal">RIVAL CHAT</h3>
-                <p className="text-muted-foreground text-sm max-w-xs leading-relaxed font-bold uppercase tracking-widest opacity-60">
-                    Selecciona un rival para entrar en la arena de mensajes
+                <h3 className="text-2xl font-black italic text-white mb-2 uppercase tracking-tighter">Selecciona un contacto</h3>
+                <p className="text-white/25 text-xs max-w-xs leading-relaxed font-bold uppercase tracking-widest">
+                    Elige a alguien de tu lista para empezar a chatear
                 </p>
             </div>
         )
     }
 
+    // Filter messages by search query
+    const filteredMessages = searchQuery.trim()
+        ? messages.filter(m => m.text?.toLowerCase().includes(searchQuery.toLowerCase()))
+        : messages
+
+    // Highlight search terms in text
+    const highlightSearch = (text: string) => {
+        if (!searchQuery.trim() || !text) return text
+        const regex = new RegExp(`(${searchQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+        return text.replace(regex, '**$1**') // placeholder for highlight
+    }
+
     // Build items with date separators
     type Item = { type: 'date'; date: Date; key: string } | { type: 'msg'; msg: any; key: string }
     const items: Item[] = []
-    messages.forEach((msg, i) => {
+    filteredMessages.forEach((msg, i) => {
         const d = new Date(msg.created_at)
         const prev = messages[i - 1]
         if (!prev || !isSameDay(d, new Date(prev.created_at))) items.push({ type: 'date', date: d, key: `date-${d.toDateString()}-${i}` })
@@ -361,86 +455,147 @@ export default function ChatWindow({
     })
 
     return (
-        <div className="flex-1 flex flex-col bg-background relative overflow-hidden h-full">
+        // ── MSN TWO-PANEL LAYOUT ────────────────────────────────────────────────
+        <div className={`flex-1 flex h-full overflow-hidden relative transition-transform ${nudging ? 'animate-nudge' : ''}`}
+            style={{ background: '#080808' }}>
 
-            {/* ── Header ── */}
-            <header className="px-4 py-3 flex items-center justify-between z-30 shrink-0 bg-background/80 backdrop-blur-2xl border-b border-border shadow-sm">
-                <div className="flex items-center gap-3">
+            {/* ── Flying emoji overlay ── */}
+            <AnimatePresence>
+                {flyingEmoji && (
+                    <motion.div key={flyingEmoji.key}
+                        initial={{ opacity: 0, scale: 0.1, y: 160, rotate: -15 }}
+                        animate={{ opacity: 1, scale: 1.9, y: 0, rotate: 0 }}
+                        exit={{ opacity: 0, scale: 3, y: -120, filter: 'blur(6px)' }}
+                        transition={{ type: 'spring', stiffness: 260, damping: 16 }}
+                        className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none select-none">
+                        {[...Array(10)].map((_, i) => (
+                            <motion.div key={i} initial={{ opacity: 0, x: 0, y: 0, scale: 0 }}
+                                animate={{ opacity: [0, 0.9, 0], x: Math.cos(i * 36 * Math.PI / 180) * 110, y: Math.sin(i * 36 * Math.PI / 180) * 110, scale: [0, 1.4, 0] }}
+                                transition={{ delay: 0.3 + i * 0.02, duration: 0.75 }}
+                                className="absolute top-1/2 left-1/2 w-3 h-3 rounded-full bg-brand-red/70 -translate-x-1/2 -translate-y-1/2" />
+                        ))}
+                        <span style={{ fontSize: 88, lineHeight: 1, filter: 'drop-shadow(0 12px 40px rgba(0,0,0,0.6)) drop-shadow(0 0 20px rgba(220,38,38,0.4))' }}>
+                            {flyingEmoji.text}
+                        </span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ══════════════════════════════════════════════════════════════ */}
+            {/* LEFT PANEL — header + messages + emoji bar + input             */}
+            {/* ══════════════════════════════════════════════════════════════ */}
+            <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+
+            {/* ── Header MSN "Para:" ── */}
+            <header className="px-4 py-0 flex items-center justify-between z-30 shrink-0 border-b border-white/[0.05] relative overflow-hidden"
+                style={{ background: 'linear-gradient(180deg, #1a0808 0%, #110606 100%)', minHeight: 52 }}>
+                <div className="absolute inset-0 bg-gradient-to-r from-brand-red/8 to-transparent pointer-events-none" />
+                <div className="flex items-center gap-2 relative z-10">
+
+                    {/* Back button */}
                     {onBack && (
-                        <button onClick={onBack} className="lg:hidden p-2.5 -ml-1 text-muted-foreground hover:text-brand-red transition-all active:scale-90 bg-muted/30 rounded-xl">
-                            <ChevronLeft className="w-6 h-6" />
+                        <button onClick={onBack} className="p-2 -ml-1 text-white/40 hover:text-white transition-all active:scale-90">
+                            <ChevronLeft className="w-5 h-5" />
                         </button>
                     )}
-                    <div className="relative shrink-0">
-                        {isGroup ? (
-                            <div className="w-11 h-11 rounded-2xl overflow-hidden bg-gradient-to-br from-brand-red to-orange-600 flex items-center justify-center border border-white/10 shadow-lg">
-                                <Users className="w-6 h-6 text-white" />
-                            </div>
-                        ) : (
-                            <>
-                                <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-brand-red/20 p-0.5 relative shadow-md">
-                                    <div className="w-full h-full rounded-full overflow-hidden relative">
-                                        <Image
-                                            src={otherPerson.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherPerson.full_name || 'U')}&background=random`}
-                                            alt="" fill className="object-cover"
-                                        />
-                                    </div>
-                                </div>
-                                {isOnline && (
-                                    <div className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white dark:border-[#0C0C0C] rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)]" />
-                                )}
-                            </>
-                        )}
-                    </div>
+
+                    {/* Para: label */}
+                    <span className="text-[9px] font-black uppercase tracking-[0.25em] text-brand-red shrink-0">Para:</span>
+
+                    {/* Contact info */}
                     <div>
-                        <h4 className="font-black italic uppercase text-base leading-none tracking-tight text-foreground">
+                        <h4 className="font-black italic uppercase text-sm leading-none tracking-tight text-white">
                             {isGroup ? (groupName || 'Grupo') : (otherPerson.full_name || otherPerson.username)}
                         </h4>
-                        <div className="mt-1 h-4 flex items-center">
+                        <div className="mt-1 h-4 flex items-center gap-1.5">
                             {isOtherTyping ? (
-                                <span className="flex items-center gap-1.5 text-[10px] text-brand-red font-black uppercase tracking-widest animate-pulse">
-                                    Escribiendo…
-                                </span>
-                            ) : isGroup ? (
-                                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">{groupMembers.length + 1} atletas</span>
+                                <>
+                                    <div className="flex gap-0.5">
+                                        {[0,1,2].map(i => (
+                                            <motion.div key={i} className="w-1.5 h-1.5 rounded-full bg-brand-red"
+                                                animate={{ y: [0, -4, 0] }} transition={{ delay: i * 0.15, duration: 0.6, repeat: Infinity }} />
+                                        ))}
+                                    </div>
+                                    <span className="text-[10px] text-brand-red font-black uppercase tracking-widest">escribiendo</span>
+                                </>
                             ) : isOnline ? (
-                                <span className="text-[10px] text-green-500 font-bold uppercase tracking-widest inline-flex items-center gap-1">
-                                    <div className="w-1 h-1 rounded-full bg-green-500" /> En línea
-                                </span>
+                                <>
+                                    <span className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_5px_rgba(74,222,128,0.8)]" />
+                                    <span className="text-[10px] text-green-400 font-bold uppercase tracking-widest">En línea</span>
+                                </>
+                            ) : isGroup ? (
+                                <span className="text-[10px] text-white/30 font-bold uppercase tracking-wider">{groupMembers.length + 1} miembros</span>
                             ) : (
-                                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Fuera de combate</span>
+                                <>
+                                    <span className="w-2 h-2 rounded-full bg-zinc-500" />
+                                    <span className="text-[10px] text-white/30 font-bold uppercase tracking-wider">No disponible</span>
+                                </>
                             )}
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-1">
+                {/* Delete button */}
+                <div className="relative z-10">
                     {onDeleteConversation && (
                         confirmDeleteConv ? (
                             <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
                                 className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-1.5">
                                 <span className="text-[10px] text-red-500 font-black uppercase">¿Borrar?</span>
-                                <button onClick={() => { setConfirmDeleteConv(false); onDeleteConversation() }} className="p-1 text-red-500 hover:scale-110">
-                                    <Check className="w-4 h-4" />
-                                </button>
-                                <button onClick={() => setConfirmDeleteConv(false)} className="p-1 text-muted-foreground hover:text-foreground">
-                                    <X className="w-4 h-4" />
-                                </button>
+                                <button onClick={() => { setConfirmDeleteConv(false); onDeleteConversation() }} className="p-1 text-red-500"><Check className="w-4 h-4" /></button>
+                                <button onClick={() => setConfirmDeleteConv(false)} className="p-1 text-white/30 hover:text-white"><X className="w-4 h-4" /></button>
                             </motion.div>
                         ) : (
-                            <button onClick={() => setConfirmDeleteConv(true)} className="p-3 text-muted-foreground hover:text-red-500 hover:bg-red-500/5 rounded-2xl transition-all">
-                                <Trash2 className="w-5 h-5" />
+                            <button onClick={() => setConfirmDeleteConv(true)} className="p-2 text-white/15 hover:text-red-400 rounded-xl transition-all">
+                                <Trash2 className="w-4 h-4" />
                             </button>
                         )
                     )}
                 </div>
             </header>
 
-            {/* ── Messages ── */}
+            {/* ── Search bar — MSN style, slides in ── */}
+            <AnimatePresence>
+                {showSearch && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.18 }}
+                        className="overflow-hidden shrink-0 border-b border-white/[0.05]"
+                        style={{ background: '#0f0808' }}
+                    >
+                        <div className="flex items-center gap-2 px-4 py-2">
+                            <Search className="w-4 h-4 text-brand-red shrink-0" />
+                            <input
+                                ref={searchInputRef}
+                                value={searchQuery}
+                                onChange={e => setSearchQuery(e.target.value)}
+                                onKeyDown={e => e.key === 'Escape' && toggleSearch()}
+                                placeholder="Buscar en la conversación..."
+                                className="flex-1 bg-transparent text-sm text-white placeholder:text-white/25 focus:outline-none font-medium"
+                            />
+                            {searchQuery && (
+                                <span className="text-[10px] text-brand-red font-black uppercase tracking-widest shrink-0">
+                                    {filteredMessages.length} resultado{filteredMessages.length !== 1 ? 's' : ''}
+                                </span>
+                            )}
+                            <button onClick={toggleSearch} className="text-white/25 hover:text-white transition-colors shrink-0">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Messages — MSN chat area ── */}
             <div ref={scrollRef} onScroll={handleScroll}
-                className="flex-1 overflow-y-auto px-4 md:px-6 py-6 relative custom-scrollbar bg-background">
-                {/* Visual texture for background */}
-                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+                className="flex-1 overflow-y-auto px-4 md:px-6 py-6 relative custom-scrollbar"
+                style={{ background: 'radial-gradient(ellipse at 20% 80%, rgba(220,38,38,0.04) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(220,38,38,0.03) 0%, transparent 60%), #080808' }}
+            >
+                {/* MSN subtle dot pattern */}
+                <div className="absolute inset-0 pointer-events-none opacity-[0.025]"
+                    style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
                 {isLoading ? (
                     <div className="flex items-center justify-center h-full">
                         <Loader2 className="w-8 h-8 text-brand-red animate-spin" />
@@ -461,9 +616,9 @@ export default function ChatWindow({
                                 const isMine = msg.sender_id === currentUserId
                                 const isEditing = editingId === msg.id
                                 const isDeleting = deletingId === msg.id
-                                const msgIdx = messages.findIndex(m => m.id === msg.id)
-                                const prevMsg = messages[msgIdx - 1]
-                                const nextMsg = messages[msgIdx + 1]
+                                const msgIdx = filteredMessages.findIndex(m => m.id === msg.id)
+                                const prevMsg = filteredMessages[msgIdx - 1]
+                                const nextMsg = filteredMessages[msgIdx + 1]
                                 const isFirst = !prevMsg || prevMsg.sender_id !== msg.sender_id
                                 const isLast = !nextMsg || nextMsg.sender_id !== msg.sender_id
                                 const isRead = !!otherParticipantLastRead &&
@@ -834,6 +989,25 @@ export default function ChatWindow({
                 )}
             </AnimatePresence>
 
+            {/* ── MSN Quick emoji bar ── */}
+            <div className="px-4 py-1.5 bg-[#0a0a0a] border-t border-white/[0.04] flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0">
+                {['😊','😂','❤️','🔥','💪','😎','🥳','😢','😮','👍','🙌','💯','🎉','😘','🤩','💥','⚡','🏆','🎯','✨'].map(e => (
+                    <button key={e} onClick={() => { setInputValue(v => v + e); playEmojiSound(e) }}
+                        className="text-xl shrink-0 w-8 h-8 flex items-center justify-center hover:bg-white/10 active:scale-90 rounded-lg transition-all hover:scale-125">
+                        {e}
+                    </button>
+                ))}
+                {/* Nudge button — MSN iconic */}
+                <div className="w-px h-5 bg-white/10 mx-1 shrink-0" />
+                <button
+                    onClick={sendNudge}
+                    title="Nudge (sacudir pantalla)"
+                    className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg bg-brand-red/10 border border-brand-red/20 hover:bg-brand-red/20 active:scale-90 transition-all text-base"
+                >
+                    💥
+                </button>
+            </div>
+
             {/* ── Input bar ── */}
             <div className="px-4 pb-4 pt-2 bg-[#0C0C0C]/90 backdrop-blur-md border-t border-white/[0.04] relative z-20 shrink-0">
                 {/* Pending media preview */}
@@ -896,18 +1070,93 @@ export default function ChatWindow({
                         </button>
                     </div>
 
-                    <button onClick={handleSend}
-                        disabled={!inputValue.trim() && !pendingMediaFile}
-                        className={clsx(
-                            'w-11 h-11 rounded-full flex items-center justify-center transition-all shrink-0',
-                            (inputValue.trim() || pendingMediaFile)
-                                ? 'bg-brand-red text-white shadow-[0_0_20px_rgba(220,38,38,0.35)] hover:scale-105 active:scale-90'
-                                : 'bg-white/[0.04] text-white/15 cursor-not-allowed'
-                        )}>
-                        <Send className="w-4 h-4 ml-0.5" />
-                    </button>
+                    {/* ── MSN-style ENVIAR + BUSCAR buttons (vertical stack) ── */}
+                    <div className="flex flex-col gap-1.5 shrink-0">
+                        <button onClick={handleSend}
+                            disabled={!inputValue.trim() && !pendingMediaFile}
+                            className={clsx(
+                                'w-24 h-9 rounded-lg flex items-center justify-center gap-1.5 transition-all font-black text-[11px] uppercase tracking-widest border',
+                                (inputValue.trim() || pendingMediaFile)
+                                    ? 'bg-brand-red border-red-700 text-white shadow-[0_2px_12px_rgba(220,38,38,0.4)] hover:bg-red-600 active:scale-95'
+                                    : 'bg-[#111] border-white/[0.07] text-white/20 cursor-not-allowed'
+                            )}>
+                            <Send className="w-3.5 h-3.5" />
+                            Enviar
+                        </button>
+                        <button onClick={toggleSearch}
+                            className={clsx(
+                                'w-24 h-9 rounded-lg flex items-center justify-center gap-1.5 font-black text-[11px] uppercase tracking-widest border transition-all active:scale-95',
+                                showSearch
+                                    ? 'bg-brand-red/15 border-brand-red/30 text-brand-red'
+                                    : 'bg-[#111] border-white/[0.07] text-white/40 hover:text-white hover:border-white/20'
+                            )}>
+                            <Search className="w-3.5 h-3.5" />
+                            Buscar
+                        </button>
+                    </div>
                 </div>
             </div>
+
+            </div>{/* END LEFT PANEL */}
+
+            {/* ══════════════════════════════════════════════════════════════ */}
+            {/* RIGHT PANEL — Profile photos (MSN iconic, desktop only)       */}
+            {/* ══════════════════════════════════════════════════════════════ */}
+            <div className="hidden lg:flex w-[130px] shrink-0 flex-col border-l border-white/[0.05]"
+                style={{ background: '#0d0d0d' }}>
+
+                {/* Contact photo — TOP */}
+                <div className="flex-1 flex flex-col items-center justify-center p-3 border-b border-white/[0.05] gap-2">
+                    <div className="relative w-full">
+                        <div className="w-full aspect-square rounded-2xl overflow-hidden border-2 relative shadow-2xl"
+                            style={{ borderColor: isOnline ? 'rgba(74,222,128,0.5)' : 'rgba(255,255,255,0.08)' }}>
+                            {isGroup ? (
+                                <div className="w-full h-full bg-gradient-to-br from-brand-red/20 to-orange-600/20 flex items-center justify-center">
+                                    <Users className="w-10 h-10 text-brand-red/60" />
+                                </div>
+                            ) : (
+                                <Image
+                                    src={otherPerson.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherPerson.full_name || 'U')}&background=EF4444&color=fff`}
+                                    alt="" fill className="object-cover"
+                                />
+                            )}
+                        </div>
+                        {isOnline && !isGroup && (
+                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-[#0d0d0d] rounded-full shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
+                        )}
+                    </div>
+                    <p className="text-[9px] font-black text-white/40 uppercase tracking-widest text-center truncate w-full px-1">
+                        {isGroup ? 'Grupo' : (otherPerson.full_name || otherPerson.username || '').split(' ')[0]}
+                    </p>
+                    {isOtherTyping && (
+                        <div className="flex gap-0.5">
+                            {[0,1,2].map(i => (
+                                <motion.div key={i} className="w-1.5 h-1.5 rounded-full bg-brand-red"
+                                    animate={{ y: [0, -3, 0] }} transition={{ delay: i * 0.15, duration: 0.5, repeat: Infinity }} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* My photo — BOTTOM */}
+                <div className="flex-1 flex flex-col items-center justify-center p-3 gap-2">
+                    <div className="w-full aspect-square rounded-2xl overflow-hidden border-2 border-brand-red/30 relative shadow-lg">
+                        {myProfile?.avatar_url ? (
+                            <Image src={myProfile.avatar_url} alt="" fill className="object-cover" />
+                        ) : (
+                            <div className="w-full h-full bg-gradient-to-br from-brand-red to-orange-600 flex items-center justify-center">
+                                <span className="text-white font-black text-2xl">
+                                    {(myProfile?.full_name || 'Y')[0]}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+                    <p className="text-[9px] font-black text-brand-red/60 uppercase tracking-widest text-center truncate w-full px-1">
+                        {(myProfile?.full_name || 'Tú').split(' ')[0]}
+                    </p>
+                </div>
+            </div>{/* END RIGHT PANEL */}
+
         </div>
     )
 }

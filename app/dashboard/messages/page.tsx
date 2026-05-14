@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import ChatList from './ChatList'
 import ChatWindow from './ChatWindow'
@@ -41,6 +41,9 @@ function MessagesContent() {
     const [isGroupModalOpen, setIsGroupModalOpen] = useState(false)
     const [friends, setFriends] = useState<any[]>([])
     const [currentUserId, setCurrentUserId] = useState<string>('')
+    const [myProfile, setMyProfile] = useState<any>(null)
+    // Broadcast channel ref for instant message delivery (no CDC delay)
+    const broadcastChannelRef = useRef<any>(null)
     const [searchQuery, setSearchQuery] = useState('')
     const [isMobileListVisible, setIsMobileListVisible] = useState(true)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -87,6 +90,9 @@ function MessagesContent() {
                 const user = authData?.user
                 if (user) {
                     setCurrentUserId(user.id)
+                    // Fetch own profile for MSN-style header
+                    const { data: prof } = await supabase.from('profiles').select('full_name, username, avatar_url').eq('id', user.id).single()
+                    setMyProfile(prof)
                     await loadConversations()
                     const friendsData = await getFriendsToChat()
                     setFriends(friendsData)
@@ -124,29 +130,47 @@ function MessagesContent() {
         return () => { supabase.removeChannel(updatesChannel) }
     }, [currentUserId, loadConversations])
 
-    // Real-time: active chat messages
+    // ── Real-time: instant message delivery via BROADCAST + CDC fallback ────────
     useEffect(() => {
         if (!activeConversationId) return
 
+        // Clean up previous broadcast channel
+        if (broadcastChannelRef.current) {
+            supabase.removeChannel(broadcastChannelRef.current)
+        }
+
         const channel = supabase
             .channel(`active-chat-${activeConversationId}`)
+            // ── BROADCAST: instant delivery (no CDC delay) ──────────────────
+            .on('broadcast', { event: 'new_message' }, ({ payload }: any) => {
+                const msg = payload?.message
+                if (!msg || msg.sender_id === currentUserId) return
+                setMessages(prev => prev.find(m => m.id === msg.id) ? prev : [...prev, msg])
+                if (activeConversationId) {
+                    markConversationAsRead(activeConversationId).catch(() => {})
+                    setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, unread_count: 0, last_message_text: msg.text || '', last_message_at: msg.created_at } : c))
+                }
+            })
+            // ── BROADCAST: typing indicator ─────────────────────────────────
+            // (typing is already handled inside ChatWindow, just keep channel open)
+            // ── CDC fallback: catches edits, deletes, read receipts ─────────
             .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` },
                 (payload: any) => {
-                    const newMessage = payload.new
-                    if (newMessage.sender_id !== currentUserId && activeConversationId) {
-                        markConversationAsRead(activeConversationId).then(() => {
-                            setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, unread_count: 0 } : c))
-                        })
-                    }
+                    const msg = payload.new
+                    // Only add if broadcast didn't already add it
                     setMessages(prev => {
-                        if (prev.find(m => m.id === newMessage.id)) return prev
-                        if (newMessage.sender_id === currentUserId) {
-                            const tempIdx = prev.findIndex(m => m.sender_id === currentUserId && m.text === newMessage.text && m.id.toString().startsWith('temp-'))
-                            if (tempIdx !== -1) { const u = [...prev]; u[tempIdx] = newMessage; return u }
+                        if (prev.find(m => m.id === msg.id)) return prev
+                        if (msg.sender_id === currentUserId) {
+                            const idx = prev.findIndex(m => m.id.toString().startsWith('temp-') && m.text === msg.text && m.sender_id === currentUserId)
+                            if (idx !== -1) { const u = [...prev]; u[idx] = msg; return u }
                             return prev
                         }
-                        return [...prev, newMessage]
+                        return [...prev, msg]
                     })
+                    if (msg.sender_id !== currentUserId && activeConversationId) {
+                        markConversationAsRead(activeConversationId).catch(() => {})
+                        setConversations(prev => prev.map(c => c.id === activeConversationId ? { ...c, unread_count: 0 } : c))
+                    }
                 })
             .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages', filter: `conversation_id=eq.${activeConversationId}` },
                 (payload: any) => { setMessages(prev => prev.map(m => m.id === payload.new.id ? payload.new : m)) })
@@ -156,8 +180,9 @@ function MessagesContent() {
                 (payload: any) => { if (payload.new.user_id !== currentUserId) setOtherParticipantLastRead(payload.new.last_read_at) })
             .subscribe()
 
-        return () => { supabase.removeChannel(channel) }
-    }, [activeConversationId, currentUserId, loadConversations])
+        broadcastChannelRef.current = channel
+        return () => { supabase.removeChannel(channel); broadcastChannelRef.current = null }
+    }, [activeConversationId, currentUserId])
 
     const handleSelectConversation = async (id: string, person: any) => {
         try {
@@ -200,6 +225,14 @@ function MessagesContent() {
                 if (prev.find(m => m.id === result.message.id)) return prev.filter(m => m.id !== tempId)
                 return prev.map(m => m.id === tempId ? result.message : m)
             })
+            // ── Broadcast for INSTANT delivery to recipient (no CDC lag) ──
+            if (broadcastChannelRef.current) {
+                broadcastChannelRef.current.send({
+                    type: 'broadcast',
+                    event: 'new_message',
+                    payload: { message: result.message }
+                }).catch(() => {})
+            }
             await loadConversations()
         }
     }
@@ -251,30 +284,49 @@ function MessagesContent() {
     const isGroupChat = activeConv?.is_group
 
     return (
-        <div className="h-[calc(100vh-120px)] md:h-[calc(100vh-140px)] bg-background flex text-foreground overflow-hidden rounded-2xl md:rounded-[3rem] border border-border shadow-[0_20px_50px_rgba(0,0,0,0.1)] mx-auto max-w-[1600px] my-0 md:my-4 transition-colors duration-500">
+        <>
+        {/* ── Desktop layout ── */}
+        <div className="hidden md:flex h-[calc(100vh-140px)] bg-background text-foreground overflow-hidden rounded-[3rem] border border-border shadow-[0_20px_50px_rgba(0,0,0,0.1)] mx-auto max-w-[1600px] my-4">
+            <div className="w-[360px] lg:w-[420px] shrink-0 border-r border-border flex flex-col">
+                <ChatList conversations={filteredConversations} activeId={activeConversationId}
+                    onSelect={handleSelectConversation} onSearch={setSearchQuery}
+                    onNewChat={() => setIsNewChatModalOpen(true)} onNewGroup={() => setIsGroupModalOpen(true)}
+                    myProfile={myProfile} />
+            </div>
+            <div className="flex-1 flex flex-col overflow-hidden relative">
+                <ChatWindow messages={messages} otherPerson={otherPerson} currentUserId={currentUserId}
+                    conversationId={activeConversationId} myProfile={myProfile} onSendMessage={handleSendMessage}
+                    onUploadImage={uploadChatImage} onUploadVideo={uploadChatVideo}
+                    onDeleteMessage={deleteMessage} onEditMessage={editMessage}
+                    onToggleLike={handleToggleLike} onDeleteConversation={handleDeleteConversation}
+                    isLoading={isLoadingMessages} otherParticipantLastRead={otherParticipantLastRead}
+                    onBack={() => setIsMobileListVisible(true)}
+                    isOnline={isGroupChat ? false : (otherPerson ? onlineUsers.has(otherPerson.id) : false)} />
+            </div>
+        </div>
 
-            {/* Sidebar */}
-            <div className={clsx(
-                "w-full md:w-[360px] lg:w-[420px] shrink-0 border-r border-border flex flex-col transition-all duration-300",
-                !isMobileListVisible ? 'hidden md:flex' : 'flex'
-            )}>
-                <ChatList
-                    conversations={filteredConversations}
-                    activeId={activeConversationId}
-                    onSelect={handleSelectConversation}
-                    onSearch={setSearchQuery}
-                    onNewChat={() => setIsNewChatModalOpen(true)}
-                    onNewGroup={() => setIsGroupModalOpen(true)}
-                />
+        {/* ── Mobile layout ── */}
+        <div className="flex md:hidden flex-col h-[calc(100dvh-80px)] bg-[#0a0a0a] overflow-hidden">
+            {/* Contact list */}
+            <div className={clsx("flex-1 flex flex-col overflow-hidden", !isMobileListVisible && 'hidden')}>
+                <ChatList conversations={filteredConversations} activeId={activeConversationId}
+                    onSelect={handleSelectConversation} onSearch={setSearchQuery}
+                    onNewChat={() => setIsNewChatModalOpen(true)} onNewGroup={() => setIsGroupModalOpen(true)}
+                    myProfile={myProfile} />
             </div>
 
-            {/* Chat window */}
-            <div className={clsx(
-                "flex-1 flex flex-col overflow-hidden relative",
-                !isMobileListVisible
-                    ? "fixed inset-0 z-[110] bg-background animate-in slide-in-from-right duration-500 lg:relative lg:inset-auto lg:z-auto lg:animate-none"
-                    : "hidden md:flex"
-            )}>
+            {/* Full-screen chat — covers EVERYTHING on mobile */}
+            <AnimatePresence>
+            {!isMobileListVisible && (
+                <motion.div
+                    initial={{ x: '100%' }}
+                    animate={{ x: 0 }}
+                    exit={{ x: '100%' }}
+                    transition={{ type: 'tween', duration: 0.22 }}
+                    className="fixed inset-0 z-[9999] flex flex-col bg-[#0a0a0a]"
+                    style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+                >
+            <div className="flex-1 flex flex-col overflow-hidden relative">
                 <ChatWindow
                     messages={messages}
                     otherPerson={otherPerson}
@@ -291,41 +343,34 @@ function MessagesContent() {
                     otherParticipantLastRead={otherParticipantLastRead}
                     onBack={() => setIsMobileListVisible(true)}
                     isOnline={isGroupChat ? false : (otherPerson ? onlineUsers.has(otherPerson.id) : false)}
+                    myProfile={myProfile}
                 />
-            </div>
-
-            {/* Modals */}
-            <AnimatePresence>
-                {isNewChatModalOpen && (
-                    <NewChatModal
-                        friends={friends}
-                        onClose={() => setIsNewChatModalOpen(false)}
-                        onSelect={handleNewChat}
-                    />
-                )}
-                {isGroupModalOpen && (
-                    <GroupChatModal
-                        friends={friends}
-                        onClose={() => setIsGroupModalOpen(false)}
-                        onCreate={handleCreateGroup}
-                    />
-                )}
-            </AnimatePresence>
-
-            {/* Error Message */}
-            <AnimatePresence>
-                {errorMsg && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 50 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[300] bg-red-500 text-white px-6 py-3 rounded-2xl shadow-2xl font-bold uppercase italic text-xs tracking-widest border border-white/20 flex items-center gap-3"
-                    >
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                        {errorMsg}
-                    </motion.div>
-                )}
+                </div>
+                </motion.div>
+            )}
             </AnimatePresence>
         </div>
+
+        {/* ── Modals (shared) ── */}
+        <AnimatePresence>
+            {isNewChatModalOpen && (
+                <NewChatModal friends={friends} onClose={() => setIsNewChatModalOpen(false)} onSelect={handleNewChat} />
+            )}
+            {isGroupModalOpen && (
+                <GroupChatModal friends={friends} onClose={() => setIsGroupModalOpen(false)} onCreate={handleCreateGroup} />
+            )}
+        </AnimatePresence>
+
+        {/* ── Error toast ── */}
+        <AnimatePresence>
+            {errorMsg && (
+                <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[9999] bg-red-500 text-white px-6 py-3 rounded-2xl shadow-2xl font-bold uppercase italic text-xs tracking-widest border border-white/20 flex items-center gap-3">
+                    <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                    {errorMsg}
+                </motion.div>
+            )}
+        </AnimatePresence>
+        </>
     )
 }

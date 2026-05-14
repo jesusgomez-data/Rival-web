@@ -3,10 +3,11 @@
 import Image from 'next/image'
 import { formatDistanceToNow } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { Search, MessageSquarePlus, Zap, ImageIcon, Film, Eye, Users, Plus } from 'lucide-react'
+import { Search, Eye, Film, ImageIcon, Users, Plus, ChevronDown, ChevronRight, Star, MessageSquarePlus } from 'lucide-react'
 import { clsx } from 'clsx'
 import { motion, AnimatePresence } from 'framer-motion'
 import { usePresence } from '../PresenceContext'
+import { useState } from 'react'
 
 interface ChatListProps {
     conversations: any[]
@@ -15,234 +16,353 @@ interface ChatListProps {
     onSearch: (query: string) => void
     onNewChat: () => void
     onNewGroup: () => void
+    myProfile?: any
 }
 
-function GroupAvatar({ members }: { members: any[] }) {
-    const shown = members.slice(0, 3)
+// ── Avatar cuadrado MSN-style ─────────────────────────────────────────────────
+function ContactAvatar({ person, isGroup, members, isOnline, hasUnread, size = 52 }: {
+    person?: any; isGroup?: boolean; members?: any[]; isOnline?: boolean; hasUnread?: boolean; size?: number
+}) {
     return (
-        <div className="relative w-full h-full">
-            {shown.length === 0 && (
-                <div className="w-full h-full bg-gradient-to-br from-brand-red/50 to-orange-500/50 flex items-center justify-center rounded-[14px]">
-                    <Users className="w-6 h-6 text-white/60" />
+        <div className="relative shrink-0" style={{ width: size, height: size }}>
+            {/* Unread: animated gradient ring */}
+            {hasUnread && (
+                <div className="absolute -inset-[2px] rounded-2xl z-0 overflow-hidden">
+                    <div className="w-full h-full bg-gradient-to-br from-brand-red via-orange-500 to-red-600 animate-spin-slow" />
                 </div>
             )}
-            {shown.length === 1 && (
-                shown[0]?.avatar_url
-                    ? <Image src={shown[0].avatar_url} alt="" fill className="object-cover rounded-[14px]" />
-                    : <div className="w-full h-full bg-gradient-to-br from-brand-red/40 to-orange-400/40 rounded-[14px] flex items-center justify-center">
-                        <span className="font-black text-white/60 text-lg">{(shown[0]?.full_name || '?')[0]}</span>
+            {/* Square avatar with rounded corners */}
+            <div
+                className="relative z-10 overflow-hidden"
+                style={{
+                    width: size, height: size,
+                    borderRadius: 14,
+                    border: isOnline
+                        ? '2.5px solid rgba(74,222,128,0.9)'
+                        : hasUnread
+                            ? '2px solid #0a0a0a'
+                            : '1.5px solid rgba(255,255,255,0.08)',
+                    boxShadow: isOnline ? '0 0 10px rgba(74,222,128,0.35)' : 'none',
+                    background: '#111'
+                }}
+            >
+                {isGroup ? (
+                    <div className="w-full h-full bg-gradient-to-br from-brand-red/30 to-orange-600/30 flex items-center justify-center">
+                        <Users className="text-brand-red/70" style={{ width: size * 0.45, height: size * 0.45 }} />
                     </div>
-            )}
-            {shown.length >= 2 && (
-                <div className="grid grid-cols-2 gap-0.5 w-full h-full rounded-[14px] overflow-hidden">
-                    {shown.slice(0, shown.length === 3 ? 3 : 2).map((m: any, i: number) => (
-                        <div key={i} className={clsx("relative overflow-hidden", shown.length === 3 && i === 0 && "row-span-2")}>
-                            {m?.avatar_url
-                                ? <Image src={m.avatar_url} alt="" fill className="object-cover" />
-                                : <div className="w-full h-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center">
-                                    <span className="font-black text-white/40 text-[10px]">{(m?.full_name || '?')[0]}</span>
-                                </div>
-                            }
-                        </div>
-                    ))}
-                </div>
-            )}
+                ) : person?.avatar_url ? (
+                    <Image src={person.avatar_url} alt="" fill className="object-cover" />
+                ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-brand-red to-orange-600 flex items-center justify-center">
+                        <span className="text-white font-black" style={{ fontSize: size * 0.38 }}>
+                            {(person?.full_name || person?.username || '?')[0].toUpperCase()}
+                        </span>
+                    </div>
+                )}
+            </div>
         </div>
     )
 }
 
-export default function ChatList({ conversations, activeId, onSearch, onSelect, onNewChat, onNewGroup }: ChatListProps) {
-    const { onlineUsers } = usePresence()
+// ── Preview text of last message ──────────────────────────────────────────────
+function getPreview(conv: any) {
+    const t = conv.last_message_text
+    if (!t) return ''
+    if (t === '👁 Ver una vez') return '📷 Ver una vez'
+    if (t === '🎬 Video') return '🎬 Video'
+    if (t === '📷 Imagen') return '📷 Foto'
+    return t.length > 42 ? t.slice(0, 42) + '…' : t
+}
 
-    const getLastMsgPreview = (conv: any) => {
-        const text = conv.last_message_text
-        if (!text) return null
-        if (text === '👁 Ver una vez') return { icon: <Eye className="w-3 h-3 shrink-0 text-purple-600" />, label: 'Ver una vez', accent: true }
-        if (text === '🎬 Video') return { icon: <Film className="w-3 h-3 shrink-0" />, label: 'Video', accent: false }
-        if (text === '📷 Imagen') return { icon: <ImageIcon className="w-3 h-3 shrink-0" />, label: 'Foto', accent: false }
-        return { icon: null, label: text, accent: false }
-    }
+// ── Collapsible group section ─────────────────────────────────────────────────
+function GroupSection({ icon, label, online, total, open, onToggle, children, accent }: {
+    icon: React.ReactNode; label: string; online: number; total: number;
+    open: boolean; onToggle: () => void; children: React.ReactNode; accent: string;
+}) {
+    return (
+        <div>
+            <button
+                onClick={onToggle}
+                className="w-full flex items-center gap-2 px-4 py-2.5 hover:bg-white/[0.03] transition-colors"
+            >
+                <span className="shrink-0">{icon}</span>
+                <span className="font-black text-sm text-white/70 tracking-tight">{label}</span>
+                <span className="text-[11px] font-bold ml-0.5" style={{ color: accent }}>
+                    ({online}/{total})
+                </span>
+                <div className="flex-1 h-px bg-white/[0.04] mx-2" />
+                {open
+                    ? <ChevronDown className="w-3.5 h-3.5 text-white/20 shrink-0" />
+                    : <ChevronRight className="w-3.5 h-3.5 text-white/20 shrink-0" />
+                }
+            </button>
+            <AnimatePresence initial={false}>
+                {open && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.18 }}
+                        className="overflow-hidden"
+                    >
+                        {children}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    )
+}
+
+// ── Single contact row ────────────────────────────────────────────────────────
+function ContactRow({ conv, isOnline, activeId, onSelect }: {
+    conv: any; isOnline: boolean;
+    activeId: string | null;
+    onSelect: (id: string, person: any) => void;
+}) {
+    const isActive = activeId === conv.id
+    const person = conv.other_person
+    const isGroup = conv.is_group
+    const hasUnread = conv.unread_count > 0
+    const preview = getPreview(conv)
+    const timeAgo = conv.last_message_at
+        ? formatDistanceToNow(new Date(conv.last_message_at), { locale: es })
+            .replace('hace ', '').replace('menos de un minuto', 'ahora')
+        : ''
 
     return (
-        <div className="flex flex-col h-full bg-background">
-            {/* Header */}
-            <div className="px-5 pt-6 pb-4 border-b border-border bg-background/80 backdrop-blur-xl">
-                <div className="flex items-center justify-between mb-5">
-                    <div className="flex flex-col">
-                        <h2 className="text-3xl font-black italic text-foreground uppercase tracking-tighter flex items-center gap-2 leading-none">
-                            <div className="w-1.5 h-8 bg-brand-red rounded-full shadow-[0_4px_15px_rgba(220,38,38,0.4)]" />
-                            CHATS
-                        </h2>
-                        <p className="text-[10px] text-muted-foreground font-black uppercase tracking-[0.2em] mt-1 ml-3.5 opacity-60">
-                            {conversations.length} CONVERSACIONES ACTIVAS
-                        </p>
+        <button
+            onClick={() => onSelect(conv.id, isGroup
+                ? { isGroup: true, groupName: conv.group_name, members: conv.group_members }
+                : person
+            )}
+            className={clsx(
+                'w-full flex items-center gap-3 px-4 py-3 transition-colors relative',
+                isActive
+                    ? 'bg-brand-red/10'
+                    : hasUnread
+                        ? 'bg-white/[0.025] hover:bg-white/[0.04]'
+                        : 'hover:bg-white/[0.025]'
+            )}
+        >
+            {/* Active indicator */}
+            {isActive && <div className="absolute left-0 top-2 bottom-2 w-[3px] bg-brand-red rounded-r-full" />}
+
+            <ContactAvatar
+                person={person}
+                isGroup={isGroup}
+                members={conv.group_members}
+                isOnline={isOnline}
+                hasUnread={hasUnread}
+                size={52}
+            />
+
+            <div className="flex-1 min-w-0 text-left">
+                {/* Name + time */}
+                <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                    <span className={clsx(
+                        'text-[13px] font-black truncate leading-tight',
+                        isActive || hasUnread ? 'text-white' : isOnline ? 'text-white/80' : 'text-white/45'
+                    )}>
+                        {isGroup ? (conv.group_name || 'Grupo') : (person?.full_name || person?.username || '?')}
+                    </span>
+                    {timeAgo && (
+                        <span className={clsx('text-[10px] font-medium shrink-0', hasUnread ? 'text-brand-red' : 'text-white/15')}>
+                            {timeAgo}
+                        </span>
+                    )}
+                </div>
+                {/* Preview text — blue in MSN, brand-red tint here */}
+                <span className={clsx(
+                    'text-[11px] truncate block leading-tight',
+                    hasUnread ? 'text-brand-red/80 font-semibold' : 'text-white/25'
+                )}>
+                    {preview || (isOnline ? '● En línea' : '○ Sin conexión')}
+                </span>
+            </div>
+
+            {/* Unread badge */}
+            {hasUnread && (
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}
+                    className="shrink-0 min-w-[20px] h-5 bg-brand-red text-white text-[10px] font-black rounded-full flex items-center justify-center px-1.5 shadow-glow">
+                    {conv.unread_count > 9 ? '9+' : conv.unread_count}
+                </motion.div>
+            )}
+        </button>
+    )
+}
+
+// ── Main ChatList ─────────────────────────────────────────────────────────────
+export default function ChatList({ conversations, activeId, onSearch, onSelect, onNewChat, onNewGroup, myProfile }: ChatListProps) {
+    const { onlineUsers } = usePresence()
+    const [myStatus, setMyStatus] = useState('')
+    const [favOpen, setFavOpen] = useState(true)
+    const [onlineOpen, setOnlineOpen] = useState(true)
+    const [offlineOpen, setOfflineOpen] = useState(false) // collapsed by default like MSN
+    const [groupsOpen, setGroupsOpen] = useState(false)
+
+    // Separate conversations
+    const groups = conversations.filter(c => c.is_group)
+    const dms = conversations.filter(c => !c.is_group)
+    const onlineConvs = dms.filter(c => c.other_person?.id && onlineUsers.has(c.other_person.id))
+    const offlineConvs = dms.filter(c => !c.other_person?.id || !onlineUsers.has(c.other_person.id))
+
+    // "Favorites" = contacts with unread messages (like MSN favorites = recent active)
+    const favorites = [...onlineConvs, ...offlineConvs.filter(c => c.unread_count > 0)].slice(0, 5)
+
+    return (
+        <div className="flex flex-col h-full" style={{ background: '#0a0a0a' }}>
+
+            {/* ── MY PROFILE — MSN mobile header ── */}
+            <div className="shrink-0" style={{ background: 'linear-gradient(180deg, #200808 0%, #140404 100%)' }}>
+                <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+                    {/* My avatar — square with green online border */}
+                    <div className="relative shrink-0">
+                        <div className="w-14 h-14 rounded-2xl overflow-hidden border-[2.5px] border-green-400/80 shadow-[0_0_12px_rgba(74,222,128,0.4)] relative">
+                            {myProfile?.avatar_url
+                                ? <Image src={myProfile.avatar_url} alt="" fill className="object-cover" />
+                                : <div className="w-full h-full bg-gradient-to-br from-brand-red to-orange-600 flex items-center justify-center">
+                                    <span className="text-white font-black text-xl">{(myProfile?.full_name || 'Y')[0]}</span>
+                                </div>
+                            }
+                        </div>
+                        {/* Green online dot */}
+                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-400 border-2 border-[#140404] rounded-full shadow-[0_0_8px_rgba(74,222,128,0.9)]" />
                     </div>
-                    <div className="flex gap-2.5">
-                        <button
-                            onClick={onNewGroup}
-                            title="Nuevo grupo"
-                            className="w-10 h-10 rounded-2xl bg-muted text-muted-foreground hover:text-brand-red hover:bg-brand-red/5 transition-all border border-border active:scale-90 flex items-center justify-center group"
-                        >
-                            <Users className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                        </button>
-                        <button
-                            onClick={onNewChat}
-                            title="Nuevo chat"
-                            className="w-10 h-10 rounded-2xl bg-brand-red text-white hover:bg-red-600 transition-all shadow-[0_8px_20px_rgba(220,38,38,0.25)] active:scale-95 flex items-center justify-center group"
-                        >
-                            <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" />
-                        </button>
+
+                    {/* Name + status + dropdown */}
+                    <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                            <span className="font-black text-white text-base leading-tight truncate">
+                                {myProfile?.full_name || 'Atleta'}
+                            </span>
+                            <span className="text-[10px] text-green-400 font-bold uppercase tracking-wider shrink-0">Activo</span>
+                        </div>
+                        {/* Status message — editable */}
+                        <input
+                            type="text"
+                            value={myStatus}
+                            onChange={e => setMyStatus(e.target.value)}
+                            placeholder="¿Cuál es tu estado?"
+                            maxLength={60}
+                            className="w-full bg-transparent text-[11px] text-white/35 placeholder:text-white/20 italic focus:outline-none focus:text-white/70 transition-colors mt-0.5"
+                        />
                     </div>
+
+                    {/* New chat button */}
+                    <button onClick={onNewChat}
+                        className="w-9 h-9 rounded-xl bg-brand-red flex items-center justify-center shadow-glow hover:bg-red-600 active:scale-90 transition-all shrink-0">
+                        <Plus className="w-4 h-4 text-white" />
+                    </button>
                 </div>
 
-                <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none opacity-40" />
-                    <input
-                        type="text"
-                        placeholder="Buscar en el arena..."
-                        onChange={e => onSearch(e.target.value)}
-                        className="w-full bg-muted/30 border border-border rounded-2xl py-3.5 pl-11 pr-5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-brand-red/10 focus:border-brand-red/50 transition-all placeholder:text-muted-foreground/30 font-bold uppercase tracking-tight"
-                    />
+                {/* ── SEARCH BAR — full width like MSN ── */}
+                <div className="px-4 pb-3">
+                    <div className="flex items-center gap-2 bg-black/50 border border-white/[0.08] rounded-xl px-3 py-2.5">
+                        <Search className="w-4 h-4 text-white/25 shrink-0" />
+                        <input
+                            type="text"
+                            placeholder="Buscar contacto..."
+                            onChange={e => onSearch(e.target.value)}
+                            className="flex-1 bg-transparent text-sm text-white/80 placeholder:text-white/20 focus:outline-none font-medium"
+                        />
+                        {/* Group button */}
+                        <button onClick={onNewGroup} className="shrink-0 text-white/20 hover:text-brand-red transition-colors">
+                            <Users className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            {/* List */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-2">
-                <AnimatePresence mode="popLayout">
-                    {conversations.length === 0 ? (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="py-24 text-center px-4"
-                        >
-                            <div className="w-20 h-20 rounded-[28px] bg-muted flex items-center justify-center mx-auto mb-6 relative">
-                                <div className="absolute inset-0 bg-brand-red/5 blur-xl rounded-full" />
-                                <Zap className="w-8 h-8 text-brand-red/20 relative animate-pulse" />
-                            </div>
-                            <p className="text-[12px] text-foreground font-black uppercase tracking-[0.2em] italic">Silencio en el campo</p>
-                            <p className="text-[10px] text-muted-foreground font-bold mt-2 uppercase tracking-widest opacity-60">Reta a un compañero y rompe el hielo</p>
-                            <button
-                                onClick={onNewChat}
-                                className="mt-8 px-7 py-3 bg-brand-red text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl hover:scale-105 active:scale-95 transition-all"
+            {/* ── CONTACT GROUPS ── */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar" style={{ background: '#0a0a0a' }}>
+                {conversations.length === 0 ? (
+                    <div className="py-16 text-center px-6">
+                        <div className="text-5xl mb-3">💬</div>
+                        <p className="text-sm text-white/25 font-bold uppercase tracking-widest">Sin contactos</p>
+                        <button onClick={onNewChat}
+                            className="mt-4 px-6 py-2.5 bg-brand-red text-white text-[11px] font-black uppercase tracking-widest rounded-xl hover:bg-red-600 active:scale-95 transition-all shadow-glow">
+                            Nuevo Chat
+                        </button>
+                    </div>
+                ) : (
+                    <>
+                        {/* ⭐ Favoritos — unread + online (MSN favorites section) */}
+                        {favorites.length > 0 && (
+                            <GroupSection
+                                icon={<Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />}
+                                label="Favoritos"
+                                online={favorites.filter(c => c.other_person?.id && onlineUsers.has(c.other_person.id)).length}
+                                total={favorites.length}
+                                open={favOpen}
+                                onToggle={() => setFavOpen(v => !v)}
+                                accent="#facc15"
                             >
-                                INICIAR COMBATE
-                            </button>
-                        </motion.div>
-                    ) : (
-                        conversations.map((conv, idx) => {
-                            const isActive = activeId === conv.id
-                            const person = conv.other_person
-                            const isGroup = conv.is_group
-                            const isOnline = !isGroup && person?.id && onlineUsers.has(person.id)
-                            const hasUnread = conv.unread_count > 0
-                            const preview = getLastMsgPreview(conv)
+                                {favorites.map(conv => (
+                                    <ContactRow key={conv.id} conv={conv}
+                                        isOnline={!conv.is_group && conv.other_person?.id && onlineUsers.has(conv.other_person.id)}
+                                        activeId={activeId} onSelect={onSelect} />
+                                ))}
+                            </GroupSection>
+                        )}
 
-                            return (
-                                <motion.button
-                                    key={conv.id}
-                                    layout
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.9 }}
-                                    transition={{ delay: idx * 0.03, type: 'spring', stiffness: 400, damping: 30 }}
-                                    onClick={() => onSelect(conv.id, isGroup ? { isGroup: true, groupName: conv.group_name, members: conv.group_members } : person)}
-                                    className={clsx(
-                                        'w-full flex items-center gap-4 px-4 py-4 rounded-[22px] transition-all relative group overflow-hidden',
-                                        isActive
-                                            ? 'bg-brand-red/[0.04] border border-brand-red/20 shadow-sm'
-                                            : hasUnread
-                                                ? 'bg-muted/80 border border-brand-red/20'
-                                                : 'border border-transparent hover:bg-muted/40'
-                                    )}
-                                >
-                                    {/* Active indicator */}
-                                    {isActive && (
-                                        <motion.div
-                                            layoutId="chat-active-bar"
-                                            className="absolute left-1 top-4 bottom-4 w-1 bg-brand-red rounded-full shadow-[0_0_10px_rgba(220,38,38,0.5)]"
-                                        />
-                                    )}
+                        {/* 🟢 En línea */}
+                        {onlineConvs.length > 0 && (
+                            <GroupSection
+                                icon={<span className="w-3 h-3 rounded-full bg-green-400 inline-block shadow-[0_0_6px_rgba(74,222,128,0.7)]" />}
+                                label="En línea"
+                                online={onlineConvs.length}
+                                total={dms.length}
+                                open={onlineOpen}
+                                onToggle={() => setOnlineOpen(v => !v)}
+                                accent="#4ade80"
+                            >
+                                {onlineConvs.map(conv => (
+                                    <ContactRow key={conv.id} conv={conv} isOnline
+                                        activeId={activeId} onSelect={onSelect} />
+                                ))}
+                            </GroupSection>
+                        )}
 
-                                    {/* Avatar with unread ring */}
-                                    <div className="relative shrink-0" style={{ width: 56, height: 56 }}>
-                                        {hasUnread && (
-                                            <div className="absolute -inset-[3px] rounded-[20px] z-0 overflow-hidden">
-                                                <div className="w-full h-full bg-gradient-to-br from-brand-red via-orange-500 to-red-600 animate-spin-slow" />
-                                            </div>
-                                        )}
-                                        <div
-                                            className="relative z-10 overflow-hidden shadow-md"
-                                            style={{
-                                                width: 56, height: 56,
-                                                borderRadius: 18,
-                                                border: hasUnread ? '3px solid hsl(var(--background))' : '2px solid hsl(var(--border))',
-                                            }}
-                                        >
-                                            {isGroup
-                                                ? <GroupAvatar members={conv.group_members || []} />
-                                                : person?.avatar_url
-                                                    ? <Image src={person.avatar_url} alt="" fill className="object-cover" />
-                                                    : <div className="w-full h-full bg-muted flex items-center justify-center">
-                                                        <span className="text-xl font-black text-brand-red opacity-30 italic">
-                                                            {(person?.full_name || person?.username || '?')[0].toUpperCase()}
-                                                        </span>
-                                                    </div>
-                                            }
-                                        </div>
-                                        {isOnline && (
-                                            <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 border-2 border-background rounded-full shadow-lg z-20" />
-                                        )}
-                                        {isGroup && (
-                                            <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-muted border-2 border-background rounded-full flex items-center justify-center z-20 shadow-sm">
-                                                <Users className="w-2.5 h-2.5 text-brand-red" />
-                                            </div>
-                                        )}
-                                    </div>
+                        {/* ⚫ Sin conexión */}
+                        {offlineConvs.length > 0 && (
+                            <GroupSection
+                                icon={<span className="w-3 h-3 rounded-full bg-white/15 inline-block" />}
+                                label="Sin conexión"
+                                online={0}
+                                total={offlineConvs.length}
+                                open={offlineOpen}
+                                onToggle={() => setOfflineOpen(v => !v)}
+                                accent="rgba(255,255,255,0.2)"
+                            >
+                                {offlineConvs.map(conv => (
+                                    <ContactRow key={conv.id} conv={conv} isOnline={false}
+                                        activeId={activeId} onSelect={onSelect} />
+                                ))}
+                            </GroupSection>
+                        )}
 
-                                    {/* Info */}
-                                    <div className="flex-1 min-w-0 text-left">
-                                        <div className="flex justify-between items-baseline mb-1">
-                                            <h4 className={clsx(
-                                                'font-black italic uppercase text-sm truncate leading-none tracking-tight',
-                                                hasUnread || isActive ? 'text-foreground' : 'text-muted-foreground'
-                                            )}>
-                                                {isGroup ? (conv.group_name || 'Grupo de Combate') : (person?.full_name || person?.username)}
-                                            </h4>
-                                            <span className={clsx(
-                                                "text-[9px] font-black uppercase tracking-wider shrink-0 ml-2",
-                                                hasUnread ? 'text-brand-red underline' : 'text-muted-foreground/40'
-                                            )}>
-                                                {conv.last_message_at
-                                                    ? formatDistanceToNow(new Date(conv.last_message_at), { locale: es })
-                                                          .replace('hace ', '')
-                                                          .replace('menos de un minuto', 'ahora')
-                                                    : ''}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <p className={clsx(
-                                                "text-[11px] truncate flex-1 flex items-center gap-1.5 font-bold uppercase tracking-tight",
-                                                preview?.accent ? 'text-purple-600 font-black italic' : hasUnread ? 'text-foreground' : 'text-muted-foreground/50'
-                                            )}>
-                                                {preview?.icon}
-                                                {preview?.label || 'INVENTARIO DE MENSAJES VACÍO'}
-                                            </p>
-                                            {hasUnread && (
-                                                <motion.div
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    className="shrink-0 min-w-[22px] h-5.5 bg-brand-red text-white text-[10px] font-black rounded-lg flex items-center justify-center px-1.5 shadow-[0_4px_10px_rgba(220,38,38,0.3)]"
-                                                >
-                                                    {conv.unread_count > 9 ? '9+' : conv.unread_count}
-                                                </motion.div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </motion.button>
-                            )
-                        })
-                    )}
-                </AnimatePresence>
+                        {/* 👥 Grupos */}
+                        {groups.length > 0 && (
+                            <GroupSection
+                                icon={<Users className="w-4 h-4 text-brand-red" />}
+                                label="Grupos"
+                                online={groups.length}
+                                total={groups.length}
+                                open={groupsOpen}
+                                onToggle={() => setGroupsOpen(v => !v)}
+                                accent="#ef4444"
+                            >
+                                {groups.map(conv => (
+                                    <ContactRow key={conv.id} conv={conv} isOnline={false}
+                                        activeId={activeId} onSelect={onSelect} />
+                                ))}
+                            </GroupSection>
+                        )}
+
+                        {/* Padding final */}
+                        <div className="h-6" />
+                    </>
+                )}
             </div>
         </div>
     )
