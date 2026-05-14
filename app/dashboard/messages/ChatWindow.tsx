@@ -16,6 +16,7 @@ import MentionInput from '@/components/MentionInput'
 import { createClient } from '@/utils/supabase/client'
 import { markViewOnceViewed } from './actions'
 import { playEmojiSound, playSendSound, playReceiveSound, playNudgeSound } from './emojiSounds'
+import { useTheme } from '../../ThemeContext'
 
 const QUICK_EMOJIS = ['❤️', '🔥', '💪', '😂', '😮', '👏', '🏆', '⚡']
 
@@ -34,18 +35,18 @@ function isEmojiOnly(text: string): boolean {
     return emojiRegex.test(t)
 }
 
-function DateSeparator({ date }: { date: Date }) {
+function DateSeparator({ date, dk }: { date: Date; dk?: boolean }) {
     let label: string
     if (isToday(date)) label = 'Hoy'
     else if (isYesterday(date)) label = 'Ayer'
     else label = format(date, "EEEE d 'de' MMMM", { locale: es })
     return (
         <div className="flex items-center gap-3 my-5 px-2">
-            <div className="flex-1 h-px bg-white/[0.05]" />
-            <span className="text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border border-white/[0.07] bg-white/[0.03] text-white/25 shrink-0">
+            <div className={clsx("flex-1 h-px", dk ? "bg-white/[0.05]" : "bg-gray-200")} />
+            <span className={clsx("text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full border shrink-0", dk ? "border-white/[0.07] bg-white/[0.03] text-white/25" : "border-gray-200 bg-white text-gray-400")}>
                 {label}
             </span>
-            <div className="flex-1 h-px bg-white/[0.05]" />
+            <div className={clsx("flex-1 h-px", dk ? "bg-white/[0.05]" : "bg-gray-200")} />
         </div>
     )
 }
@@ -190,6 +191,8 @@ export default function ChatWindow({
     const prevMsgIdsRef = useRef<Set<string>>(new Set())
 
     const supabase = createClient()
+    const { theme } = useTheme()
+    const dk = theme === 'dark'
 
     const isGroup = otherPerson?.isGroup
     const groupName = otherPerson?.groupName
@@ -412,7 +415,7 @@ export default function ChatWindow({
     if (!otherPerson) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center p-10 text-center relative overflow-hidden"
-            style={{ background: 'radial-gradient(ellipse at center, #1a1a2e 0%, #080810 100%)' }}>
+            style={{ background: dk ? 'radial-gradient(ellipse at center, #1a1a2e 0%, #080810 100%)' : 'radial-gradient(ellipse at center, #fef2f2 0%, #f0f2f5 100%)' }}>
                 <div className="absolute inset-0 pointer-events-none opacity-[0.03]"
                     style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.8) 1px, transparent 1px)', backgroundSize: '28px 28px' }} />
                 <motion.div
@@ -424,8 +427,8 @@ export default function ChatWindow({
                     <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 2.5 }}
                         className="absolute -top-2 -right-2 text-2xl">✨</motion.div>
                 </motion.div>
-                <h3 className="text-2xl font-black italic text-white mb-2 uppercase tracking-tighter">Selecciona un contacto</h3>
-                <p className="text-white/25 text-xs max-w-xs leading-relaxed font-bold uppercase tracking-widest">
+                <h3 className={clsx("text-2xl font-black italic mb-2 uppercase tracking-tighter", dk ? "text-white" : "text-gray-800")}>Selecciona un contacto</h3>
+                <p className={clsx("text-xs max-w-xs leading-relaxed font-bold uppercase tracking-widest", dk ? "text-white/25" : "text-gray-400")}>
                     Elige a alguien de tu lista para empezar a chatear
                 </p>
             </div>
@@ -457,7 +460,7 @@ export default function ChatWindow({
     return (
         // ── MSN TWO-PANEL LAYOUT ────────────────────────────────────────────────
         <div className={`flex-1 flex h-full overflow-hidden relative transition-transform ${nudging ? 'animate-nudge' : ''}`}
-            style={{ background: '#080808' }}>
+            style={{ background: dk ? '#080808' : '#f0f2f5' }}>
 
             {/* ── Flying emoji overlay ── */}
             <AnimatePresence>
@@ -487,14 +490,14 @@ export default function ChatWindow({
             <div className="flex-1 flex flex-col overflow-hidden min-w-0">
 
             {/* ── Header MSN "Para:" ── */}
-            <header className="px-4 py-0 flex items-center justify-between z-30 shrink-0 border-b border-white/[0.05] relative overflow-hidden"
-                style={{ background: 'linear-gradient(180deg, #1a0808 0%, #110606 100%)', minHeight: 52 }}>
+            <header className={clsx("px-4 py-0 flex items-center justify-between z-30 shrink-0 relative overflow-hidden", dk ? "border-b border-white/[0.05]" : "border-b border-gray-200")}
+                style={{ background: dk ? 'linear-gradient(180deg, #1a0808 0%, #110606 100%)' : 'linear-gradient(180deg, #fff5f5 0%, #ffffff 100%)', minHeight: 52 }}>
                 <div className="absolute inset-0 bg-gradient-to-r from-brand-red/8 to-transparent pointer-events-none" />
                 <div className="flex items-center gap-2 relative z-10">
 
                     {/* Back button */}
                     {onBack && (
-                        <button onClick={onBack} className="p-2 -ml-1 text-white/40 hover:text-white transition-all active:scale-90">
+                        <button onClick={onBack} className={clsx("p-2 -ml-1 transition-all active:scale-90", dk ? "text-white/40 hover:text-white" : "text-gray-400 hover:text-gray-800")}>
                             <ChevronLeft className="w-5 h-5" />
                         </button>
                     )}
@@ -504,7 +507,7 @@ export default function ChatWindow({
 
                     {/* Contact info */}
                     <div>
-                        <h4 className="font-black italic uppercase text-sm leading-none tracking-tight text-white">
+                        <h4 className={clsx("font-black italic uppercase text-sm leading-none tracking-tight", dk ? "text-white" : "text-gray-900")}>
                             {isGroup ? (groupName || 'Grupo') : (otherPerson.full_name || otherPerson.username)}
                         </h4>
                         <div className="mt-1 h-4 flex items-center gap-1.5">
@@ -524,11 +527,11 @@ export default function ChatWindow({
                                     <span className="text-[10px] text-green-400 font-bold uppercase tracking-widest">En línea</span>
                                 </>
                             ) : isGroup ? (
-                                <span className="text-[10px] text-white/30 font-bold uppercase tracking-wider">{groupMembers.length + 1} miembros</span>
+                                <span className={clsx("text-[10px] font-bold uppercase tracking-wider", dk ? "text-white/30" : "text-gray-400")}>{groupMembers.length + 1} miembros</span>
                             ) : (
                                 <>
-                                    <span className="w-2 h-2 rounded-full bg-zinc-500" />
-                                    <span className="text-[10px] text-white/30 font-bold uppercase tracking-wider">No disponible</span>
+                                    <span className="w-2 h-2 rounded-full bg-zinc-400" />
+                                    <span className={clsx("text-[10px] font-bold uppercase tracking-wider", dk ? "text-white/30" : "text-gray-400")}>No disponible</span>
                                 </>
                             )}
                         </div>
@@ -543,10 +546,10 @@ export default function ChatWindow({
                                 className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-1.5">
                                 <span className="text-[10px] text-red-500 font-black uppercase">¿Borrar?</span>
                                 <button onClick={() => { setConfirmDeleteConv(false); onDeleteConversation() }} className="p-1 text-red-500"><Check className="w-4 h-4" /></button>
-                                <button onClick={() => setConfirmDeleteConv(false)} className="p-1 text-white/30 hover:text-white"><X className="w-4 h-4" /></button>
+                                <button onClick={() => setConfirmDeleteConv(false)} className={clsx("p-1 hover:text-white", dk ? "text-white/30" : "text-gray-400")}><X className="w-4 h-4" /></button>
                             </motion.div>
                         ) : (
-                            <button onClick={() => setConfirmDeleteConv(true)} className="p-2 text-white/15 hover:text-red-400 rounded-xl transition-all">
+                            <button onClick={() => setConfirmDeleteConv(true)} className={clsx("p-2 hover:text-red-400 rounded-xl transition-all", dk ? "text-white/15" : "text-gray-300")}>
                                 <Trash2 className="w-4 h-4" />
                             </button>
                         )
@@ -562,8 +565,8 @@ export default function ChatWindow({
                         animate={{ height: 'auto', opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
                         transition={{ duration: 0.18 }}
-                        className="overflow-hidden shrink-0 border-b border-white/[0.05]"
-                        style={{ background: '#0f0808' }}
+                        className={clsx("overflow-hidden shrink-0", dk ? "border-b border-white/[0.05]" : "border-b border-gray-200")}
+                        style={{ background: dk ? '#0f0808' : '#fff5f5' }}
                     >
                         <div className="flex items-center gap-2 px-4 py-2">
                             <Search className="w-4 h-4 text-brand-red shrink-0" />
@@ -573,14 +576,14 @@ export default function ChatWindow({
                                 onChange={e => setSearchQuery(e.target.value)}
                                 onKeyDown={e => e.key === 'Escape' && toggleSearch()}
                                 placeholder="Buscar en la conversación..."
-                                className="flex-1 bg-transparent text-sm text-white placeholder:text-white/25 focus:outline-none font-medium"
+                                className={clsx("flex-1 bg-transparent text-sm focus:outline-none font-medium", dk ? "text-white placeholder:text-white/25" : "text-gray-800 placeholder:text-gray-400")}
                             />
                             {searchQuery && (
                                 <span className="text-[10px] text-brand-red font-black uppercase tracking-widest shrink-0">
                                     {filteredMessages.length} resultado{filteredMessages.length !== 1 ? 's' : ''}
                                 </span>
                             )}
-                            <button onClick={toggleSearch} className="text-white/25 hover:text-white transition-colors shrink-0">
+                            <button onClick={toggleSearch} className={clsx("transition-colors shrink-0", dk ? "text-white/25 hover:text-white" : "text-gray-400 hover:text-gray-700")}>
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
@@ -591,7 +594,9 @@ export default function ChatWindow({
             {/* ── Messages — MSN chat area ── */}
             <div ref={scrollRef} onScroll={handleScroll}
                 className="flex-1 overflow-y-auto px-4 md:px-6 py-6 relative custom-scrollbar"
-                style={{ background: 'radial-gradient(ellipse at 20% 80%, rgba(220,38,38,0.04) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(220,38,38,0.03) 0%, transparent 60%), #080808' }}
+                style={{ background: dk
+                    ? 'radial-gradient(ellipse at 20% 80%, rgba(220,38,38,0.04) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(220,38,38,0.03) 0%, transparent 60%), #080808'
+                    : 'radial-gradient(ellipse at 20% 80%, rgba(220,38,38,0.03) 0%, transparent 60%), #f0f2f5' }}
             >
                 {/* MSN subtle dot pattern */}
                 <div className="absolute inset-0 pointer-events-none opacity-[0.025]"
@@ -607,7 +612,7 @@ export default function ChatWindow({
                                 if (item.type === 'date') {
                                     return (
                                         <motion.div key={item.key} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                                            <DateSeparator date={item.date} />
+                                            <DateSeparator date={item.date} dk={dk} />
                                         </motion.div>
                                     )
                                 }
@@ -664,21 +669,21 @@ export default function ChatWindow({
                                                 isMine ? 'right-full mr-2' : 'left-full ml-2'
                                             )}>
                                                 <button onClick={() => { onToggleLike?.(msg.id, !!msg.is_liked); if (!msg.is_liked) { setLikedAnimId(msg.id); setTimeout(() => setLikedAnimId(null), 900) } }}
-                                                    className={clsx('p-1.5 rounded-xl bg-white/5 transition-colors border border-white/5', msg.is_liked ? 'text-brand-red' : 'text-white/30 hover:text-white')}>
+                                                    className={clsx('p-1.5 rounded-xl transition-colors border', dk ? 'bg-white/5 border-white/5' : 'bg-white border-gray-200 shadow-sm', msg.is_liked ? 'text-brand-red' : dk ? 'text-white/30 hover:text-white' : 'text-gray-400 hover:text-gray-700')}>
                                                     <Heart className={clsx('w-3.5 h-3.5', msg.is_liked && 'fill-current')} />
                                                 </button>
                                                 {msg.text && (
-                                                    <button onClick={() => handleCopy(msg.text)} className="p-1.5 rounded-xl bg-white/5 text-white/30 hover:text-white border border-white/5">
+                                                    <button onClick={() => handleCopy(msg.text)} className={clsx("p-1.5 rounded-xl border transition-colors", dk ? "bg-white/5 border-white/5 text-white/30 hover:text-white" : "bg-white border-gray-200 shadow-sm text-gray-400 hover:text-gray-700")}>
                                                         <Copy className="w-3.5 h-3.5" />
                                                     </button>
                                                 )}
                                                 {isMine && !msg.image_url && !msg.video_url && (
-                                                    <button onClick={() => handleStartEdit(msg)} className="p-1.5 rounded-xl bg-white/5 text-white/30 hover:text-white border border-white/5">
+                                                    <button onClick={() => handleStartEdit(msg)} className={clsx("p-1.5 rounded-xl border transition-colors", dk ? "bg-white/5 border-white/5 text-white/30 hover:text-white" : "bg-white border-gray-200 shadow-sm text-gray-400 hover:text-gray-700")}>
                                                         <Edit2 className="w-3.5 h-3.5" />
                                                     </button>
                                                 )}
                                                 {isMine && (
-                                                    <button onClick={() => setDeletingId(msg.id)} className="p-1.5 rounded-xl bg-white/5 text-white/30 hover:text-red-400 border border-white/5">
+                                                    <button onClick={() => setDeletingId(msg.id)} className={clsx("p-1.5 rounded-xl border transition-colors hover:text-red-400", dk ? "bg-white/5 border-white/5 text-white/30" : "bg-white border-gray-200 shadow-sm text-gray-400")}>
                                                         <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
                                                 )}
@@ -691,7 +696,7 @@ export default function ChatWindow({
                                                         className={clsx('flex items-center gap-2 mb-1 bg-red-500/10 border border-red-500/20 rounded-full px-3 py-1', isMine ? 'self-end' : 'self-start')}>
                                                         <span className="text-[10px] text-red-400 font-black uppercase">¿Eliminar?</span>
                                                         <button onClick={() => handleDeleteMsg(msg.id)} className="text-red-400 hover:text-red-300"><Check className="w-3.5 h-3.5" /></button>
-                                                        <button onClick={() => setDeletingId(null)} className="text-white/30 hover:text-white"><X className="w-3.5 h-3.5" /></button>
+                                                        <button onClick={() => setDeletingId(null)} className={clsx(dk ? "text-white/30 hover:text-white" : "text-gray-400 hover:text-gray-700")}><X className="w-3.5 h-3.5" /></button>
                                                     </motion.div>
                                                 )}
                                             </AnimatePresence>
@@ -804,7 +809,7 @@ export default function ChatWindow({
                                                         </div>
                                                         {msg.text && (
                                                             <div className="px-2 pt-2 pb-1">
-                                                                <MentionText text={msg.text} className="text-sm font-medium leading-relaxed block text-white" mentionClassName="text-brand-red underline" />
+                                                                <MentionText text={msg.text} className={clsx("text-sm font-medium leading-relaxed block", dk ? "text-white" : "text-gray-800")} mentionClassName="text-brand-red underline" />
                                                             </div>
                                                         )}
                                                         <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur px-1.5 py-0.5 rounded-full">
@@ -818,7 +823,7 @@ export default function ChatWindow({
                                                     <div className="relative flex flex-col">
                                                         <MentionText text={msg.text || ''} className="text-sm font-medium leading-[1.45] pr-[4.5rem]"
                                                             mentionClassName={clsx('underline', isMine ? 'text-white/70' : 'text-brand-red')} />
-                                                        <div className={clsx('absolute bottom-0 right-0 flex items-center gap-1 text-[9px] font-bold', isMine ? 'text-white/40' : 'text-white/20')}>
+                                                        <div className={clsx('absolute bottom-0 right-0 flex items-center gap-1 text-[9px] font-bold', isMine ? 'text-white/40' : dk ? 'text-white/20' : 'text-gray-400')}>
                                                             {msg.is_liked && <Heart className="w-2.5 h-2.5 fill-brand-red text-brand-red" />}
                                                             {msg.updated_at && msg.updated_at !== msg.created_at && <span className="text-[8px] opacity-60">editado</span>}
                                                             <span>{format(new Date(msg.created_at), 'HH:mm')}</span>
@@ -835,7 +840,7 @@ export default function ChatWindow({
                                             <AnimatePresence>
                                                 {msg.is_liked && !isEditing && !isViewOnce && (
                                                     <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
-                                                        className={clsx('mt-0.5 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 bg-[#1A1A1A] border border-white/[0.05]', isMine ? 'self-end' : 'self-start')}>
+                                                        className={clsx('mt-0.5 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border', dk ? 'bg-[#1A1A1A] border-white/[0.05]' : 'bg-gray-100 border-gray-200', isMine ? 'self-end' : 'self-start')}>
                                                         <Heart className="w-2.5 h-2.5 fill-brand-red text-brand-red" />
                                                     </motion.div>
                                                 )}
@@ -855,7 +860,7 @@ export default function ChatWindow({
                 {showScrollBtn && (
                     <motion.button initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
                         onClick={scrollToBottom}
-                        className="absolute bottom-24 right-5 z-30 w-10 h-10 bg-[#1A1A1A] border border-white/10 rounded-full shadow-xl flex items-center justify-center hover:bg-brand-red hover:border-brand-red transition-all">
+                        className={clsx("absolute bottom-24 right-5 z-30 w-10 h-10 rounded-full shadow-xl flex items-center justify-center hover:bg-brand-red hover:border-brand-red transition-all border", dk ? "bg-[#1A1A1A] border-white/10" : "bg-white border-gray-200")}>
                         {unreadBadge > 0
                             ? <span className="text-xs font-black text-white">{unreadBadge > 9 ? '9+' : unreadBadge}</span>
                             : <ChevronDown className="w-5 h-5 text-white" />}
@@ -902,7 +907,7 @@ export default function ChatWindow({
                             className="fixed inset-0 z-[90] bg-black/70 backdrop-blur-sm" onClick={() => setActionSheet(null)} />
                         <motion.div initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                             transition={{ type: 'spring', stiffness: 400, damping: 32 }}
-                            className="fixed bottom-0 left-0 right-0 z-[91] bg-[#111] border-t border-white/5 rounded-t-[2rem] p-4 pb-10 shadow-2xl">
+                            className={clsx("fixed bottom-0 left-0 right-0 z-[91] rounded-t-[2rem] p-4 pb-10 shadow-2xl", dk ? "bg-[#111] border-t border-white/5" : "bg-white border-t border-gray-200")}>
                             <div className="flex justify-center gap-5 py-3 mb-2">
                                 {QUICK_EMOJIS.map(emoji => (
                                     <button key={emoji} onClick={() => { onToggleLike?.(actionSheet.msg.id, !!actionSheet.msg.is_liked); setActionSheet(null) }}
@@ -912,15 +917,15 @@ export default function ChatWindow({
                             <div className="h-px bg-white/5 mb-2 mx-2" />
                             <div className="space-y-0.5">
                                 {actionSheet.msg.text && (
-                                    <button onClick={() => handleCopy(actionSheet.msg.text)} className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl hover:bg-white/5 active:bg-white/10 text-left">
-                                        <Copy className="w-5 h-5 text-white/30 shrink-0" />
-                                        <span className="text-sm font-semibold text-white/70">Copiar texto</span>
+                                    <button onClick={() => handleCopy(actionSheet.msg.text)} className={clsx("w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-colors", dk ? "hover:bg-white/5 active:bg-white/10" : "hover:bg-gray-50")}>
+                                        <Copy className={clsx("w-5 h-5 shrink-0", dk ? "text-white/30" : "text-gray-400")} />
+                                        <span className={clsx("text-sm font-semibold", dk ? "text-white/70" : "text-gray-700")}>Copiar texto</span>
                                     </button>
                                 )}
                                 {actionSheet.isMine && !actionSheet.msg.image_url && !actionSheet.msg.video_url && (
-                                    <button onClick={() => handleStartEdit(actionSheet.msg)} className="w-full flex items-center gap-4 px-4 py-3.5 rounded-xl hover:bg-white/5 active:bg-white/10 text-left">
-                                        <Edit2 className="w-5 h-5 text-white/30 shrink-0" />
-                                        <span className="text-sm font-semibold text-white/70">Editar mensaje</span>
+                                    <button onClick={() => handleStartEdit(actionSheet.msg)} className={clsx("w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-colors", dk ? "hover:bg-white/5 active:bg-white/10" : "hover:bg-gray-50")}>
+                                        <Edit2 className={clsx("w-5 h-5 shrink-0", dk ? "text-white/30" : "text-gray-400")} />
+                                        <span className={clsx("text-sm font-semibold", dk ? "text-white/70" : "text-gray-700")}>Editar mensaje</span>
                                     </button>
                                 )}
                                 {actionSheet.isMine && (
@@ -929,8 +934,8 @@ export default function ChatWindow({
                                         <span className="text-sm font-semibold text-red-400">Eliminar mensaje</span>
                                     </button>
                                 )}
-                                <button onClick={() => setActionSheet(null)} className="w-full flex items-center justify-center px-4 py-3 mt-1 rounded-xl hover:bg-white/5">
-                                    <span className="text-sm font-bold text-white/25">Cancelar</span>
+                                <button onClick={() => setActionSheet(null)} className={clsx("w-full flex items-center justify-center px-4 py-3 mt-1 rounded-xl transition-colors", dk ? "hover:bg-white/5" : "hover:bg-gray-50")}>
+                                    <span className={clsx("text-sm font-bold", dk ? "text-white/25" : "text-gray-400")}>Cancelar</span>
                                 </button>
                             </div>
                         </motion.div>
@@ -942,7 +947,7 @@ export default function ChatWindow({
             <AnimatePresence>
                 {showEmoji && (
                     <motion.div data-emoji-picker initial={{ opacity: 0, y: 8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8 }}
-                        className="absolute bottom-[80px] left-4 md:left-6 bg-[#111] border border-white/5 rounded-2xl p-3 shadow-2xl z-40 w-72">
+                        className={clsx("absolute bottom-[80px] left-4 md:left-6 rounded-2xl p-3 shadow-2xl z-40 w-72", dk ? "bg-[#111] border border-white/5" : "bg-white border border-gray-200")}>
                         <div className="grid grid-cols-8 gap-0.5">
                             {['😀','😂','🥰','😍','🤣','😊','😎','🥳','🤩','😏','😄','😁','😆','😅','🤔','😮','😱','🙄','😴','🤗',
                               '❤️','🔥','💪','🏆','⚡','💯','🎯','🙌','👏','🤝','👍','🎉','✨','💥','🌟','💎','🏅','🥇','🎽','⚽'].map(emoji => (
@@ -963,24 +968,24 @@ export default function ChatWindow({
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             className="fixed inset-0 z-40" onClick={() => setShowMediaPicker(false)} />
                         <motion.div initial={{ opacity: 0, y: 8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8 }}
-                            className="absolute bottom-[80px] left-4 md:left-6 z-50 bg-[#111] border border-white/[0.08] rounded-2xl shadow-2xl overflow-hidden min-w-[180px]">
+                            className={clsx("absolute bottom-[80px] left-4 md:left-6 z-50 rounded-2xl shadow-2xl overflow-hidden min-w-[180px]", dk ? "bg-[#111] border border-white/[0.08]" : "bg-white border border-gray-200")}>
                             <button onClick={() => fileInputRef.current?.click()}
-                                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/5 active:bg-white/10 transition-colors text-left">
+                                className={clsx("w-full flex items-center gap-3 px-4 py-3.5 transition-colors text-left", dk ? "hover:bg-white/5 active:bg-white/10" : "hover:bg-gray-50")}>
                                 <ImagePlus className="w-5 h-5 text-brand-red shrink-0" />
-                                <span className="text-sm font-black text-white/70 uppercase tracking-wide">Foto</span>
+                                <span className={clsx("text-sm font-black uppercase tracking-wide", dk ? "text-white/70" : "text-gray-700")}>Foto</span>
                             </button>
-                            <div className="h-px bg-white/[0.05]" />
+                            <div className={clsx("h-px", dk ? "bg-white/[0.05]" : "bg-gray-100")} />
                             <button onClick={() => videoInputRef.current?.click()}
-                                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/5 active:bg-white/10 transition-colors text-left">
+                                className={clsx("w-full flex items-center gap-3 px-4 py-3.5 transition-colors text-left", dk ? "hover:bg-white/5 active:bg-white/10" : "hover:bg-gray-50")}>
                                 <Video className="w-5 h-5 text-blue-400 shrink-0" />
-                                <span className="text-sm font-black text-white/70 uppercase tracking-wide">Video</span>
+                                <span className={clsx("text-sm font-black uppercase tracking-wide", dk ? "text-white/70" : "text-gray-700")}>Video</span>
                             </button>
-                            <div className="h-px bg-white/[0.05]" />
+                            <div className={clsx("h-px", dk ? "bg-white/[0.05]" : "bg-gray-100")} />
                             <button onClick={() => { setIsViewOnceMode(v => !v); fileInputRef.current?.click(); setShowMediaPicker(false) }}
-                                className="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-white/5 active:bg-white/10 transition-colors text-left">
+                                className={clsx("w-full flex items-center gap-3 px-4 py-3.5 transition-colors text-left", dk ? "hover:bg-white/5 active:bg-white/10" : "hover:bg-gray-50")}>
                                 <Eye className="w-5 h-5 text-purple-400 shrink-0" />
                                 <div>
-                                    <span className="text-sm font-black text-white/70 uppercase tracking-wide block">Ver 1 vez</span>
+                                    <span className={clsx("text-sm font-black uppercase tracking-wide block", dk ? "text-white/70" : "text-gray-700")}>Ver 1 vez</span>
                                     <span className="text-[9px] text-purple-400/60 font-bold">Desaparece en 30s</span>
                                 </div>
                             </button>
@@ -990,7 +995,7 @@ export default function ChatWindow({
             </AnimatePresence>
 
             {/* ── MSN Quick emoji bar ── */}
-            <div className="px-4 py-1.5 bg-[#0a0a0a] border-t border-white/[0.04] flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0">
+            <div className={clsx("px-4 py-1.5 flex items-center gap-1 overflow-x-auto no-scrollbar shrink-0", dk ? "bg-[#0a0a0a] border-t border-white/[0.04]" : "bg-white border-t border-gray-100")}>
                 {['😊','😂','❤️','🔥','💪','😎','🥳','😢','😮','👍','🙌','💯','🎉','😘','🤩','💥','⚡','🏆','🎯','✨'].map(e => (
                     <button key={e} onClick={() => { setInputValue(v => v + e); playEmojiSound(e) }}
                         className="text-xl shrink-0 w-8 h-8 flex items-center justify-center hover:bg-white/10 active:scale-90 rounded-lg transition-all hover:scale-125">
@@ -1009,7 +1014,7 @@ export default function ChatWindow({
             </div>
 
             {/* ── Input bar ── */}
-            <div className="px-4 pb-4 pt-2 bg-[#0C0C0C]/90 backdrop-blur-md border-t border-white/[0.04] relative z-20 shrink-0">
+            <div className={clsx("px-4 pb-4 pt-2 backdrop-blur-md relative z-20 shrink-0", dk ? "bg-[#0C0C0C]/90 border-t border-white/[0.04]" : "bg-white/95 border-t border-gray-200")}>
                 {/* Pending media preview */}
                 <AnimatePresence>
                     {pendingMediaPreview && (
@@ -1043,10 +1048,10 @@ export default function ChatWindow({
                 )}
 
                 <div className="max-w-3xl mx-auto flex items-end gap-2">
-                    <div className="flex-1 rounded-[1.5rem] border border-white/[0.06] bg-[#141414] flex items-end px-3 py-2 gap-1.5 shadow-inner focus-within:border-brand-red/20 transition-colors">
+                    <div className={clsx("flex-1 rounded-[1.5rem] flex items-end px-3 py-2 gap-1.5 shadow-inner focus-within:border-brand-red/30 transition-colors", dk ? "border border-white/[0.06] bg-[#141414]" : "border border-gray-200 bg-gray-100")}>
                         {/* Media picker button */}
                         <button onClick={() => setShowMediaPicker(v => !v)} disabled={isUploading}
-                            className={clsx("text-white/30 hover:text-brand-red p-1.5 rounded-full transition-colors shrink-0 mb-0.5", showMediaPicker && "text-brand-red")}>
+                            className={clsx("p-1.5 rounded-full transition-colors shrink-0 mb-0.5 hover:text-brand-red", showMediaPicker ? "text-brand-red" : dk ? "text-white/30" : "text-gray-400")}>
                             {isUploading
                                 ? <Loader2 className="w-5 h-5 animate-spin text-brand-red" />
                                 : <Camera className="w-5 h-5" />
@@ -1061,11 +1066,11 @@ export default function ChatWindow({
                             onChange={(v: string) => { setInputValue(v); sendTypingEvent() }}
                             onKeyDown={handleKeyDown}
                             placeholder="Mensaje..."
-                            className="flex-1 bg-transparent border-none py-2 px-1 text-sm text-white placeholder:text-white/15 focus:outline-none w-full font-medium"
+                            className={clsx("flex-1 bg-transparent border-none py-2 px-1 text-sm focus:outline-none w-full font-medium", dk ? "text-white placeholder:text-white/15" : "text-gray-800 placeholder:text-gray-400")}
                         />
 
                         <button data-emoji-btn onClick={() => setShowEmoji(v => !v)}
-                            className={clsx('p-1.5 rounded-full transition-colors shrink-0 mb-0.5', showEmoji ? 'text-brand-red' : 'text-white/25 hover:text-brand-red')}>
+                            className={clsx('p-1.5 rounded-full transition-colors shrink-0 mb-0.5', showEmoji ? 'text-brand-red' : dk ? 'text-white/25 hover:text-brand-red' : 'text-gray-400 hover:text-brand-red')}>
                             <Smile className="w-5 h-5" />
                         </button>
                     </div>
@@ -1078,7 +1083,7 @@ export default function ChatWindow({
                                 'w-24 h-9 rounded-lg flex items-center justify-center gap-1.5 transition-all font-black text-[11px] uppercase tracking-widest border',
                                 (inputValue.trim() || pendingMediaFile)
                                     ? 'bg-brand-red border-red-700 text-white shadow-[0_2px_12px_rgba(220,38,38,0.4)] hover:bg-red-600 active:scale-95'
-                                    : 'bg-[#111] border-white/[0.07] text-white/20 cursor-not-allowed'
+                                    : dk ? 'bg-[#111] border-white/[0.07] text-white/20 cursor-not-allowed' : 'bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed'
                             )}>
                             <Send className="w-3.5 h-3.5" />
                             Enviar
@@ -1088,7 +1093,7 @@ export default function ChatWindow({
                                 'w-24 h-9 rounded-lg flex items-center justify-center gap-1.5 font-black text-[11px] uppercase tracking-widest border transition-all active:scale-95',
                                 showSearch
                                     ? 'bg-brand-red/15 border-brand-red/30 text-brand-red'
-                                    : 'bg-[#111] border-white/[0.07] text-white/40 hover:text-white hover:border-white/20'
+                                    : dk ? 'bg-[#111] border-white/[0.07] text-white/40 hover:text-white hover:border-white/20' : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700 hover:border-gray-300'
                             )}>
                             <Search className="w-3.5 h-3.5" />
                             Buscar
@@ -1102,11 +1107,11 @@ export default function ChatWindow({
             {/* ══════════════════════════════════════════════════════════════ */}
             {/* RIGHT PANEL — Profile photos (MSN iconic, desktop only)       */}
             {/* ══════════════════════════════════════════════════════════════ */}
-            <div className="hidden lg:flex w-[130px] shrink-0 flex-col border-l border-white/[0.05]"
-                style={{ background: '#0d0d0d' }}>
+            <div className={clsx("hidden lg:flex w-[130px] shrink-0 flex-col", dk ? "border-l border-white/[0.05]" : "border-l border-gray-200")}
+                style={{ background: dk ? '#0d0d0d' : '#f9f9f9' }}>
 
                 {/* Contact photo — TOP */}
-                <div className="flex-1 flex flex-col items-center justify-center p-3 border-b border-white/[0.05] gap-2">
+                <div className={clsx("flex-1 flex flex-col items-center justify-center p-3 gap-2", dk ? "border-b border-white/[0.05]" : "border-b border-gray-200")}>
                     <div className="relative w-full">
                         <div className="w-full aspect-square rounded-2xl overflow-hidden border-2 relative shadow-2xl"
                             style={{ borderColor: isOnline ? 'rgba(74,222,128,0.5)' : 'rgba(255,255,255,0.08)' }}>
@@ -1122,10 +1127,10 @@ export default function ChatWindow({
                             )}
                         </div>
                         {isOnline && !isGroup && (
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-[#0d0d0d] rounded-full shadow-[0_0_8px_rgba(74,222,128,0.8)]" />
+                            <div className={clsx("absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 rounded-full shadow-[0_0_8px_rgba(74,222,128,0.8)] border-2", dk ? "border-[#0d0d0d]" : "border-[#f9f9f9]")} />
                         )}
                     </div>
-                    <p className="text-[9px] font-black text-white/40 uppercase tracking-widest text-center truncate w-full px-1">
+                    <p className={clsx("text-[9px] font-black uppercase tracking-widest text-center truncate w-full px-1", dk ? "text-white/40" : "text-gray-400")}>
                         {isGroup ? 'Grupo' : (otherPerson.full_name || otherPerson.username || '').split(' ')[0]}
                     </p>
                     {isOtherTyping && (
@@ -1151,7 +1156,7 @@ export default function ChatWindow({
                             </div>
                         )}
                     </div>
-                    <p className="text-[9px] font-black text-brand-red/60 uppercase tracking-widest text-center truncate w-full px-1">
+                    <p className="text-[9px] font-black text-brand-red/70 uppercase tracking-widest text-center truncate w-full px-1">
                         {(myProfile?.full_name || 'Tú').split(' ')[0]}
                     </p>
                 </div>

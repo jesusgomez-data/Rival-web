@@ -136,12 +136,32 @@ export async function markConversationAsRead(conversationId: string) {
     return { error: error?.message }
 }
 
+export async function uploadChatDocument(file: File) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'No session' }
+
+    const safeExt = file.name.split('.').pop()?.toLowerCase() || 'bin'
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+    const fileName = `${user.id}/docs/${Date.now()}_${safeName}`
+
+    const { error } = await supabase.storage.from('chat-media').upload(fileName, file, {
+        contentType: file.type || 'application/octet-stream'
+    })
+    if (error) return { error: error.message }
+
+    const { data: { publicUrl } } = supabase.storage.from('chat-media').getPublicUrl(fileName)
+    return { url: publicUrl, name: file.name, size: file.size, ext: safeExt }
+}
+
 export async function sendMessage(
     conversationId: string,
     text: string,
     imageUrl?: string,
     videoUrl?: string,
-    isViewOnce?: boolean
+    isViewOnce?: boolean,
+    documentUrl?: string,
+    documentName?: string
 ) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -152,14 +172,16 @@ export async function sendMessage(
     else if (isViewOnce && videoUrl) type = 'view_once_video'
     else if (imageUrl) type = 'image'
     else if (videoUrl) type = 'video'
+    else if (documentUrl) type = 'document'
 
     const { data: msgData, error: msgError } = await supabase
         .from('messages')
         .insert({
             conversation_id: conversationId,
             sender_id: user.id,
-            text: text.trim(),
-            image_url: imageUrl || null,
+            // For documents: store URL in image_url, filename in text (if no caption)
+            text: documentUrl ? (text.trim() || documentName || 'Archivo') : text.trim(),
+            image_url: imageUrl || documentUrl || null,
             video_url: videoUrl || null,
             type,
             is_view_once: isViewOnce || false,

@@ -30,6 +30,13 @@ export default function ProfilePage() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [uploadingCover, setUploadingCover] = useState(false);
+    const [toast, setToast] = useState<{ type: 'success' | 'error' | 'info'; msg: string } | null>(null);
+    const [deleteModal, setDeleteModal] = useState(false);
+
+    const showToast = (type: 'success' | 'error' | 'info', msg: string) => {
+        setToast({ type, msg });
+        setTimeout(() => setToast(null), 4000);
+    };
     const [formData, setFormData] = useState({
         full_name: "",
         username: "",
@@ -179,13 +186,13 @@ export default function ProfilePage() {
 
                 if (checkError && checkError.code !== 'PGRST116') {
                     console.error("Username check error:", checkError);
-                    alert("Error al verificar el nombre de usuario. Por favor intenta de nuevo.");
+                    showToast('error', 'Error al verificar el usuario. Inténtalo de nuevo.');
                     setSaving(false);
                     return;
                 }
 
                 if (existingUser) {
-                    alert(`El nombre de usuario "${formData.username}" ya está en uso. Por favor elige otro.`);
+                    showToast('error', `@${formData.username} ya está en uso`);
                     setSaving(false);
                     return;
                 }
@@ -212,45 +219,38 @@ export default function ProfilePage() {
                 .eq('id', user.id);
 
             if (error) {
-                // Check if it's a unique constraint violation on username
                 if (error.code === '23505' && error.message.includes('username')) {
-                    alert(`El nombre de usuario "${formData.username}" ya está en uso. Por favor elige otro.`);
+                    showToast('error', `@${formData.username} ya está en uso`);
                 } else {
                     throw error;
                 }
             } else {
-                // Update local profile state
                 setProfile((prev: any) => ({ ...prev, username: formData.username }));
+                showToast('success', 'Perfil guardado correctamente ✓');
                 window.dispatchEvent(new CustomEvent('profile-updated'));
                 router.refresh();
             }
         } catch (error) {
             console.error("Error updating profile:", error);
-            alert("Error updating profile. Check console.");
+            showToast('error', 'Error al guardar. Inténtalo de nuevo.');
         } finally {
             setSaving(false);
         }
     };
 
-    const handleDeleteAccount = async () => {
-        const confirmed = confirm("¿ESTÁS COMPLETAMENTE SEGURO? Esta acción es irreversible. Se borrarán todos tus entrenamientos, récords, fotos y actividad en Rival Fit.");
-
-        if (!confirmed) return;
-
-        const secondConfirmation = confirm("Última advertencia: Perderás todo tu progreso y trofeos. ¿Confirmar baja definitiva?");
-        if (!secondConfirmation) return;
-
+    const confirmDeleteAccount = async () => {
+        setDeleteModal(false);
         setIsDeleting(true);
         try {
             const res = await deleteProfile();
             if (res.error) {
-                alert(res.error);
+                showToast('error', res.error);
             } else {
                 router.push("/login");
             }
         } catch (error) {
             console.error("Error deleting account:", error);
-            alert("Error al procesar la solicitud");
+            showToast('error', 'Error al procesar la solicitud');
         } finally {
             setIsDeleting(false);
         }
@@ -331,12 +331,12 @@ export default function ProfilePage() {
             if (updateError) throw updateError;
 
             setProfile((prev: any) => ({ ...prev, avatar_url: publicUrl }));
-            alert("Foto de perfil actualizada correctamente");
+            showToast('success', 'Foto de perfil actualizada ✓');
             window.dispatchEvent(new CustomEvent('profile-updated'));
             router.refresh();
         } catch (error: any) {
             console.error("Error uploading image:", error);
-            alert("Error al subir la imagen: " + (error.message || "Por favor intenta con una imagen más pequeña o en otro formato."));
+            showToast('error', 'Error al subir la imagen. Prueba con un tamaño menor.');
         } finally {
             setUploading(false);
         }
@@ -379,20 +379,18 @@ export default function ProfilePage() {
 
             setProfile((prev: any) => ({ ...prev, cover_url: publicUrl }));
             setCoverPosition(50);
-            alert("Foto de portada actualizada");
+            showToast('success', 'Foto de portada actualizada ✓');
             window.dispatchEvent(new CustomEvent('profile-updated'));
             router.refresh();
         } catch (error: any) {
             console.error("Error uploading cover:", error);
-            alert("Error al subir la portada: " + (error.message || "Desconocido"));
+            showToast('error', 'Error al subir la portada. Prueba con un tamaño menor.');
         } finally {
             setUploadingCover(false);
         }
     };
 
     const handleRemoveCover = async () => {
-        if (!confirm("¿Estás seguro de que quieres eliminar la foto de portada?")) return;
-
         setSaving(true);
         try {
             const { data: { user } } = await supabase.auth.getUser();
@@ -407,10 +405,11 @@ export default function ProfilePage() {
 
             setProfile((prev: any) => ({ ...prev, cover_url: null }));
             setCoverPosition(50);
+            showToast('info', 'Portada eliminada');
             router.refresh();
         } catch (error) {
             console.error("Error removing cover:", error);
-            alert("Error al eliminar la portada");
+            showToast('error', 'Error al eliminar la portada');
         } finally {
             setSaving(false);
         }
@@ -505,7 +504,7 @@ export default function ProfilePage() {
 
         // Limit file size to 50MB to avoid server action timeouts
         if (file.size > 50 * 1024 * 1024) {
-            alert('El archivo es demasiado grande. El límite es 50MB.');
+            showToast('error', 'El archivo es demasiado grande. Límite: 50MB');
             return;
         }
 
@@ -516,14 +515,14 @@ export default function ProfilePage() {
 
             const res = await createStory(formData);
             if (res.error) {
-                alert(`Error al subir la historia: ${res.error}`);
+                showToast('error', `Error al subir la historia: ${res.error}`);
             } else {
                 router.refresh();
                 // We should also refresh stories if there's a context or local state
             }
         } catch (err) {
             console.error("Profile story upload failed:", err);
-            alert('Hubo un error inesperado al subir la historia. Inténtalo de nuevo.');
+            showToast('error', 'Error inesperado al subir la historia.');
         } finally {
             setUploading(false);
         }
@@ -539,6 +538,46 @@ export default function ProfilePage() {
 
     return (
         <div className="max-w-7xl mx-auto pb-20 px-0 md:px-8 space-y-8 animate-fade-in">
+
+            {/* ── Toast notification ── */}
+            {toast && (
+                <div className={clsx(
+                    "fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] px-6 py-3.5 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center gap-3 shadow-2xl border backdrop-blur-xl animate-in slide-in-from-bottom-4 duration-300 whitespace-nowrap",
+                    toast.type === 'success' && "bg-green-950/90 border-green-500/40 text-green-400",
+                    toast.type === 'error' && "bg-red-950/90 border-red-500/40 text-red-400",
+                    toast.type === 'info' && "bg-black/90 border-white/20 text-white/80"
+                )}>
+                    {toast.type === 'success' && <Check className="w-4 h-4 shrink-0" />}
+                    {toast.type === 'error' && <X className="w-4 h-4 shrink-0" />}
+                    {toast.msg}
+                </div>
+            )}
+
+            {/* ── Delete account modal ── */}
+            {deleteModal && (
+                <div className="fixed inset-0 z-[9998] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm" onClick={() => setDeleteModal(false)}>
+                    <div className="bg-[#0f0f0f] border border-red-500/30 rounded-3xl p-8 max-w-sm w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+                        <div className="w-14 h-14 bg-red-500/10 border border-red-500/20 rounded-full flex items-center justify-center mx-auto mb-5">
+                            <AlertTriangle className="w-7 h-7 text-red-500" />
+                        </div>
+                        <h3 className="text-xl font-black text-white text-center uppercase italic mb-2">¿Eliminar cuenta?</h3>
+                        <p className="text-xs text-gray-500 text-center mb-6 leading-relaxed">Esta acción es <span className="text-red-400 font-black">irreversible</span>. Perderás todos tus datos, entrenamientos, récords personales y trofeos de por vida.</p>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setDeleteModal(false)}
+                                className="flex-1 py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-white/10">
+                                Cancelar
+                            </button>
+                            <button
+                                onClick={confirmDeleteAccount}
+                                disabled={isDeleting}
+                                className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50">
+                                {isDeleting ? 'Eliminando...' : 'Eliminar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
             {/* Header / Banner */}
             <div className={`relative group rounded-none md:rounded-[40px] overflow-hidden border-b md:border border-white/5 shadow-2xl dark-section ${isRepositioning ? 'cursor-ns-resize' : ''}`}>
                 <div
@@ -708,6 +747,33 @@ export default function ProfilePage() {
                 </div>
             </div>
 
+            {/* ── Profile Completion Indicator ── */}
+            {(() => {
+                const fields = [
+                    formData.full_name, formData.username, formData.bio,
+                    formData.main_sport, formData.gym_home, formData.location,
+                    formData.website, formData.gender, formData.birth_date, profile?.avatar_url
+                ];
+                const filled = fields.filter(Boolean).length;
+                const pct = Math.round((filled / fields.length) * 100);
+                if (pct >= 100) return null;
+                return (
+                    <div className="mx-4 md:mx-0 bg-black/40 border border-white/5 rounded-2xl px-5 py-3 flex items-center gap-4">
+                        <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Completar Perfil</span>
+                                <span className="text-[10px] font-black text-brand-red">{pct}%</span>
+                            </div>
+                            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                <div className="h-full bg-gradient-to-r from-brand-red to-orange-500 rounded-full transition-all duration-700"
+                                    style={{ width: `${pct}%` }} />
+                            </div>
+                        </div>
+                        <div className="text-xl shrink-0">{pct < 50 ? '🌱' : pct < 80 ? '🔥' : '⚡'}</div>
+                    </div>
+                );
+            })()}
+
             {/* UPCOMING TRIAL BANNER */}
             {upcomingTrial && (
                 <div className="bg-gradient-to-r from-brand-red/20 to-black border border-brand-red/50 rounded-3xl p-6 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-6 animate-in slide-in-from-top-4 fade-in duration-500">
@@ -740,47 +806,26 @@ export default function ProfilePage() {
             )}
 
             {/* Mobile Tabs Navigation */}
-            <div className="flex lg:hidden items-center justify-around border-b border-white/5 pb-0 mb-6">
-                <button
-                    onClick={() => setMobileTab('gallery')}
-                    className={clsx(
-                        "flex flex-col items-center gap-2 pb-3 px-4 transition-all relative",
-                        mobileTab === 'gallery' ? "text-brand-red" : "text-gray-500 hover:text-gray-300"
-                    )}
-                >
-                    <LayoutGrid className="w-6 h-6" />
-                    {mobileTab === 'gallery' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red rounded-t-full" />}
-                </button>
-                <button
-                    onClick={() => setMobileTab('stats')}
-                    className={clsx(
-                        "flex flex-col items-center gap-2 pb-3 px-4 transition-all relative",
-                        mobileTab === 'stats' ? "text-brand-red" : "text-gray-500 hover:text-gray-300"
-                    )}
-                >
-                    <Trophy className="w-6 h-6" />
-                    {mobileTab === 'stats' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red rounded-t-full" />}
-                </button>
-                <button
-                    onClick={() => setMobileTab('intel')}
-                    className={clsx(
-                        "flex flex-col items-center gap-2 pb-3 px-4 transition-all relative",
-                        mobileTab === 'intel' ? "text-brand-red" : "text-gray-500 hover:text-gray-300"
-                    )}
-                >
-                    <Brain className="w-6 h-6" />
-                    {mobileTab === 'intel' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red rounded-t-full" />}
-                </button>
-                <button
-                    onClick={() => setMobileTab('settings')}
-                    className={clsx(
-                        "flex flex-col items-center gap-2 pb-3 px-4 transition-all relative",
-                        mobileTab === 'settings' ? "text-brand-red" : "text-gray-500 hover:text-gray-300"
-                    )}
-                >
-                    <Settings className="w-6 h-6" />
-                    {mobileTab === 'settings' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red rounded-t-full" />}
-                </button>
+            <div className="flex lg:hidden items-center justify-around border-b border-white/5 mb-6 bg-black/20 backdrop-blur-sm sticky top-[60px] z-30">
+                {([
+                    { id: 'gallery', icon: <LayoutGrid className="w-5 h-5" />, label: 'Galería' },
+                    { id: 'stats', icon: <Trophy className="w-5 h-5" />, label: 'Stats' },
+                    { id: 'intel', icon: <Brain className="w-5 h-5" />, label: 'Intel' },
+                    { id: 'settings', icon: <Settings className="w-5 h-5" />, label: 'Ajustes' },
+                ] as const).map(tab => (
+                    <button
+                        key={tab.id}
+                        onClick={() => setMobileTab(tab.id)}
+                        className={clsx(
+                            "flex-1 flex flex-col items-center gap-1 py-3 px-2 transition-all relative",
+                            mobileTab === tab.id ? "text-brand-red" : "text-gray-600 hover:text-gray-400"
+                        )}
+                    >
+                        {tab.icon}
+                        <span className="text-[8px] font-black uppercase tracking-widest">{tab.label}</span>
+                        {mobileTab === tab.id && <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-brand-red rounded-t-full" />}
+                    </button>
+                ))}
             </div>
 
             <div className="pt-2 lg:pt-8 flex flex-col lg:grid lg:grid-cols-12 gap-8">
@@ -818,6 +863,34 @@ export default function ProfilePage() {
                     </div>
 
                     <div className={clsx("space-y-6", mobileTab !== 'stats' && "hidden lg:block")}>
+                        {/* ── Personal Records — mobile stats tab ── */}
+                        {autoRecords.length > 0 && (
+                            <div className="bg-brand-gray/30 border border-brand-red/10 rounded-3xl p-5 backdrop-blur-xl lg:hidden">
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <Trophy className="w-4 h-4 text-brand-red" />
+                                        <h3 className="text-xs font-black uppercase tracking-[0.3em] text-foreground">Récords Personales</h3>
+                                    </div>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-red bg-brand-red/10 px-2 py-1 rounded-full border border-brand-red/20">
+                                        {autoRecords.length}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {autoRecords.slice(0, 6).map((rec, i) => (
+                                        <div key={i} className="flex items-center gap-2 bg-black/30 border border-white/5 rounded-xl p-2.5">
+                                            <div className="w-7 h-7 bg-brand-red/10 rounded-lg flex items-center justify-center shrink-0">
+                                                <Trophy className="w-3.5 h-3.5 text-brand-red" />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-[10px] font-black text-foreground uppercase truncate">{rec.exercise}</p>
+                                                <p className="text-sm font-black text-brand-red italic">{rec.weight} kg</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
                             <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Estado de Nivel</h3>
                             <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5 mb-4">
@@ -912,12 +985,18 @@ export default function ProfilePage() {
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Biografía</label>
+                                <div className="flex items-center justify-between ml-1">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500">Biografía</label>
+                                    <span className={clsx("text-[10px] font-bold tabular-nums", formData.bio.length > 240 ? "text-brand-red" : "text-gray-600")}>
+                                        {formData.bio.length}/260
+                                    </span>
+                                </div>
                                 <div className="relative">
                                     <textarea
                                         name="bio"
                                         value={formData.bio}
                                         onChange={handleChange}
+                                        maxLength={260}
                                         rows={4}
                                         placeholder="Cuéntale a la comunidad sobre tu camino fitness..."
                                         className="w-full bg-black/40 border border-white/10 rounded-2xl p-3 text-white focus:outline-none focus:border-brand-red transition-all resize-none placeholder:text-gray-700"
@@ -1208,7 +1287,7 @@ export default function ProfilePage() {
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={handleDeleteAccount}
+                                    onClick={() => setDeleteModal(true)}
                                     disabled={isDeleting}
                                     className="px-6 py-3 bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white text-[10px] font-black uppercase tracking-widest rounded-xl border border-red-500/20 transition-all disabled:opacity-50"
                                 >
@@ -1218,10 +1297,9 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    {/* Lista de entrenamientos */}
-                    {/* ── Personal Records — auto-synced from every workout ──────── */}
+                    {/* ── Personal Records — auto-synced — always on desktop, hidden on mobile (moved to left column) ── */}
                     {autoRecords.length > 0 && (
-                        <div className={clsx("bg-brand-gray/30 border border-brand-red/10 rounded-3xl p-5 md:p-8 backdrop-blur-xl", mobileTab !== 'stats' && "hidden lg:block")}>
+                        <div className={clsx("bg-brand-gray/30 border border-brand-red/10 rounded-3xl p-5 md:p-8 backdrop-blur-xl", "hidden lg:block")}>
                             <div className="flex items-center justify-between mb-5">
                                 <div className="flex items-center gap-2">
                                     <Trophy className="w-4 h-4 text-brand-red" />

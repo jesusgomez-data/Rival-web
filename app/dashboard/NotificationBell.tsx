@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Bell, X, CheckCircle2, Swords, UserPlus, Zap, MessageSquare, Heart, BookmarkCheck } from "lucide-react";
 import { getNotifications, markAsRead, markAllAsRead } from "./notifications-actions";
+import { playReceiveSound, playContactOnlineSound, playEmojiSound } from "./messages/emojiSounds";
 import { createClient } from "@/utils/supabase/client";
 import clsx from "clsx";
 import Link from "next/link";
@@ -56,6 +57,15 @@ export default function NotificationBell() {
                             return [n, ...prev];
                         });
                         setUnreadCount(prev => prev + 1);
+                        // ── MSN Messenger sounds per notification type ──
+                        try {
+                            if (n.type === 'message') playReceiveSound();
+                            else if (n.type === 'follow') playContactOnlineSound();
+                            else if (n.type === 'pr_achievement') playEmojiSound('🏆');
+                            else if (n.type === 'like') playEmojiSound('❤️');
+                            else if (n.type === 'duel') playEmojiSound('⚔️');
+                            else playReceiveSound();
+                        } catch {}
                     }
                 )
                 .on(
@@ -85,6 +95,11 @@ export default function NotificationBell() {
                         return [payload, ...prev];
                     });
                     setUnreadCount(prev => prev + 1);
+                    // MSN sound for broadcast notifications too
+                    try {
+                        if (payload.type === 'message') playReceiveSound();
+                        else playContactOnlineSound();
+                    } catch {}
                 })
                 .subscribe();
         }
