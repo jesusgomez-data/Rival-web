@@ -1215,9 +1215,9 @@ function SessionContent() {
                                             }
                                             setPreStartPlan(null);
                                         }}
-                                        className="flex-[2] py-5 rounded-2xl bg-white text-black text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-white/10 flex items-center justify-center gap-2"
+                                        className="flex-[2] py-5 rounded-2xl bg-gradient-to-r from-brand-red to-orange-600 text-white text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-brand-red/20 flex items-center justify-center gap-2"
                                     >
-                                        Ponerle Empezar <ChevronRight className="w-5 h-5" />
+                                        ⚡ Comenzar <ChevronRight className="w-5 h-5" />
                                     </button>
                                 </div>
                             </div>
@@ -2107,10 +2107,22 @@ const WORKOUT_POOL: Record<string, Record<string, TrainingPlan[]>> = {
     }
 };
 
+const SPORT_META: Record<string, { emoji: string; label: string; color: string; borderColor: string; bgColor: string }> = {
+    gym:           { emoji: '🏋️', label: 'Gimnasio',      color: 'text-brand-red',  borderColor: 'border-brand-red',  bgColor: 'bg-brand-red' },
+    running:       { emoji: '🏃', label: 'Running',       color: 'text-blue-400',   borderColor: 'border-blue-400',   bgColor: 'bg-blue-500' },
+    cross_training:{ emoji: '⚡', label: 'Cross Training', color: 'text-orange-400', borderColor: 'border-orange-400', bgColor: 'bg-orange-500' },
+    hybrid:        { emoji: '🔥', label: 'Hybrid',        color: 'text-yellow-400', borderColor: 'border-yellow-400', bgColor: 'bg-yellow-500' },
+    calisthenics:  { emoji: '💪', label: 'Calistenia',    color: 'text-purple-400', borderColor: 'border-purple-400', bgColor: 'bg-purple-500' },
+    ocr:           { emoji: '🧗', label: 'OCR',            color: 'text-emerald-400',borderColor: 'border-emerald-400',bgColor: 'bg-emerald-500' },
+    cycling:       { emoji: '🚴', label: 'Ciclismo',      color: 'text-green-400',  borderColor: 'border-green-400',  bgColor: 'bg-green-500' },
+    swimming:      { emoji: '🏊', label: 'Natación',      color: 'text-sky-400',    borderColor: 'border-sky-400',    bgColor: 'bg-sky-500' },
+    other:         { emoji: '➕', label: 'Otros',          color: 'text-gray-400',   borderColor: 'border-gray-400',   bgColor: 'bg-gray-500' },
+};
+
 function SportSelector({ onSelect, onPlanSelect, guidedCount, userTier }: { onSelect: (mode: SportMode) => void, onPlanSelect: (plan: TrainingPlan) => void, guidedCount: number, userTier: string }) {
     const { theme } = useTheme();
     const [selectedSport, setSelectedSport] = useState<SportMode>(null);
-    const [view, setView] = useState<'list' | 'options' | 'ai' | 'guided-question'>('list');
+    const [view, setView] = useState<'list' | 'quick-start' | 'ai'>('list');
     const [recommendations, setRecommendations] = useState<TrainingPlan[]>([]);
     const [loadingAi, setLoadingAi] = useState(false);
     const [selectedFocus, setSelectedFocus] = useState<string | null>(null);
@@ -2118,7 +2130,7 @@ function SportSelector({ onSelect, onPlanSelect, guidedCount, userTier }: { onSe
 
     const handleSportClick = (mode: SportMode) => {
         setSelectedSport(mode);
-        setView('options');
+        setView('quick-start');   // ← skip the "options" intermediate screen
         setSelectedFocus(null);
     }
 
@@ -2154,162 +2166,110 @@ function SportSelector({ onSelect, onPlanSelect, guidedCount, userTier }: { onSe
         onPlanSelect(plan);
     }
 
-    if (view === 'options') {
+    // ── QUICK-START: replaces the old "options" + "guided-question" screens ─────
+    if (view === 'quick-start' && selectedSport) {
+        const meta = SPORT_META[selectedSport] || SPORT_META.other;
+        const limits = { free: 2, premium: 4, elite: 6 };
+        const currentLimit = limits[userTier as keyof typeof limits] || 2;
+        const isLimitReached = guidedCount >= currentLimit;
+
+        const OBJECTIVES: Record<string, { id: string; title: string; desc: string }[]> = {
+            gym:           [{ id: 'upper', title: 'Tren Superior', desc: 'Pecho · Espalda · Brazos' }, { id: 'lower', title: 'Tren Inferior', desc: 'Pierna · Glúteo · Gemelo' }, { id: 'full', title: 'Full Body', desc: 'Cuerpo completo' }],
+            calisthenics:  [{ id: 'upper', title: 'Empuje', desc: 'Handstand · Planche · Dips' }, { id: 'pull', title: 'Tracción', desc: 'Muscle Up · Front Lever' }, { id: 'lower', title: 'Pierna', desc: 'Pistol Squats · Saltos' }],
+            running:       [{ id: 'recovery', title: 'Recuperación', desc: 'Trote suave' }, { id: 'intervals', title: 'Intervalos', desc: 'Velocidad · VO2 Máx' }, { id: 'long', title: 'Larga Distancia', desc: 'Resistencia base' }],
+            cross_training:[{ id: 'endurance', title: 'MetCon', desc: 'Cardio · Alta repetición' }, { id: 'gymnastics', title: 'Gimnásticos', desc: 'HSPU · Pull Ups · Core' }, { id: 'halterofilia', title: 'Fuerza', desc: 'Barra · Técnica · Potencia' }],
+            hybrid:        [{ id: 'run-focus', title: 'Enfoque Carrera', desc: 'Intervalos con fatiga' }, { id: 'strength-focus', title: 'Funcional', desc: 'Sleds · Lunges · Burpees' }, { id: 'race', title: 'Simulación', desc: 'Prep. de evento' }],
+            ocr:           [{ id: 'grip', title: 'Agarre', desc: 'Monkey bars · Pull ups' }, { id: 'carry', title: 'Cargas', desc: 'Sandbags · Bucket carry' }, { id: 'trail', title: 'Trail', desc: 'Desnivel · Terreno irregular' }],
+            other:         [{ id: 'mobility', title: 'Movilidad', desc: 'Flexibilidad y Flow' }, { id: 'cardio', title: 'Cardio LISS', desc: 'Baja intensidad' }, { id: 'core', title: 'Core', desc: 'Estabilidad central' }],
+            cycling:       [{ id: 'endurance', title: 'Resistencia', desc: 'Fondo y constancia' }, { id: 'intervals', title: 'Intervalos', desc: 'Potencia y velocidad' }, { id: 'recovery', title: 'Recuperación', desc: 'Rodaje suave' }],
+            swimming:      [{ id: 'technique', title: 'Técnica', desc: 'Estilo y eficiencia' }, { id: 'endurance', title: 'Resistencia', desc: 'Series largas' }, { id: 'intervals', title: 'Velocidad', desc: 'Sprints cortos' }],
+        };
+        const objectives = OBJECTIVES[selectedSport] || OBJECTIVES.gym;
+
         return (
-            <div className="flex flex-col items-center justify-center min-h-full p-6 animate-in zoom-in-95 duration-300">
-                <h2 className="text-4xl font-heading font-black italic text-white uppercase mb-8 text-center">¿Cómo quieres <span className="text-brand-red">entrenar</span>?</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl w-full">
-                    <button onClick={startFreestyle} className="group p-8 rounded-[32px] bg-[#111] border border-white/10 hover:border-white/30 hover:bg-white/5 transition-all text-left relative overflow-hidden">
-                        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Edit2 className="w-32 h-32 text-white" /></div>
-                        <h3 className="text-2xl font-black italic text-white uppercase mb-2">Modo Libre</h3>
-                        <p className="text-gray-500 text-xs font-bold uppercase tracking-wide">Registra tu propia sesión manualmente.</p>
-                        <div className="mt-4 inline-flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full">
-                            <Zap className="w-3 h-3 text-green-500" />
-                            <span className="text-[8px] font-black text-green-500 uppercase tracking-widest">Ilimitado</span>
-                        </div>
-                    </button>
+            <div className="flex flex-col min-h-full p-5 animate-in slide-in-from-right-8 duration-300 max-w-lg mx-auto w-full">
+                {/* Header */}
+                <button onClick={() => setView('list')} className="flex items-center gap-2 text-gray-500 hover:text-foreground transition-colors mb-8 w-fit">
+                    <ArrowLeft className="w-4 h-4" />
+                    <span className="text-xs font-black uppercase tracking-widest">Volver</span>
+                </button>
 
-                    {(() => {
-                        const limits = { free: 2, premium: 4, elite: 6 };
-                        const currentLimit = limits[userTier as keyof typeof limits] || 2;
-                        const isLimitReached = guidedCount >= currentLimit;
-
-                        return (
-                            <button
-                                onClick={() => !isLimitReached && setView('guided-question')}
-                                className={clsx(
-                                    "group p-8 rounded-[32px] border transition-all text-left relative overflow-hidden shadow-glow",
-                                    isLimitReached
-                                        ? "bg-gray-900 border-white/5 grayscale cursor-not-allowed opacity-50"
-                                        : "bg-brand-red border-brand-red hover:bg-red-600"
-                                )}
-                            >
-                                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity"><Activity className="w-32 h-32 text-black" /></div>
-                                <h3 className="text-2xl font-black italic text-white uppercase mb-2">Rutina Guiada</h3>
-                                <p className={clsx("text-xs font-bold uppercase tracking-wide", isLimitReached ? "text-gray-500" : "text-black/60")}>
-                                    {isLimitReached ? 'Límite semanal alcanzado' : '¿No sabes qué hacer? Elige tu objetivo.'}
+                {/* Sport badge + what to expect inside */}
+                {(() => {
+                    const WHAT_INSIDE: Record<string, string> = {
+                        gym:           'Añade ejercicios, registra series, repeticiones y peso levantado',
+                        running:       'Activa el GPS y registra distancia, ritmo y tiempo automáticamente',
+                        cross_training:'Configura bloques AMRAP/EMOM/For Time y anota tus rondas',
+                        hybrid:        'Combina ejercicios de fuerza y cardio en una misma sesión',
+                        calisthenics:  'Registra tus sets de peso corporal, trucos y progresiones',
+                        ocr:           'Simula obstáculos y registra tu rendimiento en carrera',
+                        cycling:       'Registra distancia, velocidad y tiempo de rodada',
+                        swimming:      'Anota series, distancias y tiempos en piscina',
+                        other:         'Registra cualquier actividad física libremente',
+                    };
+                    return (
+                        <div className="bg-muted/50 border border-border rounded-2xl p-4 mb-6 flex items-start gap-3">
+                            <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center text-xl shrink-0", meta.bgColor + '/20')}>
+                                {meta.emoji}
+                            </div>
+                            <div>
+                                <p className={clsx("text-sm font-black uppercase tracking-tight", meta.color)}>{meta.label}</p>
+                                <p className="text-xs text-muted-foreground font-medium mt-0.5 leading-relaxed">
+                                    {WHAT_INSIDE[selectedSport || 'gym']}
                                 </p>
+                            </div>
+                        </div>
+                    );
+                })()}
 
-                                <div className="mt-4 flex items-center justify-between">
-                                    <div className={clsx(
-                                        "inline-flex items-center gap-2 px-3 py-1 rounded-full border",
-                                        isLimitReached ? "bg-red-500/10 border-red-500/20" : "bg-black/20 border-black/10"
-                                    )}>
-                                        <div className={clsx("w-1.5 h-1.5 rounded-full", isLimitReached ? "bg-red-500" : "bg-white")} />
-                                        <span className={clsx("text-[8px] font-black uppercase tracking-widest", isLimitReached ? "text-red-500" : "text-white")}>
-                                            {guidedCount} / {currentLimit} Semanales
-                                        </span>
-                                    </div>
-
-                                    {isLimitReached && (
-                                        <Link href="/dashboard/billing" className="text-[8px] font-black uppercase text-brand-red underline hover:text-white transition-colors">
-                                            Mejorar Plan
-                                        </Link>
-                                    )}
-                                </div>
-                            </button>
-                        );
-                    })()}
-                </div>
-                <button onClick={() => setView('list')} className="mt-12 text-gray-500 hover:text-white transition-colors text-sm font-bold uppercase tracking-widest">Volver</button>
-            </div>
-        )
-    }
-
-    if (view === 'guided-question') {
-        return (
-            <div className="flex flex-col items-center justify-center min-h-full p-6 animate-in zoom-in-95 duration-300">
-                <h2 className="text-3xl font-heading font-black italic text-white uppercase mb-2 text-center">Define tu <span className="text-brand-red">Objetivo</span></h2>
-                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mb-8 text-center max-w-sm">
-                    {selectedSport === 'running' ? 'Selecciona el enfoque de tu carrera hoy.' :
-                        selectedSport === 'hybrid' ? 'Define la prioridad de tu sesión híbrida.' :
-                            selectedSport === 'cross_training' ? 'Elige el tipo de estímulo para el WOD.' :
-                                selectedSport === 'ocr' ? 'Enfócate en un área específica de carrera de obstáculos.' :
-                                    selectedSport === 'other' ? 'Selecciona el tipo de actividad complementaria.' :
-                                        'Selecciona qué zona del cuerpo quieres priorizar hoy.'}
+                {/* PRIMARY CTA — Start freestyle instantly */}
+                <button
+                    onClick={() => onSelect(selectedSport)}
+                    className="w-full py-5 bg-gradient-to-r from-brand-red to-orange-600 text-white rounded-2xl font-black text-base uppercase tracking-widest flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(239,68,68,0.3)] hover:shadow-[0_0_40px_rgba(239,68,68,0.5)] active:scale-[0.98] transition-all mb-3"
+                >
+                    <Zap className="w-5 h-5" />
+                    Empezar ahora
+                </button>
+                <p className="text-center text-[10px] text-muted-foreground font-bold uppercase tracking-widest mb-8">
+                    Sesión libre · sin rutina predefinida
                 </p>
 
-                <div className="space-y-4 w-full max-w-sm">
-                    {(() => {
-                        const objectives = {
-                            gym: [
-                                { id: 'upper', title: 'Tren Superior', desc: 'Pecho, Espalda, Brazos, Hombros', icon: <ArrowLeft className="w-5 h-5 group-hover:text-brand-red transition-colors rotate-180" /> },
-                                { id: 'lower', title: 'Tren Inferior', desc: 'Pierna, Glúteo, Gemelo', icon: <ArrowLeft className="w-5 h-5 group-hover:text-brand-red transition-colors rotate-180" /> },
-                                { id: 'full', title: 'Full Body', desc: 'Cuerpo Completo, Metabólico', icon: <ArrowLeft className="w-5 h-5 group-hover:text-brand-red transition-colors rotate-180" /> }
-                            ],
-                            calisthenics: [
-                                { id: 'upper', title: 'Trucos Empuje', desc: 'Handstand, Planche, Dips', icon: <Zap className="w-5 h-5 group-hover:text-purple-500 transition-colors" /> },
-                                { id: 'lower', title: 'Pierna Explosiva', desc: 'Pistol Squats, Saltos', icon: <Zap className="w-5 h-5 group-hover:text-purple-500 transition-colors" /> },
-                                { id: 'pull', title: 'Trucos Tracción', desc: 'Muscle Up, Front Lever', icon: <Zap className="w-5 h-5 group-hover:text-purple-500 transition-colors" /> }
-                            ],
-                            running: [
-                                { id: 'recovery', title: 'Recuperación', desc: 'Trote suave, regenerativo', icon: <Clock className="w-5 h-5 group-hover:text-blue-500 transition-colors" /> },
-                                { id: 'intervals', title: 'Series e Intervalos', desc: 'Velocidad, VO2 Máx, Fartlek', icon: <Zap className="w-5 h-5 group-hover:text-blue-500 transition-colors" /> },
-                                { id: 'long', title: 'Larga Distancia', desc: 'Tirada larga, resistencia base', icon: <MapPin className="w-5 h-5 group-hover:text-blue-500 transition-colors" /> }
-                            ],
-                            cross_training: [
-                                { id: 'endurance', title: 'Resistencia (MetCon)', desc: 'Cardio, Alta Repetición', icon: <Activity className="w-5 h-5 group-hover:text-orange-500 transition-colors" /> },
-                                { id: 'gymnastics', title: 'Gimnásticos (Skills)', desc: 'HSPU, Pull Ups, Core', icon: <Trophy className="w-5 h-5 group-hover:text-orange-500 transition-colors" /> },
-                                { id: 'halterofilia', title: 'Fuerza / Halterofilia', desc: 'Barra, Técnica, Potencia', icon: <Timer className="w-5 h-5 group-hover:text-orange-500 transition-colors" /> }
-                            ],
-                            hybrid: [
-                                { id: 'run-focus', title: 'Enfoque Carrera', desc: 'Intervalos con fatiga media', icon: <MapPin className="w-5 h-5 group-hover:text-yellow-500 transition-colors" /> },
-                                { id: 'strength-focus', title: 'Enfoque Funcional', desc: 'Sleds, Lunges, Burpees', icon: <Activity className="w-5 h-5 group-hover:text-yellow-500 transition-colors" /> },
-                                { id: 'race', title: 'Simulación de Carrera', desc: 'Bloques combinados (Prep. Evento)', icon: <Trophy className="w-5 h-5 group-hover:text-yellow-500 transition-colors" /> }
-                            ],
-                            ocr: [
-                                { id: 'grip', title: 'Agarre & Suspensión', desc: 'Monkey bars, Pull ups, Rig', icon: <Activity className="w-5 h-5 group-hover:text-emerald-500 transition-colors" /> },
-                                { id: 'carry', title: 'Cargas & Potencia', desc: 'Sandbags, Bucket carry', icon: <Zap className="w-5 h-5 group-hover:text-emerald-500 transition-colors" /> },
-                                { id: 'trail', title: 'Running Trail', desc: 'Desnivel, Terreno irregular', icon: <MapPin className="w-5 h-5 group-hover:text-emerald-500 transition-colors" /> }
-                            ],
-                            other: [
-                                { id: 'mobility', title: 'Movilidad', desc: 'Flexibilidad y Flow', icon: <Activity className="w-5 h-5 group-hover:text-gray-400 transition-colors" /> },
-                                { id: 'cardio', title: 'Cardio LISS', desc: 'Baja Intensidad', icon: <Clock className="w-5 h-5 group-hover:text-gray-400 transition-colors" /> },
-                                { id: 'core', title: 'Core / Abs', desc: 'Estabilidad Central', icon: <Zap className="w-5 h-5 group-hover:text-gray-400 transition-colors" /> }
-                            ]
-                        };
-
-                        const currentOptions = (objectives as any)[selectedSport || 'gym'] || objectives.gym;
-
-                        return currentOptions.map((opt: { id: string, title: string, desc: string, icon: React.ReactNode }) => (
-                            <button
-                                key={opt.id}
-                                onClick={() => { setSelectedFocus(opt.id); fetchRecommendations(opt.id); }}
-                                className={clsx(
-                                    "w-full p-6 rounded-3xl bg-card border border-border hover:bg-muted transition-all text-left flex items-center justify-between group",
-                                    selectedSport === 'running' ? "hover:border-blue-500" :
-                                        selectedSport === 'hybrid' ? "hover:border-yellow-500" :
-                                            selectedSport === 'cross_training' ? "hover:border-orange-500" :
-                                                selectedSport === 'ocr' ? "hover:border-emerald-500" :
-                                                    selectedSport === 'calisthenics' ? "hover:border-purple-500" :
-                                                        selectedSport === 'other' ? "hover:border-border" : "hover:border-brand-red"
-                                )}
-                            >
-                                <div>
-                                    <h3 className={clsx(
-                                        "text-xl font-heading font-black italic uppercase transition-colors",
-                                        "text-foreground",
-                                        selectedSport === 'running' ? "group-hover:text-blue-500" :
-                                            selectedSport === 'hybrid' ? "group-hover:text-yellow-500" :
-                                                selectedSport === 'cross_training' ? "group-hover:text-orange-500" :
-                                                    selectedSport === 'ocr' ? "group-hover:text-emerald-500" :
-                                                        selectedSport === 'calisthenics' ? "group-hover:text-purple-500" :
-                                                            selectedSport === 'other' ? "group-hover:text-foreground" : "group-hover:text-brand-red"
-                                    )}>
-                                        {opt.title}
-                                    </h3>
-                                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-1 opacity-60 group-hover:opacity-100 transition-opacity">
-                                        {opt.desc}
-                                    </p>
-                                </div>
-                                <div className="text-muted-foreground transition-all group-hover:scale-110">
-                                    {opt.icon}
-                                </div>
-                            </button>
-                        ));
-                    })()}
+                {/* Divider */}
+                <div className="flex items-center gap-4 mb-6">
+                    <div className="h-px flex-1 bg-border" />
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">O elige un objetivo</span>
+                    <div className="h-px flex-1 bg-border" />
                 </div>
-                <button onClick={() => setView('options')} className="mt-8 text-gray-500 hover:text-white transition-colors text-sm font-bold uppercase tracking-widest">Volver</button>
+
+                {/* Objective cards */}
+                <div className="space-y-3">
+                    {objectives.map(obj => (
+                        <button
+                            key={obj.id}
+                            disabled={isLimitReached}
+                            onClick={() => { setSelectedFocus(obj.id); fetchRecommendations(obj.id); }}
+                            className={clsx(
+                                "w-full flex items-center justify-between p-4 rounded-2xl border transition-all group",
+                                isLimitReached
+                                    ? "opacity-40 cursor-not-allowed bg-muted border-border"
+                                    : clsx("bg-card border-border hover:bg-muted cursor-pointer", "hover:" + meta.borderColor)
+                            )}
+                        >
+                            <div className="text-left">
+                                <p className={clsx("font-black uppercase text-sm text-foreground transition-colors", !isLimitReached && "group-hover:" + meta.color)}>{obj.title}</p>
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">{obj.desc}</p>
+                            </div>
+                            <ChevronRight className={clsx("w-4 h-4 shrink-0 transition-colors text-muted-foreground", !isLimitReached && "group-hover:" + meta.color)} />
+                        </button>
+                    ))}
+                </div>
+
+                {isLimitReached && (
+                    <div className="mt-4 p-4 bg-muted rounded-2xl border border-border text-center">
+                        <p className="text-xs text-muted-foreground font-bold mb-2">Límite semanal de rutinas guiadas alcanzado ({guidedCount}/{currentLimit})</p>
+                        <Link href="/dashboard/billing" className="text-xs font-black text-brand-red uppercase tracking-widest hover:underline">Mejorar plan →</Link>
+                    </div>
+                )}
             </div>
         );
     }
@@ -2365,7 +2325,7 @@ function SportSelector({ onSelect, onPlanSelect, guidedCount, userTier }: { onSe
                                 <p className="text-xs text-gray-500 uppercase tracking-wide">Desbloquea Rival Pro para programación de élite.</p>
                             </div>
                         </div>
-                        <button onClick={() => setView('options')} className="w-full text-center text-gray-500 hover:text-white transition-colors text-sm font-bold uppercase tracking-widest mt-8">Cancelar</button>
+                        <button onClick={() => setView('quick-start')} className="w-full text-center text-gray-500 hover:text-white transition-colors text-sm font-bold uppercase tracking-widest mt-8">Cancelar</button>
                     </div>
                 )}
             </div>
@@ -2374,67 +2334,73 @@ function SportSelector({ onSelect, onPlanSelect, guidedCount, userTier }: { onSe
 
     return (
         <div className="flex flex-col p-6 min-h-full">
-            <div className="flex items-center gap-4 mb-8">
+            <div className="flex items-center gap-4 mb-2">
                 <Link href="/dashboard/training" className={clsx("p-3 rounded-full transition-all", theme === 'dark' ? "bg-white/5 text-white hover:bg-white/10" : "bg-gray-100 text-black hover:bg-gray-200 shadow-sm")}><ArrowLeft className="w-6 h-6" /></Link>
                 <div>
                     <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Nueva Sesión</p>
-                    <h1 className={clsx("text-2xl md:text-3xl font-heading font-black italic uppercase tracking-tighter", theme === 'dark' ? "text-white" : "text-black")}>Elige tu <span className="text-brand-red">Combate</span></h1>
+                    <h1 className={clsx("text-2xl md:text-3xl font-heading font-black italic uppercase tracking-tighter", theme === 'dark' ? "text-white" : "text-black")}>
+                        ¿Qué vas a <span className="text-brand-red">entrenar hoy?</span>
+                    </h1>
                 </div>
             </div>
 
+            <p className={clsx("text-xs font-bold uppercase tracking-widest mb-6 ml-16", theme === 'dark' ? "text-gray-500" : "text-gray-400")}>
+                Selecciona tu deporte · después elige si entrenar libre o con rutina sugerida
+            </p>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto w-full pb-20">
                 <SportCard
-                    title="Gimnasio"
+                    title="Gimnasio 🏋️"
                     icon={<div className="w-12 h-12 rounded-xl bg-brand-red/20 flex items-center justify-center text-brand-red mb-4"><Activity className="w-6 h-6" /></div>}
-                    desc="Musculación y fuerza. Registra series, reps y pesos."
+                    desc="Añade ejercicios → anota series, reps y kilos → guarda"
                     onClick={() => handleSportClick('gym')}
                     color="hover:border-brand-red/50"
                     image="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=600&auto=format&fit=crop"
                 />
                 <SportCard
-                    title="Running"
+                    title="Running 🏃"
                     icon={<div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-500 mb-4"><MapPin className="w-6 h-6" /></div>}
-                    desc="Cardio y resistencia. GPS, tiempo y control de ritmo."
+                    desc="GPS automático → registra km, ritmo y zonas de ritmo cardíaco"
                     onClick={() => handleSportClick('running')}
                     color="hover:border-blue-500/50"
                     image="https://images.unsplash.com/photo-1530143311094-34d807799e8f?q=80&w=600&auto=format&fit=crop"
                 />
                 <SportCard
-                    title="Cross Training"
+                    title="Cross Training ⚡"
                     icon={<div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-500 mb-4"><Timer className="w-6 h-6" /></div>}
-                    desc="Alta intensidad. WODs, AMRAP, EMOM y For Time."
+                    desc="Crea bloques AMRAP, EMOM o For Time → registra rondas y tiempos"
                     onClick={() => handleSportClick('cross_training')}
                     color="hover:border-orange-500/50"
                     image="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=600&auto=format&fit=crop"
                 />
                 <SportCard
-                    title="Hybrid"
+                    title="Hybrid 🔥"
                     icon={<div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-500 mb-4"><Trophy className="w-6 h-6" /></div>}
-                    desc="Competición híbrida. Carrera + Funcionales."
+                    desc="Mezcla carrera + ejercicios funcionales en una sola sesión"
                     onClick={() => handleSportClick('hybrid')}
                     color="hover:border-yellow-500/50"
                     image="https://images.unsplash.com/photo-1599058945522-28d584b6f0ff?q=80&w=600&auto=format&fit=crop"
                 />
                 <SportCard
-                    title="Calistenia"
+                    title="Calistenia 💪"
                     icon={<div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-500 mb-4"><Zap className="w-6 h-6" /></div>}
-                    desc="Dominio del peso corporal. Trucos, fuerza y control."
+                    desc="Registra sets de peso corporal, trucos y progresiones"
                     onClick={() => handleSportClick('calisthenics')}
                     color="hover:border-purple-500/50"
                     image="https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?q=80&w=600&auto=format&fit=crop"
                 />
                 <SportCard
-                    title="OCR"
+                    title="OCR 🧗"
                     icon={<div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-500 mb-4"><Activity className="w-6 h-6" /></div>}
-                    desc="Obstacle Course Racing. Superación de obstáculos y trail."
+                    desc="Simula circuito de obstáculos y registra tu rendimiento"
                     onClick={() => handleSportClick('ocr')}
                     color="hover:border-emerald-500/50"
                     image="https://images.unsplash.com/photo-1594911772125-07fc7a2d8d9f?q=80&w=600&auto=format&fit=crop"
                 />
                 <SportCard
-                    title="Otros"
+                    title="Otros ➕"
                     icon={<div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-white mb-4"><Plus className="w-6 h-6" /></div>}
-                    desc="Cualquier otra actividad o deporte."
+                    desc="Yoga, movilidad, natación, ciclismo o cualquier actividad"
                     onClick={() => handleSportClick('other')}
                     color="hover:border-white/30"
                     image="https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=600&auto=format&fit=crop"
@@ -2747,6 +2713,234 @@ function SyncWatchModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => v
 }
 
 
+// ── GuidedWODView — clean WOD display for recommendation/plan mode ────────────
+// Replaces the complex editor when a pre-built WOD is loaded.
+// User sees: WOD format + exercises checklist + result entry. That's it.
+function GuidedWODView({ blocks, setBlocks, workoutTitle }: {
+    blocks: WorkoutBlock[];
+    setBlocks: (b: WorkoutBlock[]) => void;
+    workoutTitle?: string;
+}) {
+    const { theme } = useTheme();
+    const [checked, setChecked] = useState<Set<string>>(new Set());
+    const [resultMin, setResultMin] = useState('');
+    const [resultSec, setResultSec] = useState('');
+    const [resultRounds, setResultRounds] = useState('');
+    const [isRx, setIsRx] = useState(true);
+
+    if (!blocks.length) return null;
+
+    const block = blocks[0];
+    const isForTime = block.type === 'fortime' || block.type === 'for_time';
+    const isAmrap   = block.type === 'amrap';
+    const isEmom    = block.type === 'emom';
+
+    const formatBadge: Record<string, string> = {
+        fortime:  'FOR TIME', for_time: 'FOR TIME',
+        amrap:    'AMRAP', emom: 'EMOM', tabata: 'TABATA', other: 'WOD'
+    };
+    const badge = formatBadge[block.type] || 'WOD';
+    const timeCap = block.duration ? `${block.duration} MIN` : null;
+
+    // Format each exercise into a readable line
+    const formatExercise = (ex: WorkoutExercise): string => {
+        if (!ex.sets?.length) return ex.name;
+        const s = ex.sets[0];
+        const unit = s.unit || 'kg';
+        const measure = s.measure || 'reps';
+
+        if (measure === 'distance' || unit === 'm' || unit === 'km') {
+            return `${s.weight || s.reps} ${unit}`;
+        }
+        if (s.weight && s.weight > 0) {
+            return `${s.reps} reps @ ${s.weight}${unit}`;
+        }
+        return `${s.reps} reps`;
+    };
+
+    const allChecked = checked.size >= block.exercises.length && block.exercises.length > 0;
+
+    const saveResult = () => {
+        const time = isForTime
+            ? `${resultMin.padStart(2, '0')}:${(resultSec || '00').padStart(2, '0')}`
+            : '';
+        const updated = [...blocks];
+        updated[0] = { ...updated[0], result: { time, rounds: parseInt(resultRounds) || 0 } };
+        setBlocks(updated);
+    };
+
+    return (
+        <div className="max-w-lg mx-auto w-full px-4 pb-32 space-y-5">
+
+            {/* WOD Header */}
+            <div className={clsx(
+                "rounded-3xl p-5 border",
+                theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-200 shadow-sm"
+            )}>
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                    <span className="bg-brand-red text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
+                        {badge}
+                    </span>
+                    {timeCap && (
+                        <span className={clsx("text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border",
+                            theme === 'dark' ? "border-white/10 text-gray-400" : "border-gray-200 text-gray-500")}>
+                            ⏱ {timeCap}
+                        </span>
+                    )}
+                    {/* Rx / Scaled toggle */}
+                    <button
+                        onClick={() => setIsRx(v => !v)}
+                        className={clsx("ml-auto text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full border transition-colors",
+                            isRx
+                                ? "bg-brand-red/10 border-brand-red/30 text-brand-red"
+                                : "border-gray-400/30 text-gray-400"
+                        )}
+                    >
+                        {isRx ? 'Rx' : 'Scaled'}
+                    </button>
+                </div>
+                <h2 className={clsx("text-xl font-heading font-black italic uppercase tracking-tighter leading-tight",
+                    theme === 'dark' ? "text-white" : "text-black")}>
+                    {workoutTitle || block.title}
+                </h2>
+            </div>
+
+            {/* Exercises checklist */}
+            <div className={clsx("rounded-3xl border overflow-hidden",
+                theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-200 shadow-sm")}>
+                <div className={clsx("px-5 py-3 border-b text-[10px] font-black uppercase tracking-widest",
+                    theme === 'dark' ? "border-white/5 text-gray-500" : "border-gray-100 text-gray-400")}>
+                    Ejercicios — marca cada uno cuando lo completes
+                </div>
+                <div className="divide-y divide-white/[0.04]">
+                    {block.exercises.map((ex, i) => {
+                        const key = `${i}-${ex.name}`;
+                        const done = checked.has(key);
+                        return (
+                            <button
+                                key={key}
+                                onClick={() => setChecked(prev => {
+                                    const next = new Set(prev);
+                                    done ? next.delete(key) : next.add(key);
+                                    return next;
+                                })}
+                                className={clsx(
+                                    "w-full flex items-center gap-4 px-5 py-4 transition-colors text-left",
+                                    done
+                                        ? theme === 'dark' ? "bg-green-500/5" : "bg-green-50"
+                                        : "hover:bg-white/5"
+                                )}
+                            >
+                                {/* Checkbox */}
+                                <div className={clsx(
+                                    "w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
+                                    done ? "bg-green-500 border-green-500" : theme === 'dark' ? "border-white/20" : "border-gray-300"
+                                )}>
+                                    {done && <CheckCircle className="w-4 h-4 text-white" />}
+                                </div>
+                                {/* Exercise info */}
+                                <div className="flex-1 min-w-0">
+                                    <p className={clsx(
+                                        "font-black uppercase text-sm leading-tight",
+                                        done
+                                            ? "line-through text-gray-500"
+                                            : theme === 'dark' ? "text-white" : "text-black"
+                                    )}>
+                                        {ex.name}
+                                    </p>
+                                    <p className={clsx("text-[11px] font-bold mt-0.5",
+                                        done ? "text-gray-600" : "text-brand-red")}>
+                                        {formatExercise(ex)}
+                                    </p>
+                                </div>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Progress indicator */}
+            {block.exercises.length > 0 && (
+                <div className={clsx("rounded-2xl p-4 flex items-center gap-3 border",
+                    theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-200")}>
+                    <div className="flex-1 h-2 rounded-full bg-white/10 overflow-hidden">
+                        <div
+                            className="h-full bg-gradient-to-r from-brand-red to-orange-500 rounded-full transition-all duration-300"
+                            style={{ width: `${(checked.size / block.exercises.length) * 100}%` }}
+                        />
+                    </div>
+                    <span className={clsx("text-[11px] font-black uppercase tracking-widest shrink-0",
+                        allChecked ? "text-green-500" : "text-gray-500")}>
+                        {checked.size}/{block.exercises.length}
+                        {allChecked && ' ✓'}
+                    </span>
+                </div>
+            )}
+
+            {/* Result entry */}
+            <div className={clsx("rounded-3xl border p-5 space-y-4",
+                theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-200 shadow-sm")}>
+                <p className={clsx("text-[10px] font-black uppercase tracking-widest",
+                    theme === 'dark' ? "text-gray-500" : "text-gray-400")}>
+                    {isForTime ? '⏱ ¿Cuál fue tu tiempo?' : isAmrap || isEmom ? '🔄 ¿Cuántas rondas completaste?' : '📝 Tu resultado'}
+                </p>
+
+                {isForTime ? (
+                    <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                            <input
+                                type="number" min="0" max="99" placeholder="00"
+                                value={resultMin}
+                                onChange={e => { setResultMin(e.target.value); saveResult(); }}
+                                className={clsx(
+                                    "w-full text-center text-4xl font-mono font-black rounded-2xl py-4 outline-none border transition-colors",
+                                    theme === 'dark' ? "bg-white/5 border-white/10 text-white focus:border-brand-red" : "bg-gray-50 border-gray-200 text-black focus:border-brand-red"
+                                )}
+                            />
+                            <p className={clsx("text-center text-[9px] font-black uppercase tracking-widest mt-1",
+                                theme === 'dark' ? "text-gray-600" : "text-gray-400")}>MIN</p>
+                        </div>
+                        <span className={clsx("text-3xl font-black pb-5",
+                            theme === 'dark' ? "text-gray-600" : "text-gray-400")}>:</span>
+                        <div className="flex-1">
+                            <input
+                                type="number" min="0" max="59" placeholder="00"
+                                value={resultSec}
+                                onChange={e => { setResultSec(e.target.value); saveResult(); }}
+                                className={clsx(
+                                    "w-full text-center text-4xl font-mono font-black rounded-2xl py-4 outline-none border transition-colors",
+                                    theme === 'dark' ? "bg-white/5 border-white/10 text-white focus:border-brand-red" : "bg-gray-50 border-gray-200 text-black focus:border-brand-red"
+                                )}
+                            />
+                            <p className={clsx("text-center text-[9px] font-black uppercase tracking-widest mt-1",
+                                theme === 'dark' ? "text-gray-600" : "text-gray-400")}>SEG</p>
+                        </div>
+                    </div>
+                ) : (
+                    <div>
+                        <input
+                            type="number" min="0" placeholder="0"
+                            value={resultRounds}
+                            onChange={e => { setResultRounds(e.target.value); saveResult(); }}
+                            className={clsx(
+                                "w-full text-center text-5xl font-mono font-black rounded-2xl py-4 outline-none border transition-colors",
+                                theme === 'dark' ? "bg-white/5 border-white/10 text-white focus:border-brand-red" : "bg-gray-50 border-gray-200 text-black focus:border-brand-red"
+                            )}
+                        />
+                        <p className={clsx("text-center text-[9px] font-black uppercase tracking-widest mt-1",
+                            theme === 'dark' ? "text-gray-600" : "text-gray-400")}>RONDAS</p>
+                    </div>
+                )}
+
+                <p className={clsx("text-[10px] text-center font-medium",
+                    theme === 'dark' ? "text-gray-600" : "text-gray-400")}>
+                    Pulsa <span className="font-black">💾 Guardar</span> arriba cuando termines
+                </p>
+            </div>
+        </div>
+    );
+}
+
 // Helper var for mock
 let isPausedGlobal = false;
 
@@ -2760,6 +2954,11 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
     workoutTitle?: string;
     setWorkoutTitle?: (t: string) => void;
 }) {
+    // ── Guided mode: show simple WOD checklist instead of complex editor ─────
+    if (isGuided && blocks.length > 0) {
+        return <GuidedWODView blocks={blocks} setBlocks={setBlocks} workoutTitle={workoutTitle} />;
+    }
+
     const { theme } = useTheme();
     const [showAddModal, setShowAddModal] = useState(false);
     const [activeBlockIndex, setActiveBlockIndex] = useState(0);

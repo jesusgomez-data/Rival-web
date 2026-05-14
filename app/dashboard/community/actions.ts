@@ -129,6 +129,64 @@ export async function createPRPost(formData: FormData) {
             return { error: `Database error: ${insertError.message}` }
         }
 
+        // ── Record PR in workout_sets so it appears in profile Personal Records ──
+        // 1. Create a virtual workout entry for this PR
+        const weightNum = parseFloat(weight) || 0;
+        if (weightNum > 0) {
+            // Check if this is actually a new PR vs existing records
+            const { data: existingSets } = await supabase
+                .from('workout_sets')
+                .select('weight_kg, workouts!inner(user_id)')
+                .eq('exercise_name', exercise)
+                .eq('workouts.user_id', user.id)
+                .order('weight_kg', { ascending: false })
+                .limit(1);
+
+            const currentMax = existingSets?.[0]?.weight_kg || 0;
+            const isNewPR = weightNum > currentMax;
+
+            // Create a PR workout entry to record it permanently
+            const { data: prWorkout } = await supabase
+                .from('workouts')
+                .insert({
+                    user_id: user.id,
+                    title: `PR: ${exercise}`,
+                    sport_type: sport || 'gym',
+                    duration_seconds: 0,
+                    is_pr: true,
+                    max_weight_kg: weightNum,
+                    notes: `Récord personal registrado desde el feed`
+                })
+                .select()
+                .single();
+
+            if (prWorkout) {
+                await supabase.from('workout_sets').insert({
+                    workout_id: prWorkout.id,
+                    exercise_name: exercise,
+                    set_order: 1,
+                    weight_kg: weightNum,
+                    reps: 1,
+                    is_pr: isNewPR
+                });
+
+                // XP for PR
+                await supabase.rpc('increment_xp', { amount: 75, profile_id: user.id });
+            }
+
+            // ── Send in-app notification ──────────────────────────────────────
+            const improvementText = isNewPR && currentMax > 0
+                ? ` (+${(weightNum - currentMax).toFixed(1)}kg sobre tu anterior récord de ${currentMax}kg)`
+                : '';
+            await createNotification({
+                userId: user.id,
+                type: 'pr_achievement',
+                title: `🏆 ¡Nuevo récord personal!`,
+                content: `${exercise}: ${weight}kg${improvementText}`,
+                link: '/dashboard/profile'
+            });
+        }
+
         revalidatePath('/dashboard/community')
         revalidatePath('/dashboard')
         return { success: true }

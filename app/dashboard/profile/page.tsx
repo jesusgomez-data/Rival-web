@@ -52,11 +52,13 @@ export default function ProfilePage() {
     const [isDragging, setIsDragging] = useState(false);
     const [startY, setStartY] = useState(0);
     const [startPos, setStartPos] = useState(50);
-    const [mobileTab, setMobileTab] = useState<'gallery' | 'stats' | 'workouts' | 'settings' | 'intel'>('gallery');
+    const [mobileTab, setMobileTab] = useState<'gallery' | 'stats' | 'settings' | 'intel'>('gallery');
 
     // Featured RMs State
     const [featuredRms, setFeaturedRms] = useState<any[]>([]);
     const [newRm, setNewRm] = useState({ exercise: 'Snatch', weight: '', unit: 'kg' });
+    // Auto-PRs: best weight per exercise from workout_sets (auto-updated when training)
+    const [autoRecords, setAutoRecords] = useState<{ exercise: string; weight: number; date: string }[]>([]);
 
     // New state for upcoming trial reminder
     const [upcomingTrial, setUpcomingTrial] = useState<any>(null);
@@ -97,6 +99,29 @@ export default function ProfilePage() {
                 setCombatStats(stats);
 
                 // Load Workouts
+                // Auto-load personal records from workout_sets (best weight per exercise)
+                const { data: prSets } = await supabase
+                    .from('workout_sets')
+                    .select('exercise_name, weight_kg, created_at, workouts!inner(user_id)')
+                    .eq('workouts.user_id', data.id)
+                    .eq('is_pr', true)
+                    .order('weight_kg', { ascending: false })
+                    .limit(100);
+
+                if (prSets && prSets.length > 0) {
+                    // Group by exercise_name, keep highest weight
+                    const best: Record<string, { exercise: string; weight: number; date: string }> = {};
+                    prSets.forEach((s: any) => {
+                        const name = s.exercise_name;
+                        if (!best[name] || s.weight_kg > best[name].weight) {
+                            best[name] = { exercise: name, weight: s.weight_kg, date: s.created_at };
+                        }
+                    });
+                    // Sort by date (most recent first)
+                    const sorted = Object.values(best).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                    setAutoRecords(sorted);
+                }
+
                 const { data: userWorkouts, error: workoutError } = await supabase
                     .from('workouts')
                     .select('*, workout_sets(*)')
@@ -737,16 +762,6 @@ export default function ProfilePage() {
                     {mobileTab === 'stats' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red rounded-t-full" />}
                 </button>
                 <button
-                    onClick={() => setMobileTab('workouts')}
-                    className={clsx(
-                        "flex flex-col items-center gap-2 pb-3 px-4 transition-all relative",
-                        mobileTab === 'workouts' ? "text-brand-red" : "text-gray-500 hover:text-gray-300"
-                    )}
-                >
-                    <Dumbbell className="w-6 h-6" />
-                    {mobileTab === 'workouts' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red rounded-t-full" />}
-                </button>
-                <button
                     onClick={() => setMobileTab('intel')}
                     className={clsx(
                         "flex flex-col items-center gap-2 pb-3 px-4 transition-all relative",
@@ -861,7 +876,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Right side: Form, Workouts, Records */}
-                <div className={clsx("lg:col-span-8 space-y-8", mobileTab !== 'settings' && mobileTab !== 'workouts' && mobileTab !== 'intel' && "hidden lg:block")}>
+                <div className={clsx("lg:col-span-8 space-y-8", mobileTab !== 'settings' && mobileTab !== 'intel' && "hidden lg:block")}>
 
                     {/* Intelligence Section */}
                     <div className={clsx("space-y-6", mobileTab !== 'intel' && "hidden lg:block")}>
@@ -1204,45 +1219,40 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Lista de entrenamientos */}
-                    <div className={clsx("bg-brand-gray/30 border border-white/5 rounded-3xl p-3 md:p-8 backdrop-blur-xl", mobileTab !== 'workouts' && "hidden lg:block")}>
-                        <h3 className="text-lg font-bold text-white mb-4">Tus Entrenamientos</h3>
-                        {workouts.length === 0 ? (
-                            <p className="text-gray-400">No has registrado entrenamientos aún.</p>
-                        ) : (
-                            <ul className="divide-y divide-border dark:divide-white/10">
-                                {workouts.map((w) => {
-                                    const maxWeight = w.workout_sets?.reduce((max: number, set: any) =>
-                                        Math.max(max, set.weight_kg || 0), 0) || 0;
+                    {/* ── Personal Records — auto-synced from every workout ──────── */}
+                    {autoRecords.length > 0 && (
+                        <div className={clsx("bg-brand-gray/30 border border-brand-red/10 rounded-3xl p-5 md:p-8 backdrop-blur-xl", mobileTab !== 'stats' && "hidden lg:block")}>
+                            <div className="flex items-center justify-between mb-5">
+                                <div className="flex items-center gap-2">
+                                    <Trophy className="w-4 h-4 text-brand-red" />
+                                    <h3 className="text-xs font-black uppercase tracking-[0.3em] text-foreground">Récords Personales</h3>
+                                </div>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-brand-red bg-brand-red/10 px-2 py-1 rounded-full border border-brand-red/20">
+                                    {autoRecords.length} ejercicios
+                                </span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                {autoRecords.map((rec, i) => (
+                                    <div key={i} className="flex items-center gap-3 bg-black/30 border border-white/5 rounded-2xl p-3 hover:border-brand-red/20 transition-colors">
+                                        <div className="w-9 h-9 bg-brand-red/10 rounded-xl flex items-center justify-center shrink-0">
+                                            <Trophy className="w-4 h-4 text-brand-red" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-black text-foreground uppercase truncate">{rec.exercise}</p>
+                                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                                                {new Date(rec.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: '2-digit' })}
+                                            </p>
+                                        </div>
+                                        <div className="text-right shrink-0">
+                                            <p className="text-lg font-heading font-black text-brand-red italic leading-none">{rec.weight}</p>
+                                            <p className="text-[9px] text-muted-foreground font-bold uppercase">kg</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-                                    return (
-                                        <li key={w.id} className="py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 group">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-10 h-10 bg-black/40 rounded-xl flex items-center justify-center text-brand-red border border-white/5">
-                                                    <Dumbbell className="w-5 h-5" />
-                                                </div>
-                                                <div>
-                                                    <p className="font-bold text-white uppercase italic">{w.title}</p>
-                                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">{new Date(w.start_time).toLocaleDateString()} • {Math.floor(w.duration_seconds / 60)} min</p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center gap-6">
-                                                <div className="text-right">
-                                                    <p className="text-white font-heading font-black italic">{maxWeight} <span className="text-[10px] text-gray-500 uppercase font-sans">kg máx</span></p>
-                                                    {w.is_pr && <p className="text-[8px] text-brand-red font-black uppercase tracking-tighter shadow-sm">Nuevo Récord</p>}
-                                                </div>
-                                                <Link
-                                                    href={`/dashboard/training/session?editId=${w.id}`}
-                                                    className="p-2 bg-white/5 rounded-lg text-gray-500 hover:text-white transition-colors"
-                                                >
-                                                    <Edit2 className="w-4 h-4" />
-                                                </Link>
-                                            </div>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
-                        )}
-                    </div>
                 </div>
             </div>
         </div>

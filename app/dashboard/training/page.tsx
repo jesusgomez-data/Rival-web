@@ -171,38 +171,45 @@ export default function TrainingPage() {
     });
 
     return (
-        <div className="space-y-12 pb-20">
-            {/* Hero Header */}
-            <div className="relative h-[280px] md:h-[350px] rounded-3xl overflow-hidden group shadow-2xl">
-                <Image
-                    src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop"
-                    alt="Training Hero"
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-[2000ms]"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
-                
-                {/* Decorative Elements */}
-                <div className="absolute top-6 left-6 flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-brand-red animate-ping" />
-                    <span className="text-[10px] font-black text-white uppercase tracking-[0.3em] drop-shadow-md">Arena de Entrenamiento</span>
+        <div className="space-y-8 pb-20">
+
+            {/* ── TOP: Clear CTA + What this section does ──────────────────── */}
+            <div className="rounded-3xl overflow-hidden border border-border bg-card shadow-sm">
+                {/* Header */}
+                <div className="relative h-40 overflow-hidden">
+                    <Image
+                        src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1200&auto=format&fit=crop"
+                        alt="Training" fill className="object-cover opacity-50"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
+                    <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
+                        <div>
+                            <p className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-red mb-1">Registro de Entrenamiento</p>
+                            <h1 className="text-2xl font-heading font-black text-foreground italic uppercase tracking-tighter leading-none">
+                                Tu Sección de <span className="text-brand-red">Entrenamiento</span>
+                            </h1>
+                        </div>
+                        <Link href="/dashboard/training/session"
+                            className="bg-brand-red text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-red-600 active:scale-95 transition-all shadow-glow shrink-0">
+                            <Play className="w-4 h-4 fill-current" /> Empezar
+                        </Link>
+                    </div>
                 </div>
 
-                <div className="absolute bottom-0 left-0 p-6 md:p-10 w-full flex flex-col md:flex-row justify-between items-end gap-6">
-                    <div className="max-w-2xl">
-                        <div className="flex items-center gap-3 mb-3">
-                            <span className="bg-brand-red text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg shadow-lg">Semana 4</span>
-                            <span className="text-white/80 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                                <Activity className="w-3.5 h-3.5 text-brand-red" /> Bloque de Hipertrofia & Fuerza
-                            </span>
+                {/* How it works — 3 steps */}
+                <div className="grid grid-cols-3 divide-x divide-border border-t border-border">
+                    {[
+                        { n: '1', icon: '🏋️', title: 'Elige tu deporte', desc: 'Gym, Running, Cross Training u otro' },
+                        { n: '2', icon: '📝', title: 'Registra tu sesión', desc: 'Añade ejercicios, series, reps y tiempos' },
+                        { n: '3', icon: '📊', title: 'Guarda y comparte', desc: 'Se guarda en tu historial y puedes publicarlo' },
+                    ].map(step => (
+                        <div key={step.n} className="p-4 text-center">
+                            <div className="text-2xl mb-1">{step.icon}</div>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-brand-red mb-0.5">Paso {step.n}</p>
+                            <p className="text-xs font-black text-foreground">{step.title}</p>
+                            <p className="text-[10px] text-muted-foreground font-medium leading-tight mt-0.5 hidden sm:block">{step.desc}</p>
                         </div>
-                        <h1 className="text-4xl md:text-6xl font-heading font-black !text-white italic uppercase tracking-tighter leading-none drop-shadow-2xl">
-                            CENTRO DE <span className="text-brand-red">COMBATE</span>
-                        </h1>
-                    </div>
-                    <Link href="/dashboard/training/session" className="w-full md:w-auto bg-white text-black px-10 py-5 rounded-2xl font-black uppercase italic tracking-widest flex items-center justify-center gap-3 hover:bg-brand-red hover:text-white transition-all transform hover:-translate-y-1 active:scale-95 shadow-[0_15px_30px_rgba(0,0,0,0.4)] group">
-                        <Play className="w-5 h-5 fill-current group-hover:scale-110 transition-transform" /> INICIAR SESIÓN
-                    </Link>
+                    ))}
                 </div>
             </div>
 

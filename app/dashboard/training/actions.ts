@@ -3,6 +3,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { createNotification } from '../notifications-actions';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const aiModel = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
@@ -400,6 +401,22 @@ export async function saveWorkout(workoutData: any) {
                 is_pr: hasAtLeastOnePR
             })
             .eq('id', workout.id);
+    }
+
+    // 4b. Send PR notifications — one per exercise that set a new record
+    if (prAchievements.length > 0) {
+        for (const pr of prAchievements) {
+            const improvement = pr.improvement > 0 ? ` (+${pr.improvement}kg)` : '';
+            await createNotification({
+                userId: user.id,
+                type: 'pr_achievement',
+                title: `🏆 ¡Nuevo récord personal!`,
+                content: `${pr.name}: ${pr.newMax}kg${improvement}. ¡Sigue así!`,
+                link: '/dashboard/profile'
+            });
+        }
+        // Also award extra XP per PR
+        await supabase.rpc('increment_xp', { amount: prAchievements.length * 50, profile_id: user.id });
     }
 
     // 5. Update Missions

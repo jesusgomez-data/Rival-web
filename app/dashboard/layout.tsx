@@ -304,7 +304,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         { name: t.navDashboard.home, href: "/dashboard", icon: Home },
         { name: t.navDashboard.messages, href: "/dashboard/messages", icon: MessageSquarePlus },
         { name: t.navDashboard.onlineCoach, href: "/dashboard/coach", icon: MessageCircle },
-        { name: t.navDashboard.training, href: "/dashboard/training", icon: Dumbbell },
+        // { name: t.navDashboard.training, href: "/dashboard/training", icon: Dumbbell }, // hidden temporarily
         { name: "Nutrición", href: "/dashboard/nutrition", icon: Zap },
         { name: "Body Stats", href: "/dashboard/body-stats", icon: Activity },
         { name: t.navDashboard.affiliateGym, href: "/dashboard/gyms", icon: Building2 },
@@ -394,9 +394,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                             <LogOut className="w-4 h-4 group-hover/logout:-translate-x-1 transition-transform" /> {t.navDashboard.logout}
                         </button>
 
-                        <Link href="/dashboard/training/session" className="w-full bg-background border border-border text-foreground py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-brand-red hover:text-white hover:border-brand-red transition-all shadow-xl uppercase text-[10px] tracking-wider">
-                            <PlusCircle className="w-4 h-4" /> {t.navDashboard.startTraining}
-                        </Link>
+                        {/* Training button hidden temporarily */}
 
                         <Link href="/dashboard/profile" className="flex items-center gap-3 px-2 py-2 group bg-foreground/5 rounded-2xl border border-transparent hover:border-brand-red/30 transition-all">
                             <div
@@ -528,13 +526,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
                             {/* Menu Actions */}
                             <div className="space-y-4 pt-4 border-t border-white/5">
-                                <Link
-                                    href="/dashboard/training/session"
-                                    onClick={() => setIsMenuOpen(false)}
-                                    className="w-full bg-brand-red text-white py-5 rounded-2xl font-black flex items-center justify-center gap-3 shadow-glow-sm uppercase text-[11px] tracking-widest active:scale-[0.98] transition-all"
-                                >
-                                    <PlusCircle className="w-5 h-5" /> Iniciar Entrenamiento
-                                </Link>
+                                {/* Training button hidden temporarily */}
                                 <button
                                     onClick={() => { setIsMenuOpen(false); handleLogout(); }}
                                     className="w-full bg-white/[0.02] text-gray-500 py-4.5 rounded-2xl font-black flex items-center justify-center gap-3 uppercase text-[10px] tracking-widest border border-white/5"

@@ -9,7 +9,6 @@ import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
 import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike } from "./community/actions";
-import { VideoManager } from "./VideoManager";
 import { createRepost } from "./community/repost-actions";
 import { sharePostViaMessage } from "./community/dm-actions";
 import { getFollows } from "./community/follows-actions";
@@ -566,56 +565,43 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     // Check if post actually has visual media to display in the main container
     const hasMedia = !!(photoUrl || isVideo || isCarousel);
 
-    // ── Register / unregister this video element in the global VideoManager ──
-    useEffect(() => {
-        if (!isVideo || !videoRef.current) return;
-        VideoManager.register(postId, videoRef.current);
-        return () => { VideoManager.unregister(postId); };
-    // videoRef.current is stable after mount — postId/isVideo are the real deps
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [postId, isVideo]);
-
-    // ── Intersection observer: watch the video container div ─────────────────
+    // ── VIDEO CONTROL — single effect, correct cleanup, direct DOM ──────────
     useEffect(() => {
         if (!isVideo) return;
-        // Wait one frame so videoContainerRef.current is always populated
-        const frame = requestAnimationFrame(() => {
-            const target = videoContainerRef.current ?? postRef.current;
-            if (!target) return;
 
-            const observer = new IntersectionObserver(
-                ([entry]) => setIsVisible(entry.isIntersecting),
-                { threshold: 0.5, rootMargin: '0px' }
-            );
-            observer.observe(target);
-            // Store disconnect on the effect cleanup ref
-            (frame as any).__disconnect = () => observer.disconnect();
-        });
-        return () => {
-            cancelAnimationFrame(frame);
-            (frame as any).__disconnect?.();
-        };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [postId, isVideo]);
+        // postRef is the outer card div — always rendered, never null
+        const target = postRef.current;
+        if (!target) return;
 
-    // ── Play / Pause — VideoManager ensures only ONE video plays at a time ───
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video || !isVideo) return;
+        const observer = new IntersectionObserver(([entry]) => {
+            // Read refs at callback time — guaranteed non-null when callback fires
+            const video = videoRef.current;
+            if (!video) return;
 
-        if (isVisible) {
-            // 1. Immediately pause every other video in the page (direct DOM)
-            VideoManager.pauseAllExcept(postId);
-            // 2. Play this one
-            setIsBuffering(true);
-            setLastActiveVideoId(postId);
-            video.play().catch(() => {});
-        } else {
-            video.pause();
-        }
-    }, [isVisible, isVideo, postId, setLastActiveVideoId]);
+            if (entry.isIntersecting) {
+                // ▶ Pause every other feed video via direct DOM query.
+                // No registration/unregistration needed — always finds every video.
+                document.querySelectorAll<HTMLVideoElement>('video[data-feed-video]')
+                    .forEach(v => { if (v !== video && !v.paused) v.pause(); });
 
-    // ── Pause when tab/app goes to background ────────────────────────────────
+                setIsVisible(true);
+                setIsBuffering(true);
+                setLastActiveVideoId(postId);
+                video.play().catch(() => {});
+            } else {
+                // ◼ This video left the viewport — stop it
+                setIsVisible(false);
+                if (!video.paused) video.pause();
+            }
+        }, { threshold: 0.5 });
+
+        observer.observe(target);
+
+        // ✅ Correct cleanup — observer.disconnect() is always called
+        return () => observer.disconnect();
+    }, [isVideo, postId, setLastActiveVideoId]);
+
+    // ── Pause when browser tab goes to background ────────────────────────────
     useEffect(() => {
         if (!isVideo) return;
         const onVisibilityChange = () => {
@@ -1143,10 +1129,10 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             <video
                                 ref={videoRef}
                                 src={image}
+                                data-feed-video="true"
                                 className="w-full h-full object-cover"
                                 loop
                                 playsInline
-                                webkit-playsinline="true"
                                 muted={isMuted || !isVisible || (typeof document !== 'undefined' && document.hidden)}
                                 preload="metadata"
                                 onCanPlay={() => {
