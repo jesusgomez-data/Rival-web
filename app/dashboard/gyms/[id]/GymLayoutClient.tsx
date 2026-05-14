@@ -76,6 +76,7 @@ export default function GymLayoutClient({
                 fixed inset-y-0 left-0 z-50
                 bg-[#0A0A0A] border-r border-white/[0.06]
                 transform transition-transform duration-300 ease-in-out
+                keep-all dark-section
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             `}>
                 {/* Sidebar header */}

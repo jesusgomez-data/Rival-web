@@ -9,6 +9,7 @@ import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
 import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike } from "./community/actions";
+import { VideoManager } from "./VideoManager";
 import { createRepost } from "./community/repost-actions";
 import { sharePostViaMessage } from "./community/dm-actions";
 import { getFollows } from "./community/follows-actions";
@@ -18,24 +19,25 @@ import { clsx } from "clsx";
 import { useTheme } from "../ThemeContext";
 import { isImageUrl } from "@/lib/utils";
 import { useStories } from "./stories/StoryContext";
-import PRCard from "./community/PRCard";
-import VideoReelsModal from "./VideoReelsModal";
-import dynamic from 'next/dynamic';
-import ShareableCard from "@/components/ShareableCard";
-import RunShareCard from "@/components/training/RunShareCard";
-import WorkoutShareCard from "@/components/training/WorkoutShareCard";
-import RouteMap from "@/components/training/RouteMap";
-import WODPostDisplay from "@/components/WODPostDisplay";
-import WODTrackerModal from "@/components/WODTrackerModal";
-import WODLeaderboardModal from "@/components/WODLeaderboardModal";
 import MentionText from "@/components/MentionText";
 import MentionInput from "@/components/MentionInput";
-import WodCard from "@/components/community/WodCard";
 import { useVideo } from "./VideoContext";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import dynamic from 'next/dynamic';
 
-const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
-const InstagramShareCard = dynamic(() => import("./InstagramShareCard"), { ssr: false });
+// ── Dynamic imports: loaded on-demand, NOT in the initial bundle ──────────────
+const EmojiPicker        = dynamic(() => import('emoji-picker-react'),                          { ssr: false });
+const InstagramShareCard = dynamic(() => import("./InstagramShareCard"),                         { ssr: false });
+const PRCard             = dynamic(() => import("./community/PRCard"),                           { ssr: false });
+const WodCard            = dynamic(() => import("@/components/community/WodCard"),               { ssr: false });
+const WODPostDisplay     = dynamic(() => import("@/components/WODPostDisplay"),                  { ssr: false });
+const WODTrackerModal    = dynamic(() => import("@/components/WODTrackerModal"),                  { ssr: false });
+const WODLeaderboardModal= dynamic(() => import("@/components/WODLeaderboardModal"),             { ssr: false });
+const VideoReelsModal    = dynamic(() => import("./VideoReelsModal"),                            { ssr: false });
+const ShareableCard      = dynamic(() => import("@/components/ShareableCard"),                   { ssr: false });
+const RunShareCard       = dynamic(() => import("@/components/training/RunShareCard"),           { ssr: false });
+const WorkoutShareCard   = dynamic(() => import("@/components/training/WorkoutShareCard"),       { ssr: false });
+const RouteMap           = dynamic(() => import("@/components/training/RouteMap"),               { ssr: false });
 
 
 function ShareButton({ 
@@ -543,6 +545,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const [showWODLeaderboard, setShowWODLeaderboard] = useState(false);
     const postRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const videoContainerRef = useRef<HTMLDivElement>(null);
     const { isMuted, toggleMute, setLastActiveVideoId, setIsMuted } = useVideo();
 
     const [isVisible, setIsVisible] = useState(false);
@@ -563,62 +566,76 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     // Check if post actually has visual media to display in the main container
     const hasMedia = !!(photoUrl || isVideo || isCarousel);
 
-    // Intersection Observer to detect if post is in view
+    // ── Register / unregister this video element in the global VideoManager ──
     useEffect(() => {
-        if (!postRef.current) return;
+        if (!isVideo || !videoRef.current) return;
+        VideoManager.register(postId, videoRef.current);
+        return () => { VideoManager.unregister(postId); };
+    // videoRef.current is stable after mount — postId/isVideo are the real deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [postId, isVideo]);
 
-        const observer = new IntersectionObserver(
-            ([entry]) => {
-                setIsVisible(entry.isIntersecting);
-            },
-            { 
-                threshold: 0.15, // Reduced from 0.5 to play even if only 15% is on screen
-                rootMargin: '100px 0px' // Start loading/playing 100px before it enters viewport
-            }
-        );
-
-        observer.observe(postRef.current);
-        return () => observer.disconnect();
-    }, [postId, setLastActiveVideoId]);
-
-    // Handle Page Visibility (app in background)
+    // ── Intersection observer: watch the video container div ─────────────────
     useEffect(() => {
-        const handleVisibilityChange = () => {
-            if (document.hidden && videoRef.current) {
-                videoRef.current.pause();
-            } else if (!document.hidden && isVisible && videoRef.current) {
-                videoRef.current.play().catch(() => {
-                    // Silently fail — onCanPlay/onError handlers manage the UI state
-                });
-            }
+        if (!isVideo) return;
+        // Wait one frame so videoContainerRef.current is always populated
+        const frame = requestAnimationFrame(() => {
+            const target = videoContainerRef.current ?? postRef.current;
+            if (!target) return;
+
+            const observer = new IntersectionObserver(
+                ([entry]) => setIsVisible(entry.isIntersecting),
+                { threshold: 0.5, rootMargin: '0px' }
+            );
+            observer.observe(target);
+            // Store disconnect on the effect cleanup ref
+            (frame as any).__disconnect = () => observer.disconnect();
+        });
+        return () => {
+            cancelAnimationFrame(frame);
+            (frame as any).__disconnect?.();
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [postId, isVideo]);
 
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-    }, [isVisible]);
-
-    // Apply mute/play status based on visibility
+    // ── Play / Pause — VideoManager ensures only ONE video plays at a time ───
     useEffect(() => {
-        if (!videoRef.current) return;
+        const video = videoRef.current;
+        if (!video || !isVideo) return;
 
         if (isVisible) {
+            // 1. Immediately pause every other video in the page (direct DOM)
+            VideoManager.pauseAllExcept(postId);
+            // 2. Play this one
             setIsBuffering(true);
-            videoRef.current.play().catch(() => {
-                // Silently fail — onCanPlay/onError handlers manage the UI state
-            });
+            setLastActiveVideoId(postId);
+            video.play().catch(() => {});
         } else {
-            videoRef.current.pause();
+            video.pause();
         }
-    }, [isVisible]);
+    }, [isVisible, isVideo, postId, setLastActiveVideoId]);
 
+    // ── Pause when tab/app goes to background ────────────────────────────────
+    useEffect(() => {
+        if (!isVideo) return;
+        const onVisibilityChange = () => {
+            const video = videoRef.current;
+            if (!video) return;
+            if (document.hidden) video.pause();
+            else if (isVisible) video.play().catch(() => {});
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+    }, [isVisible, isVideo]);
+
+    // ── Mute hint ─────────────────────────────────────────────────────────────
     useEffect(() => {
         if (isVisible && isMuted && isVideo) {
             setShowMuteHint(true);
-            const timer = setTimeout(() => setShowMuteHint(false), 3000);
-            return () => clearTimeout(timer);
-        } else {
-            setShowMuteHint(false);
+            const t = setTimeout(() => setShowMuteHint(false), 2500);
+            return () => clearTimeout(t);
         }
+        setShowMuteHint(false);
     }, [isVisible, isMuted, isVideo]);
 
     // Parse wod_data if it's a string
@@ -1028,7 +1045,13 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
 
             {/* Main Content Area (Media protagonism) - Only shown if there is photo/video/carousel */}
             {hasMedia && (
-                <div className="relative w-full overflow-hidden bg-black aspect-[4/5] md:aspect-[4/5]"> 
+                <div
+                    ref={videoContainerRef}
+                    className={clsx(
+                        "relative w-full overflow-hidden bg-black",
+                        isVideo ? "aspect-[9/16]" : "aspect-[4/5]"
+                    )}
+                >
                     {/* Media rendering */}
                     <div 
                         className="relative w-full h-full cursor-pointer overflow-hidden"
@@ -1123,14 +1146,15 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 className="w-full h-full object-cover"
                                 loop
                                 playsInline
+                                webkit-playsinline="true"
                                 muted={isMuted || !isVisible || (typeof document !== 'undefined' && document.hidden)}
-                                preload="auto"
-                                onCanPlay={() => { 
+                                preload="metadata"
+                                onCanPlay={() => {
                                     if (isVisible && videoRef.current) {
-                                        videoRef.current.play().catch((err) => { 
+                                        videoRef.current.play().catch((err) => {
                                             console.warn("[FeedPost] Video play failed:", err);
-                                            setLoadError(true); 
-                                            setIsBuffering(false); 
+                                            setLoadError(true);
+                                            setIsBuffering(false);
                                         });
                                     }
                                 }}
@@ -1138,10 +1162,10 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 onPlaying={() => { setIsBuffering(false); setIsActuallyPlaying(true); setLoadError(false); }}
                                 onPause={() => setIsActuallyPlaying(false)}
                                 onEnded={() => setIsActuallyPlaying(false)}
-                                onError={(e) => { 
+                                onError={(e) => {
                                     console.error("[FeedPost] Video load error:", e);
-                                    setLoadError(true); 
-                                    setIsBuffering(false); 
+                                    setLoadError(true);
+                                    setIsBuffering(false);
                                 }}
                             />
                         ) : isCarousel ? (

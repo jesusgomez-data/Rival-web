@@ -72,11 +72,42 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '5mb',
     },
-    // Enable optimistic client cache for faster navigations
     staleTimes: {
       dynamic: 30,
       static: 180,
     },
+    // Tree-shake heavy packages — eliminates unused icons/components from bundle
+    optimizePackageImports: [
+      'lucide-react',
+      'framer-motion',
+      'recharts',
+      '@supabase/supabase-js',
+      'date-fns',
+    ],
+  },
+  // Reduce bundle by splitting vendor chunks more aggressively
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.optimization.splitChunks = {
+        ...config.optimization.splitChunks,
+        cacheGroups: {
+          ...config.optimization.splitChunks?.cacheGroups,
+          framerMotion: {
+            name: 'framer-motion',
+            test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
+            chunks: 'all',
+            priority: 20,
+          },
+          supabase: {
+            name: 'supabase',
+            test: /[\\/]node_modules[\\/]@supabase[\\/]/,
+            chunks: 'all',
+            priority: 20,
+          },
+        },
+      };
+    }
+    return config;
   },
   // Enable gzip/brotli compression on responses
   compress: true,

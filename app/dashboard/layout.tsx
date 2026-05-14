@@ -40,12 +40,15 @@ import { StoryProvider, useStories } from "./stories/StoryContext";
 import { useTheme } from "../ThemeContext";
 import { useLanguage } from "@/app/LanguageContext";
 import ThemeToggle from "@/components/ThemeToggle";
-import PendingReviewPrompt from "./PendingReviewPrompt";
-import SupportModal from "./gyms/SupportModal";
-import AnalyticsTracker from "./admin/AnalyticsTracker";
 import { playNotificationSound } from "@/app/utils/audio";
 import { VideoProvider } from "./VideoContext";
-import OnboardingTour from "@/components/OnboardingTour";
+import dynamic from "next/dynamic";
+
+// ── Non-critical layout components — loaded after paint ──────────────────────
+const PendingReviewPrompt = dynamic(() => import("./PendingReviewPrompt"),       { ssr: false, loading: () => null });
+const SupportModal        = dynamic(() => import("./gyms/SupportModal"),          { ssr: false, loading: () => null });
+const AnalyticsTracker    = dynamic(() => import("./admin/AnalyticsTracker"),     { ssr: false, loading: () => null });
+const OnboardingTour      = dynamic(() => import("@/components/OnboardingTour"),  { ssr: false, loading: () => null });
 
 // ── New-user hint above the "+" button ────────────────────────────────────────
 function NewUserHint() {

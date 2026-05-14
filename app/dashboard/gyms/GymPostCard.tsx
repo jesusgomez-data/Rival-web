@@ -234,7 +234,7 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                             />
                             <div className="pt-4">
                                 <Link
-                                    href={`/dashboard/training/session?wodId=${post.id}`}
+                                    href={`/dashboard#post-${post.id}`}
                                     className="flex items-center justify-center gap-2 w-full py-4 bg-brand-red text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-600 transition-all shadow-glow-sm hover:shadow-glow group"
                                 >
                                     <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" /> Registrar Entrenamiento

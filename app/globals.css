@@ -64,8 +64,11 @@
 /* Hardcoded dark backgrounds that should be light in [SOL] mode */
 [data-theme='light'] .bg-\[\#0a0a0a\]:not(.keep-all):not(.keep-all *),
 [data-theme='light'] .bg-\[\#0d0d0d\]:not(.keep-all):not(.keep-all *),
+[data-theme='light'] .bg-\[\#0e0e0e\]:not(.keep-all):not(.keep-all *),
+[data-theme='light'] .bg-\[\#0E0E0E\]:not(.keep-all):not(.keep-all *),
 [data-theme='light'] .bg-\[\#0f0f0f\]:not(.keep-all):not(.keep-all *),
 [data-theme='light'] .bg-\[\#111\]:not(.keep-all):not(.keep-all *),
+[data-theme='light'] .bg-\[\#121212\]:not(.keep-all):not(.keep-all *),
 [data-theme='light'] .bg-zinc-900:not(.keep-all):not(.keep-all *),
 [data-theme='light'] .bg-zinc-950:not(.keep-all):not(.keep-all *) {
   background-color: #ffffff !important;
@@ -73,9 +76,16 @@
 }
 
 [data-theme='light'] .border-white\/5:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-white\/\[0\.05\]:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-white\/\[0\.06\]:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-white\/\[0\.07\]:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
 [data-theme='light'] .border-white\/10:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
 [data-theme='light'] .border-white\/20:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
-  border-color: #cbd5e1 !important; /* Slightly darker for better visibility in light mode */
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme='light'] .divide-white\/\[0\.05\]:not(.keep-all):not(.keep-all *) > * + * {
+  border-color: #e2e8f0 !important;
 }
 
 [data-theme='light'] .stroke-white\/5,
@@ -123,19 +133,27 @@
 
 [data-theme='light'] .text-white\/20:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
 [data-theme='light'] .text-white\/30:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all) {
-  color: rgba(15, 23, 42, 0.2) !important;
+  color: rgba(15, 23, 42, 0.35) !important;
+}
+
+[data-theme='light'] .text-white\/25:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all) {
+  color: rgba(15, 23, 42, 0.4) !important;
+}
+
+[data-theme='light'] .text-white\/35:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all) {
+  color: rgba(15, 23, 42, 0.55) !important;
 }
 
 [data-theme='light'] .text-white\/40:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
 [data-theme='light'] .text-white\/50:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
 [data-theme='light'] .text-white\/60:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all) {
-  color: rgba(15, 23, 42, 0.4) !important;
+  color: rgba(15, 23, 42, 0.5) !important;
 }
 
 [data-theme='light'] .text-white\/70:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
 [data-theme='light'] .text-white\/80:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
 [data-theme='light'] .text-white\/90:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all) {
-  color: rgba(15, 23, 42, 0.7) !important;
+  color: rgba(15, 23, 42, 0.75) !important;
 }
 
 /* Permitir que textos con sombras específicas sigan siendo blancos incluso en light mode */

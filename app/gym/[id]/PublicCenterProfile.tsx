@@ -983,7 +983,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
 
                                                         {/* Render Blocks as Cards (New Style + Collapsible) */}
                                                         {(wodData.blocks || []).map((block: any, idx: number) => {
-                                                            const isBlockOpen = expandedBlocks.has(`${wod.id}-${idx}`) || isOpen;
+                                                            const isBlockOpen = expandedBlocks.has(`${wod.id}-${idx}`);
 
                                                             // Parse content into lines if it's a string, or use exercises array if available
                                                             const lines = (block.exercises && block.exercises.length > 0)

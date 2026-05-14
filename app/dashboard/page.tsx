@@ -11,22 +11,26 @@ import { useLanguage } from "@/app/LanguageContext";
 import LikeButton from "./community/LikeButton";
 import FollowButton from "./community/FollowButton";
 import FeedPost from "./FeedPost";
-import CreatePost from "./CreatePost";
 import StoryBar from "./stories/StoryBar";
 import { getMyDuels, acceptDuel } from "./community/duel-actions";
-import UserMediaGallery from "./UserMediaGallery";
 import { getMissions } from "./training/actions";
-import DashboardTour from "@/components/onboarding/DashboardTour";
-import EssentialsHero from "@/components/onboarding/EssentialsHero";
 import InfoTooltip from "@/components/InfoTooltip";
 import { getMonday } from "@/utils/date";
-import DuelCountdown from "./community/DuelCountdown";
-import VictoryShareCard from "./community/VictoryShareCard";
-import DailyCheckinWidget from "@/components/wellness/DailyCheckinWidget";
 import { getTodayCheckin } from "./wellness-actions";
-import WODGeneratorUI from "@/components/WODGeneratorUI";
-import VideoReelsViewer, { type ReelPost } from "./VideoReelsViewer";
 import { AnimatePresence } from "framer-motion";
+import dynamic from "next/dynamic";
+import type { ReelPost } from "./VideoReelsViewer";
+
+// ── Dynamic: loaded only when needed, keeps initial bundle lean ───────────────
+const CreatePost         = dynamic(() => import("./CreatePost"),                                { ssr: false });
+const DashboardTour      = dynamic(() => import("@/components/onboarding/DashboardTour"),       { ssr: false, loading: () => null });
+const EssentialsHero     = dynamic(() => import("@/components/onboarding/EssentialsHero"),      { ssr: false, loading: () => null });
+const DailyCheckinWidget = dynamic(() => import("@/components/wellness/DailyCheckinWidget"),    { ssr: false, loading: () => null });
+const DuelCountdown      = dynamic(() => import("./community/DuelCountdown"),                   { ssr: false, loading: () => null });
+const VictoryShareCard   = dynamic(() => import("./community/VictoryShareCard"),                { ssr: false, loading: () => null });
+const UserMediaGallery   = dynamic(() => import("./UserMediaGallery"),                          { ssr: false, loading: () => null });
+const WODGeneratorUI     = dynamic(() => import("@/components/WODGeneratorUI"),                 { ssr: false, loading: () => null });
+const VideoReelsViewer   = dynamic(() => import("./VideoReelsViewer"),                          { ssr: false, loading: () => null });
 
 function SuggestedUser({ id, name, username, role, avatar, isFollowing, isOfficial }: { id: string, name: string, username: string, role: string, avatar?: string, isFollowing: boolean, isOfficial?: boolean }) {
     const { t } = useLanguage();
@@ -298,6 +302,34 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
     )
 }
 
+// ── Session cache — stale-while-revalidate for dashboard stats ───────────────
+const DASH_CACHE_KEY = 'rival_dash_v1';
+const DASH_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+
+function readDashCache() {
+    try {
+        const raw = sessionStorage.getItem(DASH_CACHE_KEY);
+        if (!raw) return null;
+        const { ts, payload } = JSON.parse(raw);
+        if (Date.now() - ts > DASH_CACHE_TTL) return null;
+        return payload;
+    } catch { return null; }
+}
+
+function writeDashCache(payload: any) {
+    try {
+        const safe = {
+            profile: payload.profile,
+            workoutCount: payload.workoutCount,
+            rivalsCount: payload.rivalsCount,
+            workoutStreak: payload.workoutStreak,
+            trendingAthletes: payload.trendingAthletes,
+            myGyms: payload.myGyms,
+        };
+        sessionStorage.setItem(DASH_CACHE_KEY, JSON.stringify({ ts: Date.now(), payload: safe }));
+    } catch {}
+}
+
 export default function DashboardHome() {
     const { language, t } = useLanguage();
     // Reuse singleton client — never create more than one per browser session
@@ -336,7 +368,14 @@ export default function DashboardHome() {
 
     // Memoized fetch for main dashboard data (profile, stats, duels)
     const loadData = useCallback(async () => {
-        setLoading(true);
+        // Show cached data immediately — page feels instant on repeat visits
+        const cached = readDashCache();
+        if (cached) {
+            setData((prev: any) => ({ ...prev, ...cached }));
+            setLoading(false);
+        } else {
+            setLoading(true);
+        }
         try {
             const { data: authData } = await supabase.auth.getUser();
             const user = authData?.user;
@@ -385,6 +424,16 @@ export default function DashboardHome() {
                 current: sessionMission?.current_value || 0,
                 goal: sessionMission?.goal_value || 5,
             };
+
+            const freshStats = {
+                profile: profileData,
+                workoutCount: (workouts || 0) + (classes || 0),
+                trendingAthletes: trending?.map((athlete: any) => ({ ...athlete, isFollowing: followedIds.has(athlete.id) })) || [],
+                rivalsCount: followingCount || 0,
+                myGyms: memberships?.map((m: any) => m.organization) || [],
+                workoutStreak: missionsData?.find((m: any) => m.goal_type === 'streak')?.current_value || 0,
+            };
+            writeDashCache(freshStats);
 
             setData((prev: any) => ({
                 ...prev,

@@ -5,9 +5,9 @@
  * Interfaz para generar entrenamientos con Gemini AI
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Dumbbell,
   Clock,
@@ -39,6 +39,14 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
   const [creatorRounds, setCreatorRounds] = useState("");
   const [creatorRx, setCreatorRx] = useState(true);
   const [showResults, setShowResults] = useState(false);
+  const [isButtonVisible, setIsButtonVisible] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIsButtonVisible(prev => !prev);
+    }, 40000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Form state
   const [workoutType, setWorkoutType] = useState<WorkoutType>("amrap");
@@ -178,15 +186,24 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
 
   if (!isOpen) {
     return (
-      <motion.button
-        onClick={() => setIsOpen(true)}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        className="fixed bottom-24 right-6 z-50 bg-gradient-to-r from-brand-red to-orange-600 text-white p-4 rounded-full shadow-2xl flex items-center gap-3 font-bold hover:shadow-brand-red/50 transition-shadow"
-      >
-        <Sparkles className="w-6 h-6" />
-        <span className="hidden sm:inline">Generar WOD</span>
-      </motion.button>
+      <AnimatePresence>
+        {isButtonVisible && (
+          <motion.button
+            key="wod-fab"
+            onClick={() => { setIsButtonVisible(true); setIsOpen(true); }}
+            initial={{ scale: 0, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0, opacity: 0, y: 20 }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            className="fixed bottom-24 right-6 z-50 bg-gradient-to-r from-brand-red to-orange-600 text-white p-4 rounded-full shadow-2xl flex items-center gap-3 font-bold"
+          >
+            <Sparkles className="w-6 h-6" />
+            <span className="hidden sm:inline">Generar WOD</span>
+          </motion.button>
+        )}
+      </AnimatePresence>
     );
   }
 
