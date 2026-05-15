@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { ArrowLeft, ArrowRight, Check, Mail, Building2, MapPin, Lock, User } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { ArrowLeft, ArrowRight, Check, Mail, Building2, MapPin, Lock, User, Camera, Loader2, Navigation } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -26,6 +26,9 @@ const plans = [
 export default function CenterSignup() {
   const router = useRouter()
   const supabase = createClient()
+  const fileLogoRef = useRef<HTMLInputElement>(null)
+  const fileCoverRef = useRef<HTMLInputElement>(null)
+
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
     email: '',
@@ -35,21 +38,27 @@ export default function CenterSignup() {
     centerType: '',
     country: '',
     city: '',
+    address: '',
     plan: 'starter',
+    logoUrl: '',
+    coverUrl: '',
+    latitude: '',
+    longitude: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [existingUser, setExistingUser] = useState<any>(null)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [uploadingCover, setUploadingCover] = useState(false)
+  const [gpsLoading, setGpsLoading] = useState(false)
+  const [addressSuggestions, setAddressSuggestions] = useState<any[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
 
-  // Check for existing session on mount
   useEffect(() => {
     async function checkSession() {
       const { data: { session } } = await supabase.auth.getSession()
-
-      // Handle plan from URL if present
-      const urlParams = new URLSearchParams(window.location.search);
-      const planFromUrl = urlParams.get('plan');
-
+      const urlParams = new URLSearchParams(window.location.search)
+      const planFromUrl = urlParams.get('plan')
       if (session?.user) {
         setExistingUser(session.user)
         setFormData(prev => ({
@@ -57,7 +66,7 @@ export default function CenterSignup() {
           email: session.user.email || '',
           plan: planFromUrl || prev.plan
         }))
-        setStep(2) // Skip Step 1 (Auth)
+        setStep(2)
       } else if (planFromUrl) {
         setFormData(prev => ({ ...prev, plan: planFromUrl }))
       }
@@ -65,59 +74,112 @@ export default function CenterSignup() {
     checkSession()
   }, [])
 
+  // Address autocomplete with Nominatim (OpenStreetMap)
+  useEffect(() => {
+    if (formData.address.length < 3) { setAddressSuggestions([]); return }
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(formData.address)}&format=json&addressdetails=1&limit=5&accept-language=es`,
+          { headers: { 'Accept-Language': 'es' } }
+        )
+        const data = await res.json()
+        setAddressSuggestions(data)
+        setShowSuggestions(true)
+      } catch { /* ignore network errors */ }
+    }, 450)
+    return () => clearTimeout(timer)
+  }, [formData.address])
+
+  const handleGPS = () => {
+    if (!navigator.geolocation) return
+    setGpsLoading(true)
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=es`
+          )
+          const data = await res.json()
+          const city = data.address?.city || data.address?.town || data.address?.village || formData.city
+          const country = data.address?.country || formData.country
+          const road = data.address?.road || ''
+          const houseNumber = data.address?.house_number || ''
+          const address = [road, houseNumber].filter(Boolean).join(' ') || data.display_name || ''
+          setFormData(prev => ({ ...prev, address, city, country, latitude: String(latitude), longitude: String(longitude) }))
+          setShowSuggestions(false)
+        } catch { /* ignore */ } finally { setGpsLoading(false) }
+      },
+      () => setGpsLoading(false),
+      { enableHighAccuracy: true, timeout: 10000 }
+    )
+  }
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingLogo(true)
+    const ext = file.name.split('.').pop()
+    const { data: userData } = await supabase.auth.getUser()
+    const filename = `signup_${userData.user?.id}_logo_${Date.now()}.${ext}`
+    const { error: uploadError } = await supabase.storage.from('center-logos').upload(filename, file, { upsert: true })
+    if (!uploadError) {
+      const { data } = supabase.storage.from('center-logos').getPublicUrl(filename)
+      setFormData(prev => ({ ...prev, logoUrl: data.publicUrl }))
+    }
+    setUploadingLogo(false)
+  }
+
+  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingCover(true)
+    const ext = file.name.split('.').pop()
+    const { data: userData } = await supabase.auth.getUser()
+    const filename = `signup_${userData.user?.id}_cover_${Date.now()}.${ext}`
+    const { error: uploadError } = await supabase.storage.from('center-logos').upload(filename, file, { upsert: true })
+    if (!uploadError) {
+      const { data } = supabase.storage.from('center-logos').getPublicUrl(filename)
+      setFormData(prev => ({ ...prev, coverUrl: data.publicUrl }))
+    }
+    setUploadingCover(false)
+  }
+
   const handlePlanSelect = async (planId: string) => {
     setLoading(true)
     setError('')
-
     try {
-      // Allow Server Action to validate auth (it receives cookies)
-      // client-side getSession() can sometimes be delayed or flaky immediately after signup
-
-      // Profile creation handled above to avoid duplicates for existing users
-
-      let userIdToUse = existingUser?.id;
-
-      // If we just signed up/logged in, we might not have updated `existingUser` state yet.
-      // But we need the ID.
-      // If `existingUser` is null, we try to get it from a verify call or assume Step 1 worked.
-
+      let userIdToUse = existingUser?.id
       if (!userIdToUse) {
-        // Try to get session one last time
         const { data } = await supabase.auth.getUser()
         userIdToUse = data.user?.id
       }
+      if (!userIdToUse) throw new Error('No se pudo identificar el usuario. Por favor recarga.')
 
-      if (!userIdToUse) {
-        throw new Error('No se pudo identificar el usuario. Por favor recarga.')
-      }
-
-      // 3. Create Center via standard API Route
-      // The updated API route now automatically handles auth via cookies
       const response = await fetch('/api/centers', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: formData.email,
           centerName: formData.centerName,
           centerType: formData.centerType,
           country: formData.country,
           city: formData.city,
+          address: formData.address,
+          logoUrl: formData.logoUrl,
+          coverUrl: formData.coverUrl,
+          latitude: formData.latitude,
+          longitude: formData.longitude,
           plan: planId,
           fullName: formData.fullName,
         }),
       })
 
       const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Error al crear el centro')
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al crear el centro')
-      }
-
-      alert(`¡Cuenta y Centro creados exitosamente!`)
       router.push(`/dashboard/gyms/${data.organization.id}`)
-
     } catch (err: any) {
       console.error(err)
       setError(err.message || 'Error al procesar el registro')
@@ -136,7 +198,7 @@ export default function CenterSignup() {
         </div>
       </div>
 
-      <div className="w-full lg:w-1/2 flex items-start lg:items-center justify-center p-8 relative overflow-y-auto">
+      <div className="w-full lg:w-1/2 flex items-start justify-center p-8 relative overflow-y-auto">
         <div className="max-w-md w-full pt-4 pb-12">
           <Link href="/" className="mb-6 text-gray-400 hover:text-white flex items-center gap-2 transition-colors w-fit group">
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" /> Volver al Inicio
@@ -163,6 +225,7 @@ export default function CenterSignup() {
 
           {error && <div className="bg-red-500/10 border border-red-500/50 text-red-500 p-3 rounded-xl text-sm mb-6 text-center font-bold">{error}</div>}
 
+          {/* STEP 1 — Account */}
           {step === 1 && (
             <div className="space-y-6">
               <div className="bg-white/5 p-6 rounded-xl border border-white/10 mb-6">
@@ -193,32 +256,15 @@ export default function CenterSignup() {
               </div>
               <button onClick={async () => {
                 if (formData.email && formData.password.length >= 6 && formData.fullName) {
-                  setError('');
-
-                  // Attempt auth here if needed, or just validate
-                  // Logic is actually inside the wizard step handling in a real app, 
-                  // but here we just moved the state update.
-                  // Wait, the auth happens in handlePlanSelect in the previous code? 
-                  // NO! The previous code had the auth logic inside "handlePlanSelect" (wrongly) or "setStep" (also wrongly)?
-                  // Actually, looking at the code, Step 1 just sets Step 2. 
-                  // The actual Auth call happens in `handlePlanSelect` at the END.
-
-                  // FIX: We must Authenticate IMMEDIATELY at Step 1 to set cookies 
-                  // so they are ready by Step 4.
-
+                  setError('')
                   try {
                     setLoading(true)
-                    // 1. Sign Up / Login
                     const { data: authData, error: authError } = await supabase.auth.signUp({
                       email: formData.email,
                       password: formData.password,
-                      options: {
-                        data: { full_name: formData.fullName }
-                      }
+                      options: { data: { full_name: formData.fullName } }
                     })
-
                     if (authError) {
-                      // Try login
                       if (authError.message.includes('registered') || authError.status === 400) {
                         const { error: signinError } = await supabase.auth.signInWithPassword({
                           email: formData.email,
@@ -229,19 +275,15 @@ export default function CenterSignup() {
                         throw new Error(authError.message)
                       }
                     }
-
-                    // Auth successful, refresh router updates cookies
-                    router.refresh();
-                    setStep(2);
+                    router.refresh()
+                    setStep(2)
                     setLoading(false)
-
                   } catch (e: any) {
                     setError(e.message)
                     setLoading(false)
                   }
-
                 } else {
-                  setError('Por favor completa todos los campos correctamente');
+                  setError('Por favor completa todos los campos correctamente')
                 }
               }} className="w-full bg-brand-red hover:bg-brand-accent text-white py-4 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-brand-red/20 flex items-center justify-center gap-2 group">
                 {loading ? 'Procesando...' : <>Crear Cuenta y Continuar <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>}
@@ -252,13 +294,14 @@ export default function CenterSignup() {
             </div>
           )}
 
+          {/* STEP 2 — Center Type */}
           {step === 2 && (
             <div className="space-y-6">
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-4">Tipo</label>
                 <div className="grid grid-cols-2 gap-3">
                   {centerTypes.map((type) => (
-                    <button key={type.id} onClick={() => { setFormData({ ...formData, centerType: type.id }); setError(''); setStep(3); }} className="p-4 border border-white/10 rounded-xl text-center hover:border-brand-red/50 hover:bg-brand-red/10 transition-all">
+                    <button key={type.id} onClick={() => { setFormData({ ...formData, centerType: type.id }); setError(''); setStep(3) }} className="p-4 border border-white/10 rounded-xl text-center hover:border-brand-red/50 hover:bg-brand-red/10 transition-all">
                       <div className="text-2xl mb-2">{type.emoji}</div>
                       <div className="text-sm font-bold text-white">{type.label}</div>
                     </button>
@@ -271,16 +314,19 @@ export default function CenterSignup() {
             </div>
           )}
 
+          {/* STEP 3 — Details, Address & Photos */}
           {step === 3 && (
-            <div className="space-y-6">
+            <div className="space-y-5">
+              {/* Center name */}
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Nombre</label>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Nombre del Centro</label>
                 <div className="relative group">
                   <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-brand-red transition-colors" />
                   <input type="text" value={formData.centerName} onChange={(e) => setFormData({ ...formData, centerName: e.target.value })} className="w-full bg-brand-gray border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all placeholder:text-gray-600" placeholder="Rival Box Madrid" />
                 </div>
               </div>
 
+              {/* Country + City */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">País</label>
@@ -300,17 +346,138 @@ export default function CenterSignup() {
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              {/* Address with GPS + autocomplete */}
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Dirección</label>
+                <div className="relative group">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-brand-red transition-colors z-10" />
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => { setFormData({ ...formData, address: e.target.value }); setShowSuggestions(true) }}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    className="w-full bg-brand-gray border border-white/10 rounded-xl py-4 pl-12 pr-12 text-white focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all placeholder:text-gray-600"
+                    placeholder="Calle de Alcalá 12..."
+                  />
+                  <button
+                    type="button"
+                    onClick={handleGPS}
+                    disabled={gpsLoading}
+                    title="Usar ubicación GPS"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-gray-500 hover:text-brand-red hover:bg-brand-red/10 transition-all disabled:opacity-50"
+                  >
+                    {gpsLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Navigation className="w-4 h-4" />}
+                  </button>
+                  {showSuggestions && addressSuggestions.length > 0 && (
+                    <div className="absolute z-50 top-full left-0 right-0 bg-slate-900 border border-white/10 rounded-xl mt-1 overflow-hidden shadow-xl">
+                      {addressSuggestions.map((s, i) => (
+                        <button
+                          key={i}
+                          type="button"
+                          onMouseDown={() => {
+                            const city = s.address?.city || s.address?.town || s.address?.village || formData.city
+                            const country = s.address?.country || formData.country
+                            const road = s.address?.road || ''
+                            const houseNumber = s.address?.house_number || ''
+                            const address = [road, houseNumber].filter(Boolean).join(' ') || s.display_name
+                            setFormData(prev => ({ ...prev, address, city, country, latitude: s.lat, longitude: s.lon }))
+                            setShowSuggestions(false)
+                          }}
+                          className="w-full text-left px-4 py-3 text-sm text-gray-300 hover:bg-white/5 border-b border-white/5 last:border-0 transition-colors"
+                        >
+                          <span className="text-gray-500 mr-2">📍</span>
+                          {s.display_name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs text-gray-600 mt-1.5 flex items-center gap-1">
+                  <Navigation className="w-3 h-3" /> Escribe para buscar o pulsa el icono GPS para autodetectar
+                </p>
+              </div>
+
+              {/* Logo + Cover photos */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Logo */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Foto de perfil</label>
+                  <input ref={fileLogoRef} type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
+                  <button
+                    type="button"
+                    onClick={() => fileLogoRef.current?.click()}
+                    disabled={uploadingLogo}
+                    className="w-full h-24 rounded-xl border-2 border-dashed border-white/10 hover:border-brand-red/50 hover:bg-brand-red/5 transition-all flex flex-col items-center justify-center gap-2 overflow-hidden relative"
+                  >
+                    {formData.logoUrl ? (
+                      <img src={formData.logoUrl} alt="Logo" className="absolute inset-0 w-full h-full object-cover" />
+                    ) : uploadingLogo ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-brand-red" />
+                    ) : (
+                      <>
+                        <Camera className="w-5 h-5 text-gray-500" />
+                        <span className="text-xs text-gray-500">Logo</span>
+                      </>
+                    )}
+                    {formData.logoUrl && (
+                      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <Camera className="w-5 h-5 text-white" />
+                      </div>
+                    )}
+                  </button>
+                </div>
+
+                {/* Cover */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Foto de portada</label>
+                  <input ref={fileCoverRef} type="file" accept="image/*" onChange={handleCoverUpload} className="hidden" />
+                  <button
+                    type="button"
+                    onClick={() => fileCoverRef.current?.click()}
+                    disabled={uploadingCover}
+                    className="w-full h-24 rounded-xl border-2 border-dashed border-white/10 hover:border-brand-red/50 hover:bg-brand-red/5 transition-all flex flex-col items-center justify-center gap-2 overflow-hidden relative"
+                  >
+                    {formData.coverUrl ? (
+                      <img src={formData.coverUrl} alt="Portada" className="absolute inset-0 w-full h-full object-cover" />
+                    ) : uploadingCover ? (
+                      <Loader2 className="w-5 h-5 animate-spin text-brand-red" />
+                    ) : (
+                      <>
+                        <Camera className="w-5 h-5 text-gray-500" />
+                        <span className="text-xs text-gray-500">Portada</span>
+                      </>
+                    )}
+                    {formData.coverUrl && (
+                      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
+                        <Camera className="w-5 h-5 text-white" />
+                      </div>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-1">
                 <button onClick={() => setStep(2)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
                   <ArrowLeft className="w-5 h-5" /> Atrás
                 </button>
-                <button onClick={() => { if (formData.centerName && formData.country && formData.city) { setError(''); setStep(4); } else { setError('Completa todos'); } }} className="flex-1 bg-brand-red hover:bg-brand-accent text-white py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 group">
+                <button
+                  onClick={() => {
+                    if (formData.centerName && formData.country && formData.city) {
+                      setError('')
+                      setStep(4)
+                    } else {
+                      setError('Completa el nombre, país y ciudad')
+                    }
+                  }}
+                  className="flex-1 bg-brand-red hover:bg-brand-accent text-white py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 group"
+                >
                   Continuar <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
               </div>
             </div>
           )}
 
+          {/* STEP 4 — Plan */}
           {step === 4 && (
             <div className="space-y-6">
               <div>
@@ -322,11 +489,21 @@ export default function CenterSignup() {
                 <p className="text-sm text-gray-400 mb-4">Todos incluyen 30 días gratis.</p>
                 <div className="space-y-3">
                   {plans.map((plan) => (
-                    <button key={plan.id} onClick={() => handlePlanSelect(plan.id)} disabled={loading} className={`w-full p-4 rounded-xl border transition-all text-left ${formData.plan === plan.id ? 'border-brand-red bg-brand-red/10' : 'border-white/10 hover:border-white/20'} disabled:opacity-50`}>
+                    <button
+                      key={plan.id}
+                      onClick={() => setFormData({ ...formData, plan: plan.id })}
+                      disabled={loading}
+                      className={`w-full p-4 rounded-xl border-2 transition-all text-left disabled:opacity-50 ${formData.plan === plan.id ? 'border-brand-red bg-brand-red/10' : 'border-white/10 hover:border-white/20'}`}
+                    >
                       <div className="flex justify-between items-center">
-                        <div>
-                          <div className="font-bold text-white">{plan.name}</div>
-                          <div className="text-xs text-gray-400">{plan.description}</div>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${formData.plan === plan.id ? 'border-brand-red bg-brand-red' : 'border-white/30'}`}>
+                            {formData.plan === plan.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </div>
+                          <div>
+                            <div className="font-bold text-white">{plan.name}</div>
+                            <div className="text-xs text-gray-400">{plan.description}</div>
+                          </div>
                         </div>
                         <div className="text-2xl font-bold text-brand-red">{plan.price}</div>
                       </div>
@@ -335,7 +512,18 @@ export default function CenterSignup() {
                 </div>
               </div>
 
-              <button onClick={() => setStep(3)} className="w-full bg-slate-800 hover:bg-slate-700 text-white py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
+              <button
+                onClick={() => handlePlanSelect(formData.plan)}
+                disabled={loading}
+                className="w-full bg-brand-red hover:bg-brand-accent text-white py-4 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-brand-red/20 flex items-center justify-center gap-2 group disabled:opacity-70"
+              >
+                {loading
+                  ? <><Loader2 className="w-5 h-5 animate-spin" /> Creando centro...</>
+                  : <>Confirmar y Crear Centro <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>
+                }
+              </button>
+
+              <button onClick={() => setStep(3)} disabled={loading} className="w-full bg-slate-800 hover:bg-slate-700 text-white py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                 <ArrowLeft className="w-5 h-5" /> Atrás
               </button>
             </div>

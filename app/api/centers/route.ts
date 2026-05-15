@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
     const userId = user.id
 
     const body = await request.json()
-    const { email, centerName, centerType, country, city, plan, fullName } = body
+    const { email, centerName, centerType, country, city, plan, fullName, address, logoUrl, coverUrl, latitude, longitude } = body
 
     // Validate required fields
     if (!centerName || !centerType || !country || !city) {
@@ -63,10 +63,15 @@ export async function POST(request: NextRequest) {
       .from('organizations')
       .insert({
         name: centerName,
-        email: email, // Contact email for center, usually same as owner
+        email: email,
         center_type: centerType,
         country,
         city,
+        address: address || null,
+        logo_url: logoUrl || null,
+        cover_photo_url: coverUrl || null,
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
         plan: plan || 'free',
         owner_id: userId,
         is_public: true,
