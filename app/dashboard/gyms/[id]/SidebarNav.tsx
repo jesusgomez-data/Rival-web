@@ -34,33 +34,58 @@ export default function SidebarNav({
     const query    = sedeId ? `?centerId=${sedeId}` : "";
     const isPT     = centerType === 'personal_trainer';
 
-    const sections: NavSection[] = [
+    const sections: NavSection[] = isPT ? [
         {
-            label: 'Principal',
+            label: 'Entrenador',
             items: [
-                { name: 'Resumen',                  href: `/dashboard/gyms/${id}${sedeId ? `/sedes/${sedeId}` : ''}`, icon: LayoutDashboard },
-                { name: isPT ? 'Agenda' : 'Horario', href: `/dashboard/gyms/${id}/schedule${query}`,  icon: Calendar },
-                { name: isPT ? 'Alumnos' : 'Miembros', href: `/dashboard/gyms/${id}/members${query}`, icon: Users, badge: pendingTrials || null },
-                { name: 'Check-in',                 href: `/dashboard/gyms/${id}/checkin${query}`,    icon: ScanLine },
-                { name: isPT ? 'Programas' : 'Entrenamientos', href: `/dashboard/gyms/${id}/${isPT ? 'programming' : 'wods'}${query}`, icon: Dumbbell },
+                { name: 'Resumen',       href: `/dashboard/gyms/${id}`,                icon: LayoutDashboard },
+                { name: 'Agenda',        href: `/dashboard/gyms/${id}/schedule`,        icon: Calendar },
+                { name: 'Alumnos',       href: `/dashboard/gyms/${id}/members`,         icon: Users, badge: pendingTrials || null },
+                { name: 'Programación',  href: `/dashboard/gyms/${id}/programming`,     icon: Dumbbell },
             ]
         },
         {
             label: 'Negocio',
             items: [
-                { name: 'Membresías',  href: `/dashboard/gyms/${id}/memberships${query}`, icon: Star,       adminOnly: true },
-                { name: 'Tienda',      href: `/dashboard/gyms/${id}/store${query}`,       icon: ShoppingBag },
-                { name: 'Muro Social', href: `/dashboard/gyms/${id}/feed${query}`,        icon: Zap },
-                { name: 'Comunicados', href: `/dashboard/gyms/${id}/communications${query}`, icon: Megaphone, adminOnly: true },
+                { name: 'Tarifas',       href: `/dashboard/gyms/${id}/memberships`,     icon: Star,       adminOnly: true },
+                { name: 'Cobros',        href: `/dashboard/gyms/${id}/store`,           icon: ShoppingBag },
+            ]
+        },
+        {
+            label: 'Perfil',
+            items: [
+                { name: 'Analytics',     href: `/dashboard/gyms/${id}/analytics`,       icon: BarChart2,  adminOnly: true },
+                { name: 'Facturación',   href: `/dashboard/gyms/${id}/settings/billing`,icon: CreditCard, adminOnly: true },
+                { name: 'Editar Perfil', href: `/trainer/${id}/edit`,                   icon: Edit,       adminOnly: true },
+            ]
+        }
+    ] : [
+        {
+            label: 'Principal',
+            items: [
+                { name: 'Resumen',       href: `/dashboard/gyms/${id}${sedeId ? `/sedes/${sedeId}` : ''}`, icon: LayoutDashboard },
+                { name: 'Horario',       href: `/dashboard/gyms/${id}/schedule${query}`,       icon: Calendar },
+                { name: 'Miembros',      href: `/dashboard/gyms/${id}/members${query}`,        icon: Users, badge: pendingTrials || null },
+                { name: 'Check-in',      href: `/dashboard/gyms/${id}/checkin${query}`,        icon: ScanLine },
+                { name: 'Entrenamientos',href: `/dashboard/gyms/${id}/wods${query}`,           icon: Dumbbell },
+            ]
+        },
+        {
+            label: 'Negocio',
+            items: [
+                { name: 'Membresías',    href: `/dashboard/gyms/${id}/memberships${query}`,    icon: Star,       adminOnly: true },
+                { name: 'Tienda',        href: `/dashboard/gyms/${id}/store${query}`,          icon: ShoppingBag },
+                { name: 'Muro Social',   href: `/dashboard/gyms/${id}/feed${query}`,           icon: Zap },
+                { name: 'Comunicados',   href: `/dashboard/gyms/${id}/communications${query}`, icon: Megaphone,  adminOnly: true },
             ]
         },
         {
             label: 'Admin',
             items: [
-                { name: 'Equipo',     href: `/dashboard/gyms/${id}/team${query}`,             icon: Shield,   adminOnly: true },
-                { name: 'Analytics',  href: `/dashboard/gyms/${id}/analytics`,                icon: BarChart2, adminOnly: true },
-                { name: 'Facturación',href: `/dashboard/gyms/${id}/settings/billing`,         icon: CreditCard, adminOnly: true },
-                { name: 'Editar',     href: `/center-owner/centers/${id}/edit`,               icon: Edit,      adminOnly: true },
+                { name: 'Equipo',        href: `/dashboard/gyms/${id}/team${query}`,           icon: Shield,     adminOnly: true },
+                { name: 'Analytics',     href: `/dashboard/gyms/${id}/analytics`,              icon: BarChart2,  adminOnly: true },
+                { name: 'Facturación',   href: `/dashboard/gyms/${id}/settings/billing`,       icon: CreditCard, adminOnly: true },
+                { name: 'Editar',        href: `/center-owner/centers/${id}/edit`,             icon: Edit,       adminOnly: true },
             ]
         }
     ];

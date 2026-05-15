@@ -51,34 +51,48 @@ export async function assignWorkoutToStudent(centerId: string, studentId: string
         return { error: "The selected user is not an active member/student of this organization." };
     }
 
-    // 3. Insert Scheduled Workout
-    const { error } = await supabase
-        .from('scheduled_workouts')
-        .insert({
-            user_id: studentId,
-            title: workoutData.title || "Entrenamiento Asignado",
-            scheduled_date: workoutData.date, // ISO Date string
-            exercises: workoutData.exercises || [],
-            // Metadata for context
-            description: workoutData.description || `Asignado por tu entrenador`,
-            // We might want to store who assigned it if the table supports it, otherwise rely on description
-            // assigned_by: user.id 
-        });
+    // 3. Insert Scheduled Workout — try with optional columns first, fall back to base columns
+    const fullPayload = {
+        user_id:        studentId,
+        title:          workoutData.title || "Entrenamiento Asignado",
+        scheduled_date: workoutData.date,
+        exercises:      workoutData.exercises || [],
+        description:    workoutData.description || `Entrenamiento asignado por tu entrenador`,
+        duration:       workoutData.duration   || null,
+        sport_type:     workoutData.sportType  || null,
+        assigned_by:    user.id,
+    };
+
+    let { error } = await supabase.from('scheduled_workouts').insert(fullPayload);
+
+    // Fallback: retry with only the base columns if optional ones don't exist yet
+    if (error && error.message?.includes('column')) {
+        const basePayload = {
+            user_id:        studentId,
+            title:          workoutData.title || "Entrenamiento Asignado",
+            scheduled_date: workoutData.date,
+            exercises:      workoutData.exercises || [],
+        };
+        const retry = await supabase.from('scheduled_workouts').insert(basePayload);
+        error = retry.error;
+    }
 
     if (error) {
         console.error("Error assigning workout:", error);
         return { error: "Failed to assign workout: " + error.message };
     }
 
-    // 4. Create Notification for the student
-    await supabase.from('notifications').insert({
-        user_id: studentId,
-        type: 'workout_assigned',
-        title: 'Nuevo Entrenamiento Asignado',
-        message: `Tu entrenador ha programado una sesión para el ${new Date(workoutData.date).toLocaleDateString()}.`,
-        data: { centerId, date: workoutData.date },
-        read: false
-    });
+    // 4. Create Notification for the student (best-effort — don't block if it fails)
+    try {
+        await supabase.from('notifications').insert({
+            user_id: studentId,
+            type:    'workout_assigned',
+            title:   'Nuevo Entrenamiento Asignado',
+            content: `Tu entrenador ha programado una sesión para el ${new Date(workoutData.date).toLocaleDateString('es-ES')}.`,
+            link:    `/dashboard`,
+            is_read: false
+        });
+    } catch { /* ignore notification errors */ }
 
     revalidatePath(`/dashboard/gyms/${centerId}/programming`);
     return { success: true };

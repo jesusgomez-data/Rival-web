@@ -46,6 +46,10 @@ function CenterListPageContent() {
     const [newOrgLat, setNewOrgLat] = useState<number | null>(null);
     const [newOrgLng, setNewOrgLng] = useState<number | null>(null);
     const [isCapturingLoc, setIsCapturingLoc] = useState(false);
+    const [fieldValues, setFieldValues] = useState({
+        name: '', city: '', country: '', address: '', zip_code: '',
+        type: filterType === 'personal_trainer' ? 'personal_trainer' : 'cross_training',
+    });
 
 
     const PLANS = [
@@ -319,7 +323,7 @@ function CenterListPageContent() {
 
                 {showCreate && (
                     <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-center justify-center p-4">
-                        <div className={`${theme === 'dark' ? 'bg-brand-gray border-white/10' : 'bg-white border-gray-200 shadow-2xl'} border rounded-[32px] max-w-lg w-full relative overflow-hidden animate-in zoom-in-95 duration-300`}>
+                        <div className={`${theme === 'dark' ? 'bg-brand-gray border-white/10' : 'bg-white border-gray-200 shadow-2xl'} border rounded-[32px] max-w-lg w-full relative overflow-y-auto max-h-[90vh] animate-in zoom-in-95 duration-300`}>
                             {/* Progress Guard */}
                             <div className="absolute top-0 left-0 right-0 h-1.5 bg-white/5">
                                 <div
@@ -361,7 +365,7 @@ function CenterListPageContent() {
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
                                                     {filterType === 'personal_trainer' ? 'Marca Personal o Nombre Profesional' : 'Nombre del Campo de Batalla'}
                                                 </label>
-                                                <input name="name" required placeholder={filterType === 'personal_trainer' ? "e.g. Coach David Elite" : "e.g. Iron Forge Cross Training"} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                <input name="name" required placeholder={filterType === 'personal_trainer' ? "e.g. Coach David Elite" : "e.g. Iron Forge Cross Training"} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} onChange={(e) => setFieldValues(p => ({ ...p, name: e.target.value }))} />
                                             </div>
                                             <div>
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
@@ -372,7 +376,7 @@ function CenterListPageContent() {
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Tipo de Perfil</label>
-                                                    <select name="type" defaultValue={filterType === 'personal_trainer' ? 'personal_trainer' : 'cross_training'} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 appearance-none ${bgInput}`}>
+                                                    <select name="type" defaultValue={filterType === 'personal_trainer' ? 'personal_trainer' : 'cross_training'} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 appearance-none ${bgInput}`} onChange={(e) => setFieldValues(p => ({ ...p, type: e.target.value }))}>
                                                         {filterType === 'personal_trainer' ? (
                                                             <option value="personal_trainer">Perfil Profesional</option>
                                                         ) : (
@@ -421,20 +425,20 @@ function CenterListPageContent() {
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
                                                     {filterType === 'personal_trainer' ? 'Gimnasio Base / Dirección' : 'Dirección Física'}
                                                 </label>
-                                                <input name="address" required placeholder={filterType === 'personal_trainer' ? "Donde realizas tus entrenamientos" : "Calle Principal 123"} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                <input name="address" required placeholder={filterType === 'personal_trainer' ? "Donde realizas tus entrenamientos" : "Calle Principal 123"} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} onChange={(e) => setFieldValues(p => ({ ...p, address: e.target.value }))} />
                                             </div>
                                             <div className="grid grid-cols-3 gap-4">
                                                 <div className="col-span-1">
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>C. Postal</label>
-                                                    <input name="zip_code" required placeholder="28001" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                    <input name="zip_code" required placeholder="28001" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} onChange={(e) => setFieldValues(p => ({ ...p, zip_code: e.target.value }))} />
                                                 </div>
                                                 <div className="col-span-1">
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Ciudad</label>
-                                                    <input name="city" required placeholder="Madrid" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                    <input name="city" required placeholder="Madrid" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} onChange={(e) => setFieldValues(p => ({ ...p, city: e.target.value }))} />
                                                 </div>
                                                 <div className="col-span-1">
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>País</label>
-                                                    <input name="country" required placeholder="España" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                    <input name="country" required placeholder="España" className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} onChange={(e) => setFieldValues(p => ({ ...p, country: e.target.value }))} />
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
@@ -514,6 +518,13 @@ function CenterListPageContent() {
                                     {/* STEP 3: PLAN SELECTION */}
                                     {step === 3 && (
                                         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+                                            {/* Hidden inputs carry values from steps 1 & 2 into this FormData */}
+                                            <input type="hidden" name="name" value={fieldValues.name} />
+                                            <input type="hidden" name="type" value={fieldValues.type} />
+                                            <input type="hidden" name="city" value={fieldValues.city} />
+                                            <input type="hidden" name="country" value={fieldValues.country} />
+                                            <input type="hidden" name="address" value={fieldValues.address} />
+                                            <input type="hidden" name="zip_code" value={fieldValues.zip_code} />
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 {(filterType === 'personal_trainer' ? PT_PLANS : PLANS).map((p) => (
                                                     <div
