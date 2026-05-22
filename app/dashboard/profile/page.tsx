@@ -668,8 +668,8 @@ export default function ProfilePage() {
                             <div
                                 onClick={handleAvatarClick}
                                 className={clsx(
-                                    "w-24 h-24 rounded-3xl border-4 bg-brand-gray overflow-hidden relative shadow-2xl transition-all cursor-pointer",
-                                    hasActiveStory ? "border-brand-red shadow-glow" : "border-black group-hover/avatar:scale-[1.02]"
+                                    "w-32 h-32 md:w-40 md:h-40 rounded-full border-4 overflow-hidden relative shadow-glow-red transition-all cursor-pointer bg-black z-10",
+                                    hasActiveStory ? "border-brand-red shadow-[0_0_30px_rgba(239,68,68,0.6)]" : "border-[#020202] group-hover/avatar:scale-[1.02]"
                                 )}
                             >
                                 {profile?.avatar_url ? (
@@ -719,10 +719,14 @@ export default function ProfilePage() {
                             />
                         </div>
 
-                        <div className="pb-2 flex flex-col sm:flex-row sm:items-end justify-between flex-1 gap-4">
+                        <div className="pb-2 flex flex-col sm:flex-row sm:items-end justify-between flex-1 gap-4 ml-2">
                             <div>
-                                <h1 className="text-2xl font-heading font-black text-white keep-white italic uppercase tracking-tighter drop-shadow-lg">{profile?.full_name || 'Anonymous Athlete'}</h1>
-                                <p className="text-brand-red font-black tracking-widest text-[10px] uppercase mt-0.5 drop-shadow-md keep-white">@{profile?.username || 'user'}</p>
+                                <h1 className="text-3xl md:text-5xl font-outfit font-black text-white italic uppercase tracking-tighter drop-shadow-lg flex items-center gap-2">
+                                    {profile?.full_name || 'Anonymous Athlete'}
+                                </h1>
+                                <p className="text-brand-red font-black tracking-[0.2em] text-[10px] md:text-xs uppercase mt-1 drop-shadow-md">
+                                    @{profile?.username || 'user'}
+                                </p>
                             </div>
                             <div className="flex gap-2 mb-2">
                                 {profile?.username && (
