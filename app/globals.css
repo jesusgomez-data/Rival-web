@@ -452,3 +452,24 @@ body {
   opacity: 0.1;
   pointer-events: none;
 }
+
+/* Perspective Grid - 3D floor depth effect */
+.perspective-grid-red {
+  position: absolute;
+  bottom: -10%;
+  left: 50%;
+  transform: translateX(-50%) perspective(700px) rotateX(72deg);
+  transform-origin: bottom center;
+  width: 320%;
+  height: 130%;
+  background-image:
+    linear-gradient(rgba(239, 68, 68, 0.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(239, 68, 68, 0.14) 1px, transparent 1px);
+  background-size: 80px 80px;
+  animation: grid-scroll 20s linear infinite;
+}
+
+@keyframes grid-scroll {
+  0%   { background-position: 0 0; }
+  100% { background-position: 0 80px; }
+}
