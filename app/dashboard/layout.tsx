@@ -625,8 +625,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 }
 
 import { UploadProvider } from "./UploadContext";
-
 import { PresenceProvider } from "./PresenceContext";
+import InstallAppPrompt from "@/components/pwa/InstallAppPrompt";
+import PushNotificationManager from "@/components/pwa/PushNotificationManager";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
@@ -640,6 +641,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </PresenceProvider>
                 </StoryProvider>
             </VideoProvider>
+            <InstallAppPrompt />
+            <PushNotificationManager />
         </UploadProvider>
     );
 }

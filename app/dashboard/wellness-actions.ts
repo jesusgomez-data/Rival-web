@@ -305,14 +305,7 @@ export async function getAthleteCardStats() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return null
 
-    // Fetch everything we need in parallel
-    const workoutIdsRes = await supabase
-        .from('workouts')
-        .select('id')
-        .eq('user_id', user.id)
-
-    const workoutIds = workoutIdsRes.data?.map((w: any) => w.id) || []
-
+    // All queries fire in parallel — no sequential round-trips
     const [
         { data: profile },
         { data: workouts },
@@ -325,35 +318,30 @@ export async function getAthleteCardStats() {
             .select('xp_points, level, main_sport, full_name, username, avatar_url')
             .eq('id', user.id)
             .single(),
-
-        // Full workout data for volume, weights, sport type, dates
         supabase
             .from('workouts')
             .select('created_at, total_volume_kg, max_weight_kg, sport_type, is_pr')
             .eq('user_id', user.id)
-            .order('created_at', { ascending: false }),
-
-        // Class sessions for streak + consistency
+            .order('created_at', { ascending: false })
+            .limit(200),
         supabase
             .from('class_results')
             .select('date_performed')
             .eq('user_id', user.id)
-            .order('date_performed', { ascending: false }),
-
-        // Daily check-ins for streak
+            .order('date_performed', { ascending: false })
+            .limit(200),
         supabase
             .from('daily_checkins')
             .select('checkin_date')
             .eq('user_id', user.id)
-            .order('checkin_date', { ascending: false }),
-
-        // All sets to get max weight EVER and PR count
-        workoutIds.length > 0
-            ? supabase
-                .from('workout_sets')
-                .select('weight_kg, is_pr')
-                .in('workout_id', workoutIds)
-            : Promise.resolve({ data: [] }),
+            .order('checkin_date', { ascending: false })
+            .limit(200),
+        // JOIN directo — elimina la query previa de IDs
+        supabase
+            .from('workout_sets')
+            .select('weight_kg, is_pr, workouts!inner(user_id)')
+            .eq('workouts.user_id', user.id)
+            .limit(500),
     ])
 
     const allWorkouts = workouts || []

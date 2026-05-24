@@ -3,42 +3,19 @@ import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./ThemeContext";
 import { LanguageProvider } from "./LanguageContext";
-import InstallAppPrompt from "@/components/pwa/InstallAppPrompt";
-import PushNotificationManager from "@/components/pwa/PushNotificationManager";
 
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
+  display: "swap",
+  preload: true,
 });
 
 const outfit = Outfit({
   variable: "--font-outfit",
   subsets: ["latin"],
-});
-
-import { Bungee, Montserrat, Anton, Sacramento } from "next/font/google";
-
-const bungee = Bungee({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-bungee",
-});
-
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  variable: "--font-montserrat",
-});
-
-const anton = Anton({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-anton",
-});
-
-const sacramento = Sacramento({
-  weight: "400",
-  subsets: ["latin"],
-  variable: "--font-sacramento",
+  display: "swap",
+  preload: true,
 });
 
 
@@ -91,13 +68,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${outfit.variable} ${bungee.variable} ${montserrat.variable} ${anton.variable} ${sacramento.variable} antialiased bg-background text-foreground transition-colors duration-300`}
+        className={`${inter.variable} ${outfit.variable} antialiased bg-background text-foreground transition-colors duration-300`}
         suppressHydrationWarning
       >
         <LanguageProvider>
           <ThemeProvider>
-            <InstallAppPrompt />
-            <PushNotificationManager />
             {children}
           </ThemeProvider>
         </LanguageProvider>

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { 
   Zap, Flame, Trophy, Users, MapPin, Target, Activity, 
@@ -10,11 +10,6 @@ import {
 
 export default function UnifiedPremiumLanding() {
   const [activeTab, setActiveTab] = useState<'athlete' | 'center'>('athlete');
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
@@ -22,8 +17,6 @@ export default function UnifiedPremiumLanding() {
   const springY = useSpring(mouseY, { damping: 40, stiffness: 200 });
   const heroRotateX = useTransform(springY, [-0.5, 0.5], [4, -4]);
   const heroRotateY = useTransform(springX, [-0.5, 0.5], [-5, 5]);
-
-  if (!isMounted) return <div className="min-h-screen bg-[#030303]" />;
 
   const handleHeroMouseMove = (e: React.MouseEvent<HTMLElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -37,7 +30,12 @@ export default function UnifiedPremiumLanding() {
   };
 
   return (
-    <main className="min-h-screen bg-[#030303] text-white selection:bg-brand-red selection:text-white font-outfit overflow-x-hidden relative">
+    <motion.main
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="min-h-screen bg-[#030303] text-white selection:bg-brand-red selection:text-white font-outfit overflow-x-hidden relative"
+    >
       {/* Global Background */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <div className="absolute inset-0 bg-noise opacity-[0.03]" />
@@ -512,6 +510,6 @@ export default function UnifiedPremiumLanding() {
           </div>
         </div>
       </footer>
-    </main>
+    </motion.main>
   );
 }

@@ -102,21 +102,29 @@ export default function ProfilePage() {
                     birth_date_public: data.birth_date_public !== false,
                 });
 
-                const stats = await getCombatStats(data.id);
+                // All dependent queries fire in parallel — no sequential awaits
+                const [stats, prSetsRes, workoutsRes, orgs] = await Promise.all([
+                    getCombatStats(data.id),
+                    supabase
+                        .from('workout_sets')
+                        .select('exercise_name, weight_kg, created_at, workouts!inner(user_id)')
+                        .eq('workouts.user_id', data.id)
+                        .eq('is_pr', true)
+                        .order('weight_kg', { ascending: false })
+                        .limit(20),
+                    supabase
+                        .from('workouts')
+                        .select('*, workout_sets(id, exercise_name, weight_kg, reps, sets, is_pr, notes)')
+                        .eq('user_id', data.id)
+                        .order('start_time', { ascending: false })
+                        .limit(30),
+                    getUserOrganizations(),
+                ]);
+
                 setCombatStats(stats);
 
-                // Load Workouts
-                // Auto-load personal records from workout_sets (best weight per exercise)
-                const { data: prSets } = await supabase
-                    .from('workout_sets')
-                    .select('exercise_name, weight_kg, created_at, workouts!inner(user_id)')
-                    .eq('workouts.user_id', data.id)
-                    .eq('is_pr', true)
-                    .order('weight_kg', { ascending: false })
-                    .limit(100);
-
+                const prSets = prSetsRes.data;
                 if (prSets && prSets.length > 0) {
-                    // Group by exercise_name, keep highest weight
                     const best: Record<string, { exercise: string; weight: number; date: string }> = {};
                     prSets.forEach((s: any) => {
                         const name = s.exercise_name;
@@ -124,22 +132,11 @@ export default function ProfilePage() {
                             best[name] = { exercise: name, weight: s.weight_kg, date: s.created_at };
                         }
                     });
-                    // Sort by date (most recent first)
                     const sorted = Object.values(best).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
                     setAutoRecords(sorted);
                 }
 
-                const { data: userWorkouts, error: workoutError } = await supabase
-                    .from('workouts')
-                    .select('*, workout_sets(*)')
-                    .eq('user_id', data.id)
-                    .order('start_time', { ascending: false });
-
-                if (workoutError) console.error("Error fetching workouts:", workoutError);
-                setWorkouts(userWorkouts || []);
-
-                // Load Organizations to check for Management access
-                const orgs = await getUserOrganizations();
+                setWorkouts(workoutsRes.data || []);
                 setHasOrgs(orgs && orgs.length > 0);
 
                 if (data.cover_position !== undefined) {
