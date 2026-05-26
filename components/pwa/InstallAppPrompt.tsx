@@ -48,15 +48,14 @@ export default function InstallAppPrompt() {
             navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW fail', err));
         }
 
-        // Mostrar prompt después de un tiempo si es iOS (ya que no tienen evento)
-        // O si es Android y por alguna razón no saltó el evento (fallback a instrucciones manuales)
         if (isIosDevice || isAndroidDevice) {
-            const hasSeenPrompt = localStorage.getItem('rival_install_prompt_seen');
-            if (!hasSeenPrompt) {
+            const seenAt = localStorage.getItem('rival_install_prompt_seen');
+            const sevenDays = 7 * 24 * 60 * 60 * 1000;
+            const expired = !seenAt || Date.now() - Number(seenAt) > sevenDays;
+            if (expired) {
                 const timer = setTimeout(() => {
-                    // Solo activar si no se activó ya por el evento nativo
                     setShowPrompt(prev => prev || true);
-                }, 100); // Casi inmediato
+                }, 3000);
                 return () => {
                     clearTimeout(timer);
                     window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -69,7 +68,7 @@ export default function InstallAppPrompt() {
 
     const handleDismiss = () => {
         setShowPrompt(false);
-        localStorage.setItem('rival_install_prompt_seen', 'true');
+        localStorage.setItem('rival_install_prompt_seen', String(Date.now()));
     };
 
     const handleInstallClick = async () => {

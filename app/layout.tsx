@@ -3,6 +3,7 @@ import { Inter, Outfit } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "./ThemeContext";
 import { LanguageProvider } from "./LanguageContext";
+import InstallAppPrompt from "@/components/pwa/InstallAppPrompt";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -33,8 +34,11 @@ export const metadata: Metadata = {
   description: "La primera red social creada para la mentalidad del 1%. Registra tus progresos, compite globalmente y accede a gimnasios de élite.",
   manifest: "/manifest.json",
   icons: {
-    icon: "/logo.svg",
-    apple: "/logo.svg",
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
   },
   openGraph: {
     title: "Rival Fit | Face Yourself. Conquer All.",
@@ -74,6 +78,7 @@ export default function RootLayout({
         <LanguageProvider>
           <ThemeProvider>
             {children}
+            <InstallAppPrompt />
           </ThemeProvider>
         </LanguageProvider>
       </body>
