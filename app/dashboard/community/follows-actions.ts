@@ -60,7 +60,7 @@ export async function toggleFollow(followingId: string) {
 
     revalidatePath('/dashboard/community')
     revalidatePath('/dashboard')
-    revalidatePath(`/dashboard/profile`)
+    revalidatePath('/dashboard/profile/[username]', 'page')
     return { success: true }
 }
 

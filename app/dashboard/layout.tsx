@@ -278,7 +278,6 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         if (pathname?.startsWith('/dashboard/messages')) {
             setUnreadMessages(0);
-            // Clear message notifications when entering the messages page
             import("./notifications-actions").then(m => m.markMessageNotificationsAsRead());
         } else {
             getUnreadMessageCount().then(unread => {
@@ -286,6 +285,16 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             });
         }
     }, [pathname]);
+
+    // Polling fallback — runs every 20s when Realtime drops
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (!pathnameRef.current?.startsWith('/dashboard/messages')) {
+                getUnreadMessageCount().then(count => setUnreadMessages(count));
+            }
+        }, 20000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handleLogout = async () => {
         await supabase.auth.signOut();

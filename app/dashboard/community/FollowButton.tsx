@@ -9,9 +9,10 @@ interface FollowButtonProps {
     targetId: string;
     isFollowingInitial: boolean;
     variant?: 'small' | 'large';
+    onToggle?: (following: boolean) => void;
 }
 
-export default function FollowButton({ targetId, isFollowingInitial, variant = 'small' }: FollowButtonProps) {
+export default function FollowButton({ targetId, isFollowingInitial, variant = 'small', onToggle }: FollowButtonProps) {
     const [isFollowing, setIsFollowing] = useState(isFollowingInitial);
     const [isPending, setIsPending] = useState(false);
 
@@ -19,15 +20,16 @@ export default function FollowButton({ targetId, isFollowingInitial, variant = '
         if (isPending) return;
         setIsPending(true);
 
-        // Optimistic UI update
         const previousState = isFollowing;
-        setIsFollowing(!previousState);
+        const nextState = !previousState;
+        setIsFollowing(nextState);
+        onToggle?.(nextState);
 
         const result = await toggleFollow(targetId);
 
         if (result.error) {
-            // Rollback on error
             setIsFollowing(previousState);
+            onToggle?.(previousState);
             alert("Error: " + result.error);
         }
 
@@ -57,18 +59,18 @@ export default function FollowButton({ targetId, isFollowingInitial, variant = '
             onClick={handleToggle}
             disabled={isPending}
             className={clsx(
-                "text-[10px] sm:text-xs font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-full transition-all flex items-center gap-1 whitespace-nowrap",
+                "flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap",
                 isFollowing
-                    ? "bg-white/5 text-gray-500 border border-white/10"
-                    : "bg-brand-red/10 text-brand-red border border-brand-red/20 hover:bg-brand-red hover:text-white"
+                    ? "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10 hover:text-white"
+                    : "bg-brand-red text-white shadow-[0_4px_15px_rgba(220,38,38,0.3)] hover:bg-red-600"
             )}
         >
             {isPending ? (
-                <Loader2 className="w-3 h-3 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" />
             ) : isFollowing ? (
-                <>Dejar</>
+                <><UserMinus className="w-4 h-4" /> Siguiendo</>
             ) : (
-                <>Seguir</>
+                <><UserPlus className="w-4 h-4" /> Seguir</>
             )}
         </button>
     );

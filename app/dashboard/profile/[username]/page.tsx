@@ -17,17 +17,18 @@ export const dynamic = 'force-dynamic';
 export default async function PublicProfilePage(props: { params: Promise<{ username: string }> }) {
     const { username } = await props.params;
     const supabase = await createClient();
-    const profile = await getPublicProfile(username);
+
+    // Phase 1: Fetch profile and authenticated user in parallel
+    const [profile, authRes] = await Promise.all([
+        getPublicProfile(username),
+        supabase.auth.getUser().catch(() => ({ data: { user: null } })),
+    ]);
 
     if (!profile) {
         return notFound();
     }
 
-    // Fetch all data in parallel for maximum speed
-    const [combatStats, { data: { user } }] = await Promise.all([
-        getCombatStats(profile.id),
-        supabase.auth.getUser(),
-    ]);
+    const user = authRes.data?.user || null;
 
     // Fire background badge/gear check for own profile (non-blocking)
     if (user && user.id === profile.id) {
@@ -35,10 +36,11 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
         seedDemoGear(user.id).catch(() => {});
     }
 
-    // Parallel: follow status + duel + all content
     const adminSupabase = createAdminClient();
 
+    // Phase 2: Fetch all content and combat stats in parallel
     const [
+        combatStats,
         followRes,
         duelData,
         workoutsRes,
@@ -50,6 +52,7 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
         currentUserProfileRes,
         medalsRes,
     ] = await Promise.all([
+        getCombatStats(profile.id),
         user
             ? adminSupabase.from('follows').select('id').eq('follower_id', user.id).eq('following_id', profile.id).maybeSingle()
             : Promise.resolve({ data: null }),

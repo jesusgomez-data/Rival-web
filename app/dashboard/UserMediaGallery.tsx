@@ -1,68 +1,205 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { getUserMedia } from "./community/actions";
-import { Play, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Play, Volume2, VolumeX, X } from "lucide-react";
 import { isImageUrl } from "@/lib/utils";
 
-export default function UserMediaGallery({ userId, limit }: { userId: string, limit?: number }) {
+const VIDEO_EXTS = ['mp4', 'webm', 'ogg', 'mov', 'm4v'];
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic'];
+
+function isVideoItem(item: any) {
+    const ext = item.media_url?.split('.').pop()?.toLowerCase() || '';
+    return (VIDEO_EXTS.includes(ext) || item.media_type === 'video') && !IMAGE_EXTS.includes(ext);
+}
+
+function MediaCard({ item, isActive, globalMuted, onMuteChange }: {
+    item: any;
+    isActive: boolean;
+    globalMuted: boolean;
+    onMuteChange: (m: boolean) => void;
+}) {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [isPlaying, setIsPlaying] = useState(true);
+    const [progress, setProgress] = useState(0);
+    const isVideo = isVideoItem(item);
+
+    useEffect(() => {
+        if (!videoRef.current || !isVideo) return;
+        if (isActive) {
+            videoRef.current.play().catch(() => {});
+            setIsPlaying(true);
+        } else {
+            videoRef.current.pause();
+            videoRef.current.currentTime = 0;
+            setIsPlaying(false);
+        }
+    }, [isActive, isVideo]);
+
+    useEffect(() => {
+        if (!videoRef.current || !isVideo || !isActive) return;
+        const interval = setInterval(() => {
+            const v = videoRef.current;
+            if (v && v.duration) setProgress((v.currentTime / v.duration) * 100);
+        }, 100);
+        return () => clearInterval(interval);
+    }, [isVideo, isActive]);
+
+    const togglePlay = () => {
+        if (!videoRef.current) return;
+        if (videoRef.current.paused) { videoRef.current.play(); setIsPlaying(true); }
+        else { videoRef.current.pause(); setIsPlaying(false); }
+    };
+
+    return (
+        <div className="relative w-full h-screen snap-start snap-always flex-shrink-0 bg-black overflow-hidden">
+            {isVideo ? (
+                <>
+                    <video
+                        ref={videoRef}
+                        key={item.id}
+                        src={item.media_url}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        loop
+                        playsInline
+                        muted={globalMuted}
+                        onClick={togglePlay}
+                        onPlay={() => setIsPlaying(true)}
+                        onPause={() => setIsPlaying(false)}
+                    />
+                    {/* Progress bar */}
+                    <div className="absolute top-0 left-0 right-0 h-0.5 bg-white/20 z-10">
+                        <div className="h-full bg-brand-red" style={{ width: `${progress}%`, transition: 'width 0.1s linear' }} />
+                    </div>
+                    {/* Gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60 pointer-events-none" />
+                    {/* Play/pause indicator */}
+                    {!isPlaying && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="bg-black/50 backdrop-blur-sm p-6 rounded-full">
+                                <Play className="w-16 h-16 text-white fill-white" />
+                            </div>
+                        </div>
+                    )}
+                    {/* Mute button - right side like VideoFeed */}
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onMuteChange(!globalMuted); }}
+                        className="absolute bottom-8 right-4 z-20 p-3 rounded-full bg-black/20 backdrop-blur-md hover:bg-black/40"
+                    >
+                        {globalMuted ? <VolumeX className="w-7 h-7 text-white" /> : <Volume2 className="w-7 h-7 text-white" />}
+                    </button>
+                </>
+            ) : (
+                <>
+                    <img
+                        src={item.media_url}
+                        alt="Media"
+                        className="absolute inset-0 w-full h-full object-contain"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/30 pointer-events-none" />
+                </>
+            )}
+        </div>
+    );
+}
+
+export default function UserMediaGallery({ userId, limit }: { userId: string; limit?: number }) {
     const [mediaItems, setMediaItems] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+    const [activeIndex, setActiveIndex] = useState(0);
+    const [globalMuted, setGlobalMuted] = useState(true);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        const handleVisibilityChange = () => {
-            const videos = document.querySelectorAll('video');
-            if (document.hidden) {
-                videos.forEach(v => v.pause());
-            }
+        const handleVisibility = () => {
+            if (document.hidden) document.querySelectorAll('video').forEach(v => v.pause());
         };
-
-        document.addEventListener("visibilitychange", handleVisibilityChange);
-        return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => document.removeEventListener('visibilitychange', handleVisibility);
     }, []);
 
     useEffect(() => {
-        if (userId) {
-            getUserMedia(userId).then((data) => {
-                // Filter out class_result or JSON strings immediately
-                const validMedia = (data || []).filter((item: any) => {
-                    const isJson = !isImageUrl(item.media_url);
-                    return item.media_type !== 'class_result' && !isJson;
-                });
-                setMediaItems(validMedia);
-                setIsLoading(false);
+        if (!userId) return;
+        getUserMedia(userId).then((data) => {
+            const valid = (data || []).filter((item: any) => {
+                const isJson = !isImageUrl(item.media_url);
+                return item.media_type !== 'class_result' && !isJson;
             });
-        }
+            setMediaItems(valid);
+            setIsLoading(false);
+        });
     }, [userId]);
 
-    if (isLoading) {
-        return <div className="p-6 bg-brand-gray border border-white/5 rounded-3xl animate-pulse h-40"></div>;
-    }
+    // Scroll to the tapped item when viewer opens
+    useEffect(() => {
+        if (lightboxIndex !== null && scrollContainerRef.current) {
+            setActiveIndex(lightboxIndex);
+            // Use requestAnimationFrame to ensure DOM is ready
+            requestAnimationFrame(() => {
+                scrollContainerRef.current?.scrollTo({ top: lightboxIndex * window.innerHeight });
+            });
+        }
+    }, [lightboxIndex]);
 
-    if (mediaItems.length === 0) {
-        return null; // Don't show if empty
-    }
+    // Detect active card via scroll (same as VideoFeed)
+    useEffect(() => {
+        const container = scrollContainerRef.current;
+        if (!container) return;
+        const handleScroll = () => {
+            const idx = Math.round(container.scrollTop / window.innerHeight);
+            if (idx !== activeIndex && idx >= 0 && idx < mediaItems.length) {
+                setActiveIndex(idx);
+            }
+        };
+        container.addEventListener('scroll', handleScroll, { passive: true });
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [activeIndex, mediaItems.length]);
+
+    // Keyboard nav
+    useEffect(() => {
+        if (lightboxIndex === null) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') { setLightboxIndex(null); return; }
+            const dir = (e.key === 'ArrowDown' || e.key === 'ArrowRight') ? 1
+                : (e.key === 'ArrowUp' || e.key === 'ArrowLeft') ? -1 : 0;
+            if (!dir) return;
+            const next = activeIndex + dir;
+            if (next >= 0 && next < mediaItems.length) {
+                scrollContainerRef.current?.scrollTo({ top: next * window.innerHeight, behavior: 'smooth' });
+            }
+        };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [lightboxIndex, activeIndex, mediaItems.length]);
+
+    // Lock body scroll while viewer is open
+    useEffect(() => {
+        document.body.style.overflow = lightboxIndex !== null ? 'hidden' : '';
+        return () => { document.body.style.overflow = ''; };
+    }, [lightboxIndex]);
+
+    if (isLoading) return <div className="p-6 bg-brand-gray border border-white/5 rounded-3xl animate-pulse h-40" />;
+    if (mediaItems.length === 0) return null;
+
+    const displayItems = limit ? mediaItems.slice(0, limit) : mediaItems;
 
     return (
         <>
+            {/* Grid thumbnail section */}
             <div className="p-6 bg-brand-gray border border-white/5 rounded-3xl shadow-xl space-y-4">
                 <div className="flex items-center justify-between mb-2">
                     <h2 className="text-white font-bold tracking-widest text-xs uppercase flex items-center gap-2">
-                        <span className="w-1 h-3 bg-brand-red rounded-full"></span>
+                        <span className="w-1 h-3 bg-brand-red rounded-full" />
                         MEDIA GALLERY
                     </h2>
                     <span className="text-xs text-gray-500">{mediaItems.length} items</span>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2">
-                    {(limit ? mediaItems.slice(0, limit) : mediaItems).map((item, index) => {
-                        const fileExt = item.media_url?.split('.').pop()?.toLowerCase() || '';
-                        const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'm4v'];
-                        const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic'];
-                        const isVideo = (videoExtensions.includes(fileExt) || item.media_type === 'video') && !imageExtensions.includes(fileExt);
-
+                    {displayItems.map((item, index) => {
+                        const isVideo = isVideoItem(item);
                         return (
                             <div
                                 key={item.id}
@@ -70,27 +207,14 @@ export default function UserMediaGallery({ userId, limit }: { userId: string, li
                                 onClick={() => setLightboxIndex(index)}
                             >
                                 {isVideo ? (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                        <video
-                                            src={item.media_url}
-                                            className="w-full h-full object-cover"
-                                            autoPlay
-                                            loop
-                                            playsInline
-                                            muted
-                                            preload="auto"
-                                        />
-                                        <div className="absolute inset-0 bg-black/20 flex items-center justify-center group-hover:bg-transparent transition-colors">
-                                            <Play className="w-6 h-6 text-white fill-white opacity-50" />
+                                    <>
+                                        <video src={item.media_url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+                                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/10 transition-colors">
+                                            <Play className="w-7 h-7 text-white fill-white drop-shadow-lg" />
                                         </div>
-                                    </div>
+                                    </>
                                 ) : (
-                                    <Image
-                                        src={item.media_url}
-                                        alt="User media"
-                                        fill
-                                        className="object-cover"
-                                    />
+                                    <Image src={item.media_url} alt="User media" fill className="object-cover" sizes="(max-width: 768px) 33vw, 200px" />
                                 )}
                             </div>
                         );
@@ -98,72 +222,46 @@ export default function UserMediaGallery({ userId, limit }: { userId: string, li
                 </div>
 
                 {limit && mediaItems.length > limit && (
-                    <button className="w-full text-center text-xs text-gray-400 hover:text-white mt-2">
-                        View all
+                    <button className="w-full text-center text-xs text-gray-400 hover:text-white mt-2" onClick={() => setLightboxIndex(limit)}>
+                        Ver todos ({mediaItems.length})
                     </button>
                 )}
             </div>
 
-            {/* Lightbox */}
+            {/* VideoFeed-style fullscreen viewer */}
             {lightboxIndex !== null && (
-                <div
-                    className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-sm flex items-center justify-center p-4"
-                    onClick={() => setLightboxIndex(null)}
-                >
-                    {/* Navigation Buttons */}
+                <div className="fixed inset-0 bg-black" style={{ zIndex: 200 }}>
+                    {/* Close */}
                     <button
-                        className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white transition-colors z-[110]"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setLightboxIndex((prev) => (prev !== null && prev > 0 ? prev - 1 : mediaItems.length - 1));
-                        }}
+                        onClick={() => setLightboxIndex(null)}
+                        className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white/80 hover:text-white transition-colors"
+                        style={{ zIndex: 300 }}
                     >
-                        <ChevronLeft className="w-8 h-8 md:w-12 md:h-12" />
+                        <X className="w-6 h-6" />
                     </button>
 
-                    <button
-                        className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 p-2 text-white/50 hover:text-white transition-colors z-[110]"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            setLightboxIndex((prev) => (prev !== null && prev < mediaItems.length - 1 ? prev + 1 : 0));
-                        }}
-                    >
-                        <ChevronRight className="w-8 h-8 md:w-12 md:h-12" />
-                    </button>
-
+                    {/* Counter */}
                     <div
-                        className="relative w-auto max-w-5xl max-h-[80vh] flex items-center justify-center px-0 shadow-2xl rounded-2xl overflow-hidden bg-black"
-                        onClick={(e) => e.stopPropagation()}
+                        className="absolute top-4 left-1/2 -translate-x-1/2 text-white/60 text-xs font-bold tracking-widest"
+                        style={{ zIndex: 300 }}
                     >
-                        <button
-                            onClick={() => setLightboxIndex(null)}
-                            className="absolute top-4 right-4 text-white hover:text-brand-red focus:outline-none transition-colors z-[120] bg-black/40 backdrop-blur-md p-2 rounded-full border border-white/10"
-                        >
-                            <X className="w-6 h-6" />
-                        </button>
+                        {activeIndex + 1} / {mediaItems.length}
+                    </div>
 
-                        {(() => {
-                            const currentItem = mediaItems[lightboxIndex];
-                            const fileExt = currentItem.media_url?.split('.').pop()?.toLowerCase() || '';
-                            const videoExtensions = ['mp4', 'webm', 'ogg', 'mov', 'm4v'];
-                            const imageExtensions = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic'];
-                            const isVideo = (videoExtensions.includes(fileExt) || currentItem.media_type === 'video') && !imageExtensions.includes(fileExt);
-
-                            return isVideo ? (
-                                <video
-                                    src={currentItem.media_url}
-                                    controls
-                                    autoPlay
-                                    className="max-w-full max-h-[80vh] object-contain"
-                                />
-                            ) : (
-                                <img
-                                    src={currentItem.media_url}
-                                    alt="Full size"
-                                    className="max-w-full max-h-[80vh] object-contain"
-                                />
-                            );
-                        })()}
+                    {/* Snap-scroll reel container — same as VideoFeed */}
+                    <div
+                        ref={scrollContainerRef}
+                        className="w-full h-screen overflow-y-scroll snap-y snap-mandatory scrollbar-hide"
+                    >
+                        {mediaItems.map((item, index) => (
+                            <MediaCard
+                                key={item.id}
+                                item={item}
+                                isActive={index === activeIndex}
+                                globalMuted={globalMuted}
+                                onMuteChange={setGlobalMuted}
+                            />
+                        ))}
                     </div>
                 </div>
             )}

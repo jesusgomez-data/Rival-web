@@ -232,10 +232,21 @@ export async function getActiveStories() {
 
         const now = new Date().toISOString()
 
-        // Fetch active stories (not expired)
-        // Optimization: Only fetch IDs for likes/views to reduce payload. 
-        // Viewer profiles are only needed for the owner and will be fetched separately if needed.
-        const { data, error } = await supabase
+        // Build allowed user IDs: own + followed users
+        let allowedUserIds: string[] = []
+        if (user) {
+            const [followsRes, officialsRes] = await Promise.all([
+                supabase.from('follows').select('following_id').eq('follower_id', user.id),
+                supabase.from('profiles').select('id').eq('is_official', true),
+            ])
+            allowedUserIds = [
+                user.id,
+                ...(followsRes.data || []).map((f: any) => f.following_id),
+                ...(officialsRes.data || []).map((p: any) => p.id),
+            ]
+        }
+
+        const query = supabase
             .from('stories')
             .select(`
                 *,
@@ -248,14 +259,18 @@ export async function getActiveStories() {
                 ),
                 story_likes (user_id),
                 story_views (
-                    user_id, 
+                    user_id,
                     created_at,
                     profiles:user_id (id, username, full_name, avatar_url)
                 )
             `)
             .gt('expires_at', now)
             .order('created_at', { ascending: false })
-            .limit(50);
+            .limit(50)
+
+        const { data, error } = allowedUserIds.length > 0
+            ? await query.in('user_id', allowedUserIds)
+            : await query
 
         if (error) {
             console.error("Error fetching stories:", error)

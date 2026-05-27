@@ -35,7 +35,8 @@ interface ProfileContentProps {
     medals?: any[];
 }
 
-export default function ProfileContent({ profile, combatStats, user, isFollowing, posts, canViewContent, privacy, workouts, badges, gear, isAdminUser = false, hasActiveDuel = false, medals = [] }: ProfileContentProps) {
+export default function ProfileContent({ profile, combatStats, user, isFollowing: isFollowingProp, posts, canViewContent, privacy, workouts, badges, gear, isAdminUser = false, hasActiveDuel = false, medals = [] }: ProfileContentProps) {
+    const [following, setFollowing] = useState(isFollowingProp);
     const [mobileTab, setMobileTab] = useState<'activity' | 'gallery' | 'stats'>('activity');
     const [modalOpen, setModalOpen] = useState<'followers' | 'following' | null>(null);
     const [avatarModalOpen, setAvatarModalOpen] = useState(false);
@@ -77,51 +78,73 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
         <div className="max-w-5xl mx-auto space-y-6 md:space-y-12 animate-fade-in pb-20 px-0 md:px-4">
             <StoryBar currentUser={user} hideBar={true} />
             
-            {/* New Premium Profile Header - Matched to Mockup */}
-            <section className="glass-dark border border-white/10 rounded-[2rem] md:rounded-[3rem] p-6 md:p-8 lg:p-12 flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10 relative overflow-hidden mb-8 shadow-2xl">
-                {/* Background Ambience */}
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand-red/10 blur-[120px] -mr-40 -mt-40 rounded-full pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-brand-orange/5 blur-[100px] -ml-20 -mb-20 rounded-full pointer-events-none" />
-                
-                <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none hidden md:block">
-                    <Activity className="w-64 h-64 text-brand-red" />
-                </div>
-                
-                {/* Avatar */}
-                <div className="relative group shrink-0 mt-2">
-                    <div className="absolute -inset-2 bg-gradient-to-tr from-brand-red to-brand-orange rounded-full blur-xl opacity-30 group-hover:opacity-60 transition-opacity duration-500 pointer-events-none" />
-                    <button 
-                        onClick={() => setAvatarModalOpen(true)}
-                        className="relative w-28 h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full border-4 border-[#020202] overflow-hidden bg-black z-10 transition-transform active:scale-95 shadow-glow-red"
-                    >
-                        {profile.avatar_url ? (
+            {/* New Premium Profile Header with Cover Photo */}
+            <section className="glass-dark border border-white/10 rounded-[2rem] md:rounded-[3rem] overflow-hidden relative mb-8 shadow-2xl">
+                {/* Cover Photo Banner */}
+                <div className="h-48 md:h-64 bg-gradient-to-r from-brand-red via-brand-red/80 to-brand-gray relative w-full select-none overflow-hidden border-b border-white/10">
+                    {profile.cover_url ? (
+                        <>
                             <Image
-                                src={profile.avatar_url}
-                                alt={profile.full_name}
+                                src={profile.cover_url}
+                                alt="Cover"
                                 fill
-                                className={clsx(
-                                    profile.is_official ? "object-contain p-2 md:p-3 bg-white" : "object-cover grayscale hover:grayscale-0 transition-all duration-500"
-                                )}
+                                className="object-cover pointer-events-none"
+                                style={{ objectPosition: `center ${profile.cover_position ?? 50}%` }}
+                                priority
                             />
-                        ) : (
-                            <div className="flex items-center justify-center w-full h-full text-2xl md:text-4xl font-black text-white italic">
-                                {profile.full_name?.charAt(0)}
-                            </div>
-                        )}
-                    </button>
-                    {profile.is_official ? (
-                        <div className="absolute bottom-1 right-1 w-6 h-6 md:w-8 md:h-8 bg-blue-500 rounded-full flex items-center justify-center border-2 border-[#020202] shadow-[0_0_15px_rgba(59,130,246,0.5)] z-20">
-                            <ShieldCheck className="w-3 h-3 md:w-4 md:h-4 text-white" />
-                        </div>
+                            <div className="absolute inset-0 bg-brand-red/10 mix-blend-multiply"></div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                        </>
                     ) : (
-                        <div className="absolute bottom-1 right-1 w-6 h-6 md:w-8 md:h-8 bg-brand-red rounded-full flex items-center justify-center border-2 border-[#020202] shadow-glow-red z-20">
-                            <Activity className="w-3 h-3 md:w-4 md:h-4 text-white fill-white" />
-                        </div>
+                        <>
+                            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-20 mix-blend-overlay"></div>
+                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                        </>
                     )}
+                    {/* Background Ambience on top of cover */}
+                    <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-brand-red/20 blur-[80px] -mr-20 -mt-20 rounded-full pointer-events-none" />
                 </div>
 
-                {/* Info & Stats */}
-                <div className="flex-1 space-y-6 text-center md:text-left relative z-10 w-full">
+                {/* Details (Avatar & Info) Container */}
+                <div className="p-6 md:p-8 lg:p-12 pt-0 flex flex-col md:flex-row items-center md:items-start gap-6 md:gap-10 relative">
+                    {/* Background Ambience inside details */}
+                    <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-brand-orange/5 blur-[100px] -ml-20 -mb-20 rounded-full pointer-events-none" />
+                    
+                    {/* Avatar (Overlapping Cover Photo) */}
+                    <div className="relative group shrink-0 -mt-16 md:-mt-24 z-10">
+                        <div className="absolute -inset-2 bg-gradient-to-tr from-brand-red to-brand-orange rounded-full blur-xl opacity-30 group-hover:opacity-60 transition-opacity duration-500 pointer-events-none" />
+                        <button 
+                            onClick={() => setAvatarModalOpen(true)}
+                            className="relative w-28 h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full border-4 border-[#020202] overflow-hidden bg-black transition-transform active:scale-95 shadow-glow-red"
+                        >
+                            {profile.avatar_url ? (
+                                <Image
+                                    src={profile.avatar_url}
+                                    alt={profile.full_name}
+                                    fill
+                                    className={clsx(
+                                        profile.is_official ? "object-contain p-2 md:p-3 bg-white" : "object-cover grayscale hover:grayscale-0 transition-all duration-500"
+                                    )}
+                                />
+                            ) : (
+                                <div className="flex items-center justify-center w-full h-full text-2xl md:text-4xl font-black text-white italic">
+                                    {profile.full_name?.charAt(0)}
+                                </div>
+                            )}
+                        </button>
+                        {profile.is_official ? (
+                            <div className="absolute bottom-1 right-1 w-6 h-6 md:w-8 md:h-8 bg-blue-500 rounded-full flex items-center justify-center border-2 border-[#020202] shadow-[0_0_15px_rgba(59,130,246,0.5)] z-20">
+                                <ShieldCheck className="w-3 h-3 md:w-4 md:h-4 text-white" />
+                            </div>
+                        ) : (
+                            <div className="absolute bottom-1 right-1 w-6 h-6 md:w-8 md:h-8 bg-brand-red rounded-full flex items-center justify-center border-2 border-[#020202] shadow-glow-red z-20">
+                                <Activity className="w-3 h-3 md:w-4 md:h-4 text-white fill-white" />
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Info & Stats */}
+                    <div className="flex-1 space-y-6 text-center md:text-left relative z-10 w-full mt-4 md:mt-0">
                     <div className="space-y-2">
                         <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-2 md:gap-3">
                             <h1 className="text-3xl md:text-4xl lg:text-5xl font-black italic uppercase tracking-tighter text-white">
@@ -189,22 +212,30 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             </Link>
                         ) : !profile.is_official ? (
                             <div className="flex w-full sm:w-auto gap-2">
-                                {/* Botones de Seguir y Retar conectados y funcionando */}
-                                <div className="flex-1 sm:flex-none"><FollowButton targetId={profile.id} isFollowingInitial={isFollowing} /></div>
-                                <div className="flex-1 sm:flex-none"><DuelButton targetId={profile.id} isRival={isFollowing} hasActiveDuel={hasActiveDuel} /></div>
-                                {isFollowing && (
-                                     <Link href={`/dashboard/messages?userId=${profile.id}`}
-                                         className="flex-1 sm:flex-none p-2 md:p-2.5 bg-white/5 border border-white/10 rounded-xl text-brand-red hover:bg-brand-red hover:text-white transition-all flex items-center justify-center shadow-lg">
-                                         <MessageCircle className="w-4 h-4 md:w-5 md:h-5" />
-                                     </Link>
-                                 )}
+                                <FollowButton targetId={profile.id} isFollowingInitial={following} onToggle={setFollowing} />
+                                <DuelButton targetId={profile.id} isRival={following} hasActiveDuel={hasActiveDuel} />
+                                {following && (
+                                    <Link href={`/dashboard/messages?userId=${profile.id}`}
+                                        className="p-2.5 bg-white/5 border border-white/10 rounded-xl text-gray-400 hover:bg-brand-red hover:text-white hover:border-brand-red transition-all flex items-center justify-center"
+                                        title="Enviar mensaje">
+                                        <MessageCircle className="w-4 h-4" />
+                                    </Link>
+                                )}
                             </div>
                         ) : null}
                     </div>
+
+                    {/* Bio inline — just below buttons */}
+                    {!profile.is_official && profile.bio && (
+                        <p className="text-sm text-gray-300 font-medium italic leading-relaxed border-l-2 border-brand-red/60 pl-4 py-1 whitespace-pre-wrap mt-3">
+                            {profile.bio}
+                        </p>
+                    )}
                 </div>
+            </div>
             </section>
 
-            {/* Bio / Manifiesto — IMPROVED FOR OFFICIAL */}
+            {/* Bio / Manifiesto — OFFICIAL ONLY */}
             {profile.is_official ? (
                  <div className="bg-white/5 border border-white/10 rounded-[32px] p-6 md:p-12 backdrop-blur-md relative overflow-hidden group">
                     <div className="absolute top-0 right-0 p-8 text-white/[0.02] pointer-events-none">
@@ -221,12 +252,6 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             <div className="h-0.5 w-12 bg-brand-red/40 rounded-full" />
                         </div>
                     </div>
-                </div>
-            ) : profile.bio ? (
-                <div className="px-4 md:px-0">
-                    <p className="text-sm md:text-base text-gray-300 font-medium italic leading-relaxed border-l-2 border-brand-red/60 pl-4 py-1 whitespace-pre-wrap">
-                        {profile.bio}
-                    </p>
                 </div>
             ) : null}
 
@@ -280,7 +305,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             <p className="text-gray-400 max-w-sm mx-auto">Sigue a este atleta para ver sus fotos, videos e historial de entrenamiento.</p>
                             {user?.id !== profile.id && (
                                 <div className="pt-4">
-                                    <FollowButton targetId={profile.id} isFollowingInitial={isFollowing} variant="large" />
+                                    <FollowButton targetId={profile.id} isFollowingInitial={following} onToggle={setFollowing} variant="large" />
                                 </div>
                             )}
                         </div>

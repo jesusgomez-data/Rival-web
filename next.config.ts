@@ -19,7 +19,7 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://images.unsplash.com https://ui-avatars.com https://ralskslspvskjqqgzbiv.supabase.co https://rivalfit.app https://randomuser.me",
+      "img-src 'self' data: blob: https://images.unsplash.com https://ui-avatars.com https://ralskslspvskjqqgzbiv.supabase.co https://rivalfit.app https://randomuser.me https://lh3.googleusercontent.com",
       "font-src 'self'",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.groq.com https://api.stripe.com https://api.resend.com",
       "frame-src 'none'",
@@ -78,6 +78,10 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'randomuser.me',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
       }
     ],
   },
