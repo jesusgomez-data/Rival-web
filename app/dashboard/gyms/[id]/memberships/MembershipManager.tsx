@@ -112,7 +112,7 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
-                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">
+                <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest">
                     Planes activos: {plans.length}
                 </p>
                 <button
@@ -129,7 +129,7 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {plans.length > 0 ? (
                     plans.map((plan: any) => (
-                        <div key={plan.id} className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 flex flex-col justify-between hover:border-brand-red/30 transition-all group overflow-hidden relative">
+                        <div key={plan.id} className="bg-card border border-border rounded-3xl p-6 flex flex-col justify-between hover:border-brand-red/30 transition-all group overflow-hidden relative">
                             {/* Glow Effect */}
                             <div className="absolute -top-10 -right-10 w-32 h-32 bg-brand-red/10 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
 
@@ -139,54 +139,54 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
                                         <CreditCard className="w-6 h-6" />
                                     </div>
                                     <div className="flex gap-2">
-                                        <button onClick={() => handleEdit(plan)} className="p-2 bg-white/5 rounded-lg text-gray-400 hover:text-white transition-colors">
+                                        <button onClick={() => handleEdit(plan)} className="p-2 bg-muted rounded-lg text-muted-foreground hover:text-foreground transition-colors">
                                             <Edit2 className="w-4 h-4" />
                                         </button>
-                                        <button onClick={() => handleDelete(plan.id)} className="p-2 bg-white/5 rounded-lg text-gray-400 hover:text-red-500 transition-colors">
+                                        <button onClick={() => handleDelete(plan.id)} className="p-2 bg-muted rounded-lg text-muted-foreground hover:text-red-500 transition-colors">
                                             <Trash2 className="w-4 h-4" />
                                         </button>
                                     </div>
                                 </div>
 
-                                <h3 className="text-xl font-black text-white uppercase italic tracking-tighter mb-1">{plan.name}</h3>
-                                <p className="text-xs text-gray-500 mb-4 line-clamp-2">{plan.description || "Sin descripción proporcionada."}</p>
+                                <h3 className="text-xl font-black text-foreground uppercase italic tracking-tighter mb-1">{plan.name}</h3>
+                                <p className="text-xs text-muted-foreground mb-4 line-clamp-2">{plan.description || "Sin descripción proporcionada."}</p>
 
                                 <div className="flex items-baseline gap-1 mb-6">
-                                    <span className="text-3xl font-black text-white italic">{plan.price}€</span>
-                                    <span className="text-xs text-gray-500 font-bold uppercase tracking-widest">/ {plan.duration_months === 1 ? "mes" : `${plan.duration_months} meses`}</span>
+                                    <span className="text-3xl font-black text-foreground italic">{plan.price}€</span>
+                                    <span className="text-xs text-muted-foreground font-bold uppercase tracking-widest">/ {plan.duration_months === 1 ? "mes" : `${plan.duration_months} meses`}</span>
                                 </div>
 
-                                <div className="space-y-2 mb-6 border-t border-white/5 pt-4">
+                                <div className="space-y-2 mb-6 border-t border-border pt-4">
                                     {plan.features?.length > 0 ? (
                                         plan.features.map((feature: string, idx: number) => (
-                                            <div key={idx} className="flex items-center gap-2 text-[11px] text-gray-300">
+                                            <div key={idx} className="flex items-center gap-2 text-[11px] text-foreground/70">
                                                 <Check className="w-3 h-3 text-green-500 shrink-0" />
                                                 <span>{feature}</span>
                                             </div>
                                         ))
                                     ) : (
-                                        <p className="text-[10px] text-gray-600 italic">Acceso estándar al centro.</p>
+                                        <p className="text-[10px] text-muted-foreground italic">Acceso estándar al centro.</p>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="pt-4 border-t border-white/5 flex items-center justify-between">
+                            <div className="pt-4 border-t border-border flex items-center justify-between">
                                 <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-md ${plan.is_active ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
                                     {plan.is_active ? 'Activa' : 'Inactiva'}
                                 </span>
-                                <span className="text-[9px] text-gray-600 font-bold uppercase tracking-tighter">
+                                <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-tighter">
                                     ID: {plan.id.substring(0, 8)}
                                 </span>
                             </div>
                         </div>
                     ))
                 ) : (
-                    <div className="col-span-full py-20 bg-brand-gray/20 rounded-3xl border border-dashed border-white/10 flex flex-col items-center justify-center text-center px-10">
-                        <div className="p-4 bg-white/5 rounded-full mb-4">
-                            <CreditCard className="w-8 h-8 text-gray-600" />
+                    <div className="col-span-full py-20 bg-muted/20 rounded-3xl border border-dashed border-border flex flex-col items-center justify-center text-center px-10">
+                        <div className="p-4 bg-muted rounded-full mb-4">
+                            <CreditCard className="w-8 h-8 text-muted-foreground" />
                         </div>
-                        <h4 className="text-lg font-bold text-white uppercase italic mb-2">No has configurado tarifas</h4>
-                        <p className="text-xs text-gray-500 max-w-sm mb-6 uppercase tracking-widest font-medium">Define tus planes de precios para que puedas asignarlos a tus miembros y habilitar el cobro automático desde la App.</p>
+                        <h4 className="text-lg font-bold text-foreground uppercase italic mb-2">No has configurado tarifas</h4>
+                        <p className="text-xs text-muted-foreground max-w-sm mb-6 uppercase tracking-widest font-medium">Define tus planes de precios para que puedas asignarlos a tus miembros y habilitar el cobro automático desde la App.</p>
                         <button
                             onClick={() => setShowModal(true)}
                             className="bg-brand-red text-white py-3 px-8 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg"
@@ -199,21 +199,21 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
 
             {/* Modal de Crear / Editar */}
             {showModal && (
-                <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
-                    <div className="bg-brand-gray border border-white/10 rounded-3xl p-6 sm:p-8 w-full max-w-2xl animate-in fade-in zoom-in duration-300 my-8">
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="bg-card border border-border rounded-3xl p-6 sm:p-8 w-full max-w-2xl animate-in fade-in zoom-in duration-300 my-8">
                         <div className="flex justify-between items-start mb-8">
                             <div className="flex items-center gap-3">
                                 <div className="p-2 bg-brand-red/10 rounded-xl text-brand-red">
                                     <CreditCard className="w-6 h-6" />
                                 </div>
                                 <div>
-                                    <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">
+                                    <h3 className="text-2xl font-black text-foreground italic uppercase tracking-tighter">
                                         {editingPlan ? "Editar Tarifa" : "Nueva Tarifa"}
                                     </h3>
-                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Define los detalles del plan de pagos</p>
+                                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Define los detalles del plan de pagos</p>
                                 </div>
                             </div>
-                            <button onClick={() => setShowModal(false)} className="bg-white/5 p-2 rounded-full text-gray-500 hover:text-white transition-colors">
+                            <button onClick={() => setShowModal(false)} className="bg-muted p-2 rounded-full text-muted-foreground hover:text-foreground transition-colors">
                                 <X className="w-6 h-6" />
                             </button>
                         </div>
@@ -222,26 +222,26 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
                             <div className="grid md:grid-cols-2 gap-6">
                                 <div className="space-y-4">
                                     <div>
-                                        <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Nombre del Plan</label>
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Nombre del Plan</label>
                                         <div className="relative">
-                                            <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                            <CreditCard className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                             <input
                                                 required
                                                 value={name}
                                                 onChange={(e) => setName(e.target.value)}
                                                 placeholder="Ej: Acceso Ilimitado GOLD"
-                                                className="w-full bg-black/60 border border-white/10 rounded-xl p-4 pl-12 text-white outline-none focus:border-brand-red text-sm"
+                                                className="w-full bg-background border border-border rounded-xl p-4 pl-12 text-foreground outline-none focus:border-brand-red text-sm"
                                             />
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Descripción (Opcional)</label>
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Descripción (Opcional)</label>
                                         <textarea
                                             value={description}
                                             onChange={(e) => setDescription(e.target.value)}
                                             placeholder="Detalla qué incluye este plan..."
-                                            className="w-full bg-black/60 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-brand-red text-sm h-32 resize-none"
+                                            className="w-full bg-background border border-border rounded-xl p-4 text-foreground outline-none focus:border-brand-red text-sm h-32 resize-none"
                                         />
                                     </div>
                                 </div>
@@ -249,9 +249,9 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
                                 <div className="space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Precio (€)</label>
+                                            <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Precio (€)</label>
                                             <div className="relative">
-                                                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                                 <input
                                                     required
                                                     type="number"
@@ -259,40 +259,40 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
                                                     value={price}
                                                     onChange={(e) => setPrice(e.target.value)}
                                                     placeholder="0.00"
-                                                    className="w-full bg-black/60 border border-white/10 rounded-xl p-4 pl-12 text-white outline-none focus:border-brand-red text-sm"
+                                                    className="w-full bg-background border border-border rounded-xl p-4 pl-12 text-foreground outline-none focus:border-brand-red text-sm"
                                                 />
                                             </div>
                                         </div>
                                         <div>
-                                            <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Duración (Meses)</label>
+                                            <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Duración (Meses)</label>
                                             <div className="relative">
-                                                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                                 <select
                                                     value={duration}
                                                     onChange={(e) => setDuration(e.target.value)}
-                                                    className="w-full bg-black/60 border border-white/10 rounded-xl p-4 pl-12 text-white outline-none focus:border-brand-red text-sm appearance-none"
+                                                    className="w-full bg-background border border-border rounded-xl p-4 pl-12 text-foreground outline-none focus:border-brand-red text-sm appearance-none"
                                                 >
                                                     <option value="1">1 Mes</option>
                                                     <option value="3">3 Meses</option>
                                                     <option value="6">6 Meses</option>
                                                     <option value="12">Anual</option>
                                                 </select>
-                                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                                             </div>
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2">Características y Beneficios</label>
+                                        <label className="block text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-2">Características y Beneficios</label>
                                         <div className="space-y-3">
                                             <div className="relative">
-                                                <ListChecks className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                                <ListChecks className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                                 <input
                                                     value={newFeature}
                                                     onChange={(e) => setNewFeature(e.target.value)}
                                                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddFeature())}
                                                     placeholder="Agregar característica..."
-                                                    className="w-full bg-black/60 border border-white/10 rounded-xl p-3 pl-10 text-white outline-none focus:border-brand-red text-xs"
+                                                    className="w-full bg-background border border-border rounded-xl p-3 pl-10 text-foreground outline-none focus:border-brand-red text-xs"
                                                 />
                                                 <button
                                                     type="button"
@@ -305,7 +305,7 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
 
                                             <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-1 custom-scrollbar">
                                                 {features.map((feat, idx) => (
-                                                    <div key={idx} className="flex items-center gap-1.5 bg-brand-red/10 border border-brand-red/20 px-2 py-1 rounded-lg text-[10px] text-white group">
+                                                    <div key={idx} className="flex items-center gap-1.5 bg-brand-red/10 border border-brand-red/20 px-2 py-1 rounded-lg text-[10px] text-foreground group">
                                                         <span>{feat}</span>
                                                         <button type="button" onClick={() => removeFeature(idx)} className="text-brand-red hover:text-red-400">
                                                             <X className="w-3 h-3" />
@@ -313,7 +313,7 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
                                                     </div>
                                                 ))}
                                                 {features.length === 0 && (
-                                                    <p className="text-[10px] text-gray-600 italic">No hay características añadidas.</p>
+                                                    <p className="text-[10px] text-muted-foreground italic">No hay características añadidas.</p>
                                                 )}
                                             </div>
                                         </div>
@@ -321,11 +321,11 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
                                 </div>
                             </div>
 
-                            <div className="flex gap-4 pt-6 border-t border-white/5">
+                            <div className="flex gap-4 pt-6 border-t border-border">
                                 <button
                                     type="button"
                                     onClick={() => setShowModal(false)}
-                                    className="flex-1 bg-white/5 text-gray-400 py-4 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-white/10 transition-colors"
+                                    className="flex-1 bg-muted text-muted-foreground py-4 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-muted/80 transition-colors"
                                 >
                                     Cancelar
                                 </button>

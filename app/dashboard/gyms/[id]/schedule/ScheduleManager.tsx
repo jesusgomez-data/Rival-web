@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Calendar as CalIcon, Clock, Users, ChevronLeft, ChevronRight, LayoutGrid, List as ListIcon, ChevronDown, Check, Building2, RefreshCw, Sparkles, Download, Share2 } from "lucide-react";
+import { Plus, Trash2, Calendar as CalIcon, Clock, Users, ChevronLeft, ChevronRight, LayoutGrid, List as ListIcon, ChevronDown, Check, Building2, RefreshCw, Download, Share2 } from "lucide-react";
 import { createClass, deleteClass, getClassesRange } from "../../schedule-actions";
 
 
@@ -193,7 +193,7 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
 
                             {centerDropdownOpen && (
                                 <div className="absolute top-full right-0 mt-2 w-56 bg-card border border-border rounded-xl shadow-2xl z-40 overflow-hidden animate-in fade-in zoom-in-95 duration-100">
-                                    <div className="p-2 border-b border-white/5 bg-purple-500/5">
+                                    <div className="p-2 border-b border-border bg-purple-500/5">
                                         <p className="text-[8px] font-black uppercase tracking-[0.2em] text-purple-500/60 ml-2 mb-1">Cambiar Ubicación</p>
                                     </div>
                                     {centers.map((c: any) => (
@@ -203,7 +203,7 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
                                                 setSelectedCenterId(c.id);
                                                 setCenterDropdownOpen(false);
                                             }}
-                                            className={`w-full text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-white/5 flex items-center justify-between ${selectedCenterId === c.id ? 'text-purple-500 bg-purple-500/5' : 'text-muted-foreground'}`}
+                                            className={`w-full text-left px-4 py-3 text-[10px] font-black uppercase tracking-widest transition-all hover:bg-muted flex items-center justify-between ${selectedCenterId === c.id ? 'text-purple-500 bg-purple-500/5' : 'text-muted-foreground'}`}
                                         >
                                             <span className="truncate">{c.name}</span>
                                             {selectedCenterId === c.id && <Check className="w-3 h-3" />}
@@ -218,7 +218,7 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
                              <button
                                 onClick={handleSyncCalendar}
                                 disabled={isSyncing}
-                                className="hidden sm:flex items-center gap-2 bg-white/5 border border-white/10 text-white px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                                className="hidden sm:flex items-center gap-2 bg-muted border border-border text-foreground px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-muted/80 transition-all"
                             >
                                 <RefreshCw className={`w-3.5 h-3.5 text-brand-red ${isSyncing ? 'animate-spin' : ''}`} />
                                 {isSyncing ? 'Sincronizando...' : 'Google Sync'}
@@ -338,7 +338,7 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
                                                         e.stopPropagation();
                                                         window.location.href = `/dashboard/gyms/${centerId}/schedule/${c.id}`;
                                                     }}
-                                                    className="bg-brand-red text-white p-1.5 rounded-lg text-[10px] shadow-lg mb-1 cursor-pointer hover:bg-red-700 transition-colors border border-white/10"
+                                                    className="bg-brand-red text-white p-1.5 rounded-lg text-[10px] shadow-lg mb-1 cursor-pointer hover:bg-red-700 transition-colors border border-brand-red/30"
                                                 >
                                                     <div className="font-black truncate">{c.name}</div>
                                                     <div className="flex justify-between opacity-80 mt-1">
@@ -346,14 +346,8 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
                                                         <span>{c.enrolled_count}/{c.max_capacity}</span>
                                                     </div>
 
-                                                    {/* Quick AI Action (Pro) */}
-                                                    <div className="mt-2 pt-2 border-t border-white/10 flex justify-between items-center opacity-0 group-hover/class:opacity-100 transition-opacity">
-                                                        <button 
-                                                            onClick={(e) => { e.stopPropagation(); window.location.href=`/dashboard/gyms/${centerId}/programming?classId=${c.id}`; }}
-                                                            className="flex items-center gap-1 text-[8px] font-black uppercase bg-white/20 hover:bg-white/40 px-1.5 py-0.5 rounded transition-all"
-                                                        >
-                                                            <Sparkles className="w-2.5 h-2.5" /> AI WOD
-                                                        </button>
+                                                    {/* Quick Actions */}
+                                                    <div className="mt-2 pt-2 border-t border-white/10 flex justify-end items-center opacity-0 group-hover/class:opacity-100 transition-opacity">
                                                         <div className="flex gap-1">
                                                             <Download onClick={(e) => { e.stopPropagation(); alert("Exportando lista de asistencia..."); }} className="w-3 h-3 text-white/60 hover:text-white" />
                                                             <Share2 onClick={(e) => { e.stopPropagation(); alert("Enlace de reserva copiado."); }} className="w-3 h-3 text-white/60 hover:text-white" />
@@ -441,10 +435,10 @@ export default function ScheduleManager({ centerId, initialClasses, coaches, use
                             </div>
 
                             <div className="flex gap-2 mt-6">
-                                <button type="button" onClick={() => setShowModal(false)} className="bg-transparent border border-white/10 text-white p-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/5 transition-all flex-1">
+                                <button type="button" onClick={() => setShowModal(false)} className="bg-muted border border-border text-muted-foreground p-3 rounded-xl text-xs font-black uppercase tracking-widest hover:text-foreground transition-all flex-1">
                                     Cancelar
                                 </button>
-                                <button type="submit" disabled={isSaving} className="bg-white text-black p-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all flex-1 shadow-lg">
+                                <button type="submit" disabled={isSaving} className="bg-foreground text-background p-3 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all flex-1 shadow-lg">
                                     {isSaving ? 'Guardando...' : (organizationDetails?.center_type === 'personal_trainer' ? 'Agendar Cita' : 'Crear Clase')}
                                 </button>
                             </div>

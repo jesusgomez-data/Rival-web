@@ -219,6 +219,46 @@ export async function POST(req: Request) {
             break;
         }
 
+        // Center Stripe Connect onboarding completed
+        case "account.updated": {
+            const account = event.data.object as Stripe.Account;
+            const isReady = account.details_submitted && (account.payouts_enabled ?? false);
+
+            const { error } = await supabase
+                .from('organizations')
+                .update({ stripe_onboarding_complete: isReady })
+                .eq('stripe_account_id', account.id);
+
+            if (error) {
+                console.error('Error updating org stripe status:', error);
+            } else {
+                console.log(`Organization with account ${account.id} onboarding_complete=${isReady}`);
+            }
+            break;
+        }
+
+        // Member membership renewal success — extend membership_end_date
+        case "invoice.payment_succeeded": {
+            const invoice = event.data.object as Stripe.Invoice;
+            const subscriptionId = (invoice as any).subscription as string | null;
+            if (subscriptionId) {
+                const { data: member } = await supabase
+                    .from('members')
+                    .select('id, center_id')
+                    .eq('stripe_subscription_id', subscriptionId)
+                    .single();
+
+                if (member) {
+                    await supabase
+                        .from('members')
+                        .update({ status: 'active' })
+                        .eq('id', member.id);
+                    console.log(`Membership renewed for member ${member.id}`);
+                }
+            }
+            break;
+        }
+
         default:
             console.log(`Unhandled event type ${event.type}`);
     }

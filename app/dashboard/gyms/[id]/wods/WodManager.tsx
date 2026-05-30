@@ -502,9 +502,9 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
         <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
             {/* Create/Edit Form */}
             <div className="lg:col-span-1">
-                <div className="bg-brand-gray border border-white/5 rounded-2xl p-4 sm:p-6 sticky top-8">
+                <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 sticky top-8">
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-black text-white italic uppercase">{editingId ? 'Edit WOD' : 'Publish WOD'}</h3>
+                        <h3 className="text-lg font-black text-foreground italic uppercase">{editingId ? 'Edit WOD' : 'Publish WOD'}</h3>
                         {editingId && (
                             <button onClick={resetForm} className="text-xs text-brand-red font-bold uppercase hover:underline">Cancel</button>
                         )}
@@ -520,17 +520,17 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                     <button
                                         type="button"
                                         onClick={() => setShowBenchmarks(!showBenchmarks)}
-                                        className="text-[10px] font-black text-white/40 hover:text-brand-red uppercase tracking-wider bg-white/5 px-2.5 py-1 rounded-lg border border-white/5 transition-all flex items-center gap-1.5"
+                                        className="text-[10px] font-black text-muted-foreground hover:text-brand-red uppercase tracking-wider bg-muted px-2.5 py-1 rounded-lg border border-border transition-all flex items-center gap-1.5"
                                     >
                                         <Trophy className="w-3 h-3" />
                                         Cargar Benchmark
                                     </button>
 
                                     {showBenchmarks && (
-                                        <div className="absolute right-0 top-full mt-2 w-64 bg-brand-gray border border-white/10 rounded-xl shadow-2xl z-[150] p-1 overflow-hidden backdrop-blur-2xl">
-                                            <div className="p-2 border-b border-white/5 flex items-center justify-between">
-                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Seleccionar Benchmark</span>
-                                                <button onClick={() => setShowBenchmarks(false)}><X className="w-3 h-3 text-gray-600" /></button>
+                                        <div className="absolute right-0 top-full mt-2 w-64 bg-card border border-border rounded-xl shadow-2xl z-[150] p-1 overflow-hidden backdrop-blur-2xl">
+                                            <div className="p-2 border-b border-border flex items-center justify-between">
+                                                <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest pl-1">Seleccionar Benchmark</span>
+                                                <button onClick={() => setShowBenchmarks(false)}><X className="w-3 h-3 text-muted-foreground" /></button>
                                             </div>
                                             <div className="max-h-60 overflow-y-auto custom-scrollbar">
                                                 {BENCHMARKS.map((bm, i) => (
@@ -550,7 +550,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                             }
                                                             setShowBenchmarks(false);
                                                         }}
-                                                        className="w-full text-left px-4 py-3 text-xs font-bold text-gray-300 hover:text-white hover:bg-white/5 border-b border-white/5 last:border-0 transition-colors uppercase italic"
+                                                        className="w-full text-left px-4 py-3 text-xs font-bold text-foreground/70 hover:text-foreground hover:bg-muted border-b border-border last:border-0 transition-colors uppercase italic"
                                                     >
                                                         {bm.name}
                                                     </button>
@@ -565,7 +565,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                 value={title}
                                 onChange={(e) => setTitle(e.target.value.toUpperCase())}
                                 placeholder="Ej: THE CHIEF, MURPH, PUSH & BURN..."
-                                className="w-full bg-black/40 border border-white/10 rounded-xl p-3 text-white focus:border-brand-red focus:bg-black/60 outline-none text-sm font-black italic uppercase transition-colors"
+                                className="w-full bg-background border border-border rounded-xl p-3 text-foreground focus:border-brand-red outline-none text-sm font-black italic uppercase transition-colors"
                             />
                         </div>
 
@@ -576,17 +576,17 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                 value={warmup}
                                 onChange={(e) => setWarmup(e.target.value)}
                                 placeholder="Warm up details..."
-                                className="w-full h-24 bg-black/40 border border-white/10 rounded-xl p-3 text-white focus:border-brand-red focus:bg-black/60 outline-none text-sm resize-none transition-colors"
+                                className="w-full h-24 bg-background border border-border rounded-xl p-3 text-foreground focus:border-brand-red outline-none text-sm resize-none transition-colors"
                             />
                         </div>
 
                         {/* Dynamic Blocks */}
                         {blocks.map((block, index) => (
-                            <div key={block.id} className="space-y-3 relative group p-3 sm:p-4 bg-white/5 rounded-xl border border-white/5 hover:border-white/20 transition-colors animate-fade-in">
+                            <div key={block.id} className="space-y-3 relative group p-3 sm:p-4 bg-muted/30 rounded-xl border border-border hover:border-border/60 transition-colors animate-fade-in">
                                 <button
                                     type="button"
                                     onClick={() => removeBlock(index)}
-                                    className="absolute top-2 right-2 text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                    className="absolute top-2 right-2 text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-10"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -608,7 +608,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
 
                                                     updateBlock(index, { format: newFormat, config: newConfig });
                                                 }}
-                                                className="appearance-none bg-black/50 border border-white/10 rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-red focus:border-brand-red outline-none cursor-pointer pr-8"
+                                                className="appearance-none bg-background border border-border rounded-lg px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-brand-red focus:border-brand-red outline-none cursor-pointer pr-8"
                                             >
                                                 <option value="FREE">Free Style</option>
                                                 <option value="EMOM">EMOM</option>
@@ -621,35 +621,35 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                 <option value="QUALITY">Quality</option>
                                                 <option value="REST">Rest</option>
                                             </select>
-                                            <ChevronDown className="w-3 h-3 text-gray-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                            <ChevronDown className="w-3 h-3 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                                         </div>
 
                                         {(block.format === 'AMRAP' || block.format === 'FOR TIME' || block.format === 'ROUNDS FOR TIME') && (
                                             <div className="flex items-end gap-2">
                                                 {block.format === 'ROUNDS FOR TIME' && (
                                                     <div className="flex flex-col items-center gap-0.5">
-                                                        <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Rounds</span>
-                                                        <div className="flex items-center bg-black/50 rounded-xl border border-white/10 overflow-hidden">
-                                                            <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, rounds: Math.max(1, (block.config?.rounds || 1) - 1) } })} className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-white/5 active:scale-90 transition-transform"><Minus className="w-3.5 h-3.5" /></button>
-                                                            <span className="w-8 text-center text-sm font-black text-white">{block.config?.rounds || 1}</span>
-                                                            <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, rounds: (block.config?.rounds || 1) + 1 } })} className="w-9 h-9 flex items-center justify-center text-brand-red hover:bg-white/5 active:scale-95 transition-transform"><Plus className="w-3.5 h-3.5" /></button>
+                                                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Rounds</span>
+                                                        <div className="flex items-center bg-background rounded-xl border border-border overflow-hidden">
+                                                            <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, rounds: Math.max(1, (block.config?.rounds || 1) - 1) } })} className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-muted active:scale-90 transition-transform"><Minus className="w-3.5 h-3.5" /></button>
+                                                            <span className="w-8 text-center text-sm font-black text-foreground">{block.config?.rounds || 1}</span>
+                                                            <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, rounds: (block.config?.rounds || 1) + 1 } })} className="w-9 h-9 flex items-center justify-center text-brand-red hover:bg-muted active:scale-95 transition-transform"><Plus className="w-3.5 h-3.5" /></button>
                                                         </div>
                                                     </div>
                                                 )}
                                                 <div className="flex flex-col items-center gap-0.5">
-                                                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Time Cap</span>
-                                                    <div className="flex items-center bg-black/50 rounded-xl border border-brand-red/30 overflow-hidden">
+                                                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Time Cap</span>
+                                                    <div className="flex items-center bg-background rounded-xl border border-brand-red/30 overflow-hidden">
                                                         <button type="button" onClick={() => {
                                                             const [m, s] = (block.config?.timecap || '20:00').split(':').map(Number);
                                                             const newMins = Math.max(0, (isNaN(m) ? 20 : m) - 1);
                                                             updateBlock(index, { config: { ...block.config, timecap: `${String(newMins).padStart(2,'0')}:${String(isNaN(s) ? 0 : s).padStart(2,'0')}` } });
-                                                        }} className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-white/5 active:scale-90 transition-transform"><Minus className="w-3.5 h-3.5" /></button>
+                                                        }} className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-muted active:scale-90 transition-transform"><Minus className="w-3.5 h-3.5" /></button>
                                                         <span className="text-sm font-black text-brand-red px-1 tabular-nums">{(() => { const [m,s]=(block.config?.timecap||'20:00').split(':').map(Number); return `${String(isNaN(m)?20:m).padStart(2,'0')}:${String(isNaN(s)?0:s).padStart(2,'0')}`; })()}</span>
                                                         <button type="button" onClick={() => {
                                                             const [m, s] = (block.config?.timecap || '20:00').split(':').map(Number);
                                                             const newMins = (isNaN(m) ? 20 : m) + 1;
                                                             updateBlock(index, { config: { ...block.config, timecap: `${String(newMins).padStart(2,'0')}:${String(isNaN(s) ? 0 : s).padStart(2,'0')}` } });
-                                                        }} className="w-9 h-9 flex items-center justify-center text-brand-red hover:bg-white/5 active:scale-95 transition-transform"><Plus className="w-3.5 h-3.5" /></button>
+                                                        }} className="w-9 h-9 flex items-center justify-center text-brand-red hover:bg-muted active:scale-95 transition-transform"><Plus className="w-3.5 h-3.5" /></button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -658,11 +658,11 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                         {block.format === 'EMOM' && (
                                             <div className="flex items-end gap-2">
                                                 <div className="flex flex-col items-center gap-0.5">
-                                                    <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Minutos</span>
-                                                    <div className="flex items-center bg-black/50 rounded-xl border border-brand-red/30 overflow-hidden">
-                                                        <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, minutes: Math.max(1, (block.config?.minutes || 12) - 1) } })} className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-white/5 active:scale-90 transition-transform"><Minus className="w-3.5 h-3.5" /></button>
+                                                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Minutos</span>
+                                                    <div className="flex items-center bg-background rounded-xl border border-brand-red/30 overflow-hidden">
+                                                        <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, minutes: Math.max(1, (block.config?.minutes || 12) - 1) } })} className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-muted active:scale-90 transition-transform"><Minus className="w-3.5 h-3.5" /></button>
                                                         <span className="w-8 text-center text-sm font-black text-brand-red">{block.config?.minutes || 12}</span>
-                                                        <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, minutes: (block.config?.minutes || 12) + 1 } })} className="w-9 h-9 flex items-center justify-center text-brand-red hover:bg-white/5 active:scale-95 transition-transform"><Plus className="w-3.5 h-3.5" /></button>
+                                                        <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, minutes: (block.config?.minutes || 12) + 1 } })} className="w-9 h-9 flex items-center justify-center text-brand-red hover:bg-muted active:scale-95 transition-transform"><Plus className="w-3.5 h-3.5" /></button>
                                                     </div>
                                                 </div>
                                                 {block.config?.minutes && (block.exercises?.length || 0) > 0 && (
@@ -675,13 +675,13 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                     </div>
 
                                     {/* Mode Toggle */}
-                                    <div className="flex bg-black/50 rounded-lg p-1 border border-white/10 shrink-0">
+                                    <div className="flex bg-background rounded-lg p-1 border border-border shrink-0">
                                         <button
                                             type="button"
                                             onClick={() => block.mode !== 'text' && toggleBlockMode(index)}
                                             className={clsx(
                                                 "px-3 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all",
-                                                (!block.mode || block.mode === 'text') ? "bg-white/10 text-white" : "text-gray-500 hover:text-white"
+                                                (!block.mode || block.mode === 'text') ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
                                             )}
                                         >
                                             Text
@@ -691,7 +691,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                             onClick={() => block.mode !== 'builder' && toggleBlockMode(index)}
                                             className={clsx(
                                                 "px-3 py-1.5 text-[10px] font-bold uppercase rounded-md transition-all",
-                                                block.mode === 'builder' ? "bg-brand-red text-white" : "text-gray-500 hover:text-white"
+                                                block.mode === 'builder' ? "bg-brand-red text-white" : "text-muted-foreground hover:text-foreground"
                                             )}
                                         >
                                             Builder
@@ -704,7 +704,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                         value={block.content}
                                         onChange={(e) => updateBlock(index, { content: e.target.value })}
                                         placeholder="Workout details..."
-                                        className="w-full h-32 bg-black/40 border-0 rounded-lg p-3 text-white text-sm resize-none focus:ring-1 ring-white/20 font-heading font-medium tracking-tight"
+                                        className="w-full h-32 bg-background border border-border rounded-lg p-3 text-foreground text-sm resize-none outline-none focus:border-brand-red font-heading font-medium tracking-tight"
                                     />
                                 ) : (
                                     <div className="space-y-3">
@@ -712,8 +712,8 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                             <div key={ex.id} className="bg-black/60 border border-white/5 rounded-2xl p-3 sm:p-4 space-y-4 animate-in slide-in-from-left-2 duration-200">
                                                 <div className="flex items-center gap-2">
                                                     <div className="relative flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 group-focus-within:border-brand-red transition-all">
-                                                            <Search className="w-4 h-4 text-gray-500 shrink-0" />
+                                                        <div className="flex items-center gap-2 bg-background border border-border rounded-xl px-3 py-2.5 group-focus-within:border-brand-red transition-all">
+                                                            <Search className="w-4 h-4 text-muted-foreground shrink-0" />
                                                             <input
                                                                 placeholder="Ejercicio..."
                                                                 value={ex.name}
@@ -722,13 +722,13 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                                     updateExercise(index, exIndex, { name: e.target.value });
                                                                     setSearchQuery(e.target.value);
                                                                 }}
-                                                                className="flex-1 bg-transparent border-none text-sm font-bold text-white outline-none placeholder-gray-600 min-w-0"
+                                                                className="flex-1 bg-transparent border-none text-sm font-bold text-foreground outline-none placeholder:text-muted-foreground min-w-0"
                                                             />
                                                         </div>
 
                                                         {/* Suggestions Dropdown */}
                                                         {activeExercisePath?.bIdx === index && activeExercisePath?.eIdx === exIndex && searchQuery && (
-                                                            <div className="absolute left-0 right-0 top-full mt-2 bg-brand-gray border border-white/10 rounded-xl shadow-2xl z-[100] max-h-48 overflow-y-auto overflow-x-hidden backdrop-blur-xl">
+                                                            <div className="absolute left-0 right-0 top-full mt-2 bg-card border border-border rounded-xl shadow-2xl z-[100] max-h-48 overflow-y-auto overflow-x-hidden backdrop-blur-xl">
                                                                 {catalogExercises.filter(ce => ce.toLowerCase().includes(searchQuery.toLowerCase())).map((ce, i) => (
                                                                     <button
                                                                         key={i}
@@ -738,7 +738,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                                             setActiveExercisePath(null);
                                                                             setSearchQuery("");
                                                                         }}
-                                                                        className="w-full text-left px-4 py-2.5 text-xs text-gray-300 hover:text-white hover:bg-white/5 border-b border-white/5 last:border-0 transition-colors"
+                                                                        className="w-full text-left px-4 py-2.5 text-xs text-foreground/70 hover:text-foreground hover:bg-muted border-b border-border last:border-0 transition-colors"
                                                                     >
                                                                         {ce}
                                                                     </button>
@@ -748,7 +748,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                                         type="button"
                                                                         onClick={() => handleSaveNewExercise(searchQuery, index, exIndex)}
                                                                         disabled={isSavingExercise}
-                                                                        className="w-full text-left px-4 py-3 text-xs font-black text-brand-red hover:bg-brand-red/10 border-t border-white/10 transition-colors uppercase italic flex items-center justify-between"
+                                                                        className="w-full text-left px-4 py-3 text-xs font-black text-brand-red hover:bg-brand-red/10 border-t border-border transition-colors uppercase italic flex items-center justify-between"
                                                                     >
                                                                         <span>{isSavingExercise ? 'Guardando...' : `+ Añadir "${searchQuery}" a la librería`}</span>
                                                                         {!isSavingExercise && <Plus className="w-3 h-3" />}
@@ -763,7 +763,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                             "w-10 h-10 flex items-center justify-center rounded-xl border cursor-pointer transition-all",
                                                             (ex.media_url || exerciseFiles[block.id]?.[ex.id])
                                                                 ? "bg-brand-red border-brand-red text-white shadow-glow"
-                                                                : "bg-black/40 border-white/10 text-gray-500 hover:text-white hover:bg-white/10"
+                                                                : "bg-muted border-border text-muted-foreground hover:text-foreground hover:bg-muted/80"
                                                         )}>
                                                             {(ex.media_url || exerciseFiles[block.id]?.[ex.id]) ? <Check className="w-4 h-4" /> : <Video className="w-4 h-4" />}
                                                             <input
@@ -776,7 +776,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                         <button
                                                             type="button"
                                                             onClick={() => removeExercise(index, exIndex)}
-                                                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-black/40 border border-white/10 text-gray-500 hover:text-red-500 hover:bg-red-500/10 transition-all"
+                                                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-muted border border-border text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
                                                         </button>
@@ -786,8 +786,8 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                 <div className="grid grid-cols-3 gap-3">
                                                     {/* Sets */}
                                                     <div className="space-y-1">
-                                                        <span className="text-[8px] uppercase font-black text-gray-500 tracking-widest ml-1">Sets</span>
-                                                        <div className="flex items-center gap-0.5 bg-black/40 rounded-xl p-1 border border-white/10">
+                                                        <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest ml-1">Sets</span>
+                                                        <div className="flex items-center gap-0.5 bg-background rounded-xl p-1 border border-border">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => {
@@ -801,7 +801,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                             <input
                                                                 value={ex.sets || ''}
                                                                 onChange={(e) => updateExercise(index, exIndex, { sets: e.target.value })}
-                                                                className="w-full bg-transparent text-center text-base font-black text-white outline-none placeholder-gray-800"
+                                                                className="w-full bg-transparent text-center text-base font-black text-foreground outline-none placeholder:text-muted-foreground/30"
                                                                 placeholder="0"
                                                             />
                                                             <button
@@ -819,8 +819,8 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
 
                                                     {/* Reps */}
                                                     <div className="space-y-1">
-                                                        <span className="text-[8px] uppercase font-black text-gray-500 tracking-widest ml-1">Reps</span>
-                                                        <div className="flex items-center gap-0.5 bg-black/40 rounded-xl p-1 border border-brand-red/40 shadow-glow shadow-brand-red/5">
+                                                        <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest ml-1">Reps</span>
+                                                        <div className="flex items-center gap-0.5 bg-background rounded-xl p-1 border border-brand-red/40 shadow-glow shadow-brand-red/5">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => {
@@ -834,7 +834,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                             <input
                                                                 value={ex.reps || ''}
                                                                 onChange={(e) => updateExercise(index, exIndex, { reps: e.target.value })}
-                                                                className="w-full bg-transparent text-center text-lg font-black text-white outline-none placeholder-gray-800"
+                                                                className="w-full bg-transparent text-center text-lg font-black text-foreground outline-none placeholder:text-muted-foreground/30"
                                                                 placeholder="0"
                                                             />
                                                             <button
@@ -852,8 +852,8 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
 
                                                     {/* Charge */}
                                                     <div className="space-y-1">
-                                                        <span className="text-[8px] uppercase font-black text-gray-500 tracking-widest ml-1">Carga</span>
-                                                        <div className="flex items-center gap-0.5 bg-black/40 rounded-xl p-1 border border-white/10">
+                                                        <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest ml-1">Carga</span>
+                                                        <div className="flex items-center gap-0.5 bg-background rounded-xl p-1 border border-border">
                                                             <button
                                                                 type="button"
                                                                 onClick={() => {
@@ -867,7 +867,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                             <input
                                                                 value={ex.value || ''}
                                                                 onChange={(e) => updateExercise(index, exIndex, { value: e.target.value })}
-                                                                className="w-full bg-transparent text-center text-base font-black text-white outline-none placeholder-gray-800"
+                                                                className="w-full bg-transparent text-center text-base font-black text-foreground outline-none placeholder:text-muted-foreground/30"
                                                                 placeholder="0"
                                                             />
                                                             <button
@@ -888,7 +888,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                         <button
                                             type="button"
                                             onClick={() => addExercise(index)}
-                                            className="w-full py-4 rounded-xl border-2 border-dashed border-white/10 text-gray-500 hover:text-white hover:border-brand-red/50 hover:bg-brand-red/5 transition-all flex items-center justify-center gap-2 group"
+                                            className="w-full py-4 rounded-xl border-2 border-dashed border-border text-muted-foreground hover:text-foreground hover:border-brand-red/50 hover:bg-brand-red/5 transition-all flex items-center justify-center gap-2 group"
                                         >
                                             <Plus className="w-4 h-4 group-hover:scale-125 transition-transform" />
                                             <span className="text-xs font-black uppercase tracking-widest">Añadir Línea de Ejercicio</span>
@@ -897,9 +897,9 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                 )}
 
                                 {/* Block Media Controls */}
-                                <div className="pt-2 border-t border-white/5">
+                                <div className="pt-2 border-t border-border">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <label className="cursor-pointer flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wide hover:text-white transition-colors">
+                                        <label className="cursor-pointer flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wide hover:text-foreground transition-colors">
                                             <ImageIcon className="w-3 h-3" /> Attach Media (Entire Block)
                                             <input
                                                 type="file"
@@ -915,7 +915,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                     <div className="flex flex-wrap gap-2">
                                         {/* Existing Media */}
                                         {block.media_urls?.map((url, i) => (
-                                            <div key={`existing-${i}`} className="w-12 h-12 bg-black rounded border border-white/10 relative group overflow-hidden">
+                                            <div key={`existing-${i}`} className="w-12 h-12 bg-muted rounded border border-border relative group overflow-hidden">
                                                 <img src={url} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition-opacity" />
                                                 <button
                                                     type="button"
@@ -948,35 +948,35 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                         <button
                             type="button"
                             onClick={addBlock}
-                            className="w-full py-3 border border-dashed border-white/20 rounded-xl text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-white hover:border-white/40 transition-colors flex items-center justify-center gap-2"
+                            className="w-full py-3 border border-dashed border-border rounded-xl text-xs font-bold text-muted-foreground uppercase tracking-widest hover:text-foreground hover:border-border/60 transition-colors flex items-center justify-center gap-2"
                         >
                             <Plus className="w-4 h-4" /> Add Block
                         </button>
 
                         {/* Section: Summary / Goal */}
                         <div className="bg-brand-red/5 border border-brand-red/20 rounded-2xl p-4 space-y-4">
-                            <div className="flex items-center gap-2 text-white">
+                            <div className="flex items-center gap-2 text-foreground">
                                 <Trophy className="w-4 h-4 text-brand-red" />
                                 <span className="text-xs font-black uppercase italic tracking-tighter">WOD Summary & Goal</span>
                             </div>
 
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-500 uppercase">Estimated Time</label>
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Estimated Time</label>
                                     <input
                                         type="text"
                                         value={summary.totalTime}
                                         onChange={(e) => setSummary({ ...summary, totalTime: e.target.value.toUpperCase() })}
                                         placeholder="Ej: 60:00"
-                                        className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white text-xs font-bold outline-none focus:border-brand-red"
+                                        className="w-full bg-background border border-border rounded-xl p-2.5 text-foreground text-xs font-bold outline-none focus:border-brand-red"
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-bold text-gray-500 uppercase">Score Type</label>
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase">Score Type</label>
                                     <select
                                         value={summary.scoreType}
                                         onChange={(e) => setSummary({ ...summary, scoreType: e.target.value as any })}
-                                        className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-brand-red text-xs font-bold outline-none focus:border-brand-red cursor-pointer"
+                                        className="w-full bg-background border border-border rounded-xl p-2.5 text-brand-red text-xs font-bold outline-none focus:border-brand-red cursor-pointer"
                                     >
                                         <option value="TIME">TIME</option>
                                         <option value="REPS">REPS</option>
@@ -989,22 +989,22 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                             </div>
 
                             <div className="space-y-1">
-                                <label className="text-[10px] font-bold text-gray-500 uppercase">Score Label / Target</label>
+                                <label className="text-[10px] font-bold text-muted-foreground uppercase">Score Label / Target</label>
                                 <input
                                     type="text"
                                     value={summary.scoreLabel}
                                     onChange={(e) => setSummary({ ...summary, scoreLabel: e.target.value.toUpperCase() })}
                                     placeholder="Ej: PR: 21:05 / RX: 43KG"
-                                    className="w-full bg-black/40 border border-white/10 rounded-xl p-2.5 text-white text-xs font-bold outline-none focus:border-brand-red"
+                                    className="w-full bg-background border border-border rounded-xl p-2.5 text-foreground text-xs font-bold outline-none focus:border-brand-red"
                                 />
                             </div>
                         </div>
 
-                        <div className="border-t border-white/10 pt-4">
-                            <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Programar Publicación</label>
+                        <div className="border-t border-border pt-4">
+                            <label className="block text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-2">Programar Publicación</label>
                             <div className="grid grid-cols-2 gap-3 mb-4">
                                 <div className="relative group/date">
-                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none group-hover/date:text-brand-red transition-colors" />
+                                    <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none group-hover/date:text-brand-red transition-colors" />
                                     <input
                                         type="date"
                                         value={date}
@@ -1012,23 +1012,23 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                         onClick={(e) => {
                                             try { (e.target as any).showPicker(); } catch (err) { }
                                         }}
-                                        className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-white outline-none focus:border-brand-red text-sm cursor-pointer"
+                                        className="w-full bg-background border border-border rounded-xl p-3 pl-10 text-foreground outline-none focus:border-brand-red text-sm cursor-pointer"
                                     />
                                 </div>
                                 <div className="relative">
-                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                    <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                     <input
                                         type="time"
                                         value={time}
                                         onChange={(e) => setTime(e.target.value)}
-                                        className="w-full bg-black/40 border border-white/10 rounded-xl p-3 pl-10 text-white outline-none focus:border-brand-red text-sm"
+                                        className="w-full bg-background border border-border rounded-xl p-3 pl-10 text-foreground outline-none focus:border-brand-red text-sm"
                                     />
                                 </div>
                             </div>
 
-                            <div className="flex items-center justify-between p-3 bg-black/40 border border-white/10 rounded-xl mb-6">
+                            <div className="flex items-center justify-between p-3 bg-muted/30 border border-border rounded-xl mb-6">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 rounded-full bg-gray-800 border border-white/10 overflow-hidden">
+                                    <div className="w-8 h-8 rounded-full bg-muted border border-border overflow-hidden">
                                         {postAsCenter ? (
                                             center?.logo_url ? <img src={center.logo_url} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-brand-red/20" />
                                         ) : (
@@ -1036,15 +1036,15 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                         )}
                                     </div>
                                     <div>
-                                        <p className="text-[10px] font-black text-white uppercase italic">{postAsCenter ? center?.name : 'Tu Perfil (Coach)'}</p>
-                                        <p className="text-[8px] text-gray-500 font-bold uppercase tracking-widest">{postAsCenter ? 'Perfil del Centro' : 'Publicación Personal'}</p>
+                                        <p className="text-[10px] font-black text-foreground uppercase italic">{postAsCenter ? center?.name : 'Tu Perfil (Coach)'}</p>
+                                        <p className="text-[8px] text-muted-foreground font-bold uppercase tracking-widest">{postAsCenter ? 'Perfil del Centro' : 'Publicación Personal'}</p>
                                     </div>
                                 </div>
                                 {canPostAsCenter && (
                                     <button
                                         type="button"
                                         onClick={() => setPostAsCenter(!postAsCenter)}
-                                        className={`relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none ${postAsCenter ? 'bg-brand-red' : 'bg-gray-700'}`}
+                                        className={`relative w-10 h-5 rounded-full transition-colors duration-200 focus:outline-none ${postAsCenter ? 'bg-brand-red' : 'bg-muted-foreground/30'}`}
                                     >
                                         <div className={`absolute top-1 left-1 w-3 h-3 bg-white rounded-full transition-transform duration-200 ${postAsCenter ? 'translate-x-5' : ''}`} />
                                     </button>
@@ -1080,14 +1080,14 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                         const isFuture = new Date(post.scheduled_for) > new Date();
 
                         return (
-                            <div key={post.id} className={`bg-brand-gray border rounded-2xl overflow-hidden animate-fade-in text-left transition-all ${isFuture ? 'border-brand-red/30 bg-brand-red/[0.02]' : 'border-white/5'}`}>
+                            <div key={post.id} className={`bg-card border rounded-2xl overflow-hidden animate-fade-in text-left transition-all ${isFuture ? 'border-brand-red/30 bg-brand-red/[0.02]' : 'border-border'}`}>
                                 {/* Header / Toggle Button */}
                                 <button
                                     onClick={() => togglePost(post.id)}
-                                    className="w-full text-left p-5 sm:p-6 flex items-center justify-between hover:bg-white/5 transition-colors group"
+                                    className="w-full text-left p-5 sm:p-6 flex items-center justify-between hover:bg-muted/30 transition-colors group"
                                 >
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-full bg-gray-800 border border-white/10 overflow-hidden shrink-0">
+                                        <div className="w-10 h-10 rounded-full bg-muted border border-border overflow-hidden shrink-0">
                                             {post.post_as_center ? (
                                                 center?.logo_url ? <img src={center.logo_url} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-brand-red/20" />
                                             ) : (
@@ -1096,7 +1096,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                                                <h4 className="text-white font-black italic uppercase text-sm sm:text-base tracking-tighter shrink-0">
+                                                <h4 className="text-foreground font-black italic uppercase text-sm sm:text-base tracking-tighter shrink-0">
                                                     ENTRENAMIENTO - {new Date(post.scheduled_for || post.created_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
                                                 </h4>
                                                 {isFuture && (
@@ -1106,7 +1106,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                     </span>
                                                 )}
                                             </div>
-                                            <p className="text-[10px] text-gray-500 font-bold tracking-widest uppercase flex items-center gap-2">
+                                            <p className="text-[10px] text-muted-foreground font-bold tracking-widest uppercase flex items-center gap-2">
                                                 {post.post_as_center ? (center?.name || 'Centro') : (post.author?.full_name || 'Coach')}
                                                 {isFuture && <span>• {new Date(post.scheduled_for).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}hs</span>}
                                             </p>
@@ -1116,39 +1116,39 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                         <div className="flex items-center gap-2 transition-opacity">
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); handleEdit(post); }}
-                                                className="p-2 bg-black/50 rounded-full text-gray-400 hover:text-white transition-colors"
+                                                className="p-2 bg-muted rounded-full text-muted-foreground hover:text-foreground transition-colors"
                                             >
                                                 <Edit2 className="w-3.5 h-3.5" />
                                             </button>
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); handleDelete(post.id); }}
-                                                className="p-2 bg-black/50 rounded-full text-gray-400 hover:text-red-500 transition-colors"
+                                                className="p-2 bg-muted rounded-full text-muted-foreground hover:text-red-500 transition-colors"
                                             >
                                                 <Trash2 className="w-3.5 h-3.5" />
                                             </button>
                                         </div>
-                                        <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
+                                        <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} />
                                     </div>
                                 </button>
 
                                 {/* Collapsible Content */}
                                 {isExpanded && (
                                     <div className="p-5 sm:p-8 pt-0 animate-in slide-in-from-top-4 duration-300">
-                                        <div className="border-t border-white/5 pt-6 space-y-4">
+                                        <div className="border-t border-border pt-6 space-y-4">
                                             {wodData.warmup && (
-                                                <div className="bg-black/20 rounded-2xl border border-white/5 overflow-hidden">
+                                                <div className="bg-muted/20 rounded-2xl border border-border overflow-hidden">
                                                     <button
                                                         onClick={() => toggleInternalBlock(post.id, 'warmup')}
-                                                        className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
+                                                        className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
                                                     >
                                                         <h5 className="text-brand-red font-heading font-black text-xs uppercase tracking-widest flex items-center gap-2 italic">
                                                             <span className="w-2 h-2 rounded-full bg-brand-red"></span> Warm Up
                                                         </h5>
-                                                        <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${expandedBlocks[post.id]?.['warmup'] ? 'rotate-180' : ''}`} />
+                                                        <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${expandedBlocks[post.id]?.['warmup'] ? 'rotate-180' : ''}`} />
                                                     </button>
                                                     {expandedBlocks[post.id]?.['warmup'] && (
                                                         <div className="px-4 pb-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                                                            <div className="text-gray-300 text-sm whitespace-pre-wrap font-medium leading-relaxed pl-4 border-l-2 border-white/10">
+                                                            <div className="text-foreground/70 text-sm whitespace-pre-wrap font-medium leading-relaxed pl-4 border-l-2 border-border">
                                                                 {wodData.warmup}
                                                             </div>
                                                         </div>
@@ -1162,10 +1162,10 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                 const isBlockExpanded = expandedBlocks[post.id]?.[blockKey];
 
                                                 return (
-                                                    <div key={idx} className="bg-black/20 rounded-2xl border border-white/5 overflow-hidden">
+                                                    <div key={idx} className="bg-muted/20 rounded-2xl border border-border overflow-hidden">
                                                         <button
                                                             onClick={() => toggleInternalBlock(post.id, blockKey)}
-                                                            className="w-full flex items-center justify-between p-4 hover:bg-white/5 transition-colors"
+                                                            className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
                                                         >
                                                             <div className="flex items-center gap-3">
                                                                 <h5 className="text-white font-heading font-black text-xs uppercase tracking-widest flex items-center gap-2 italic">

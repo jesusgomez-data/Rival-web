@@ -105,7 +105,7 @@ export default function SidebarNav({
                     if (!visible.length) return null;
                     return (
                         <div key={section.label}>
-                            <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/20 px-2.5 mb-1">
+                            <p className="text-[9px] font-black uppercase tracking-[0.25em] text-gray-400 dark:text-white/20 px-2.5 mb-1">
                                 {section.label}
                             </p>
                             <div className="space-y-px">
@@ -116,14 +116,14 @@ export default function SidebarNav({
                                             className={clsx(
                                                 "flex items-center gap-2.5 px-2.5 py-2 text-[13px] font-semibold rounded-lg transition-all group relative",
                                                 active
-                                                    ? "text-white bg-brand-red/10 border border-brand-red/20"
-                                                    : "text-white/40 hover:text-white/80 hover:bg-white/[0.04] border border-transparent"
+                                                    ? "text-gray-900 dark:text-white bg-brand-red/10 border border-brand-red/20"
+                                                    : "text-gray-500 dark:text-white/40 hover:text-gray-800 dark:hover:text-white/80 hover:bg-gray-100 dark:hover:bg-white/[0.04] border border-transparent"
                                             )}
                                         >
                                             {active && <div className="absolute left-0 top-1.5 bottom-1.5 w-0.5 bg-brand-red rounded-full" />}
                                             <item.icon className={clsx(
                                                 "w-3.5 h-3.5 shrink-0 transition-colors",
-                                                active ? "text-brand-red" : "text-white/25 group-hover:text-white/60"
+                                                active ? "text-brand-red" : "text-gray-400 dark:text-white/25 group-hover:text-gray-600 dark:group-hover:text-white/60"
                                             )} />
                                             <span className="flex-1 truncate leading-none">{item.name}</span>
                                             {item.badge && item.badge > 0 ? (
@@ -158,7 +158,7 @@ export default function SidebarNav({
                                     "relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all border whitespace-nowrap",
                                     active
                                         ? "text-white bg-brand-red border-brand-red"
-                                        : "text-white/35 border-transparent hover:text-white hover:border-white/10"
+                                        : "text-gray-500 dark:text-white/35 border-transparent hover:text-gray-900 dark:hover:text-white hover:border-gray-200 dark:hover:border-white/10"
                                 )}
                             >
                                 <item.icon className="w-3.5 h-3.5 shrink-0" />

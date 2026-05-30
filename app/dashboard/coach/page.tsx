@@ -9,6 +9,7 @@ import Image from "next/image";
 
 import { getRecentPRs, getUserProfile, getPerformanceStats, scheduleWorkout } from "../training/actions";
 import { generateCoachResponse } from "./ai-actions";
+import { publishCoachWorkoutToFeed } from "./coach-actions";
 
 interface WorkoutExercise {
     name: string;
@@ -50,8 +51,11 @@ export default function CoachPage() {
     const [stats, setStats] = useState<any>({ daily: [], fatigue: 0 });
     const [activeTab, setActiveTab] = useState<'chat' | 'insights'>('chat');
     const [isScheduling, setIsScheduling] = useState(false);
+    const [isPublishing, setIsPublishing] = useState(false);
     const [scheduleSuccess, setScheduleSuccess] = useState<string | null>(null);
     const [dailyLimitReached, setDailyLimitReached] = useState(false);
+    const [datePickerFor, setDatePickerFor] = useState<string | null>(null);
+    const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const formatTime = (date?: Date) => {
@@ -174,15 +178,28 @@ export default function CoachPage() {
 
     const handleSchedule = async (workout: Workout) => {
         setIsScheduling(true);
-        const today = new Date().toISOString().split('T')[0];
         const res = await scheduleWorkout({
             title: workout.title,
-            date: today,
+            date: selectedDate,
             exercises: workout.exercises
         });
         setIsScheduling(false);
+        setDatePickerFor(null);
         if (res.success) {
-            setScheduleSuccess("¡Misión asignada al calendario!");
+            const dateFormatted = new Date(selectedDate + 'T12:00:00').toLocaleDateString('es-ES', {
+                weekday: 'long', day: 'numeric', month: 'long'
+            });
+            setScheduleSuccess(`✅ Entreno guardado para el ${dateFormatted}`);
+            setTimeout(() => setScheduleSuccess(null), 4000);
+        }
+    };
+
+    const handlePublish = async (workout: Workout) => {
+        setIsPublishing(true);
+        const res = await publishCoachWorkoutToFeed(workout);
+        setIsPublishing(false);
+        if (!res.error) {
+            setScheduleSuccess('🔥 WOD publicado en tu feed');
             setTimeout(() => setScheduleSuccess(null), 3000);
         }
     };
@@ -303,21 +320,62 @@ export default function CoachPage() {
                                                 </div>
                                             )}
 
-                                            <div className="p-3 bg-white/5 border-t border-white/5 grid grid-cols-2 gap-2">
-                                                <button
-                                                    onClick={() => msg.workout && startTraining(msg.workout)}
-                                                    className="flex items-center justify-center gap-2 bg-white text-black py-2 rounded-lg text-[10px] font-black uppercase transition-colors hover:bg-brand-red hover:text-white"
-                                                >
-                                                    <PlayCircle className="w-3 h-3" /> Comenzar Ya
-                                                </button>
-                                                <button
-                                                    onClick={() => msg.workout && handleSchedule(msg.workout)}
-                                                    disabled={isScheduling}
-                                                    className="flex items-center justify-center gap-2 bg-brand-red/20 border border-brand-red/30 text-white py-2 rounded-lg text-[10px] font-black uppercase transition-colors hover:bg-brand-red disabled:opacity-50"
-                                                >
-                                                    <Calendar className="w-3 h-3" /> Al Calendario
-                                                </button>
-                                            </div>
+                                            {/* Date picker (inline, shown when calendar button is clicked) */}
+                                            {datePickerFor === msg.id ? (
+                                                <div className="p-3 bg-black/50 border-t border-white/5 space-y-2">
+                                                    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest flex items-center gap-1.5">
+                                                        <Calendar className="w-3 h-3 text-brand-red" /> ¿Para qué día?
+                                                    </p>
+                                                    <div className="flex gap-2">
+                                                        <input
+                                                            type="date"
+                                                            value={selectedDate}
+                                                            min={new Date().toISOString().split('T')[0]}
+                                                            onChange={e => setSelectedDate(e.target.value)}
+                                                            className="flex-1 bg-white/5 border border-white/10 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-brand-red/50 [color-scheme:dark]"
+                                                        />
+                                                        <button
+                                                            onClick={() => msg.workout && handleSchedule(msg.workout)}
+                                                            disabled={isScheduling}
+                                                            className="bg-brand-red text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase hover:bg-red-600 disabled:opacity-50 flex items-center gap-1"
+                                                        >
+                                                            {isScheduling ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                                                        </button>
+                                                        <button
+                                                            onClick={() => setDatePickerFor(null)}
+                                                            className="bg-white/5 text-gray-400 px-3 py-2 rounded-lg hover:bg-white/10"
+                                                        >
+                                                            <X className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="p-3 bg-white/5 border-t border-white/5 grid grid-cols-3 gap-2">
+                                                    <button
+                                                        onClick={() => msg.workout && startTraining(msg.workout)}
+                                                        className="flex items-center justify-center gap-1.5 bg-white text-black py-2 rounded-lg text-[10px] font-black uppercase transition-colors hover:bg-brand-red hover:text-white"
+                                                    >
+                                                        <PlayCircle className="w-3 h-3" /> Comenzar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setDatePickerFor(msg.id);
+                                                            setSelectedDate(new Date().toISOString().split('T')[0]);
+                                                        }}
+                                                        className="flex items-center justify-center gap-1.5 bg-brand-red/20 border border-brand-red/30 text-white py-2 rounded-lg text-[10px] font-black uppercase transition-colors hover:bg-brand-red"
+                                                    >
+                                                        <Calendar className="w-3 h-3" /> Agendar
+                                                    </button>
+                                                    <button
+                                                        onClick={() => msg.workout && handlePublish(msg.workout)}
+                                                        disabled={isPublishing}
+                                                        className="flex items-center justify-center gap-1.5 bg-white/10 border border-white/10 text-white py-2 rounded-lg text-[10px] font-black uppercase transition-colors hover:bg-white/20 disabled:opacity-50"
+                                                    >
+                                                        {isPublishing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trophy className="w-3 h-3" />}
+                                                        WOD
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>

@@ -74,17 +74,16 @@ export default function GymLayoutClient({
             <aside className={`
                 hidden lg:flex w-56 xl:w-60 flex-col h-full
                 fixed inset-y-0 left-0 z-50
-                bg-[#0A0A0A] border-r border-white/[0.06]
-                transform transition-transform duration-300 ease-in-out
-                keep-all dark-section
+                bg-gray-50 dark:bg-[#0A0A0A] border-r border-gray-200 dark:border-white/[0.06]
+                transform transition-transform duration-300 ease-in-out keep-all
                 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
             `}>
                 {/* Sidebar header */}
-                <div className="px-4 pt-4 pb-3 border-b border-white/[0.06] shrink-0">
+                <div className="px-4 pt-4 pb-3 border-b border-gray-200 dark:border-white/[0.06] shrink-0">
                     <div className="flex items-center justify-between gap-2">
                         <Link href={`/dashboard/gyms/${org.id}`} className="flex items-center gap-2.5 min-w-0 hover:opacity-80 transition-opacity">
                             {org.logo_url ? (
-                                <div className="w-7 h-7 rounded-lg overflow-hidden shrink-0 border border-white/10">
+                                <div className="w-7 h-7 rounded-lg overflow-hidden shrink-0 border border-gray-200 dark:border-white/10">
                                     <Image src={org.logo_url} alt="" width={28} height={28} className="object-cover w-full h-full" />
                                 </div>
                             ) : (
@@ -93,11 +92,11 @@ export default function GymLayoutClient({
                                 </div>
                             )}
                             <div className="min-w-0">
-                                <h2 className="font-black text-sm text-white leading-tight truncate">{org.name}</h2>
+                                <h2 className="font-black text-sm text-gray-900 dark:text-white leading-tight truncate">{org.name}</h2>
                                 <p className="text-[9px] text-brand-red font-bold uppercase tracking-wider leading-none mt-0.5">{roleLabel}</p>
                             </div>
                         </Link>
-                        <button onClick={() => setSidebarOpen(false)} className="p-1.5 text-white/25 hover:text-white hover:bg-white/5 rounded-lg transition-colors shrink-0">
+                        <button onClick={() => setSidebarOpen(false)} className="p-1.5 text-gray-400 dark:text-white/25 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors shrink-0">
                             <ChevronLeft className="w-4 h-4" />
                         </button>
                     </div>
@@ -107,9 +106,9 @@ export default function GymLayoutClient({
                 <SidebarNav id={org.id} isAdmin={isAdmin} centerType={org.center_type} />
 
                 {/* Sidebar footer */}
-                <div className="px-3 py-2.5 border-t border-white/[0.06] shrink-0">
+                <div className="px-3 py-2.5 border-t border-gray-200 dark:border-white/[0.06] shrink-0">
                     <Link href="/dashboard/gyms"
-                        className="flex items-center gap-2.5 px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-white/25 hover:text-white/70 hover:bg-white/[0.04] rounded-lg transition-all">
+                        className="flex items-center gap-2.5 px-3 py-2 text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-white/25 hover:text-gray-700 dark:hover:text-white/70 hover:bg-gray-100 dark:hover:bg-white/[0.04] rounded-lg transition-all">
                         <LogOut className="w-3.5 h-3.5" /> Cambiar Centro
                     </Link>
                 </div>
@@ -145,7 +144,7 @@ export default function GymLayoutClient({
                 </header>
 
                 {/* Mobile header */}
-                <div className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-white/[0.06]">
+                <div className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-gray-200 dark:border-white/[0.06]">
                     <div className="px-4 py-2.5 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5 min-w-0">
                             {org.logo_url
@@ -153,7 +152,7 @@ export default function GymLayoutClient({
                                 : <div className="w-6 h-6 rounded-lg bg-brand-red/20 border border-brand-red/30 flex items-center justify-center shrink-0"><span className="text-brand-red font-black text-[10px]">{org.name?.[0]?.toUpperCase()}</span></div>
                             }
                             <div className="min-w-0">
-                                <h1 className="font-black text-sm italic text-white truncate leading-tight">{org.name}</h1>
+                                <h1 className="font-black text-sm italic text-gray-900 dark:text-white truncate leading-tight">{org.name}</h1>
                                 <p className="text-[9px] font-bold text-brand-red uppercase tracking-widest leading-none">{userRole === 'owner' ? 'Propietario' : 'Coach'}</p>
                             </div>
                         </div>

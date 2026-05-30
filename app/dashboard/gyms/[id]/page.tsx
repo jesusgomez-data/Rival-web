@@ -35,7 +35,7 @@ function DashboardCard({ title, value, icon: Icon, trend, trendValue, subtext, o
                         "text-xs font-bold px-2 py-1 rounded-full uppercase tracking-widest",
                         Number(trendValue) > 0 ? "bg-green-500/10 text-green-500"
                         : Number(trendValue) < 0 ? "bg-red-500/10 text-red-500"
-                        : "bg-white/5 text-white/30"
+                        : "bg-muted text-muted-foreground"
                     )}>
                         {Number(trendValue) > 0 ? `+${trendValue}%` : `${trendValue}%`}
                     </span>
@@ -411,7 +411,7 @@ export default function CenterDashboardHome() {
             {showAddCenter && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
                     <div className="bg-card border border-border rounded-[40px] max-w-lg w-full p-8 relative animate-in zoom-in-95 duration-300">
-                        <button onClick={() => setShowAddCenter(false)} className="absolute top-6 right-8 text-muted-foreground hover:text-white transition-colors">
+                        <button onClick={() => setShowAddCenter(false)} className="absolute top-6 right-8 text-muted-foreground hover:text-foreground transition-colors">
                             <ChevronDown className="w-6 h-6 rotate-180" />
                         </button>
 
@@ -460,11 +460,11 @@ function StatCard({ title, value, subtext, icon: Icon, trend, loading }: any) {
     if (loading) return (
         <div className="bg-card border border-border rounded-2xl p-4 sm:p-6 animate-pulse">
             <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-white/5" />
-                <div className="h-3 w-24 bg-white/5 rounded-full" />
+                <div className="w-10 h-10 rounded-xl bg-muted" />
+                <div className="h-3 w-24 bg-muted rounded-full" />
             </div>
-            <div className="h-10 w-20 bg-white/5 rounded-lg mb-2" />
-            <div className="h-3 w-32 bg-white/5 rounded-full" />
+            <div className="h-10 w-20 bg-muted rounded-lg mb-2" />
+            <div className="h-3 w-32 bg-muted rounded-full" />
         </div>
     );
     return (
@@ -478,7 +478,7 @@ function StatCard({ title, value, subtext, icon: Icon, trend, loading }: any) {
                 </div>
                 <div className={clsx(
                     "w-2 h-2 rounded-full mt-1",
-                    trend === 'up' ? 'bg-green-500' : trend === 'down' ? 'bg-red-500' : 'bg-white/20'
+                    trend === 'up' ? 'bg-green-500' : trend === 'down' ? 'bg-red-500' : 'bg-muted-foreground/30'
                 )} />
             </div>
             <h3 className="text-3xl sm:text-4xl font-accent font-bold text-foreground mb-1 tracking-tighter italic">{value}</h3>

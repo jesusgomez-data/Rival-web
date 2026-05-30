@@ -5,6 +5,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "../notifications-actions";
 import { sendPaymentRequestEmail } from "./email-actions";
+import { PLATFORM_FEE_PERCENT } from "@/lib/stripe-config";
 
 // Helper
 const sanitizeDate = (date: string | null | undefined) => {
@@ -235,7 +236,18 @@ export async function requestMemberPayment(centerId: string, planId: string, use
             await admin.from('profiles').update({ stripe_customer_id: customerId }).eq('id', userId);
         }
 
-        // 3. Create Checkout Session
+        // 3. Check if center has Stripe Connect configured to receive funds
+        const { data: centerOrg } = await admin
+            .from('organizations')
+            .select('stripe_account_id, stripe_onboarding_complete')
+            .eq('id', centerId)
+            .single();
+
+        const amountCents = Math.round(plan.price * 100);
+        const platformFeeCents = Math.round(amountCents * PLATFORM_FEE_PERCENT / 100);
+        const centerHasConnect = !!(centerOrg?.stripe_account_id && centerOrg?.stripe_onboarding_complete);
+
+        // 4. Create Checkout Session
         const session = await stripe.checkout.sessions.create({
             customer: customerId,
             payment_method_types: ['card'],
@@ -246,11 +258,20 @@ export async function requestMemberPayment(centerId: string, planId: string, use
                         name: `Membresía: ${plan.name}`,
                         description: `Pago de membresía para el centro`,
                     },
-                    unit_amount: Math.round(plan.price * 100),
+                    unit_amount: amountCents,
                 },
                 quantity: 1,
             }],
             mode: 'payment',
+            // Destination charge: platform deducts fee, rest goes to center's bank account
+            ...(centerHasConnect && {
+                payment_intent_data: {
+                    application_fee_amount: platformFeeCents,
+                    transfer_data: {
+                        destination: centerOrg!.stripe_account_id!,
+                    },
+                },
+            }),
             success_url: `${process.env.NEXT_PUBLIC_APP_URL}/gym/${centerId}?status=success_payment`,
             cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/gym/${centerId}?status=canceled_payment`,
             metadata: {
@@ -263,7 +284,7 @@ export async function requestMemberPayment(centerId: string, planId: string, use
         });
 
 
-        // 4. Create or Update Member as 'pending_payment'
+        // 5. Create or Update Member as 'pending_payment'
         const { data: existingMember } = await admin
             .from('members')
             .select('id, status')
@@ -309,7 +330,7 @@ export async function requestMemberPayment(centerId: string, planId: string, use
 
         if (memberError) return { error: memberError.message };
 
-        // 5. Notify User
+        // 6. Notify User
         const { data: org } = await supabase.from('organizations').select('name, logo_url').eq('id', centerId).single();
         const gymName = org?.name || 'Tu Centro';
         const gymLogo = org?.logo_url || null;
@@ -322,7 +343,7 @@ export async function requestMemberPayment(centerId: string, planId: string, use
             link: session.url!
         });
 
-        // 6. Send Email Notification via Resend
+        // 7. Send Email Notification via Resend
         const targetEmail = extraData.email || profile.email;
         if (targetEmail) {
             sendPaymentRequestEmail(

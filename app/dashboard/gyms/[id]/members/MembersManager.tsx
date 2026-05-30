@@ -503,9 +503,9 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
         <div className="space-y-4 sm:space-y-6">
             <div className="flex justify-between items-end mb-2 sm:mb-4">
                 <div className="flex flex-col">
-                    <h2 className="text-xl sm:text-2xl italic font-black text-white uppercase tracking-tighter">Gestión de {orgDetails?.center_type === 'personal_trainer' ? 'Alumnos' : 'Atletas'}</h2>
+                    <h2 className="text-xl sm:text-2xl italic font-black text-foreground uppercase tracking-tighter">Gestión de {orgDetails?.center_type === 'personal_trainer' ? 'Alumnos' : 'Atletas'}</h2>
                     <div className="flex items-center gap-2">
-                        <p className="text-[9px] sm:text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                        <p className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
                             Registrados: {members.length} | Filtrados: {filteredMembers.length}
                         </p>
                         {isMultiCenter && (
@@ -519,7 +519,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                     <ChevronDown className={`w-2.5 h-2.5 transition-transform ${centerDropdownOpen ? 'rotate-180' : ''}`} />
                                 </button>
                                 {centerDropdownOpen && (
-                                    <div className="absolute top-full left-0 mt-1 w-48 bg-brand-gray border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+                                    <div className="absolute top-full left-0 mt-1 w-48 bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
                                         {centers.map((c: any) => (
                                             <button
                                                 key={c.id}
@@ -527,7 +527,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                     setSelectedCenterId(c.id);
                                                     setCenterDropdownOpen(false);
                                                 }}
-                                                className={`w-full text-left px-3 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-white/5 transition-all flex items-center justify-between ${selectedCenterId === c.id ? 'text-purple-500 bg-purple-500/5' : 'text-gray-400'}`}
+                                                className={`w-full text-left px-3 py-2 text-[10px] font-bold uppercase tracking-widest hover:bg-muted transition-all flex items-center justify-between ${selectedCenterId === c.id ? 'text-purple-500 bg-purple-500/5' : 'text-muted-foreground'}`}
                                             >
                                                 <span className="truncate">{c.name}</span>
                                                 {selectedCenterId === c.id && <Check className="w-3 h-3" />}
@@ -540,15 +540,15 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                     </div>
                 </div>
             </div>
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-brand-gray/20 p-4 rounded-2xl border border-white/5 backdrop-blur-sm">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-muted/20 p-4 rounded-2xl border border-border backdrop-blur-sm">
                 <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto flex-1 mr-4">
                     <div className="relative w-full sm:w-auto flex-1 max-w-md">
-                        <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+                        <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <input
                             placeholder="Buscar por nombre o @usuario..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="bg-black/60 border border-white/10 rounded-xl pl-11 pr-4 py-3 text-sm text-white focus:border-brand-red outline-none w-full shadow-inner transition-all hover:bg-black/80 focus:bg-black/80"
+                            className="bg-background border border-border rounded-xl pl-11 pr-4 py-3 text-sm text-foreground focus:border-brand-red outline-none w-full shadow-inner transition-all"
                         />
                     </div>
 
@@ -556,7 +556,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="bg-black/60 border border-white/10 rounded-xl px-4 py-3 pr-10 text-sm text-white focus:border-brand-red outline-none shadow-inner w-full sm:w-40 appearance-none cursor-pointer transition-all hover:bg-black/80 focus:bg-black/80"
+                            className="bg-background border border-border rounded-xl px-4 py-3 pr-10 text-sm text-foreground focus:border-brand-red outline-none shadow-inner w-full sm:w-40 appearance-none cursor-pointer transition-all"
                         >
                             <option value="all">Todos</option>
                             <option value="active">Activos</option>
@@ -565,13 +565,13 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                             <option value="trial">En Prueba</option>
                             <option value="paused">Pausados</option>
                         </select>
-                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                     </div>
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">
                     <button
                         onClick={handleExport}
-                        className="flex-1 md:flex-none bg-white/5 text-gray-400 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest hover:text-white border border-white/5 transition-all flex items-center justify-center gap-2"
+                        className="flex-1 md:flex-none bg-muted text-muted-foreground py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest hover:text-foreground border border-border transition-all flex items-center justify-center gap-2"
                         title="Exportar base de datos a CSV"
                     >
                         <Download className="w-4 h-4" />
@@ -579,7 +579,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                     </button>
                     <button
                         onClick={() => setShowImportModal(true)}
-                        className="flex-1 md:flex-none bg-white/5 text-gray-400 py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest hover:text-white border border-white/5 transition-all flex items-center justify-center gap-2"
+                        className="flex-1 md:flex-none bg-muted text-muted-foreground py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest hover:text-foreground border border-border transition-all flex items-center justify-center gap-2"
                         title="Importar base de datos desde CSV"
                     >
                         <Upload className="w-4 h-4" />
@@ -597,9 +597,9 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                 </div>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-white/5 bg-brand-gray/50 shadow-2xl custom-scrollbar">
+            <div className="overflow-x-auto rounded-2xl border border-border bg-card/50 shadow-2xl custom-scrollbar">
                 <table className="w-full text-left text-sm min-w-[600px] sm:min-w-0">
-                    <thead className="bg-white/5 text-gray-400 font-bold uppercase text-[9px] sm:text-[10px] tracking-wider">
+                    <thead className="bg-muted text-muted-foreground font-bold uppercase text-[9px] sm:text-[10px] tracking-wider">
                         <tr>
                             <th className="px-4 sm:px-6 py-3 sm:py-4">{orgDetails?.center_type === 'personal_trainer' ? 'Alumno' : 'Atleta'} / Edad</th>
                             <th className="px-4 sm:px-6 py-3 sm:py-4">Tarifa</th>
@@ -607,7 +607,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                             <th className="px-4 sm:px-6 py-3 sm:py-4 text-center">Estado</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-white/5">
+                    <tbody className="divide-y divide-border">
                         {filteredMembers.length > 0 ? (
                             filteredMembers.map((m: any) => (
                                 <tr
@@ -623,16 +623,16 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                         setNotes(m.notes || "");
                                         setIsEditing(false);
                                     }}
-                                    className="hover:bg-white/10 transition-all group cursor-pointer"
+                                    className="hover:bg-muted/50 transition-all group cursor-pointer"
                                 >
                                     <td className="px-4 sm:px-6 py-3 sm:py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="relative">
-                                                <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gray-700 overflow-hidden shadow-lg shrink-0 ${m.story_status === 'unseen' ? 'ring-2 ring-brand-red ring-offset-2 ring-offset-[#111]' : m.story_status === 'seen' ? 'ring-2 ring-gray-500 ring-offset-2 ring-offset-[#111]' : 'border border-white/10'}`}>
+                                                <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-muted overflow-hidden shadow-lg shrink-0 ${m.story_status === 'unseen' ? 'ring-2 ring-brand-red ring-offset-2 ring-offset-[#111]' : m.story_status === 'seen' ? 'ring-2 ring-gray-500 ring-offset-2 ring-offset-[#111]' : 'border border-border'}`}>
                                                     {m.user?.avatar_url || m.avatar_url ? (
                                                         <img src={m.user?.avatar_url || m.avatar_url} className="w-full h-full object-cover" />
                                                     ) : (
-                                                        <User className="p-1 sm:p-2 w-full h-full text-gray-400" />
+                                                        <User className="p-1 sm:p-2 w-full h-full text-muted-foreground" />
                                                     )}
                                                 </div>
                                                 {isBirthday(m.birth_date) && (
@@ -643,10 +643,10 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                             </div>
                                             <div className="min-w-0">
                                                 <div className="flex items-center gap-2">
-                                                    <p className="font-bold text-white group-hover:text-brand-red transition-colors truncate text-xs sm:text-sm">
+                                                    <p className="font-bold text-foreground group-hover:text-brand-red transition-colors truncate text-xs sm:text-sm">
                                                         {m.user?.full_name || m.full_name || 'Atleta'}
                                                         {calculateAge(m.birth_date || m.user?.birth_date) !== null && (
-                                                            <span className="ml-2 text-[9px] text-gray-500 font-medium">
+                                                            <span className="ml-2 text-[9px] text-muted-foreground font-medium">
                                                                 {calculateAge(m.birth_date || m.user?.birth_date)} años
                                                             </span>
                                                         )}
@@ -658,13 +658,13 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <p className="text-[9px] sm:text-[10px] text-gray-500 uppercase tracking-widest truncate">
+                                                    <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-widest truncate">
                                                         {m.user?.username ? `@${m.user.username}` : (m.email || m.user?.email ? 'Miembro' : 'GUEST')}
                                                     </p>
                                                     {(m.email || m.user?.email) && (
                                                         <>
-                                                            <span className="text-[7px] text-gray-700 font-bold">•</span>
-                                                            <p className="text-[9px] sm:text-[10px] text-gray-400 truncate lowercase font-medium">
+                                                            <span className="text-[7px] text-muted-foreground/50 font-bold">•</span>
+                                                            <p className="text-[9px] sm:text-[10px] text-muted-foreground truncate lowercase font-medium">
                                                                 {m.email || m.user?.email}
                                                             </p>
                                                         </>
@@ -674,13 +674,13 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                         </div>
                                     </td>
                                     <td className="px-4 sm:px-6 py-3 sm:py-4">
-                                        <span className="bg-white/5 px-2 py-1 rounded text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-300 border border-white/5 w-fit">
+                                        <span className="bg-muted px-2 py-1 rounded text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-foreground/70 border border-border w-fit">
                                             {plans.find((p: any) => p.id === m.plan)?.name || m.membership_type || m.plan}
                                         </span>
                                     </td>
                                     <td className="px-4 sm:px-6 py-3 sm:py-4">
                                         <div className="flex flex-col gap-1">
-                                            <span className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-gray-400">
+                                            <span className="flex items-center gap-1.5 text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                                                 {m.payment_method === 'card' ? (
                                                     <><CreditCard className="w-3.5 h-3.5 text-blue-400" /> ****{m.card_last4 || '0000'}</>
                                                 ) : m.payment_method === 'payment_request' ? (
@@ -709,9 +709,9 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                             <tr>
                                 <td colSpan={4} className="px-6 py-20 text-center">
                                     <div className="flex flex-col items-center gap-2">
-                                        <User className="w-8 h-8 text-gray-600 mb-2" />
-                                        <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">No se han encontrado {orgDetails?.center_type === 'personal_trainer' ? 'alumnos' : 'atletas'}</p>
-                                        <p className="text-gray-600 text-[10px] uppercase tracking-tighter">Prueba con otro nombre o asegúrate de que el centro tiene miembros activos.</p>
+                                        <User className="w-8 h-8 text-muted-foreground mb-2" />
+                                        <p className="text-muted-foreground font-bold uppercase tracking-widest text-xs">No se han encontrado {orgDetails?.center_type === 'personal_trainer' ? 'alumnos' : 'atletas'}</p>
+                                        <p className="text-muted-foreground/60 text-[10px] uppercase tracking-tighter">Prueba con otro nombre o asegúrate de que el centro tiene miembros activos.</p>
                                     </div>
                                 </td>
                             </tr>
@@ -722,14 +722,14 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
 
             {/* Ficha de Miembro (View / Edit) */}
             {viewingMember && (
-                <div className="fixed inset-0 bg-black/95 backdrop-blur-lg z-50 flex items-center justify-center p-2 sm:p-4">
-                    <div className="bg-brand-gray border border-white/10 rounded-2xl sm:rounded-3xl w-full max-w-md animate-in fade-in zoom-in duration-300 shadow-2xl flex flex-col max-h-[92vh]">
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-lg z-50 flex items-center justify-center p-2 sm:p-4">
+                    <div className="bg-card border border-border rounded-2xl sm:rounded-3xl w-full max-w-md animate-in fade-in zoom-in duration-300 shadow-2xl flex flex-col max-h-[92vh]">
                         {/* Header - Fixed */}
-                        <div className="flex justify-between items-start p-3 sm:p-5 border-b border-white/5 bg-black/20 rounded-t-2xl sm:rounded-t-3xl">
+                        <div className="flex justify-between items-start p-3 sm:p-5 border-b border-border bg-muted/30 rounded-t-2xl sm:rounded-t-3xl">
                             <div className="flex items-center gap-4">
                                 <div className="relative">
-                                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gray-800 overflow-hidden shadow-xl shrink-0 ${viewingMember.story_status === 'unseen' ? 'ring-2 ring-brand-red ring-offset-2 ring-offset-[#111]' : viewingMember.story_status === 'seen' ? 'ring-2 ring-gray-500 ring-offset-2 ring-offset-[#111]' : 'border border-white/10'}`}>
-                                        {viewingMember.user?.avatar_url ? <img src={viewingMember.user.avatar_url} className="w-full h-full object-cover" /> : <User className="p-2 sm:p-3 w-full h-full text-gray-400" />}
+                                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-muted overflow-hidden shadow-xl shrink-0 ${viewingMember.story_status === 'unseen' ? 'ring-2 ring-brand-red ring-offset-2 ring-offset-[#111]' : viewingMember.story_status === 'seen' ? 'ring-2 ring-gray-500 ring-offset-2 ring-offset-[#111]' : 'border border-border'}`}>
+                                        {viewingMember.user?.avatar_url ? <img src={viewingMember.user.avatar_url} className="w-full h-full object-cover" /> : <User className="p-2 sm:p-3 w-full h-full text-muted-foreground" />}
                                     </div>
                                     {isBirthday(viewingMember.birth_date) && (
                                         <div className="absolute -top-1.5 -right-1.5 bg-brand-red p-1 rounded-lg rotate-12 shadow-xl animate-pulse z-10">
@@ -741,11 +741,11 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                     {viewingMember.user?.full_name || viewingMember.full_name || username || (orgDetails?.center_type === 'personal_trainer' ? 'Ficha de Alumno' : 'Ficha de Atleta')}
                                     <div className="flex items-center gap-2 mt-1">
                                         <div className="flex items-center gap-1.5 flex-wrap">
-                                            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest truncate">
+                                            <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest truncate">
                                                 {viewingMember.user?.username ? `@${viewingMember.user.username}` : 'Miembro Externo'}
                                             </p>
-                                            <span className="text-gray-700 text-[8px]">•</span>
-                                            <p className="text-gray-400 text-[9px] font-medium lowercase">
+                                            <span className="text-muted-foreground/50 text-[8px]">•</span>
+                                            <p className="text-muted-foreground text-[9px] font-medium lowercase">
                                                 {viewingMember.email || viewingMember.user?.email}
                                             </p>
                                         </div>
@@ -765,11 +765,11 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                             </div>
                             <div className="flex gap-1.5 shrink-0">
                                 {!isEditing && (
-                                    <button onClick={() => setIsEditing(true)} className="bg-white/5 p-2 sm:p-2.5 rounded-xl text-gray-400 hover:text-white transition-colors group">
+                                    <button onClick={() => setIsEditing(true)} className="bg-muted p-2 sm:p-2.5 rounded-xl text-muted-foreground hover:text-foreground transition-colors group">
                                         <Edit2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
                                     </button>
                                 )}
-                                <button onClick={() => setViewingMember(null)} className="bg-white/5 p-2 sm:p-2.5 rounded-full text-gray-500 hover:text-white transition-colors group">
+                                <button onClick={() => setViewingMember(null)} className="bg-muted p-2 sm:p-2.5 rounded-full text-muted-foreground hover:text-foreground transition-colors group">
                                     <X className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-90 transition-transform" />
                                 </button>
                             </div>
@@ -784,7 +784,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                     </div>
                                     <div>
                                         <h4 className="text-[11px] font-black text-brand-red uppercase">¡HOY ES SU CUMPLEAÑOS!</h4>
-                                        <p className="text-[10px] text-gray-400">Cumple {calculateAge(viewingMember.birth_date)} años.</p>
+                                        <p className="text-[10px] text-muted-foreground">Cumple {calculateAge(viewingMember.birth_date)} años.</p>
                                     </div>
                                 </div>
                             )}
@@ -795,12 +795,12 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                     <div className="space-y-3">
                                         <div className="flex items-center gap-1.5 text-brand-red mb-0.5">
                                             <Landmark className="w-3 h-3" />
-                                            <span className="text-[8px] font-black uppercase tracking-widest text-white/50">Plan & Membresía</span>
+                                            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Plan & Membresía</span>
                                         </div>
 
                                         <div>
-                                            <label className="block text-[7px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Tarifa Actual</label>
-                                            <select disabled={!isEditing} value={plan} onChange={e => setPlan(e.target.value)} className="w-full bg-black/60 border border-white/10 rounded-lg p-2 sm:p-2.5 text-white outline-none focus:border-brand-red text-[11px] transition-all disabled:opacity-50 appearance-none">
+                                            <label className="block text-[7px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">Tarifa Actual</label>
+                                            <select disabled={!isEditing} value={plan} onChange={e => setPlan(e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 sm:p-2.5 text-foreground outline-none focus:border-brand-red text-[11px] transition-all disabled:opacity-50 appearance-none">
                                                 {plans.length > 0 ? (
                                                     plans.map((p: any) => (
                                                         <option key={p.id} value={p.id}>{p.name} ({p.price}€)</option>
@@ -815,7 +815,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                 )}
                                             </select>
                                             {viewingMember.status === 'active' && plan !== 'guest' && plan !== 'trial' && (
-                                                <div className="mt-2 flex items-center gap-1.5 text-[9px] text-gray-500 font-bold uppercase tracking-widest opacity-80">
+                                                <div className="mt-2 flex items-center gap-1.5 text-[9px] text-muted-foreground font-bold uppercase tracking-widest opacity-80">
                                                     <Calendar className="w-3 h-3 text-brand-red" />
                                                     Cobro Automático: 1 de {new Date(new Date().setMonth(new Date().getMonth() + 1)).toLocaleString('es-ES', { month: 'long' })}
                                                 </div>
@@ -824,7 +824,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
 
 
                                         <div>
-                                            <label className="block text-[7px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Estado de Cuenta</label>
+                                            <label className="block text-[7px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">Estado de Cuenta</label>
                                             <div className="flex gap-1.5">
                                                 {/* Status Display */}
                                                 <div className={`flex-1 p-1.5 rounded-lg border flex items-center justify-between ${viewingMember.status === 'active' ? 'bg-green-500/10 border-green-500/20' :
@@ -936,11 +936,11 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                     <CheckCircle className="w-3 h-3" />
                                                     <span className="text-[9px] font-black uppercase tracking-widest">Cuenta Rival Vinculada</span>
                                                 </div>
-                                                <div className="flex items-center gap-2 p-2 bg-black/40 rounded-xl border border-white/5">
+                                                <div className="flex items-center gap-2 p-2 bg-muted rounded-xl border border-border">
                                                     <img src={viewingMember.user?.avatar_url || `https://ui-avatars.com/api/?name=${viewingMember.user?.full_name}`} className="w-8 h-8 rounded-full border-2 border-green-500/20 p-0.5" />
                                                     <div>
-                                                        <p className="text-xs font-bold text-white tracking-tight leading-none">{viewingMember.user?.full_name}</p>
-                                                        <p className="text-[9px] text-gray-500 leading-none mt-1">@{viewingMember.user?.username}</p>
+                                                        <p className="text-xs font-bold text-foreground tracking-tight leading-none">{viewingMember.user?.full_name}</p>
+                                                        <p className="text-[9px] text-muted-foreground leading-none mt-1">@{viewingMember.user?.username}</p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -951,24 +951,24 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                     <div className="space-y-3">
                                         <div className="flex items-center gap-1.5 text-brand-red mb-0.5">
                                             <Phone className="w-3 h-3" />
-                                            <span className="text-[8px] font-black uppercase tracking-widest text-white/50">Información de Contacto</span>
+                                            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Información de Contacto</span>
                                         </div>
 
                                         <div>
-                                            <label className="block text-[7px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Nombre Completo</label>
-                                            <input required disabled={!isEditing} value={username} onChange={e => setUsername(e.target.value)} className="w-full bg-black/60 border border-white/10 rounded-lg p-2 sm:p-2.5 text-white outline-none focus:border-brand-red text-[11px] disabled:opacity-50" />
+                                            <label className="block text-[7px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">Nombre Completo</label>
+                                            <input required disabled={!isEditing} value={username} onChange={e => setUsername(e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 sm:p-2.5 text-foreground outline-none focus:border-brand-red text-[11px] disabled:opacity-50" />
                                         </div>
 
                                         <div>
                                             <label className="block text-[7px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Fecha de Nacimiento</label>
                                             <div className="relative">
-                                                <input type="date" disabled={!isEditing} value={birthDate} onChange={e => setBirthDate(e.target.value)} className="w-full bg-black/60 border border-white/10 rounded-lg p-2 sm:p-2.5 text-white outline-none focus:border-brand-red text-[11px] disabled:opacity-50 [color-scheme:dark]" />
+                                                <input type="date" disabled={!isEditing} value={birthDate} onChange={e => setBirthDate(e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 sm:p-2.5 text-foreground outline-none focus:border-brand-red text-[11px] disabled:opacity-50" />
                                             </div>
                                         </div>
 
                                         <div>
                                             <label className="block text-[7px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Correo Electrónico</label>
-                                            <input type="email" disabled={!isEditing} value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-black/60 border border-white/10 rounded-lg p-2 sm:p-2.5 text-white outline-none focus:border-brand-red text-[11px] disabled:opacity-50" />
+                                            <input type="email" disabled={!isEditing} value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 sm:p-2.5 text-foreground outline-none focus:border-brand-red text-[11px] disabled:opacity-50" />
                                         </div>
                                     </div>
                                 </div>
@@ -987,7 +987,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                 value={profileSearchQuery}
                                                 onChange={(e) => handleProfileSearch(e.target.value)}
                                                 placeholder="Buscar por @usuario o nombre..."
-                                                className="w-full bg-black/60 border border-white/10 rounded-xl py-3 pl-11 pr-4 text-white outline-none focus:border-brand-red text-xs shadow-inner"
+                                                className="w-full bg-background border border-border rounded-xl py-3 pl-11 pr-4 text-foreground outline-none focus:border-brand-red text-xs shadow-inner"
                                             />
                                             {isSearching && (
                                                 <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -1001,13 +1001,13 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                     <div
                                                         key={p.id}
                                                         onClick={() => handleLinkProfile(p.id)}
-                                                        className="flex items-center justify-between p-3 rounded-xl bg-black/40 hover:bg-brand-red/10 cursor-pointer transition-all border border-white/5 hover:border-brand-red/30"
+                                                        className="flex items-center justify-between p-3 rounded-xl bg-muted hover:bg-brand-red/10 cursor-pointer transition-all border border-border hover:border-brand-red/30"
                                                     >
                                                         <div className="flex items-center gap-3">
                                                             <img src={p.avatar_url || `https://ui-avatars.com/api/?name=${p.full_name}`} className="w-8 h-8 rounded-full border border-white/10" />
                                                             <div>
-                                                                <p className="text-xs font-bold text-white">{p.full_name}</p>
-                                                                <p className="text-[10px] text-gray-500">@{p.username}</p>
+                                                                <p className="text-xs font-bold text-foreground">{p.full_name}</p>
+                                                                <p className="text-[10px] text-muted-foreground">@{p.username}</p>
                                                             </div>
                                                         </div>
                                                         <div className="flex items-center gap-2 bg-brand-red text-white text-[9px] font-black uppercase px-3 py-1.5 rounded-lg">
@@ -1017,26 +1017,26 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                 ))}
                                             </div>
                                         ) : profileSearchQuery.length >= 2 && !isSearching && (
-                                            <div className="p-4 bg-black/20 rounded-xl border border-white/5 text-center">
-                                                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">No se encontraron atletas</p>
+                                            <div className="p-4 bg-muted rounded-xl border border-border text-center">
+                                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">No se encontraron atletas</p>
                                             </div>
                                         )}
                                     </div>
                                 )}
 
                                 {/* Billing Section in Ficha */}
-                                <div className="pt-3 border-t border-white/5">
+                                <div className="pt-3 border-t border-border">
                                     <div className="flex items-center gap-1.5 text-brand-red mb-3">
                                         <div className="text-brand-red opacity-60 bg-brand-red/10 p-1 rounded-lg"><Landmark className="w-3 h-3" /></div>
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-white/50">Datos de Facturación</span>
+                                        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Datos de Facturación</span>
                                     </div>
-                                    <div className="bg-black/40 p-2 sm:p-3 rounded-xl border border-white/5">
+                                    <div className="bg-muted/50 p-2 sm:p-3 rounded-xl border border-border">
                                         <div className="flex gap-3 mb-3">
-                                            <button disabled={!isEditing} type="button" onClick={() => setPaymentMethod('cash')} className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-lg border transition-all ${paymentMethod === 'cash' ? 'bg-brand-red border-brand-red text-white' : 'bg-black/60 border-white/10 text-gray-500 hover:text-white'} disabled:opacity-50`}>
+                                            <button disabled={!isEditing} type="button" onClick={() => setPaymentMethod('cash')} className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-lg border transition-all ${paymentMethod === 'cash' ? 'bg-brand-red border-brand-red text-white' : 'bg-muted border-border text-muted-foreground hover:text-foreground'} disabled:opacity-50`}>
                                                 <Landmark className="w-3 h-3" />
                                                 <span className="text-[8px] font-black uppercase tracking-widest">Efectivo</span>
                                             </button>
-                                            <button disabled={!isEditing} type="button" onClick={() => setPaymentMethod('payment_request')} className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-lg border transition-all ${paymentMethod === 'payment_request' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-black/60 border-white/10 text-gray-500 hover:text-white'} disabled:opacity-50`}>
+                                            <button disabled={!isEditing} type="button" onClick={() => setPaymentMethod('payment_request')} className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-lg border transition-all ${paymentMethod === 'payment_request' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-muted border-border text-muted-foreground hover:text-foreground'} disabled:opacity-50`}>
                                                 <Send className="w-3 h-3" />
                                                 <span className="text-[8px] font-black uppercase tracking-widest">Solicitud (App)</span>
                                             </button>
@@ -1048,7 +1048,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                     <Send className="w-4 h-4" />
                                                     <span className="text-[10px] font-black uppercase tracking-widest">Solicitud de Pago</span>
                                                 </div>
-                                                <p className="text-xs text-gray-300 leading-relaxed">
+                                                <p className="text-xs text-foreground/70 leading-relaxed">
                                                     Se enviará una notificación a la App del atleta para gestionar el pago.
                                                 </p>
                                             </div>
@@ -1057,17 +1057,17 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                 </div>
 
                                 {/* Section for Notes / Injuries */}
-                                <div className="pt-3 border-t border-white/5">
+                                <div className="pt-3 border-t border-border">
                                     <div className="flex items-center gap-1.5 text-brand-red mb-3">
                                         <div className="text-brand-red opacity-60 bg-brand-red/10 p-1 rounded-lg"><FileText className="w-3 h-3" /></div>
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-white/50">Notas / Observaciones (Molestias, lesiones...)</span>
+                                        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Notas / Observaciones (Molestias, lesiones...)</span>
                                     </div>
                                     <textarea
                                         disabled={!isEditing}
                                         value={notes}
                                         onChange={e => setNotes(e.target.value)}
                                         placeholder="Escribe aquí cualquier observación relevante sobre el atleta..."
-                                        className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-white outline-none focus:border-brand-red text-[11px] min-h-[80px] disabled:opacity-50 resize-none"
+                                        className="w-full bg-background border border-border rounded-xl p-3 text-foreground outline-none focus:border-brand-red text-[11px] min-h-[80px] disabled:opacity-50 resize-none"
                                     />
                                 </div>
 
@@ -1147,8 +1147,8 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                 </div>
 
                                                 {/* Form Actions (Save / Cancel) */}
-                                                <div className="grid grid-cols-2 gap-2 w-full pt-2 border-t border-white/5">
-                                                    <button type="button" onClick={() => setIsEditing(false)} className="bg-white/5 text-gray-400 py-3 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:text-white transition-all text-center truncate">Cancelar</button>
+                                                <div className="grid grid-cols-2 gap-2 w-full pt-2 border-t border-border">
+                                                    <button type="button" onClick={() => setIsEditing(false)} className="bg-muted text-muted-foreground py-3 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:text-foreground transition-all text-center truncate">Cancelar</button>
                                                     <button type="submit" disabled={isSaving} className="bg-brand-red text-white py-3 px-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 shadow-lg transition-all text-center truncate">{isSaving ? '...' : 'Guardar'}</button>
                                                 </div>
                                             </>
@@ -1167,29 +1167,29 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
             {/* Alta Nueva Modal */}
             {
                 showModal && (
-                    <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4">
-                        <div className="bg-brand-gray border border-white/10 rounded-2xl sm:rounded-3xl w-full max-w-lg animate-in fade-in zoom-in duration-300 flex flex-col max-h-[92vh] overflow-hidden">
-                            <div className="flex justify-between items-start p-4 sm:p-6 border-b border-white/5">
-                                <h3 className="text-xl sm:text-2xl font-black text-white italic uppercase tracking-tighter">Nueva Alta</h3>
-                                <button onClick={() => setShowModal(false)} className="bg-white/5 p-2 rounded-full text-gray-500 hover:text-white transition-colors group">
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-4">
+                        <div className="bg-card border border-border rounded-2xl sm:rounded-3xl w-full max-w-lg animate-in fade-in zoom-in duration-300 flex flex-col max-h-[92vh] overflow-hidden">
+                            <div className="flex justify-between items-start p-4 sm:p-6 border-b border-border">
+                                <h3 className="text-xl sm:text-2xl font-black text-foreground italic uppercase tracking-tighter">Nueva Alta</h3>
+                                <button onClick={() => setShowModal(false)} className="bg-muted p-2 rounded-full text-muted-foreground hover:text-foreground transition-colors group">
                                     <X className="w-5 h-5 sm:w-6 sm:h-6 group-hover:rotate-90 transition-transform" />
                                 </button>
                             </div>
                             <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-8">
                                 <form onSubmit={handleAdd} className="space-y-4 sm:space-y-6">
                                     {plan !== 'guest' && (
-                                        <div className="p-4 sm:p-6 bg-black/40 border border-white/5 rounded-2xl space-y-3 sm:space-y-4">
+                                        <div className="p-4 sm:p-6 bg-muted/30 border border-border rounded-2xl space-y-3 sm:space-y-4">
                                             <div className="flex items-center gap-2 text-brand-red">
                                                 <LinkIcon className="w-4 h-4" />
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-white/50">Vincular Atleta Rival (Opcional)</span>
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Vincular Atleta Rival (Opcional)</span>
                                             </div>
                                             <div className="relative">
-                                                <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+                                                <Search className="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
                                                 <input
                                                     value={profileSearchQuery}
                                                     onChange={(e) => handleProfileSearch(e.target.value)}
                                                     placeholder="Buscar atleta por nombre o @usuario..."
-                                                    className="w-full bg-black/60 border border-white/10 rounded-xl py-2.5 sm:py-3 pl-12 pr-4 text-white outline-none focus:border-brand-red text-xs sm:text-xs"
+                                                    className="w-full bg-background border border-border rounded-xl py-2.5 sm:py-3 pl-12 pr-4 text-foreground outline-none focus:border-brand-red text-xs sm:text-xs"
                                                 />
                                                 {isSearching && <Loader2 className="w-4 h-4 absolute right-4 top-1/2 -translate-y-1/2 text-brand-red animate-spin" />}
 
@@ -1248,13 +1248,13 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                                 setSearchResults([]);
                                                                 setProfileSearchQuery(p.full_name);
                                                             }}
-                                                            className="flex items-center justify-between p-3 rounded-xl bg-black/40 hover:bg-brand-red/10 cursor-pointer transition-all border border-white/5 hover:border-brand-red/30"
+                                                            className="flex items-center justify-between p-3 rounded-xl bg-muted hover:bg-brand-red/10 cursor-pointer transition-all border border-border hover:border-brand-red/30"
                                                         >
                                                             <div className="flex items-center gap-3">
                                                                 <img src={p.avatar_url || `https://ui-avatars.com/api/?name=${p.full_name}`} className="w-8 h-8 rounded-full border border-white/10" />
                                                                 <div>
-                                                                    <p className="text-xs font-bold text-white">{p.full_name}</p>
-                                                                    <p className="text-[10px] text-gray-500">@{p.username}</p>
+                                                                    <p className="text-xs font-bold text-foreground">{p.full_name}</p>
+                                                                    <p className="text-[10px] text-muted-foreground">@{p.username}</p>
                                                                 </div>
                                                             </div>
                                                             <div className="bg-brand-red text-white text-[9px] font-black uppercase px-2 py-1 rounded">Seleccionar</div>
@@ -1262,8 +1262,8 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                     ))}
                                                 </div>
                                             ) : profileSearchQuery.length >= 2 && !isSearching && (
-                                                <div className="p-4 bg-black/20 rounded-xl border border-white/5 text-center mt-2">
-                                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">No se encontraron atletas</p>
+                                                <div className="p-4 bg-muted rounded-xl border border-border text-center mt-2">
+                                                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">No se encontraron atletas</p>
                                                 </div>
                                             )}
 
@@ -1272,8 +1272,8 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                     <div className="flex items-center gap-3">
                                                         <img src={selectedProfile.avatar_url || `https://ui-avatars.com/api/?name=${selectedProfile.full_name}`} className="w-10 h-10 rounded-full border-2 border-brand-red/30 p-0.5" />
                                                         <div>
-                                                            <p className="text-sm font-bold text-white">{selectedProfile.full_name}</p>
-                                                            <p className="text-[10px] text-gray-400">@{selectedProfile.username}</p>
+                                                            <p className="text-sm font-bold text-foreground">{selectedProfile.full_name}</p>
+                                                            <p className="text-[10px] text-muted-foreground">@{selectedProfile.username}</p>
                                                         </div>
                                                     </div>
                                                     <button type="button" onClick={() => setSelectedProfile(null)} className="text-gray-500 hover:text-white"><X className="w-4 h-4" /></button>
@@ -1281,12 +1281,12 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                             )}
 
                                             <div className="pt-2">
-                                                <label className="block text-[8px] font-black uppercase tracking-widest text-gray-500 mb-1.5 ml-1">Notas / Observaciones Iniciales</label>
+                                                <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 ml-1">Notas / Observaciones Iniciales</label>
                                                 <textarea
                                                     value={notes}
                                                     onChange={e => setNotes(e.target.value)}
                                                     placeholder="Ej: Molestias en rodilla derecha, operado de hombro en 2022..."
-                                                    className="w-full bg-black/60 border border-white/10 rounded-xl p-3 text-white outline-none focus:border-brand-red text-xs min-h-[80px] resize-none"
+                                                    className="w-full bg-background border border-border rounded-xl p-3 text-foreground outline-none focus:border-brand-red text-xs min-h-[80px] resize-none"
                                                 />
                                             </div>
                                         </div>
@@ -1294,35 +1294,35 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
 
                                     <div className="grid md:grid-cols-2 gap-3 sm:gap-6 pt-4">
                                         <div>
-                                            <label className="block text-[8px] font-black uppercase tracking-widest text-gray-500 mb-1 sm:mb-2">Nombre Completo</label>
-                                            <input required value={username} onChange={e => setUsername(e.target.value)} className="w-full bg-black/60 border border-white/10 rounded-xl p-3 sm:p-4 text-white outline-none focus:border-brand-red text-sm" placeholder="e.g. Santiago Gomez" />
+                                            <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1 sm:mb-2">Nombre Completo</label>
+                                            <input required value={username} onChange={e => setUsername(e.target.value)} className="w-full bg-background border border-border rounded-xl p-3 sm:p-4 text-foreground outline-none focus:border-brand-red text-sm" placeholder="e.g. Santiago Gomez" />
                                         </div>
                                         <div>
-                                            <label className="block text-[8px] font-black uppercase tracking-widest text-gray-500 mb-1 sm:mb-2">Fecha de Nacimiento</label>
-                                            <input required type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="w-full bg-black/60 border border-white/10 rounded-xl p-3 sm:p-4 text-white outline-none focus:border-brand-red text-sm" />
+                                            <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1 sm:mb-2">Fecha de Nacimiento</label>
+                                            <input required type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="w-full bg-background border border-border rounded-xl p-3 sm:p-4 text-foreground outline-none focus:border-brand-red text-sm" />
                                         </div>
                                     </div>
 
                                     <div className="grid md:grid-cols-2 gap-3 sm:gap-6">
                                         <div>
-                                            <label className="block text-[8px] font-black uppercase tracking-widest text-gray-500 mb-1 sm:mb-2">Correo Electrónico</label>
-                                            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-black/60 border border-white/10 rounded-xl p-3 sm:p-4 text-white outline-none focus:border-brand-red text-sm" placeholder="ejemplo@email.com" />
+                                            <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1 sm:mb-2">Correo Electrónico</label>
+                                            <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-background border border-border rounded-xl p-3 sm:p-4 text-foreground outline-none focus:border-brand-red text-sm" placeholder="ejemplo@email.com" />
                                         </div>
                                         <div>
-                                            <label className="block text-[8px] font-black uppercase tracking-widest text-gray-500 mb-1 sm:mb-2">Teléfono</label>
-                                            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-black/60 border border-white/10 rounded-xl p-3 sm:p-4 text-white outline-none focus:border-brand-red text-sm" placeholder="+34 600..." />
+                                            <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1 sm:mb-2">Teléfono</label>
+                                            <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-background border border-border rounded-xl p-3 sm:p-4 text-foreground outline-none focus:border-brand-red text-sm" placeholder="+34 600..." />
                                         </div>
                                     </div>
 
                                     <div className="grid md:grid-cols-2 gap-3 sm:gap-6">
                                         <div className="relative">
-                                            <label className="block text-[8px] font-black uppercase tracking-widest text-gray-500 mb-1 sm:mb-2">Plan</label>
+                                            <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1 sm:mb-2">Plan</label>
                                             <div className="relative">
                                                 <select
                                                     required
                                                     value={plan}
                                                     onChange={e => setPlan(e.target.value)}
-                                                    className="w-full bg-black/60 border border-white/10 rounded-xl p-3 sm:p-4 text-white outline-none focus:border-brand-red text-sm appearance-none"
+                                                    className="w-full bg-background border border-border rounded-xl p-3 sm:p-4 text-foreground outline-none focus:border-brand-red text-sm appearance-none"
                                                 >
                                                     {plans.length > 0 ? (
                                                         <>
@@ -1347,12 +1347,12 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                         </div>
 
                                         <div className="relative">
-                                            <label className="block text-[8px] font-black uppercase tracking-widest text-gray-500 mb-1 sm:mb-2">Método Pago</label>
+                                            <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1 sm:mb-2">Método Pago</label>
                                             <div className="relative">
                                                 <select
                                                     value={paymentMethod}
                                                     onChange={e => setPaymentMethod(e.target.value)}
-                                                    className="w-full bg-black/60 border border-white/10 rounded-xl p-3 sm:p-4 text-white outline-none focus:border-brand-red text-sm appearance-none"
+                                                    className="w-full bg-background border border-border rounded-xl p-3 sm:p-4 text-foreground outline-none focus:border-brand-red text-sm appearance-none"
                                                 >
                                                     <option value="cash">Efectivo</option>
                                                     <option value="payment_request">Solicitar Pago (App)</option>
@@ -1370,7 +1370,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                 <Send className="w-4 h-4" />
                                                 <span className="text-[10px] font-black uppercase tracking-widest">Solicitud de Pago</span>
                                             </div>
-                                            <p className="text-xs text-gray-300 leading-relaxed">
+                                            <p className="text-xs text-foreground/70 leading-relaxed">
                                                 El atleta {selectedProfile ? 'vinculado' : ''} recibirá una notificación en su App para completar el pago y el registro.
                                             </p>
                                             {!selectedProfile && (
@@ -1381,7 +1381,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                         </div>
                                     )}
                                     <div className="flex gap-3 sm:gap-4 pt-4">
-                                        <button type="button" onClick={() => setShowModal(false)} className="flex-1 bg-white/5 text-gray-400 py-3 sm:py-4 rounded-xl text-xs font-black uppercase tracking-widest">Cancelar</button>
+                                        <button type="button" onClick={() => setShowModal(false)} className="flex-1 bg-muted text-muted-foreground py-3 sm:py-4 rounded-xl text-xs font-black uppercase tracking-widest">Cancelar</button>
                                         <button type="submit" disabled={isSaving} className="flex-[2] bg-brand-red text-white py-3 sm:py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl">{isSaving ? 'Guardando...' : 'Registrar'}</button>
                                     </div>
                                 </form>
@@ -1394,19 +1394,19 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
             {/* Importar Modal */}
             {
                 showImportModal && (
-                    <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[60] flex items-center justify-center p-4 overflow-y-auto">
-                        <div className="bg-brand-gray border border-white/10 rounded-3xl p-8 w-full max-w-2xl animate-in fade-in zoom-in duration-300">
+                    <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[60] flex items-center justify-center p-4 overflow-y-auto">
+                        <div className="bg-card border border-border rounded-3xl p-8 w-full max-w-2xl animate-in fade-in zoom-in duration-300">
                             <div className="flex justify-between items-start mb-8">
                                 <div>
-                                    <h3 className="text-2xl font-black text-white italic uppercase tracking-tighter">Importar Base de Datos</h3>
-                                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest mt-1">Sube tu archivo CSV para migrar atletas</p>
+                                    <h3 className="text-2xl font-black text-foreground italic uppercase tracking-tighter">Importar Base de Datos</h3>
+                                    <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest mt-1">Sube tu archivo CSV para migrar atletas</p>
                                 </div>
-                                <button onClick={() => { setShowImportModal(false); setImportData([]); }} className="bg-white/5 p-2 rounded-full text-gray-500 hover:text-white transition-colors"><X className="w-6 h-6" /></button>
+                                <button onClick={() => { setShowImportModal(false); setImportData([]); }} className="bg-muted p-2 rounded-full text-muted-foreground hover:text-foreground transition-colors"><X className="w-6 h-6" /></button>
                             </div>
 
                             <div className="space-y-6">
                                 {importData.length === 0 ? (
-                                    <div className="border-2 border-dashed border-white/10 rounded-2xl p-12 flex flex-col items-center justify-center text-center group hover:border-brand-red/30 transition-all cursor-pointer relative overflow-hidden">
+                                    <div className="border-2 border-dashed border-border rounded-2xl p-12 flex flex-col items-center justify-center text-center group hover:border-brand-red/30 transition-all cursor-pointer relative overflow-hidden">
                                         <input
                                             type="file"
                                             accept=".csv"
@@ -1416,10 +1416,10 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                         <div className="w-16 h-16 rounded-2xl bg-brand-red/10 flex items-center justify-center text-brand-red mb-4 group-hover:scale-110 transition-transform">
                                             <FileText className="w-8 h-8" />
                                         </div>
-                                        <h4 className="text-white font-bold mb-1">Selecciona tu archivo .CSV</h4>
-                                        <p className="text-gray-500 text-xs max-w-xs leading-relaxed">Arrastra tu archivo aquí para procesar los datos de tus clientes automáticamente.</p>
+                                        <h4 className="text-foreground font-bold mb-1">Selecciona tu archivo .CSV</h4>
+                                        <p className="text-muted-foreground text-xs max-w-xs leading-relaxed">Arrastra tu archivo aquí para procesar los datos de tus clientes automáticamente.</p>
 
-                                        <div className="mt-8 p-4 bg-white/5 rounded-xl text-left w-full text-[10px] text-gray-400 font-mono space-y-2">
+                                        <div className="mt-8 p-4 bg-muted rounded-xl text-left w-full text-[10px] text-muted-foreground font-mono space-y-2">
                                             <p className="text-brand-red font-bold uppercase tracking-widest mb-2 font-sans text-[9px]">Formato Recomendado:</p>
                                             <p>Nombre,Email,Telefono,FechaNacimiento,Plan,Estado,MetodoPago,FechaInicio</p>
                                             <p>Juan Perez,juan@mail.com,600123456,1990-05-15,unlimited,active,cash,2024-01-01</p>
@@ -1433,22 +1433,22 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                             </div>
                                             <div>
                                                 <h4 className="text-sm font-black text-green-500 uppercase">Archivo Procesado</h4>
-                                                <p className="text-xs text-gray-400">Se han detectado {importData.length} registros listos para importar.</p>
+                                                <p className="text-xs text-muted-foreground">Se han detectado {importData.length} registros listos para importar.</p>
                                             </div>
                                         </div>
 
-                                        <div className="max-h-60 overflow-y-auto rounded-xl border border-white/5 bg-black/40 custom-scrollbar">
+                                        <div className="max-h-60 overflow-y-auto rounded-xl border border-border bg-muted/50 custom-scrollbar">
                                             <table className="w-full text-[10px] text-left">
-                                                <thead className="bg-white/5 text-gray-500 sticky top-0">
+                                                <thead className="bg-muted text-muted-foreground sticky top-0">
                                                     <tr>
                                                         <th className="p-3">Nombre</th>
                                                         <th className="p-3">Email</th>
                                                         <th className="p-3 text-right">Plan</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody className="divide-y divide-white/5">
+                                                <tbody className="divide-y divide-border">
                                                     {importData.slice(0, 10).map((row, i) => (
-                                                        <tr key={i} className="text-gray-300">
+                                                        <tr key={i} className="text-foreground/70">
                                                             <td className="p-3 font-bold">{row.full_name}</td>
                                                             <td className="p-3 opacity-60">{row.email}</td>
                                                             <td className="p-3 text-right uppercase font-black text-brand-red">{row.plan}</td>
@@ -1472,7 +1472,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                         <div className="flex gap-4">
                                             <button
                                                 onClick={() => setImportData([])}
-                                                className="flex-1 bg-white/5 text-gray-400 py-4 rounded-xl text-xs font-black uppercase tracking-widest hover:text-white transition-all"
+                                                className="flex-1 bg-muted text-muted-foreground py-4 rounded-xl text-xs font-black uppercase tracking-widest hover:text-foreground transition-all"
                                             >
                                                 Cambiar Archivo
                                             </button>
