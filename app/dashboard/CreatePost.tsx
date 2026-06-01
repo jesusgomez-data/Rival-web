@@ -48,6 +48,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const [editorVideoFile, setEditorVideoFile] = useState<File | null>(null);
     const [videoDuration, setVideoDuration] = useState(0);
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+    const dragIndexRef = useRef<number | null>(null);
     const trimmerVideoRef = useRef<HTMLVideoElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
@@ -137,11 +138,12 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
         // MULTIPLE FILES UPLOAD
         if (pendingFiles.length > 0) {
             try {
+                const batchTs = Date.now(); // single timestamp for the whole batch → guarantees order
                 for (let i = 0; i < pendingFiles.length; i++) {
                     const file = pendingFiles[i];
-                    
+
                     const fileExt = (file.name.split('.').pop() || 'mp4').toLowerCase();
-                    const fileName = `${currentUser.id}/${Date.now()}-${i}.${fileExt}`;
+                    const fileName = `${currentUser.id}/${batchTs}-${String(i).padStart(3, '0')}.${fileExt}`;
 
                     const { data: uploadData, error: uploadError } = await supabaseClient.storage
                         .from('posts')
@@ -421,23 +423,52 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                         {/* Media Preview */}
                         {previews.length > 0 && (
                             <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-black/60 shadow-inner group transition-all w-full">
+                                {/* Order hint for multiple files */}
+                                {previews.length > 1 && (
+                                    <div className="flex items-center gap-1.5 px-3 py-2 bg-brand-red/10 border-b border-brand-red/20">
+                                        <span className="text-[9px] font-black text-brand-red uppercase tracking-widest">Arrastra para reordenar · El nº indica el orden de publicación</span>
+                                    </div>
+                                )}
                                 <div className="flex flex-col">
                                     {/* Grid for multiple previews */}
                                     <div className={clsx(
                                         "grid gap-1 bg-black/20",
-                                        previews.length === 1 ? "grid-cols-1" : 
-                                        previews.length === 2 ? "grid-cols-2" : 
+                                        previews.length === 1 ? "grid-cols-1" :
+                                        previews.length === 2 ? "grid-cols-2" :
                                         "grid-cols-2 md:grid-cols-3"
                                     )}>
                                         {previews.map((url, idx) => (
-                                            <div key={idx} className="relative aspect-square bg-gray-900 group/item">
+                                            <div
+                                                key={idx}
+                                                className="relative aspect-square bg-gray-900 group/item cursor-grab active:cursor-grabbing"
+                                                draggable={!isPosting && previews.length > 1}
+                                                onDragStart={() => { dragIndexRef.current = idx; }}
+                                                onDragOver={e => e.preventDefault()}
+                                                onDrop={() => {
+                                                    const from = dragIndexRef.current;
+                                                    if (from === null || from === idx) return;
+                                                    const nP = [...previews];
+                                                    const nF = [...pendingFiles];
+                                                    nP.splice(idx, 0, nP.splice(from, 1)[0]);
+                                                    nF.splice(idx, 0, nF.splice(from, 1)[0]);
+                                                    setPreviews(nP);
+                                                    setPendingFiles(nF);
+                                                    dragIndexRef.current = null;
+                                                }}
+                                            >
                                                 {pendingFiles[idx]?.type.startsWith('video/') ? (
                                                     <video src={url} className="w-full h-full object-cover" autoPlay muted playsInline loop />
                                                 ) : (
                                                     <img src={url} alt="Preview" className="w-full h-full object-cover" />
                                                 )}
+                                                {/* Order badge */}
+                                                {previews.length > 1 && (
+                                                    <div className="absolute top-2 left-2 w-5 h-5 bg-black/70 border border-white/20 rounded-full flex items-center justify-center">
+                                                        <span className="text-[9px] font-black text-white">{idx + 1}</span>
+                                                    </div>
+                                                )}
                                                 {!isPosting && (
-                                                    <button 
+                                                    <button
                                                         type="button"
                                                         onClick={() => {
                                                             const nP = [...previews]; nP.splice(idx, 1); setPreviews(nP);

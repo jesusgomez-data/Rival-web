@@ -9,7 +9,8 @@ import {
     ArrowUpRight, ArrowDownRight, BarChart2, RefreshCcw, FileDown,
     Zap, Globe, Shield
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { Loader2 } from "lucide-react";
 
 const COLORS = ['#E11D48', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#06b6d4'];
 
@@ -72,6 +73,8 @@ export default function AnalyticsManager({ centerId, analytics, metrics, centerN
     centerName: string;
 }) {
     const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'revenue' | 'classes' | 'benchmark'>('overview');
+    const [generatingPdf, setGeneratingPdf] = useState(false);
+    const reportRef = useRef<HTMLDivElement>(null);
 
     const tabs = [
         { id: 'overview', label: 'Resumen' },
@@ -81,9 +84,26 @@ export default function AnalyticsManager({ centerId, analytics, metrics, centerN
         { id: 'benchmark', label: 'Benchmarking' },
     ] as const;
 
-    const handleGenerateReport = () => {
-        alert("Generando informe de rendimiento detallado en PDF... Por favor espera.");
-        // In a real app, we would use html2canvas or a server-side PDF generator
+    const handleGenerateReport = async () => {
+        if (!reportRef.current) return;
+        setGeneratingPdf(true);
+        try {
+            const { toJpeg } = await import('html-to-image');
+            const dataUrl = await toJpeg(reportRef.current, {
+                quality: 0.95,
+                backgroundColor: '#0A0A0A',
+                pixelRatio: 2,
+            });
+            const link = document.createElement('a');
+            link.download = `informe_${centerName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.jpg`;
+            link.href = dataUrl;
+            link.click();
+        } catch (err) {
+            console.error('Error generando informe:', err);
+            alert('Error al generar el informe. Inténtalo de nuevo.');
+        } finally {
+            setGeneratingPdf(false);
+        }
     };
 
 
@@ -109,11 +129,16 @@ export default function AnalyticsManager({ centerId, analytics, metrics, centerN
             <div className="flex justify-end">
                 <button
                     onClick={handleGenerateReport}
-                    className="flex items-center gap-2 bg-white/5 border border-white/10 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all"
+                    disabled={generatingPdf}
+                    className="flex items-center gap-2 bg-white/5 border border-white/10 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all disabled:opacity-50"
                 >
-                    <FileDown className="w-4 h-4 text-brand-red" /> Generar Informe (PDF)
+                    {generatingPdf
+                        ? <><Loader2 className="w-4 h-4 animate-spin text-brand-red" /> Generando...</>
+                        : <><FileDown className="w-4 h-4 text-brand-red" /> Descargar Informe</>
+                    }
                 </button>
             </div>
+            <div ref={reportRef}>
 
             {/* ── OVERVIEW TAB ─────────────────────────────────────────── */}
             {activeTab === 'overview' && (
@@ -466,6 +491,7 @@ export default function AnalyticsManager({ centerId, analytics, metrics, centerN
                     </div>
                 </div>
             )}
+            </div>{/* end reportRef */}
         </div>
     );
 }

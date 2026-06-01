@@ -8,7 +8,7 @@ import clsx from "clsx";
 interface FollowButtonProps {
     targetId: string;
     isFollowingInitial: boolean;
-    variant?: 'small' | 'large';
+    variant?: 'small' | 'large' | 'icon';
     onToggle?: (following: boolean) => void;
 }
 
@@ -35,6 +35,24 @@ export default function FollowButton({ targetId, isFollowingInitial, variant = '
 
         setIsPending(false);
     };
+
+    if (variant === 'icon') {
+        return (
+            <button
+                onClick={handleToggle}
+                disabled={isPending}
+                title={isFollowing ? 'Dejar de seguir' : 'Seguir'}
+                className={clsx(
+                    "w-8 h-8 rounded-full flex items-center justify-center transition-all shrink-0",
+                    isFollowing
+                        ? "bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 hover:text-white"
+                        : "bg-brand-red text-white shadow-[0_2px_8px_rgba(220,38,38,0.4)] hover:bg-red-600"
+                )}
+            >
+                {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : isFollowing ? <UserMinus className="w-3.5 h-3.5" /> : <UserPlus className="w-3.5 h-3.5" />}
+            </button>
+        );
+    }
 
     if (variant === 'large') {
         return (

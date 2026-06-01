@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Search, MapPin, ExternalLink, Trophy, Filter, Plus, Users, Calendar, Loader2, CheckCircle, XCircle, X } from 'lucide-react';
 import { COMPETITIONS_DATA, Competition } from './data';
 import Image from 'next/image';
@@ -304,6 +305,11 @@ export default function CompetitionsClient({ staticCompetitions, dbCompetitions,
     const [selectedType, setSelectedType] = useState<string>('ALL');
     const [showCreate, setShowCreate] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        if (searchParams.get('new') === 'true') setShowCreate(true);
+    }, [searchParams]);
 
     const types = ['ALL', 'HYROX', 'CROSSFIT', 'OCR', 'RUNNING', 'TRIATHLON', 'HYBRID', 'OTHER'];
     const today = new Date();

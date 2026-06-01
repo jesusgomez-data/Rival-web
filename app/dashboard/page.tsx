@@ -173,16 +173,16 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
     const containerRef = useRef<HTMLDivElement>(null);
     const searchParams = useSearchParams();
     const shouldOpenCreate = searchParams.get('create') === 'true';
+    const newPostType = searchParams.get('newPost') as 'wod' | 'pr' | null;
 
     useEffect(() => {
-        if (shouldOpenCreate) {
+        if (shouldOpenCreate || newPostType) {
             setIsOpen(true);
-            // Small delay to let the component expand before scrolling
             setTimeout(() => {
                 containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }, 80);
         }
-    }, [shouldOpenCreate]);
+    }, [shouldOpenCreate, newPostType]);
 
     useEffect(() => {
         const handleRepost = (e: any) => {
@@ -292,7 +292,7 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
                             setEditMode(null);
                             refresh();
                         }}
-                        initialPostType={repostData ? 'wod' : 'standard'}
+                        initialPostType={repostData ? 'wod' : (newPostType || 'standard')}
                         initialData={repostData}
                         editingPostId={editMode?.id}
                     />

@@ -13,7 +13,14 @@ export async function toggleFollow(followingId: string) {
 
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
-    // if (user.id === followingId) return { error: 'Cannot follow yourself' }
+
+    // Official account cannot follow others
+    const { data: currentProfile } = await adminSupabase.from('profiles').select('is_official').eq('id', user.id).single()
+    if (currentProfile?.is_official) return { success: true }
+
+    // Nobody can follow the official account — it broadcasts to everyone automatically
+    const { data: targetProfile } = await adminSupabase.from('profiles').select('is_official').eq('id', followingId).single()
+    if (targetProfile?.is_official) return { success: true }
 
     // Check if relationship exists using ADMIN client
     const { data: existingFollow } = await adminSupabase

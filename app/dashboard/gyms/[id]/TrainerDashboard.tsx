@@ -96,11 +96,11 @@ export default function TrainerDashboard({ id, centerDetails, metrics, analytics
         <div className="px-4 py-6 max-w-7xl mx-auto space-y-6 animate-fade-in">
 
             {/* ═══ HERO HEADER ═══════════════════════════════════════════════ */}
-            <div className="relative rounded-3xl overflow-hidden border border-white/8 min-h-[140px]">
+            <div className="relative rounded-3xl overflow-hidden border border-border min-h-[140px]">
                 {/* Background */}
                 {centerDetails.cover_photo_url
                     ? <img src={centerDetails.cover_photo_url} className="absolute inset-0 w-full h-full object-cover opacity-20" alt="" />
-                    : <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-black to-slate-900" />
+                    : <div className="absolute inset-0 bg-gradient-to-br from-muted via-background to-muted" />
                 }
                 <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent" />
 
@@ -124,11 +124,11 @@ export default function TrainerDashboard({ id, centerDetails, metrics, analytics
                                     </span>
                                 )}
                             </div>
-                            <h1 className="text-2xl md:text-3xl font-heading font-black italic uppercase text-white leading-tight">
+                            <h1 className="text-2xl md:text-3xl font-heading font-black italic uppercase text-foreground leading-tight">
                                 {centerDetails.name}
                             </h1>
                             {(centerDetails.city || centerDetails.country) && (
-                                <p className="text-gray-400 text-sm mt-0.5">
+                                <p className="text-muted-foreground text-sm mt-0.5">
                                     📍 {[centerDetails.city, centerDetails.country].filter(Boolean).join(', ')}
                                 </p>
                             )}
@@ -143,18 +143,18 @@ export default function TrainerDashboard({ id, centerDetails, metrics, analytics
                         </Link>
                         {!atLimit && (
                             <Link href={`/dashboard/gyms/${id}/members?action=new`}
-                                className="bg-white/10 border border-white/10 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-white/20 transition-all flex items-center gap-2">
+                                className="bg-muted border border-border text-foreground px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-muted/80 transition-all flex items-center gap-2">
                                 <UserPlus className="w-4 h-4" /> Alumno
                             </Link>
                         )}
                         <Link href={`/trainer/${id}`}
-                            className="bg-white/5 border border-white/10 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-white/10 transition-all flex items-center gap-2"
+                            className="bg-muted border border-border text-foreground px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-muted/80 transition-all flex items-center gap-2"
                             target="_blank" rel="noopener noreferrer">
                             <ArrowUpRight className="w-4 h-4" /> Ver perfil
                         </Link>
                         {isOwner && (
                             <Link href={`/trainer/${id}/edit`}
-                                className="bg-white/5 border border-white/10 text-white px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-white/10 transition-all flex items-center gap-2">
+                                className="bg-muted border border-border text-foreground px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-muted/80 transition-all flex items-center gap-2">
                                 <Edit className="w-4 h-4" /> Editar
                             </Link>
                         )}
@@ -207,16 +207,16 @@ export default function TrainerDashboard({ id, centerDetails, metrics, analytics
                             : <div className="space-y-1.5">
                                 {todaySessions.map(s => (
                                     <Link key={s.id} href={`/dashboard/gyms/${id}/schedule`}
-                                        className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group">
+                                        className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors group">
                                         <div className="w-12 h-10 rounded-lg bg-brand-red/10 flex flex-col items-center justify-center text-brand-red flex-shrink-0">
                                             <span className="text-[10px] font-black leading-none">{fmtTime(s.start_time)}</span>
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="text-white font-bold text-sm truncate">{s.title || 'Sesión personal'}</p>
-                                            <p className="text-gray-500 text-xs">{s.enrolled_count ?? 0} inscrito{(s.enrolled_count ?? 1) !== 1 ? 's' : ''} · hasta {fmtTime(s.end_time)}</p>
+                                            <p className="text-foreground font-bold text-sm truncate">{s.title || 'Sesión personal'}</p>
+                                            <p className="text-muted-foreground text-xs">{s.enrolled_count ?? 0} inscrito{(s.enrolled_count ?? 1) !== 1 ? 's' : ''} · hasta {fmtTime(s.end_time)}</p>
                                         </div>
                                         <SessionBadge type={s.class_type} />
-                                        <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-white transition-colors flex-shrink-0" />
+                                        <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0" />
                                     </Link>
                                 ))}
                               </div>
@@ -240,7 +240,7 @@ export default function TrainerDashboard({ id, centerDetails, metrics, analytics
                                     const p = m.profiles
                                     return (
                                         <Link key={m.id} href={`/dashboard/gyms/${id}/members`}
-                                            className="flex items-center gap-3 p-3 rounded-xl hover:bg-white/5 transition-colors group">
+                                            className="flex items-center gap-3 p-3 rounded-xl hover:bg-muted/50 transition-colors group">
                                             {p?.avatar_url
                                                 ? <img src={p.avatar_url} className="w-9 h-9 rounded-full object-cover flex-shrink-0" alt={p.full_name} />
                                                 : <div className="w-9 h-9 rounded-full bg-brand-red/20 flex items-center justify-center text-brand-red font-black text-sm flex-shrink-0">
@@ -248,11 +248,11 @@ export default function TrainerDashboard({ id, centerDetails, metrics, analytics
                                                   </div>
                                             }
                                             <div className="flex-1 min-w-0">
-                                                <p className="text-white font-bold text-sm truncate">{p?.full_name || p?.username || 'Alumno'}</p>
-                                                <p className="text-gray-500 text-xs">Nv.{p?.level ?? 1} · {(p?.xp_points ?? 0).toLocaleString()} XP</p>
+                                                <p className="text-foreground font-bold text-sm truncate">{p?.full_name || p?.username || 'Alumno'}</p>
+                                                <p className="text-muted-foreground text-xs">Nv.{p?.level ?? 1} · {(p?.xp_points ?? 0).toLocaleString()} XP</p>
                                             </div>
                                             <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-500/10 text-green-400 font-bold">ACTIVO</span>
-                                            <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-white flex-shrink-0" />
+                                            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground flex-shrink-0" />
                                         </Link>
                                     )
                                 })}
@@ -260,7 +260,7 @@ export default function TrainerDashboard({ id, centerDetails, metrics, analytics
                                 {/* Add more or upgrade */}
                                 {!atLimit && plan.maxStudents < Infinity && (
                                     <Link href={`/dashboard/gyms/${id}/members?action=new`}
-                                        className="flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-white/8 hover:border-brand-red/40 hover:bg-brand-red/5 transition-colors text-gray-500 hover:text-brand-red text-sm font-bold mt-2">
+                                        className="flex items-center justify-center gap-2 p-3 rounded-xl border-2 border-dashed border-border hover:border-brand-red/40 hover:bg-brand-red/5 transition-colors text-muted-foreground hover:text-brand-red text-sm font-bold mt-2">
                                         <Plus className="w-4 h-4" /> Añadir alumno
                                     </Link>
                                 )}
@@ -282,12 +282,12 @@ export default function TrainerDashboard({ id, centerDetails, metrics, analytics
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {/* Manual — always available */}
                             <Link href={`/dashboard/gyms/${id}/programming`}
-                                className="p-4 rounded-xl bg-white/4 border border-white/8 hover:border-brand-red/30 hover:bg-brand-red/5 transition-all group">
+                                className="p-4 rounded-xl bg-card border border-border hover:border-brand-red/30 hover:bg-brand-red/5 transition-all group">
                                 <div className="flex items-center gap-3 mb-2">
                                     <div className="w-8 h-8 rounded-lg bg-brand-red/15 flex items-center justify-center">
                                         <FileText className="w-4 h-4 text-brand-red" />
                                     </div>
-                                    <span className="font-bold text-sm text-white">Rutinas Manuales</span>
+                                    <span className="font-bold text-sm text-foreground">Rutinas Manuales</span>
                                 </div>
                                 <p className="text-gray-500 text-xs">Crea y asigna rutinas personalizadas paso a paso</p>
                             </Link>

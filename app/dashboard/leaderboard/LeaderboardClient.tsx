@@ -87,20 +87,20 @@ export default function LeaderboardClient({ initialData, currentUser, followedId
                             <div
                                 key={athlete.id}
                                 className={clsx(
-                                    "group flex items-center gap-1 sm:gap-0 p-2 sm:p-6 transition-all hover:bg-white/5",
+                                    "group flex items-center gap-2.5 px-3 py-3 sm:px-6 sm:py-5 transition-all hover:bg-white/5",
                                     index === 0 && "bg-brand-red/5"
                                 )}
                             >
-                                {/* Rank Number */}
-                                <div className="w-5 sm:w-16 flex justify-center shrink-0">
-                                    {index === 0 ? <Medal className="w-3.5 h-3.5 sm:w-8 sm:h-8 text-yellow-500 drop-shadow-glow" /> :
-                                        index === 1 ? <Medal className="w-3 h-3 sm:w-7 sm:h-7 text-gray-400" /> :
-                                            index === 2 ? <Medal className="w-3 h-3 sm:w-7 sm:h-7 text-orange-500" /> :
-                                                <span className="text-[9px] sm:text-xl font-heading font-black text-gray-600">#{index + 1}</span>}
+                                {/* Rank */}
+                                <div className="w-6 sm:w-14 flex justify-center shrink-0">
+                                    {index === 0 ? <Medal className="w-4 h-4 sm:w-7 sm:h-7 text-yellow-500" /> :
+                                     index === 1 ? <Medal className="w-4 h-4 sm:w-7 sm:h-7 text-gray-400" /> :
+                                     index === 2 ? <Medal className="w-4 h-4 sm:w-7 sm:h-7 text-orange-500" /> :
+                                     <span className="text-[10px] sm:text-lg font-heading font-black text-gray-600">#{index + 1}</span>}
                                 </div>
 
                                 {/* Avatar */}
-                                <div className="w-7 h-7 sm:w-14 sm:h-14 rounded-lg sm:rounded-2xl bg-black border border-white/10 overflow-hidden relative mr-1.5 sm:mr-6 group-hover:border-brand-red/50 transition-colors shrink-0">
+                                <div className="w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-black border border-white/10 overflow-hidden relative group-hover:border-brand-red/50 transition-colors shrink-0">
                                     <Image
                                         src={athlete.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(athlete.full_name || 'U')}&background=random`}
                                         alt={athlete.full_name}
@@ -108,47 +108,49 @@ export default function LeaderboardClient({ initialData, currentUser, followedId
                                         className="object-cover"
                                     />
                                     {athlete.is_official && (
-                                        <div className="absolute top-0 right-0 bg-brand-red p-0.5 sm:p-1 rounded-bl-lg">
-                                            <Trophy className="w-2 sm:w-2.5 h-2 sm:h-2.5 text-white" />
+                                        <div className="absolute top-0 right-0 bg-brand-red p-0.5 rounded-bl-md">
+                                            <Trophy className="w-2 h-2 text-white" />
                                         </div>
                                     )}
                                 </div>
 
-                                {/* User Details */}
-                                <div className="flex-1 min-w-0 mr-1 sm:mr-3">
-                                    <Link href={athlete.username ? `/dashboard/profile/${athlete.username}` : `/dashboard/leaderboard`} className="block">
-                                        <div className="flex items-center gap-1 sm:gap-2">
-                                            <h3 className="font-heading font-black text-white italic uppercase tracking-tight text-[11px] sm:text-lg group-hover:text-brand-red transition-colors truncate">
-                                                {athlete.full_name}
-                                            </h3>
-                                            {athlete.level >= 10 && <Star className="w-2.5 h-2.5 sm:w-4 sm:h-4 text-yellow-500 fill-yellow-500 shrink-0" />}
-                                        </div>
-                                        <p className="text-[7px] sm:text-[10px] text-gray-500 font-black uppercase tracking-wider sm:tracking-widest leading-none mt-0.5 sm:mt-1 truncate">
-                                            @{athlete.username} <span className="hidden sm:inline">• SOLDADO LVL {athlete.level}</span>
-                                        </p>
-                                    </Link>
-                                </div>
+                                {/* Name + username */}
+                                <Link
+                                    href={athlete.username ? `/dashboard/profile/${athlete.username}` : `/dashboard/leaderboard`}
+                                    className="flex-1 min-w-0"
+                                >
+                                    <div className="flex items-center gap-1">
+                                        <h3 className="font-heading font-black text-white italic uppercase tracking-tight text-[11px] sm:text-base group-hover:text-brand-red transition-colors truncate">
+                                            {athlete.full_name}
+                                        </h3>
+                                        {athlete.level >= 10 && <Star className="w-2.5 h-2.5 text-yellow-500 fill-yellow-500 shrink-0" />}
+                                    </div>
+                                    <p className="text-[8px] sm:text-[10px] text-gray-600 font-bold uppercase tracking-wider leading-none mt-0.5 truncate">
+                                        @{athlete.username}
+                                    </p>
+                                </Link>
 
-                                {/* Stat Display */}
-                                <div className="text-right mr-1 sm:mr-10 flex-shrink-0">
-                                    <p className="text-xs sm:text-2xl font-heading font-black text-white italic tracking-tighter leading-none mb-0.5 sm:mb-1">
+                                {/* XP value */}
+                                <div className="text-right shrink-0">
+                                    <p className="text-sm sm:text-xl font-heading font-black text-white italic leading-none">
                                         {getStatValue(athlete)}
                                     </p>
-                                    <p className="text-[6px] sm:text-[9px] text-gray-500 font-black uppercase tracking-wider sm:tracking-widest">
+                                    <p className="text-[7px] sm:text-[9px] text-gray-600 font-black uppercase tracking-wider">
                                         {getStatUnit()}
                                     </p>
                                 </div>
 
-                                {/* Action */}
-                                <div className="shrink-0 scale-[0.7] sm:scale-100">
-                                    {athlete.id !== currentUser?.id && (
-                                        <FollowButton
-                                            targetId={athlete.id}
-                                            isFollowingInitial={followedIds.has(athlete.id)}
-                                            variant="small"
-                                        />
-                                    )}
-                                </div>
+                                {/* Follow — icon on mobile, small on desktop */}
+                                {athlete.id !== currentUser?.id && (
+                                    <div className="shrink-0">
+                                        <span className="sm:hidden">
+                                            <FollowButton targetId={athlete.id} isFollowingInitial={followedIds.has(athlete.id)} variant="icon" />
+                                        </span>
+                                        <span className="hidden sm:block">
+                                            <FollowButton targetId={athlete.id} isFollowingInitial={followedIds.has(athlete.id)} variant="small" />
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         )) : (
                             <div className="p-20 text-center">

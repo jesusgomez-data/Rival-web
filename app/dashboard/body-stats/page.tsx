@@ -69,6 +69,7 @@ export default function BodyStatsPage() {
     const [goalForm, setGoalForm] = useState({ title: '', target_value: '', unit: 'kg', target_date: '' });
     const fileRef = useRef<HTMLInputElement>(null);
     const [isUploading, setIsUploading] = useState(false);
+    const [detailEntry, setDetailEntry] = useState<any>(null);
 
     const showToast = (message: string, type: 'error' | 'success') => setToast({ message, type });
 
@@ -197,6 +198,52 @@ export default function BodyStatsPage() {
                 {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
             </AnimatePresence>
 
+            {/* Entry Detail Modal */}
+            <AnimatePresence>
+                {detailEntry && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4"
+                        onClick={() => setDetailEntry(null)}
+                    >
+                        <motion.div
+                            initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }}
+                            className="bg-[#0A0A0A] border border-white/10 rounded-3xl p-6 w-full max-w-sm space-y-4"
+                            onClick={e => e.stopPropagation()}
+                        >
+                            <div className="flex items-center justify-between">
+                                <h3 className="text-white font-black uppercase tracking-widest text-sm">
+                                    {new Date(detailEntry.recorded_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                </h3>
+                                <button onClick={() => setDetailEntry(null)} className="text-gray-500 hover:text-white">
+                                    <X className="w-5 h-5" />
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                {[
+                                    { label: 'Peso', value: detailEntry.weight_kg, unit: 'kg' },
+                                    { label: 'Grasa', value: detailEntry.body_fat_pct, unit: '%' },
+                                    { label: 'Pecho', value: detailEntry.chest_cm, unit: 'cm' },
+                                    { label: 'Cintura', value: detailEntry.waist_cm, unit: 'cm' },
+                                    { label: 'Caderas', value: detailEntry.hips_cm, unit: 'cm' },
+                                    { label: 'Bíceps', value: detailEntry.bicep_cm, unit: 'cm' },
+                                    { label: 'Muslo', value: detailEntry.thigh_cm, unit: 'cm' },
+                                    { label: 'Hombros', value: detailEntry.shoulder_cm, unit: 'cm' },
+                                ].filter(f => f.value != null).map(f => (
+                                    <div key={f.label} className="bg-white/5 rounded-2xl p-3">
+                                        <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest">{f.label}</p>
+                                        <p className="text-lg font-heading font-black text-white mt-0.5">{f.value} <span className="text-xs text-gray-500">{f.unit}</span></p>
+                                    </div>
+                                ))}
+                            </div>
+                            {detailEntry.notes && (
+                                <p className="text-xs text-gray-400 border-t border-white/5 pt-3">{detailEntry.notes}</p>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
@@ -289,8 +336,12 @@ export default function BodyStatsPage() {
                         <div className="mt-6 space-y-3">
                             {history.length === 0 ? (
                                 <p className="text-center text-white/20 text-sm font-bold py-4">Sin registros aún</p>
-                            ) : history.slice(0, 5).map((entry, i) => (
-                                <div key={i} className="bg-black/30 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
+                            ) : history.slice(0, 10).map((entry, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => setDetailEntry(entry)}
+                                    className="w-full bg-black/30 border border-white/5 rounded-2xl p-4 flex items-center justify-between hover:border-brand-red/30 hover:bg-white/5 transition-all text-left"
+                                >
                                     <div>
                                         <p className="text-white font-bold text-sm capitalize">
                                             {new Date(entry.recorded_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -301,16 +352,19 @@ export default function BodyStatsPage() {
                                             {!entry.weight_kg && !entry.body_fat_pct && 'Medidas registradas'}
                                         </p>
                                     </div>
-                                    {i > 0 && history[i - 1]?.weight_kg && entry.weight_kg && (
-                                        <span className={clsx("text-sm font-black flex items-center gap-1",
-                                            entry.weight_kg < history[i - 1].weight_kg ? "text-green-500" : "text-red-400")}>
-                                            {entry.weight_kg < history[i - 1].weight_kg
-                                                ? <ArrowDownRight className="w-4 h-4" />
-                                                : <ArrowUpRight className="w-4 h-4" />}
-                                            {Math.abs(entry.weight_kg - history[i - 1].weight_kg).toFixed(1)} kg
-                                        </span>
-                                    )}
-                                </div>
+                                    <div className="flex items-center gap-2">
+                                        {i > 0 && history[i - 1]?.weight_kg && entry.weight_kg && (
+                                            <span className={clsx("text-sm font-black flex items-center gap-1",
+                                                entry.weight_kg < history[i - 1].weight_kg ? "text-green-500" : "text-red-400")}>
+                                                {entry.weight_kg < history[i - 1].weight_kg
+                                                    ? <ArrowDownRight className="w-4 h-4" />
+                                                    : <ArrowUpRight className="w-4 h-4" />}
+                                                {Math.abs(entry.weight_kg - history[i - 1].weight_kg).toFixed(1)} kg
+                                            </span>
+                                        )}
+                                        <span className="text-[10px] text-gray-600 font-bold">Ver →</span>
+                                    </div>
+                                </button>
                             ))}
                         </div>
                     </motion.div>

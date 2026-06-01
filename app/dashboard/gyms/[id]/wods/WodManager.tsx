@@ -709,7 +709,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                 ) : (
                                     <div className="space-y-3">
                                         {block.exercises?.map((ex, exIndex) => (
-                                            <div key={ex.id} className="bg-black/60 border border-white/5 rounded-2xl p-3 sm:p-4 space-y-4 animate-in slide-in-from-left-2 duration-200">
+                                            <div key={ex.id} className="bg-background border border-border rounded-2xl p-3 sm:p-4 space-y-4 animate-in slide-in-from-left-2 duration-200">
                                                 <div className="flex items-center gap-2">
                                                     <div className="relative flex-1 min-w-0">
                                                         <div className="flex items-center gap-2 bg-background border border-border rounded-xl px-3 py-2.5 group-focus-within:border-brand-red transition-all">
@@ -1168,8 +1168,8 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                             className="w-full flex items-center justify-between p-4 hover:bg-muted/30 transition-colors"
                                                         >
                                                             <div className="flex items-center gap-3">
-                                                                <h5 className="text-white font-heading font-black text-xs uppercase tracking-widest flex items-center gap-2 italic">
-                                                                    <span className={`w-2 h-2 rounded-full ${block.type === 'wod' ? 'bg-white' : 'bg-gray-500'}`}></span>
+                                                                <h5 className="text-foreground font-heading font-black text-xs uppercase tracking-widest flex items-center gap-2 italic">
+                                                                    <span className={`w-2 h-2 rounded-full ${block.type === 'wod' ? 'bg-foreground' : 'bg-muted-foreground'}`}></span>
                                                                     {(block.title || (block.format && block.format !== 'FREE' ? block.format : (block.type === 'wod' ? 'Workout' : block.type))).toUpperCase()}
 
                                                                     {/* Display Config Info */}
@@ -1188,18 +1188,18 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                                     )}
                                                                 </h5>
                                                             </div>
-                                                            <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${isBlockExpanded ? 'rotate-180' : ''}`} />
+                                                            <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${isBlockExpanded ? 'rotate-180' : ''}`} />
                                                         </button>
 
                                                         {isBlockExpanded && (
                                                             <div className="px-4 pb-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                                                                <div className="bg-black/30 rounded-xl p-4 border border-white/5 mb-4 shadow-inner">
+                                                                <div className="bg-muted/20 rounded-xl p-4 border border-border mb-4 shadow-inner">
                                                                     {(() => {
                                                                         const lines = (block.exercises && block.exercises.length > 0)
                                                                             ? block.exercises
                                                                             : (block.content || '').split('\n').filter(l => l.trim());
 
-                                                                        if (lines.length === 0) return <p className="text-gray-500 text-xs italic">No hay ejercicios registrados</p>;
+                                                                        if (lines.length === 0) return <p className="text-muted-foreground text-xs italic">No hay ejercicios registrados</p>;
 
                                                                         return (
                                                                             <div className="space-y-2">
@@ -1213,7 +1213,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                                                         text = `${prefix ? prefix + ' ' : ''}${item.name} ${suffix}`.trim();
                                                                                     }
                                                                                     return (
-                                                                                        <div key={i} className="flex items-center gap-2 text-gray-300 text-sm font-medium pl-2 border-l border-white/10">
+                                                                                        <div key={i} className="flex items-center gap-2 text-foreground/70 text-sm font-medium pl-2 border-l border-border">
                                                                                             <div className="w-1 h-1 rounded-full bg-brand-red" />
                                                                                             {text}
                                                                                         </div>
@@ -1228,10 +1228,10 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                                 {block.media_urls && block.media_urls.length > 0 && (
                                                                     <div className="grid grid-cols-3 md:grid-cols-4 gap-2">
                                                                         {block.media_urls.map((url, i) => (
-                                                                            <div key={i} className="rounded-lg overflow-hidden border border-white/5 bg-black aspect-video relative group cursor-pointer hover:border-white/20">
+                                                                            <div key={i} className="rounded-lg overflow-hidden border border-border bg-muted aspect-video relative group cursor-pointer hover:border-border/60">
                                                                                 {url.match(/\.(mp4|webm|ogg)$/i) ? (
                                                                                     <div className="w-full h-full flex items-center justify-center bg-black">
-                                                                                        <Video className="w-6 h-6 text-gray-500" />
+                                                                                        <Video className="w-6 h-6 text-muted-foreground" />
                                                                                     </div>
                                                                                 ) : (
                                                                                     <img src={url} className="w-full h-full object-cover" />
@@ -1248,15 +1248,12 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
 
                                             {/* Fallback for old 'workout' field */}
                                             {wodData.workout && !wodData.blocks && (
-                                                <div className="bg-black/20 rounded-2xl border border-white/5 overflow-hidden">
+                                                <div className="bg-muted/20 rounded-2xl border border-border overflow-hidden">
                                                     <div className="p-4">
-                                                        <h5 className="text-white font-heading text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
-                                                            <span className="w-2 h-2 rounded-full bg-white"></span> WOD
+                                                        <h5 className="text-foreground font-heading text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
+                                                            <span className="w-2 h-2 rounded-full bg-foreground"></span> WOD
                                                         </h5>
-                                                        <div className={clsx(
-                                                            "whitespace-pre-wrap font-accent font-semibold text-sm sm:text-lg tracking-tight leading-relaxed",
-                                                            theme === 'dark' ? "text-white" : "text-black"
-                                                        )}>
+                                                        <div className="whitespace-pre-wrap font-accent font-semibold text-sm sm:text-lg tracking-tight leading-relaxed text-foreground">
                                                             {wodData.workout}
                                                         </div>
                                                     </div>
@@ -1272,9 +1269,9 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
 
                 {
                     posts.length === 0 && (
-                        <div className="text-center py-20 border-2 border-dashed border-white/5 rounded-2xl">
-                            <FileText className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                            <p className="text-gray-500">No WODs scheduled.</p>
+                        <div className="text-center py-20 border-2 border-dashed border-border rounded-2xl">
+                            <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                            <p className="text-muted-foreground">No WODs scheduled.</p>
                         </div>
                     )
                 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { clsx } from "clsx";
 import { motion } from "framer-motion";
-import { Trophy, Swords, ShieldCheck, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, X, MessageSquare, Edit2, Globe, Users } from "lucide-react";
+import { Trophy, Swords, ShieldCheck, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, X, MessageSquare, Edit2, Globe, Users, Plus, ArrowRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import DuelButton from "../../community/DuelButton";
@@ -37,6 +37,10 @@ interface ProfileContentProps {
 
 export default function ProfileContent({ profile, combatStats, user, isFollowing: isFollowingProp, posts, canViewContent, privacy, workouts, badges, gear, isAdminUser = false, hasActiveDuel = false, medals = [] }: ProfileContentProps) {
     const [following, setFollowing] = useState(isFollowingProp);
+
+    // Sync server-side value on navigation (handles Next.js page cache)
+    useEffect(() => { setFollowing(isFollowingProp); }, [isFollowingProp]);
+
     const [mobileTab, setMobileTab] = useState<'activity' | 'gallery' | 'stats'>('activity');
     const [modalOpen, setModalOpen] = useState<'followers' | 'following' | null>(null);
     const [avatarModalOpen, setAvatarModalOpen] = useState(false);
@@ -81,27 +85,35 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
             {/* New Premium Profile Header with Cover Photo */}
             <section className="glass-dark border border-white/10 rounded-[2rem] md:rounded-[3rem] overflow-hidden relative mb-8 shadow-2xl">
                 {/* Cover Photo Banner */}
-                <div className="h-48 md:h-64 bg-gradient-to-r from-brand-red via-brand-red/80 to-brand-gray relative w-full select-none overflow-hidden border-b border-white/10">
-                    {profile.cover_url ? (
+                <div className="h-48 md:h-64 relative w-full select-none overflow-hidden border-b border-white/10"
+                    style={profile.is_official ? { background: 'linear-gradient(135deg, #000 0%, #0a0a0a 40%, #1a0000 70%, #000 100%)' } : { background: 'linear-gradient(to right, #dc2626, rgba(220,38,38,0.8), #111)' }}>
+                    {profile.is_official ? (
+                        /* Official branded cover */
                         <>
-                            <Image
-                                src={profile.cover_url}
-                                alt="Cover"
-                                fill
-                                className="object-cover pointer-events-none"
-                                style={{ objectPosition: `center ${profile.cover_position ?? 50}%` }}
-                                priority
-                            />
-                            <div className="absolute inset-0 bg-brand-red/10 mix-blend-multiply"></div>
-                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                            {/* Diagonal stripe pattern */}
+                            <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #dc2626 0, #dc2626 1px, transparent 0, transparent 24px)', backgroundSize: '34px 34px' }} />
+                            {/* Red glow at bottom */}
+                            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-brand-red/15 to-transparent" />
+                            {/* Large faint R symbol */}
+                            <div className="absolute right-8 top-1/2 -translate-y-1/2 text-[160px] font-black text-white/[0.03] italic tracking-tighter select-none pointer-events-none leading-none">R</div>
+                            {/* Official ribbon */}
+                            <div className="absolute top-5 left-5 flex items-center gap-2 bg-black/60 border border-blue-500/30 backdrop-blur-md px-4 py-1.5 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+                                <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
+                                <span className="text-[9px] font-black text-blue-400 uppercase tracking-[0.3em]">Cuenta Oficial · RivalFit</span>
+                            </div>
+                        </>
+                    ) : profile.cover_url ? (
+                        <>
+                            <Image src={profile.cover_url} alt="Cover" fill className="object-cover pointer-events-none" style={{ objectPosition: `center ${profile.cover_position ?? 50}%` }} priority />
+                            <div className="absolute inset-0 bg-brand-red/10 mix-blend-multiply" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
                         </>
                     ) : (
                         <>
-                            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-20 mix-blend-overlay"></div>
-                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
+                            <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-20 mix-blend-overlay" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
                         </>
                     )}
-                    {/* Background Ambience on top of cover */}
                     <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-brand-red/20 blur-[80px] -mr-20 -mt-20 rounded-full pointer-events-none" />
                 </div>
 
@@ -113,9 +125,14 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     {/* Avatar (Overlapping Cover Photo) */}
                     <div className="relative group shrink-0 -mt-16 md:-mt-24 z-10">
                         <div className="absolute -inset-2 bg-gradient-to-tr from-brand-red to-brand-orange rounded-full blur-xl opacity-30 group-hover:opacity-60 transition-opacity duration-500 pointer-events-none" />
-                        <button 
+                        <button
                             onClick={() => setAvatarModalOpen(true)}
-                            className="relative w-28 h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full border-4 border-[#020202] overflow-hidden bg-black transition-transform active:scale-95 shadow-glow-red"
+                            className={clsx(
+                                "relative w-28 h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 rounded-full border-4 overflow-hidden bg-black transition-transform active:scale-95",
+                                profile.is_official
+                                    ? "border-blue-500 shadow-[0_0_30px_rgba(59,130,246,0.5)]"
+                                    : "border-[#020202] shadow-glow-red"
+                            )}
                         >
                             {profile.avatar_url ? (
                                 <Image
@@ -146,15 +163,23 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     {/* Info & Stats */}
                     <div className="flex-1 space-y-6 text-center md:text-left relative z-10 w-full mt-4 md:mt-0">
                     <div className="space-y-2">
-                        <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-2 md:gap-3">
-                            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black italic uppercase tracking-tighter text-white">
-                                {profile.full_name}
-                            </h1>
-                            {!profile.is_official && (
-                                <span className="glass px-3 py-1 rounded-full text-[9px] md:text-[10px] font-black tracking-widest text-brand-red uppercase border-brand-red/30 shadow-glow-red">
-                                    Pro
-                                </span>
+                        <div className="flex flex-col items-center md:items-start gap-2">
+                            {profile.is_official && (
+                                <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/30 rounded-full">
+                                    <ShieldCheck className="w-3 h-3 text-blue-400" />
+                                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-[0.25em]">Plataforma Oficial · App Administrator</span>
+                                </div>
                             )}
+                            <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-2 md:gap-3">
+                                <h1 className="text-3xl md:text-4xl lg:text-5xl font-black italic uppercase tracking-tighter text-white">
+                                    {profile.full_name}
+                                </h1>
+                                {!profile.is_official && (
+                                    <span className="glass px-3 py-1 rounded-full text-[9px] md:text-[10px] font-black tracking-widest text-brand-red uppercase border-brand-red/30 shadow-glow-red">
+                                        Pro
+                                    </span>
+                                )}
+                            </div>
                         </div>
                         <div className="flex items-center justify-center md:justify-start gap-2 text-brand-red font-black tracking-[0.2em] text-[9px] md:text-[10px] uppercase flex-wrap">
                             @{profile.username}
@@ -182,25 +207,44 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                          )}
                     </div>
 
-                    {/* Integrated Stats (Like Mockup) */}
+                    {/* Integrated Stats */}
                     <div className="flex flex-wrap justify-center md:justify-start gap-3 md:gap-4">
-                        <button onClick={() => scrollToSection('activity-feed', 'activity')} className="glass px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl border-white/5 text-center flex-1 md:flex-none min-w-[80px] hover:border-brand-red/30 transition-colors cursor-pointer">
-                            <div className="text-xl md:text-2xl font-black italic text-white">{stats.wods}</div>
-                            <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/40">WODs</div>
-                        </button>
-                        <button onClick={() => scrollToSection('personal-records', 'stats')} className="glass px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl border-white/5 text-center flex-1 md:flex-none min-w-[80px] hover:border-brand-red/30 transition-colors cursor-pointer">
-                            <div className="text-xl md:text-2xl font-black italic text-brand-red">{stats.prs}</div>
-                            <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/40">PRs</div>
-                        </button>
-                        <button onClick={() => handleOpenModal('followers')} className="glass px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl border-white/5 text-center flex-1 md:flex-none min-w-[80px] hover:border-brand-red/30 transition-colors cursor-pointer">
-                            <div className="text-xl md:text-2xl font-black italic text-brand-orange">{stats.followers}</div>
-                            <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/40">Seguidores</div>
-                        </button>
-                        {!profile.is_official && (
-                            <button onClick={() => handleOpenModal('following')} className="glass px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl border-white/5 text-center flex-1 md:flex-none min-w-[80px] hover:border-brand-red/30 transition-colors cursor-pointer">
-                                <div className="text-xl md:text-2xl font-black italic text-white/80">{profile.following_count || 0}</div>
-                                <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/40">Siguiendo</div>
-                            </button>
+                        {profile.is_official ? (
+                            /* Official profile: show content stats, no follower/following counts */
+                            <>
+                                <button onClick={() => scrollToSection('activity-feed', 'activity')} className="glass px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl border-blue-500/10 text-center flex-1 md:flex-none min-w-[80px] hover:border-blue-500/30 transition-colors cursor-pointer">
+                                    <div className="text-xl md:text-2xl font-black italic text-white">{stats.wods}</div>
+                                    <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-blue-400/60">WODs</div>
+                                </button>
+                                <button onClick={() => scrollToSection('activity-feed', 'activity')} className="glass px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl border-blue-500/10 text-center flex-1 md:flex-none min-w-[80px] hover:border-blue-500/30 transition-colors cursor-pointer">
+                                    <div className="text-xl md:text-2xl font-black italic text-brand-red">{stats.prs}</div>
+                                    <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-blue-400/60">Publicaciones</div>
+                                </button>
+                                <div className="glass px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl border-blue-500/10 text-center flex-1 md:flex-none min-w-[80px]">
+                                    <div className="text-xl md:text-2xl font-black italic text-blue-400">∞</div>
+                                    <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-blue-400/60">Miembros</div>
+                                </div>
+                            </>
+                        ) : (
+                            /* Regular profile */
+                            <>
+                                <button onClick={() => scrollToSection('activity-feed', 'activity')} className="glass px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl border-white/5 text-center flex-1 md:flex-none min-w-[80px] hover:border-brand-red/30 transition-colors cursor-pointer">
+                                    <div className="text-xl md:text-2xl font-black italic text-white">{stats.wods}</div>
+                                    <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/40">WODs</div>
+                                </button>
+                                <button onClick={() => scrollToSection('personal-records', 'stats')} className="glass px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl border-white/5 text-center flex-1 md:flex-none min-w-[80px] hover:border-brand-red/30 transition-colors cursor-pointer">
+                                    <div className="text-xl md:text-2xl font-black italic text-brand-red">{stats.prs}</div>
+                                    <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/40">PRs</div>
+                                </button>
+                                <button onClick={() => handleOpenModal('followers')} className="glass px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl border-white/5 text-center flex-1 md:flex-none min-w-[80px] hover:border-brand-red/30 transition-colors cursor-pointer">
+                                    <div className="text-xl md:text-2xl font-black italic text-brand-orange">{stats.followers}</div>
+                                    <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/40">Seguidores</div>
+                                </button>
+                                <button onClick={() => handleOpenModal('following')} className="glass px-4 md:px-6 py-2 md:py-3 rounded-xl md:rounded-2xl border-white/5 text-center flex-1 md:flex-none min-w-[80px] hover:border-brand-red/30 transition-colors cursor-pointer">
+                                    <div className="text-xl md:text-2xl font-black italic text-white/80">{profile.following_count || 0}</div>
+                                    <div className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/40">Siguiendo</div>
+                                </button>
+                            </>
                         )}
                     </div>
 
@@ -237,19 +281,38 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
 
             {/* Bio / Manifiesto — OFFICIAL ONLY */}
             {profile.is_official ? (
-                 <div className="bg-white/5 border border-white/10 rounded-[32px] p-6 md:p-12 backdrop-blur-md relative overflow-hidden group">
-                    <div className="absolute top-0 right-0 p-8 text-white/[0.02] pointer-events-none">
-                        <ShieldCheck className="w-48 h-48 -rotate-12" />
-                    </div>
-                    <div className="relative z-10">
-                        <h3 className="text-[10px] font-black text-brand-red uppercase tracking-[0.6em] mb-6 flex items-center gap-2 opacity-80">
-                            <ShieldCheck className="w-3 h-3" /> COMUNICADO OFICIAL
-                        </h3>
-                        <div className="space-y-4 max-w-3xl">
-                            <p className="text-lg md:text-2xl font-bold text-gray-200 leading-relaxed italic tracking-tight whitespace-pre-wrap">
-                                {profile.bio || "Bienvenidos a la plataforma oficial de Rival Fit. Aquí encontrarás toda la información, retos y motivación para llevar tu entrenamiento al siguiente nivel."}
-                            </p>
-                            <div className="h-0.5 w-12 bg-brand-red/40 rounded-full" />
+                <div className="relative rounded-[32px] overflow-hidden border border-blue-500/20 shadow-[0_0_40px_rgba(59,130,246,0.08)]"
+                    style={{ background: 'linear-gradient(135deg, #000 0%, #050510 50%, #020008 100%)' }}>
+                    {/* Background pattern */}
+                    <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'repeating-linear-gradient(-45deg, #3b82f6 0, #3b82f6 1px, transparent 0, transparent 20px)', backgroundSize: '28px 28px' }} />
+                    {/* Blue glow top right */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-[80px] rounded-full -mr-20 -mt-20 pointer-events-none" />
+                    {/* Red glow bottom left */}
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-brand-red/10 blur-[60px] rounded-full -ml-16 -mb-16 pointer-events-none" />
+
+                    <div className="relative z-10 p-6 md:p-12 space-y-6">
+                        {/* Header */}
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 bg-blue-500/10 border border-blue-500/30 rounded-xl">
+                                <ShieldCheck className="w-5 h-5 text-blue-400" />
+                            </div>
+                            <div>
+                                <p className="text-[9px] font-black text-blue-400 uppercase tracking-[0.4em]">Canal Oficial</p>
+                                <p className="text-[11px] font-bold text-white/60">Administrador de la Plataforma</p>
+                            </div>
+                            <div className="ml-auto px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full">
+                                <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">Verificado ✓</span>
+                            </div>
+                        </div>
+
+                        {/* Message */}
+                        <p className="text-base md:text-xl font-bold text-gray-200 leading-relaxed italic tracking-tight whitespace-pre-wrap border-l-2 border-blue-500/40 pl-5">
+                            {profile.bio || "Bienvenidos a la plataforma oficial de RivalFit. Aquí encontrarás entrenamientos, retos y toda la información para llevar tu rendimiento al siguiente nivel."}
+                        </p>
+
+                        <div className="flex items-center gap-3 pt-2 border-t border-white/5">
+                            <div className="h-1 w-8 bg-brand-red rounded-full" />
+                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">RivalFit Official · Todos los derechos reservados</span>
                         </div>
                     </div>
                 </div>
@@ -449,7 +512,14 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                                 <Dumbbell className="w-4 h-4 text-brand-red" /> RÉCORDS PERSONALES (PRs)
                                             </h3>
                                             <div className="space-y-4">
-                                                {profile.featured_rms.map((rm: any) => (
+                                                {profile.featured_rms.map((rm: any) => {
+                                                    const ex = (rm.exercise || '').toLowerCase();
+                                                    const isEndurance = /run|row|swim|bike|cycling|km|m\b|meter|endur|cardio|corr|natat|cicl/.test(ex);
+                                                    const isTime = /for\s*time|time|min|seg|sec/.test(ex);
+                                                    let displayUnit = rm.unit || 'kg';
+                                                    if (isEndurance && displayUnit === 'kg') displayUnit = 'm';
+                                                    if (isTime && displayUnit === 'kg') displayUnit = 'min';
+                                                    return (
                                                     <div key={rm.id} className="flex items-center justify-between py-3 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors rounded-lg px-2 -mx-2 group">
                                                         <div className="flex items-center gap-3">
                                                             <div className="w-8 h-8 bg-brand-red/10 rounded-lg flex items-center justify-center text-brand-red shrink-0 group-hover:scale-110 transition-transform">
@@ -457,9 +527,10 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                                             </div>
                                                             <span className="text-[11px] md:text-xs font-black uppercase text-gray-300 tracking-wide">{rm.exercise}</span>
                                                         </div>
-                                                        <span className="text-sm md:text-base font-black text-white italic tracking-tighter">{rm.weight} {rm.unit}</span>
+                                                        <span className="text-sm md:text-base font-black text-white italic tracking-tighter">{rm.weight} {displayUnit}</span>
                                                     </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
                                         </div>
                                     )}
@@ -472,18 +543,63 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                     <h3 className="text-xs font-black text-white uppercase tracking-[0.4em] mb-6 flex items-center gap-2">
                                         Explora el Ecosistema
                                     </h3>
-                                    <ul className="space-y-4">
-                                        <li className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/5 hover:border-brand-red/30 transition-all cursor-pointer">
-                                            <LayoutGrid className="w-4 h-4 text-brand-red" />
-                                            <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">WODs del Día</span>
+                                    <ul className="space-y-3">
+                                        {/* WODs del Día */}
+                                        <li className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-1.5 bg-brand-red/10 rounded-lg shrink-0">
+                                                    <LayoutGrid className="w-4 h-4 text-brand-red" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <span className="text-[10px] font-black text-white uppercase tracking-widest block">WODs del Día</span>
+                                                    <span className="text-[8px] text-gray-600">Publica o explora entrenamientos</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Link href="/dashboard?newPost=wod" className="flex-1 flex items-center justify-center gap-1.5 bg-brand-red text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-600 transition-colors">
+                                                    <Plus className="w-3 h-3" /> Publicar WOD
+                                                </Link>
+                                                <Link href="/dashboard/community" className="px-4 py-2 bg-white/5 border border-white/10 text-gray-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1">
+                                                    Ver <ArrowRight className="w-3 h-3" />
+                                                </Link>
+                                            </div>
                                         </li>
-                                        <li className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/5 hover:border-brand-red/30 transition-all cursor-pointer">
-                                            <Trophy className="w-4 h-4 text-purple-500" />
-                                            <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Retos Globales</span>
+
+                                        {/* Retos Globales */}
+                                        <li className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-1.5 bg-purple-500/10 rounded-lg shrink-0">
+                                                    <Trophy className="w-4 h-4 text-purple-500" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <span className="text-[10px] font-black text-white uppercase tracking-widest block">Retos Globales</span>
+                                                    <span className="text-[8px] text-gray-600">Crea o únete a competiciones</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex gap-2">
+                                                <Link href="/dashboard/competitions?new=true" className="flex-1 flex items-center justify-center gap-1.5 bg-purple-600 text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-purple-700 transition-colors">
+                                                    <Plus className="w-3 h-3" /> Crear Reto
+                                                </Link>
+                                                <Link href="/dashboard/competitions" className="px-4 py-2 bg-white/5 border border-white/10 text-gray-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1">
+                                                    Ver <ArrowRight className="w-3 h-3" />
+                                                </Link>
+                                            </div>
                                         </li>
-                                        <li className="flex items-center gap-3 bg-white/5 p-3 rounded-2xl border border-white/5 hover:border-brand-red/30 transition-all cursor-pointer">
-                                            <TrendingUp className="w-4 h-4 text-green-500" />
-                                            <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Ranking Élite</span>
+
+                                        {/* Ranking Élite */}
+                                        <li className="bg-white/5 border border-white/5 rounded-2xl p-4 space-y-3">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-1.5 bg-green-500/10 rounded-lg shrink-0">
+                                                    <TrendingUp className="w-4 h-4 text-green-500" />
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <span className="text-[10px] font-black text-white uppercase tracking-widest block">Ranking Élite</span>
+                                                    <span className="text-[8px] text-gray-600">Los mejores atletas de la plataforma</span>
+                                                </div>
+                                            </div>
+                                            <Link href="/dashboard/leaderboard" className="flex items-center justify-center gap-1.5 bg-green-600/20 border border-green-500/30 text-green-400 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-green-600/30 transition-colors w-full">
+                                                Ver mi posición <ArrowRight className="w-3 h-3" />
+                                            </Link>
                                         </li>
                                     </ul>
                                 </div>

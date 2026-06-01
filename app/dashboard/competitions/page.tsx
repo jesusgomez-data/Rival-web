@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import CompetitionsClient from './CompetitionsClient';
+import { Suspense } from 'react';
 import { COMPETITIONS_DATA } from './data';
 
 export const dynamic = 'force-dynamic';
@@ -33,10 +34,12 @@ export default async function CompetitionsPage() {
     }
 
     return (
-        <CompetitionsClient
-            staticCompetitions={COMPETITIONS_DATA}
-            dbCompetitions={dbCompetitions}
-            isAdmin={isAdmin}
-        />
+        <Suspense fallback={<div className="p-20 text-center text-gray-500 animate-pulse font-black uppercase tracking-widest">Cargando...</div>}>
+            <CompetitionsClient
+                staticCompetitions={COMPETITIONS_DATA}
+                dbCompetitions={dbCompetitions}
+                isAdmin={isAdmin}
+            />
+        </Suspense>
     );
 }
