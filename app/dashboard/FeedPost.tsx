@@ -255,93 +255,90 @@ function RepostCard({ image, caption, prefetchedPost }: { image?: string; captio
 
     return (
         <div className="px-4 pb-4">
-            {/* Reposter's own caption */}
-            {caption && (
-                <p className="text-sm text-white mb-3 leading-relaxed">{caption}</p>
-            )}
-
-            {/* Embedded original post */}
+            {/* Embedded original post - Twitter/X Quote Tweet style */}
             <a
                 href={originalPostId ? `/dashboard#post-${originalPostId}` : '/dashboard'}
-                className="block border border-white/10 rounded-2xl overflow-hidden bg-white/[0.03] hover:bg-white/[0.06] hover:border-brand-red/30 transition-all group"
+                className="block border border-white/10 rounded-2xl overflow-hidden bg-white/[0.01] hover:bg-white/[0.04] hover:border-brand-red/25 transition-all group"
             >
                 {loading ? (
                     <div className="p-4 flex items-center gap-3 animate-pulse">
-                        <div className="w-9 h-9 rounded-full bg-white/10 shrink-0" />
-                        <div className="flex-1 space-y-2">
-                            <div className="h-3 bg-white/10 rounded w-28" />
-                            <div className="h-2 bg-white/5 rounded w-20" />
+                        <div className="w-6 h-6 rounded-full bg-white/10 shrink-0" />
+                        <div className="flex-1 space-y-1.5">
+                            <div className="h-2.5 bg-white/10 rounded w-24" />
+                            <div className="h-2 bg-white/5 rounded w-16" />
                         </div>
                     </div>
                 ) : originalPost ? (
                     <>
-                        {/* Original post header */}
-                        <div className="flex items-center gap-2.5 p-3 border-b border-white/5">
-                            <div className="w-8 h-8 rounded-full bg-gray-800 border border-white/10 overflow-hidden relative shrink-0">
+                        {/* Original post header (compact) */}
+                        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/[0.04]">
+                            <div className="w-6 h-6 rounded-full bg-gray-800 border border-white/10 overflow-hidden relative shrink-0">
                                 {originalPost.profiles?.avatar_url ? (
                                     <Image src={originalPost.profiles.avatar_url} alt={originalPost.profiles.username} fill className="object-cover" />
                                 ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-gray-500 uppercase">
+                                    <div className="w-full h-full flex items-center justify-center text-[8px] font-black text-gray-500 uppercase">
                                         {(originalPost.profiles?.full_name || 'U').substring(0, 2)}
                                     </div>
                                 )}
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <p className="text-xs font-black text-brand-red uppercase italic leading-none truncate">
+                            <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
+                                <span className="text-[11px] font-extrabold text-white uppercase tracking-wide leading-none truncate">
                                     {originalPost.profiles?.full_name || originalPost.profiles?.username}
-                                    {originalPost.profiles?.is_official && <span className="ml-1">✓</span>}
-                                </p>
-                                <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-0.5">
+                                </span>
+                                {originalPost.profiles?.is_official && <VerifiedBadge size="sm" />}
+                                <span className="text-[9px] text-white/35 font-bold tracking-wider leading-none">
                                     @{originalPost.profiles?.username}
-                                </p>
+                                </span>
                             </div>
                             <Repeat className="w-3.5 h-3.5 text-brand-red/50 shrink-0" />
                         </div>
 
                         {/* Original post caption */}
                         {originalPost.caption && (
-                            <p className="text-sm text-gray-300 px-3 py-2.5 leading-relaxed line-clamp-3">
-                                {originalPost.caption}
+                            <p className="text-xs sm:text-[13px] text-white/80 px-4 py-3 leading-relaxed line-clamp-3">
+                                <MentionText text={originalPost.caption} />
                             </p>
                         )}
 
                         {/* Original post media or WOD content */}
                         {isImageUrl(originalPost.media_url) ? (
-                            <div className="relative aspect-video w-full bg-black overflow-hidden">
+                            <div className="relative aspect-video w-full bg-black overflow-hidden border-t border-white/[0.04]">
                                 {originalPost.media_type === 'video' ? (
                                     <video src={originalPost.media_url} className="w-full h-full object-cover" muted playsInline />
                                 ) : (
-                                    <Image src={originalPost.media_url} alt="Post original" fill className="object-cover" />
+                                    <Image src={originalPost.media_url} alt="Original Post Media" fill className="object-cover" />
                                 )}
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/25 to-transparent" />
                             </div>
                         ) : (originalPost.media_type === 'wod' || originalPost.media_type === 'workout') ? (
-                            <div className="px-3 pb-3">
-                                <div className="p-3 bg-white/5 border border-white/5 rounded-xl border-dashed">
-                                    <div className="flex items-center gap-2 mb-1.5">
-                                        <Trophy className="w-3.5 h-3.5 text-brand-red" />
-                                        <span className="text-[10px] font-black text-white uppercase italic tracking-tighter">Entrenamiento de Fuerza/WOD</span>
+                            <div className="px-4 pb-4">
+                                <div className="p-3 bg-brand-red/[0.03] border border-brand-red/10 rounded-xl flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-lg bg-brand-red/10 border border-brand-red/25 flex items-center justify-center text-brand-red shrink-0">
+                                        <Trophy className="w-4 h-4" />
                                     </div>
-                                    <p className="text-[11px] text-gray-400 font-bold uppercase tracking-widest line-clamp-1">
-                                        {(() => {
-                                            try {
-                                                const wod = JSON.parse(originalPost.media_url);
-                                                return wod.title || "WOD DETECTADO";
-                                            } catch { return "ENTRENAMIENTO"; }
-                                        })()}
-                                    </p>
+                                    <div className="text-left min-w-0">
+                                        <div className="text-[7.5px] font-black tracking-widest text-brand-red uppercase leading-none">WOD / ENTRENAMIENTO</div>
+                                        <p className="text-xs font-bold text-white uppercase tracking-wide mt-1 truncate">
+                                            {(() => {
+                                                try {
+                                                    const wod = JSON.parse(originalPost.media_url);
+                                                    return wod.title || "WOD DETECTADO";
+                                                } catch { return "ENTRENAMIENTO"; }
+                                            })()}
+                                        </p>
+                                    </div>
                                 </div>
                             </div>
                         ) : null}
 
-                        <div className="px-3 py-2 text-[9px] text-gray-600 font-bold uppercase tracking-widest flex items-center gap-1 group-hover:text-brand-red transition-colors">
+                        <div className="px-4 pb-3.5 text-[9px] font-extrabold text-brand-red/60 uppercase tracking-widest flex items-center gap-1 group-hover:text-brand-red transition-colors">
                             <ExternalLink className="w-3 h-3" /> Ver publicación original
                         </div>
                     </>
                 ) : (
-                    <div className="p-4 flex items-center gap-3 text-gray-600">
-                        <Repeat className="w-4 h-4" />
-                        <span className="text-xs font-bold uppercase tracking-widest">Publicación no disponible</span>
+                    <div className="p-4 flex items-center gap-2.5 text-gray-600">
+                        <Repeat className="w-3.5 h-3.5" />
+                        <span className="text-[10px] font-black uppercase tracking-widest">Publicación no disponible</span>
                     </div>
                 )}
             </a>
@@ -950,9 +947,11 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
             ref={postRef}
             id={`post-${postId}`}
             className={clsx(
-                "md:mb-10 transition-all relative group/post",
-                "rounded-none md:rounded-[48px] overflow-hidden shadow-2xl", // Premium rounded look
-                theme === 'dark' ? "bg-black border border-white/5" : "bg-white border border-gray-100"
+                "md:mb-8 transition-all duration-300 relative group/post",
+                "rounded-none md:rounded-3xl overflow-hidden shadow-2xl",
+                theme === 'dark' 
+                    ? "bg-[#060606]/85 backdrop-blur-xl border border-white/[0.08] hover:border-brand-red/20 hover:shadow-[0_0_35px_rgba(220,38,38,0.08)]" 
+                    : "bg-white border border-zinc-100 hover:border-zinc-300 hover:shadow-lg"
             )}
         >
             {/* CLASSIC HEADER: Always at the top */}

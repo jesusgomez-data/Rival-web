@@ -49,6 +49,7 @@ const PendingReviewPrompt = dynamic(() => import("./PendingReviewPrompt"),      
 const SupportModal        = dynamic(() => import("./gyms/SupportModal"),          { ssr: false, loading: () => null });
 const AnalyticsTracker    = dynamic(() => import("./admin/AnalyticsTracker"),     { ssr: false, loading: () => null });
 const OnboardingTour      = dynamic(() => import("@/components/OnboardingTour"),  { ssr: false, loading: () => null });
+const LiveActivityTicker  = dynamic(() => import("@/components/LiveActivityTicker"), { ssr: false, loading: () => null });
 
 // ── New-user hint above the "+" button ────────────────────────────────────────
 function NewUserHint() {
@@ -570,6 +571,11 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                                 </Link>
                             </div>
                         </header>
+                    )}
+                    {showMobileNav && (
+                        <div className="mb-6 px-3 sm:px-0">
+                            <LiveActivityTicker />
+                        </div>
                     )}
                     {children}
                 </div>

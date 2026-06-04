@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Orbitron:wght@400..900&family=Oswald:wght@200..700&family=Outfit:wght@100..900&family=Syne:wght@400..800&display=swap');
+
 @import "tailwindcss";
 
 @theme {
@@ -18,10 +20,15 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-input: var(--input);
-  --font-sans: var(--font-inter);
-  --font-heading: var(--font-outfit);
-  --font-accent: var(--font-lexend);
+  --font-sans: "Inter", sans-serif;
+  --font-heading: "Bebas Neue", sans-serif;
+  --font-accent: "Lexend", sans-serif;
+  --font-outfit: "Outfit", sans-serif;
+  --font-inter: "Inter", sans-serif;
+  --font-oswald: "Oswald", sans-serif;
+  --font-bebas: "Bebas Neue", sans-serif;
 }
+
 
 :root {
   /* DARK THEME (Default/Original) */
@@ -36,6 +43,8 @@
 
   --font-inter: "Inter", sans-serif;
   --font-outfit: "Outfit", sans-serif;
+  --font-lexend: "Lexend", sans-serif;
+  --font-oswald: "Oswald", sans-serif;
 }
 
 [data-theme='light'] {
@@ -473,3 +482,62 @@ body {
   0%   { background-position: 0 0; }
   100% { background-position: 0 80px; }
 }
+
+/* Moving Border Glow Animation */
+@keyframes rotate-border {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-border-glow {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-border-glow::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 30%,
+    #EF4444 45%,
+    #FF6B00 55%,
+    transparent 70%
+  );
+  animation: rotate-border 6s linear infinite;
+  z-index: 0;
+}
+
+/* Logo Breathing Glow */
+@keyframes pulse-glow-logo {
+  0%, 100% {
+    filter: drop-shadow(0 0 3px rgba(239, 68, 68, 0.35));
+    opacity: 0.9;
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(239, 68, 68, 0.75));
+    opacity: 1;
+  }
+}
+
+.animate-logo-glow {
+  animation: pulse-glow-logo 3.5s ease-in-out infinite;
+}
+
+/* Mockup Scanning Line */
+@keyframes scan-move {
+  0% { top: 0%; opacity: 0; }
+  10% { opacity: 0.4; }
+  90% { opacity: 0.4; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.animate-scan {
+  animation: scan-move 5s linear infinite;
+}
+
+

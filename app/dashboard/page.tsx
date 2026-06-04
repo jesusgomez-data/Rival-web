@@ -641,7 +641,7 @@ export default function DashboardHome() {
     return (
         <div className="max-w-full mx-auto space-y-6 pb-12 px-3 sm:px-4 lg:px-8 overflow-x-hidden">
             {/* Hero Welcome Banner */}
-            <div className="relative min-h-[180px] md:h-64 rounded-[24px] md:rounded-[40px] overflow-hidden border border-white/5 shadow-2xl flex flex-col justify-center dark-section w-full">
+            <div className="relative min-h-[110px] md:h-44 rounded-2xl md:rounded-[28px] overflow-hidden border border-white/5 shadow-2xl flex flex-col justify-center dark-section w-full">
                 <Image
                     src="https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=60&w=800&auto=format&fit=crop"
                     alt="Training Arena"
@@ -651,42 +651,17 @@ export default function DashboardHome() {
                     priority
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-black via-black/70 to-transparent" />
-                <div className="relative z-10 px-4 sm:px-10 py-6 sm:py-12">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-[10px] font-black mb-3 w-fit">
-                        <Flame className="w-3 h-3 fill-current" />
+                <div className="relative z-10 px-4 sm:px-8 py-4 sm:py-8">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-red/15 border border-brand-red/30 text-brand-red text-[9px] font-black mb-1.5 w-fit">
+                        <Flame className="w-2.5 h-2.5 fill-current" />
                         {t.dashboard.liveStatus}
                     </div>
-                    <h1 className="text-2xl sm:text-5xl font-heading font-black !text-white mb-2 italic uppercase tracking-tight leading-none">
+                    <h1 className="text-xl sm:text-3xl font-heading font-black !text-white mb-1 italic uppercase tracking-tight leading-none">
                         {t.dashboard.welcome} <span className="text-brand-red">{data.profile?.full_name?.split(' ')[0] || t.dashboard.warrior}</span>
                     </h1>
-                    <p className="!text-gray-300 text-xs sm:text-lg max-w-2xl font-medium leading-snug">
-                        <span className="text-white font-bold">{data.workoutCount}</span> sesiones · <span className="text-white font-bold">{data.rivalsCount}</span> rivales
+                    <p className="!text-gray-300 text-[10px] sm:text-sm max-w-2xl font-bold uppercase tracking-wider">
+                        <span className="text-white font-extrabold">{data.workoutCount}</span> sesiones · <span className="text-white font-extrabold">{data.rivalsCount}</span> rivales
                     </p>
-                </div>
-            </div>
-
-            {/* Daily Check-in + Quick Access */}
-            <div className="grid sm:grid-cols-3 gap-3">
-                <div className="sm:col-span-2 min-w-0">
-                    {todayCheckin !== undefined && (
-                        <DailyCheckinWidget 
-                            existingCheckin={todayCheckin} 
-                            onComplete={() => {
-                                getTodayCheckin().then(setTodayCheckin);
-                                loadData();
-                            }} 
-                        />
-                    )}
-                </div>
-                <div className="grid grid-cols-1 gap-3 min-w-0">
-                    <Link href="/dashboard/nutrition" className="group bg-black/40 border border-white/5 rounded-[1.5rem] p-4 hover:border-green-500/30 transition-all flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-500 group-hover:bg-green-500/20 transition-all">🥗</div>
-                        <div><p className="text-white font-black text-xs uppercase tracking-widest">Nutrición</p><p className="text-[10px] text-gray-600">Macros del día</p></div>
-                    </Link>
-                    <Link href="/dashboard/body-stats" className="group bg-black/40 border border-white/5 rounded-[1.5rem] p-4 hover:border-blue-500/30 transition-all flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center group-hover:bg-blue-500/20 transition-all">⚖️</div>
-                        <div><p className="text-white font-black text-xs uppercase tracking-widest">Body Stats</p><p className="text-[10px] text-gray-600">Peso y medidas</p></div>
-                    </Link>
                 </div>
             </div>
 
