@@ -141,19 +141,26 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         let isMounted = true;
         async function loadProfile() {
             try {
-                // Fire all 3 requests in parallel — saves ~400ms vs sequential
-                const [authResult, profileData, unreadCount] = await Promise.all([
-                    supabase.auth.getUser(),
+                // Try to get session locally first to avoid network delay
+                const { data: sessionData } = await supabase.auth.getSession();
+                let user = sessionData?.session?.user || null;
+                if (!user) {
+                    const authResult = await supabase.auth.getUser();
+                    user = authResult.data?.user || null;
+                }
+
+                if (user) {
+                    cachedUserIdRef.current = user.id;
+                    if (isMounted) setUserEmail(user.email?.toLowerCase() || null);
+                }
+
+                // Fetch database profile and unread messages in parallel
+                const [profileData, unreadCount] = await Promise.all([
                     getUserProfile(),
                     getUnreadMessageCount(),
                 ]);
                 if (!isMounted) return;
 
-                const user = authResult.data?.user;
-                if (user) {
-                    cachedUserIdRef.current = user.id;
-                    setUserEmail(user.email?.toLowerCase() || null);
-                }
                 setProfile(profileData);
                 setUnreadMessages(unreadCount);
 

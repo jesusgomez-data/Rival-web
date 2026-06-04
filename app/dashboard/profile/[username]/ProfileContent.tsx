@@ -451,8 +451,8 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                                     avatar={post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.profiles?.full_name || 'User')}&background=random`}
                                                     image={post.media_url}
                                                     mediaType={post.media_type}
-                                                    initialLikes={post.likes ? post.likes.length : 0}
-                                                    hasLikedInitial={post.likes?.some((l: any) => l.user_id === user?.id)}
+                                                    initialLikes={post.likes_count || 0}
+                                                    hasLikedInitial={user && post.likes && post.likes.length > 0 ? true : false}
                                                     comments={post.comments ? post.comments[0]?.count : 0}
                                                     caption={post.caption}
                                                     workoutData={post.workouts}

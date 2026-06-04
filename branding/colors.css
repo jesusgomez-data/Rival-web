@@ -1,0 +1,69 @@
+/**
+ * RIVALFIT — Design Tokens · Color System
+ * =========================================
+ * Fuente única de verdad para colores de la plataforma.
+ * Importar en cualquier CSS global.
+ */
+
+:root {
+
+  /* ─── BRAND CORE ─────────────────────────────────────────── */
+  --color-brand-red:      #EF4444;   /* Principal — botones, acentos, CTAs */
+  --color-brand-accent:   #DC2626;   /* Variante oscura — hover, sombras */
+  --color-brand-deep:     #991B1B;   /* Profundo — sombras, logo depth */
+
+  /* ─── BACKGROUNDS ────────────────────────────────────────── */
+  --color-bg-base:        #000000;   /* Fondo raíz */
+  --color-bg-raised:      #0A0A0A;   /* Tarjetas elevadas */
+  --color-bg-card:        #111111;   /* Cards y secciones */
+  --color-bg-muted:       #1F2937;   /* brand-gray — fondos secundarios */
+  --color-bg-subtle:      #111827;   /* Inputs, áreas de contenido */
+
+  /* ─── TEXT ───────────────────────────────────────────────── */
+  --color-text-primary:   #FFFFFF;   /* Títulos y texto principal */
+  --color-text-secondary: #D1D5DB;   /* Subtítulos — gray-300 */
+  --color-text-muted:     #9CA3AF;   /* Texto de apoyo — gray-400 */
+  --color-text-disabled:  #4B5563;   /* Texto desactivado — gray-600 */
+  --color-text-placeholder:#374151; /* Placeholders — gray-700 */
+
+  /* ─── BORDERS ────────────────────────────────────────────── */
+  --color-border-default: rgba(255,255,255,0.06);
+  --color-border-subtle:  rgba(255,255,255,0.05);
+  --color-border-strong:  rgba(255,255,255,0.15);
+  --color-border-brand:   rgba(239,68,68,0.30);    /* brand-red/30 */
+
+  /* ─── SEMANTIC ───────────────────────────────────────────── */
+  --color-success:        #22C55E;   /* green-500 */
+  --color-success-bg:     rgba(34,197,94,0.10);
+  --color-warning:        #F59E0B;   /* amber-500 */
+  --color-warning-bg:     rgba(245,158,11,0.10);
+  --color-error:          #EF4444;   /* Same as brand-red */
+  --color-error-bg:       rgba(239,68,68,0.10);
+  --color-info:           #3B82F6;   /* blue-500 — cuenta oficial */
+  --color-info-bg:        rgba(59,130,246,0.10);
+
+  /* ─── GRADIENTS ──────────────────────────────────────────── */
+  --gradient-brand:       linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+  --gradient-dark:        linear-gradient(180deg, #000000 0%, #0A0A0A 100%);
+  --gradient-card:        linear-gradient(135deg, #111111 0%, #0A0A0A 100%);
+  --gradient-hero:        linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, transparent 40%, rgba(0,0,0,0.6) 100%);
+
+  /* ─── SHADOWS ────────────────────────────────────────────── */
+  --shadow-brand:         0 4px 15px rgba(239,68,68,0.30);
+  --shadow-brand-lg:      0 10px 30px rgba(239,68,68,0.25);
+  --shadow-card:          0 4px 24px rgba(0,0,0,0.4);
+  --shadow-glow-red:      0 0 20px rgba(239,68,68,0.20);
+}
+
+/* ─── LIGHT MODE OVERRIDES ─────────────────────────────────── */
+[data-theme="light"] {
+  --color-bg-base:        #F9FAFB;
+  --color-bg-raised:      #FFFFFF;
+  --color-bg-card:        #FFFFFF;
+  --color-bg-muted:       #F3F4F6;
+  --color-text-primary:   #111111;
+  --color-text-secondary: #374151;
+  --color-text-muted:     #6B7280;
+  --color-border-default: rgba(0,0,0,0.08);
+  --color-border-subtle:  rgba(0,0,0,0.06);
+}

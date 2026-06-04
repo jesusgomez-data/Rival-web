@@ -24,7 +24,7 @@ export default function HashtagPage({ params }: { params: Promise<{ tag: string 
 
             // Search for posts containing the hashtag in the caption
             // We join with profiles and workouts to get all data needed for FeedPost
-            const { data, error, count } = await supabase
+            let postsQuery = supabase
                 .from('posts')
                 .select(`
                     *,
@@ -39,7 +39,13 @@ export default function HashtagPage({ params }: { params: Promise<{ tag: string 
                         workout_sets (*)
                     ),
                     likes:likes(user_id)
-                `, { count: 'exact' })
+                `, { count: 'exact' });
+
+            if (user) {
+                postsQuery = postsQuery.eq('likes.user_id', user.id);
+            }
+
+            const { data, error, count } = await postsQuery
                 .ilike('caption', `%#${tag}%`)
                 .order('created_at', { ascending: false });
 
@@ -129,8 +135,8 @@ export default function HashtagPage({ params }: { params: Promise<{ tag: string 
                                     image={post.media_url}
                                     mediaType={post.media_type}
                                     caption={post.caption}
-                                    initialLikes={post.likes ? post.likes.length : (post.likes_count || 0)}
-                                    hasLikedInitial={currentUserId ? post.likes?.some((l: any) => l.user_id === currentUserId) : false}
+                                    initialLikes={post.likes_count || 0}
+                                    hasLikedInitial={currentUserId && post.likes && post.likes.length > 0 ? true : false}
                                     comments={post.comments_count || 0}
                                     currentUserId={currentUserId || undefined}
                                     authorId={post.user_id}

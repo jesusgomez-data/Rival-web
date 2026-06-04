@@ -9,6 +9,10 @@ import { useActionState } from "react";
 import { login } from "@/app/login/actions";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import { useTheme } from "./ThemeContext";
+import ThemeToggle from "@/components/ThemeToggle";
+
+
 
 // Lazy load feature sheets to keep bundle light
 const AthleteFeatures = dynamic(() => import("@/components/landing/AthleteFeatures"), { ssr: false });
@@ -25,6 +29,9 @@ const LIVE_EVENTS = [
 
 // High-fidelity animated SVG logo component with outline draw on load, sheen laser sweeps, 3D parallax layers, HUD rings, and sparks
 function AnimatedLogo() {
+    const { theme } = useTheme();
+    const isLight = theme === 'light';
+
     return (
         <motion.div 
             initial="idle"
@@ -210,7 +217,7 @@ function AnimatedLogo() {
                 <motion.text 
                     x="256" 
                     y="460" 
-                    fill="#FFFFFF" 
+                    fill={isLight ? "#0F172A" : "#FFFFFF"} 
                     fontFamily="'Arial Black', 'Arial Bold', sans-serif" 
                     fontWeight="900" 
                     fontSize="110" 
@@ -219,7 +226,7 @@ function AnimatedLogo() {
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: [0, 0.4, 0.2, 1, 0.8, 1], scale: 1 }}
                     variants={{
-                        idle: { fill: "#FFFFFF", filter: "none", scale: 1, y: 0 },
+                        idle: { fill: isLight ? "#0F172A" : "#FFFFFF", filter: "none", scale: 1, y: 0 },
                         hover: { 
                             fill: "#EF4444", 
                             filter: "url(#neon-glow-filter)", 
@@ -313,7 +320,7 @@ export default function UnifiedLanding() {
     return (
         <main 
             onMouseMove={handleGlobalMouseMove}
-            className="h-[100svh] w-screen bg-[#030303] text-white selection:bg-brand-red selection:text-white font-sans overflow-hidden relative flex flex-col justify-between p-4 sm:p-6 md:p-12"
+            className="h-[100svh] w-screen bg-white dark:bg-[#030303] text-slate-900 dark:text-white selection:bg-brand-red selection:text-white font-sans overflow-hidden relative flex flex-col justify-between p-4 sm:p-6 md:p-12"
         >
             {/* Global Tech Background */}
             <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
@@ -366,26 +373,29 @@ export default function UnifiedLanding() {
 
             {/* Header */}
             <header className="relative z-10 w-full flex justify-between items-center">
-                <Link href="/" className="flex items-center gap-3.5 group">
+                <Link href="/" className="flex items-center gap-3.5 group text-slate-900 dark:text-white">
                     <AnimatedLogo />
                     <span className="font-heading font-black text-xl italic tracking-tighter uppercase">
                         RIVAL <span className="text-brand-red">FIT</span>
                     </span>
                 </Link>
-                {/* Hidden on mobile to keep clean */}
-                <div className="hidden sm:flex gap-4">
-                    <button 
-                        onClick={() => setActiveSheet('athlete')}
-                        className="text-[9px] font-black uppercase tracking-widest text-white/55 hover:text-white transition-colors cursor-pointer"
-                    >
-                        Para Atletas
-                    </button>
-                    <button 
-                        onClick={() => setActiveSheet('center')}
-                        className="text-[9px] font-black uppercase tracking-widest text-white/55 hover:text-white transition-colors cursor-pointer"
-                    >
-                        Para Centros
-                    </button>
+                <div className="flex items-center gap-6">
+                    {/* Hidden on mobile to keep clean */}
+                    <div className="hidden sm:flex gap-4">
+                        <button 
+                            onClick={() => setActiveSheet('athlete')}
+                            className="text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:text-white/55 dark:hover:text-white transition-colors cursor-pointer"
+                        >
+                            Para Atletas
+                        </button>
+                        <button 
+                            onClick={() => setActiveSheet('center')}
+                            className="text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:text-white/55 dark:hover:text-white transition-colors cursor-pointer"
+                        >
+                            Para Centros
+                        </button>
+                    </div>
+                    <ThemeToggle />
                 </div>
             </header>
 
@@ -406,16 +416,16 @@ export default function UnifiedLanding() {
                         initial={{ opacity: 0, x: -30 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.8 }}
-                        className="w-full max-w-lg bg-[#050505]/60 border border-white/10 rounded-2xl overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.8)] backdrop-blur-xl flex min-h-[460px] relative"
+                        className="w-full max-w-lg bg-[#f8fafc]/90 dark:bg-[#050505]/60 border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_0_80px_rgba(0,0,0,0.8)] backdrop-blur-xl flex min-h-[460px] relative"
                     >
                         {/* Scanning Laser Line Overlay */}
                         <div className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-brand-red to-transparent opacity-40 animate-scan pointer-events-none z-20" />
                         
                         {/* Sidebar mini */}
-                        <div className="w-12 border-r border-white/5 bg-black/40 flex flex-col items-center py-6 gap-6">
+                        <div className="w-12 border-r border-slate-100 dark:border-white/5 bg-slate-50/80 dark:bg-black/40 flex flex-col items-center py-6 gap-6">
                             <div className="w-6 h-6 rounded-full bg-brand-red/20 border border-brand-red/40 flex items-center justify-center text-[8px] font-black text-brand-red italic">RF</div>
                             {[0, 1, 2, 3].map(i => (
-                                <div key={i} className={`w-3 h-3 rounded-sm border ${i === 0 ? 'bg-brand-red border-brand-red shadow-glow-red' : 'border-white/20'}`} />
+                                <div key={i} className={`w-3 h-3 rounded-sm border ${i === 0 ? 'bg-brand-red border-brand-red shadow-glow-red' : 'border-slate-300 dark:border-white/20'}`} />
                             ))}
                         </div>
                         {/* Mock Content */}
@@ -423,23 +433,23 @@ export default function UnifiedLanding() {
                             <div className="flex justify-between items-start">
                                 <div className="space-y-1">
                                     <div className="text-[8px] text-brand-red font-black tracking-[0.2em] uppercase italic">ESTADÍSTICAS REALES</div>
-                                    <h3 className="text-2xl font-black italic text-white uppercase tracking-tighter font-heading">TU RENDIMIENTO</h3>
+                                    <h3 className="text-2xl font-black italic text-slate-900 dark:text-white uppercase tracking-tighter font-heading">TU RENDIMIENTO</h3>
                                 </div>
                                 <div className="w-10 h-10 rounded-full bg-brand-red/20 border border-brand-red/40 flex items-center justify-center text-xs font-black italic text-brand-red shadow-glow-red">JD</div>
                             </div>
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-white/[0.02] border border-white/5 p-4 rounded-xl space-y-1">
-                                    <div className="text-[7px] font-black text-white/30 uppercase tracking-widest">PERSONAL BEST</div>
-                                    <div className="text-xl font-black italic text-white tracking-tighter">125 KG</div>
+                                <div className="bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 p-4 rounded-xl space-y-1">
+                                    <div className="text-[7px] font-black text-slate-400 dark:text-white/30 uppercase tracking-widest">PERSONAL BEST</div>
+                                    <div className="text-xl font-black italic text-slate-900 dark:text-white tracking-tighter">125 KG</div>
                                 </div>
-                                <div className="bg-white/[0.02] border border-white/5 p-4 rounded-xl space-y-1">
-                                    <div className="text-[7px] font-black text-white/30 uppercase tracking-widest">RANKING GLOBAL</div>
+                                <div className="bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 p-4 rounded-xl space-y-1">
+                                    <div className="text-[7px] font-black text-slate-400 dark:text-white/30 uppercase tracking-widest">RANKING GLOBAL</div>
                                     <div className="text-xl font-black italic text-brand-red tracking-tighter">TOP 30</div>
                                 </div>
                             </div>
-                            <div className="bg-white/[0.02] border border-white/5 p-5 rounded-xl space-y-4">
+                            <div className="bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 p-5 rounded-xl space-y-4">
                                 <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest">
-                                    <span className="text-white/40">PROGRESO SEMANAL</span>
+                                    <span className="text-slate-500 dark:text-white/40">PROGRESO SEMANAL</span>
                                     <span className="text-brand-red">+12% ESTA SEMANA</span>
                                 </div>
                                 <div className="flex items-end h-20 gap-2">
@@ -447,7 +457,7 @@ export default function UnifiedLanding() {
                                         <div key={i} className="flex-1 relative">
                                             <div
                                                 style={{ height: `${h}%` }}
-                                                className={`w-full rounded-t-sm ${i === 5 ? 'bg-brand-red shadow-glow-red' : 'bg-white/10'}`}
+                                                className={`w-full rounded-t-sm ${i === 5 ? 'bg-brand-red shadow-glow-red' : 'bg-slate-200 dark:bg-white/10'}`}
                                             />
                                         </div>
                                     ))}
@@ -455,17 +465,17 @@ export default function UnifiedLanding() {
                             </div>
                             
                             {/* Live activity ticker inside mockup */}
-                            <div className="bg-white/[0.01] border border-white/[0.03] p-4 rounded-xl space-y-2.5">
-                                <div className="text-[7px] font-black text-white/30 tracking-widest uppercase">ACTIVIDAD RECIENTE</div>
+                            <div className="bg-slate-50/50 dark:bg-white/[0.01] border border-slate-100/50 dark:border-white/[0.03] p-4 rounded-xl space-y-2.5">
+                                <div className="text-[7px] font-black text-slate-400 dark:text-white/30 tracking-widest uppercase">ACTIVIDAD RECIENTE</div>
                                 <div className="space-y-2">
                                     <div className="flex justify-between items-center text-[9px]">
-                                        <span className="text-white/60 font-medium">Completed "Fran" in 3:45</span>
+                                        <span className="text-slate-600 dark:text-white/60 font-medium">Completed "Fran" in 3:45</span>
                                         <span className="text-brand-red font-bold">🔥 NUEVO PR</span>
                                     </div>
-                                    <div className="h-[1px] bg-white/5" />
+                                    <div className="h-[1px] bg-slate-100 dark:bg-white/5" />
                                     <div className="flex justify-between items-center text-[9px]">
-                                        <span className="text-white/60 font-medium">Joined "Desafío Sled Push"</span>
-                                        <span className="text-white/30 font-medium">Hace 2h</span>
+                                        <span className="text-slate-600 dark:text-white/60 font-medium">Joined "Desafío Sled Push"</span>
+                                        <span className="text-slate-400 dark:text-white/30 font-medium">Hace 2h</span>
                                     </div>
                                 </div>
                             </div>
@@ -485,13 +495,13 @@ export default function UnifiedLanding() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="relative w-full max-w-sm sm:max-w-md p-[1.5px] rounded-2xl animate-border-glow shadow-[0_0_50px_rgba(239,68,68,0.15)]"
+                    className="relative w-full max-w-sm sm:max-w-md p-[1.5px] rounded-2xl dark:animate-border-glow bg-slate-200 dark:bg-transparent shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_0_50px_rgba(239,68,68,0.15)]"
                 >
                     {/* Inner content container to mask the rotating conic gradient */}
-                    <div className="relative z-10 w-full bg-[#050505] p-5 sm:p-8 rounded-[15px] flex flex-col justify-center space-y-4">
+                    <div className="relative z-10 w-full bg-white dark:bg-[#050505] p-5 sm:p-8 rounded-[15px] flex flex-col justify-center space-y-4 border border-slate-100/50 dark:border-none">
                         
                         {/* Live Activity Ticker (Real-time dynamic feed) */}
-                        <div className="w-full bg-white/[0.02] border border-white/5 rounded-xl py-2 px-3 flex items-center justify-between overflow-hidden min-h-[36px]">
+                        <div className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 rounded-xl py-2 px-3 flex items-center justify-between overflow-hidden min-h-[36px]">
                             <div className="flex items-center gap-2 max-w-[90%]">
                                 <span className="relative flex h-2 w-2">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-red opacity-75"></span>
@@ -504,7 +514,7 @@ export default function UnifiedLanding() {
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: -8 }}
                                         transition={{ duration: 0.3 }}
-                                        className="text-[8px] font-black uppercase tracking-widest text-white/70 whitespace-nowrap overflow-hidden text-ellipsis"
+                                        className="text-[8px] font-black uppercase tracking-widest text-slate-700 dark:text-white/70 whitespace-nowrap overflow-hidden text-ellipsis"
                                     >
                                         {LIVE_EVENTS[tickerIndex]}
                                     </motion.p>
@@ -514,14 +524,14 @@ export default function UnifiedLanding() {
                         </div>
 
                         <div className="text-center space-y-1.5 pt-1">
-                            <div className="inline-flex items-center gap-2 glass px-3 py-1 rounded-full border-white/10">
+                            <div className="inline-flex items-center gap-2 bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 px-3 py-1 rounded-full">
                                 <Trophy className="w-3.5 h-3.5 text-brand-red" />
-                                <span className="text-[8px] font-black tracking-[0.25em] uppercase text-white/80">EL ECOSISTEMA FITNESS DEFINITIVO</span>
+                                <span className="text-[8px] font-black tracking-[0.25em] uppercase text-slate-600 dark:text-white/80">EL ECOSISTEMA FITNESS DEFINITIVO</span>
                             </div>
                             <h1 className="text-3xl sm:text-4xl font-heading font-black italic uppercase tracking-tighter leading-none text-gradient-red">
                                 DOMINA TU TERRENO.
                             </h1>
-                            <p className="text-[10px] sm:text-xs text-white/45 font-medium leading-normal max-w-xs mx-auto">
+                            <p className="text-[10px] sm:text-xs text-slate-500 dark:text-white/45 font-medium leading-normal max-w-xs mx-auto">
                                 Ingresa al instante y conecta con los mejores atletas y centros de alto rendimiento.
                             </p>
                         </div>
@@ -530,7 +540,7 @@ export default function UnifiedLanding() {
                         <button
                             type="button"
                             onClick={() => handleOAuthLogin('google')}
-                            className="w-full flex items-center justify-center gap-3 py-3 border border-white/10 hover:border-brand-red/30 rounded-xl hover:bg-brand-red/5 transition-all font-bold text-xs uppercase tracking-widest cursor-pointer hover:scale-[1.02] active:scale-95 duration-300 shadow-sm"
+                            className="w-full flex items-center justify-center gap-3 py-3 bg-slate-50 dark:bg-transparent border border-slate-200 dark:border-white/10 hover:border-brand-red/30 rounded-xl hover:bg-brand-red/5 transition-all font-bold text-xs uppercase tracking-widest cursor-pointer hover:scale-[1.02] active:scale-95 duration-300 shadow-sm text-slate-800 dark:text-white"
                         >
                             <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
                                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -542,9 +552,9 @@ export default function UnifiedLanding() {
                         </button>
 
                         <div className="relative flex py-1 items-center">
-                            <div className="flex-grow border-t border-white/5"></div>
-                            <span className="flex-shrink mx-3 text-[8px] text-white/20 font-black tracking-widest uppercase">O con tu cuenta</span>
-                            <div className="flex-grow border-t border-white/5"></div>
+                            <div className="flex-grow border-t border-slate-100 dark:border-white/5"></div>
+                            <span className="flex-shrink mx-3 text-[8px] text-slate-400 dark:text-white/20 font-black tracking-widest uppercase">O con tu cuenta</span>
+                            <div className="flex-grow border-t border-slate-100 dark:border-white/5"></div>
                         </div>
 
                         {/* Email/Password Login Form */}
@@ -555,14 +565,14 @@ export default function UnifiedLanding() {
                                 </div>
                             )}
                             <div className="space-y-1.5">
-                                <label className="block text-[8px] font-black text-white/40 uppercase tracking-widest">Email</label>
+                                <label className="block text-[8px] font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">Email</label>
                                 <div className="relative group">
-                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-brand-red transition-colors" />
+                                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/20 group-focus-within:text-brand-red transition-colors" />
                                     <input
                                         name="email"
                                         type="email"
                                         required
-                                        className="w-full border border-white/10 bg-[#080808]/85 rounded-xl py-3 pl-10 pr-4 text-xs focus:outline-none focus:border-brand-red focus:ring-2 focus:ring-brand-red/20 transition-all text-white placeholder:text-white/20"
+                                        className="w-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#080808]/85 rounded-xl py-3 pl-10 pr-4 text-xs focus:outline-none focus:border-brand-red focus:ring-2 focus:ring-brand-red/20 transition-all text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/20"
                                         placeholder="tu@ejemplo.com"
                                     />
                                 </div>
@@ -570,16 +580,16 @@ export default function UnifiedLanding() {
 
                             <div className="space-y-1.5">
                                 <div className="flex justify-between items-center">
-                                    <label className="block text-[8px] font-black text-white/40 uppercase tracking-widest">Contraseña</label>
+                                    <label className="block text-[8px] font-black text-slate-500 dark:text-white/40 uppercase tracking-widest">Contraseña</label>
                                     <Link href="/forgot-password" className="text-[8px] text-brand-red hover:underline uppercase tracking-widest font-black">¿La olvidaste?</Link>
                                 </div>
                                 <div className="relative group">
-                                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20 group-focus-within:text-brand-red transition-colors" />
+                                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-white/20 group-focus-within:text-brand-red transition-colors" />
                                     <input
                                         name="password"
                                         type="password"
                                         required
-                                        className="w-full border border-white/10 bg-[#080808]/85 rounded-xl py-3 pl-10 pr-4 text-xs focus:outline-none focus:border-brand-red focus:ring-2 focus:ring-brand-red/20 transition-all text-white placeholder:text-white/20"
+                                        className="w-full border border-slate-200 dark:border-white/10 bg-white dark:bg-[#080808]/85 rounded-xl py-3 pl-10 pr-4 text-xs focus:outline-none focus:border-brand-red focus:ring-2 focus:ring-brand-red/20 transition-all text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-white/20"
                                         placeholder="••••••••"
                                     />
                                 </div>
@@ -598,27 +608,27 @@ export default function UnifiedLanding() {
                         {/* Bottom Links & Explores */}
                         <div className="space-y-4 pt-1">
                             <div className="text-center">
-                                <span className="text-[9px] font-bold text-white/40">
-                                    ¿No tienes cuenta? <Link href="/signup" className="text-white hover:text-brand-red font-black uppercase tracking-widest ml-1 transition-colors">Regístrate gratis</Link>
+                                <span className="text-[9px] font-bold text-slate-500 dark:text-white/40">
+                                    ¿No tienes cuenta? <Link href="/signup" className="text-slate-900 dark:text-white hover:text-brand-red font-black uppercase tracking-widest ml-1 transition-colors">Regístrate gratis</Link>
                                 </span>
                             </div>
 
                             <div className="relative flex py-1 items-center">
-                                <div className="flex-grow border-t border-white/5"></div>
-                                <span className="flex-shrink mx-3 text-[7px] text-white/20 font-black tracking-widest uppercase">Explorar la App</span>
-                                <div className="flex-grow border-t border-white/5"></div>
+                                <div className="flex-grow border-t border-slate-100 dark:border-white/5"></div>
+                                <span className="flex-shrink mx-3 text-[7px] text-slate-400 dark:text-white/20 font-black tracking-widest uppercase">Explorar la App</span>
+                                <div className="flex-grow border-t border-slate-100 dark:border-white/5"></div>
                             </div>
 
                             <div className="flex gap-3">
                                 <button
                                     onClick={() => setActiveSheet('athlete')}
-                                    className="flex-1 py-3 px-2 rounded-xl border border-brand-red/20 hover:border-brand-red/55 hover:bg-brand-red/5 hover:scale-[1.02] active:scale-95 transition-all text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 group cursor-pointer"
+                                    className="flex-1 py-3 px-2 rounded-xl border border-brand-red/20 hover:border-brand-red/55 hover:bg-brand-red/5 hover:scale-[1.02] active:scale-95 transition-all text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 group cursor-pointer text-slate-800 dark:text-white bg-slate-50/50 dark:bg-transparent"
                                 >
                                     <Flame className="w-3.5 h-3.5 text-brand-red group-hover:scale-110 transition-transform" /> Soy Atleta
                                 </button>
                                 <button
                                     onClick={() => setActiveSheet('center')}
-                                    className="flex-1 py-3 px-2 rounded-xl border border-brand-orange/20 hover:border-brand-orange/55 hover:bg-brand-orange/5 hover:scale-[1.02] active:scale-95 transition-all text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 group cursor-pointer"
+                                    className="flex-1 py-3 px-2 rounded-xl border border-brand-orange/20 hover:border-brand-orange/55 hover:bg-brand-orange/5 hover:scale-[1.02] active:scale-95 transition-all text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 group cursor-pointer text-slate-800 dark:text-white bg-slate-50/50 dark:bg-transparent"
                                 >
                                     <Building2 className="w-3.5 h-3.5 text-brand-orange group-hover:scale-110 transition-transform" /> Soy Centro
                                 </button>
@@ -629,8 +639,8 @@ export default function UnifiedLanding() {
             </div>
 
             {/* Footer */}
-            <footer className="relative z-10 w-full text-center py-3 mt-auto border-t border-white/5">
-                <span className="text-[8px] font-black uppercase tracking-widest text-white/10">RIVAL FIT © 2026</span>
+            <footer className="relative z-10 w-full text-center py-3 mt-auto border-t border-slate-100 dark:border-white/5">
+                <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 dark:text-white/10">RIVAL FIT © 2026</span>
             </footer>
 
             {/* Slide-up Sheets (Modals) */}
@@ -649,9 +659,9 @@ export default function UnifiedLanding() {
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
                             transition={{ type: "spring", damping: 28, stiffness: 220 }}
-                            className="fixed inset-x-0 bottom-0 h-[92vh] bg-[#050505] border-t border-white/10 rounded-t-[2.5rem] z-50 overflow-hidden flex flex-col"
+                            className="fixed inset-x-0 bottom-0 h-[92vh] bg-white dark:bg-[#050505] border-t border-slate-200 dark:border-white/10 rounded-t-[2.5rem] z-50 overflow-hidden flex flex-col text-slate-900 dark:text-white"
                         >
-                            <div className="sticky top-0 z-50 flex items-center justify-between p-6 border-b border-white/5 bg-[#050505]/90 backdrop-blur-md">
+                            <div className="sticky top-0 z-50 flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/5 bg-white/90 dark:bg-[#050505]/90 backdrop-blur-md">
                                 <div className="flex items-center gap-3">
                                     {activeSheet === 'athlete' ? (
                                         <>
@@ -667,7 +677,7 @@ export default function UnifiedLanding() {
                                 </div>
                                 <button
                                     onClick={() => setActiveSheet(null)}
-                                    className="p-2 bg-white/5 border border-white/10 rounded-full text-white/60 hover:text-white transition-all cursor-pointer"
+                                    className="p-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
                                 >
                                     <X className="w-5 h-5" />
                                 </button>

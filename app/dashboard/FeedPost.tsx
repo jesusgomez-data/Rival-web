@@ -545,6 +545,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const { isMuted, toggleMute, setLastActiveVideoId, setIsMuted } = useVideo();
 
     const [isVisible, setIsVisible] = useState(false);
+    const [isNearViewport, setIsNearViewport] = useState(false);
     const [showMuteHint, setShowMuteHint] = useState(false);
     // Combined state for buffering/loading
     const [isBuffering, setIsBuffering] = useState(true);
@@ -557,6 +558,20 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
             setIsBuffering(false);
         }
     }, [image, workoutData]);
+
+    // Track if post is near the viewport (within 600px) to start preloading
+    useEffect(() => {
+        if (!isVideo) return;
+        const target = postRef.current;
+        if (!target) return;
+
+        const observer = new IntersectionObserver(([entry]) => {
+            setIsNearViewport(entry.isIntersecting);
+        }, { rootMargin: "600px 0px", threshold: 0.01 });
+
+        observer.observe(target);
+        return () => observer.disconnect();
+    }, [isVideo]);
 
     
     // Check if post actually has visual media to display in the main container
@@ -1127,13 +1142,13 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                         {isVideo ? (
                             <video
                                 ref={videoRef}
-                                src={image}
+                                src={isNearViewport ? image : undefined}
                                 data-feed-video="true"
                                 className="w-full h-full object-cover"
                                 loop
                                 playsInline
                                 muted={isMuted || !isVisible || (typeof document !== 'undefined' && document.hidden)}
-                                preload="metadata"
+                                preload={isNearViewport ? "metadata" : "none"}
                                 onCanPlay={() => {
                                     if (isVisible && videoRef.current) {
                                         videoRef.current.play().catch((err) => {
@@ -1148,6 +1163,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 onPause={() => setIsActuallyPlaying(false)}
                                 onEnded={() => setIsActuallyPlaying(false)}
                                 onError={(e) => {
+                                    if (!isNearViewport) return;
                                     console.error("[FeedPost] Video load error:", e);
                                     setLoadError(true);
                                     setIsBuffering(false);

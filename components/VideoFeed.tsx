@@ -38,7 +38,7 @@ interface VideoFeedProps {
   onLoadMore?: () => void;
 }
 
-function VideoCard({ video, isActive }: { video: VideoPost; isActive: boolean }) {
+function VideoCard({ video, isActive, isNear }: { video: VideoPost; isActive: boolean; isNear: boolean }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
@@ -99,11 +99,12 @@ function VideoCard({ video, isActive }: { video: VideoPost; isActive: boolean })
       {/* VIDEO */}
       <video
         ref={videoRef}
-        src={video.videoUrl}
+        src={isNear ? video.videoUrl : undefined}
         className="absolute inset-0 w-full h-full object-cover"
         loop
         playsInline
         muted={isMuted}
+        preload={isNear ? "auto" : "none"}
         poster={video.thumbnailUrl}
         onClick={togglePlay}
       />
@@ -332,6 +333,7 @@ export default function VideoFeed({ videos, onLoadMore }: VideoFeedProps) {
           key={video.id}
           video={video}
           isActive={index === activeIndex}
+          isNear={Math.abs(index - activeIndex) <= 1}
         />
       ))}
     </div>

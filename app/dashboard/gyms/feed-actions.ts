@@ -22,6 +22,10 @@ export async function getCenterPosts(id: string, allowFuture: boolean = false, i
             comments_count:center_post_comments(count)
         `);
 
+    if (user) {
+        query = query.eq('center_post_likes.user_id', user.id);
+    }
+
     if (isCenterId) {
         query = query.eq('center_id', id);
     } else {
@@ -42,8 +46,8 @@ export async function getCenterPosts(id: string, allowFuture: boolean = false, i
 
     return data.map((post: any) => ({
         ...post,
-        is_liked: user ? post.likes.some((l: any) => l.user_id === user.id) : false,
-        likes_count: post.likes ? post.likes.length : 0,
+        is_liked: user && post.likes && post.likes.length > 0 ? true : false,
+        likes_count: post.likes_count ?? 0,
         comments_count: post.comments_count?.[0]?.count || 0,
         likes: undefined
     }));
@@ -53,7 +57,7 @@ export async function getCenterPost(postId: string) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    const { data, error } = await supabase
+    let query = supabase
         .from('center_posts')
         .select(`
             *,
@@ -61,7 +65,13 @@ export async function getCenterPost(postId: string) {
             organization:organization_id (name, logo_url),
             likes:center_post_likes(user_id),
             comments_count:center_post_comments(count)
-        `)
+        `);
+
+    if (user) {
+        query = query.eq('center_post_likes.user_id', user.id);
+    }
+
+    const { data, error } = await query
         .eq('id', postId)
         .single();
 
@@ -69,8 +79,8 @@ export async function getCenterPost(postId: string) {
 
     return {
         ...data,
-        is_liked: user ? data.likes.some((l: any) => l.user_id === user.id) : false,
-        likes_count: data.likes ? data.likes.length : 0,
+        is_liked: user && data.likes && data.likes.length > 0 ? true : false,
+        likes_count: data.likes_count ?? 0,
         comments_count: data.comments_count?.[0]?.count || 0,
         likes: undefined
     };

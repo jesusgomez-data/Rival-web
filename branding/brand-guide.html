@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>RivalFit — Brand Guide</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --red:    #EF4444;
+    --accent: #DC2626;
+    --deep:   #991B1B;
+    --bg:     #000000;
+    --card:   #0A0A0A;
+    --border: rgba(255,255,255,0.08);
+    --text:   #FFFFFF;
+    --muted:  #9CA3AF;
+    --gray:   #1F2937;
+  }
+
+  body {
+    font-family: system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* ─── LAYOUT ─── */
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 32px; }
+
+  /* ─── HERO ─── */
+  .hero {
+    background: linear-gradient(135deg, #000 0%, #0a0000 50%, #000 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 80px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    width: 600px; height: 400px;
+    background: radial-gradient(ellipse, rgba(239,68,68,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-inner { display: flex; align-items: center; gap: 48px; position: relative; }
+  .hero-logo { flex-shrink: 0; }
+  .hero-logo img, .hero-logo svg { width: 120px; height: 120px; }
+  .hero h1 {
+    font-size: 72px; font-weight: 900; font-style: italic;
+    letter-spacing: -3px; text-transform: uppercase; line-height: 0.9;
+  }
+  .hero h1 span { color: var(--red); }
+  .hero p { color: var(--muted); font-size: 18px; margin-top: 12px; letter-spacing: 4px; text-transform: uppercase; font-size: 11px; }
+  .hero-meta { display: flex; gap: 12px; margin-top: 20px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(239,68,68,0.10); border: 1px solid rgba(239,68,68,0.25);
+    color: var(--red); font-size: 10px; font-weight: 700; letter-spacing: 3px;
+    text-transform: uppercase; padding: 4px 12px; border-radius: 100px;
+  }
+
+  /* ─── SECTIONS ─── */
+  .section { padding: 80px 0; border-bottom: 1px solid var(--border); }
+  .section-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 5px;
+    text-transform: uppercase; color: var(--red); margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::before { content: ''; width: 24px; height: 2px; background: var(--red); border-radius: 2px; }
+  .section-title {
+    font-size: 40px; font-weight: 900; font-style: italic;
+    text-transform: uppercase; letter-spacing: -1px; margin-bottom: 48px;
+  }
+
+  /* ─── LOGO GRID ─── */
+  .logo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+  .logo-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; overflow: hidden;
+  }
+  .logo-card.light-bg { background: #F9FAFB; }
+  .logo-card-preview {
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px; min-height: 200px;
+  }
+  .logo-card-preview img, .logo-card-preview svg { max-width: 100%; max-height: 140px; }
+  .logo-card-info { padding: 16px 20px; border-top: 1px solid var(--border); }
+  .logo-card-info h4 { font-size: 13px; font-weight: 700; color: var(--text); }
+  .logo-card-info p { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .logo-card-info code {
+    display: block; margin-top: 8px; font-size: 10px;
+    color: var(--red); font-family: monospace; letter-spacing: 1px;
+  }
+  .logo-card.light-bg .logo-card-info { background: #fff; border-top-color: #e5e7eb; }
+  .logo-card.light-bg .logo-card-info h4 { color: #111; }
+  .logo-card.light-bg .logo-card-info p { color: #6b7280; }
+
+  /* ─── COLOR PALETTE ─── */
+  .color-group { margin-bottom: 40px; }
+  .color-group h3 { font-size: 12px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 16px; }
+  .color-swatches { display: flex; gap: 12px; flex-wrap: wrap; }
+  .swatch {
+    border-radius: 16px; overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    min-width: 140px;
+  }
+  .swatch-color { height: 80px; }
+  .swatch-info { padding: 12px 14px; background: var(--card); border: 1px solid var(--border); border-top: none; border-radius: 0 0 16px 16px; }
+  .swatch-name { font-size: 11px; font-weight: 700; color: var(--text); }
+  .swatch-hex { font-size: 11px; font-family: monospace; color: var(--muted); margin-top: 2px; }
+  .swatch-usage { font-size: 10px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+
+  /* ─── TYPOGRAPHY ─── */
+  .type-sample {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 20px; padding: 32px; margin-bottom: 16px;
+  }
+  .type-label { font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+  .type-heading { font-size: 64px; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: -3px; line-height: 1; }
+  .type-subheading { font-size: 36px; font-weight: 900; font-style: italic; text-transform: uppercase; letter-spacing: -1px; }
+  .type-body { font-size: 16px; color: var(--muted); max-width: 600px; line-height: 1.7; }
+  .type-small { font-size: 10px; font-weight: 700; letter-spacing: 4px; text-transform: uppercase; color: var(--muted); }
+  .type-tag {
+    display: inline-block; padding: 4px 12px; background: rgba(239,68,68,0.10);
+    border: 1px solid rgba(239,68,68,0.25); color: var(--red);
+    font-size: 10px; font-weight: 700; letter-spacing: 3px;
+    text-transform: uppercase; border-radius: 100px;
+  }
+
+  /* ─── FONT SPECS ─── */
+  .font-spec {
+    display: flex; flex-direction: column; gap: 4px;
+    padding: 20px 24px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; margin-top: 16px;
+  }
+  .font-spec h4 { font-size: 13px; font-weight: 700; }
+  .font-spec p { font-size: 11px; color: var(--muted); }
+  .font-spec code { font-size: 10px; color: var(--red); font-family: monospace; margin-top: 4px; }
+
+  /* ─── USAGE RULES ─── */
+  .rules { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .rule-card {
+    border-radius: 20px; padding: 24px;
+    border: 1px solid;
+  }
+  .rule-card.do { border-color: rgba(34,197,94,0.25); background: rgba(34,197,94,0.04); }
+  .rule-card.dont { border-color: rgba(239,68,68,0.25); background: rgba(239,68,68,0.04); }
+  .rule-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+  .rule-card.do h4 { color: #22C55E; }
+  .rule-card.dont h4 { color: var(--red); }
+  .rule-card ul { list-style: none; }
+  .rule-card ul li { font-size: 13px; color: var(--muted); padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .rule-card ul li:last-child { border-bottom: none; }
+  .rule-card.do ul li::before { content: '✓ '; color: #22C55E; font-weight: 700; }
+  .rule-card.dont ul li::before { content: '✗ '; color: var(--red); font-weight: 700; }
+
+  /* ─── BRAND VOICE ─── */
+  .voice-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .voice-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; }
+  .voice-card h4 { font-size: 20px; font-weight: 900; font-style: italic; text-transform: uppercase; color: var(--red); margin-bottom: 8px; }
+  .voice-card p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+  /* ─── SOCIAL ─── */
+  .social-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; }
+  .social-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; padding: 20px; text-align: center;
+  }
+  .social-card .size { font-size: 22px; font-weight: 900; font-style: italic; color: var(--red); }
+  .social-card .name { font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--text); margin-top: 4px; }
+  .social-card .dims { font-size: 10px; color: var(--muted); margin-top: 2px; font-family: monospace; }
+
+  /* ─── FOOTER ─── */
+  footer { padding: 40px 0; text-align: center; }
+  footer p { font-size: 11px; color: var(--muted); letter-spacing: 2px; }
+  footer span { color: var(--red); }
+
+  @media (max-width: 768px) {
+    .hero-inner { flex-direction: column; text-align: center; }
+    .hero h1 { font-size: 48px; }
+    .rules { grid-template-columns: 1fr; }
+    .voice-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     HERO
+══════════════════════════════════════════ -->
+<div class="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-logo">
+        <svg width="120" height="120" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="512" height="512" rx="120" fill="#000"/>
+          <g transform="translate(38.4, -40) scale(0.85)">
+            <path d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z" fill="#EF4444"/>
+            <path d="M160 100L145 310H220L235 100H160Z" fill="#DC2626"/>
+          </g>
+          <text x="256" y="460" fill="#FFF" font-family="'Arial Black'" font-weight="900" font-size="110" letter-spacing="4" text-anchor="middle">FIT</text>
+        </svg>
+      </div>
+      <div>
+        <p class="section-label" style="margin-bottom:12px">Brand Guide · v1.0</p>
+        <h1>RIVAL<span>FIT</span></h1>
+        <p>ENTRENA · COMPITE · DOMINA</p>
+        <div class="hero-meta">
+          <span class="badge">Identidad Visual</span>
+          <span class="badge">2024–2025</span>
+          <span class="badge">Confidencial</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     LOGOS
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="container">
+    <div class="section-label">01 · Logotipo</div>
+    <div class="section-title">Variaciones del Logo</div>
+
+    <div class="logo-grid">
+
+      <!-- Primary (transparent) -->
+      <div class="logo-card">
+        <div class="logo-card-preview">
+          <svg width="160" height="160" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g transform="translate(40, 20) scale(0.62)">
+              <path d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z" fill="#EF4444"/>
+              <path d="M160 100L145 310H220L235 100H160Z" fill="#DC2626"/>
+            </g>
+            <text x="200" y="300" fill="#FFF" font-family="'Arial Black'" font-weight="900" font-size="78" letter-spacing="-2" text-anchor="middle" font-style="italic">RIVAL</text>
+            <text x="200" y="360" fill="#EF4444" font-family="'Arial Black'" font-weight="900" font-size="42" letter-spacing="18" text-anchor="middle">FIT</text>
+          </svg>
+        </div>
+        <div class="logo-card-info">
+          <h4>Logo Primario</h4>
+          <p>Fondo transparente — uso principal</p>
+          <code>logos/logo-primary.svg</code>
+        </div>
+      </div>
+
+      <!-- Dark BG -->
+      <div class="logo-card">
+        <div class="logo-card-preview">
+          <svg width="160" height="160" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="400" height="400" rx="48" fill="#000"/>
+            <g transform="translate(40, 20) scale(0.62)">
+              <path d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z" fill="#EF4444"/>
+              <path d="M160 100L145 310H220L235 100H160Z" fill="#DC2626"/>
+            </g>
+            <text x="200" y="300" fill="#FFF" font-family="'Arial Black'" font-weight="900" font-size="78" letter-spacing="-2" text-anchor="middle" font-style="italic">RIVAL</text>
+            <text x="200" y="360" fill="#EF4444" font-family="'Arial Black'" font-weight="900" font-size="42" letter-spacing="18" text-anchor="middle">FIT</text>
+          </svg>
+        </div>
+        <div class="logo-card-info">
+          <h4>Logo Fondo Oscuro</h4>
+          <p>Sobre fondo negro — apps, presentaciones</p>
+          <code>logos/logo-dark-bg.svg</code>
+        </div>
+      </div>
+
+      <!-- Light BG -->
+      <div class="logo-card light-bg">
+        <div class="logo-card-preview" style="background:#f9fafb">
+          <svg width="160" height="160" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="400" height="400" rx="48" fill="#FFF"/>
+            <g transform="translate(40, 20) scale(0.62)">
+              <path d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z" fill="#EF4444"/>
+              <path d="M160 100L145 310H220L235 100H160Z" fill="#DC2626"/>
+            </g>
+            <text x="200" y="300" fill="#111" font-family="'Arial Black'" font-weight="900" font-size="78" letter-spacing="-2" text-anchor="middle" font-style="italic">RIVAL</text>
+            <text x="200" y="360" fill="#EF4444" font-family="'Arial Black'" font-weight="900" font-size="42" letter-spacing="18" text-anchor="middle">FIT</text>
+          </svg>
+        </div>
+        <div class="logo-card-info">
+          <h4>Logo Fondo Claro</h4>
+          <p>Sobre fondo blanco — documentos, print</p>
+          <code>logos/logo-light-bg.svg</code>
+        </div>
+      </div>
+
+      <!-- Horizontal -->
+      <div class="logo-card" style="grid-column: span 2;">
+        <div class="logo-card-preview">
+          <svg width="320" height="86" viewBox="0 0 600 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <g transform="translate(8, -8) scale(0.32)">
+              <path d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z" fill="#EF4444"/>
+              <path d="M160 100L145 310H220L235 100H160Z" fill="#DC2626"/>
+            </g>
+            <rect x="146" y="24" width="2" height="112" fill="#EF4444" opacity="0.4" rx="1"/>
+            <text x="166" y="100" fill="#FFF" font-family="'Arial Black'" font-weight="900" font-size="76" letter-spacing="-3" text-anchor="start" font-style="italic">RIVAL</text>
+            <rect x="167" y="112" width="76" height="26" rx="4" fill="#EF4444"/>
+            <text x="205" y="131" fill="#FFF" font-family="'Arial Black'" font-weight="900" font-size="15" letter-spacing="6" text-anchor="middle">FIT</text>
+          </svg>
+        </div>
+        <div class="logo-card-info">
+          <h4>Logo Horizontal</h4>
+          <p>Formato apaisado — headers, navbars, banners</p>
+          <code>logos/logo-horizontal.svg</code>
+        </div>
+      </div>
+
+      <!-- Icon only -->
+      <div class="logo-card">
+        <div class="logo-card-preview">
+          <svg width="100" height="100" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="512" height="512" rx="120" fill="#000"/>
+            <g transform="translate(38.4, -40) scale(0.85)">
+              <path d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z" fill="#EF4444"/>
+              <path d="M160 100L145 310H220L235 100H160Z" fill="#DC2626"/>
+            </g>
+            <text x="256" y="460" fill="#FFF" font-family="'Arial Black'" font-weight="900" font-size="110" letter-spacing="4" text-anchor="middle">FIT</text>
+          </svg>
+        </div>
+        <div class="logo-card-info">
+          <h4>Ícono App</h4>
+          <p>Para app icon, favicon, avatar</p>
+          <code>logos/logo-icon.svg</code>
+        </div>
+      </div>
+
+      <!-- Wordmark -->
+      <div class="logo-card">
+        <div class="logo-card-preview">
+          <svg width="240" height="60" viewBox="0 0 480 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <text x="0" y="88" fill="#FFF" font-family="'Arial Black'" font-weight="900" font-size="88" letter-spacing="-3" text-anchor="start" font-style="italic">RIVAL</text>
+            <text x="322" y="88" fill="#EF4444" font-family="'Arial Black'" font-weight="900" font-size="88" letter-spacing="-3" text-anchor="start" font-style="italic">FIT</text>
+          </svg>
+        </div>
+        <div class="logo-card-info">
+          <h4>Wordmark</h4>
+          <p>Solo tipografía — cuando el ícono no cabe</p>
+          <code>logos/logo-wordmark.svg</code>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     COLORES
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="container">
+    <div class="section-label">02 · Colores</div>
+    <div class="section-title">Paleta de Color</div>
+
+    <div class="color-group">
+      <h3>Marca Principal</h3>
+      <div class="color-swatches">
+        <div class="swatch">
+          <div class="swatch-color" style="background:#EF4444"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Brand Red</div>
+            <div class="swatch-hex">#EF4444</div>
+            <div class="swatch-usage">Color primario, CTAs, botones, acentos</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#DC2626"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Brand Accent</div>
+            <div class="swatch-hex">#DC2626</div>
+            <div class="swatch-usage">Hover states, logo depth</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#991B1B"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Brand Deep</div>
+            <div class="swatch-hex">#991B1B</div>
+            <div class="swatch-usage">Sombras, inner shadow del logo</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="color-group">
+      <h3>Fondos</h3>
+      <div class="color-swatches">
+        <div class="swatch">
+          <div class="swatch-color" style="background:#000000; border:1px solid #1F2937"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Black Base</div>
+            <div class="swatch-hex">#000000</div>
+            <div class="swatch-usage">Fondo raíz de la app</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#0A0A0A; border:1px solid #1F2937"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Surface</div>
+            <div class="swatch-hex">#0A0A0A</div>
+            <div class="swatch-usage">Tarjetas, modales, sidebar</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#111111; border:1px solid #1F2937"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Card</div>
+            <div class="swatch-hex">#111111</div>
+            <div class="swatch-usage">Cards de contenido</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#1F2937"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Brand Gray</div>
+            <div class="swatch-hex">#1F2937</div>
+            <div class="swatch-usage">Secciones secundarias</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="color-group">
+      <h3>Texto</h3>
+      <div class="color-swatches">
+        <div class="swatch">
+          <div class="swatch-color" style="background:#FFFFFF"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">White</div>
+            <div class="swatch-hex">#FFFFFF</div>
+            <div class="swatch-usage">Títulos y texto principal</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#D1D5DB"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Gray 300</div>
+            <div class="swatch-hex">#D1D5DB</div>
+            <div class="swatch-usage">Subtítulos</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#9CA3AF"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Gray 400</div>
+            <div class="swatch-hex">#9CA3AF</div>
+            <div class="swatch-usage">Texto de apoyo</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#4B5563"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Gray 600</div>
+            <div class="swatch-hex">#4B5563</div>
+            <div class="swatch-usage">Texto desactivado</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="color-group">
+      <h3>Semánticos</h3>
+      <div class="color-swatches">
+        <div class="swatch">
+          <div class="swatch-color" style="background:#22C55E"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Success</div>
+            <div class="swatch-hex">#22C55E</div>
+            <div class="swatch-usage">Confirmaciones, estados activos</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#F59E0B"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Warning</div>
+            <div class="swatch-hex">#F59E0B</div>
+            <div class="swatch-usage">Alertas, estados pendientes</div>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background:#3B82F6"></div>
+          <div class="swatch-info">
+            <div class="swatch-name">Info · Official</div>
+            <div class="swatch-hex">#3B82F6</div>
+            <div class="swatch-usage">Cuenta oficial, información</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     TIPOGRAFÍA
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="container">
+    <div class="section-label">03 · Tipografía</div>
+    <div class="section-title">Sistema Tipográfico</div>
+
+    <div class="type-sample">
+      <div class="type-label">Heading — Font Heading · 900 · Italic · Uppercase</div>
+      <div class="type-heading">RIVAL<span style="color:#EF4444">FIT</span></div>
+    </div>
+
+    <div class="type-sample">
+      <div class="type-label">Subheading — 900 · Italic</div>
+      <div class="type-subheading">Entrena Sin Límites</div>
+    </div>
+
+    <div class="type-sample">
+      <div class="type-label">Body — Regular · 400–600</div>
+      <div class="type-body">La plataforma deportiva que conecta atletas, centros de entrenamiento y competiciones en un solo ecosistema. Diseñada para quienes no se conforman con lo ordinario.</div>
+    </div>
+
+    <div class="type-sample">
+      <div class="type-label">Labels & Tags — 700 · Uppercase · Letter-spacing</div>
+      <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:8px">
+        <span class="type-tag">LEYENDAS</span>
+        <span class="type-tag">GLADIADORES</span>
+        <span class="type-tag" style="border-color:rgba(59,130,246,0.3);background:rgba(59,130,246,0.1);color:#3B82F6">CUENTA OFICIAL</span>
+        <span class="type-small">CROSS TRAINING · LVL 12</span>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:24px">
+      <div class="font-spec">
+        <h4>Font Heading</h4>
+        <p>Titulares, nombres de usuario, scores, botones CTA</p>
+        <code>font-weight: 900 · font-style: italic · text-transform: uppercase</code>
+        <code>font-family: var(--font-heading), Arial Black, Impact</code>
+      </div>
+      <div class="font-spec">
+        <h4>Font Sans</h4>
+        <p>Texto de interfaz, descripciones, etiquetas, navegación</p>
+        <code>font-weight: 400 / 600 / 700 · Normal</code>
+        <code>font-family: var(--font-sans), system-ui, sans-serif</code>
+      </div>
+    </div>
+
+    <!-- Scale -->
+    <div style="margin-top:32px; background:var(--card); border:1px solid var(--border); border-radius:20px; padding:32px;">
+      <div class="type-label" style="margin-bottom:24px">Escala Tipográfica</div>
+      <div style="display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid var(--border);padding-bottom:16px"><span style="color:var(--muted);font-size:10px;width:60px;flex-shrink:0">10px</span><span style="font-size:10px;font-weight:700;letter-spacing:3px;text-transform:uppercase">LABEL · UI · TRACKING</span></div>
+        <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid var(--border);padding-bottom:16px"><span style="color:var(--muted);font-size:10px;width:60px;flex-shrink:0">12px</span><span style="font-size:12px">Texto pequeño, metadatos, timestamps</span></div>
+        <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid var(--border);padding-bottom:16px"><span style="color:var(--muted);font-size:10px;width:60px;flex-shrink:0">14px</span><span style="font-size:14px">Texto de interfaz principal, descripciones</span></div>
+        <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid var(--border);padding-bottom:16px"><span style="color:var(--muted);font-size:10px;width:60px;flex-shrink:0">24px</span><span style="font-size:24px;font-weight:700;font-style:italic;text-transform:uppercase">Subtítulos de sección</span></div>
+        <div style="display:flex;align-items:baseline;gap:16px;border-bottom:1px solid var(--border);padding-bottom:16px"><span style="color:var(--muted);font-size:10px;width:60px;flex-shrink:0">36px</span><span style="font-size:36px;font-weight:900;font-style:italic;text-transform:uppercase">Títulos de página</span></div>
+        <div style="display:flex;align-items:baseline;gap:16px"><span style="color:var(--muted);font-size:10px;width:60px;flex-shrink:0">64px+</span><span style="font-size:52px;font-weight:900;font-style:italic;text-transform:uppercase;letter-spacing:-2px">Hero</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     REGLAS DE USO
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="container">
+    <div class="section-label">04 · Uso del Logo</div>
+    <div class="section-title">Reglas de Aplicación</div>
+
+    <div class="rules">
+      <div class="rule-card do">
+        <h4>✓ Correcto</h4>
+        <ul>
+          <li>Usar el logo en fondos oscuros (negro, gris oscuro)</li>
+          <li>Mantener espacio libre mínimo de 1× altura del logo</li>
+          <li>Usar el wordmark cuando el espacio es muy reducido</li>
+          <li>Usar el ícono cuadrado para app icon y favicon</li>
+          <li>Usar la versión horizontal en headers y navbars</li>
+          <li>El rojo del logo es siempre #EF4444 o #DC2626</li>
+          <li>RIVAL en blanco sobre fondo oscuro, en negro sobre fondo claro</li>
+        </ul>
+      </div>
+      <div class="rule-card dont">
+        <h4>✗ Incorrecto</h4>
+        <ul>
+          <li>No cambiar los colores del logo</li>
+          <li>No estirar ni deformar el logo</li>
+          <li>No rotar el logo</li>
+          <li>No aplicar efectos: sombras drop-shadow, outlines, gradientes</li>
+          <li>No colocar sobre fondos con baja contraste</li>
+          <li>No usar RIVAL en rojo o FIT en blanco (invertir colores)</li>
+          <li>No separar el ícono R del texto en comunicaciones formales</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     VOZ DE MARCA
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="container">
+    <div class="section-label">05 · Personalidad</div>
+    <div class="section-title">Voz de Marca</div>
+
+    <div class="voice-grid">
+      <div class="voice-card">
+        <h4>Intenso</h4>
+        <p>RivalFit habla con energía y determinación. Cada palabra tiene peso. No hay espacio para la mediocridad. La plataforma exige, motiva y empuja al límite.</p>
+      </div>
+      <div class="voice-card">
+        <h4>Competitivo</h4>
+        <p>Todo es una competición. Los usuarios son atletas, gladiadores, leyendas. El lenguaje refleja la rivalidad sana que impulsa el rendimiento al máximo nivel.</p>
+      </div>
+      <div class="voice-card">
+        <h4>Directo</h4>
+        <p>Sin rodeos. Los mensajes son cortos, impactantes y al grano. El atleta no tiene tiempo para parrafadas — necesita acción, información y motivación en segundos.</p>
+      </div>
+      <div class="voice-card">
+        <h4>Técnico</h4>
+        <p>RivalFit conoce el deporte. WOD, PR, AMRAP, EMOM, OCR, HYROX — la plataforma habla el idioma del atleta sin explicar lo obvio.</p>
+      </div>
+      <div class="voice-card">
+        <h4>Comunidad</h4>
+        <p>Aunque el tono es duro, la base es la comunidad. Los rivales se respetan. Los duelos tienen fair play. La plataforma construye atletas, no solo registros.</p>
+      </div>
+      <div class="voice-card">
+        <h4>Auténtico</h4>
+        <p>No hay filtros en RivalFit. Los datos son reales, los records son verificados, el esfuerzo se muestra sin editar. La autenticidad es el núcleo de la marca.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════
+     FORMATOS SOCIALES
+══════════════════════════════════════════ -->
+<div class="section">
+  <div class="container">
+    <div class="section-label">06 · Formatos Digitales</div>
+    <div class="section-title">Tamaños Estándar</div>
+
+    <div class="social-grid">
+      <div class="social-card">
+        <div class="size">512²</div>
+        <div class="name">App Icon</div>
+        <div class="dims">512 × 512 px</div>
+      </div>
+      <div class="social-card">
+        <div class="size">1:1</div>
+        <div class="name">Instagram Post</div>
+        <div class="dims">1080 × 1080 px</div>
+      </div>
+      <div class="social-card">
+        <div class="size">9:16</div>
+        <div class="name">Stories / Reels</div>
+        <div class="dims">1080 × 1920 px</div>
+      </div>
+      <div class="social-card">
+        <div class="size">4:5</div>
+        <div class="name">Feed Portrait</div>
+        <div class="dims">1080 × 1350 px</div>
+      </div>
+      <div class="social-card">
+        <div class="size">16:9</div>
+        <div class="name">Banner / Cover</div>
+        <div class="dims">1920 × 1080 px</div>
+      </div>
+      <div class="social-card">
+        <div class="size">OG</div>
+        <div class="name">Open Graph</div>
+        <div class="dims">1200 × 630 px</div>
+      </div>
+      <div class="social-card">
+        <div class="size">32²</div>
+        <div class="name">Favicon</div>
+        <div class="dims">32 × 32 px</div>
+      </div>
+      <div class="social-card">
+        <div class="size">PWA</div>
+        <div class="name">PWA Icons</div>
+        <div class="dims">192 × 192 · 512 × 512</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <p>© 2024–2025 <span>RivalFit</span> · Todos los derechos reservados · Documento de uso interno</p>
+    <p style="margin-top:8px">Versión 1.0 · Identidad Visual Oficial</p>
+  </div>
+</footer>
+
+</body>
+</html>

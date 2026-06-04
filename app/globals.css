@@ -2,6 +2,8 @@
 
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -48,15 +50,41 @@
 }
 
 [data-theme='light'] {
-  --background: #f8fafc; /* Slack/Vercel style light background */
+  --background: #ffffff; /* Pure white background */
   --foreground: #0f172a; /* Slate-900 */
   --card: #ffffff;
   --card-foreground: #0f172a;
   --border: #e2e8f0; /* Slate-200 */
-  --muted: #f1f5f9; /* Slate-100 */
+  --muted: #f8fafc; /* Very light slate/off-white */
   --muted-foreground: #64748b; /* Slate-500 */
   --input: #ffffff;
 }
+
+/* Glassmorphism and high-tech grid adjustments in light mode */
+[data-theme='light'] .glass {
+  background: rgba(255, 255, 255, 0.7) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+[data-theme='light'] .glass-dark {
+  background: rgba(255, 255, 255, 0.85) !important;
+  backdrop-filter: blur(16px) !important;
+  -webkit-backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
+}
+
+[data-theme='light'] .bg-grid-tech {
+  background-image: 
+    linear-gradient(rgba(15, 23, 42, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.03) 1px, transparent 1px) !important;
+}
+
+[data-theme='light'] .bg-dot-grid {
+  background-image: radial-gradient(rgba(15, 23, 42, 0.06) 1px, transparent 1px) !important;
+}
+
 
 /* Ensure common color utilities respect the theme, but respect dark containers */
 [data-theme='light'] .bg-brand-gray:not(.keep-bg):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
@@ -65,103 +93,162 @@
   color: #0f172a !important;
 }
 
+/* ──────────────────────────────────────────────────────────────────────────
+   1. FONDS CLAROS / INVERSIÓN DE FONDOS OSCUROS
+   ────────────────────────────────────────────────────────────────────────── */
+[data-theme='light'] .bg-black:not(.keep-bg):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-\[\#000000\]:not(.keep-bg):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-zinc-950:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.keep-bg):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-zinc-900:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.keep-bg):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-zinc-850:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.keep-bg):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-neutral-950:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.keep-bg):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-neutral-900:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.keep-bg):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-neutral-850:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.keep-bg):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-gray-950:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.keep-bg):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-gray-900:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.keep-bg):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-slate-950:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.keep-bg):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-slate-900:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.keep-bg):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-stone-950:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.keep-bg):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-stone-900:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.keep-bg):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-\[\#0a0a0a\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-\[\#0d0d0d\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-\[\#0e0e0e\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-\[\#0E0E0E\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-\[\#0f0f0f\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-\[\#111\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-\[\#111111\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-\[\#121212\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-\[\#151515\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-\[\#161616\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-\[\#171717\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-\[\#181818\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-\[\#1a1a1a\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-\[\#1c1c1e\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-\[\#222\]:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-card:not(.keep-bg) {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+/* Fondos secundarios oscuros que deben ser gris muy suave en modo claro */
+[data-theme='light'] .bg-zinc-800:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-zinc-700:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-neutral-800:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-neutral-700:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-gray-800:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-gray-700:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-slate-800:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-slate-700:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *):not(.fixed):not(.absolute),
+[data-theme='light'] .bg-white\/5:not(.keep-bg):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-white\/10:not(.keep-bg):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-white\/20:not(.keep-bg):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-white\/\[0\.01\]:not(.keep-bg),
+[data-theme='light'] .bg-white\/\[0\.02\]:not(.keep-bg),
+[data-theme='light'] .bg-white\/\[0\.03\]:not(.keep-bg),
+[data-theme='light'] .bg-white\/\[0\.04\]:not(.keep-bg),
+[data-theme='light'] .bg-white\/\[0\.05\]:not(.keep-bg),
+[data-theme='light'] .bg-white\/\[0\.06\]:not(.keep-bg),
+[data-theme='light'] .bg-white\/\[0\.08\]:not(.keep-bg),
+[data-theme='light'] .bg-white\/\[0\.12\]:not(.keep-bg),
+[data-theme='light'] .bg-black\/5:not(.keep-bg),
+[data-theme='light'] .bg-black\/10:not(.keep-bg),
+[data-theme='light'] .bg-black\/20:not(.keep-bg),
+[data-theme='light'] .bg-black\/30:not(.keep-bg),
+[data-theme='light'] .bg-black\/40:not(.keep-bg),
+[data-theme='light'] .bg-black\/50:not(.keep-bg),
+[data-theme='light'] .dark\:bg-\[\#0a0a0a\],
+[data-theme='light'] .dark\:bg-black\/20 {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+/* Translucent dark grey backgrounds that should map to translucent slate in light mode */
+[data-theme='light'] .bg-zinc-900\/5,
+[data-theme='light'] .bg-zinc-900\/10,
+[data-theme='light'] .bg-zinc-900\/15,
+[data-theme='light'] .bg-zinc-900\/20,
+[data-theme='light'] .bg-zinc-900\/30,
+[data-theme='light'] .bg-zinc-900\/40,
+[data-theme='light'] .bg-zinc-900\/50,
+[data-theme='light'] .bg-zinc-800\/5,
+[data-theme='light'] .bg-zinc-800\/10,
+[data-theme='light'] .bg-zinc-800\/20,
+[data-theme='light'] .bg-zinc-800\/30,
+[data-theme='light'] .bg-zinc-800\/50,
+[data-theme='light'] .bg-white\/\[0\.02\],
+[data-theme='light'] .bg-white\/\[0\.03\],
+[data-theme='light'] .bg-white\/\[0\.05\],
+[data-theme='light'] .bg-white\/\[0\.08\],
+[data-theme='light'] .bg-neutral-900\/10,
+[data-theme='light'] .bg-neutral-900\/20,
+[data-theme='light'] .bg-neutral-900\/30,
+[data-theme='light'] .bg-neutral-900\/50 {
+  background-color: rgba(15, 23, 42, 0.04) !important;
+  color: #0f172a !important;
+}
+
+
+/* ──────────────────────────────────────────────────────────────────────────
+   2. CONTRASSTE DE TEXTO PREMIUM
+   ────────────────────────────────────────────────────────────────────────── */
 [data-theme='light'] .text-white:not(.bg-brand-red *):not(.bg-brand-red):not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *):not(.text-brand-red),
-[data-theme='light'] .\!text-white:not(.bg-brand-red *):not(.bg-brand-red):not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *):not(.text-brand-red) {
-  color: #0f172a !important;
+[data-theme='light'] .\!text-white:not(.bg-brand-red *):not(.bg-brand-red):not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *):not(.text-brand-red),
+[data-theme='light'] .text-gray-50:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-gray-100:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-gray-200:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-zinc-50:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-zinc-100:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-zinc-200:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-neutral-50:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-neutral-100:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-neutral-200:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-slate-50:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-slate-100:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-slate-200:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-\[\#EDEDED\]:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
+  color: #0f172a !important; /* Slate-900 */
 }
 
-/* Hardcoded dark backgrounds that should be light in [SOL] mode */
-[data-theme='light'] .bg-\[\#0a0a0a\]:not(.keep-all):not(.keep-all *),
-[data-theme='light'] .bg-\[\#0d0d0d\]:not(.keep-all):not(.keep-all *),
-[data-theme='light'] .bg-\[\#0e0e0e\]:not(.keep-all):not(.keep-all *),
-[data-theme='light'] .bg-\[\#0E0E0E\]:not(.keep-all):not(.keep-all *),
-[data-theme='light'] .bg-\[\#0f0f0f\]:not(.keep-all):not(.keep-all *),
-[data-theme='light'] .bg-\[\#111\]:not(.keep-all):not(.keep-all *),
-[data-theme='light'] .bg-\[\#121212\]:not(.keep-all):not(.keep-all *),
-[data-theme='light'] .bg-zinc-900:not(.keep-all):not(.keep-all *),
-[data-theme='light'] .bg-zinc-950:not(.keep-all):not(.keep-all *) {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
+[data-theme='light'] .text-gray-300:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .\!text-gray-300:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-zinc-300:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .\!text-zinc-300:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-neutral-300:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-slate-300:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
+  color: #334155 !important; /* Slate-700 */
 }
 
-[data-theme='light'] .border-white\/5:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
-[data-theme='light'] .border-white\/\[0\.05\]:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
-[data-theme='light'] .border-white\/\[0\.06\]:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
-[data-theme='light'] .border-white\/\[0\.07\]:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
-[data-theme='light'] .border-white\/10:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
-[data-theme='light'] .border-white\/20:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
-  border-color: #e2e8f0 !important;
-}
-
-[data-theme='light'] .divide-white\/\[0\.05\]:not(.keep-all):not(.keep-all *) > * + * {
-  border-color: #e2e8f0 !important;
-}
-
-[data-theme='light'] .stroke-white\/5,
-[data-theme='light'] circle[stroke='rgba(255,255,255,0.05)'] {
-  stroke: rgba(0, 0, 0, 0.05) !important;
-}
-
-[data-theme='light'] .bg-black:not(.keep-bg):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *):not(.z-\[100\]):not(.z-\[200\]):not(.fixed *),
-[data-theme='light'] .bg-black\/40:not(.keep-bg):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
-  background-color: #f1f5f9 !important; /* Muted background in light mode instead of pure white */
-  color: #0f172a !important;
-}
-
-[data-theme='light'] .bg-black\/60,
-[data-theme='light'] .bg-black\/80,
-[data-theme='light'] .bg-black\/90,
-[data-theme='light'] .bg-white\/5,
-[data-theme='light'] .bg-white\/10 {
-  background-color: #ffffff !important;
-  box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1) !important;
-  color: #0f172a !important;
-}
-
-
-
-[data-theme='light'] .text-gray-50:not(.dark-section):not(.dark-section *),
-[data-theme='light'] .text-gray-100:not(.dark-section):not(.dark-section *),
-[data-theme='light'] .text-gray-200:not(.dark-section):not(.dark-section *) {
-  color: #1e293b !important; /* Slate-800 */
-}
-
-[data-theme='light'] .text-gray-300:not(.dark-section):not(.dark-section *),
-[data-theme='light'] .\!text-gray-300:not(.dark-section):not(.dark-section *) {
-  color: #475569 !important; /* Slate-600 */
-}
-
-[data-theme='light'] .text-gray-400:not(.dark-section):not(.dark-section *),
-[data-theme='light'] .text-gray-500:not(.dark-section):not(.dark-section *),
-[data-theme='light'] .text-gray-600:not(.dark-section):not(.dark-section *),
-[data-theme='light'] .text-slate-400:not(.dark-section):not(.dark-section *),
-[data-theme='light'] .text-slate-500:not(.dark-section):not(.dark-section *),
-[data-theme='light'] .text-muted-foreground:not(.dark-section):not(.dark-section *) {
+[data-theme='light'] .text-gray-400:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-zinc-400:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-neutral-400:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-slate-400:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-gray-500:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-zinc-500:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-neutral-500:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-slate-500:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-muted-foreground:not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
   color: #64748b !important; /* Slate-500 */
 }
 
-[data-theme='light'] .text-white\/20:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
-[data-theme='light'] .text-white\/30:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all) {
+/* Opacidades de texto blanco a texto oscuro legible */
+[data-theme='light'] .text-white\/20:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-white\/30:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
   color: rgba(15, 23, 42, 0.35) !important;
 }
-
-[data-theme='light'] .text-white\/25:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all) {
+[data-theme='light'] .text-white\/25:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
   color: rgba(15, 23, 42, 0.4) !important;
 }
-
-[data-theme='light'] .text-white\/35:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all) {
+[data-theme='light'] .text-white\/35:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
   color: rgba(15, 23, 42, 0.55) !important;
 }
-
-[data-theme='light'] .text-white\/40:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
-[data-theme='light'] .text-white\/50:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
-[data-theme='light'] .text-white\/60:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all) {
+[data-theme='light'] .text-white\/40:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-white\/50:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-white\/60:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
   color: rgba(15, 23, 42, 0.5) !important;
 }
-
-[data-theme='light'] .text-white\/70:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
-[data-theme='light'] .text-white\/80:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all),
-[data-theme='light'] .text-white\/90:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all) {
+[data-theme='light'] .text-white\/70:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-white\/80:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .text-white\/90:not(.keep-white):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *) {
   color: rgba(15, 23, 42, 0.75) !important;
 }
 
@@ -171,27 +258,105 @@
   color: #ffffff !important;
 }
 
-.keep-all, .keep-all * {
-  /* This class prevents theme-switching logic entirely */
-}
-
-[data-theme='light'] .bg-card:not(.keep-bg),
-[data-theme='light'] .bg-white\/5:not(.keep-bg),
-[data-theme='light'] .bg-white\/10:not(.keep-bg),
-[data-theme='light'] .bg-white\/20:not(.keep-bg),
-[data-theme='light'] .dark\:bg-\[\#0a0a0a\],
-[data-theme='light'] .dark\:bg-black\/20 {
-  background-color: #ffffff !important;
-}
-
-[data-theme='light'] .placeholder\:text-gray-400::placeholder,
-[data-theme='light'] .placeholder\:text-gray-600::placeholder {
-  color: #000000 !important;
-  opacity: 0.7 !important;
-}
-
 [data-theme='light'] .hover\:text-white:hover:not(.bg-brand-red *):not(.bg-brand-red) {
-  color: #000000 !important;
+  color: #0f172a !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   3. BORDES PRECISOS Y LIMPIOS
+   ────────────────────────────────────────────────────────────────────────── */
+[data-theme='light'] .border-white\/5:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-white\/\[0\.05\]:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-white\/\[0\.06\]:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-white\/\[0\.07\]:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-white\/\[0\.08\]:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-white\/10:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-white\/20:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-white\/30:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-zinc-900:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-zinc-800:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-zinc-700:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-neutral-900:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-neutral-800:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-neutral-700:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-gray-900:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-gray-800:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-gray-700:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-slate-800:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-slate-700:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *),
+[data-theme='light'] .border-gray-200,
+[data-theme='light'] .border:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *):not(.bg-brand-red *):not(.border-brand-red),
+[data-theme='light'] .border-t:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *):not(.border-brand-red),
+[data-theme='light'] .border-b:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *):not(.border-brand-red),
+[data-theme='light'] .border-l:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *):not(.border-brand-red),
+[data-theme='light'] .border-r:not(.keep-border):not(.dark-section):not(.dark-section *):not(.keep-all):not(.keep-all *):not(.border-brand-red) {
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme='light'] .divide-white\/\[0\.05\]:not(.keep-all):not(.keep-all *) > * + * {
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme='light'] .stroke-white\/5,
+[data-theme='light'] circle[stroke='rgba(255,255,255,0.05)'] {
+  stroke: rgba(15, 23, 42, 0.08) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   4. CAMPOS DE FORMULARIO E INPUTS LIMPIOS
+   ────────────────────────────────────────────────────────────────────────── */
+
+[data-theme='light'] input:not([type='submit']):not([type='button']):not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] textarea:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] select:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *) {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+[data-theme='light'] :not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *)::placeholder,
+[data-theme='light'] .placeholder-zinc-500:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *)::placeholder,
+[data-theme='light'] .placeholder-gray-500:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *)::placeholder,
+[data-theme='light'] .placeholder-slate-500:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *)::placeholder,
+[data-theme='light'] .placeholder-neutral-500:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *)::placeholder,
+[data-theme='light'] .placeholder\:text-gray-400:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *)::placeholder,
+[data-theme='light'] .placeholder\:text-gray-600:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *)::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+/* ──────────────────────────────────────────────────────────────────────────
+   5. OVERLAYS DE MODALES (MANTENER OSCUROS Y BLUR)
+   ────────────────────────────────────────────────────────────────────────── */
+[data-theme='light'] .fixed.bg-black\/60,
+[data-theme='light'] .fixed.bg-black\/80,
+[data-theme='light'] .fixed.bg-black\/90,
+[data-theme='light'] .fixed.bg-black\/50,
+[data-theme='light'] .fixed.bg-black\/40,
+[data-theme='light'] .fixed.bg-black\/70,
+[data-theme='light'] .absolute.bg-black\/60,
+[data-theme='light'] .absolute.bg-black\/80,
+[data-theme='light'] .absolute.bg-black\/90,
+[data-theme='light'] .absolute.bg-black\/50,
+[data-theme='light'] .absolute.bg-black\/40,
+[data-theme='light'] .absolute.bg-black\/70 {
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   6. SHADOWS Y SELECCIÓN PREMIUM
+   ────────────────────────────────────────────────────────────────────────── */
+[data-theme='light'] .shadow-sm,
+[data-theme='light'] .shadow-md,
+[data-theme='light'] .shadow-lg,
+[data-theme='light'] .dark\:shadow-none {
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 8px -1px rgba(15, 23, 42, 0.03) !important;
+}
+
+[data-theme='light'] .shadow-glow-sm,
+[data-theme='light'] .shadow-glow {
+  box-shadow: 0 10px 30px -10px rgba(239, 68, 68, 0.15) !important;
 }
 
 [data-theme='light'] .selection\:bg-brand-red ::selection {
@@ -199,33 +364,47 @@
   color: white !important;
 }
 
-[data-theme='light'] .shadow-sm,
-[data-theme='light'] .shadow-md,
-[data-theme='light'] .shadow-lg,
-[data-theme='light'] .dark\:shadow-none {
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05), 0 0 0 1px rgb(0 0 0 / 0.05) !important;
+/* ──────────────────────────────────────────────────────────────────────────
+   7. SCROLLBARS CLARAS Y ELEGANTES
+   ────────────────────────────────────────────────────────────────────────── */
+[data-theme='light'] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+[data-theme='light'] ::-webkit-scrollbar-track {
+  background: #f8fafc;
+}
+[data-theme='light'] ::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* Slate-300 */
+  border-radius: 4px;
+}
+[data-theme='light'] ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; /* Slate-400 */
 }
 
-[data-theme='light'] .bg-white.border,
-[data-theme='light'] .bg-background.border {
-  border-color: #e2e8f0 !important;
-  border-width: 1px !important;
-}
-
-[data-theme='light'] .text-xs.font-black.uppercase.tracking-widest {
-  color: #1e293b !important;
-  font-weight: 900 !important;
-  letter-spacing: 0.15em !important;
-}
-
-[data-theme='light'] th {
+/* ──────────────────────────────────────────────────────────────────────────
+   8. COMPONENTES VARIOS (TABLAS, SECCIONES)
+   ────────────────────────────────────────────────────────────────────────── */
+[data-theme='light'] th:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *) {
   color: #0f172a !important;
   border-bottom: 2px solid #e2e8f0 !important;
   font-weight: 900 !important;
   background-color: #f8fafc !important;
 }
 
-[data-theme='light'] .border-gray-200 {
+[data-theme='light'] .text-xs.font-black.uppercase.tracking-widest:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *) {
+  color: #1e293b !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.15em !important;
+}
+
+[data-theme='light'] .bg-white.border:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *),
+[data-theme='light'] .bg-background.border:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *) {
+  border-color: #e2e8f0 !important;
+  border-width: 1px !important;
+}
+
+[data-theme='light'] .border-gray-200:not(.keep-all):not(.keep-all *):not(.dark-section):not(.dark-section *) {
   border-color: #e2e8f0 !important;
 }
 

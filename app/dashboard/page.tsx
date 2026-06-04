@@ -150,7 +150,7 @@ function FeedEmptyGuide({ onExplore }: { onExplore: () => void }) {
     );
 }
 
-function StatCard({ label, value, subtext, icon }: { label: string, value: string, subtext: string, icon: React.ReactNode }) {
+function StatCard({ label, value, subtext, icon, loading }: { label: string, value: string, subtext: string, icon: React.ReactNode, loading?: boolean }) {
     return (
         <div className="bg-brand-gray/40 border border-border/10 p-3 md:p-6 rounded-[24px] backdrop-blur-md hover:border-brand-red/40 hover:bg-brand-gray/60 transition-all group cursor-pointer h-full flex flex-col justify-between overflow-hidden">
             <div className="flex items-center justify-between mb-2 md:mb-4 gap-2">
@@ -158,8 +158,14 @@ function StatCard({ label, value, subtext, icon }: { label: string, value: strin
                 <div className="p-1.5 md:p-2 bg-foreground/5 rounded-lg group-hover:scale-110 group-hover:bg-brand-red/20 transition-all shrink-0">{icon}</div>
             </div>
             <div>
-                <div className={`text-xl md:text-3xl font-heading font-black text-foreground italic tracking-tighter truncate`}>{value}</div>
-                <div className="text-foreground/40 text-[8px] md:text-[10px] font-bold uppercase tracking-widest mt-1 group-hover:text-foreground/80 transition-opacity">{subtext}</div>
+                {loading ? (
+                    <div className="h-8 bg-foreground/15 rounded-lg animate-pulse w-20 mb-1" />
+                ) : (
+                    <div className={`text-xl md:text-3xl font-heading font-black text-foreground italic tracking-tighter truncate`}>{value}</div>
+                )}
+                <div className="text-foreground/40 text-[8px] md:text-[10px] font-bold uppercase tracking-widest mt-1 group-hover:text-foreground/80 transition-opacity">
+                    {loading ? <div className="h-3 bg-foreground/10 rounded w-24 animate-pulse" /> : subtext}
+                </div>
             </div>
         </div>
     )
@@ -335,6 +341,10 @@ export default function DashboardHome() {
     // Reuse singleton client — never create more than one per browser session
     const supabase = useMemo(() => createClient(), []);
     const [loading, setLoading] = useState(true);
+    const [statsLoading, setStatsLoading] = useState(true);
+    const [gymsLoading, setGymsLoading] = useState(true);
+    const [duelsLoading, setDuelsLoading] = useState(true);
+    const [trendingLoading, setTrendingLoading] = useState(true);
     const [showStats, setShowStats] = useState(false);
     const [showTour, setShowTour] = useState(false);
     const [reelsOpen, setReelsOpen] = useState(false);
@@ -373,31 +383,52 @@ export default function DashboardHome() {
         if (cached) {
             setData((prev: any) => ({ ...prev, ...cached }));
             setLoading(false);
+            setStatsLoading(false);
+            setGymsLoading(false);
+            setDuelsLoading(false);
+            setTrendingLoading(false);
         } else {
             setLoading(true);
+            setStatsLoading(true);
+            setGymsLoading(true);
+            setDuelsLoading(true);
+            setTrendingLoading(true);
         }
         try {
-            const { data: authData } = await supabase.auth.getUser();
-            const user = authData?.user;
-            if (!user) return;
+            // Retrieve session locally first (super fast)
+            const { data: sessionData } = await supabase.auth.getSession();
+            let user = sessionData?.session?.user || null;
+            if (!user) {
+                const { data: authData } = await supabase.auth.getUser();
+                user = authData?.user || null;
+            }
+            if (!user) {
+                setLoading(false);
+                setStatsLoading(false);
+                setGymsLoading(false);
+                setDuelsLoading(false);
+                setTrendingLoading(false);
+                return;
+            }
 
             // Cache user for reuse in fetchFeed (avoids repeated auth.getUser() calls)
             currentUserRef.current = user;
 
-            // All queries run in parallel — 8 queries (merged the 2 follows into 1)
-            const [
-                { data: memberships },
-                { data: profileData },
-                { count: workouts },
-                { count: classes },
-                { data: myFollows },
-                { data: trending },
-                { data: officialProfiles },
-                missionsData,
-                duelsData
-            ] = await Promise.all([
+            // Fetch basic profile data (fast single query key lookup)
+            const { data: profileData } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+
+            setData((prev: any) => ({
+                ...prev,
+                currentUser: user,
+                profile: profileData
+            }));
+
+            // Release full screen spinner immediately once layout can draw user info
+            setLoading(false);
+
+            // Fetch secondary data (gyms, counts, trending, official, missions, duels) in the background
+            Promise.all([
                 supabase.from('members').select('*, organization:center_id(id, name, logo_url, city)').eq('user_id', user.id).in('status', ['active', 'trial']),
-                supabase.from('profiles').select('*').eq('id', user.id).single(),
                 supabase.from('workouts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
                 supabase.from('class_results').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
                 supabase.from('follows').select('following_id').eq('follower_id', user.id),
@@ -407,52 +438,80 @@ export default function DashboardHome() {
                     .eq('is_official', false)
                     .order('xp_points', { ascending: false })
                     .limit(4),
-                // Prefetch official IDs here so fetchFeed can skip its own query
                 supabase.from('profiles').select('id').eq('is_official', true),
                 getMissions(),
                 getMyDuels()
-            ]);
+            ]).then(([
+                membershipsResult,
+                workoutsResult,
+                classesResult,
+                followsResult,
+                trendingResult,
+                officialResult,
+                missionsData,
+                duelsData
+            ]) => {
+                const memberships = membershipsResult.data;
+                const workouts = workoutsResult.count;
+                const classes = classesResult.count;
+                const myFollows = followsResult.data;
+                const trending = trendingResult.data;
+                const officialProfiles = officialResult.data;
 
-            const followedIds = new Set(myFollows?.map((f: { following_id: string }) => f.following_id) || []);
-            const followingCount = myFollows?.length || 0;
-            // Cache for reuse in fetchFeed — avoids re-fetching on every feed load
-            followedIdsRef.current = Array.from(followedIds) as string[];
-            officialIdsRef.current = (officialProfiles?.map((p: any) => p.id) || []) as string[];
+                const followedIds = new Set(myFollows?.map((f: { following_id: string }) => f.following_id) || []);
+                const followingCount = myFollows?.length || 0;
+                
+                followedIdsRef.current = Array.from(followedIds) as string[];
+                officialIdsRef.current = (officialProfiles?.map((p: any) => p.id) || []) as string[];
 
-            const sessionMission = missionsData?.find((m: any) => m.goal_type === 'sessions_count' || m.goal_type === 'workouts');
-            const weeklyProgress = {
-                current: sessionMission?.current_value || 0,
-                goal: sessionMission?.goal_value || 5,
-            };
+                const sessionMission = missionsData?.find((m: any) => m.goal_type === 'sessions_count' || m.goal_type === 'workouts');
+                const weeklyProgress = {
+                    current: sessionMission?.current_value || 0,
+                    goal: sessionMission?.goal_value || 5,
+                };
 
-            const freshStats = {
-                profile: profileData,
-                workoutCount: (workouts || 0) + (classes || 0),
-                trendingAthletes: trending?.map((athlete: any) => ({ ...athlete, isFollowing: followedIds.has(athlete.id) })) || [],
-                rivalsCount: followingCount || 0,
-                myGyms: memberships?.map((m: any) => m.organization) || [],
-                workoutStreak: missionsData?.find((m: any) => m.goal_type === 'streak')?.current_value || 0,
-            };
-            writeDashCache(freshStats);
+                const freshStats = {
+                    profile: profileData,
+                    workoutCount: (workouts || 0) + (classes || 0),
+                    trendingAthletes: trending?.map((athlete: any) => ({ ...athlete, isFollowing: followedIds.has(athlete.id) })) || [],
+                    rivalsCount: followingCount || 0,
+                    myGyms: memberships?.map((m: any) => m.organization) || [],
+                    workoutStreak: missionsData?.find((m: any) => m.goal_type === 'streak')?.current_value || 0,
+                };
+                
+                writeDashCache(freshStats);
 
-            setData((prev: any) => ({
-                ...prev,
-                profile: profileData,
-                workoutCount: (workouts || 0) + (classes || 0),
-                trendingAthletes: trending?.map((athlete: any) => ({ ...athlete, isFollowing: followedIds.has(athlete.id) })) || [],
-                rivalsCount: followingCount || 0,
-                currentUser: user,
-                missionProgress: weeklyProgress.current,
-                missionGoal: weeklyProgress.goal,
-                duels: duelsData || [],
-                myGyms: memberships?.map((m: any) => m.organization) || [],
-                activeCenterIds: new Set(memberships?.filter((m: any) => m.status === 'active').map((m: any) => m.center_id) || []),
-                workoutStreak: missionsData?.find((m: any) => m.goal_type === 'streak')?.current_value || 0
-            }));
+                setData((prev: any) => ({
+                    ...prev,
+                    workoutCount: freshStats.workoutCount,
+                    trendingAthletes: freshStats.trendingAthletes,
+                    rivalsCount: freshStats.rivalsCount,
+                    missionProgress: weeklyProgress.current,
+                    missionGoal: weeklyProgress.goal,
+                    duels: duelsData || [],
+                    myGyms: freshStats.myGyms,
+                    activeCenterIds: new Set(memberships?.filter((m: any) => m.status === 'active').map((m: any) => m.center_id) || []),
+                    workoutStreak: freshStats.workoutStreak
+                }));
+
+                setStatsLoading(false);
+                setGymsLoading(false);
+                setDuelsLoading(false);
+                setTrendingLoading(false);
+            }).catch(err => {
+                console.error("Background data fetch catch:", err);
+                setStatsLoading(false);
+                setGymsLoading(false);
+                setDuelsLoading(false);
+                setTrendingLoading(false);
+            });
         } catch (e) {
-            console.error(e);
-        } finally {
+            console.error("loadData error:", e);
             setLoading(false);
+            setStatsLoading(false);
+            setGymsLoading(false);
+            setDuelsLoading(false);
+            setTrendingLoading(false);
         }
         // load checkin separately (non-blocking)
         getTodayCheckin().then(setTodayCheckin);
@@ -491,8 +550,9 @@ export default function DashboardHome() {
                     likes_count, comments_count, created_at,
                     profiles:user_id (id, username, full_name, avatar_url, level, is_official),
                     workouts:workout_id (*),
-                    likes (user_id)
+                    likes:likes(user_id)
                 `)
+                .eq('likes.user_id', user.id)
                 .order('created_at', { ascending: false })
                 .limit(20);
 
@@ -671,7 +731,24 @@ export default function DashboardHome() {
                 <div className="lg:col-span-7 space-y-6 min-w-0 overflow-hidden">
 
                     {/* 1. My Gyms Section (Moved here) */}
-                    {data.myGyms?.length > 0 && (
+                    {gymsLoading ? (
+                        <div className="mb-8">
+                            <h2 className="text-xl font-black text-foreground italic uppercase tracking-tighter mb-4 flex items-center gap-2">
+                                <Dumbbell className="w-5 h-5 text-brand-red animate-pulse" /> {t.dashboard.myGyms}
+                            </h2>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                {[1, 2].map((i) => (
+                                    <div key={i} className="animate-pulse rounded-2xl bg-brand-gray/40 border border-border/10 p-4 flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-foreground/10 shrink-0" />
+                                        <div className="space-y-2 flex-1">
+                                            <div className="h-4 bg-foreground/15 rounded w-2/3" />
+                                            <div className="h-3 bg-foreground/10 rounded w-1/3" />
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ) : data.myGyms?.length > 0 ? (
                         <div className="mb-8">
                             <h2 className="text-xl font-black text-foreground italic uppercase tracking-tighter mb-4 flex items-center gap-2">
                                 <Dumbbell className="w-5 h-5 text-brand-red" /> {t.dashboard.myGyms}
@@ -701,7 +778,7 @@ export default function DashboardHome() {
                                 ))}
                             </div>
                         </div>
-                    )}
+                    ) : null}
 
                     {/* 2. Stories Bar (Moved here as requested) */}
                     <div id="story-bar">
@@ -738,6 +815,7 @@ export default function DashboardHome() {
                                     value={data.workoutCount?.toString() || "0"}
                                     icon={<Dumbbell className="w-4 h-4 text-brand-red" />}
                                     subtext={t.dashboard.statsSesionesTotales}
+                                    loading={statsLoading}
                                 />
                             </Link>
                             <Link href="/dashboard/community" className="group">
@@ -746,6 +824,7 @@ export default function DashboardHome() {
                                     value={data.rivalsCount?.toString() || "0"}
                                     icon={<Flame className="w-4 h-4 text-orange-500" />}
                                     subtext={t.dashboard.statsSeguidos}
+                                    loading={statsLoading}
                                 />
                             </Link>
                             <Link href="/dashboard/leaderboard" className="group">
@@ -754,6 +833,7 @@ export default function DashboardHome() {
                                     value={data.workoutStreak > 0 ? `${data.workoutStreak} ${data.workoutStreak === 1 ? (language === 'es' ? 'Día' : 'Day') : (language === 'es' ? 'Días' : 'Days')}` : "0"}
                                     icon={<Trophy className="w-4 h-4 text-yellow-500" />}
                                     subtext={t.dashboard.statsContinuo}
+                                    loading={statsLoading}
                                 />
                             </Link>
                             <Link href="/dashboard/analytics" className="group">
@@ -762,6 +842,7 @@ export default function DashboardHome() {
                                     value={data.profile?.level ? `${t.dashboard.level} ${data.profile.level}` : t.dashboard.revelLevel}
                                     icon={<TrendingUp className="w-4 h-4 text-purple-500" />}
                                     subtext={t.dashboard.statsPrestigio}
+                                    loading={statsLoading}
                                 />
                             </Link>
                         </div>
@@ -871,8 +952,8 @@ export default function DashboardHome() {
                                                 time={formatTimeAgo(post.created_at)}
                                                 avatar={post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.profiles?.full_name || 'User')}&background=random`}
                                                 image={post.media_url}
-                                                initialLikes={post.likes ? post.likes.length : (post.likes_count || 0)}
-                                                hasLikedInitial={post.likes?.some((l: any) => l.user_id === data.currentUser?.id)}
+                                                initialLikes={post.likes_count || 0}
+                                                hasLikedInitial={post.likes && post.likes.length > 0}
                                                 comments={post.comments_count || 0}
                                                 highlight={post.workouts?.title}
                                                 mediaType={post.media_type}
@@ -905,7 +986,20 @@ export default function DashboardHome() {
                 <div className="lg:col-span-5 space-y-6 md:space-y-8 min-w-0 overflow-hidden">
                     <UserMediaGallery userId={data.currentUser?.id} />
 
-                    {data.duels.length > 0 && (
+                    {duelsLoading ? (
+                        <div className="bg-black/40 border border-brand-red/20 rounded-[32px] p-5 md:p-8 backdrop-blur-xl animate-pulse space-y-6">
+                            <div className="h-6 bg-white/10 rounded w-1/3 mb-8" />
+                            {[1, 2].map((i) => (
+                                <div key={i} className="bg-white/5 border border-white/5 rounded-2xl p-5 flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-full bg-white/10 shrink-0" />
+                                    <div className="space-y-2 flex-1">
+                                        <div className="h-4 bg-white/10 rounded w-1/2" />
+                                        <div className="h-3 bg-white/5 rounded w-1/3" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : data.duels.length > 0 ? (
                         <div id="duels-section" className="bg-black/40 border border-brand-red/20 rounded-[32px] p-5 md:p-8 backdrop-blur-xl shadow-[0_0_30px_rgba(220,38,38,0.1)] relative overflow-hidden group">
                             <div className="absolute top-0 right-0 p-8 text-brand-red/5 group-hover:text-brand-red/10 transition-all pointer-events-none">
                                 <Swords className="w-32 h-32 rotate-12" />
@@ -980,26 +1074,38 @@ export default function DashboardHome() {
                                 })}
                             </div>
                         </div>
-                    )}
+                    ) : null}
 
                     <div className="bg-brand-gray/40 border border-white/10 rounded-[32px] p-5 md:p-8 backdrop-blur-xl shadow-2xl relative overflow-hidden group">
                         <h3 className="font-heading font-black text-foreground italic tracking-wider mb-10 flex items-center gap-3 text-lg">
                             <Flame className="w-6 h-6 text-brand-red" /> {t.dashboard.rivalsToFollow}
                         </h3>
                         <div className="space-y-5">
-                            {data.trendingAthletes.map((athlete: any) => (
-                                <div key={athlete.username} className="bg-black/40 backdrop-blur-sm border border-white/5 rounded-2xl p-5 hover:border-brand-red/30 transition-all group/user">
-                                    <SuggestedUser
-                                        id={athlete.id}
-                                        name={athlete.full_name || athlete.username}
-                                        username={athlete.username}
-                                        role={athlete.level}
-                                        avatar={athlete.avatar_url}
-                                        isFollowing={athlete.isFollowing}
-                                        isOfficial={athlete.is_official}
-                                    />
-                                </div>
-                            ))}
+                            {trendingLoading ? (
+                                [1, 2, 3].map((i) => (
+                                    <div key={i} className="animate-pulse bg-black/40 backdrop-blur-sm border border-white/5 rounded-2xl p-5 flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-foreground/10 shrink-0" />
+                                        <div className="space-y-2 flex-1">
+                                            <div className="h-4 bg-foreground/15 rounded w-1/2" />
+                                            <div className="h-3 bg-foreground/10 rounded w-1/3" />
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                data.trendingAthletes.map((athlete: any) => (
+                                    <div key={athlete.username} className="bg-black/40 backdrop-blur-sm border border-white/5 rounded-2xl p-5 hover:border-brand-red/30 transition-all group/user">
+                                        <SuggestedUser
+                                            id={athlete.id}
+                                            name={athlete.full_name || athlete.username}
+                                            username={athlete.username}
+                                            role={athlete.level}
+                                            avatar={athlete.avatar_url}
+                                            isFollowing={athlete.isFollowing}
+                                            isOfficial={athlete.is_official}
+                                        />
+                                    </div>
+                                ))
+                            )}
                         </div>
                         <Link href="/dashboard/community" className="group/link mt-12 w-full py-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white hover:bg-white/10 transition-all">
                             {t.dashboard.enterArena} <ArrowRight className="w-4 h-4 group-hover/link:translate-x-1 transition-transform" />

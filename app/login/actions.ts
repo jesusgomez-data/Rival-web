@@ -22,7 +22,6 @@ export async function login(prevState: any, formData: FormData) {
     }
 
     // If success, redirect (this throws an error in Next.js to handle redirect, so it must be outside try/catch or just straight up)
-    revalidatePath('/', 'layout')
     redirect('/dashboard')
 }
 
@@ -113,7 +112,6 @@ export async function signup(prevState: any, formData: FormData) {
     }
 
     if (data.session) {
-        revalidatePath('/', 'layout')
         redirect('/onboarding')
     } else if (data.user) {
         // "Confirm Anytime" Flow:
@@ -125,7 +123,6 @@ export async function signup(prevState: any, formData: FormData) {
         })
 
         if (loginData.session) {
-            revalidatePath('/', 'layout')
             redirect('/onboarding')
         }
 

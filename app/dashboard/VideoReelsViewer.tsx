@@ -44,7 +44,7 @@ function CommentSheet({ postId, onClose }: { postId: string; onClose: () => void
             .eq('post_id', postId)
             .order('created_at', { ascending: false })
             .limit(30)
-            .then(res => { setComments((res.data as any[]) || []); setLoading(false) })
+            .then((res: any) => { setComments((res.data as any[]) || []); setLoading(false) })
     }, [postId])
 
     const send = async () => {
@@ -108,8 +108,8 @@ function CommentSheet({ postId, onClose }: { postId: string; onClose: () => void
 }
 
 // ── Single reel — pure UI, no video control logic ─────────────────────────────
-function ReelItem({ post, isActive, onCommentOpen, onShare }: {
-    post: ReelPost; isActive: boolean;
+function ReelItem({ post, isActive, isNear, onCommentOpen, onShare }: {
+    post: ReelPost; isActive: boolean; isNear: boolean;
     onCommentOpen: () => void; onShare: () => void;
 }) {
     const supabase = createClient()
@@ -161,11 +161,11 @@ function ReelItem({ post, isActive, onCommentOpen, onShare }: {
             {/* Video — parent controls play/pause via ref, not React state */}
             <video
                 ref={videoRef}
-                src={post.src}
+                src={isNear ? post.src : undefined}
                 data-reel-video
                 className="absolute inset-0 w-full h-full object-cover"
                 loop playsInline muted
-                preload="auto"
+                preload={isNear ? "auto" : "none"}
                 onPlay={() => { setVideoLoading(false); setVideoPaused(false) }}
                 onPause={() => setVideoPaused(true)}
                 onWaiting={() => setVideoLoading(true)}
@@ -412,6 +412,7 @@ export default function VideoReelsViewer({ posts, startIndex, onClose }: VideoRe
                         <ReelItem
                             post={post}
                             isActive={i === currentIndex}
+                            isNear={Math.abs(i - currentIndex) <= 1}
                             onCommentOpen={() => setCommentPostId(post.postId)}
                             onShare={handleShare}
                         />

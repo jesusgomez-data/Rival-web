@@ -1,0 +1,7 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- R Icon standalone, centered in 200x200 -->
+  <g transform="translate(-22, -8) scale(0.38)">
+    <path d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z" fill="#EF4444"/>
+    <path d="M160 100L145 310H220L235 100H160Z" fill="#DC2626"/>
+  </g>
+</svg>

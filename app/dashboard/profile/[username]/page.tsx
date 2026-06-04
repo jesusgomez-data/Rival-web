@@ -62,12 +62,18 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
         supabase.from('posts').select('created_at').eq('user_id', profile.id).in('media_type', ['wod', 'pr', 'class_result']),
         supabase.from('user_badges').select('*, badges(*)').eq('user_id', profile.id),
         supabase.from('user_gear').select('*').eq('user_id', profile.id).eq('is_active', true),
-        supabase.from('posts').select(`
-            *,
-            profiles:user_id (full_name, avatar_url, username),
-            workouts:workout_id (title, sport_type, total_volume_kg, workout_sets(*), location_name, metrics),
-            likes:likes(user_id)
-        `).eq('user_id', profile.id).order('created_at', { ascending: false }),
+        (async () => {
+            let q = supabase.from('posts').select(`
+                *,
+                profiles:user_id (full_name, avatar_url, username),
+                workouts:workout_id (title, sport_type, total_volume_kg, workout_sets(*), location_name, metrics),
+                likes:likes(user_id)
+            `);
+            if (user) {
+                q = q.eq('likes.user_id', user.id);
+            }
+            return q.eq('user_id', profile.id).order('created_at', { ascending: false });
+        })(),
         user ? supabase.from('profiles').select('is_official').eq('id', user.id).single() : Promise.resolve({ data: null }),
         (async () => {
             try {

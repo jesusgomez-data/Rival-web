@@ -1,0 +1,13 @@
+<svg width="600" height="160" viewBox="0 0 600 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="600" height="160" rx="20" fill="#000000"/>
+  <ellipse cx="120" cy="80" rx="100" ry="80" fill="#EF4444" opacity="0.05"/>
+  <!-- R Icon -->
+  <g transform="translate(8, -8) scale(0.32)">
+    <path d="M160 100H280C360 100 390 160 390 210C390 280 340 310 290 310H220L280 412H360L290 310H300C340 310 420 280 420 190C420 110 360 70 260 70H130L100 442H180L160 100Z" fill="#EF4444"/>
+    <path d="M160 100L145 310H220L235 100H160Z" fill="#DC2626"/>
+  </g>
+  <rect x="146" y="24" width="2" height="112" fill="#EF4444" opacity="0.4" rx="1"/>
+  <text x="166" y="100" fill="#FFFFFF" font-family="'Arial Black','Impact',sans-serif" font-weight="900" font-size="76" letter-spacing="-3" text-anchor="start" font-style="italic">RIVAL</text>
+  <rect x="167" y="112" width="76" height="26" rx="4" fill="#EF4444"/>
+  <text x="205" y="131" fill="#FFFFFF" font-family="'Arial Black','Impact',sans-serif" font-weight="900" font-size="15" letter-spacing="6" text-anchor="middle">FIT</text>
+</svg>
