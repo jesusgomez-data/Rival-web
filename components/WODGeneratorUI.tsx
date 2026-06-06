@@ -18,8 +18,10 @@ import {
   Trophy,
   Target,
   X,
+  Calendar,
 } from "lucide-react";
 import type { WorkoutType, FitnessLevel, Equipment, GeneratedWOD } from "@/lib/wod-generator";
+import { scheduleWorkout } from "@/app/dashboard/training/actions";
 
 interface WODGeneratorUIProps {
   onWODGenerated?: (wod: GeneratedWOD) => void;
@@ -32,6 +34,73 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
   const [isPublishing, setIsPublishing] = useState(false);
   const [generatedWOD, setGeneratedWOD] = useState<GeneratedWOD | null>(null);
   const [dailyLimitReached, setDailyLimitReached] = useState(false);
+
+  // Scheduling State
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [scheduleDate, setScheduleDate] = useState(new Date().toISOString().split('T')[0]);
+  const [isScheduling, setIsScheduling] = useState(false);
+
+  const handleScheduleWorkoutSubmit = async () => {
+    if (!generatedWOD) return;
+    setIsScheduling(true);
+    try {
+      // Map WOD exercises to routine exercises
+      const mappedExercises = generatedWOD.blocks.flatMap((block) =>
+        block.exercises.map((ex) => ({
+          name: ex.name,
+          reps: ex.reps || "10",
+          sets: "1",
+          notes: ex.notes || ""
+        }))
+      );
+
+      const result = await scheduleWorkout({
+        title: generatedWOD.title,
+        date: scheduleDate,
+        exercises: mappedExercises,
+      });
+
+      if (result.error) {
+        alert("Error al programar: " + result.error);
+      } else {
+        alert("¡Entrenamiento programado con éxito! 📅");
+        setShowDatePicker(false);
+        setIsOpen(false);
+        setGeneratedWOD(null);
+        router.refresh();
+      }
+    } catch (error: any) {
+      alert("Error: " + error.message);
+    } finally {
+      setIsScheduling(false);
+    }
+  };
+
+  const handleShareWODDirectly = async () => {
+    if (!generatedWOD) return;
+    setIsPublishing(true);
+    try {
+      const response = await fetch("/api/wod/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wod: generatedWOD }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Error al publicar");
+      }
+
+      alert("¡WOD publicado directamente en el feed! 🚀");
+      setIsOpen(false);
+      setGeneratedWOD(null);
+      router.refresh();
+    } catch (error: any) {
+      alert(error.message);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
 
   // Resultado del creador para el ranking
   const [creatorTimeMin, setCreatorTimeMin] = useState("");
@@ -499,44 +568,112 @@ export default function WODGeneratorUI({ onWODGenerated }: WODGeneratorUIProps) 
               </motion.div>
             )}
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  if (showResults) {
-                    setShowResults(false);
-                  } else {
-                    setGeneratedWOD(null);
-                  }
-                }}
-                disabled={isPublishing}
-                className="flex-1 bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            {/* Date Picker Section */}
+            {showDatePicker && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-brand-gray/40 border border-blue-500/30 rounded-2xl p-5 shadow-2xl backdrop-blur-md space-y-4"
               >
-                {showResults ? "Atrás" : "Generar Otro"}
-              </button>
-              
-              {!showResults ? (
-                <button
-                  onClick={() => setShowResults(true)}
-                  className="flex-1 bg-brand-red hover:bg-brand-accent text-white font-bold py-3 rounded-xl transition-all shadow-lg hover:shadow-brand-red/30 flex items-center justify-center gap-2"
-                >
-                  <Trophy className="w-5 h-5" />
-                  Realizar WOD
-                </button>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-blue-400" /> Programar Entrenamiento
+                  </h4>
+                  <button onClick={() => setShowDatePicker(false)} className="text-gray-400 hover:text-white">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                
+                <div className="space-y-3">
+                  <label className="block text-xs text-gray-500 uppercase font-black tracking-wider px-1">Seleccionar Fecha</label>
+                  <input
+                    type="date"
+                    value={scheduleDate}
+                    onChange={(e) => setScheduleDate(e.target.value)}
+                    className="w-full bg-black/40 border border-white/10 rounded-xl p-3.5 text-white font-bold text-sm focus:border-blue-500/50 transition-all outline-none"
+                  />
+                  <div className="flex gap-2 pt-2">
+                    <button
+                      onClick={() => setShowDatePicker(false)}
+                      className="flex-1 bg-white/5 hover:bg-white/10 text-white text-xs font-bold py-2.5 rounded-lg transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleScheduleWorkoutSubmit}
+                      disabled={isScheduling}
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      {isScheduling ? <Loader2 className="w-4 h-4 animate-spin" /> : "Programar"}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            <div className="flex flex-col gap-3">
+              {showDatePicker ? null : showResults ? (
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      setShowResults(false);
+                    }}
+                    disabled={isPublishing}
+                    className="flex-1 bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50"
+                  >
+                    Atrás
+                  </button>
+                  
+                  <button
+                    onClick={handlePublish}
+                    disabled={isPublishing || (!creatorTimeMin && !creatorRounds)}
+                    className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isPublishing ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Publicando...
+                      </>
+                    ) : (
+                      "Finalizar y Publicar"
+                    )}
+                  </button>
+                </div>
               ) : (
-                <button
-                  onClick={handlePublish}
-                  disabled={isPublishing || (!creatorTimeMin && !creatorRounds)}
-                  className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                >
-                  {isPublishing ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Publicando...
-                    </>
-                  ) : (
-                    "Finalizar y Publicar"
-                  )}
-                </button>
+                <>
+                  <button
+                    onClick={() => setShowResults(true)}
+                    className="w-full bg-brand-red hover:bg-brand-accent text-white font-bold py-4 rounded-xl transition-all shadow-lg hover:shadow-brand-red/30 flex items-center justify-center gap-2 text-sm uppercase tracking-widest"
+                  >
+                    <Trophy className="w-5 h-5" />
+                    Realizar WOD
+                  </button>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      onClick={() => setGeneratedWOD(null)}
+                      className="bg-white/5 hover:bg-white/10 text-white font-bold py-3 rounded-xl transition-colors text-xs flex items-center justify-center gap-1.5"
+                    >
+                      <X className="w-4 h-4" />
+                      Atrás
+                    </button>
+                    <button
+                      onClick={() => setShowDatePicker(true)}
+                      className="bg-blue-600/20 border border-blue-500/30 text-blue-400 hover:bg-blue-600/30 font-bold py-3 rounded-xl transition-colors text-xs flex items-center justify-center gap-1.5"
+                    >
+                      <Calendar className="w-4 h-4" />
+                      Calendario
+                    </button>
+                    <button
+                      onClick={handleShareWODDirectly}
+                      disabled={isPublishing}
+                      className="bg-orange-600/20 border border-orange-500/30 text-orange-400 hover:bg-orange-600/30 font-bold py-3 rounded-xl transition-colors text-xs flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {isPublishing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                      Compartir Feed
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>

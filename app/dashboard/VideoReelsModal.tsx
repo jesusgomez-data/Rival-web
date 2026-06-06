@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Heart, MessageCircle, Share2, Music, User, Trophy, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getReelPosts, toggleLike, getComments, addComment } from './community/actions';
+import { getReelPosts, toggleLike, getComments, addComment, toggleCommentLike } from './community/actions';
 import Image from 'next/image';
 import Link from 'next/link';
 import { clsx } from 'clsx';
@@ -44,6 +44,7 @@ function CommentsDrawer({ postId, onClose }: { postId: string, onClose: () => vo
     const [loading, setLoading] = useState(true);
     const [newComment, setNewComment] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [replyingTo, setReplyingTo] = useState<{ id: string; username: string } | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -53,7 +54,7 @@ function CommentsDrawer({ postId, onClose }: { postId: string, onClose: () => vo
     const loadComments = async () => {
         setLoading(true);
         const data = await getComments(postId);
-        setComments(data);
+        setComments(data || []);
         setLoading(false);
         setTimeout(scrollToBottom, 100);
     };
@@ -65,12 +66,50 @@ function CommentsDrawer({ postId, onClose }: { postId: string, onClose: () => vo
     const handleSend = async () => {
         if (!newComment.trim()) return;
         setSubmitting(true);
-        const result = await addComment(postId, newComment);
+        const result = await addComment(postId, newComment, replyingTo?.id);
         if (result?.success) {
             setNewComment('');
+            setReplyingTo(null);
             loadComments();
         }
         setSubmitting(false);
+    };
+
+    const handleCommentLike = async (commentId: string) => {
+        // Optimistically toggle comment like
+        setComments(prev => prev.map(c => {
+            if (c.id === commentId) {
+                return {
+                    ...c,
+                    has_liked: !c.has_liked,
+                    likes_count: c.has_liked ? c.likes_count - 1 : c.likes_count + 1
+                };
+            }
+            return c;
+        }));
+        await toggleCommentLike(commentId);
+    };
+
+    // Process comments to group replies under parent comments
+    const roots = comments.filter(c => !c.parent_id);
+    const repliesMap = new Map<string, any[]>();
+    comments.forEach(c => {
+        if (c.parent_id) {
+            if (!repliesMap.has(c.parent_id)) {
+                repliesMap.set(c.parent_id, []);
+            }
+            repliesMap.get(c.parent_id)!.push(c);
+        }
+    });
+
+    const getDescendants = (commentId: string): any[] => {
+        const list: any[] = [];
+        const direct = repliesMap.get(commentId) || [];
+        direct.forEach(child => {
+            list.push(child);
+            list.push(...getDescendants(child.id));
+        });
+        return list;
     };
 
     return (
@@ -94,54 +133,151 @@ function CommentsDrawer({ postId, onClose }: { postId: string, onClose: () => vo
                     <div className="flex justify-center py-8">
                         <Loader2 className="w-6 h-6 animate-spin text-brand-red" />
                     </div>
-                ) : comments.length === 0 ? (
+                ) : roots.length === 0 ? (
                     <div className="text-center text-gray-500 text-xs py-8">
                         Sé el primero en comentar.
                     </div>
                 ) : (
                     <>
-                        {comments.map((comment) => (
-                            <div key={comment.id} className="flex gap-3">
-                                {comment.user?.username ? (
-                                    <Link href={`/dashboard/profile/${comment.user.username}`}>
-                                        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10">
-                                            {comment.user?.avatar_url ? (
-                                                <Image src={comment.user.avatar_url} alt="user" width={32} height={32} className="object-cover" />
+                        {roots.map((c) => {
+                            const p = c.user as any;
+                            const replies = getDescendants(c.id);
+
+                            return (
+                                <div key={c.id} className="space-y-3">
+                                    {/* Parent Comment */}
+                                    <div className="flex gap-3 items-start justify-between group">
+                                        <div className="flex gap-3">
+                                            {p?.username ? (
+                                                <Link href={`/dashboard/profile/${p.username}`}>
+                                                    <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10 relative">
+                                                        {p.avatar_url ? (
+                                                            <Image src={p.avatar_url} alt="user" width={32} height={32} className="object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                                                <User className="w-3 h-3 text-gray-500" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </Link>
                                             ) : (
-                                                <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10 bg-gray-800 flex items-center justify-center">
                                                     <User className="w-3 h-3 text-gray-500" />
                                                 </div>
                                             )}
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    {p?.username ? (
+                                                        <Link href={`/dashboard/profile/${p.username}`} className="text-white font-bold text-[10px] hover:underline">
+                                                            {p.username}
+                                                        </Link>
+                                                    ) : (
+                                                        <span className="text-white font-bold text-[10px]">Usuario</span>
+                                                    )}
+                                                    <span className="text-gray-500 text-[9px] uppercase tracking-widest">
+                                                        {new Date(c.created_at).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                                <p className="text-white/80 text-xs leading-relaxed">
+                                                    <MentionText text={c.content} className="text-brand-red hover:underline" />
+                                                </p>
+                                                <div className="flex items-center gap-3 mt-1.5">
+                                                    <button
+                                                        onClick={() => setReplyingTo({ id: c.id, username: p?.username || 'Usuario' })}
+                                                        className="text-[9px] font-black uppercase text-white/40 hover:text-white/80 transition-colors"
+                                                    >
+                                                        Responder
+                                                    </button>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </Link>
-                                ) : (
-                                    <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10 bg-gray-800 flex items-center justify-center">
-                                        <User className="w-3 h-3 text-gray-500" />
+
+                                        {/* Like button */}
+                                        <button onClick={() => handleCommentLike(c.id)} className="flex flex-col items-center gap-0.5 pt-1 pr-1 shrink-0 text-white/40 hover:text-brand-red transition-colors">
+                                            <Heart className={clsx("w-3.5 h-3.5", c.has_liked ? "fill-brand-red text-brand-red" : "text-white/40")} />
+                                            {c.likes_count > 0 && <span className="text-[8px] font-black text-white/40">{c.likes_count}</span>}
+                                        </button>
                                     </div>
-                                )}
-                                <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-0.5">
-                                        {comment.user?.username ? (
-                                            <Link href={`/dashboard/profile/${comment.user.username}`} className="text-white font-bold text-[10px] hover:underline">
-                                                {comment.user.username}
-                                            </Link>
-                                        ) : (
-                                            <span className="text-white font-bold text-[10px]">Usuario</span>
-                                        )}
-                                        <span className="text-gray-500 text-[9px] uppercase tracking-widest">
-                                            {new Date(comment.created_at).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                    <p className="text-white/80 text-xs leading-relaxed">
-                                        <MentionText text={comment.content} className="text-brand-red hover:underline" />
-                                    </p>
+
+                                    {/* Replies */}
+                                    {replies.length > 0 && (
+                                        <div className="pl-11 space-y-3 border-l-2 border-white/5 ml-4">
+                                            {replies.map(reply => {
+                                                const rp = reply.user as any;
+                                                return (
+                                                    <div key={reply.id} className="flex gap-2.5 items-start justify-between group">
+                                                        <div className="flex gap-2.5">
+                                                            {rp?.username ? (
+                                                                <Link href={`/dashboard/profile/${rp.username}`}>
+                                                                    <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-white/10 relative">
+                                                                        {rp.avatar_url ? (
+                                                                            <Image src={rp.avatar_url} alt="user" width={24} height={24} className="object-cover" />
+                                                                        ) : (
+                                                                            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                                                                <User className="w-2.5 h-2.5 text-gray-500" />
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </Link>
+                                                            ) : (
+                                                                <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-white/10 bg-gray-800 flex items-center justify-center">
+                                                                    <User className="w-2.5 h-2.5 text-gray-500" />
+                                                                </div>
+                                                            )}
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center gap-2 mb-0.5">
+                                                                    {rp?.username ? (
+                                                                        <Link href={`/dashboard/profile/${rp.username}`} className="text-white font-bold text-[10px] hover:underline">
+                                                                            {rp.username}
+                                                                        </Link>
+                                                                    ) : (
+                                                                        <span className="text-white font-bold text-[10px]">Usuario</span>
+                                                                    )}
+                                                                    <span className="text-gray-500 text-[8px] uppercase tracking-widest">
+                                                                        {new Date(reply.created_at).toLocaleDateString()}
+                                                                    </span>
+                                                                </div>
+                                                                <p className="text-white/80 text-xs leading-relaxed">
+                                                                    <MentionText text={reply.content} className="text-brand-red hover:underline" />
+                                                                </p>
+                                                                <div className="flex items-center gap-3 mt-1">
+                                                                    <button
+                                                                        onClick={() => setReplyingTo({ id: c.id, username: rp?.username || 'Usuario' })}
+                                                                        className="text-[8px] font-black uppercase text-white/40 hover:text-white/80 transition-colors"
+                                                                    >
+                                                                        Responder
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Like button */}
+                                                        <button onClick={() => handleCommentLike(reply.id)} className="flex flex-col items-center gap-0.5 pt-0.5 pr-1 shrink-0 text-white/40 hover:text-brand-red transition-colors">
+                                                            <Heart className={clsx("w-3 h-3", reply.has_liked ? "fill-brand-red text-brand-red" : "text-white/40")} />
+                                                            {reply.likes_count > 0 && <span className="text-[8px] font-black text-white/40">{reply.likes_count}</span>}
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        ))}
+                            );
+                        })}
                         <div ref={messagesEndRef} />
                     </>
                 )}
             </div>
+
+            {/* Replying banner */}
+            {replyingTo && (
+                <div className="px-5 py-2 bg-brand-red/10 border-t border-brand-red/20 text-[10px] font-black uppercase tracking-wider text-white flex items-center justify-between">
+                    <span>Respondiendo a <span className="text-brand-red">@{replyingTo.username}</span></span>
+                    <button onClick={() => setReplyingTo(null)} className="text-white/50 hover:text-white">
+                        <X className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            )}
 
             <div className="p-4 border-t border-white/10">
                 <div className="relative flex items-center gap-2 bg-white/5 rounded-2xl border border-white/10 px-4 focus-within:border-brand-red transition-all">
@@ -149,7 +285,7 @@ function CommentsDrawer({ postId, onClose }: { postId: string, onClose: () => vo
                         <MentionInput
                             value={newComment}
                             onChange={setNewComment}
-                            placeholder="Escribe un comentario..."
+                            placeholder={replyingTo ? `Responder a @${replyingTo.username}...` : "Escribe un comentario..."}
                             className="bg-transparent border-none focus:ring-0 text-white text-xs py-3 w-full outline-none"
                         />
                     </div>

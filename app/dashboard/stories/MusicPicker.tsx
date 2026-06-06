@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Search, Play, Pause, Music2, ChevronRight, Check, Loader2, MicVocal } from 'lucide-react';
 import { clsx } from 'clsx';
-import { RIVAL_MUSIC_LIBRARY } from '../music-data';
 
 interface Track {
     id: string;
@@ -14,9 +13,7 @@ interface Track {
     url: string;
     previewUrl: string;
     cover: string;
-    license: string;
-    tags: string[];
-    category: string;
+    genre: string;
 }
 
 interface MusicPickerProps {
@@ -28,72 +25,13 @@ interface MusicPickerProps {
 const CATEGORIES = [
     { id: '', label: '🔥 Popular' },
     { id: 'workout', label: '💪 Workout' },
-    { id: 'electronic', label: '⚡ Electrónica' },
-    { id: 'hiphop', label: '🎤 Hip-Hop' },
-    { id: 'rock', label: '🎸 Rock' },
-    { id: 'chill', label: '😌 Chill' },
     { id: 'latin', label: '💃 Latin' },
+    { id: 'hiphop', label: '🎤 Hip-Hop' },
+    { id: 'electronic', label: '⚡ EDM' },
+    { id: 'rock', label: '🎸 Rock' },
+    { id: 'pop', label: '🎶 Pop' },
+    { id: 'chill', label: '😌 Chill' },
 ];
-
-// Genre → photo mapping for covers
-const GENRE_PHOTOS: Record<string, string> = {
-    Motivational: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=200&q=80',
-    Epic: 'https://images.unsplash.com/photo-1526401485004-46910ecc8e2d?w=200&q=80',
-    Aggressive: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=200&q=80',
-    Motivacion: 'https://images.unsplash.com/photo-1601422407692-ad6a68a27e4f?w=200&q=80',
-    Phonk: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=200&q=80',
-    Electronic: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=200&q=80',
-    Trance: 'https://images.unsplash.com/photo-1571330735066-03aaa9429d89?w=200&q=80',
-    Ambient: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=200&q=80',
-    Chill: 'https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?w=200&q=80',
-    Deep: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=200&q=80',
-    Rock: 'https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=200&q=80',
-};
-
-function genreToCover(genre: string): string {
-    return GENRE_PHOTOS[genre] || 'https://images.unsplash.com/photo-1593079831268-3381b0db4a77?w=200&q=80';
-}
-
-function genreToCategory(genre: string): string {
-    const map: Record<string, string> = {
-        Motivational: 'workout', Epic: 'workout', Aggressive: 'workout', Motivacion: 'workout',
-        Phonk: 'hiphop',
-        Electronic: 'electronic', Trance: 'electronic', Ambient: 'electronic', Deep: 'electronic',
-        Chill: 'chill',
-        Rock: 'rock',
-    };
-    return map[genre] || '';
-}
-
-// Convert the music library into Track objects (always available, no fetch needed)
-const FALLBACK_TRACKS: Track[] = RIVAL_MUSIC_LIBRARY.map(t => ({
-    id: t.id,
-    title: t.title,
-    artist: t.artist,
-    album: t.genre,
-    duration: 210,
-    url: t.url,
-    previewUrl: t.url,
-    cover: genreToCover(t.genre),
-    license: 'Royalty Free',
-    tags: [t.genre.toLowerCase()],
-    category: genreToCategory(t.genre),
-}));
-
-function filterTracks(tracks: Track[], query: string, category: string): Track[] {
-    let result = [...tracks];
-    if (category) result = result.filter(t => t.category === category);
-    if (query) {
-        const q = query.toLowerCase();
-        const searched = result.filter(t =>
-            t.title.toLowerCase().includes(q) ||
-            t.artist.toLowerCase().includes(q) ||
-            t.tags.some(tag => tag.includes(q))
-        );
-        if (searched.length > 0) result = searched;
-    }
-    return result.length > 0 ? result : tracks;
-}
 
 function formatDuration(secs: number): string {
     const m = Math.floor(secs / 60);
@@ -102,9 +40,8 @@ function formatDuration(secs: number): string {
 }
 
 export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicPickerProps) {
-    const [allTracks] = useState<Track[]>(FALLBACK_TRACKS);
-    const [tracks, setTracks] = useState<Track[]>(FALLBACK_TRACKS);
-    const [isLoading] = useState(false);
+    const [tracks, setTracks] = useState<Track[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const [query, setQuery] = useState('');
     const [category, setCategory] = useState('');
     const [playingId, setPlayingId] = useState<string | null>(null);
@@ -112,27 +49,79 @@ export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicP
     const [duration, setDuration] = useState(0);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const abortControllerRef = useRef<AbortController | null>(null);
 
-    // ── Filter locally — instant, no network needed ──────────────────────────
-    const applyFilter = useCallback((q: string, cat: string) => {
-        setTracks(filterTracks(allTracks, q, cat));
-    }, [allTracks]);
+    // ── Fetch tracks from API ────────────────────────────────────────────────
+    const fetchTracks = useCallback(async (q: string, cat: string) => {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+        }
 
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
+
+        setIsLoading(true);
+        try {
+            const params = new URLSearchParams();
+            if (q) params.set('q', q);
+            else if (cat) params.set('category', cat);
+
+            const res = await fetch(`/api/music?${params}`, {
+                signal: controller.signal,
+            });
+
+            if (!res.ok) throw new Error('API error');
+            const data = await res.json();
+
+            const mapped: Track[] = (data.tracks || []).map((t: any) => ({
+                id: t.id,
+                title: t.title,
+                artist: t.artist,
+                album: t.album || '',
+                duration: t.duration || 30,
+                url: t.url || t.previewUrl,
+                previewUrl: t.url || t.previewUrl,
+                cover: t.cover || '',
+                genre: t.genre || '',
+            }));
+
+            setTracks(mapped);
+        } catch (err: any) {
+            if (err.name !== 'AbortError') {
+                console.error('[Stories MusicPicker] Fetch error:', err);
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    // ── Load popular on mount ────────────────────────────────────────────────
+    useEffect(() => {
+        fetchTracks('', '');
+    }, [fetchTracks]);
+
+    // ── Handle search with debounce ──────────────────────────────────────────
     const handleSearch = (value: string) => {
         setQuery(value);
         if (searchDebounce.current) clearTimeout(searchDebounce.current);
         searchDebounce.current = setTimeout(() => {
-            applyFilter(value, category);
-        }, 300);
+            if (value.trim()) {
+                setCategory('');
+                fetchTracks(value, '');
+            } else {
+                fetchTracks('', category);
+            }
+        }, 400);
     };
 
+    // ── Handle category ──────────────────────────────────────────────────────
     const handleCategory = (cat: string) => {
         setCategory(cat);
         setQuery('');
-        applyFilter('', cat);
+        fetchTracks('', cat);
     };
 
-    // ── Audio playback ────────────────────────────────────────────────────────
+    // ── Audio playback ───────────────────────────────────────────────────────
     const togglePlay = (track: Track) => {
         if (playingId === track.id) {
             audioRef.current?.pause();
@@ -146,9 +135,6 @@ export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicP
             audioRef.current.src = '';
         }
 
-        // ⚠️ Do NOT set crossOrigin — archive.org and SoundHelix don't send
-        // Access-Control-Allow-Origin headers, so setting crossOrigin causes
-        // the browser to block the audio entirely (CORS error).
         const audio = new Audio();
         audio.volume = 0.9;
         audio.preload = 'auto';
@@ -160,7 +146,6 @@ export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicP
             setPlayingId(null);
         };
 
-        // Set src AFTER attaching events
         audio.src = track.url;
 
         const promise = audio.play();
@@ -180,6 +165,9 @@ export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicP
     useEffect(() => {
         return () => {
             audioRef.current?.pause();
+            if (abortControllerRef.current) {
+                abortControllerRef.current.abort();
+            }
         };
     }, []);
 
@@ -216,7 +204,7 @@ export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicP
                         <div>
                             <h3 className="text-sm font-black text-white uppercase italic tracking-tighter">Música</h3>
                             <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">
-                                Royalty Free · {tracks.length} canciones
+                                iTunes · {tracks.length} canciones
                             </p>
                         </div>
                     </div>
@@ -231,7 +219,7 @@ export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicP
                         <Search className="w-4 h-4 text-gray-500 shrink-0" />
                         <input
                             type="text"
-                            placeholder="Buscar canción o artista..."
+                            placeholder="Busca Bad Bunny, Drake, Shakira..."
                             value={query}
                             onChange={e => handleSearch(e.target.value)}
                             className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 outline-none font-medium"
@@ -291,7 +279,7 @@ export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicP
                     {isLoading ? (
                         <div className="flex flex-col items-center justify-center py-16 gap-4">
                             <Loader2 className="w-8 h-8 text-brand-red animate-spin" />
-                            <p className="text-[11px] text-gray-500 font-black uppercase tracking-widest">Cargando...</p>
+                            <p className="text-[11px] text-gray-500 font-black uppercase tracking-widest">Buscando canciones...</p>
                         </div>
                     ) : tracks.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-16 gap-4">
@@ -321,11 +309,13 @@ export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicP
                                         className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-white/5 focus:outline-none focus:ring-2 focus:ring-brand-red"
                                         aria-label={isPlaying ? 'Pausar' : 'Reproducir'}
                                     >
-                                        <img
-                                            src={track.cover}
-                                            alt={track.title}
-                                            className="w-full h-full object-cover"
-                                        />
+                                        {track.cover ? (
+                                            <img src={track.cover} alt={track.title} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full bg-black/40 flex items-center justify-center">
+                                                <Music2 className="w-5 h-5 text-brand-red" />
+                                            </div>
+                                        )}
 
                                         {/* Now-playing bars */}
                                         {isPlaying ? (
@@ -333,7 +323,6 @@ export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicP
                                                 <NowPlayingBars />
                                             </div>
                                         ) : (
-                                            /* Small play badge — always visible so mobile users know it's tappable */
                                             <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                                                 <div className="w-7 h-7 rounded-full bg-black/60 border border-white/20 flex items-center justify-center">
                                                     <Play className="w-3 h-3 text-white fill-white ml-0.5" />
@@ -351,7 +340,7 @@ export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicP
                                             {track.title}
                                         </p>
                                         <p className="text-[10px] text-gray-500 font-bold truncate uppercase tracking-wide">
-                                            {track.artist} · {track.album}
+                                            {track.artist}{track.album ? ` · ${track.album}` : ''}
                                         </p>
 
                                         {/* Progress bar when playing */}
@@ -398,11 +387,9 @@ export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicP
                     {/* Attribution */}
                     <div className="pt-4 pb-2 text-center">
                         <p className="text-[9px] text-gray-700 font-bold">
-                            Música royalty-free ·{' '}
-                            <a href="https://www.soundhelix.com" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">SoundHelix</a>
-                            {' & '}
-                            <a href="https://archive.org" target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">Archive.org</a>
-                            {' '}· Gratis para uso personal
+                            Previews de 30s ·{' '}
+                            <span className="text-gray-600">iTunes Music</span>
+                            {' '}· Rival Fit
                         </p>
                     </div>
                 </div>

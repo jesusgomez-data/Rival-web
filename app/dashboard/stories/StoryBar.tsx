@@ -12,7 +12,7 @@ import { useStories } from './StoryContext'
 import { useVideo } from '../VideoContext'
 import { motion, AnimatePresence } from 'framer-motion'
 import MusicPicker from '../MusicPicker'
-import { MusicTrack } from '../music-data'
+import { MusicTrack } from '../MusicPicker'
 import type { EmojiClickData, Theme } from 'emoji-picker-react'
 import dynamic from 'next/dynamic'
 import { createClient } from '@/utils/supabase/client'
@@ -99,6 +99,21 @@ interface OverlayElement {
     link?: string
 }
 
+const slideVariants = {
+    enter: (direction: number) => ({
+        x: direction > 0 ? '100%' : direction < 0 ? '-100%' : '0%',
+        opacity: direction === 0 ? 0 : 1
+    }),
+    center: {
+        x: '0%',
+        opacity: 1
+    },
+    exit: (direction: number) => ({
+        x: direction < 0 ? '100%' : direction > 0 ? '-100%' : '0%',
+        opacity: 0
+    })
+};
+
 export default function StoryBar({ currentUser, hideBar = false }: { currentUser: any, hideBar?: boolean }) {
     const { userStories, setUserStories, refreshStories } = useStories()
     const { isMuted, toggleMute, setIsMuted } = useVideo()
@@ -131,6 +146,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
     const [isMusicPickerOpen, setIsMusicPickerOpen] = useState(false)
     const [isVideoEditing, setIsVideoEditing] = useState(false)
     const [editorVideoFile, setEditorVideoFile] = useState<File | null>(null)
+    const [direction, setDirection] = useState(0)
 
     // Image adjustment controls (Instagram-style)
     const [imageZoom, setImageZoom] = useState(1)
@@ -785,6 +801,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
 
     const nextStory = () => {
         if (selectedUserIndex === null) return
+        setDirection(1)
         setShowViewers(false)
         setExpandedWorkoutId(null)
         setShowFullSummary(false)
@@ -810,6 +827,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
 
     const prevStory = () => {
         if (selectedUserIndex === null) return
+        setDirection(-1)
         setShowViewers(false)
         setExpandedWorkoutId(null)
         setShowFullSummary(false)
@@ -838,24 +856,40 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
     useEffect(() => {
         if (selectedUserIndex !== null && currentStory?.music_url && !showViewers && !previewUrl && !isPaused) {
             if (audioRef.current) {
-                audioRef.current.src = currentStory.music_url;
+                if (audioRef.current.src !== currentStory.music_url) {
+                    audioRef.current.src = currentStory.music_url;
+                }
                 audioRef.current.currentTime = 0;
                 audioRef.current.muted = isMuted;
-                if (!isMuted) {
-                    audioRef.current.play().catch(e => console.log("Audio play blocked by browser"));
-                }
+                audioRef.current.play().catch(e => console.log("Audio play blocked by browser"));
             }
         } else {
             if (audioRef.current) audioRef.current.pause();
         }
     }, [selectedUserIndex, activeStoryIndex, showViewers, currentStory?.music_url, previewUrl, isPaused])
 
-    // Story Progression Logic
+    // Sync mute state changes instantly without restarting the track
+    useEffect(() => {
+        if (audioRef.current) {
+            audioRef.current.muted = isMuted;
+            if (!isMuted && selectedUserIndex !== null && currentStory?.music_url && !showViewers && !previewUrl && !isPaused) {
+                audioRef.current.play().catch(e => console.log("Audio play blocked by browser"));
+            }
+        }
+    }, [isMuted, selectedUserIndex, currentStory?.music_url, showViewers, previewUrl, isPaused])
+
+    // Story Progression Logic (driven by dynamic timer for images/PRs, or video element for videos)
     useEffect(() => {
         let interval: any;
-        if (selectedUserIndex !== null && !showViewers && !isPaused && !previewUrl) {
-            const storyDuration = 10000; // 10 seconds for images
-            const step = 50; // update every 50ms
+        if (selectedUserIndex !== null && !showViewers && !isPaused && !previewUrl && currentStory) {
+            if (currentStory.media_type === 'video') {
+                // Video progression is handled by the video element's event handlers
+                return;
+            }
+            
+            // Standard image / PR card duration (5 seconds)
+            const storyDuration = 5000;
+            const step = 50;
 
             interval = setInterval(() => {
                 setProgress(prev => {
@@ -868,19 +902,92 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
             }, step);
         }
         return () => clearInterval(interval);
-    }, [selectedUserIndex, activeStoryIndex, isPaused, showViewers, previewUrl]);
+    }, [selectedUserIndex, activeStoryIndex, isPaused, showViewers, previewUrl, currentStory?.media_type]);
 
+    const pressTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const pressStartTimeRef = useRef<number>(0);
+    const dragStartCoordsRef = useRef<{ x: number; y: number } | null>(null);
 
-    const handlePressStart = () => {
-        setIsPressed(true);
-        setIsPaused(true);
-        if (storyVideoRef.current) storyVideoRef.current.pause();
+    const handleGestureDown = (e: React.MouseEvent | React.TouchEvent) => {
+        const isTouch = 'touches' in e;
+        const clientX = isTouch ? (e as React.TouchEvent).touches[0].clientX : (e as React.MouseEvent).clientX;
+        const clientY = isTouch ? (e as React.TouchEvent).touches[0].clientY : (e as React.MouseEvent).clientY;
+        dragStartCoordsRef.current = { x: clientX, y: clientY };
+        pressStartTimeRef.current = Date.now();
+        
+        if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
+        pressTimerRef.current = setTimeout(() => {
+            setIsPressed(true);
+            setIsPaused(true);
+            if (storyVideoRef.current) storyVideoRef.current.pause();
+            if (audioRef.current) audioRef.current.pause();
+        }, 200); // 200ms of holding activates "pause" & hides UI
     };
 
-    const handlePressEnd = () => {
-        setIsPressed(false);
-        setIsPaused(false);
-        if (storyVideoRef.current) storyVideoRef.current.play().catch(() => { });
+    const handleGestureUp = (e: React.MouseEvent | React.TouchEvent) => {
+        if (pressTimerRef.current) {
+            clearTimeout(pressTimerRef.current);
+            pressTimerRef.current = null;
+        }
+
+        const isTouch = 'touches' in e || 'changedTouches' in e;
+        const touchEvent = e as React.TouchEvent;
+        const mouseEvent = e as React.MouseEvent;
+        
+        const clientX = isTouch 
+            ? (touchEvent.changedTouches?.[0]?.clientX ?? touchEvent.touches?.[0]?.clientX ?? 0)
+            : mouseEvent.clientX;
+        const clientY = isTouch 
+            ? (touchEvent.changedTouches?.[0]?.clientY ?? touchEvent.touches?.[0]?.clientY ?? 0)
+            : mouseEvent.clientY;
+
+        const duration = Date.now() - pressStartTimeRef.current;
+
+        // Check if user dragged/swiped (movement > 12px)
+        let isDrag = false;
+        if (dragStartCoordsRef.current) {
+            const dx = Math.abs(clientX - dragStartCoordsRef.current.x);
+            const dy = Math.abs(clientY - dragStartCoordsRef.current.y);
+            if (dx > 12 || dy > 12) {
+                isDrag = true;
+            }
+        }
+
+        if (isPressed) {
+            // It was a long press: release and resume
+            setIsPressed(false);
+            setIsPaused(false);
+            if (storyVideoRef.current) storyVideoRef.current.play().catch(() => {});
+            if (currentStory?.music_url && audioRef.current && !isMuted) {
+                audioRef.current.play().catch(() => {});
+            }
+        } else if (!isDrag) {
+            // Only navigate if it was not a drag/swipe
+            const rect = e.currentTarget.getBoundingClientRect();
+            const xPercent = ((clientX - rect.left) / rect.width) * 100;
+
+            if (xPercent < 30) {
+                prevStory();
+            } else {
+                nextStory();
+            }
+        }
+        dragStartCoordsRef.current = null;
+    };
+
+    const handleGestureLeave = () => {
+        if (pressTimerRef.current) {
+            clearTimeout(pressTimerRef.current);
+            pressTimerRef.current = null;
+        }
+        if (isPressed) {
+            setIsPressed(false);
+            setIsPaused(false);
+            if (storyVideoRef.current) storyVideoRef.current.play().catch(() => {});
+            if (currentStory?.music_url && audioRef.current && !isMuted) {
+                audioRef.current.play().catch(() => {});
+            }
+        }
     };
 
 
@@ -1219,42 +1326,48 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
             </div>
 
             {/* List of Users */}
-            {userStories.map((us, idx) => (
-                <div key={us.user.id} className="flex flex-col items-center gap-2 shrink-0">
-                    <button
-                        onClick={() => {
-                            setSelectedUserIndex(idx)
-                            setActiveStoryIndex(0)
-                            recordView(us.stories[0].id)
-                            setIsMuted(false)
-                        }}
-                        className={clsx(
-                            "w-16 h-16 p-0.5 rounded-full ring-2 transition-all hover:scale-105 active:scale-95 bg-black relative",
-                            (us.user as any).is_official
-                                ? "ring-brand-red shadow-[0_0_20px_rgba(220,38,38,0.4)]"
-                                : "ring-brand-red/40"
-                        )}
-                    >
-                        <div className="w-full h-full rounded-full overflow-hidden relative">
-                            <Image
-                                src={us.user.avatar_url || `https://ui-avatars.com/api/?name=${us.user.full_name}&background=random`}
-                                alt={us.user?.username || us.user?.full_name || 'user'} fill className="object-cover"
-                            />
+            {userStories.map((us, idx) => {
+                const hasUnseen = us.stories.some((s: any) => !s.has_seen);
+                return (
+                    <div key={us.user.id} className="flex flex-col items-center gap-2 shrink-0">
+                        <div className={clsx(
+                            "rounded-full p-[3px] transition-all hover:scale-105 active:scale-95",
+                            hasUnseen 
+                                ? "bg-gradient-to-tr from-brand-red via-orange-500 to-amber-400 shadow-[0_0_15px_rgba(239,68,68,0.3)] animate-pulse" 
+                                : "bg-zinc-800"
+                        )}>
+                            <button
+                                onClick={() => {
+                                    setDirection(0)
+                                    setSelectedUserIndex(idx)
+                                    setActiveStoryIndex(0)
+                                    recordView(us.stories[0].id)
+                                    setIsMuted(false)
+                                }}
+                                className="w-16 h-16 rounded-full p-0.5 bg-black relative block border-2 border-black"
+                            >
+                                <div className="w-full h-full rounded-full overflow-hidden relative">
+                                    <Image
+                                        src={us.user.avatar_url || `https://ui-avatars.com/api/?name=${us.user.full_name}&background=random`}
+                                        alt={us.user?.username || us.user?.full_name || 'user'} fill className="object-cover"
+                                    />
+                                </div>
+                                {(us.user as any).is_official && (
+                                    <div className="absolute -bottom-1 -right-1 bg-brand-red p-1 rounded-full border border-black shadow-lg z-10">
+                                        <Trophy className="w-2.5 h-2.5 text-white" />
+                                    </div>
+                                )}
+                            </button>
                         </div>
-                        {(us.user as any).is_official && (
-                            <div className="absolute -bottom-1 -right-1 bg-brand-red p-1 rounded-full border border-black shadow-lg">
-                                <Trophy className="w-2.5 h-2.5 text-white" />
-                            </div>
-                        )}
-                    </button>
-                    <span className={clsx(
-                        "text-[10px] font-black uppercase tracking-widest truncate max-w-[64px]",
-                        (us.user as any).is_official ? "text-brand-red" : "text-gray-300"
-                    )}>
-                        {us.user?.username || us.user?.full_name?.split(' ')[0] || 'Usuario'}
-                    </span>
-                </div>
-            ))}
+                        <span className={clsx(
+                            "text-[10px] font-black uppercase tracking-widest truncate max-w-[64px]",
+                            (us.user as any).is_official ? "text-brand-red" : "text-gray-300"
+                        )}>
+                            {us.user?.username || us.user?.full_name?.split(' ')[0] || 'Usuario'}
+                        </span>
+                    </div>
+                );
+            })}
                 </>
             )}
 
@@ -1659,9 +1772,39 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
             )}
 
             {/* Story Viewer (Updated to show overlays) */}
-            {selectedUserIndex !== null && currentStory && (
-                <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4 dark-section keep-all">
-                    <div className="relative w-full max-w-[400px] h-[90vh] bg-black rounded-[32px] overflow-hidden shadow-2xl border border-white/5 mx-auto flex flex-col keep-all">
+            <AnimatePresence>
+                {selectedUserIndex !== null && currentStory && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4 dark-section keep-all"
+                    >
+                        {/* Background Blur Backdrop */}
+                        <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-40 select-none transition-all duration-500 blur-3xl scale-110">
+                            {currentStory.media_type === 'video' ? (
+                                <video src={currentStory.media_url} muted loop autoPlay className="w-full h-full object-cover" />
+                            ) : (
+                                <img src={currentStory.media_url} className="w-full h-full object-cover" alt="" />
+                            )}
+                        </div>
+
+                        <motion.div
+                            initial={{ scale: 0.9, y: 80, opacity: 0 }}
+                            animate={{ scale: 1, y: 0, opacity: 1 }}
+                            exit={{ scale: 0.9, y: 80, opacity: 0 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                            drag="y"
+                            dragConstraints={{ top: 0, bottom: 0 }}
+                            dragElastic={{ top: 0.1, bottom: 0.8 }}
+                            onDragEnd={(_: any, info: any) => {
+                                if (info.offset.y > 150) {
+                                    setSelectedUserIndex(null)
+                                    if (audioRef.current) audioRef.current.pause()
+                                }
+                            }}
+                            className="relative w-full max-w-[400px] h-[90vh] bg-black rounded-[32px] overflow-hidden shadow-2xl border border-white/5 mx-auto flex flex-col keep-all z-10"
+                        >
                         <AnimatePresence>
                             {!isPressed && (
                                 <motion.div
@@ -1748,44 +1891,49 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                         </AnimatePresence>
 
 
-                        <div className="absolute inset-0 z-35 flex">
-                            <div className="w-1/3 h-full cursor-pointer" onClick={prevStory} />
-                            <div className="w-2/3 h-full cursor-pointer" onClick={nextStory} />
-                        </div>
-
-
-                        <motion.div
-                            key={`${selectedUserIndex}-${activeStoryIndex}`}
-                            drag="x"
-                            dragConstraints={{ left: 0, right: 0 }}
-                            onDragEnd={(_: any, info: any) => {
-                                if (info.offset.x < -100) {
-                                    // Swipe left -> Next User
-                                    if (selectedUserIndex < userStories.length - 1) {
-                                        setSelectedUserIndex(selectedUserIndex + 1)
-                                        setActiveStoryIndex(0)
-                                        recordView(userStories[selectedUserIndex + 1].stories[0].id)
-                                    } else {
-                                        setSelectedUserIndex(null)
-                                    }
-                                } else if (info.offset.x > 100) {
-                                    // Swipe right -> Previous User
-                                    if (selectedUserIndex > 0) {
-                                        setSelectedUserIndex(selectedUserIndex - 1)
-                                        const lastStoryIdx = userStories[selectedUserIndex - 1].stories.length - 1
-                                        setActiveStoryIndex(lastStoryIdx)
-                                        recordView(userStories[selectedUserIndex - 1].stories[lastStoryIdx].id)
-                                    }
-                                }
-                            }}
-                            className="w-full h-full relative cursor-grab active:cursor-grabbing touch-none flex-1"
-                            onMouseDown={handlePressStart}
-                            onMouseUp={handlePressEnd}
-                            onMouseLeave={handlePressEnd}
-                            onTouchStart={handlePressStart}
-                            onTouchEnd={handlePressEnd}
-
-                        >
+                        <div className="relative flex-1 w-full overflow-hidden">
+                            <AnimatePresence initial={false} custom={direction}>
+                                <motion.div
+                                    key={`${selectedUserIndex}-${activeStoryIndex}`}
+                                    custom={direction}
+                                    variants={slideVariants}
+                                    initial="enter"
+                                    animate="center"
+                                    exit="exit"
+                                    transition={{
+                                        x: { type: "spring", stiffness: 300, damping: 30 },
+                                        opacity: { duration: 0.2 }
+                                    }}
+                                    drag="x"
+                                    dragConstraints={{ left: 0, right: 0 }}
+                                    dragElastic={0.4}
+                                    onDragEnd={(_: any, info: any) => {
+                                        if (info.offset.x < -60) {
+                                            setDirection(1)
+                                            if (selectedUserIndex < userStories.length - 1) {
+                                                setSelectedUserIndex(selectedUserIndex + 1)
+                                                setActiveStoryIndex(0)
+                                                recordView(userStories[selectedUserIndex + 1].stories[0].id)
+                                            } else {
+                                                setSelectedUserIndex(null)
+                                            }
+                                        } else if (info.offset.x > 60) {
+                                            setDirection(-1)
+                                            if (selectedUserIndex > 0) {
+                                                setSelectedUserIndex(selectedUserIndex - 1)
+                                                const lastStoryIdx = userStories[selectedUserIndex - 1].stories.length - 1
+                                                setActiveStoryIndex(lastStoryIdx)
+                                                recordView(userStories[selectedUserIndex - 1].stories[lastStoryIdx].id)
+                                            }
+                                        }
+                                    }}
+                                    className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing touch-none"
+                                    onMouseDown={handleGestureDown}
+                                    onMouseUp={handleGestureUp}
+                                    onMouseLeave={handleGestureLeave}
+                                    onTouchStart={handleGestureDown}
+                                    onTouchEnd={handleGestureUp}
+                                >
                             {currentStory.media_type === 'pr' ? (
                                 (() => {
                                     try {
@@ -1806,7 +1954,26 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                     }
                                 })()
                             ) : currentStory.media_type === 'video' ? (
-                                <video ref={storyVideoRef} src={currentStory.media_url} autoPlay playsInline muted={isMuted} className="w-full h-full object-cover pointer-events-none" />
+                                <video
+                                    ref={storyVideoRef}
+                                    src={currentStory.media_url}
+                                    autoPlay
+                                    playsInline
+                                    muted={isMuted}
+                                    className="w-full h-full object-cover pointer-events-none"
+                                    onTimeUpdate={(e) => {
+                                        const video = e.currentTarget;
+                                        if (video.duration && !isPaused) {
+                                            setProgress((video.currentTime / video.duration) * 100);
+                                        }
+                                    }}
+                                    onEnded={() => {
+                                        nextStory();
+                                    }}
+                                    onPlay={(e) => {
+                                        if (isPaused) e.currentTarget.pause();
+                                    }}
+                                />
                             ) : (
                                 <Image src={currentStory.media_url} alt="Story content" fill className="object-cover pointer-events-none" />
                             )}
@@ -1981,7 +2148,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                             )}
 
                             {/* Render Viewer Overlays */}
-                            <div className="absolute inset-0 z-50 pointer-events-none">
+                            <div className={clsx("absolute inset-0 z-50 pointer-events-none transition-opacity duration-200", isPressed ? "opacity-0" : "opacity-100")}>
                                 {currentStory.metadata?.overlays && currentStory.metadata.overlays.map((overlay: OverlayElement) => (
                                     <div
                                         key={overlay.id}
@@ -2181,7 +2348,9 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                     </div>
                                 ))}
                             </div>
-                        </motion.div>
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
 
                         <AnimatePresence>
                             {!isPressed && (
@@ -2289,9 +2458,10 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                 </motion.div>
                             )}
                         </AnimatePresence>
-                    </div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
+            </AnimatePresence>
             {showPRCreator && (
                 <div className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
                     <div className="bg-brand-gray border border-white/10 w-full max-w-md rounded-[32px] p-8 shadow-2xl relative">
@@ -2409,6 +2579,28 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                 }}
                 style={{ width: '1px', height: '1px', opacity: 0.01, position: 'absolute', pointerEvents: 'none' }}
             />
+
+            {/* Silent Preloader for adjacent content */}
+            {selectedUserIndex !== null && (
+                <div className="hidden" aria-hidden="true">
+                    {/* Next story in current deck */}
+                    {currentUserStories?.stories?.[activeStoryIndex + 1] && (
+                        currentUserStories.stories[activeStoryIndex + 1].media_type === 'video' ? (
+                            <video src={currentUserStories.stories[activeStoryIndex + 1].media_url} preload="auto" muted />
+                        ) : (
+                            <img src={currentUserStories.stories[activeStoryIndex + 1].media_url} alt="" />
+                        )
+                    )}
+                    {/* First story of next user's deck */}
+                    {userStories[selectedUserIndex + 1]?.stories?.[0] && (
+                        userStories[selectedUserIndex + 1].stories[0].media_type === 'video' ? (
+                            <video src={userStories[selectedUserIndex + 1].stories[0].media_url} preload="auto" muted />
+                        ) : (
+                            <img src={userStories[selectedUserIndex + 1].stories[0].media_url} alt="" />
+                        )
+                    )}
+                </div>
+            )}
             
             {/* Video Editor Pro Modal */}
             {isVideoEditing && editorVideoFile && (

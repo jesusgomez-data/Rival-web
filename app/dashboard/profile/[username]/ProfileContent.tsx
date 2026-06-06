@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { clsx } from "clsx";
 import { motion } from "framer-motion";
-import { Trophy, Swords, ShieldCheck, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, X, MessageSquare, Edit2, Globe, Users, Plus, ArrowRight } from "lucide-react";
+import { Trophy, Swords, ShieldCheck, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, X, MessageSquare, Edit2, Globe, Users, Plus, ArrowRight, Play, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import DuelButton from "../../community/DuelButton";
@@ -18,6 +18,8 @@ import { getFollows } from "../../community/follows-actions";
 import StoryBar from "../../stories/StoryBar";
 import MedalShelf from "./MedalShelf";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { createClient } from "@/utils/supabase/client";
+import { createNotification } from "../../notifications-actions";
 
 interface ProfileContentProps {
     profile: any;
@@ -41,11 +43,62 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
     // Sync server-side value on navigation (handles Next.js page cache)
     useEffect(() => { setFollowing(isFollowingProp); }, [isFollowingProp]);
 
-    const [mobileTab, setMobileTab] = useState<'activity' | 'gallery' | 'stats'>('activity');
+    const [mobileTab, setMobileTab] = useState<'activity' | 'gallery' | 'stats' | 'calendar'>('activity');
     const [modalOpen, setModalOpen] = useState<'followers' | 'following' | null>(null);
     const [avatarModalOpen, setAvatarModalOpen] = useState(false);
     const [modalData, setModalData] = useState<any[]>([]);
     const [loadingModal, setLoadingModal] = useState(false);
+
+    // Profile Calendar State
+    const [scheduledWorkouts, setScheduledWorkouts] = useState<any[]>([]);
+    const [loadingCalendar, setLoadingCalendar] = useState(false);
+    const supabase = createClient();
+
+    useEffect(() => {
+        async function fetchCalendar() {
+            if (!user) return;
+            setLoadingCalendar(true);
+            try {
+                // Anyone can view the scheduled workouts of the profile owner,
+                // but security: only query profile owner's workouts.
+                const { data, error } = await supabase
+                    .from('scheduled_workouts')
+                    .select('*')
+                    .eq('user_id', profile.id)
+                    .order('scheduled_date', { ascending: true });
+                if (!error && data) {
+                    setScheduledWorkouts(data);
+                }
+            } catch (err) {
+                console.error("Error fetching calendar:", err);
+            } finally {
+                setLoadingCalendar(false);
+            }
+        }
+        fetchCalendar();
+    }, [profile.id, user]);
+
+    const handleSendReminder = async (workout: any) => {
+        try {
+            const title = "Recordatorio de Entrenamiento ⚡";
+            const content = `${user.user_metadata?.full_name || 'Alguien'} te recuerda tu entrenamiento pendiente: "${workout.title}"`;
+            const result = await createNotification({
+                userId: profile.id, // Enviar al dueño del perfil
+                type: "workout_reminder",
+                title,
+                content,
+                link: "/dashboard/training"
+            });
+            if (result.success) {
+                alert("¡Recordatorio enviado con éxito al atleta! 🚀");
+            } else {
+                alert("Error al enviar recordatorio: " + (result.error || ""));
+            }
+        } catch (err: any) {
+            console.error(err);
+            alert("Error al enviar recordatorio: " + err.message);
+        }
+    };
 
     const handleOpenModal = async (type: 'followers' | 'following') => {
         setModalOpen(type);
@@ -355,6 +408,15 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                 >
                     <Activity className="w-5 h-5" />
                 </button>
+                <button
+                    onClick={() => setMobileTab('calendar')}
+                    className={clsx(
+                        "flex-1 py-4 flex justify-center items-center border-b-2 transition-all",
+                        mobileTab === 'calendar' ? "border-brand-red text-white" : "border-transparent text-gray-500"
+                    )}
+                >
+                    <Calendar className="w-5 h-5" />
+                </button>
             </div>
 
             <div className="grid lg:grid-cols-12 gap-10">
@@ -374,6 +436,221 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                         </div>
                     ) : (
                         <>
+                            {/* Calendario de Entrenamientos — Premium Timeline */}
+                            <div className={clsx(mobileTab !== 'calendar' && "hidden md:block")}>
+                                <div className="mb-10 relative">
+                                    {/* Section Header */}
+                                    <div className="flex items-center justify-between mb-8 px-2">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 bg-gradient-to-br from-brand-red to-orange-600 rounded-2xl flex items-center justify-center shadow-lg shadow-brand-red/20">
+                                                <Calendar className="w-5 h-5 text-white" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-sm font-black text-white uppercase tracking-wider">Mi Agenda</h3>
+                                                <p className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.3em]">Entrenamientos Programados</p>
+                                            </div>
+                                        </div>
+                                        {scheduledWorkouts.length > 0 && (
+                                            <div className="flex items-center gap-2 bg-white/5 border border-white/10 px-3.5 py-1.5 rounded-full backdrop-blur-sm">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-brand-red animate-pulse" />
+                                                <span className="text-[9px] font-black text-white/70 uppercase tracking-widest">
+                                                    {scheduledWorkouts.filter((w: any) => !w.is_completed).length} Activo{scheduledWorkouts.filter((w: any) => !w.is_completed).length !== 1 ? 's' : ''}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {loadingCalendar ? (
+                                        <div className="flex flex-col items-center justify-center py-16 gap-3">
+                                            <Loader2 className="w-6 h-6 text-brand-red animate-spin" />
+                                            <p className="text-[10px] font-black text-gray-600 uppercase tracking-widest">Cargando agenda...</p>
+                                        </div>
+                                    ) : scheduledWorkouts.length > 0 ? (
+                                        <div className="relative pl-6 md:pl-8">
+                                            {/* Timeline vertical line */}
+                                            <div className="absolute left-[11px] md:left-[15px] top-2 bottom-2 w-px bg-gradient-to-b from-brand-red/40 via-white/10 to-transparent" />
+
+                                            <div className="space-y-3">
+                                                {scheduledWorkouts.map((workout: any, wIdx: number) => {
+                                                    const workoutDate = new Date(workout.scheduled_date + 'T00:00:00');
+                                                    const today = new Date();
+                                                    today.setHours(0,0,0,0);
+                                                    const workoutDateZero = new Date(workoutDate);
+                                                    workoutDateZero.setHours(0,0,0,0);
+                                                    
+                                                    const isToday = workoutDateZero.getTime() === today.getTime();
+                                                    const isPast = workoutDateZero.getTime() < today.getTime() && !workout.is_completed;
+                                                    const isFuture = workoutDateZero.getTime() > today.getTime();
+
+                                                    const statusColor = workout.is_completed
+                                                        ? 'emerald' : isToday ? 'red' : isPast ? 'amber' : 'white';
+                                                    
+                                                    const dayName = workoutDate.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase();
+                                                    const dayNum = workoutDate.getDate();
+                                                    const monthName = workoutDate.toLocaleDateString('es-ES', { month: 'short' }).toUpperCase();
+
+                                                    return (
+                                                        <motion.div
+                                                            key={workout.id}
+                                                            initial={{ opacity: 0, x: -10 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            transition={{ delay: wIdx * 0.06, duration: 0.35 }}
+                                                            className="relative group/row"
+                                                        >
+                                                            {/* Timeline node dot */}
+                                                            <div className={clsx(
+                                                                "absolute -left-6 md:-left-8 top-5 w-[9px] h-[9px] rounded-full border-2 z-10 transition-all",
+                                                                workout.is_completed
+                                                                    ? "bg-emerald-500 border-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.5)]"
+                                                                    : isToday
+                                                                        ? "bg-brand-red border-red-400 shadow-[0_0_10px_rgba(220,38,38,0.6)] scale-125"
+                                                                        : isPast
+                                                                            ? "bg-amber-500 border-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.4)]"
+                                                                            : "bg-white/20 border-white/30"
+                                                            )} />
+
+                                                            {/* Card */}
+                                                            <div className={clsx(
+                                                                "rounded-2xl border transition-all duration-300 overflow-hidden",
+                                                                workout.is_completed
+                                                                    ? "bg-emerald-500/[0.03] border-emerald-500/10 opacity-60 hover:opacity-80"
+                                                                    : isToday
+                                                                        ? "bg-gradient-to-r from-brand-red/[0.08] to-transparent border-brand-red/20 shadow-[0_0_30px_rgba(220,38,38,0.06)]"
+                                                                        : isPast
+                                                                            ? "bg-amber-500/[0.04] border-amber-500/15"
+                                                                            : "bg-white/[0.02] border-white/5 hover:border-white/10 hover:bg-white/[0.04]"
+                                                            )}>
+                                                                <div className="flex items-stretch">
+                                                                    {/* Date Column */}
+                                                                    <div className={clsx(
+                                                                        "w-16 md:w-20 shrink-0 flex flex-col items-center justify-center py-4 border-r",
+                                                                        workout.is_completed ? "border-emerald-500/10" :
+                                                                        isToday ? "border-brand-red/15" :
+                                                                        isPast ? "border-amber-500/10" : "border-white/5"
+                                                                    )}>
+                                                                        <span className={clsx(
+                                                                            "text-[8px] font-black uppercase tracking-[0.2em] mb-0.5",
+                                                                            isToday ? "text-brand-red" : "text-gray-600"
+                                                                        )}>{isToday ? 'HOY' : dayName}</span>
+                                                                        <span className={clsx(
+                                                                            "text-2xl md:text-3xl font-black leading-none",
+                                                                            workout.is_completed ? "text-emerald-500/40" :
+                                                                            isToday ? "text-white" :
+                                                                            isPast ? "text-amber-500/60" : "text-white/20"
+                                                                        )}>{dayNum}</span>
+                                                                        <span className={clsx(
+                                                                            "text-[7px] font-bold uppercase tracking-widest mt-0.5",
+                                                                            isToday ? "text-brand-red/60" : "text-gray-700"
+                                                                        )}>{monthName}</span>
+                                                                    </div>
+
+                                                                    {/* Content Column */}
+                                                                    <div className="flex-1 min-w-0 p-4 md:p-5">
+                                                                        <div className="flex items-start justify-between gap-3 mb-2.5">
+                                                                            <div className="min-w-0">
+                                                                                <h4 className={clsx(
+                                                                                    "text-sm md:text-base font-black uppercase tracking-wide leading-tight truncate",
+                                                                                    workout.is_completed ? "text-emerald-400/60 line-through" : "text-white"
+                                                                                )}>
+                                                                                    {workout.title}
+                                                                                </h4>
+                                                                                {workout.sport_type && (
+                                                                                    <p className="text-[8px] font-bold text-gray-600 uppercase tracking-[0.2em] mt-0.5">
+                                                                                        {workout.sport_type}
+                                                                                    </p>
+                                                                                )}
+                                                                            </div>
+                                                                            {/* Status badge */}
+                                                                            {workout.is_completed ? (
+                                                                                <span className="shrink-0 flex items-center gap-1 bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-wider border border-emerald-500/20">
+                                                                                    <CheckCircle className="w-2.5 h-2.5" /> Hecho
+                                                                                </span>
+                                                                            ) : isPast ? (
+                                                                                <span className="shrink-0 flex items-center gap-1 bg-amber-500/10 text-amber-400 px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-wider border border-amber-500/20 animate-pulse">
+                                                                                    <AlertTriangle className="w-2.5 h-2.5" /> Vencido
+                                                                                </span>
+                                                                            ) : isToday ? (
+                                                                                <span className="shrink-0 flex items-center gap-1 bg-brand-red/15 text-brand-red px-2 py-0.5 rounded-md text-[7px] font-black uppercase tracking-wider border border-brand-red/25">
+                                                                                    <Flame className="w-2.5 h-2.5" /> Hoy
+                                                                                </span>
+                                                                            ) : null}
+                                                                        </div>
+
+                                                                        {/* Exercise chips — compact horizontal wrap */}
+                                                                        {workout.exercises && workout.exercises.length > 0 && (
+                                                                            <div className="flex flex-wrap gap-1.5 mb-3">
+                                                                                {workout.exercises.slice(0, 5).map((ex: any, idx: number) => (
+                                                                                    <span
+                                                                                        key={idx}
+                                                                                        className={clsx(
+                                                                                            "inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-bold border",
+                                                                                            workout.is_completed
+                                                                                                ? "bg-emerald-500/5 border-emerald-500/10 text-emerald-500/40"
+                                                                                                : "bg-white/[0.04] border-white/[0.06] text-gray-400"
+                                                                                        )}
+                                                                                    >
+                                                                                        <Dumbbell className="w-2.5 h-2.5 opacity-40" />
+                                                                                        {ex.name}
+                                                                                        {ex.reps && <span className="text-gray-600 font-normal">×{ex.reps}</span>}
+                                                                                    </span>
+                                                                                ))}
+                                                                                {workout.exercises.length > 5 && (
+                                                                                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-bold text-gray-600 bg-white/[0.02] border border-white/[0.04]">
+                                                                                        +{workout.exercises.length - 5}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+
+                                                                        {/* Action row */}
+                                                                        {!workout.is_completed && (
+                                                                            <div className="flex items-center gap-2">
+                                                                                <Link
+                                                                                    href={`/dashboard/training/session?mode=scheduled&scheduledId=${workout.id}&workout=${encodeURIComponent(JSON.stringify({
+                                                                                        title: workout.title,
+                                                                                        exercises: workout.exercises,
+                                                                                        sportType: workout.sport_type
+                                                                                    }))}`}
+                                                                                    className={clsx(
+                                                                                        "flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all active:scale-95",
+                                                                                        isToday
+                                                                                            ? "bg-gradient-to-r from-brand-red to-orange-600 text-white shadow-lg shadow-brand-red/20 hover:shadow-brand-red/40"
+                                                                                            : "bg-white/10 text-white hover:bg-white/15"
+                                                                                    )}
+                                                                                >
+                                                                                    <Play className="w-3 h-3 fill-current" /> Iniciar
+                                                                                </Link>
+
+                                                                                {isPast && (
+                                                                                    <button
+                                                                                        onClick={() => handleSendReminder(workout)}
+                                                                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/15 hover:bg-amber-500/20 transition-all active:scale-95"
+                                                                                    >
+                                                                                        <MessageCircle className="w-3 h-3" /> Recordar
+                                                                                    </button>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </motion.div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center py-16 px-6 bg-white/[0.02] border border-dashed border-white/5 rounded-[28px]">
+                                            <div className="w-14 h-14 bg-white/5 rounded-2xl flex items-center justify-center mb-4">
+                                                <Calendar className="w-7 h-7 text-gray-600" />
+                                            </div>
+                                            <p className="text-sm font-bold text-gray-500 mb-1">Sin entrenamientos programados</p>
+                                            <p className="text-[10px] text-gray-600 font-medium">Genera un WOD con IA y agrégalo a tu agenda</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
                             <div className={clsx(mobileTab !== 'gallery' && "hidden md:block")}>
                                 <div className="md:mb-10">
                                     <UserMediaGallery userId={profile.id} />

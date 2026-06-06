@@ -204,23 +204,25 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                     if (data.title) setTitle(data.title.toUpperCase());
                     if (data.category) setCategory(data.category);
                     
-                    if (data.blocks) {
+                    if (data.blocks && Array.isArray(data.blocks)) {
                         const normalizedBlocks = data.blocks.map((b: any) => ({
                             ...b,
                             format: b.format || 'LIBRE',
                             config: b.config || {},
                             id: Math.random().toString(36).substring(7),
-                            exercises: b.exercises?.map((ex: any) => ({
+                            exercises: Array.isArray(b.exercises) ? b.exercises.map((ex: any) => ({
                                 id: Math.random().toString(36).substring(7),
                                 name: ex.name || '',
                                 reps: ex.reps || '',
                                 detail: ex.detail || '',
                                 type: ex.type || 'exercise'
-                            })) || []
+                            })) : []
                         }));
                         setBlocks(normalizedBlocks);
                         if (data.summary) setSummary(data.summary);
                         updateWod(newTitle, normalizedBlocks, newSummary, newDate, newCat);
+                    } else {
+                        alert('La pizarra se analizó correctamente pero no se encontró un formato estructurado de bloques compatible.');
                     }
                 } else {
                     alert(res.error || 'No se pudo analizar la imagen. Intenta con una foto más clara.');

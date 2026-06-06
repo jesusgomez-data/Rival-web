@@ -883,6 +883,27 @@ export async function deleteScheduledWorkout(workoutId: string) {
     return { success: true }
 }
 
+export async function completeScheduledWorkout(workoutId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'Unauthorized' }
+
+    const { error } = await supabase
+        .from('scheduled_workouts')
+        .update({ is_completed: true })
+        .eq('id', workoutId)
+        .eq('user_id', user.id)
+
+    if (error) {
+        console.error('Error completing scheduled workout:', error)
+        return { error: 'Failed to complete workout' }
+    }
+
+    revalidatePath('/dashboard/training')
+    return { success: true }
+}
+
+
 export async function getPerformanceStats() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -1553,6 +1574,11 @@ export async function addNewExercise(exercise: { name: string, muscle_group?: st
 }
 
 export async function parseWodFromImage(base64Image: string) {
+    if (!process.env.GEMINI_API_KEY) {
+        console.warn('WOD scanning attempted but GEMINI_API_KEY is not set.');
+        return { error: 'La clave de API de Gemini (GEMINI_API_KEY) no está configurada en el servidor. Por favor, configúrala en el archivo .env para habilitar el escaneo de pizarras.' };
+    }
+
     try {
         const prompt = `
             Eres un experto en CrossFit y entrenamiento funcional. Tu tarea es analizar la imagen de una pizarra de entrenamiento (WOD) y extraer la estructura de ejercicios.
@@ -1604,7 +1630,13 @@ export async function parseWodFromImage(base64Image: string) {
         
         // Clean markdown if present
         const jsonString = text.replace(/```json|```/gi, '').trim();
-        const parsed = JSON.parse(jsonString);
+        let parsed;
+        try {
+            parsed = JSON.parse(jsonString);
+        } catch (jsonErr) {
+            console.error('Failed to parse JSON response from Gemini:', text, jsonErr);
+            return { error: 'El análisis de la imagen no devolvió un formato estructurado válido. Intenta con una foto más nítida.' };
+        }
         
         return { success: true, data: parsed };
     } catch (e: any) {

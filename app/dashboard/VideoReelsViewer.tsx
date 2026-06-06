@@ -7,6 +7,8 @@ import Image from 'next/image'
 import { createClient } from '@/utils/supabase/client'
 import { createPortal } from 'react-dom'
 import { useVideo } from './VideoContext'
+import { getComments, addComment, toggleCommentLike } from './community/actions'
+import { clsx } from 'clsx'
 
 export interface ReelPost {
     postId: string
@@ -30,36 +32,73 @@ interface VideoReelsViewerProps {
 
 // ── Inline comment sheet ──────────────────────────────────────────────────────
 function CommentSheet({ postId, onClose }: { postId: string; onClose: () => void }) {
-    const supabase = createClient()
     const [comments, setComments] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [text, setText] = useState('')
     const [sending, setSending] = useState(false)
+    const [replyingTo, setReplyingTo] = useState<{ id: string; username: string } | null>(null)
+
+    const loadComments = async () => {
+        setLoading(true)
+        const data = await getComments(postId)
+        setComments(data || [])
+        setLoading(false)
+    }
 
     useEffect(() => {
-        setLoading(true)
-        supabase
-            .from('comments')
-            .select('id, content, created_at, profiles:user_id(full_name, username, avatar_url)')
-            .eq('post_id', postId)
-            .order('created_at', { ascending: false })
-            .limit(30)
-            .then((res: any) => { setComments((res.data as any[]) || []); setLoading(false) })
+        loadComments()
     }, [postId])
 
     const send = async () => {
         if (!text.trim() || sending) return
         setSending(true)
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) { setSending(false); return }
-        await supabase.from('comments').insert({ post_id: postId, user_id: user.id, content: text.trim() })
-        const { data } = await supabase
-            .from('comments')
-            .select('id, content, created_at, profiles:user_id(full_name, username, avatar_url)')
-            .eq('post_id', postId).order('created_at', { ascending: false }).limit(30)
-        setComments((data as any[]) || [])
-        setText('')
+        const result = await addComment(postId, text.trim(), replyingTo?.id)
+        if (result?.success) {
+            setText('')
+            setReplyingTo(null)
+            const updated = await getComments(postId)
+            setComments(updated || [])
+        } else {
+            alert(result?.error || 'Error al añadir comentario')
+        }
         setSending(false)
+    }
+
+    const handleCommentLike = async (commentId: string) => {
+        // Optimistically toggle comment like
+        setComments(prev => prev.map(c => {
+            if (c.id === commentId) {
+                return {
+                    ...c,
+                    has_liked: !c.has_liked,
+                    likes_count: c.has_liked ? c.likes_count - 1 : c.likes_count + 1
+                }
+            }
+            return c
+        }))
+        await toggleCommentLike(commentId)
+    }
+
+    // Process comments to group replies under parent comments
+    const roots = comments.filter(c => !c.parent_id)
+    const repliesMap = new Map<string, any[]>()
+    comments.forEach(c => {
+        if (c.parent_id) {
+            if (!repliesMap.has(c.parent_id)) {
+                repliesMap.set(c.parent_id, [])
+            }
+            repliesMap.get(c.parent_id)!.push(c)
+        }
+    })
+
+    const getDescendants = (commentId: string): any[] => {
+        const list: any[] = []
+        const direct = repliesMap.get(commentId) || []
+        direct.forEach(child => {
+            list.push(child)
+            list.push(...getDescendants(child.id))
+        })
+        return list
     }
 
     return (
@@ -74,28 +113,101 @@ function CommentSheet({ postId, onClose }: { postId: string; onClose: () => void
                     <h3 className="text-sm font-black text-white uppercase tracking-widest">Comentarios</h3>
                     <button onClick={onClose} className="text-white/30 hover:text-white"><X className="w-5 h-5" /></button>
                 </div>
-                <div className="flex-1 overflow-y-auto px-5 py-3 space-y-4">
+                <div className="flex-1 overflow-y-auto px-5 py-4 space-y-5">
                     {loading ? <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-brand-red" /></div>
-                        : comments.length === 0 ? <p className="text-center text-white/25 text-sm py-8 font-bold">Sé el primero</p>
-                            : comments.map(c => {
-                                const p = c.profiles as any
+                        : roots.length === 0 ? <p className="text-center text-white/25 text-sm py-8 font-bold">Sé el primero</p>
+                            : roots.map(c => {
+                                const p = c.user as any
+                                const replies = getDescendants(c.id)
+
                                 return (
-                                    <div key={c.id} className="flex gap-3">
-                                        <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10 relative">
-                                            {p?.avatar_url ? <Image src={p.avatar_url} alt="" fill className="object-cover" />
-                                                : <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-[10px] font-black text-white/40">{(p?.full_name || '?')[0]}</div>}
+                                    <div key={c.id} className="space-y-3">
+                                        {/* Parent Comment */}
+                                        <div className="flex gap-3 items-start justify-between group">
+                                            <div className="flex gap-3">
+                                                <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 border border-white/10 relative bg-zinc-900">
+                                                    {p?.avatar_url ? <Image src={p.avatar_url} alt="" fill className="object-cover" />
+                                                        : <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-[10px] font-black text-white/40">{(p?.username || '?')[0].toUpperCase()}</div>}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[11px] font-black text-brand-red">@{p?.username || 'Usuario'}</span>
+                                                        <span className="text-[9px] text-white/30 font-semibold">{new Date(c.created_at).toLocaleDateString()}</span>
+                                                    </div>
+                                                    <p className="text-sm text-white/90 leading-tight mt-0.5">{c.content}</p>
+                                                    <div className="flex items-center gap-3 mt-1.5">
+                                                        <button
+                                                            onClick={() => setReplyingTo({ id: c.id, username: p?.username || 'Usuario' })}
+                                                            className="text-[9px] font-black uppercase text-white/40 hover:text-white/80 transition-colors"
+                                                        >
+                                                            Responder
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Like button */}
+                                            <button onClick={() => handleCommentLike(c.id)} className="flex flex-col items-center gap-0.5 pt-1 pr-1 shrink-0 text-white/40 hover:text-brand-red transition-colors">
+                                                <Heart className={clsx("w-3.5 h-3.5", c.has_liked ? "fill-brand-red text-brand-red" : "text-white/40")} />
+                                                {c.likes_count > 0 && <span className="text-[8px] font-black text-white/40">{c.likes_count}</span>}
+                                            </button>
                                         </div>
-                                        <div>
-                                            <span className="text-[11px] font-black text-brand-red">{p?.username || p?.full_name}</span>
-                                            <p className="text-sm text-white/80 leading-tight mt-0.5">{c.content}</p>
-                                        </div>
+
+                                        {/* Nested Replies */}
+                                        {replies.length > 0 && (
+                                            <div className="pl-11 space-y-3 border-l-2 border-white/5 ml-4">
+                                                {replies.map(reply => {
+                                                    const rp = reply.user as any
+                                                    return (
+                                                        <div key={reply.id} className="flex gap-2.5 items-start justify-between group">
+                                                            <div className="flex gap-2.5">
+                                                                <div className="w-6 h-6 rounded-full overflow-hidden shrink-0 border border-white/10 relative bg-zinc-900">
+                                                                    {rp?.avatar_url ? <Image src={rp.avatar_url} alt="" fill className="object-cover" />
+                                                                        : <div className="w-full h-full bg-zinc-800 flex items-center justify-center text-[8px] font-black text-white/40">{(rp?.username || '?')[0].toUpperCase()}</div>}
+                                                                </div>
+                                                                <div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <span className="text-[10px] font-black text-brand-red">@{rp?.username || 'Usuario'}</span>
+                                                                        <span className="text-[8px] text-white/30 font-semibold">{new Date(reply.created_at).toLocaleDateString()}</span>
+                                                                    </div>
+                                                                    <p className="text-xs text-white/80 leading-tight mt-0.5">{reply.content}</p>
+                                                                    <div className="flex items-center gap-3 mt-1">
+                                                                        <button
+                                                                            onClick={() => setReplyingTo({ id: c.id, username: rp?.username || 'Usuario' })}
+                                                                            className="text-[8px] font-black uppercase text-white/40 hover:text-white/80 transition-colors"
+                                                                        >
+                                                                            Responder
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Like button */}
+                                                            <button onClick={() => handleCommentLike(reply.id)} className="flex flex-col items-center gap-0.5 pt-0.5 pr-1 shrink-0 text-white/40 hover:text-brand-red transition-colors">
+                                                                <Heart className={clsx("w-3 h-3", reply.has_liked ? "fill-brand-red text-brand-red" : "text-white/40")} />
+                                                                {reply.likes_count > 0 && <span className="text-[8px] font-black text-white/40">{reply.likes_count}</span>}
+                                                            </button>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 )
                             })}
                 </div>
+                {/* Replying banner */}
+                {replyingTo && (
+                    <div className="px-5 py-2 bg-brand-red/10 border-t border-brand-red/20 text-[10px] font-black uppercase tracking-wider text-white flex items-center justify-between">
+                        <span>Respondiendo a <span className="text-brand-red">@{replyingTo.username}</span></span>
+                        <button onClick={() => setReplyingTo(null)} className="text-white/50 hover:text-white">
+                            <X className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
+                )}
                 <div className="flex gap-3 px-4 py-3 border-t border-white/[0.06] pb-[env(safe-area-inset-bottom,12px)]">
                     <input value={text} onChange={e => setText(e.target.value)} onKeyDown={e => e.key === 'Enter' && send()}
-                        placeholder="Añadir comentario..."
+                        placeholder={replyingTo ? `Responder a @${replyingTo.username}...` : "Añadir comentario..."}
                         className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-4 py-2.5 text-white text-sm focus:outline-none focus:border-brand-red transition-colors placeholder:text-white/20" />
                     <button onClick={send} disabled={!text.trim() || sending}
                         className="w-10 h-10 rounded-full bg-brand-red flex items-center justify-center disabled:opacity-40 shrink-0">

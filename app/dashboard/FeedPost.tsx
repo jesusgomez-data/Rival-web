@@ -535,6 +535,8 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const [downloadProgress, setDownloadProgress] = useState(0);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
+    const [isMusicVisible, setIsMusicVisible] = useState(false);
+    const [isManuallyPaused, setIsManuallyPaused] = useState(false);
 
     // Estados para modales de WOD
     const [showWODTracker, setShowWODTracker] = useState(false);
@@ -543,6 +545,39 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const videoRef = useRef<HTMLVideoElement>(null);
     const videoContainerRef = useRef<HTMLDivElement>(null);
     const { isMuted, toggleMute, setLastActiveVideoId, setIsMuted } = useVideo();
+
+    const isMusicPlaying = isPlaying && !isMuted;
+
+    useEffect(() => {
+        const handleGlobalPlay = (e: any) => {
+            if (e.detail?.activePostId !== postId) {
+                setIsManuallyPaused(true);
+            }
+        };
+        window.addEventListener('global-music-play', handleGlobalPlay);
+        return () => {
+            window.removeEventListener('global-music-play', handleGlobalPlay);
+        };
+    }, [postId]);
+
+    const toggleMusicPlayback = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        if (!music_url || !audioRef.current) return;
+
+        const isCurrentlyPlayingAndAudible = isPlaying && !isMuted;
+
+        if (isCurrentlyPlayingAndAudible) {
+            setIsManuallyPaused(true);
+        } else {
+            setIsMuted(false);
+            setIsManuallyPaused(false);
+            window.dispatchEvent(new CustomEvent('global-music-play', { detail: { activePostId: postId } }));
+            audioRef.current.play().catch(err => {
+                console.warn("Playback failed:", err);
+            });
+        }
+    };
 
     const [isVisible, setIsVisible] = useState(false);
     const [isNearViewport, setIsNearViewport] = useState(false);
@@ -636,6 +671,59 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
         setShowMuteHint(false);
     }, [isVisible, isMuted, isVideo]);
 
+    // Viewport visibility observer for post music
+    useEffect(() => {
+        if (!music_url) return;
+        const target = postRef.current;
+        if (!target) return;
+
+        const observer = new IntersectionObserver(([entry]) => {
+            setIsMusicVisible(entry.isIntersecting);
+        }, { threshold: 0.15 });
+
+        observer.observe(target);
+        return () => observer.disconnect();
+    }, [music_url]);
+
+    // Handle audio play/pause states reactively
+    useEffect(() => {
+        if (!music_url || !audioRef.current) return;
+        const audio = audioRef.current;
+
+        // Sync mute state
+        audio.muted = isMuted;
+
+        const handlePlayState = async () => {
+            if (isMusicVisible && !isManuallyPaused && !document.hidden) {
+                try {
+                    await audio.play();
+                } catch (e) {
+                    console.log("FeedPost music autoplay blocked:", e);
+                }
+            } else {
+                audio.pause();
+            }
+        };
+
+        handlePlayState();
+    }, [music_url, isMusicVisible, isMuted, isManuallyPaused]);
+
+    // Tab visibility changes
+    useEffect(() => {
+        if (!music_url) return;
+        const onVisibilityChange = () => {
+            const audio = audioRef.current;
+            if (!audio) return;
+            if (document.hidden) {
+                audio.pause();
+            } else if (isMusicVisible && !isManuallyPaused) {
+                audio.play().catch(() => {});
+            }
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+    }, [music_url, isMusicVisible, isManuallyPaused]);
+
     // Parse wod_data if it's a string
     const parsedWodData = useMemo(() => {
         if (!wod_data) return null;
@@ -669,6 +757,9 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
         }
         return null;
     }, [workoutData, image]);
+
+    // Check if the post only has written text (no photos, videos, or workout/WOD details)
+    const isTextOnly = !hasMedia && !(resolvedWorkoutData || wod_data || post_type === 'wod' || mediaType === 'pr' || mediaType === 'class_result' || mediaType === 'membership_activation' || mediaType === 'repost');
 
     // Extract IDs from workout data if possible
     const workoutWodId = (resolvedWorkoutData as any)?.original_wod_post_id || (resolvedWorkoutData as any)?.postId;
@@ -849,7 +940,13 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
 
         if (isPlaying) {
             audioRef.current.pause();
+            setIsManuallyPaused(true);
         } else {
+            setIsManuallyPaused(false);
+            if (isMuted) {
+                setIsMuted(false);
+            }
+            audioRef.current.muted = false;
             audioRef.current.play().catch(console.error);
         }
     };
@@ -969,6 +1066,19 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     : "bg-white border border-zinc-100 hover:border-zinc-300 hover:shadow-lg"
             )}
         >
+            {music_url && (
+                <audio
+                    ref={audioRef}
+                    src={music_url}
+                    loop
+                    preload="auto"
+                    playsInline
+                    onPlay={() => setIsPlaying(true)}
+                    onPause={() => setIsPlaying(false)}
+                    onEnded={() => setIsPlaying(false)}
+                    onError={(e) => console.error("FeedPost Audio Error:", e)}
+                />
+            )}
             {/* CLASSIC HEADER: Always at the top */}
             <div className="px-6 py-5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -999,8 +1109,36 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             </span>
                             {isOfficial && <VerifiedBadge size="sm" />}
                         </Link>
-                        <div className="flex items-center gap-2">
-                            <span className="text-gray-500 text-[9px] font-black uppercase tracking-widest">{time}</span>
+                        <div className="flex items-center gap-2 flex-wrap max-w-full">
+                            <span className="text-gray-500 text-[9px] font-black uppercase tracking-widest shrink-0">{time}</span>
+                            {music_url && (
+                                <>
+                                    <span className="w-1 h-1 rounded-full bg-white/10 shrink-0" />
+                                    <button
+                                        onClick={toggleMusicPlayback}
+                                        type="button"
+                                        className={clsx(
+                                            "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all border shrink-0 active:scale-95",
+                                            isMusicPlaying
+                                                ? "bg-brand-red/25 border-brand-red/40 text-brand-red shadow-[0_0_10px_rgba(220,38,38,0.2)] animate-pulse"
+                                                : "bg-white/5 border-white/10 text-gray-400 hover:text-white hover:border-white/30"
+                                        )}
+                                        title={isMusicPlaying ? "Silenciar música" : "Escuchar música"}
+                                    >
+                                        {isMusicPlaying ? (
+                                            <>
+                                                <Volume2 className="w-3 h-3 text-brand-red animate-bounce" />
+                                                <span className="truncate italic max-w-[100px] sm:max-w-[140px] text-brand-red">{music_title} • {music_artist}</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <VolumeX className="w-3 h-3 text-gray-500" />
+                                                <span className="truncate italic max-w-[100px] sm:max-w-[140px]">{music_title} • {music_artist}</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -1147,7 +1285,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 className="w-full h-full object-cover"
                                 loop
                                 playsInline
-                                muted={isMuted || !isVisible || (typeof document !== 'undefined' && document.hidden)}
+                                muted={isMuted || !isVisible || (typeof document !== 'undefined' && document.hidden) || !!music_url}
                                 preload={isNearViewport ? "metadata" : "none"}
                                 onCanPlay={() => {
                                     if (isVisible && videoRef.current) {
@@ -1245,60 +1383,38 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                 </div>
             )}
 
-            {/* ACTION BAR: Horizontal layout below media */}
-            <div className="px-6 pt-4 pb-2 flex items-center justify-between">
-                <div className="flex items-center gap-5">
-                    <LikeButton postId={postId} initialLikes={initialLikes} hasLikedInitial={hasLikedInitial} />
-                    <button 
-                        onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} 
-                        className="flex flex-col items-center gap-1 group text-zinc-400 hover:text-white transition-colors"
-                    >
-                        <MessageCircle className={clsx("w-7 h-7 transition-all active:scale-90", showComments && "fill-brand-red text-brand-red")} />
-                        <span className="text-[10px] font-black">{commentsCount}</span>
-                    </button>
-                    <ShareButton
-                        image={image}
-                        workoutData={resolvedWorkoutData}
-                        mediaType={mediaType}
-                        postId={postId}
-                        photoUrl={photoUrl}
-                        caption={caption}
-                        className="text-zinc-400 hover:text-white transition-colors"
-                        iconClassName="w-7 h-7"
-                        onInstagramShare={() => setShowInstagramCard(true)}
-                        onOpenShareCard={() => setShowShareCard(true)}
-                        onDownloadMedia={handleDownloadMedia}
-                        isVideo={isVideo}
-                        onRepostClick={() => setShowRepostModal(true)}
-                        onMessageClick={() => { setShowDMModal(true); loadDMFollows(); }}
-                    />
-                </div>
 
-                {music_url && (
-                    <button 
-                        onClick={toggleMusic}
-                        className={clsx(
-                            "w-10 h-10 rounded-full border-2 border-brand-red/50 p-1 relative transition-all group active:scale-90 bg-black shadow-glow",
-                            isPlaying && "animate-[spin_4s_linear_infinite]"
-                        )}
-                    >
-                        <Image src="/logo.svg" alt="Music" fill className="object-contain p-2" />
-                    </button>
-                )}
-            </div>
-
-            {/* CAPTION: Classic Instagram style below actions */}
+            {/* CAPTION: Sleek text container */}
             {caption && (
-                <div className="px-6 pb-4">
-                    <div className="text-[13px] leading-relaxed">
-                        <span className="font-black uppercase italic tracking-tighter text-brand-red mr-2">{username || user}</span>
-                        <div className={clsx(
-                            "inline transition-all duration-300",
-                            theme === 'dark' ? "text-white/90" : "text-zinc-900"
-                        )}>
-                            <MentionText text={caption} />
+                <div className={clsx(
+                    "px-6 pb-4",
+                    isTextOnly ? "pt-4" : ""
+                )}>
+                    {isTextOnly ? (
+                        <div className="relative overflow-hidden bg-gradient-to-br from-brand-red/10 via-zinc-900/40 to-black/80 border border-white/5 rounded-2xl p-6 shadow-inner">
+                            {/* Decorative sporty accent line */}
+                            <div className="absolute top-0 left-0 w-1 h-full bg-brand-red shadow-[0_0_8px_rgba(220,38,38,0.5)]" />
+                            {/* Decorative background glow */}
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-brand-red/5 blur-2xl rounded-full pointer-events-none" />
+                            
+                            <p className={clsx(
+                                "text-base md:text-lg font-bold leading-relaxed italic tracking-wide relative z-10",
+                                theme === 'dark' ? "text-gray-100" : "text-zinc-800"
+                            )}>
+                                <MentionText text={caption} />
+                            </p>
                         </div>
-                    </div>
+                    ) : (
+                        <div className="text-[13px] leading-relaxed">
+                            <span className="font-black uppercase italic tracking-tighter text-brand-red mr-2">{username || user}</span>
+                            <div className={clsx(
+                                "inline transition-all duration-300",
+                                theme === 'dark' ? "text-white/90" : "text-zinc-900"
+                            )}>
+                                <MentionText text={caption} />
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -1439,6 +1555,56 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                 </div>
             )}
 
+            {/* ACTION BAR: Horizontal layout below all content */}
+            <div className="px-6 py-4 flex items-center justify-between border-t border-white/5 bg-black/[0.02]">
+                <div className="flex items-center gap-5">
+                    <LikeButton postId={postId} initialLikes={initialLikes} hasLikedInitial={hasLikedInitial} />
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} 
+                        className="flex flex-col items-center gap-1 group text-zinc-400 hover:text-white transition-colors"
+                    >
+                        <MessageCircle className={clsx("w-7 h-7 transition-all active:scale-90", showComments && "fill-brand-red text-brand-red")} />
+                        <span className="text-[10px] font-black">{commentsCount}</span>
+                    </button>
+                    <ShareButton
+                        image={image}
+                        workoutData={resolvedWorkoutData}
+                        mediaType={mediaType}
+                        postId={postId}
+                        photoUrl={photoUrl}
+                        caption={caption}
+                        className="text-zinc-400 hover:text-white transition-colors"
+                        iconClassName="w-7 h-7"
+                        onInstagramShare={() => setShowInstagramCard(true)}
+                        onOpenShareCard={() => setShowShareCard(true)}
+                        onDownloadMedia={handleDownloadMedia}
+                        isVideo={isVideo}
+                        onRepostClick={() => setShowRepostModal(true)}
+                        onMessageClick={() => { setShowDMModal(true); loadDMFollows(); }}
+                    />
+                </div>
+
+                {music_url && (
+                    <button 
+                        onClick={toggleMusic}
+                        className={clsx(
+                            "w-10 h-10 rounded-full border-2 border-brand-red/30 p-0.5 relative transition-all group active:scale-90 bg-black shadow-glow flex items-center justify-center hover:border-brand-red/60",
+                            isPlaying && "animate-[spin_4s_linear_infinite]"
+                        )}
+                        title={isPlaying ? "Pausar música" : "Reproducir música"}
+                    >
+                        {isPlaying ? (
+                            <div className="w-full h-full flex items-center justify-center bg-brand-red rounded-full shadow-[0_0_10px_rgba(220,38,38,0.4)]">
+                                <Volume2 className="w-4 h-4 text-white animate-pulse" />
+                            </div>
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-zinc-950 rounded-full group-hover:bg-brand-red/10 transition-colors">
+                                <Music className="w-4 h-4 text-brand-red group-hover:text-white transition-colors" />
+                            </div>
+                        )}
+                    </button>
+                )}
+            </div>
 
             {/* Comments Section */}
             {

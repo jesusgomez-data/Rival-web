@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Send, Image as ImageIcon, Loader2, X, Smile, Sparkles } from "lucide-react";
 import { createUserPost, createPRPost, updatePost, createWodPost } from "./community/actions";
 import MentionInput from "@/components/MentionInput";
@@ -10,7 +11,7 @@ import Image from "next/image";
 import type { Theme, EmojiClickData } from 'emoji-picker-react';
 import dynamic from 'next/dynamic';
 import MusicPicker from "./MusicPicker";
-import { MusicTrack } from "./music-data";
+import { MusicTrack } from "./MusicPicker";
 import WodCreator, { WodBlock, WodSummary, WorkoutCategory } from "@/components/training/WodCreator";
 import { useLanguage } from "@/app/LanguageContext";
 import VideoEditor from "@/components/video/VideoEditor";
@@ -40,6 +41,19 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const [weight, setWeight] = useState("");
     const [sport, setSport] = useState("Cross Training");
     const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
+    const [lastFocusedInput, setLastFocusedInput] = useState<string>("content");
+    const lastFocusedElementRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+    const [isMobile, setIsMobile] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+        setIsMobile(window.innerWidth < 640);
+        const handleResize = () => setIsMobile(window.innerWidth < 640);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const [scheduledFor, setScheduledFor] = useState<string>(initialData?.date || new Date().toISOString().split('T')[0]);
     const [duration, setDuration] = useState<number | null>(null);
     const [showWodFooter, setShowWodFooter] = useState(true);
@@ -89,6 +103,16 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
         };
     }, []);
 
+    // Lock scroll on mobile when emoji picker is open
+    useEffect(() => {
+        if (showEmojiPicker && isMobile) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => { document.body.style.overflow = 'unset'; };
+    }, [showEmojiPicker, isMobile]);
+
     async function handlePost(e: React.FormEvent) {
         e.preventDefault();
         if (isPosting) return;
@@ -118,7 +142,8 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                         currentUser,
                         preview: previews[0],
                         wodData,
-                        scheduledFor
+                        scheduledFor,
+                        selectedTrack
                     });
                     
                     // Immediate success feedback to the parent to close the modal/form
@@ -178,6 +203,11 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
         try {
             const finalMediaUrl = mediaType === 'carousel' ? JSON.stringify(mediaUrls) : mediaUrls[0];
             const formData = new FormData();
+            if (selectedTrack) {
+                formData.append("music_url", selectedTrack.url);
+                formData.append("music_title", selectedTrack.title);
+                formData.append("music_artist", selectedTrack.artist);
+            }
             let res: any;
 
             if (postType === 'pr') {
@@ -269,53 +299,133 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
         }
     };
 
+    const handleFocusCapture = (e: React.FocusEvent) => {
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+            lastFocusedElementRef.current = target as HTMLInputElement | HTMLTextAreaElement;
+            
+            // Sync fallback state identifiers
+            const placeholder = target.getAttribute('placeholder') || '';
+            const name = target.getAttribute('name') || '';
+            const id = target.id || '';
+            
+            if (id === 'exercise' || name === 'exercise' || placeholder.toLowerCase().includes('squat')) {
+                setLastFocusedInput("exercise");
+            } else if (id === 'weight' || name === 'weight' || placeholder.toLowerCase().includes('140')) {
+                setLastFocusedInput("weight");
+            } else if (id === 'sport' || name === 'sport' || placeholder.toLowerCase().includes('discipline') || placeholder.toLowerCase().includes('comentario')) {
+                setLastFocusedInput("sport");
+            } else {
+                setLastFocusedInput("content");
+            }
+        }
+    };
+
     const onEmojiClick = (emojiData: EmojiClickData) => {
-        setContent((prev: string) => prev + emojiData.emoji);
+        // 1. Programmatic insertion into currently active/last focused element
+        let insertedProgrammatically = false;
+        try {
+            const activeEl = lastFocusedElementRef.current;
+            if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+                const start = activeEl.selectionStart ?? activeEl.value.length;
+                const end = activeEl.selectionEnd ?? activeEl.value.length;
+                const text = activeEl.value;
+                const before = text.substring(0, start);
+                const after = text.substring(end);
+                const newValue = before + emojiData.emoji + after;
+
+                // React 16+ setter override bypass
+                const prototype = activeEl.tagName === 'TEXTAREA' 
+                    ? window.HTMLTextAreaElement.prototype 
+                    : window.HTMLInputElement.prototype;
+                
+                const nativeValueSetter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+                
+                if (nativeValueSetter) {
+                    nativeValueSetter.call(activeEl, newValue);
+                } else {
+                    activeEl.value = newValue;
+                }
+
+                // Restore cursor position
+                const newCursorPos = start + emojiData.emoji.length;
+                activeEl.selectionStart = newCursorPos;
+                activeEl.selectionEnd = newCursorPos;
+
+                // Dispatch input event to trigger React's onChange
+                activeEl.dispatchEvent(new Event('input', { bubbles: true }));
+                
+                // Focus back on the input to keep typing
+                activeEl.focus();
+                insertedProgrammatically = true;
+            }
+        } catch (err) {
+            console.error("Programmatic emoji insertion failed:", err);
+        }
+
+        // 2. Fallback state updates (only if programmatic insertion didn't trigger or for main states)
+        if (!insertedProgrammatically || lastFocusedElementRef.current?.id === 'exercise' || lastFocusedElementRef.current?.getAttribute('placeholder')?.toLowerCase().includes('squat')) {
+            if (lastFocusedInput === "exercise") {
+                setExercise((prev: string) => prev + emojiData.emoji);
+            } else if (lastFocusedInput === "weight") {
+                setWeight((prev: string) => prev + emojiData.emoji);
+            } else if (lastFocusedInput === "sport") {
+                setSport((prev: string) => prev + emojiData.emoji);
+            } else {
+                setContent((prev: string) => prev + emojiData.emoji);
+            }
+        }
     };
 
     return (
-        <div className="bg-brand-gray/30 border border-white/10 rounded-[24px] md:rounded-[28px] p-3 md:p-6 backdrop-blur-md mb-8 relative z-10 w-full overflow-hidden">
-            {/* Post Type Selector */}
-            <div className="flex gap-2 mb-4 md:mb-6 overflow-x-auto no-scrollbar pb-2">
+        <div className="w-full relative z-10" onFocusCapture={handleFocusCapture}>
+            {/* Segmented Post Type Selector */}
+            <div className="flex bg-black/40 border border-white/5 rounded-2xl p-1 mb-6 max-w-[480px] w-full">
                 <button
                     type="button"
                     onClick={() => setPostType('standard')}
                     className={clsx(
-                        "flex items-center gap-1.5 px-3 md:px-6 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider md:tracking-widest transition-all whitespace-nowrap shrink-0",
-                        postType === 'standard' ? "bg-white/10 border-white/20 text-white shadow-inner" : "border-transparent text-gray-500 hover:text-gray-300"
+                        "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap shrink-0 border",
+                        postType === 'standard' 
+                            ? "bg-white/10 border-white/10 text-white shadow-sm font-black" 
+                            : "border-transparent text-gray-500 hover:text-gray-300 font-bold"
                     )}
                 >
-                    <Activity className="w-3.5 h-3.5 text-brand-red" />
+                    <Activity className={clsx("w-3.5 h-3.5", postType === 'standard' ? "text-brand-red" : "text-gray-500")} />
                     {language === 'es' ? 'ACTUALIZACIÓN' : 'UPDATE'}
                 </button>
                 <button
                     type="button"
                     onClick={() => setPostType('pr')}
                     className={clsx(
-                        "flex items-center gap-1.5 px-3 md:px-6 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider md:tracking-widest transition-all whitespace-nowrap shrink-0",
-                        postType === 'pr' ? "bg-brand-red/10 border-brand-red/30 text-brand-red shadow-[0_0_15px_rgba(220,38,38,0.1)]" : "border-transparent text-gray-500 hover:text-gray-300"
+                        "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap shrink-0 border",
+                        postType === 'pr' 
+                            ? "bg-brand-red/10 border-brand-red/20 text-brand-red shadow-sm font-black" 
+                            : "border-transparent text-gray-500 hover:text-gray-300 font-bold"
                     )}
                 >
-                    <Trophy className="w-3.5 h-3.5" />
+                    <Trophy className={clsx("w-3.5 h-3.5", postType === 'pr' ? "text-brand-red" : "text-gray-500")} />
                     {language === 'es' ? 'NUEVO PR' : 'NEW PR'}
                 </button>
                 <button
                     type="button"
                     onClick={() => setPostType('wod')}
                     className={clsx(
-                        "flex items-center gap-1.5 px-3 md:px-6 py-2 md:py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider md:tracking-widest transition-all whitespace-nowrap shrink-0",
-                        postType === 'wod' ? "bg-brand-blue/10 border-brand-blue/30 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.1)]" : "border-transparent text-gray-500 hover:text-gray-300"
+                        "flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-wider transition-all whitespace-nowrap shrink-0 border",
+                        postType === 'wod' 
+                            ? "bg-brand-blue/10 border-brand-blue/20 text-blue-400 shadow-sm font-black" 
+                            : "border-transparent text-gray-500 hover:text-gray-300 font-bold"
                     )}
                 >
-                    <Dumbbell className="w-3.5 h-3.5" />
+                    <Dumbbell className={clsx("w-3.5 h-3.5", postType === 'wod' ? "text-blue-400" : "text-gray-500")} />
                     {language === 'es' ? 'WOD' : 'WORKOUT'}
                 </button>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-                {/* Avatar - Visible on larger screens */}
-                <div className="hidden sm:block shrink-0">
-                    <div className="w-12 h-12 rounded-full border-2 border-white/10 bg-black/40 overflow-hidden relative shadow-xl">
+            <div className="flex gap-4 items-start">
+                {/* Avatar - Always visible */}
+                <div className="shrink-0 pt-1">
+                    <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full border border-white/10 bg-black/40 overflow-hidden relative shadow-md">
                         {currentUser?.user_metadata?.avatar_url ? (
                             <Image src={currentUser.user_metadata.avatar_url} alt="User" fill className="object-cover" />
                         ) : (
@@ -328,17 +438,19 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                 <div className="flex-1 min-w-0">
                     <form onSubmit={handlePost} className="flex flex-col gap-4">
                         {/* Text / PR Inputs */}
-                        <div className="bg-black/40 rounded-2xl p-4 border border-white/5 focus-within:border-brand-red/30 transition-all shadow-inner">
+                        <div className="w-full">
                             {postType === 'standard' ? (
-                                <MentionInput
-                                    as="textarea"
-                                    value={content}
-                                    onChange={setContent}
-                                    placeholder="¿Qué estás entrenando hoy?"
-                                    className="w-full bg-transparent text-white placeholder:text-gray-500 text-sm md:text-lg resize-none focus:outline-none min-h-[80px] md:min-h-[100px]"
-                                />
+                                <div onFocusCapture={() => setLastFocusedInput("content")}>
+                                    <MentionInput
+                                        as="textarea"
+                                        value={content}
+                                        onChange={setContent}
+                                        placeholder="¿Qué estás entrenando hoy?"
+                                        className="w-full bg-transparent text-white placeholder:text-gray-500 text-base md:text-lg resize-none focus:outline-none min-h-[100px] leading-relaxed font-medium"
+                                    />
+                                </div>
                             ) : postType === 'wod' ? (
-                                <div className="space-y-6">
+                                <div className="bg-black/45 border border-white/[0.06] rounded-2xl p-4 md:p-6 space-y-6 shadow-inner">
                                     {/* Footer Toggle */}
                                     <div className="flex items-center justify-between p-3 bg-white/[0.03] border border-white/5 rounded-2xl">
                                         <div className="flex flex-col">
@@ -364,13 +476,15 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
 
                                     {/* Caption Textarea - Only if footer enabled */}
                                     {showWodFooter && (
-                                        <MentionInput
-                                            as="textarea"
-                                            value={content}
-                                            onChange={setContent}
-                                            placeholder="Escribe una descripción o motivación para este WOD..."
-                                            className="w-full bg-transparent text-white placeholder:text-gray-500 text-sm md:text-lg resize-none focus:outline-none min-h-[60px]"
-                                        />
+                                        <div onFocusCapture={() => setLastFocusedInput("content")}>
+                                            <MentionInput
+                                                as="textarea"
+                                                value={content}
+                                                onChange={setContent}
+                                                placeholder="Escribe una descripción o motivación para este WOD..."
+                                                className="w-full bg-transparent text-white placeholder:text-gray-500 text-sm md:text-base resize-none focus:outline-none min-h-[60px]"
+                                            />
+                                        </div>
                                     )}
 
                                     <div className="border-t border-white/5 pt-6">
@@ -384,37 +498,48 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                     </div>
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Ejercicio</label>
-                                        <input
-                                            type="text"
-                                            placeholder="p.ej. Back Squat"
-                                            value={exercise}
-                                            onChange={(e) => setExercise(e.target.value)}
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-red/50 text-sm italic font-bold"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Peso (kg)</label>
-                                        <input
-                                            type="text"
-                                            inputMode="decimal"
-                                            placeholder="p.ej. 140"
-                                            value={weight}
-                                            onChange={(e) => setWeight(e.target.value)}
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-brand-red font-black focus:outline-none focus:border-brand-red/50 text-sm"
-                                        />
-                                    </div>
-                                    <div className="space-y-1.5 sm:col-span-2">
-                                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Disciplina / Comentario</label>
-                                        <input
-                                            type="text"
-                                            placeholder="p.ej. Cross Training / Sede Norte"
-                                            value={sport}
-                                            onChange={(e) => setSport(e.target.value)}
-                                            className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-red/50 text-sm"
-                                        />
+                                <div className="bg-black/45 border border-white/[0.06] rounded-2xl p-4 md:p-6 space-y-4 shadow-inner">
+                                    <h3 className="text-xs font-black uppercase tracking-widest text-brand-red/90 mb-2 flex items-center gap-1.5">
+                                        <Trophy className="w-4 h-4" /> Registrar Récord Personal
+                                    </h3>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Ejercicio</label>
+                                            <input
+                                                type="text"
+                                                id="exercise"
+                                                placeholder="p.ej. Back Squat"
+                                                value={exercise}
+                                                onChange={(e) => setExercise(e.target.value)}
+                                                onFocus={() => setLastFocusedInput("exercise")}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-red/50 text-sm italic font-bold"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Peso (kg)</label>
+                                            <input
+                                                type="text"
+                                                id="weight"
+                                                inputMode="decimal"
+                                                placeholder="p.ej. 140"
+                                                value={weight}
+                                                onChange={(e) => setWeight(e.target.value)}
+                                                onFocus={() => setLastFocusedInput("weight")}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-brand-red font-black focus:outline-none focus:border-brand-red/50 text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-1.5 sm:col-span-2">
+                                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">Disciplina / Comentario</label>
+                                            <input
+                                                type="text"
+                                                id="sport"
+                                                placeholder="p.ej. Cross Training / Sede Norte"
+                                                value={sport}
+                                                onChange={(e) => setSport(e.target.value)}
+                                                onFocus={() => setLastFocusedInput("sport")}
+                                                className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-brand-red/50 text-sm"
+                                            />
+                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -529,17 +654,16 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                         )}
 
                         {/* Actions Bar */}
-                        <div className="flex items-center justify-between pt-2 gap-3 flex-wrap">
-                            <div className="flex items-center gap-2">
+                        <div className="border-t border-white/5 pt-4 flex items-center justify-between gap-3 flex-wrap">
+                            <div className="flex items-center gap-1.5">
                                 {/* Media Upload */}
                                 <button
                                     type="button"
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="p-3 text-gray-400 hover:text-brand-red hover:bg-brand-red/5 rounded-2xl transition-all border border-transparent hover:border-brand-red/20 group flex items-center gap-2"
+                                    className="p-2.5 text-gray-400 hover:text-brand-red hover:bg-white/5 rounded-full transition-all border border-transparent group flex items-center justify-center"
                                     title="Añadir Multimedia"
                                 >
                                     <ImageIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                                    <span className="text-[10px] font-black uppercase tracking-widest hidden md:inline">Multimedia</span>
                                 </button>
                                 <input
                                     ref={fileInputRef}
@@ -550,32 +674,61 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                     className="hidden"
                                 />
 
-                                {/* Emoji Picker */}
-                                {postType === 'standard' && (
-                                    <div ref={emojiPickerRef} className="relative">
-                                        <button
-                                            type="button"
-                                            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                            className={`p-3 rounded-2xl transition-all border border-transparent flex items-center gap-2 group ${showEmojiPicker ? 'text-yellow-400 bg-yellow-400/5 border-yellow-400/20' : 'text-gray-400 hover:text-yellow-400 hover:bg-yellow-400/5 hover:border-yellow-400/20'}`}
-                                            title="Añadir Emoji"
-                                        >
-                                            <Smile className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                                        </button>
-                                        {showEmojiPicker && (
-                                            <div className="absolute top-14 left-0 shadow-2xl z-[100] animate-in fade-in zoom-in-95 duration-200">
-                                                <div className="relative">
-                                                    <div className="absolute -top-2 left-4 w-4 h-4 bg-[#1e1e1e] rotate-45 border-l border-t border-white/10" />
-                                                    <EmojiPicker
-                                                        theme={"dark" as any}
-                                                        onEmojiClick={onEmojiClick}
-                                                        width={320}
-                                                        height={400}
+                                {/* Emoji Picker (Available on all post types, responsive bottom sheet drawer on mobile) */}
+                                <div ref={emojiPickerRef} className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                        className={`p-2.5 rounded-full transition-all border border-transparent flex items-center justify-center group ${showEmojiPicker ? 'text-yellow-400 bg-white/5' : 'text-gray-400 hover:text-yellow-400 hover:bg-white/5'}`}
+                                        title="Añadir Emoji"
+                                    >
+                                        <Smile className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                    </button>
+                                    {showEmojiPicker && (
+                                        isMobile && mounted && typeof document !== 'undefined' ? (
+                                            createPortal(
+                                                <div className="fixed inset-0 z-[99999] flex items-end justify-center">
+                                                    {/* Backdrop for mobile bottom drawer */}
+                                                    <div 
+                                                        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer"
+                                                        onClick={() => setShowEmojiPicker(false)}
                                                     />
+                                                    {/* Sheet */}
+                                                    <div className="relative z-10 w-full bg-[#141414] rounded-t-[32px] border-t border-white/10 p-4 pb-8 shadow-[0_-8px_30px_rgba(0,0,0,0.6)] animate-in slide-in-from-bottom-8 duration-300">
+                                                        <div className="relative flex flex-col items-center">
+                                                            {/* Pull tab on mobile */}
+                                                            <div className="w-12 h-1.5 bg-white/20 rounded-full mb-4 mt-1 cursor-pointer" onClick={() => setShowEmojiPicker(false)} />
+                                                            
+                                                            <div className="w-full overflow-hidden rounded-2xl">
+                                                                <EmojiPicker
+                                                                    theme={"dark" as any}
+                                                                    onEmojiClick={onEmojiClick}
+                                                                    width="100%"
+                                                                    height={320}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>,
+                                                document.body
+                                            )
+                                        ) : (
+                                            <div className="absolute top-14 left-0 z-50 rounded-2xl border border-white/10 bg-[#141414] p-0 pb-0 shadow-2xl animate-in slide-in-from-bottom-0 zoom-in-95 duration-300">
+                                                <div className="relative flex flex-col items-center">
+                                                    <div className="absolute -top-2 left-4 w-4 h-4 bg-[#141414] rotate-45 border-l border-t border-white/10" />
+                                                    <div className="w-full overflow-hidden rounded-2xl">
+                                                        <EmojiPicker
+                                                            theme={"dark" as any}
+                                                            onEmojiClick={onEmojiClick}
+                                                            width="350px"
+                                                            height={400}
+                                                        />
+                                                    </div>
                                                 </div>
                                             </div>
-                                        )}
-                                    </div>
-                                )}
+                                        )
+                                    )}
+                                </div>
 
                                 {/* Music Picker */}
                                 <MusicPicker
@@ -588,7 +741,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                             <button
                                 type="submit"
                                 disabled={isPosting || (postType === 'standard' && !content.trim() && previews.length === 0) || (postType === 'pr' && (!exercise || !weight)) || (postType === 'wod' && false)}
-                                className="bg-brand-red text-white px-8 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-glow-sm hover:shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed flex items-center gap-3 ml-auto"
+                                className="bg-brand-red text-white px-8 py-3 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-glow-sm hover:shadow-glow hover:scale-105 active:scale-95 transition-all disabled:opacity-30 disabled:grayscale disabled:cursor-not-allowed flex items-center gap-3 ml-auto"
                             >
                                 {isPosting ? (
                                     <>

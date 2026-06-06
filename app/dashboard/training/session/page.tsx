@@ -12,8 +12,8 @@ import RouteMap from '@/components/training/RouteMap';
 import RunShareCard from '@/components/training/RunShareCard';
 import WorkoutShareCard from '@/components/training/WorkoutShareCard';
 import Image from "next/image";
-import { useState, useEffect, Suspense, useMemo, useRef } from "react";
-import { saveWorkout, getExercises, getExercisePreviousRecord, getWorkoutDetails, uploadWorkoutMedia, getUserProfile, getGuidedWorkoutsCount } from "../actions";
+import { useState, useEffect, Suspense, useMemo, useRef, useCallback } from "react";
+import { saveWorkout, getExercises, getExercisePreviousRecord, getWorkoutDetails, uploadWorkoutMedia, getUserProfile, getGuidedWorkoutsCount, completeScheduledWorkout } from "../actions";
 import { getCenterPost } from "../../gyms/feed-actions";
 import { getAiRecommendation } from "../ai-coach";
 import type { TrainingPlan, WorkoutBlock, WorkoutExercise, WorkoutSet, SportType } from "../types";
@@ -64,13 +64,18 @@ function SessionContent() {
     // Only show loading overlay when there's real data to parse from URL
     const hasAiWorkout = searchParams.get('mode') === 'ai-coach' && !!searchParams.get('workout');
     const hasPlanData  = searchParams.get('mode') === 'recommendation' && !!searchParams.get('plan');
-    const [isLoadingData, setIsLoadingData] = useState(!!wodId || !!editId || hasAiWorkout || hasPlanData);
+    const hasScheduledWorkout = searchParams.get('mode') === 'scheduled' && !!searchParams.get('workout');
+    const [isLoadingData, setIsLoadingData] = useState(!!wodId || !!editId || hasAiWorkout || hasPlanData || hasScheduledWorkout);
 
     // Common State
     const [startTime] = useState(new Date());
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
     const [isPaused, setIsPaused] = useState(true);
     const [countdown, setCountdown] = useState<number | null>(null);
+    
+    // Background-safe timer state references
+    const accumulatedSecondsRef = useRef(0);
+    const lastResumedTimeRef = useRef<number | null>(null);
     const [workoutTitle, setWorkoutTitle] = useState("Sesión de entrenamiento");
     const [locationName, setLocationName] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
@@ -86,7 +91,7 @@ function SessionContent() {
     const [viewingVideo, setViewingVideo] = useState<string | null>(null);
     const [timerMode, setTimerMode] = useState<'up' | 'down'>('up');
     const [preStartPlan, setPreStartPlan] = useState<TrainingPlan | null>(null);
-    const [isGuided, setIsGuided] = useState<boolean>(!!wodId || searchParams.get('mode') === 'recommendation' || searchParams.get('mode') === 'ai-coach');
+    const [isGuided, setIsGuided] = useState<boolean>(!!wodId || searchParams.get('mode') === 'recommendation' || searchParams.get('mode') === 'ai-coach' || searchParams.get('mode') === 'scheduled');
     const [guidedCount, setGuidedCount] = useState<number>(0);
     const [userTier, setUserTier] = useState<string>('free');
     const [gpsStatus, setGpsStatus] = useState<'idle' | 'searching' | 'tracking'>('idle');
@@ -522,8 +527,8 @@ function SessionContent() {
 
     // Data pre-fill effect
     useEffect(() => {
-        // Pre-fill from AI Coach
-        if (searchParams.get('mode') === 'ai-coach' && searchParams.get('workout')) {
+        // Pre-fill from AI Coach or Scheduled Workout
+        if ((searchParams.get('mode') === 'ai-coach' || searchParams.get('mode') === 'scheduled') && searchParams.get('workout')) {
             try {
                 const workout = JSON.parse(decodeURIComponent(searchParams.get('workout')!));
                 setWorkoutTitle(workout.title);
@@ -742,43 +747,88 @@ function SessionContent() {
 
 
 
-    // Timer Logic
-    useEffect(() => {
-        if (isPaused) return;
-        const timer = setInterval(() => {
-            setElapsedSeconds(s => s + 1);
-        }, 1000);
-        return () => clearInterval(timer);
-    }, [isPaused]);
-
-    // Countdown and Sound Logic
-    const playBeep = (freq = 440) => {
+    // Premium Sound Synthesizer (beeps/chimes)
+    const playBeep = useCallback((freq = 440, type: OscillatorType = "sine", duration = 0.2) => {
         try {
             const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
-            osc.type = "sine";
+            osc.type = type;
             osc.frequency.value = freq;
             osc.connect(gain);
             gain.connect(ctx.destination);
             osc.start();
-            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.2);
-            osc.stop(ctx.currentTime + 0.2);
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + duration);
+            osc.stop(ctx.currentTime + duration);
         } catch (e) { console.warn("Audio not supported or blocked", e) }
-    };
+    }, []);
 
+    // Sync refs when pause status changes
+    useEffect(() => {
+        if (!isPaused) {
+            lastResumedTimeRef.current = Date.now();
+        } else {
+            if (lastResumedTimeRef.current) {
+                accumulatedSecondsRef.current += Math.floor((Date.now() - lastResumedTimeRef.current) / 1000);
+                lastResumedTimeRef.current = null;
+            }
+        }
+    }, [isPaused]);
+
+    // Timer Logic: Background-safe wall-clock interval
+    useEffect(() => {
+        if (isPaused) return;
+
+        if (!lastResumedTimeRef.current) {
+            lastResumedTimeRef.current = Date.now();
+        }
+
+        const timer = setInterval(() => {
+            if (lastResumedTimeRef.current) {
+                const total = accumulatedSecondsRef.current + Math.floor((Date.now() - lastResumedTimeRef.current) / 1000);
+                setElapsedSeconds(total);
+            }
+        }, 250); // check 4 times a second for responsive segundero
+        return () => clearInterval(timer);
+    }, [isPaused]);
+
+    // Visibility Listener: Sync seconds immediately when page becomes visible
+    useEffect(() => {
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible' && !isPaused && lastResumedTimeRef.current) {
+                const total = accumulatedSecondsRef.current + Math.floor((Date.now() - lastResumedTimeRef.current) / 1000);
+                setElapsedSeconds(total);
+            }
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
+        return () => document.removeEventListener('visibilitychange', handleVisibility);
+    }, [isPaused]);
+
+    // Auto-stop and beep when countdown timer ends (time is up)
+    useEffect(() => {
+        if (timerMode === 'down' && targetDuration && elapsedSeconds >= targetDuration * 60 && !isPaused) {
+            setIsPaused(true);
+            // Sporty triplet alarm sound
+            playBeep(880, 'triangle', 0.2);
+            setTimeout(() => playBeep(880, 'triangle', 0.2), 250);
+            setTimeout(() => playBeep(1200, 'triangle', 0.5), 500);
+        }
+    }, [elapsedSeconds, timerMode, targetDuration, isPaused, playBeep]);
+
+    // Countdown and Sound Logic
     useEffect(() => {
         if (countdown === null) return;
         if (countdown > 0) {
-            playBeep(440);
+            playBeep(440, 'triangle', 0.12); // Short beep on 3, 2, 1
             const t = setTimeout(() => setCountdown(countdown - 1), 1000);
             return () => clearTimeout(t);
         } else {
-            playBeep(880);
+            playBeep(880, 'triangle', 0.45); // High beep on GO!
             setIsPaused(false);
             setCountdown(null);
         }
-    }, [countdown]);
+    }, [countdown, playBeep]);
 
     const toggleTimer = () => {
         if (isPaused && elapsedSeconds === 0 && countdown === null) {
@@ -800,6 +850,13 @@ function SessionContent() {
         if (parts[0]) total += parseInt(parts[0]) || 0;
         if (parts[1]) total += (parseInt(parts[1]) || 0) * 60;
         if (parts[2]) total += (parseInt(parts[2]) || 0) * 3600;
+        
+        accumulatedSecondsRef.current = total;
+        if (!isPaused) {
+            lastResumedTimeRef.current = Date.now();
+        } else {
+            lastResumedTimeRef.current = null;
+        }
         setElapsedSeconds(total);
         setIsEditingTime(false);
     };
@@ -812,6 +869,12 @@ function SessionContent() {
                 if (workout) {
                     setShortcutMode(workout.sport_type?.toLowerCase() || 'gym');
                     setWorkoutTitle(workout.title);
+                    accumulatedSecondsRef.current = workout.duration_seconds || 0;
+                    if (!isPaused) {
+                        lastResumedTimeRef.current = Date.now();
+                    } else {
+                        lastResumedTimeRef.current = null;
+                    }
                     setElapsedSeconds(workout.duration_seconds || 0);
                     if (workout.exercises) setExercises(workout.exercises);
                 }
@@ -915,6 +978,12 @@ function SessionContent() {
     };
 
     const handleFinish = async () => {
+        // Play upward arpeggio victory chime
+        playBeep(523.25, 'sine', 0.15); // C5
+        setTimeout(() => playBeep(659.25, 'sine', 0.15), 120); // E5
+        setTimeout(() => playBeep(783.99, 'sine', 0.15), 240); // G5
+        setTimeout(() => playBeep(1046.50, 'sine', 0.4), 360); // C6
+
         setIsSaving(true);
         try {
             // Calculate pace for running
@@ -981,6 +1050,12 @@ function SessionContent() {
             const result = await saveWorkout(payload);
             // @ts-ignore
             if (result?.success) {
+                // Mark scheduled workout as completed if we started from a scheduled agenda item
+                const scheduledId = searchParams.get('scheduledId');
+                if (scheduledId) {
+                    await completeScheduledWorkout(scheduledId);
+                }
+                
                 // @ts-ignore
                 if (result.prAchievements && result.prAchievements.length > 0) {
                     // @ts-ignore
@@ -2769,6 +2844,23 @@ function GuidedWODView({ blocks, setBlocks, workoutTitle }: {
         setBlocks(updated);
     };
 
+    // Check beep sound feedback
+    const playCheckBeep = () => {
+        try {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = 600; // sporty chirp
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
+            osc.stop(ctx.currentTime + 0.1);
+        } catch (e) { console.warn("Audio error", e) }
+    };
+
     return (
         <div className="max-w-lg mx-auto w-full px-4 pb-32 space-y-5">
 
@@ -2819,11 +2911,18 @@ function GuidedWODView({ blocks, setBlocks, workoutTitle }: {
                         return (
                             <button
                                 key={key}
-                                onClick={() => setChecked(prev => {
-                                    const next = new Set(prev);
-                                    done ? next.delete(key) : next.add(key);
-                                    return next;
-                                })}
+                                onClick={() => {
+                                    setChecked(prev => {
+                                        const next = new Set(prev);
+                                        if (done) {
+                                            next.delete(key);
+                                        } else {
+                                            next.add(key);
+                                            playCheckBeep();
+                                        }
+                                        return next;
+                                    });
+                                }}
                                 className={clsx(
                                     "w-full flex items-center gap-4 px-5 py-4 transition-colors text-left",
                                     done
@@ -4659,6 +4758,28 @@ function CoachAiView({
 
     const progress = targetDuration ? Math.min(100, (elapsedSeconds / (targetDuration * 60)) * 100) : 0;
 
+    // Calculate completed exercises across blocks
+    const totalExercises = blocks.reduce((acc, b) => acc + (b.exercises?.length || 0), 0);
+    const completedExercises = blocks.reduce((acc, b) => acc + (b.exercises?.filter(ex => ex.sets?.[0]?.completed)?.length || 0), 0);
+    const exerciseProgressPercent = totalExercises > 0 ? Math.round((completedExercises / totalExercises) * 100) : 0;
+
+    // Check beep sound feedback
+    const playCheckBeep = () => {
+        try {
+            const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = "sine";
+            osc.frequency.value = 600; // sporty chirp
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            gain.gain.setValueAtTime(0.2, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
+            osc.stop(ctx.currentTime + 0.1);
+        } catch (e) { console.warn("Audio error", e) }
+    };
+
     return (
         <div className={clsx("min-h-screen flex flex-col pt-12 md:pt-20 pb-40 px-4 max-w-xl mx-auto space-y-8 md:space-y-12 relative", theme === 'dark' ? "bg-black" : "bg-white")}>
             {/* Header / Coach Intro */}
@@ -4679,17 +4800,55 @@ function CoachAiView({
                     {workoutTitle}
                 </h2>
 
-                {targetDuration && progress > 0 && (
-                    <div className="max-w-[200px] mx-auto space-y-1.5 pt-2">
-                        <div className={clsx("h-1 rounded-full overflow-hidden", theme === 'dark' ? "bg-white/5" : "bg-gray-100")}>
-                            <div
-                                className="h-full bg-brand-red transition-all duration-1000"
-                                style={{ width: `${progress}%` }}
-                            />
+                {/* Sporty Progress Dashboard */}
+                <div className={clsx(
+                    "max-w-md mx-auto rounded-3xl p-5 border space-y-4 shadow-xl",
+                    theme === 'dark' ? "bg-[#111] border-white/10" : "bg-gray-50 border-gray-200"
+                )}>
+                    <div className="flex items-center justify-between">
+                        <div className="text-left">
+                            <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">Ejercicios</p>
+                            <h4 className="text-xl font-heading font-black italic text-brand-red">
+                                {completedExercises} de {totalExercises}
+                            </h4>
                         </div>
-                        <p className="text-right text-[7px] text-gray-500 font-black uppercase tracking-widest">{Math.round(progress)}% Completado</p>
+                        <div className="text-right">
+                            <p className="text-[9px] text-gray-500 font-black uppercase tracking-widest">Entrenamiento</p>
+                            <h4 className={clsx("text-xl font-heading font-black italic", theme === 'dark' ? "text-white" : "text-black")}>
+                                {exerciseProgressPercent}% completado
+                            </h4>
+                        </div>
                     </div>
-                )}
+
+                    {/* Gradient Progress Bar */}
+                    <div className="h-3 bg-black/40 rounded-full overflow-hidden border border-white/5 relative">
+                        <div
+                            className="h-full bg-gradient-to-r from-brand-red to-orange-500 transition-all duration-500 rounded-full"
+                            style={{ width: `${exerciseProgressPercent}%` }}
+                        />
+                    </div>
+
+                    {/* Mini Exercises Step Map */}
+                    <div className="flex flex-wrap gap-2 justify-center pt-1">
+                        {blocks.flatMap((b, bIdx) => b.exercises.map((ex, eIdx) => {
+                            const isCompleted = !!ex.sets?.[0]?.completed;
+                            return (
+                                <div
+                                    key={ex.id || `${bIdx}-${eIdx}`}
+                                    className={clsx(
+                                        "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider transition-all duration-300 flex items-center gap-1 border",
+                                        isCompleted
+                                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                                            : (theme === 'dark' ? "bg-white/5 border-white/5 text-white/40" : "bg-black/5 border-black/5 text-black/40")
+                                    )}
+                                >
+                                    <span className={clsx("w-1.5 h-1.5 rounded-full", isCompleted ? "bg-emerald-400" : "bg-white/20")} />
+                                    {eIdx + 1}
+                                </div>
+                            );
+                        }))}
+                    </div>
+                </div>
             </div>
 
             {/* Blocks List */}
@@ -4720,8 +4879,10 @@ function CoachAiView({
                         <div className="space-y-3 md:space-y-4">
                             {block.exercises.map((ex: any, eIdx: number) => (
                                 <div key={ex.id || eIdx} className={clsx(
-                                    "border rounded-[28px] md:rounded-[32px] p-5 md:p-6 space-y-4 shadow-xl relative overflow-hidden group hover:border-brand-red/30 transition-all duration-500",
-                                    theme === 'dark' ? "bg-[#111] border-white/5" : "bg-white border-gray-100"
+                                    "border rounded-[28px] md:rounded-[32px] p-5 md:p-6 space-y-4 shadow-xl relative overflow-hidden group transition-all duration-500",
+                                    ex.sets?.[0]?.completed
+                                        ? (theme === 'dark' ? "bg-emerald-950/5 border-emerald-500/30 shadow-emerald-500/5" : "bg-emerald-50/20 border-emerald-500/20")
+                                        : (theme === 'dark' ? "bg-[#111] border-white/5 hover:border-brand-red/30" : "bg-white border-gray-100 hover:border-brand-red/25")
                                 )}>
                                     <div className="absolute top-0 right-0 p-6 opacity-0 md:group-hover:opacity-5 transition-opacity pointer-events-none">
                                         <Activity className="w-16 h-16 text-brand-red" />
@@ -4729,22 +4890,63 @@ function CoachAiView({
 
                                     <div className="flex items-center justify-between relative z-10">
                                         <div className="flex items-center gap-3 md:gap-4">
-                                            <div className={clsx("w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center font-heading font-black italic text-xs md:text-sm text-brand-red border", theme === 'dark' ? "bg-white/5 border-white/5" : "bg-gray-50 border-gray-100")}>
+                                            <div className={clsx(
+                                                "w-8 h-8 md:w-10 md:h-10 rounded-xl flex items-center justify-center font-heading font-black italic text-xs md:text-sm border transition-all",
+                                                ex.sets?.[0]?.completed
+                                                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400"
+                                                    : (theme === 'dark' ? "bg-white/5 border-white/5 text-brand-red" : "bg-gray-50 border-gray-100 text-brand-red")
+                                            )}>
                                                 {eIdx + 1}
                                             </div>
                                             <div>
-                                                <h4 className={clsx("text-base md:text-lg font-heading font-black italic uppercase tracking-tight leading-none", theme === 'dark' ? "text-white" : "text-black")}>{ex.name}</h4>
+                                                <h4 className={clsx(
+                                                    "text-base md:text-lg font-heading font-black italic uppercase tracking-tight leading-none transition-all",
+                                                    ex.sets?.[0]?.completed
+                                                        ? "line-through text-white/40"
+                                                        : (theme === 'dark' ? "text-white" : "text-black")
+                                                )}>{ex.name}</h4>
                                                 <p className="text-brand-red text-[8px] md:text-[9px] font-black uppercase tracking-widest mt-1 opacity-70">{ex.target}</p>
                                             </div>
                                         </div>
-                                        {ex.video_url && (
+                                        <div className="flex items-center gap-2">
+                                            {ex.video_url && (
+                                                <button
+                                                    onClick={() => setViewingVideo(ex.video_url)}
+                                                    className="p-2 bg-white/5 hover:bg-red-600 rounded-xl text-gray-400 hover:text-white transition-all border border-white/10 hover:border-red-600"
+                                                >
+                                                    <Youtube className="w-4 h-4 fill-current" />
+                                                </button>
+                                            )}
                                             <button
-                                                onClick={() => setViewingVideo(ex.video_url)}
-                                                className="p-2 bg-white/5 hover:bg-red-600 rounded-xl text-gray-400 hover:text-white transition-all border border-white/10 hover:border-red-600"
+                                                onClick={() => {
+                                                    const newBlocks = [...blocks];
+                                                    if (!newBlocks[bIdx].exercises[eIdx].sets) {
+                                                        newBlocks[bIdx].exercises[eIdx].sets = [];
+                                                    }
+                                                    if (newBlocks[bIdx].exercises[eIdx].sets.length === 0) {
+                                                        newBlocks[bIdx].exercises[eIdx].sets.push({ order: 1, weight: 0, reps: 0, completed: false });
+                                                    }
+                                                    const currentCompleted = !!newBlocks[bIdx].exercises[eIdx].sets[0].completed;
+                                                    newBlocks[bIdx].exercises[eIdx].sets[0].completed = !currentCompleted;
+                                                    setBlocks(newBlocks);
+                                                    if (!currentCompleted) {
+                                                        playCheckBeep();
+                                                    }
+                                                }}
+                                                className={clsx(
+                                                    "w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all",
+                                                    ex.sets?.[0]?.completed
+                                                        ? "bg-emerald-500 border-emerald-500 text-black shadow-lg shadow-emerald-500/20"
+                                                        : (theme === 'dark' ? "border-white/20 hover:border-brand-red text-white" : "border-gray-300 hover:border-brand-red text-black")
+                                                )}
                                             >
-                                                <Youtube className="w-4 h-4 fill-current" />
+                                                {ex.sets?.[0]?.completed ? (
+                                                    <CheckCircle className="w-5 h-5 fill-current" />
+                                                ) : (
+                                                    <div className="w-2.5 h-2.5 rounded-full bg-transparent hover:bg-brand-red/50 transition-colors" />
+                                                )}
                                             </button>
-                                        )}
+                                        </div>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-2 md:gap-3 relative z-10">
@@ -4757,9 +4959,15 @@ function CoachAiView({
                                                 <input
                                                     type="number"
                                                     placeholder="0"
-                                                    value={ex.sets[0]?.weight || ''}
+                                                    value={ex.sets?.[0]?.weight || ''}
                                                     onChange={(e) => {
                                                         const newBlocks = [...blocks];
+                                                        if (!newBlocks[bIdx].exercises[eIdx].sets) {
+                                                            newBlocks[bIdx].exercises[eIdx].sets = [];
+                                                        }
+                                                        if (newBlocks[bIdx].exercises[eIdx].sets.length === 0) {
+                                                            newBlocks[bIdx].exercises[eIdx].sets.push({ order: 1, weight: 0, reps: 0, completed: false });
+                                                        }
                                                         newBlocks[bIdx].exercises[eIdx].sets[0].weight = parseFloat(e.target.value) || 0;
                                                         setBlocks(newBlocks);
                                                     }}
@@ -4779,9 +4987,15 @@ function CoachAiView({
                                                 <input
                                                     type="number"
                                                     placeholder="0"
-                                                    value={ex.sets[0]?.reps || ''}
+                                                    value={ex.sets?.[0]?.reps || ''}
                                                     onChange={(e) => {
                                                         const newBlocks = [...blocks];
+                                                        if (!newBlocks[bIdx].exercises[eIdx].sets) {
+                                                            newBlocks[bIdx].exercises[eIdx].sets = [];
+                                                        }
+                                                        if (newBlocks[bIdx].exercises[eIdx].sets.length === 0) {
+                                                            newBlocks[bIdx].exercises[eIdx].sets.push({ order: 1, weight: 0, reps: 0, completed: false });
+                                                        }
                                                         newBlocks[bIdx].exercises[eIdx].sets[0].reps = parseInt(e.target.value) || 0;
                                                         setBlocks(newBlocks);
                                                     }}
