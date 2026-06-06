@@ -19,7 +19,7 @@ export interface MusicTrack {
 interface MusicPickerProps {
     onSelect: (track: MusicTrack | null) => void;
     selectedTrackId: string | null;
-    variant?: 'button' | 'embedded';
+    variant?: 'button' | 'embedded' | 'inline';
     onClose?: () => void;
 }
 
@@ -35,7 +35,7 @@ const CATEGORIES = [
 ];
 
 export default function MusicPicker({ onSelect, selectedTrackId, variant = 'button', onClose }: MusicPickerProps) {
-    const [isOpen, setIsOpen] = useState(variant === 'embedded');
+    const [isOpen, setIsOpen] = useState(variant === 'embedded' || variant === 'inline');
     const [mounted, setMounted] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
@@ -228,16 +228,18 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
 
     const PickerContent = (isModal: boolean) => (
         <div className={clsx(
-            "bg-brand-gray border flex flex-col overflow-hidden transition-all duration-300 w-full",
-            isModal 
-                ? "h-[85vh] sm:h-[650px] rounded-t-[32px] sm:rounded-[32px] border-t sm:border border-white/10 shadow-[0_-8px_30px_rgba(0,0,0,0.5)] sm:shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)]" 
-                : "rounded-[24px] p-4 border border-white/10"
+            "flex flex-col overflow-hidden transition-all duration-300 w-full",
+            variant === 'inline'
+                ? "border-none bg-transparent p-0"
+                : "bg-brand-gray border",
+            !isModal && variant !== 'inline' && "rounded-[24px] p-4 border border-white/10",
+            isModal && "h-[85vh] sm:h-[650px] rounded-t-[32px] sm:rounded-[32px] border-t sm:border border-white/10 shadow-[0_-8px_30px_rgba(0,0,0,0.5)] sm:shadow-[0_32px_64px_-12px_rgba(0,0,0,0.8)]"
         )}>
             {/* Pull tab on mobile */}
             {isModal && (
                 <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mt-3 sm:hidden shrink-0 cursor-pointer" onClick={() => setIsOpen(false)} />
             )}
-
+ 
             {/* Header */}
             <div className={clsx("flex items-center justify-between p-4 sm:p-6 pb-2 relative", !isModal && "p-0 mb-4")}>
                 <div className="flex items-center gap-3 pr-12">
@@ -249,8 +251,8 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
                         <p className="text-[9px] text-gray-500 font-bold uppercase tracking-widest truncate">Canciones reales · iTunes</p>
                     </div>
                 </div>
-
-                {(isModal || onClose) && (
+ 
+                {(isModal || onClose) && variant !== 'inline' && (
                     <button
                         type="button"
                         onClick={(e) => {
@@ -421,7 +423,7 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
         </div>
     );
 
-    if (variant === 'embedded') {
+    if (variant === 'embedded' || variant === 'inline') {
         return PickerContent(false);
     }
 

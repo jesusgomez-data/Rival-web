@@ -150,3 +150,82 @@ export async function getOrgMembersForCheckin(orgId: string) {
         .order('full_name', { ascending: true });
     return members || [];
 }
+
+export async function checkinWithQR(classId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "Inicia sesión para realizar check-in." };
+
+    const admin = createAdminClient();
+
+    // 1. Get Class Details & Organization
+    const { data: classData, error: classError } = await admin
+        .from('classes')
+        .select('id, name, organization_id, max_capacity, enrollments:class_enrollments(count)')
+        .eq('id', classId)
+        .single();
+
+    if (classError || !classData) {
+        return { error: "Clase no encontrada." };
+    }
+
+    const orgId = classData.organization_id;
+
+    // 2. Find member record
+    const { data: member, error: memberError } = await admin
+        .from('members')
+        .select('id, status')
+        .eq('center_id', orgId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (memberError || !member) {
+        return { error: "No eres miembro de este centro. Debes inscribirte primero." };
+    }
+
+    if (member.status !== 'active' && member.status !== 'trial') {
+        return { error: "Tu membresía no está activa." };
+    }
+
+    // 3. Check existing enrollment
+    const { data: existing } = await admin
+        .from('class_enrollments')
+        .select('id, attended')
+        .eq('class_id', classId)
+        .eq('member_id', member.id)
+        .maybeSingle();
+
+    if (existing) {
+        if (existing.attended) {
+            return { success: true, alreadyCheckedIn: true, className: classData.name };
+        }
+        // Mark as attended
+        const { error } = await admin
+            .from('class_enrollments')
+            .update({ attended: true })
+            .eq('id', existing.id);
+        if (error) return { error: error.message };
+    } else {
+        // Check capacity
+        const enrolledCount = classData.enrollments?.[0]?.count || 0;
+        if (enrolledCount >= (classData.max_capacity || 20)) {
+            return { error: "La clase está completa." };
+        }
+
+        // Create enrollment and mark attended
+        const { error } = await admin
+            .from('class_enrollments')
+            .insert({
+                class_id: classId,
+                member_id: member.id,
+                attended: true,
+                enrollment_date: new Date().toISOString()
+            });
+        if (error) return { error: error.message };
+    }
+
+    revalidatePath(`/dashboard/gyms/${orgId}/checkin`);
+    revalidatePath(`/gym/${orgId}`);
+    return { success: true, className: classData.name };
+}
+

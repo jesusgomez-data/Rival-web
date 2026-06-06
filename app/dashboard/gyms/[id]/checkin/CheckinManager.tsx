@@ -43,6 +43,12 @@ export default function CheckinManager({ centerId, initialClasses, stats, member
     const [isPending, startTransition] = useTransition();
     const [successIds, setSuccessIds] = useState<Set<string>>(new Set());
     const [localStats, setLocalStats] = useState(stats);
+    const [showQrModal, setShowQrModal] = useState(false);
+    const [origin, setOrigin] = useState('');
+
+    useEffect(() => {
+        setOrigin(window.location.origin);
+    }, []);
 
     async function loadClassData(cls: ClassItem) {
         setLoadingClass(true);
@@ -170,9 +176,17 @@ export default function CheckinManager({ centerId, initialClasses, stats, member
                                         <p className="font-black text-white">{selectedClass.name}</p>
                                         <p className="text-xs text-gray-500">{formatTime(selectedClass.scheduled_time)} · {classData?.enrollments?.length || 0} inscritos</p>
                                     </div>
-                                    <span className="text-xs font-black text-brand-red bg-brand-red/10 px-3 py-1 rounded-full">
-                                        {classData?.enrollments?.filter((e: any) => e.attended).length || 0} presentes
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setShowQrModal(true)}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-brand-red/20 border border-white/10 hover:border-brand-red/30 rounded-xl text-xs font-black uppercase text-gray-300 hover:text-white transition-all shadow-sm"
+                                        >
+                                            <QrCode className="w-3.5 h-3.5" /> Mostrar QR
+                                        </button>
+                                        <span className="text-xs font-black text-brand-red bg-brand-red/10 px-3 py-1 rounded-full">
+                                            {classData?.enrollments?.filter((e: any) => e.attended).length || 0} presentes
+                                        </span>
+                                    </div>
                                 </div>
 
                                 {/* Search */}
@@ -319,6 +333,59 @@ export default function CheckinManager({ centerId, initialClasses, stats, member
                     {filteredMembers.length > 20 && (
                         <p className="text-xs text-gray-600 text-center">Mostrando 20 de {filteredMembers.length}. Busca por nombre para filtrar.</p>
                     )}
+                </div>
+            )}
+
+            {/* QR Code Modal */}
+            {showQrModal && selectedClass && (
+                <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+                    <div className="relative w-full max-w-md bg-brand-gray border border-white/10 rounded-3xl p-6 shadow-[0_0_50px_rgba(239,68,68,0.15)] overflow-hidden">
+                        {/* Red glow decorative top border */}
+                        <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-brand-red to-transparent"></div>
+                        
+                        {/* Header */}
+                        <div className="flex items-start justify-between mb-6">
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-red mb-1">Control de Acceso</p>
+                                <h3 className="text-lg font-heading font-black text-white italic uppercase tracking-tight">Código QR de la Clase</h3>
+                            </div>
+                            <button
+                                onClick={() => setShowQrModal(false)}
+                                className="p-2 text-gray-500 hover:text-white bg-white/5 hover:bg-white/10 rounded-full transition-colors"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Class Details Card */}
+                        <div className="bg-black/30 border border-white/5 rounded-2xl p-4 mb-6 text-center">
+                            <p className="font-bold text-white text-base leading-tight">{selectedClass.name}</p>
+                            <p className="text-xs text-gray-500 mt-1 uppercase font-bold tracking-wider">
+                                ⏰ {formatTime(selectedClass.scheduled_time)}
+                            </p>
+                        </div>
+
+                        {/* QR Image Container */}
+                        <div className="flex flex-col items-center justify-center bg-white p-6 rounded-3xl border border-white/10 shadow-inner max-w-[250px] mx-auto mb-6">
+                            <img
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
+                                    `${origin}/dashboard/checkin?classId=${selectedClass.id}`
+                                )}&color=000000&bgcolor=ffffff`}
+                                alt={`QR para ${selectedClass.name}`}
+                                className="w-full h-auto object-contain"
+                            />
+                        </div>
+
+                        {/* Instructions */}
+                        <div className="text-center space-y-2">
+                            <p className="text-xs text-gray-400 leading-relaxed font-semibold">
+                                Pide a los atletas que escaneen este código con la cámara de su móvil para registrar su asistencia al instante.
+                            </p>
+                            <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
+                                RIVAL FIT · SISTEMA B2B
+                            </p>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

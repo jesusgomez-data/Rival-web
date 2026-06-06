@@ -719,4 +719,27 @@ body {
   animation: scan-move 5s linear infinite;
 }
 
+/* Floating emoji animation for story reactions */
+@keyframes float-emoji {
+  0% {
+    transform: translateY(100%) scale(0.6) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-80vh) scale(1.4) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+
+.animate-float-emoji {
+  animation: float-emoji 2.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+}
+
+
 

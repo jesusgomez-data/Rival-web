@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown } from 'lucide-react'
 import { createStory, createPRStory, toggleStoryLike, recordStoryView, deleteStory, getStoryViewers } from './actions'
+import { getOrCreateConversation, sendMessage } from '../messages/actions'
 import { clsx } from 'clsx'
 import PRCard from '../community/PRCard'
 import { Trophy, Activity } from 'lucide-react'
@@ -102,14 +103,17 @@ interface OverlayElement {
 const slideVariants = {
     enter: (direction: number) => ({
         x: direction > 0 ? '100%' : direction < 0 ? '-100%' : '0%',
-        opacity: direction === 0 ? 0 : 1
+        scale: 0.92,
+        opacity: 0
     }),
     center: {
         x: '0%',
+        scale: 1,
         opacity: 1
     },
     exit: (direction: number) => ({
-        x: direction < 0 ? '100%' : direction > 0 ? '-100%' : '0%',
+        x: direction < 0 ? '50%' : direction > 0 ? '-50%' : '0%',
+        scale: 0.92,
         opacity: 0
     })
 };
@@ -123,6 +127,12 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
     const [progress, setProgress] = useState(0)
     const [isPaused, setIsPaused] = useState(false)
     const [isPressed, setIsPressed] = useState(false)
+    
+    // Story DM Reply and Quick Reactions State
+    const [replyText, setReplyText] = useState("")
+    const [showReactions, setShowReactions] = useState(false)
+    const [isSendingReply, setIsSendingReply] = useState(false)
+    const [floatingEmojis, setFloatingEmojis] = useState<{ id: number; char: string; left: number; delay: number }[]>([])
     const [showViewers, setShowViewers] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
     const storyVideoRef = useRef<HTMLVideoElement>(null)
@@ -164,6 +174,8 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
     // Interaction State for Dragging
     const [draggingId, setDraggingId] = useState<string | null>(null)
     const dragStartRef = useRef<{ x: number, y: number } | null>(null)
+    const [isDraggingBg, setIsDraggingBg] = useState(false)
+    const bgDragStartRef = useRef<{ x: number, y: number, posX: number, posY: number } | null>(null)
     const [selectedOverlayId, setSelectedOverlayId] = useState<string | null>(null)
     const [expandedWorkoutId, setExpandedWorkoutId] = useState<string | null>(null)
     const [showFullSummary, setShowFullSummary] = useState(false)
@@ -181,6 +193,10 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
     const currentUserStories = selectedUserIndex !== null ? userStories[selectedUserIndex] : null
     const currentStory = currentUserStories?.stories?.[activeStoryIndex] || null
     const isOwner = currentUserStories?.user?.id === currentUser?.id
+
+    const storyZoom = currentStory?.metadata?.imageZoom || 1
+    const storyPosX = currentStory?.metadata?.imagePositionX ?? 50
+    const storyPosY = currentStory?.metadata?.imagePositionY ?? 50
 
     useEffect(() => {
         const fetchViewers = async () => {
@@ -491,7 +507,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
         setOverlays(overlays.filter(o => o.id !== id))
     }
 
-    // Dragging Logic (Simple 2D translation for now)
+    // Dragging Logic (Stickers & Background Image/Video)
     const handleDragStart = (e: React.MouseEvent | React.TouchEvent, id: string) => {
         // e.stopPropagation(); 
         setDraggingId(id)
@@ -500,38 +516,90 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
         dragStartRef.current = { x: clientX, y: clientY }
     }
 
+    const handleBgDragStart = (e: React.MouseEvent | React.TouchEvent) => {
+        if (draggingId || selectedOverlayId) return;
+
+        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+
+        setIsDraggingBg(true);
+        bgDragStartRef.current = {
+            x: clientX,
+            y: clientY,
+            posX: imagePositionX,
+            posY: imagePositionY
+        };
+    };
+
+    const handleBgDragMove = (e: React.MouseEvent | React.TouchEvent) => {
+        if (!isDraggingBg || !bgDragStartRef.current) return;
+
+        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
+
+        const deltaX = clientX - bgDragStartRef.current.x;
+        const deltaY = clientY - bgDragStartRef.current.y;
+
+        const sensitivity = 0.5; // Drag sensitivity
+        const newPosX = bgDragStartRef.current.posX - (deltaX / 300) * 100 * sensitivity / imageZoom;
+        const newPosY = bgDragStartRef.current.posY - (deltaY / 600) * 100 * sensitivity / imageZoom;
+
+        setImagePositionX(Math.min(Math.max(newPosX, 0), 100));
+        setImagePositionY(Math.min(Math.max(newPosY, 0), 100));
+        bgDragStartRef.current = {
+            x: clientX,
+            y: clientY,
+            posX: Math.min(Math.max(newPosX, 0), 100),
+            posY: Math.min(Math.max(newPosY, 0), 100)
+        };
+    };
+
+    const handleBgDragEnd = () => {
+        setIsDraggingBg(false);
+        bgDragStartRef.current = null;
+    };
+
+    const handleBgWheel = (e: React.WheelEvent) => {
+        const zoomDelta = -e.deltaY * 0.002;
+        setImageZoom(prev => Math.min(Math.max(prev + zoomDelta, 1), 3));
+    };
+
     const handleDragMove = (e: React.MouseEvent | React.TouchEvent) => {
-        if (!draggingId || !dragStartRef.current) return
+        if (draggingId && dragStartRef.current) {
+            const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX
+            const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY
 
-        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX
-        const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY
+            const deltaX = clientX - dragStartRef.current.x
+            const deltaY = clientY - dragStartRef.current.y
 
-        const deltaX = clientX - dragStartRef.current.x
-        const deltaY = clientY - dragStartRef.current.y
+            const percentX = (deltaX / 300) * 100
+            const percentY = (deltaY / 600) * 100
 
-        // Convert pixels to % roughly (assuming mostly standard phone width, but simplistic)
-        // A better way is to use pixels relative to container, but let's just nudge the % values for MVP feel
-        // Assuming ~400px width container
-        const percentX = (deltaX / 300) * 100
-        const percentY = (deltaY / 600) * 100
-
-        setOverlays(prev => prev.map(o => {
-            if (o.id === draggingId) {
-                return {
-                    ...o,
-                    x: Math.min(Math.max(o.x + percentX, 0), 100),
-                    y: Math.min(Math.max(o.y + percentY, 0), 100)
+            setOverlays(prev => prev.map(o => {
+                if (o.id === draggingId) {
+                    return {
+                        ...o,
+                        x: Math.min(Math.max(o.x + percentX, 0), 100),
+                        y: Math.min(Math.max(o.y + percentY, 0), 100)
+                    }
                 }
-            }
-            return o
-        }))
+                return o
+            }))
 
-        dragStartRef.current = { x: clientX, y: clientY }
+            dragStartRef.current = { x: clientX, y: clientY }
+        } else if (isDraggingBg && bgDragStartRef.current) {
+            handleBgDragMove(e);
+        }
     }
 
     const handleDragEnd = () => {
-        setDraggingId(null)
-        dragStartRef.current = null
+        if (draggingId) {
+            setDraggingId(null)
+            dragStartRef.current = null
+        }
+        if (isDraggingBg) {
+            handleBgDragEnd();
+        }
     }
 
     const handlePostStory = async () => {
@@ -590,9 +658,13 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                 formData.append('music_title', selectedTrack.title)
                 formData.append('music_artist', selectedTrack.artist)
             }
-            if (overlays.length > 0) {
-                formData.append('metadata', JSON.stringify({ overlays }))
+            const metadataObj: any = { overlays }
+            if (imageZoom !== 1 || imagePositionX !== 50 || imagePositionY !== 50) {
+                metadataObj.imageZoom = imageZoom
+                metadataObj.imagePositionX = imagePositionX
+                metadataObj.imagePositionY = imagePositionY
             }
+            formData.append('metadata', JSON.stringify(metadataObj))
 
             const res = await createStory(formData)
             if (res.error) {
@@ -796,6 +868,156 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                 nextStory()
             }
             await refreshStories()
+        }
+    }
+
+    const handleSendReply = async () => {
+        if (!replyText.trim() || !currentUserStories?.user?.id || !currentStory) return
+
+        setIsSendingReply(true)
+        setIsPaused(true)
+        if (storyVideoRef.current) storyVideoRef.current.pause()
+        if (audioRef.current) audioRef.current.pause()
+
+        try {
+            const res = await getOrCreateConversation(currentUserStories.user.id)
+            if (res.error) {
+                showError("No se pudo iniciar la conversación: " + res.error)
+                setIsSendingReply(false)
+                setIsPaused(false)
+                return
+            }
+
+            const conversationId = res.conversationId
+            if (!conversationId) {
+                showError("No se pudo obtener el ID de la conversación.")
+                setIsSendingReply(false)
+                setIsPaused(false)
+                return
+            }
+
+            // Detect media to attach
+            const isVideo = currentStory.media_type === 'video'
+            const isImage = currentStory.media_type === 'image'
+            const isPr = currentStory.media_type === 'pr'
+            
+            let attachImageUrl: string | undefined = undefined
+            let attachVideoUrl: string | undefined = undefined
+
+            if (isImage) {
+                attachImageUrl = currentStory.media_url
+            } else if (isVideo) {
+                attachVideoUrl = currentStory.media_url
+            } else if (isPr) {
+                try {
+                    const prObj = JSON.parse(currentStory.media_url)
+                    if (prObj.backgroundImage) attachImageUrl = prObj.backgroundImage
+                } catch (e) {}
+            }
+
+            const sendRes = await sendMessage(
+                conversationId,
+                `Respondió a tu historia: "${replyText.trim()}"`,
+                attachImageUrl,
+                attachVideoUrl
+            )
+
+            if (sendRes.error) {
+                showError("Error al enviar mensaje: " + sendRes.error)
+            } else {
+                setReplyText("")
+                setShowReactions(false)
+                setIsPaused(false)
+                if (storyVideoRef.current) storyVideoRef.current.play().catch(() => {})
+                if (currentStory.music_url && audioRef.current && !isMuted) audioRef.current.play().catch(() => {})
+                
+                const notice = document.createElement('div')
+                notice.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 z-[999] bg-brand-green/90 backdrop-blur-md text-white text-xs font-black px-4 py-2.5 rounded-full shadow-lg'
+                notice.innerText = '¡Respuesta enviada!'
+                document.body.appendChild(notice)
+                setTimeout(() => notice.remove(), 2500)
+            }
+        } catch (err: any) {
+            showError("Error crítico al enviar respuesta: " + (err.message || err))
+        } finally {
+            setIsSendingReply(false)
+        }
+    }
+
+    const handleSendReaction = async (emoji: string) => {
+        if (!currentUserStories?.user?.id || !currentStory) return
+
+        setIsPaused(true)
+        if (storyVideoRef.current) storyVideoRef.current.pause()
+        if (audioRef.current) audioRef.current.pause()
+
+        const count = 18
+        const newFloating: typeof floatingEmojis = []
+        for (let i = 0; i < count; i++) {
+            newFloating.push({
+                id: Date.now() + i + Math.random(),
+                char: emoji,
+                left: 10 + Math.random() * 80,
+                delay: Math.random() * 0.4
+            })
+        }
+        setFloatingEmojis(newFloating)
+        setTimeout(() => {
+            setFloatingEmojis([])
+        }, 3000)
+
+        setShowReactions(false)
+
+        try {
+            const res = await getOrCreateConversation(currentUserStories.user.id)
+            if (res.error) {
+                showError("No se pudo reaccionar: " + res.error)
+                setIsPaused(false)
+                return
+            }
+
+            const conversationId = res.conversationId
+            if (!conversationId) {
+                setIsPaused(false)
+                return
+            }
+
+            const isVideo = currentStory.media_type === 'video'
+            const isImage = currentStory.media_type === 'image'
+            const isPr = currentStory.media_type === 'pr'
+            
+            let attachImageUrl: string | undefined = undefined
+            let attachVideoUrl: string | undefined = undefined
+
+            if (isImage) {
+                attachImageUrl = currentStory.media_url
+            } else if (isVideo) {
+                attachVideoUrl = currentStory.media_url
+            } else if (isPr) {
+                try {
+                    const prObj = JSON.parse(currentStory.media_url)
+                    if (prObj.backgroundImage) attachImageUrl = prObj.backgroundImage
+                } catch (e) {}
+            }
+
+            const sendRes = await sendMessage(
+                conversationId,
+                `Reaccionó a tu historia: ${emoji}`,
+                attachImageUrl,
+                attachVideoUrl
+            )
+
+            if (sendRes.error) {
+                showError("Error al enviar reacción: " + sendRes.error)
+            }
+        } catch (err: any) {
+            console.error("Reaction sending failed:", err)
+        } finally {
+            setTimeout(() => {
+                setIsPaused(false)
+                if (storyVideoRef.current) storyVideoRef.current.play().catch(() => {})
+                if (currentStory.music_url && audioRef.current && !isMuted) audioRef.current.play().catch(() => {})
+            }, 1000)
         }
     }
 
@@ -1532,16 +1754,27 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                         </div>
 
                         {/* Canvas Area */}
-                        <div className="relative flex-1 w-full h-full bg-gray-900 overflow-hidden flex items-center justify-center">
+                        <div 
+                            className="relative flex-1 w-full h-full bg-gray-900 overflow-hidden flex items-center justify-center cursor-grab active:cursor-grabbing select-none"
+                            onMouseDown={handleBgDragStart}
+                            onTouchStart={handleBgDragStart}
+                            onWheel={handleBgWheel}
+                        >
+                            {/* Drag & Zoom Info Badge */}
+                            <div className="absolute top-20 left-1/2 -translate-x-1/2 bg-black/60 backdrop-blur-md px-3.5 py-2 rounded-full border border-white/10 z-30 pointer-events-none flex items-center gap-2 shadow-lg animate-in fade-in slide-in-from-top-3 duration-500">
+                                <Move className="w-3.5 h-3.5 text-brand-red animate-pulse" />
+                                <span className="text-[8px] font-black text-white uppercase tracking-[0.15em]">Arrastra la foto para encuadrar • Scroll/Rueda para Zoom</span>
+                            </div>
+
                             {previewFile?.type.startsWith('video/') ? (
                                 <video
                                     src={previewUrl}
                                     autoPlay
                                     loop
                                     playsInline
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-cover pointer-events-none"
                                     style={{
-                                        transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
+                                        transform: `scale(${imageZoom}) translate(${(50 - imagePositionX) / imageZoom}%, ${(50 - imagePositionY) / imageZoom}%)`,
                                         transformOrigin: 'center center'
                                     }}
                                 />
@@ -1549,9 +1782,9 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                 <img
                                     src={previewUrl}
                                     alt="Preview"
-                                    className="w-full h-full object-cover"
+                                    className="w-full h-full object-cover pointer-events-none"
                                     style={{
-                                        transform: `scale(${imageZoom}) translate(${(imagePositionX - 50) / imageZoom}%, ${(imagePositionY - 50) / imageZoom}%)`,
+                                        transform: `scale(${imageZoom}) translate(${(50 - imagePositionX) / imageZoom}%, ${(50 - imagePositionY) / imageZoom}%)`,
                                         transformOrigin: 'center center'
                                     }}
                                 />
@@ -1960,7 +2193,11 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                     autoPlay
                                     playsInline
                                     muted={isMuted}
-                                    className="w-full h-full object-cover pointer-events-none"
+                                    className="w-full h-full object-cover pointer-events-none animate-in fade-in duration-300"
+                                    style={{
+                                        transform: `scale(${storyZoom}) translate(${(50 - storyPosX) / storyZoom}%, ${(50 - storyPosY) / storyZoom}%)`,
+                                        transformOrigin: 'center center'
+                                    }}
                                     onTimeUpdate={(e) => {
                                         const video = e.currentTarget;
                                         if (video.duration && !isPaused) {
@@ -1975,7 +2212,15 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                     }}
                                 />
                             ) : (
-                                <Image src={currentStory.media_url} alt="Story content" fill className="object-cover pointer-events-none" />
+                                <img
+                                    src={currentStory.media_url}
+                                    alt="Story content"
+                                    className="w-full h-full object-cover pointer-events-none animate-in fade-in duration-300"
+                                    style={{
+                                        transform: `scale(${storyZoom}) translate(${(50 - storyPosX) / storyZoom}%, ${(50 - storyPosY) / storyZoom}%)`,
+                                        transformOrigin: 'center center'
+                                    }}
+                                />
                             )}
 
                             {/* Workout Summary Overlay */}
@@ -2352,16 +2597,71 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                             </AnimatePresence>
                         </div>
 
+                        {/* Floating Emojis Reaction Layer */}
+                        <div className="absolute inset-0 pointer-events-none z-[80] overflow-hidden rounded-[32px]">
+                            {floatingEmojis.map((fe) => (
+                                <span
+                                    key={fe.id}
+                                    className="absolute bottom-10 text-4xl animate-float-emoji select-none"
+                                    style={{
+                                        left: `${fe.left}%`,
+                                        animationDelay: `${fe.delay}s`,
+                                        '--rot': `${(Math.random() - 0.5) * 60}deg`
+                                    } as any}
+                                >
+                                    {fe.char}
+                                </span>
+                            ))}
+                        </div>
+
+                        {/* Quick Reactions Panel Overlay */}
+                        <AnimatePresence>
+                            {showReactions && !isPressed && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                                    className="absolute bottom-24 left-6 right-6 bg-black/90 backdrop-blur-2xl border border-white/10 rounded-2xl p-4 z-50 flex flex-col gap-3 shadow-2xl pointer-events-auto"
+                                >
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Reacciones rápidas</span>
+                                        <button
+                                            onClick={() => {
+                                                setShowReactions(false);
+                                                setIsPaused(false);
+                                                if (storyVideoRef.current) storyVideoRef.current.play().catch(() => {});
+                                                if (currentStory?.music_url && audioRef.current && !isMuted) audioRef.current.play().catch(() => {});
+                                            }}
+                                            className="text-gray-500 hover:text-white p-0.5"
+                                        >
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                    <div className="grid grid-cols-6 gap-1 text-2xl">
+                                        {['🔥', '😂', '👏', '😍', '😢', '😮'].map((emoji) => (
+                                            <button
+                                                key={emoji}
+                                                onClick={() => handleSendReaction(emoji)}
+                                                className="hover:scale-125 active:scale-95 transition-transform p-2 text-center"
+                                            >
+                                                {emoji}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
                         <AnimatePresence>
                             {!isPressed && (
                                 <motion.div
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
-                                    className="absolute bottom-10 left-0 right-0 px-6 flex items-center justify-between z-50 pointer-events-none"
+                                    className="absolute bottom-10 left-0 right-0 px-6 flex items-center gap-3 z-50 pointer-events-none"
                                 >
-                                    <div className="pointer-events-auto">
-                                        {isOwner ? (
+                                    {isOwner ? (
+                                        <div className="pointer-events-auto flex-1">
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); setShowViewers(true); }}
                                                 className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-xl px-4 py-2.5 rounded-2xl border border-white/10 transition-all group"
@@ -2377,15 +2677,56 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                                     {(currentStory as any).views_count} {(currentStory as any).views_count === 1 ? 'Vista' : 'Vistas'}
                                                 </span>
                                             </button>
-                                        ) : (
-                                            <div className="flex-1" />
-                                        )}
-                                    </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex-1 flex items-center gap-2 pointer-events-auto relative">
+                                            <input
+                                                type="text"
+                                                placeholder={`Responder a ${currentUserStories?.user?.username || 'Usuario'}...`}
+                                                value={replyText}
+                                                onChange={(e) => setReplyText(e.target.value)}
+                                                onFocus={() => {
+                                                    setIsPaused(true);
+                                                    if (storyVideoRef.current) storyVideoRef.current.pause();
+                                                    if (audioRef.current) audioRef.current.pause();
+                                                    setShowReactions(true);
+                                                }}
+                                                onBlur={() => {
+                                                    setTimeout(() => {
+                                                        if (!replyText.trim() && !showReactions) {
+                                                            setIsPaused(false);
+                                                            if (storyVideoRef.current) storyVideoRef.current.play().catch(() => {});
+                                                            if (currentStory?.music_url && audioRef.current && !isMuted) audioRef.current.play().catch(() => {});
+                                                        }
+                                                    }, 300);
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        handleSendReply();
+                                                    }
+                                                }}
+                                                className="w-full bg-black/60 hover:bg-black/80 focus:bg-black/90 border border-white/10 text-white rounded-full px-5 py-3 text-xs placeholder-gray-400 focus:outline-none transition-all duration-300 pr-10"
+                                            />
+                                            {replyText.trim() && (
+                                                <button
+                                                    onClick={handleSendReply}
+                                                    disabled={isSendingReply}
+                                                    className="absolute right-3 p-1 text-brand-red hover:text-white transition-colors"
+                                                >
+                                                    {isSendingReply ? (
+                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                    ) : (
+                                                        <Send className="w-4 h-4" />
+                                                    )}
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
 
                                     <button
                                         onClick={handleLike}
                                         className={clsx(
-                                            "p-3 rounded-full backdrop-blur-xl border transition-all active:scale-90 pointer-events-auto",
+                                            "p-3 rounded-full backdrop-blur-xl border transition-all active:scale-90 pointer-events-auto shrink-0 relative",
                                             (currentStory as any).has_liked
                                                 ? "bg-brand-red/20 border-brand-red text-brand-red"
                                                 : "bg-white/10 border-white/10 text-white hover:bg-white/20"

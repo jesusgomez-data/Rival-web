@@ -9,6 +9,7 @@ import dynamic from 'next/dynamic'
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false })
 import { createPortal } from 'react-dom'
 import { createClient } from '@/utils/supabase/client'
+import MusicPicker, { MusicTrack } from "@/app/dashboard/MusicPicker"
 
 interface TextOverlay {
     id: string; text: string; x: number; y: number; fontSize: number;
@@ -101,32 +102,6 @@ const SPEEDS = [
     { label: "1.5×", value: 1.5 },
     { label: "2×",   value: 2 },
     { label: "3×",   value: 3 },
-]
-
-const TRACKS = [
-    // ── DUBSTEP / AGGRESSIVE ELECTRONIC · The Avalune (CC BY 4.0) ──
-    { name: "Kinetic Breach",       artist: "The Avalune",  genre: "Dubstep",       url: "https://archive.org/download/avalune-kinetic-aggressive-dubstep-mix-30-min/Kinetic%20Breach.mp3" },
-    { name: "Armor Shatter",        artist: "The Avalune",  genre: "Dubstep",       url: "https://archive.org/download/avalune-kinetic-aggressive-dubstep-mix-30-min/Armor%20Shatter.mp3" },
-    { name: "Digital Anarchy",      artist: "The Avalune",  genre: "Industrial",    url: "https://archive.org/download/avalune-kinetic-aggressive-dubstep-mix-30-min/Digital%20Anarchy.mp3" },
-    { name: "System Implosion",     artist: "The Avalune",  genre: "Heavy EDM",     url: "https://archive.org/download/avalune-kinetic-aggressive-dubstep-mix-30-min/System%20Implosion.mp3" },
-    { name: "Dominance Wave",       artist: "The Avalune",  genre: "Dubstep",       url: "https://archive.org/download/avalune-kinetic-aggressive-dubstep-mix-30-min/Dominance%20Wave.mp3" },
-    { name: "Pulse Weaponry",       artist: "The Avalune",  genre: "Future Bass",   url: "https://archive.org/download/avalune-kinetic-aggressive-dubstep-mix-30-min/Pulse%20Weaponry.mp3" },
-    // ── SYNTHWAVE / HIGH-OCTANE · The Avalune (CC BY 4.0) ──
-    { name: "Velocity Surge",       artist: "The Avalune",  genre: "Synthwave",     url: "https://archive.org/download/avalune-blaze-highoctane-synth-mix-30-minute/Velocity%20Surge.mp3" },
-    { name: "Chrome Metropolis",    artist: "The Avalune",  genre: "Synthwave",     url: "https://archive.org/download/avalune-blaze-highoctane-synth-mix-30-minute/Chrome%20Metropolis.mp3" },
-    { name: "Midnight Pursuit",     artist: "The Avalune",  genre: "Dark Synth",    url: "https://archive.org/download/avalune-blaze-highoctane-synth-mix-30-minute/Midnight%20Pursuit.mp3" },
-    { name: "Night Drive Protocol", artist: "The Avalune",  genre: "Synthwave",     url: "https://archive.org/download/avalune-blaze-highoctane-synth-mix-30-minute/Night%20Drive%20Protocol.mp3" },
-    { name: "Street Heat",          artist: "The Avalune",  genre: "Outrun",        url: "https://archive.org/download/avalune-velocity-chiptune-outrun-mix-23-minutes/Street%20Heat.mp3" },
-    { name: "Electric Streets",     artist: "The Avalune",  genre: "Chiptune",      url: "https://archive.org/download/avalune-velocity-chiptune-outrun-mix-23-minutes/Electric%20Streets.mp3" },
-    { name: "Nightfall Pursuit",    artist: "The Avalune",  genre: "Outrun",        url: "https://archive.org/download/avalune-velocity-chiptune-outrun-mix-23-minutes/Nightfall%20Pursuit.mp3" },
-    { name: "Urban Circuit",        artist: "The Avalune",  genre: "Electronic",    url: "https://archive.org/download/avalune-velocity-chiptune-outrun-mix-23-minutes/Urban%20Circuit.mp3" },
-    // ── METAL / ROCK · Komiku (CC0 — Dominio Público) ──
-    { name: "Metal Circuit",        artist: "Komiku",       genre: "Metal",         url: "https://archive.org/download/komiku-incredible-kart-game/Metal%20Circuit.mp3" },
-    { name: "Punk Rock Circuit",    artist: "Komiku",       genre: "Punk Rock",     url: "https://archive.org/download/komiku-incredible-kart-game/Punk%20Rock%20Circuit.mp3" },
-    { name: "Rock'n Roll Circuit",  artist: "Komiku",       genre: "Rock",          url: "https://archive.org/download/komiku-incredible-kart-game/Rock%27n%20Roll%20Circuit.mp3" },
-    { name: "Boss Fight Circuit",   artist: "Komiku",       genre: "Action Rock",   url: "https://archive.org/download/komiku-incredible-kart-game/Boss%20Fight%20Circuit.mp3" },
-    // ── HIP-HOP BEAT · Cely Grande (CC0 — Dominio Público) ──
-    { name: "Real Man Use Fists",   artist: "Cely Grande",  genre: "Hip-Hop",       url: "https://archive.org/download/CelyGrande-RealManUseFistsdeepUndergroundRapInstrumental/Celygrande-Real_man_use_fists.mp3" },
 ]
 
 const ASPECT_RATIOS = [
@@ -1085,6 +1060,145 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                         {isSaving ? <Loader2 size={24} className="animate-spin text-brand-red"/> : <ChevronRight size={28} className="group-hover:translate-x-1 transition-transform"/>}
                     </button>
                 </div>
+
+                {/* Selected Element Context Panel */}
+                {selectedId && (
+                    <div className="absolute bottom-28 left-1/2 -translate-x-1/2 bg-black/90 backdrop-blur-2xl border border-white/15 p-4 rounded-3xl w-[calc(100%-32px)] pointer-events-auto shadow-2xl flex flex-col gap-3.5 z-[1000] animate-in slide-in-from-bottom-3 duration-300">
+                        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                            <span className="text-[9px] font-black text-brand-red uppercase tracking-[0.2em] flex items-center gap-1">
+                                <Sparkles size={11} className="animate-pulse" /> Ajustar Elemento
+                            </span>
+                            <button
+                                onClick={() => setSelectedId(null)}
+                                className="text-[9px] font-bold text-gray-500 hover:text-white transition-colors"
+                            >
+                                Deseleccionar
+                            </button>
+                        </div>
+
+                        {/* If Text Overlay selected */}
+                        {textOverlays.some(t => t.id === selectedId) && (() => {
+                            const to = textOverlays.find(t => t.id === selectedId)!;
+                            return (
+                                <div className="space-y-3">
+                                    {/* Live text change */}
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Contenido del Texto</label>
+                                        <input
+                                            type="text"
+                                            value={to.text}
+                                            onChange={e => setTextOverlays(p => p.map(t => t.id === selectedId ? { ...t, text: e.target.value } : t))}
+                                            className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-red/50"
+                                        />
+                                    </div>
+                                    {/* Live color change */}
+                                    <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                                        {COLORS.map(c => (
+                                            <button
+                                                key={c}
+                                                onClick={() => setTextOverlays(p => p.map(t => t.id === selectedId ? { ...t, color: c } : t))}
+                                                className={clsx("w-6 h-6 rounded-full border transition-all shrink-0", to.color === c ? "border-white scale-110 shadow-md" : "border-white/20")}
+                                                style={{ backgroundColor: c }}
+                                            />
+                                        ))}
+                                    </div>
+                                    {/* Live size slider */}
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest shrink-0">Tamaño</span>
+                                        <input
+                                            type="range"
+                                            min={16}
+                                            max={120}
+                                            value={to.fontSize}
+                                            onChange={e => setTextOverlays(p => p.map(t => t.id === selectedId ? { ...t, fontSize: parseInt(e.target.value) } : t))}
+                                            className="flex-1 accent-brand-red h-1 cursor-pointer"
+                                        />
+                                        <span className="text-[10px] font-black text-gray-400 w-6 text-right">{to.fontSize}</span>
+                                    </div>
+                                    {/* Live Font style */}
+                                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
+                                        {FONTS.map(f => (
+                                            <button
+                                                key={f.name}
+                                                onClick={() => setTextOverlays(p => p.map(t => t.id === selectedId ? { ...t, fontFamily: f.family, style: f.style } : t))}
+                                                className={clsx("px-3 py-1.5 rounded-lg border text-[8px] font-black uppercase tracking-widest shrink-0 transition-all", to.fontFamily === f.family ? "bg-white text-black border-white" : "border-white/10 text-white/50")}
+                                            >
+                                                {f.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {/* If Sticker Overlay selected */}
+                        {stickerOverlays.some(s => s.id === selectedId) && (() => {
+                            const so = stickerOverlays.find(s => s.id === selectedId)!;
+                            return (
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest shrink-0">Tamaño</span>
+                                        <input
+                                            type="range"
+                                            min={40}
+                                            max={250}
+                                            value={so.size}
+                                            onChange={e => setStickerOverlays(p => p.map(s => s.id === selectedId ? { ...s, size: parseInt(e.target.value) } : s))}
+                                            className="flex-1 accent-brand-red h-1 cursor-pointer"
+                                        />
+                                        <span className="text-[10px] font-black text-gray-400 w-6 text-right">{so.size}</span>
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {/* If Stat Overlay selected */}
+                        {statOverlays.some(s => s.id === selectedId) && (() => {
+                            const so = statOverlays.find(s => s.id === selectedId)!;
+                            return (
+                                <div className="space-y-3">
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[8px] font-black text-gray-500 uppercase tracking-widest">Valor del Stat</label>
+                                        <input
+                                            type="text"
+                                            value={so.value}
+                                            onChange={e => setStatOverlays(p => p.map(s => s.id === selectedId ? { ...s, value: e.target.value } : s))}
+                                            className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-brand-red/50"
+                                        />
+                                    </div>
+                                    {/* Style selector */}
+                                    <div className="flex gap-2 justify-center">
+                                        {STAT_STYLES.map(ss => (
+                                            <button
+                                                key={ss.id}
+                                                onClick={() => setStatOverlays(p => p.map(s => s.id === selectedId ? { ...s, style: ss.id as any } : s))}
+                                                className={clsx("px-3 py-1.5 rounded-full border text-[8px] font-black uppercase tracking-widest transition-all", so.style === ss.id ? "border-white text-white" : "border-white/10 text-white/30")}
+                                                style={{ background: so.style === ss.id ? ss.bg : undefined }}
+                                            >
+                                                {ss.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })()}
+
+                        {/* Delete Element Button */}
+                        <button
+                            onClick={() => {
+                                setTextOverlays(p => p.filter(t => t.id !== selectedId));
+                                setStickerOverlays(p => p.filter(s => s.id !== selectedId));
+                                setStatOverlays(p => p.filter(s => s.id !== selectedId));
+                                setTagOverlays(p => p.filter(t => t.id !== selectedId));
+                                setImageOverlays(p => p.filter(i => i.id !== selectedId));
+                                setSelectedId(null);
+                            }}
+                            className="w-full py-2.5 bg-brand-red/10 hover:bg-brand-red text-brand-red hover:text-white border border-brand-red/20 hover:border-brand-red rounded-xl text-[9px] font-black uppercase tracking-widest transition-all mt-1"
+                        >
+                            Eliminar Elemento
+                        </button>
+                    </div>
+                )}
             </div>
 
             <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />

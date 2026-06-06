@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { UserPlus, UserCheck, MapPin, Globe, CheckCircle2, Grid, Dumbbell, ShoppingBag, X, CreditCard, Check, Lock, Calendar, ArrowRight, ArrowLeft, Trophy, ChevronRight, ChevronLeft, Clock, ChevronDown, Zap, Flame, TrendingUp, Info, Play, Banknote, Instagram, Youtube, Facebook, Hash, Navigation, Image as ImageIcon, Star, Users, Building2, List, LayoutGrid } from "lucide-react";
-import { toggleFollow, requestTrial, purchaseProduct, getClassesForDate, getClassesRange, enrollInClass, getClassAttendees, saveClassResult, getDayRankings, requestMemberPayment } from "../../dashboard/gyms/management-actions";
+import { toggleFollow, requestTrial, purchaseProduct, getClassesForDate, getClassesRange, enrollInClass, unenrollFromClass, getClassAttendees, saveClassResult, getDayRankings, requestMemberPayment } from "../../dashboard/gyms/management-actions";
 import { bookTrialClass } from "../../dashboard/gyms/trial-booking-actions";
 import GymPostCard from "../../dashboard/gyms/GymPostCard";
 import Link from "next/link";
@@ -50,6 +50,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
     const [scheduleClasses, setScheduleClasses] = useState<any[]>([]);
     const [weeklyClasses, setWeeklyClasses] = useState<Record<string, any[]>>({});
     const [bookingClassId, setBookingClassId] = useState<string | null>(null);
+    const [hoveredClassId, setHoveredClassId] = useState<string | null>(null);
     const [attendeesList, setAttendeesList] = useState<any[] | null>(null);
     const [isLoadingAttendees, setIsLoadingAttendees] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
@@ -262,7 +263,21 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
     }
 
     // Booking Flow - Book Trial Class or Regular Class
-    async function handleBook(classId: string) {
+    async function handleBook(classId: string, isEnrolled = false) {
+        if (isEnrolled) {
+            if (!confirm("¿Seguro que deseas cancelar tu reserva en esta clase?")) return;
+            setBookingClassId(classId);
+            const res = await unenrollFromClass(org.id, classId);
+            setBookingClassId(null);
+            if (res.error) {
+                showToast(res.error, false);
+            } else {
+                showToast("¡Reserva cancelada con éxito!");
+                loadSchedule(scheduleDate);
+            }
+            return;
+        }
+
         setBookingClassId(classId);
 
         // Use trial booking for non-members, regular enrollment for members
@@ -1374,10 +1389,12 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                                 <div className="flex flex-col gap-2 w-full sm:w-auto">
                                                     {/* Enroll Button */}
                                                     <button
-                                                        onClick={() => handleBook(cls.id)}
+                                                        onClick={() => handleBook(cls.id, cls.is_enrolled)}
+                                                        onMouseEnter={() => setHoveredClassId(cls.id)}
+                                                        onMouseLeave={() => setHoveredClassId(null)}
                                                         disabled={bookingClassId === cls.id || (cls.enrolled_count >= cls.max_capacity && !cls.is_enrolled)}
                                                         className={`w-full sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${cls.is_enrolled
-                                                            ? 'bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-green-500/20'
+                                                            ? 'bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/30'
                                                             : cls.enrolled_count >= cls.max_capacity
                                                                 ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5'
                                                                 : isMember
@@ -1386,19 +1403,22 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                                             }`}
                                                     >
                                                         {bookingClassId === cls.id ? '...' :
-                                                            cls.is_enrolled ? 'Inscrito ✓' :
-                                                                cls.enrolled_count >= cls.max_capacity ? 'Completo' :
+                                                            cls.is_enrolled
+                                                                ? (hoveredClassId === cls.id ? 'Cancelar Reserva' : 'Inscrito ✓')
+                                                                : cls.enrolled_count >= cls.max_capacity ? 'Completo' :
                                                                     isMember ? 'Reservar Plaza' : (isTrainer ? 'Agendar' : 'Prueba Gratis')}
                                                     </button>
 
                                                     {/* Result/Attendees Actions */}
                                                     <div className="flex justify-between items-center px-1">
-                                                        <button
-                                                            onClick={() => handleViewAttendees(cls.id)}
-                                                            className="text-[9px] uppercase font-black tracking-widest text-gray-500 hover:text-brand-red transition-colors"
-                                                        >
-                                                            Ver Asistentes
-                                                        </button>
+                                                        {isMember && (
+                                                            <button
+                                                                onClick={() => handleViewAttendees(cls.id)}
+                                                                className="text-[9px] uppercase font-black tracking-widest text-gray-500 hover:text-brand-red transition-colors"
+                                                            >
+                                                                Ver Asistentes
+                                                            </button>
+                                                        )}
 
                                                         {isMember && cls.is_enrolled && (new Date() >= new Date(cls.scheduled_time) || cls.my_result) && (
                                                             <button
@@ -1470,14 +1490,18 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                                                 </button>
 
                                                                 <button
-                                                                    onClick={() => handleBook(cls.id)}
+                                                                    onClick={() => handleBook(cls.id, cls.is_enrolled)}
+                                                                    onMouseEnter={() => setHoveredClassId(cls.id)}
+                                                                    onMouseLeave={() => setHoveredClassId(null)}
                                                                     disabled={bookingClassId === cls.id || (cls.enrolled_count >= cls.max_capacity && !cls.is_enrolled)}
                                                                     className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cls.is_enrolled
-                                                                        ? 'bg-green-500/10 text-green-500 border border-green-500/20'
+                                                                        ? 'bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/30'
                                                                         : 'bg-brand-red text-white hover:bg-red-600'
                                                                         }`}
                                                                 >
-                                                                    {cls.is_enrolled ? '✓' : 'Book'}
+                                                                    {cls.is_enrolled
+                                                                        ? (hoveredClassId === cls.id ? 'Cancelar' : '✓')
+                                                                        : 'Book'}
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -1711,30 +1735,51 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                     </div>
 
                                     <div className={`pt-6 border-t space-y-3 ${theme === 'dark' ? 'border-white/5' : 'border-gray-100'}`}>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <button
-                                                onClick={() => handlePurchase('cash')}
-                                                disabled={isPurchasing || selectedProduct.stock_quantity === 0}
-                                                className="w-full py-4 bg-gray-700 text-white flex flex-col items-center justify-center gap-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                                <Banknote className="w-4 h-4" />
-                                                Efectivo
-                                            </button>
-                                            <button
-                                                onClick={() => handlePurchase('card')}
-                                                disabled={isPurchasing || selectedProduct.stock_quantity === 0}
-                                                className="w-full py-4 bg-brand-red text-white flex flex-col items-center justify-center gap-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-red-500/20"
-                                            >
-                                                {isPurchasing ? '...' : (
-                                                    selectedProduct.stock_quantity > 0 ? (
-                                                        <><CreditCard className="w-4 h-4" /> Tarjeta</>
-                                                    ) : 'Agotado'
-                                                )}
-                                            </button>
-                                        </div>
-                                        <p className="text-[9px] text-center text-gray-500 font-medium leading-tight">
-                                            Tarjeta: pago automático.<br />Efectivo: pagar en mostrador.
-                                        </p>
+                                        {!isMember ? (
+                                            <div className={`text-center py-4 rounded-2xl p-4 ${theme === 'dark' ? 'bg-brand-red/5 border-brand-red/20' : 'bg-red-50 border-red-200'} border`}>
+                                                <Lock className="w-5 h-5 text-brand-red mx-auto mb-2" />
+                                                <p className="text-[10px] font-black text-brand-red uppercase tracking-wider mb-1">Solo para Miembros</p>
+                                                <p className={`text-[11px] mb-3 leading-snug font-bold ${theme === 'dark' ? 'text-gray-400' : 'text-gray-600'}`}>
+                                                    Debes ser miembro activo del centro para adquirir productos en la tienda.
+                                                </p>
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedProduct(null);
+                                                        setActiveTab('memberships');
+                                                    }}
+                                                    className="px-5 py-2.5 bg-brand-red text-white text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-red-600 transition-all shadow-lg hover:scale-105"
+                                                >
+                                                    Ver Planes de Membresía
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <button
+                                                        onClick={() => handlePurchase('cash')}
+                                                        disabled={isPurchasing || selectedProduct.stock_quantity === 0}
+                                                        className="w-full py-4 bg-gray-700 text-white flex flex-col items-center justify-center gap-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        <Banknote className="w-4 h-4" />
+                                                        Efectivo
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handlePurchase('card')}
+                                                        disabled={isPurchasing || selectedProduct.stock_quantity === 0}
+                                                        className="w-full py-4 bg-brand-red text-white flex flex-col items-center justify-center gap-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-red-500/20"
+                                                    >
+                                                        {isPurchasing ? '...' : (
+                                                            selectedProduct.stock_quantity > 0 ? (
+                                                                <><CreditCard className="w-4 h-4" /> Tarjeta</>
+                                                            ) : 'Agotado'
+                                                        )}
+                                                    </button>
+                                                </div>
+                                                <p className="text-[9px] text-center text-gray-500 font-medium leading-tight">
+                                                    Tarjeta: pago automático.<br />Efectivo: pagar en mostrador.
+                                                </p>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
                             </div>

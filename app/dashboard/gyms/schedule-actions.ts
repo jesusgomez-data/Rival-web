@@ -423,3 +423,39 @@ export async function enrollInClass(centerId: string, classId: string) {
     revalidatePath(`/gym/${centerId}`);
     return { success: true };
 }
+
+export async function unenrollFromClass(centerId: string, classId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "Inicia sesión." };
+
+    const { data: member } = await supabase.from('members').select('id').eq('center_id', centerId).eq('user_id', user.id).single();
+    if (!member) return { error: "Membresía no encontrada." };
+
+    const { data: existing } = await supabase.from('class_enrollments').select('id').eq('class_id', classId).eq('member_id', member.id).maybeSingle();
+    if (!existing) return { error: "No estás inscrito." };
+
+    const { error } = await supabase
+        .from('class_enrollments')
+        .delete()
+        .eq('id', existing.id);
+
+    if (error) return { error: error.message };
+
+    // Notification for cancellation
+    const { data: classInfo } = await supabase.from('classes').select('name, organization:organization_id(name)').eq('id', classId).single();
+    if (classInfo) {
+        await createNotification({
+            userId: user.id,
+            type: 'class_cancellation',
+            title: 'Reserva Cancelada',
+            // @ts-ignore
+            content: `Has cancelado tu reserva en ${classInfo.name} en ${classInfo.organization?.name || 'el centro'}.`,
+            link: `/gym/${centerId}`
+        });
+    }
+
+    revalidatePath(`/gym/${centerId}`);
+    return { success: true };
+}
+
