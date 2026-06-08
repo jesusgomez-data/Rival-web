@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
     Users, Calendar, DollarSign, Zap, ChevronRight, Plus, Brain,
@@ -30,6 +31,7 @@ interface Props {
 
 export default function TrainerDashboard({ id, centerDetails, metrics, analytics, userRole }: Props) {
     const supabase = createClient()
+    const router   = useRouter()
     const planKey  = (centerDetails?.plan as PlanKey) in PLANS ? (centerDetails?.plan as PlanKey) : 'pt_free'
     const plan     = PLANS[planKey]
 
@@ -147,11 +149,11 @@ export default function TrainerDashboard({ id, centerDetails, metrics, analytics
                                 <UserPlus className="w-4 h-4" /> Alumno
                             </Link>
                         )}
-                        <Link href={`/trainer/${id}`}
-                            className="bg-muted border border-border text-foreground px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-muted/80 transition-all flex items-center gap-2"
-                            target="_blank" rel="noopener noreferrer">
+                        <button
+                            onClick={() => router.push(`/trainer/${id}`)}
+                            className="bg-muted border border-border text-foreground px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-muted/80 transition-all flex items-center gap-2">
                             <ArrowUpRight className="w-4 h-4" /> Ver perfil
-                        </Link>
+                        </button>
                         {isOwner && (
                             <Link href={`/trainer/${id}/edit`}
                                 className="bg-muted border border-border text-foreground px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-muted/80 transition-all flex items-center gap-2">

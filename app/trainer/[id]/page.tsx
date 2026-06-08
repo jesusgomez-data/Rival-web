@@ -102,7 +102,17 @@ export default function TrainerPublicProfile() {
         <div className="min-h-screen bg-black text-white">
             {/* Back */}
             <div className="sticky top-0 z-30 bg-black/80 backdrop-blur border-b border-white/5 px-4 py-3 flex items-center gap-3">
-                <button onClick={() => router.back()} className="p-1.5 rounded-lg hover:bg-white/8 text-gray-400 hover:text-white transition-colors">
+                <button
+                    onClick={() => {
+                        // Check if we have real history to go back to
+                        if (window.history.length > 1 && document.referrer && document.referrer.includes(window.location.hostname)) {
+                            window.history.back()
+                        } else {
+                            router.push('/dashboard/gyms')
+                        }
+                    }}
+                    className="p-1.5 rounded-lg hover:bg-white/8 text-gray-400 hover:text-white transition-colors"
+                >
                     <ArrowLeft className="w-5 h-5" />
                 </button>
                 <span className="text-white font-bold text-sm truncate">{trainer.name}</span>
