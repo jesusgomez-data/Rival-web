@@ -51,6 +51,60 @@ const AnalyticsTracker    = dynamic(() => import("./admin/AnalyticsTracker"),   
 const OnboardingTour      = dynamic(() => import("@/components/OnboardingTour"),  { ssr: false, loading: () => null });
 const LiveActivityTicker  = dynamic(() => import("@/components/LiveActivityTicker"), { ssr: false, loading: () => null });
 
+// ── Black Screen Fix for Capacitor/PWA ───────────────────────────────────────
+// When the app is minimized on Android/iOS and the WebView is resumed after a 
+// long idle period, the WebView can show a blank black screen. We detect when 
+// the page becomes visible again after being hidden and force a paint cycle.
+function useBlackScreenFix() {
+    useEffect(() => {
+        let hiddenAt: number | null = null;
+
+        const onVisibilityChange = () => {
+            if (document.hidden) {
+                hiddenAt = Date.now();
+            } else {
+                const hiddenMs = hiddenAt ? Date.now() - hiddenAt : 0;
+                hiddenAt = null;
+
+                // Force a repaint to clear potential blank WebView state
+                if (hiddenMs > 0) {
+                    // Trigger a forced reflow/repaint on the body
+                    document.body.style.opacity = '0.99';
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            document.body.style.opacity = '';
+                        });
+                    });
+                }
+
+                // Hard reload after very long background (> 10 min) to recover fully
+                if (hiddenMs > 10 * 60 * 1000) {
+                    window.location.reload();
+                }
+            }
+        };
+
+        document.addEventListener('visibilitychange', onVisibilityChange);
+
+        // Capacitor/Android also fires 'resume' on the window object
+        const onResume = () => {
+            document.body.style.opacity = '0.99';
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    document.body.style.opacity = '';
+                });
+            });
+        };
+        window.addEventListener('resume', onResume);
+
+        return () => {
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+            window.removeEventListener('resume', onResume);
+        };
+    }, []);
+}
+
+
 // ── New-user hint above the "+" button ────────────────────────────────────────
 function NewUserHint() {
     const [show, setShow] = useState(false);
@@ -94,6 +148,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const router = useRouter();
     const { theme, toggleTheme } = useTheme();
     const { language, setLanguage, t } = useLanguage();
+
+    // ── Apply the black screen fix for Capacitor/PWA ──────────────────────────
+    useBlackScreenFix();
 
     const [profile, setProfile] = useState<any>(null);
     const [userEmail, setUserEmail] = useState<string | null>(null);

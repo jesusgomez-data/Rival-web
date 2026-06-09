@@ -375,6 +375,29 @@ export default function DashboardHome() {
     // Cache follows & official IDs so fetchFeed doesn't re-fetch them
     const followedIdsRef = useRef<string[]>([]);
     const officialIdsRef = useRef<string[]>([]);
+    // Track when the page was hidden to detect long background intervals (black screen fix)
+    const hiddenAtRef = useRef<number | null>(null);
+
+    // ── Black screen fix for Capacitor/PWA: reload if app was backgrounded > 5 min ──
+    useEffect(() => {
+        const onVisibilityChange = () => {
+            if (document.hidden) {
+                hiddenAtRef.current = Date.now();
+            } else {
+                const hiddenMs = hiddenAtRef.current ? Date.now() - hiddenAtRef.current : 0;
+                hiddenAtRef.current = null;
+                // If backgrounded for more than 5 minutes, do a hard reload to clear the black screen
+                if (hiddenMs > 5 * 60 * 1000) {
+                    window.location.reload();
+                } else if (hiddenMs > 30 * 1000) {
+                    // Backgrounded between 30s and 5min → just refresh the feed silently
+                    setRefreshKey(prev => prev + 1);
+                }
+            }
+        };
+        document.addEventListener('visibilitychange', onVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', onVisibilityChange);
+    }, []);
 
     // Memoized fetch for main dashboard data (profile, stats, duels)
     const loadData = useCallback(async () => {

@@ -169,9 +169,14 @@ function ShareButton({
         <div className="relative" ref={menuRef}>
             <button
                 onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                aria-label="Compartir"
                 className={className}
             >
                 <Share2 className={iconClassName} />
+                {/* If the className contains flex-col (action bar context), show the label */}
+                {className?.includes('flex-col') && (
+                    <span className="text-[10px] font-black sr-only">Compartir</span>
+                )}
             </button>
             {isOpen && (
                 <>
@@ -227,6 +232,7 @@ function ShareButton({
         </div>
     );
 }
+
 
 function RepostCard({ image, caption, prefetchedPost }: { image?: string; caption?: string; prefetchedPost?: any }) {
     const [originalPost, setOriginalPost] = useState<any>(prefetchedPost || null);
@@ -1556,32 +1562,38 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
             )}
 
             {/* ACTION BAR: Horizontal layout below all content */}
-            <div className="px-6 py-4 flex items-center justify-between border-t border-white/5 bg-black/[0.02]">
-                <div className="flex items-center gap-5">
+            <div className="px-6 py-3 flex items-center justify-between border-t border-white/5 bg-black/[0.02]">
+                <div className="flex items-center gap-6">
                     <LikeButton postId={postId} initialLikes={initialLikes} hasLikedInitial={hasLikedInitial} />
                     <button 
                         onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }} 
-                        className="flex flex-col items-center gap-1 group text-zinc-400 hover:text-white transition-colors"
+                        aria-label="Comentarios"
+                        className={clsx(
+                            "flex flex-col items-center gap-1 transition-all active:scale-90",
+                            showComments ? "text-brand-red" : "text-zinc-400 hover:text-white"
+                        )}
                     >
-                        <MessageCircle className={clsx("w-7 h-7 transition-all active:scale-90", showComments && "fill-brand-red text-brand-red")} />
+                        <MessageCircle className={clsx("w-7 h-7 transition-all", showComments && "fill-brand-red")} />
                         <span className="text-[10px] font-black">{commentsCount}</span>
                     </button>
-                    <ShareButton
-                        image={image}
-                        workoutData={resolvedWorkoutData}
-                        mediaType={mediaType}
-                        postId={postId}
-                        photoUrl={photoUrl}
-                        caption={caption}
-                        className="text-zinc-400 hover:text-white transition-colors"
-                        iconClassName="w-7 h-7"
-                        onInstagramShare={() => setShowInstagramCard(true)}
-                        onOpenShareCard={() => setShowShareCard(true)}
-                        onDownloadMedia={handleDownloadMedia}
-                        isVideo={isVideo}
-                        onRepostClick={() => setShowRepostModal(true)}
-                        onMessageClick={() => { setShowDMModal(true); loadDMFollows(); }}
-                    />
+                    <div className="flex flex-col items-center gap-1">
+                        <ShareButton
+                            image={image}
+                            workoutData={resolvedWorkoutData}
+                            mediaType={mediaType}
+                            postId={postId}
+                            photoUrl={photoUrl}
+                            caption={caption}
+                            className="flex flex-col items-center gap-1 text-zinc-400 hover:text-white transition-all active:scale-90"
+                            iconClassName="w-7 h-7"
+                            onInstagramShare={() => setShowInstagramCard(true)}
+                            onOpenShareCard={() => setShowShareCard(true)}
+                            onDownloadMedia={handleDownloadMedia}
+                            isVideo={isVideo}
+                            onRepostClick={() => setShowRepostModal(true)}
+                            onMessageClick={() => { setShowDMModal(true); loadDMFollows(); }}
+                        />
+                    </div>
                 </div>
 
                 {music_url && (
