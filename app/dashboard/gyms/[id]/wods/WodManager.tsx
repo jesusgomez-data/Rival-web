@@ -8,8 +8,17 @@ import { deletePost } from "../../feed-actions";
 import clsx from "clsx";
 import { useTheme } from "../../../../ThemeContext";
 
-type BlockType = 'strength' | 'wod' | 'skill' | 'other';
+type BlockType = 'weightlifting' | 'metcon' | 'gymnastics' | 'endurance' | 'mobility' | 'other';
 type BlockFormat = 'EMOM' | 'AMRAP' | 'FOR TIME' | 'INTERVALS' | 'TABATA' | 'QUALITY' | 'REST' | 'DEATH BY' | 'FREE' | 'ROUNDS FOR TIME';
+
+const PART_NAMES: Record<BlockType, string> = {
+    weightlifting: 'Fuerza / Weightlifting',
+    metcon: 'Metcon / WOD',
+    gymnastics: 'Gymnastics / Skill',
+    endurance: 'Endurance / Hyrox',
+    mobility: 'Movilidad / Finisher',
+    other: 'Otra Parte'
+};
 
 import { BENCHMARKS } from "./benchmarks";
 
@@ -46,7 +55,10 @@ interface WodExercise {
     name: string;
     sets?: string;
     reps?: string;
+    repUnit?: string;
     value?: string;
+    weightUnit?: string;
+    note?: string;
     media_url?: string;
 }
 
@@ -114,6 +126,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
     const [activeExercisePath, setActiveExercisePath] = useState<{ bIdx: number, eIdx: number } | null>(null);
     const [catalogExercises, setCatalogExercises] = useState<string[]>([]);
     const [isSavingExercise, setIsSavingExercise] = useState(false);
+    const [showAddPartMenu, setShowAddPartMenu] = useState(false);
 
     // Initial Load
     useEffect(() => {
@@ -194,7 +207,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
             if (wodData.workout) {
                 setBlocks([{
                     id: Math.random().toString(36).substr(2, 9),
-                    type: 'wod',
+                    type: 'metcon',
                     format: 'FREE',
                     config: {},
                     content: wodData.workout
@@ -318,14 +331,19 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
 
     // --- BLOCK LOGIC ---
 
-    const addBlock = () => {
+    const addBlock = (type: BlockType = 'metcon') => {
+        let defaultFormat: BlockFormat = 'FREE';
+        if (type === 'weightlifting') defaultFormat = 'QUALITY';
+        if (type === 'metcon') defaultFormat = 'AMRAP';
+        if (type === 'endurance') defaultFormat = 'INTERVALS';
+
         setBlocks([...blocks, {
             id: Math.random().toString(36).substr(2, 9),
-            type: 'wod',
-            format: 'FREE',
+            type: type,
+            format: defaultFormat,
             config: { timecap: '20:00' },
             content: "",
-            mode: 'text',
+            mode: 'builder',
             exercises: []
         }]);
     };
@@ -449,16 +467,22 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
     const handleSaveNewExercise = async (name: string, bIdx: number, exIdx: number) => {
         if (!name.trim()) return;
         setIsSavingExercise(true);
-        const res = await addExerciseToCatalog(name.toUpperCase());
-        setIsSavingExercise(false);
-
-        if (res.success) {
-            setCatalogExercises(prev => Array.from(new Set([...prev, name.toUpperCase()])).sort());
-            updateExercise(bIdx, exIdx, { name: name.toUpperCase() });
-            setActiveExercisePath(null);
-            setSearchQuery("");
-        } else {
-            alert("Error al guardar ejercicio: " + res.error);
+        try {
+            const res = await addExerciseToCatalog(name.toUpperCase());
+            
+            if (res.success) {
+                setCatalogExercises(prev => Array.from(new Set([...prev, name.toUpperCase()])).sort());
+                updateExercise(bIdx, exIdx, { name: name.toUpperCase() });
+                setActiveExercisePath(null);
+                setSearchQuery("");
+            } else {
+                alert("Error al guardar ejercicio: " + res.error);
+            }
+        } catch (error) {
+            console.error("Error in handleSaveNewExercise:", error);
+            alert("Error inesperado al guardar el ejercicio.");
+        } finally {
+            setIsSavingExercise(false);
         }
     };
 
@@ -624,34 +648,45 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                             <ChevronDown className="w-3 h-3 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                                         </div>
 
-                                        {(block.format === 'AMRAP' || block.format === 'FOR TIME' || block.format === 'ROUNDS FOR TIME') && (
+                                        {(block.format === 'AMRAP' || block.format === 'FOR TIME' || block.format === 'ROUNDS FOR TIME' || block.format === 'TABATA') && (
                                             <div className="flex items-end gap-2">
-                                                {block.format === 'ROUNDS FOR TIME' && (
+                                                {(block.format === 'ROUNDS FOR TIME' || block.format === 'TABATA') && (
                                                     <div className="flex flex-col items-center gap-0.5">
                                                         <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Rounds</span>
-                                                        <div className="flex items-center bg-background rounded-xl border border-border overflow-hidden">
-                                                            <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, rounds: Math.max(1, (block.config?.rounds || 1) - 1) } })} className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-muted active:scale-90 transition-transform"><Minus className="w-3.5 h-3.5" /></button>
-                                                            <span className="w-8 text-center text-sm font-black text-foreground">{block.config?.rounds || 1}</span>
-                                                            <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, rounds: (block.config?.rounds || 1) + 1 } })} className="w-9 h-9 flex items-center justify-center text-brand-red hover:bg-muted active:scale-95 transition-transform"><Plus className="w-3.5 h-3.5" /></button>
-                                                        </div>
+                                                        <input 
+                                                            type="number" 
+                                                            value={block.config?.rounds || 1} 
+                                                            onChange={e => updateBlock(index, { config: { ...block.config, rounds: Math.max(1, parseInt(e.target.value) || 1) } })} 
+                                                            className="w-16 h-9 bg-background border border-border rounded-xl text-center text-sm font-black text-foreground focus:border-brand-red outline-none" 
+                                                        />
                                                     </div>
                                                 )}
-                                                <div className="flex flex-col items-center gap-0.5">
-                                                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Time Cap</span>
-                                                    <div className="flex items-center bg-background rounded-xl border border-brand-red/30 overflow-hidden">
-                                                        <button type="button" onClick={() => {
-                                                            const [m, s] = (block.config?.timecap || '20:00').split(':').map(Number);
-                                                            const newMins = Math.max(0, (isNaN(m) ? 20 : m) - 1);
-                                                            updateBlock(index, { config: { ...block.config, timecap: `${String(newMins).padStart(2,'0')}:${String(isNaN(s) ? 0 : s).padStart(2,'0')}` } });
-                                                        }} className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-muted active:scale-90 transition-transform"><Minus className="w-3.5 h-3.5" /></button>
-                                                        <span className="text-sm font-black text-brand-red px-1 tabular-nums">{(() => { const [m,s]=(block.config?.timecap||'20:00').split(':').map(Number); return `${String(isNaN(m)?20:m).padStart(2,'0')}:${String(isNaN(s)?0:s).padStart(2,'0')}`; })()}</span>
-                                                        <button type="button" onClick={() => {
-                                                            const [m, s] = (block.config?.timecap || '20:00').split(':').map(Number);
-                                                            const newMins = (isNaN(m) ? 20 : m) + 1;
-                                                            updateBlock(index, { config: { ...block.config, timecap: `${String(newMins).padStart(2,'0')}:${String(isNaN(s) ? 0 : s).padStart(2,'0')}` } });
-                                                        }} className="w-9 h-9 flex items-center justify-center text-brand-red hover:bg-muted active:scale-95 transition-transform"><Plus className="w-3.5 h-3.5" /></button>
+                                                
+                                                {block.format === 'TABATA' && (
+                                                    <>
+                                                        <div className="flex flex-col items-center gap-0.5">
+                                                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Work</span>
+                                                            <input type="text" value={block.config?.work || '20S'} onChange={e => updateBlock(index, { config: { ...block.config, work: e.target.value.toUpperCase() }})} className="w-16 h-9 bg-background border border-border rounded-xl text-center text-sm font-black text-foreground focus:border-brand-red outline-none" />
+                                                        </div>
+                                                        <div className="flex flex-col items-center gap-0.5">
+                                                            <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Rest</span>
+                                                            <input type="text" value={block.config?.rest || '10S'} onChange={e => updateBlock(index, { config: { ...block.config, rest: e.target.value.toUpperCase() }})} className="w-16 h-9 bg-background border border-border rounded-xl text-center text-sm font-black text-foreground focus:border-brand-red outline-none" />
+                                                        </div>
+                                                    </>
+                                                )}
+
+                                                {(block.format === 'AMRAP' || block.format === 'FOR TIME' || block.format === 'ROUNDS FOR TIME') && (
+                                                    <div className="flex flex-col items-center gap-0.5">
+                                                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Time Cap</span>
+                                                        <input 
+                                                            type="text" 
+                                                            value={block.config?.timecap || ''} 
+                                                            placeholder="20:00"
+                                                            onChange={e => updateBlock(index, { config: { ...block.config, timecap: e.target.value } })} 
+                                                            className="w-16 h-9 bg-background border border-brand-red/30 rounded-xl text-center text-sm font-black text-brand-red focus:border-brand-red outline-none" 
+                                                        />
                                                     </div>
-                                                </div>
+                                                )}
                                             </div>
                                         )}
 
@@ -659,16 +694,30 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                             <div className="flex items-end gap-2">
                                                 <div className="flex flex-col items-center gap-0.5">
                                                     <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Minutos</span>
-                                                    <div className="flex items-center bg-background rounded-xl border border-brand-red/30 overflow-hidden">
-                                                        <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, minutes: Math.max(1, (block.config?.minutes || 12) - 1) } })} className="w-9 h-9 flex items-center justify-center text-gray-500 hover:bg-muted active:scale-90 transition-transform"><Minus className="w-3.5 h-3.5" /></button>
-                                                        <span className="w-8 text-center text-sm font-black text-brand-red">{block.config?.minutes || 12}</span>
-                                                        <button type="button" onClick={() => updateBlock(index, { config: { ...block.config, minutes: (block.config?.minutes || 12) + 1 } })} className="w-9 h-9 flex items-center justify-center text-brand-red hover:bg-muted active:scale-95 transition-transform"><Plus className="w-3.5 h-3.5" /></button>
-                                                    </div>
+                                                    <input 
+                                                        type="number" 
+                                                        value={block.config?.minutes || 12} 
+                                                        onChange={e => updateBlock(index, { config: { ...block.config, minutes: Math.max(1, parseInt(e.target.value) || 12) } })} 
+                                                        className="w-16 h-9 bg-background border border-brand-red/30 rounded-xl text-center text-sm font-black text-brand-red focus:border-brand-red outline-none" 
+                                                    />
                                                 </div>
                                                 {block.config?.minutes && (block.exercises?.length || 0) > 0 && (
-                                                    <div className="px-2 py-1.5 bg-brand-red/10 rounded-xl border border-brand-red/20 animate-in fade-in duration-500">
-                                                        <p className="text-[10px] font-black text-brand-red uppercase italic leading-none">{block.config.minutes} RONDAS</p>
-                                                    </div>
+                                                    (() => {
+                                                        const minutes = block.config.minutes;
+                                                        const exCount = block.exercises!.length;
+                                                        const rounds = Math.floor(minutes / exCount);
+                                                        const remainder = minutes % exCount;
+                                                        return (
+                                                            <div className={clsx("px-2 py-1.5 rounded-xl border animate-in fade-in duration-500 flex flex-col justify-center", remainder === 0 ? "bg-brand-red/10 border-brand-red/20" : "bg-yellow-500/10 border-yellow-500/30")}>
+                                                                <p className={clsx("text-[10px] font-black uppercase italic leading-none", remainder === 0 ? "text-brand-red" : "text-yellow-500")}>
+                                                                    {rounds} RONDAS
+                                                                </p>
+                                                                {remainder > 0 && (
+                                                                    <p className="text-[8px] font-bold text-yellow-500/70 leading-none mt-0.5">+{remainder} MIN EXTRA</p>
+                                                                )}
+                                                            </div>
+                                                        )
+                                                    })()
                                                 )}
                                             </div>
                                         )}
@@ -707,22 +756,26 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                         className="w-full h-32 bg-background border border-border rounded-lg p-3 text-foreground text-sm resize-none outline-none focus:border-brand-red font-heading font-medium tracking-tight"
                                     />
                                 ) : (
-                                    <div className="space-y-3">
-                                        {block.exercises?.map((ex, exIndex) => (
-                                            <div key={ex.id} className="bg-background border border-border rounded-2xl p-3 sm:p-4 space-y-4 animate-in slide-in-from-left-2 duration-200">
+                                    <div className="space-y-2">
+                                        {block.exercises?.map((ex, exIndex) => {
+                                            const hideSets = ['AMRAP', 'FOR TIME', 'EMOM', 'TABATA'].includes(block.format || '');
+                                            return (
+                                            <div key={ex.id} className="bg-background border border-border rounded-xl p-3 sm:px-4 sm:py-3 animate-in slide-in-from-left-2 duration-200 hover:border-brand-red/30 transition-all flex flex-col gap-2 group relative">
+                                                
+                                                {/* Top Row: Reorder & Name */}
                                                 <div className="flex items-center gap-2">
                                                     <div className="relative flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 bg-background border border-border rounded-xl px-3 py-2.5 group-focus-within:border-brand-red transition-all">
-                                                            <Search className="w-4 h-4 text-muted-foreground shrink-0" />
+                                                        <div className="flex items-center gap-2 bg-muted/30 border border-transparent rounded-lg px-2 py-1.5 focus-within:border-brand-red/50 focus-within:bg-background transition-all">
+                                                            <Search className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
                                                             <input
-                                                                placeholder="Ejercicio..."
+                                                                placeholder="Buscar ejercicio..."
                                                                 value={ex.name}
                                                                 onFocus={() => setActiveExercisePath({ bIdx: index, eIdx: exIndex })}
                                                                 onChange={(e) => {
                                                                     updateExercise(index, exIndex, { name: e.target.value });
                                                                     setSearchQuery(e.target.value);
                                                                 }}
-                                                                className="flex-1 bg-transparent border-none text-sm font-bold text-foreground outline-none placeholder:text-muted-foreground min-w-0"
+                                                                className="flex-1 bg-transparent border-none text-sm font-bold text-foreground outline-none placeholder:text-muted-foreground/60 min-w-0"
                                                             />
                                                         </div>
 
@@ -758,14 +811,14 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                         )}
                                                     </div>
 
-                                                    <div className="flex items-center gap-1.5 shrink-0">
+                                                    <div className="flex items-center gap-1 shrink-0 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                                                         <label className={clsx(
-                                                            "w-10 h-10 flex items-center justify-center rounded-xl border cursor-pointer transition-all",
+                                                            "w-8 h-8 flex items-center justify-center rounded-lg border cursor-pointer transition-all",
                                                             (ex.media_url || exerciseFiles[block.id]?.[ex.id])
-                                                                ? "bg-brand-red border-brand-red text-white shadow-glow"
-                                                                : "bg-muted border-border text-muted-foreground hover:text-foreground hover:bg-muted/80"
-                                                        )}>
-                                                            {(ex.media_url || exerciseFiles[block.id]?.[ex.id]) ? <Check className="w-4 h-4" /> : <Video className="w-4 h-4" />}
+                                                                ? "bg-brand-red/10 border-brand-red text-brand-red"
+                                                                : "bg-transparent border-transparent text-muted-foreground hover:bg-muted"
+                                                        )} title="Adjuntar Vídeo/Imagen">
+                                                            {(ex.media_url || exerciseFiles[block.id]?.[ex.id]) ? <Check className="w-3.5 h-3.5" /> : <Video className="w-3.5 h-3.5" />}
                                                             <input
                                                                 type="file"
                                                                 accept="image/*,video/*"
@@ -776,115 +829,91 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                         <button
                                                             type="button"
                                                             onClick={() => removeExercise(index, exIndex)}
-                                                            className="w-10 h-10 flex items-center justify-center rounded-xl bg-muted border border-border text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all"
+                                                            className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-all"
+                                                            title="Eliminar línea"
                                                         >
-                                                            <Trash2 className="w-4 h-4" />
+                                                            <Trash2 className="w-3.5 h-3.5" />
                                                         </button>
                                                     </div>
                                                 </div>
 
-                                                <div className="grid grid-cols-3 gap-3">
-                                                    {/* Sets */}
-                                                    <div className="space-y-1">
-                                                        <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest ml-1">Sets</span>
-                                                        <div className="flex items-center gap-0.5 bg-background rounded-xl p-1 border border-border">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const current = parseInt(ex.sets || '0');
-                                                                    updateExercise(index, exIndex, { sets: Math.max(0, current - 1).toString() });
-                                                                }}
-                                                                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5 text-gray-500 active:scale-90 transition-transform"
-                                                            >
-                                                                <Minus className="w-4 h-4" />
-                                                            </button>
+                                                {/* Bottom Row: Programming Fields */}
+                                                <div className="flex flex-wrap items-end gap-2 sm:gap-4 pl-0 sm:pl-8">
+                                                    
+                                                    {/* Sets (Hidden for AMRAP/ForTime) */}
+                                                    {!hideSets && (
+                                                        <div className="flex flex-col gap-1 w-16 shrink-0">
+                                                            <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest px-1">Sets</span>
                                                             <input
                                                                 value={ex.sets || ''}
                                                                 onChange={(e) => updateExercise(index, exIndex, { sets: e.target.value })}
-                                                                className="w-full bg-transparent text-center text-base font-black text-foreground outline-none placeholder:text-muted-foreground/30"
-                                                                placeholder="0"
+                                                                className="w-full bg-background border border-border rounded-lg px-2 py-1.5 text-xs font-black text-center text-foreground focus:border-brand-red outline-none transition-colors"
+                                                                placeholder="Ej: 4"
                                                             />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const current = parseInt(ex.sets || '0');
-                                                                    updateExercise(index, exIndex, { sets: (current + 1).toString() });
-                                                                }}
-                                                                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5 text-brand-red active:scale-95 transition-transform"
-                                                            >
-                                                                <Plus className="w-4 h-4" />
-                                                            </button>
                                                         </div>
-                                                    </div>
+                                                    )}
 
-                                                    {/* Reps */}
-                                                    <div className="space-y-1">
-                                                        <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest ml-1">Reps</span>
-                                                        <div className="flex items-center gap-0.5 bg-background rounded-xl p-1 border border-brand-red/40 shadow-glow shadow-brand-red/5">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const current = parseInt(ex.reps || '0');
-                                                                    updateExercise(index, exIndex, { reps: Math.max(0, current - 1).toString() });
-                                                                }}
-                                                                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5 text-gray-500 active:scale-90 transition-transform"
-                                                            >
-                                                                <Minus className="w-4 h-4" />
-                                                            </button>
+                                                    {/* Reps & Unit */}
+                                                    <div className="flex flex-col gap-1 w-28 sm:w-32 shrink-0">
+                                                        <span className="text-[9px] uppercase font-bold text-brand-red tracking-widest px-1">Reps/Dist</span>
+                                                        <div className="flex items-center bg-brand-red/5 border border-brand-red/30 rounded-lg overflow-hidden focus-within:border-brand-red transition-colors">
                                                             <input
                                                                 value={ex.reps || ''}
                                                                 onChange={(e) => updateExercise(index, exIndex, { reps: e.target.value })}
-                                                                className="w-full bg-transparent text-center text-lg font-black text-foreground outline-none placeholder:text-muted-foreground/30"
-                                                                placeholder="0"
+                                                                className="w-full bg-transparent px-2 py-1.5 text-xs font-black text-foreground outline-none min-w-0"
+                                                                placeholder="Ej: 10"
                                                             />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const current = parseInt(ex.reps || '0');
-                                                                    updateExercise(index, exIndex, { reps: (current + 1).toString() });
-                                                                }}
-                                                                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5 text-brand-red active:scale-95 transition-transform"
+                                                            <select
+                                                                value={ex.repUnit || 'reps'}
+                                                                onChange={(e) => updateExercise(index, exIndex, { repUnit: e.target.value })}
+                                                                className="bg-transparent border-l border-brand-red/20 py-1.5 px-1 text-[10px] font-bold text-brand-red outline-none cursor-pointer appearance-none text-center"
                                                             >
-                                                                <Plus className="w-4 h-4" />
-                                                            </button>
+                                                                <option value="reps">reps</option>
+                                                                <option value="m">m</option>
+                                                                <option value="km">km</option>
+                                                                <option value="cal">cal</option>
+                                                                <option value="seg">seg</option>
+                                                                <option value="min">min</option>
+                                                            </select>
                                                         </div>
                                                     </div>
 
-                                                    {/* Charge */}
-                                                    <div className="space-y-1">
-                                                        <span className="text-[8px] uppercase font-black text-muted-foreground tracking-widest ml-1">Carga</span>
-                                                        <div className="flex items-center gap-0.5 bg-background rounded-xl p-1 border border-border">
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const current = parseFloat(ex.value || '0');
-                                                                    updateExercise(index, exIndex, { value: (Math.max(0, current - 2.5)).toString() });
-                                                                }}
-                                                                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5 text-gray-500 active:scale-90 transition-transform"
-                                                            >
-                                                                <Minus className="w-4 h-4" />
-                                                            </button>
+                                                    {/* Peso & Unit */}
+                                                    <div className="flex flex-col gap-1 w-28 sm:w-32 shrink-0">
+                                                        <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-widest px-1">Peso/Obj</span>
+                                                        <div className="flex items-center bg-background border border-border rounded-lg overflow-hidden focus-within:border-brand-red transition-colors">
                                                             <input
                                                                 value={ex.value || ''}
                                                                 onChange={(e) => updateExercise(index, exIndex, { value: e.target.value })}
-                                                                className="w-full bg-transparent text-center text-base font-black text-foreground outline-none placeholder:text-muted-foreground/30"
-                                                                placeholder="0"
+                                                                className="w-full bg-transparent px-2 py-1.5 text-xs font-black text-foreground outline-none min-w-0"
+                                                                placeholder="Ej: 40"
                                                             />
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const current = parseFloat(ex.value || '0');
-                                                                    updateExercise(index, exIndex, { value: (current + 2.5).toString() });
-                                                                }}
-                                                                className="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-white/5 text-brand-red active:scale-95 transition-transform"
+                                                            <select
+                                                                value={ex.weightUnit || 'kg'}
+                                                                onChange={(e) => updateExercise(index, exIndex, { weightUnit: e.target.value })}
+                                                                className="bg-transparent border-l border-border py-1.5 px-1 text-[10px] font-bold text-muted-foreground outline-none cursor-pointer appearance-none text-center"
                                                             >
-                                                                <Plus className="w-4 h-4" />
-                                                            </button>
+                                                                <option value="kg">kg</option>
+                                                                <option value="lb">lb</option>
+                                                                <option value="%RM">%RM</option>
+                                                                <option value="RPE">RPE</option>
+                                                                <option value="BW">BW</option>
+                                                            </select>
                                                         </div>
+                                                    </div>
+                                                    
+                                                    {/* Note Field (Optional visual) */}
+                                                    <div className="flex-1 min-w-[120px]">
+                                                        <input
+                                                            value={ex.note || ''}
+                                                            onChange={(e) => updateExercise(index, exIndex, { note: e.target.value })}
+                                                            className="w-full bg-transparent border-b border-dashed border-border/50 px-1 py-1.5 text-[10px] italic text-muted-foreground focus:border-brand-red outline-none transition-colors"
+                                                            placeholder="Añadir nota (ej. unbroken, touch&go...)"
+                                                        />
                                                     </div>
                                                 </div>
                                             </div>
-                                        ))}
+                                        )})}
                                         <button
                                             type="button"
                                             onClick={() => addExercise(index)}
@@ -945,13 +974,39 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                             </div>
                         ))}
 
-                        <button
-                            type="button"
-                            onClick={addBlock}
-                            className="w-full py-3 border border-dashed border-border rounded-xl text-xs font-bold text-muted-foreground uppercase tracking-widest hover:text-foreground hover:border-border/60 transition-colors flex items-center justify-center gap-2"
-                        >
-                            <Plus className="w-4 h-4" /> Add Block
-                        </button>
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => setShowAddPartMenu(!showAddPartMenu)}
+                                className="w-full py-4 border border-dashed border-border rounded-xl text-xs font-black text-foreground uppercase tracking-widest hover:text-white hover:border-brand-red/50 hover:bg-brand-red/10 transition-all flex items-center justify-center gap-2"
+                            >
+                                <Plus className="w-4 h-4" /> Añadir Parte al WOD
+                            </button>
+
+                            {showAddPartMenu && (
+                                <div className="absolute left-0 right-0 top-full mt-2 bg-card border border-border rounded-xl shadow-2xl z-[150] p-2 overflow-hidden flex flex-col gap-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <div className="px-3 py-2 border-b border-border mb-1 flex items-center justify-between">
+                                        <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Selecciona el Tipo</span>
+                                        <button onClick={() => setShowAddPartMenu(false)}><X className="w-3 h-3 text-muted-foreground hover:text-foreground" /></button>
+                                    </div>
+                                    <button type="button" onClick={() => { addBlock('weightlifting'); setShowAddPartMenu(false); }} className="text-left px-3 py-2.5 rounded-lg text-sm font-bold text-foreground hover:bg-muted transition-colors flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div> Fuerza / Weightlifting
+                                    </button>
+                                    <button type="button" onClick={() => { addBlock('metcon'); setShowAddPartMenu(false); }} className="text-left px-3 py-2.5 rounded-lg text-sm font-bold text-foreground hover:bg-muted transition-colors flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-brand-red"></div> Metcon / WOD
+                                    </button>
+                                    <button type="button" onClick={() => { addBlock('gymnastics'); setShowAddPartMenu(false); }} className="text-left px-3 py-2.5 rounded-lg text-sm font-bold text-foreground hover:bg-muted transition-colors flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-purple-500"></div> Gymnastics / Skill
+                                    </button>
+                                    <button type="button" onClick={() => { addBlock('endurance'); setShowAddPartMenu(false); }} className="text-left px-3 py-2.5 rounded-lg text-sm font-bold text-foreground hover:bg-muted transition-colors flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-orange-500"></div> Endurance / Hyrox
+                                    </button>
+                                    <button type="button" onClick={() => { addBlock('mobility'); setShowAddPartMenu(false); }} className="text-left px-3 py-2.5 rounded-lg text-sm font-bold text-foreground hover:bg-muted transition-colors flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-green-500"></div> Movilidad / Finisher
+                                    </button>
+                                </div>
+                            )}
+                        </div>
 
                         {/* Section: Summary / Goal */}
                         <div className="bg-brand-red/5 border border-brand-red/20 rounded-2xl p-4 space-y-4">
@@ -1169,8 +1224,9 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                         >
                                                             <div className="flex items-center gap-3">
                                                                 <h5 className="text-foreground font-heading font-black text-xs uppercase tracking-widest flex items-center gap-2 italic">
-                                                                    <span className={`w-2 h-2 rounded-full ${block.type === 'wod' ? 'bg-foreground' : 'bg-muted-foreground'}`}></span>
-                                                                    {(block.title || (block.format && block.format !== 'FREE' ? block.format : (block.type === 'wod' ? 'Workout' : block.type))).toUpperCase()}
+                                                                    <span className={`w-2 h-2 rounded-full ${block.type === 'metcon' ? 'bg-brand-red' : block.type === 'weightlifting' ? 'bg-blue-500' : 'bg-muted-foreground'}`}></span>
+                                                                    <span className="text-muted-foreground mr-1">Part {String.fromCharCode(65 + idx)}:</span> 
+                                                                    {PART_NAMES[block.type] || block.type.toUpperCase()}
 
                                                                     {/* Display Config Info */}
                                                                     {(block.config?.timecap || block.config?.rounds || block.config?.minutes || block.duration) && (

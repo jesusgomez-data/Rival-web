@@ -241,7 +241,8 @@ export async function createClass(centerId: string, data: any) {
                 duration_minutes: parseInt(data.duration) || 60,
                 scheduled_time: data.scheduled_time,
                 class_type: data.type || 'general',
-                difficulty: data.difficulty || 'intermediate'
+                difficulty: data.difficulty || 'intermediate',
+                color: data.color || '#dc2626'
             });
 
         if (error) return { error: error.message };

@@ -166,7 +166,7 @@ export async function addExerciseToCatalog(name: string) {
         .from('exercises_catalog')
         .insert({
             name: name,
-            created_by: user.id
+            is_custom: true
         })
         .select()
         .single();

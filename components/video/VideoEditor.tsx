@@ -111,6 +111,12 @@ const ASPECT_RATIOS = [
     { label: "16:9",  name: "Horizontal",  desc: "YouTube · Landscape",  ratio: 16/9  },
 ]
 
+const TRACKS = [
+    { name: "Epic Workout", artist: "Rival Music", genre: "EDM", url: "" },
+    { name: "Heavy Lifts", artist: "Rival Music", genre: "Rock", url: "" },
+    { name: "Cardio Flow", artist: "Rival Music", genre: "Pop", url: "" },
+]
+
 interface VideoEditorProps {
     videoFile: File
     onSave: (editedFile: File, duration: number) => void
