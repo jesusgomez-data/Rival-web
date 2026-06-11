@@ -18,7 +18,7 @@ export default function LiveActivityTicker() {
     const [events, setEvents] = useState<ActivityEvent[]>([]);
     const [tickerIndex, setTickerIndex] = useState(0);
 
-    const fetchRecentActivities = async () => {
+    const fetchRecentActivities = async (retry = true): Promise<any[]> => {
         try {
             const { data, error } = await supabase
                 .from('posts')
@@ -41,14 +41,23 @@ export default function LiveActivityTicker() {
                 `)
                 .order('created_at', { ascending: false })
                 .limit(10);
-            
+
             if (error) {
-                console.error("Error fetching live activities:", error);
+                // Un blip transitorio (red/sesion aun estableciendose): un reintento silencioso.
+                if (retry) {
+                    await new Promise(r => setTimeout(r, 800));
+                    return fetchRecentActivities(false);
+                }
+                console.warn("Live activities no disponibles:", error.message);
                 return [];
             }
             return data || [];
         } catch (err) {
-            console.error("Catch error fetching live activities:", err);
+            if (retry) {
+                await new Promise(r => setTimeout(r, 800));
+                return fetchRecentActivities(false);
+            }
+            console.warn("Live activities no disponibles:", (err as Error)?.message || err);
             return [];
         }
     };

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useMemo, memo } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink, ZapOff } from "lucide-react";
 import { VideoProcessor } from "./stories/VideoProcessor";
@@ -235,6 +236,7 @@ function ShareButton({
 
 
 function RepostCard({ image, caption, prefetchedPost }: { image?: string; caption?: string; prefetchedPost?: any }) {
+    const router = useRouter();
     const [originalPost, setOriginalPost] = useState<any>(prefetchedPost || null);
     const [loading, setLoading] = useState(!prefetchedPost);
 
@@ -261,10 +263,15 @@ function RepostCard({ image, caption, prefetchedPost }: { image?: string; captio
 
     return (
         <div className="px-4 pb-4">
-            {/* Embedded original post - Twitter/X Quote Tweet style */}
-            <a
-                href={originalPostId ? `/dashboard#post-${originalPostId}` : '/dashboard'}
-                className="block border border-white/10 rounded-2xl overflow-hidden bg-white/[0.01] hover:bg-white/[0.04] hover:border-brand-red/25 transition-all group"
+            {/* Embedded original post - Twitter/X Quote Tweet style.
+                Es un div clickable (no <a>) porque contiene enlaces de menciones/hashtags;
+                un <a> dentro de otro <a> es HTML invalido y rompe la hidratacion. */}
+            <div
+                role="link"
+                tabIndex={0}
+                onClick={() => router.push(originalPostId ? `/dashboard/post/${originalPostId}` : '/dashboard')}
+                onKeyDown={(e) => { if (e.key === 'Enter') router.push(originalPostId ? `/dashboard/post/${originalPostId}` : '/dashboard'); }}
+                className="block border border-white/10 rounded-2xl overflow-hidden bg-white/[0.01] hover:bg-white/[0.04] hover:border-brand-red/25 transition-all group cursor-pointer"
             >
                 {loading ? (
                     <div className="p-4 flex items-center gap-3 animate-pulse">
@@ -347,7 +354,7 @@ function RepostCard({ image, caption, prefetchedPost }: { image?: string; captio
                         <span className="text-[10px] font-black uppercase tracking-widest">Publicación no disponible</span>
                     </div>
                 )}
-            </a>
+            </div>
         </div>
     );
 }
@@ -793,29 +800,36 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
         // Fetch completion data if it's a WOD post OR a post with resolved workout data that looks like a WOD
         const isWodData = resolvedWorkoutData && (resolvedWorkoutData.blocks || (resolvedWorkoutData.metrics && resolvedWorkoutData.metrics.blocks));
         if ((post_type === 'wod' || isWodData) && targetWodId) {
-            fetchCompletionsCount(targetWodId);
+            // AbortController: cancela las peticiones si el componente se desmonta
+            // (p.ej. al cambiar de pagina), evitando "Failed to fetch" y setState en desmontado.
+            const ctrl = new AbortController();
+            fetchCompletionsCount(targetWodId, ctrl.signal);
             // Only check if we don't have a manual ID set yet to avoid loops
             if (!hasCompletedWod) {
-                checkUserCompletion(targetWodId);
+                checkUserCompletion(targetWodId, ctrl.signal);
             }
+            return () => ctrl.abort();
         }
     }, [post_type, targetWodId, hasCompletedWod]);
 
-    const fetchCompletionsCount = async (targetWodId: string) => {
+    const fetchCompletionsCount = async (targetWodId: string, signal?: AbortSignal) => {
         try {
-            const res = await fetch(`/api/wod/leaderboard?wodPostId=${targetWodId}`);
+            const res = await fetch(`/api/wod/leaderboard?wodPostId=${targetWodId}`, { signal });
             const data = await res.json();
             if (data.success && typeof data.total === 'number') {
                 setCompletionsCountWod(data.total);
             }
         } catch (e) {
-            console.error("Error fetching completions count:", e);
+            // Cancelacion por navegacion (abort o "Failed to fetch"): contador no critico, ignorar
+            const msg = (e as Error)?.message || '';
+            if ((e as Error)?.name === 'AbortError' || msg.includes('Failed to fetch')) return;
+            console.warn("Completions count no disponible:", msg);
         }
     };
 
-    const checkUserCompletion = async (targetWodId: string) => {
+    const checkUserCompletion = async (targetWodId: string, signal?: AbortSignal) => {
         try {
-            const res = await fetch(`/api/wod/my-completion?wodPostId=${targetWodId}`);
+            const res = await fetch(`/api/wod/my-completion?wodPostId=${targetWodId}`, { signal });
             const data = await res.json();
             if (data.success && data.completion) {
                 setHasCompletedWod(true);
@@ -825,7 +839,10 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                 }
             }
         } catch (e) {
-            console.error("Error checking user completion:", e);
+            // Cancelacion por navegacion (abort o "Failed to fetch"): no critico, ignorar
+            const msg = (e as Error)?.message || '';
+            if ((e as Error)?.name === 'AbortError' || msg.includes('Failed to fetch')) return;
+            console.warn("Estado de completado no disponible:", msg);
         }
     };
 

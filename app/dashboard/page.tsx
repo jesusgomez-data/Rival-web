@@ -1052,9 +1052,10 @@ export default function DashboardHome() {
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-sm font-black text-foreground uppercase italic truncate">VS {rival?.full_name || rival?.username}</p>
-                                                    <p className="text-xs text-gray-500 uppercase font-bold mt-1">
+                                                    {/* div, no <p>: DuelCountdown renderiza <div> y <p> no puede contener bloques */}
+                                                    <div className="text-xs text-gray-500 uppercase font-bold mt-1">
                                                         <DuelCountdown endDate={duel.end_date} status={duel.status} />
-                                                    </p>
+                                                    </div>
 
                                                     {/* SCORE DISPLAY */}
                                                     {!isPending && (

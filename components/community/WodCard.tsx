@@ -80,11 +80,13 @@ export default function WodCard({ data, userName, publishDate, postId, completio
 
     useEffect(() => {
         if (postId || (data as any).original_wod_post_id) {
-            checkCompletionStatus();
+            const ctrl = new AbortController();
+            checkCompletionStatus(ctrl.signal);
+            return () => ctrl.abort();
         }
     }, [postId, data]);
 
-    const checkCompletionStatus = async () => {
+    const checkCompletionStatus = async (signal?: AbortSignal) => {
         setIsLoadingStatus(true);
         const targetWodId = (data as any).original_wod_post_id || postId;
         if (!targetWodId) {
@@ -92,13 +94,16 @@ export default function WodCard({ data, userName, publishDate, postId, completio
             return;
         }
         try {
-            const response = await fetch(`/api/wod/my-completion?wodPostId=${targetWodId}`);
+            const response = await fetch(`/api/wod/my-completion?wodPostId=${targetWodId}`, { signal });
             const resData = await response.json();
             if (resData.success && resData.completion) {
                 setHasCompleted(true);
             }
         } catch (error) {
-            console.error("Error checking completion status:", error);
+            // Cancelacion por navegacion (abort o "Failed to fetch"): no critico, ignorar
+            const msg = (error as Error)?.message || '';
+            if ((error as Error)?.name === 'AbortError' || msg.includes('Failed to fetch')) return;
+            console.warn("Estado de completado no disponible:", msg);
         } finally {
             setIsLoadingStatus(false);
         }
