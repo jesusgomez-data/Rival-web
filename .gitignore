@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local tooling / preview config (machine-specific paths)
+.claude/
+
+# secrets and local debug artifacts (never commit)
+keys.txt
+*.log
+debug-output.txt
+brute-force-result*.txt
+check-results.txt
+forensic_output.txt
+http-diag-result*.txt
+wod_debug.json
+build_output.txt

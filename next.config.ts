@@ -8,7 +8,8 @@ const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  // (self) required: gyms page uses navigator.geolocation; stories/video use camera+mic
+  { key: 'Permissions-Policy', value: 'camera=(self), microphone=(self), geolocation=(self)' },
   {
     key: 'Strict-Transport-Security',
     value: 'max-age=63072000; includeSubDomains; preload',

@@ -1,14 +1,18 @@
 {
+  "id": "rivalfit-app",
   "name": "Rival Fit",
   "short_name": "RivalFit",
-  "description": "La primera red social creada para la mentalidad del 1%.",
+  "description": "La primera red social creada para la mentalidad del 1%. Entrena, compite y gestiona tu centro deportivo.",
+  "lang": "es",
+  "dir": "ltr",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "portrait",
   "background_color": "#000000",
   "theme_color": "#EF4444",
-  "categories": ["fitness", "sports", "social"],
+  "categories": ["fitness", "sports", "social", "health"],
   "icons": [
     {
       "src": "/icon-192.png",
@@ -28,5 +32,36 @@
       "type": "image/png",
       "purpose": "maskable"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "Feed",
+      "short_name": "Feed",
+      "description": "Ver las últimas publicaciones",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Entrenamiento",
+      "short_name": "Entrenar",
+      "description": "Registrar tu entrenamiento de hoy",
+      "url": "/dashboard/training",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mensajes",
+      "short_name": "Mensajes",
+      "description": "Abrir tus conversaciones",
+      "url": "/dashboard/messages",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Mi Centro",
+      "short_name": "Centro",
+      "description": "Gestionar tu centro deportivo",
+      "url": "/dashboard/gyms",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ],
+  "prefer_related_applications": false
 }

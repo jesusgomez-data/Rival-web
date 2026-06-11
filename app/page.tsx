@@ -334,29 +334,36 @@ export default function UnifiedLanding() {
                     }}
                 />
                 
-                {/* Floating Particles */}
-                {Array.from({ length: 15 }).map((_, i) => (
-                    <motion.div
-                        key={i}
-                        className="absolute w-1 h-1 rounded-full bg-brand-red/25"
-                        style={{
-                            top: `${Math.random() * 100}%`,
-                            left: `${Math.random() * 100}%`,
-                        }}
-                        animate={{
-                            y: [0, -60, 0],
-                            x: [0, Math.random() * 40 - 20, 0],
-                            opacity: [0.1, 0.7, 0.1],
-                            scale: [1, 1.8, 1],
-                        }}
-                        transition={{
-                            duration: 8 + Math.random() * 10,
-                            repeat: Infinity,
-                            ease: "easeInOut",
-                            delay: Math.random() * 5,
-                        }}
-                    />
-                ))}
+                {/* Floating Particles — pseudo-random determinista por índice para
+                    que servidor y cliente rendericen idéntico (evita hydration mismatch) */}
+                {Array.from({ length: 15 }).map((_, i) => {
+                    const rand = (n: number) => {
+                        const x = Math.sin(i * 127.1 + n * 311.7) * 43758.5453;
+                        return x - Math.floor(x);
+                    };
+                    return (
+                        <motion.div
+                            key={i}
+                            className="absolute w-1 h-1 rounded-full bg-brand-red/25"
+                            style={{
+                                top: `${rand(1) * 100}%`,
+                                left: `${rand(2) * 100}%`,
+                            }}
+                            animate={{
+                                y: [0, -60, 0],
+                                x: [0, rand(3) * 40 - 20, 0],
+                                opacity: [0.1, 0.7, 0.1],
+                                scale: [1, 1.8, 1],
+                            }}
+                            transition={{
+                                duration: 8 + rand(4) * 10,
+                                repeat: Infinity,
+                                ease: "easeInOut",
+                                delay: rand(5) * 5,
+                            }}
+                        />
+                    );
+                })}
 
                 {/* Aurora Glows */}
                 <motion.div

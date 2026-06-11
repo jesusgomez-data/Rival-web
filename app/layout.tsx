@@ -26,6 +26,7 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
+  themeColor: "#000000",
 };
 
 export const metadata: Metadata = {
@@ -33,6 +34,11 @@ export const metadata: Metadata = {
   title: "Rival Fit | El Futuro del Fitness 2026",
   description: "La primera red social creada para la mentalidad del 1%. Registra tus progresos, compite globalmente y accede a gimnasios de élite.",
   manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "RivalFit",
+  },
   icons: {
     icon: [
       { url: "/icon-192.png", sizes: "192x192", type: "image/png" },

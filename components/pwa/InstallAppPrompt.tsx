@@ -22,6 +22,12 @@ export default function InstallAppPrompt() {
 
         setIsStandalone(isStandaloneMode);
 
+        // El SW debe registrarse SIEMPRE (también en modo instalado),
+        // si no, la app instalada pierde push y actualizaciones de caché.
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW fail', err));
+        }
+
         if (isStandaloneMode) return;
 
         // Detectar OS
@@ -43,10 +49,6 @@ export default function InstallAppPrompt() {
         };
 
         window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW fail', err));
-        }
 
         if (isIosDevice || isAndroidDevice) {
             const seenAt = localStorage.getItem('rival_install_prompt_seen');

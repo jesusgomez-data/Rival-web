@@ -1,5 +1,6 @@
-const CACHE_NAME = 'rival-fit-v2';
-const STATIC_ASSETS = ['/', '/manifest.json', '/logo.svg'];
+const CACHE_NAME = 'rival-fit-v3';
+const OFFLINE_URL = '/offline.html';
+const STATIC_ASSETS = ['/', '/manifest.json', '/logo.svg', OFFLINE_URL];
 
 self.addEventListener('install', (event) => {
     self.skipWaiting();
@@ -113,6 +114,16 @@ self.addEventListener('fetch', (event) => {
                 }
                 return res;
             }))
+        );
+        return;
+    }
+
+    // Navigation requests: network-first, branded offline fallback
+    if (request.mode === 'navigate') {
+        event.respondWith(
+            fetch(request).catch(() =>
+                caches.match(OFFLINE_URL).then(cached => cached || Response.error())
+            )
         );
     }
     // Let everything else go to network normally
