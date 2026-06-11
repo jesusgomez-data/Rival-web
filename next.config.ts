@@ -20,12 +20,12 @@ const securityHeaders = [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://images.unsplash.com https://ui-avatars.com https://ralskslspvskjqqgzbiv.supabase.co https://rivalfit.app https://randomuser.me https://lh3.googleusercontent.com https://*.mzstatic.com https://*.apple.com https://cdn.jsdelivr.net",
+      "img-src 'self' data: blob: https://images.unsplash.com https://ui-avatars.com https://api.dicebear.com https://ralskslspvskjqqgzbiv.supabase.co https://rivalfit.app https://randomuser.me https://lh3.googleusercontent.com https://*.mzstatic.com https://*.apple.com https://cdn.jsdelivr.net",
       "font-src 'self'",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.groq.com https://api.stripe.com https://api.resend.com https://cdn.jsdelivr.net",
       "frame-src 'none'",
       "frame-ancestors 'none'",
-      "media-src 'self' https://*.supabase.co blob: data: https://*.apple.com https://*.itunes.apple.com",
+      "media-src 'self' https://*.supabase.co blob: data: https://*.apple.com https://*.itunes.apple.com https://assets.mixkit.co",
       "object-src 'none'",
       "base-uri 'self'",
     ].join('; '),
@@ -59,6 +59,12 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
     // Cache optimized images for 1 week in browser
     minimumCacheTTL: 604800,
+    // ui-avatars y dicebear devuelven SVG; next/image los bloquea por defecto.
+    // Lo habilitamos de forma segura: servidos como attachment + CSP restrictivo,
+    // y solo desde los dominios de avatares permitidos en remotePatterns.
+    dangerouslyAllowSVG: true,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [
       {
         protocol: 'https',
@@ -67,6 +73,10 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: 'ui-avatars.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'api.dicebear.com',
       },
       {
         protocol: 'https',

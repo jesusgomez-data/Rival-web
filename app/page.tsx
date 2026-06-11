@@ -118,11 +118,12 @@ function AnimatedLogo() {
                         <stop offset="100%" stopColor="#EF4444" />
                     </linearGradient>
                     {/* Laser Sweep Shine Gradient */}
-                    <motion.linearGradient 
-                        id="laser-sweep" 
+                    <motion.linearGradient
+                        id="laser-sweep"
                         gradientUnits="userSpaceOnUse"
                         x1="-100%" y1="-100%"
                         x2="0%" y2="0%"
+                        initial={{ x1: "-100%", y1: "-100%", x2: "0%", y2: "0%" }}
                         variants={{
                             animate: {
                                 x1: ["-100%", "200%"],

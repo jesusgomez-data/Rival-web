@@ -53,3 +53,9 @@ forensic_output.txt
 http-diag-result*.txt
 wod_debug.json
 build_output.txt
+_buildcheck.txt
+
+# QA / PDF temp render artifacts
+scripts/_shots/
+scripts/_*.png
+scripts/_*.svg

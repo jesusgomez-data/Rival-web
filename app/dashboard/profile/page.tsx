@@ -107,14 +107,14 @@ export default function ProfilePage() {
                     getCombatStats(data.id),
                     supabase
                         .from('workout_sets')
-                        .select('exercise_name, weight_kg, created_at, workouts!inner(user_id)')
+                        .select('exercise_name, weight_kg, is_pr, workouts!inner(user_id, start_time)')
                         .eq('workouts.user_id', data.id)
                         .eq('is_pr', true)
                         .order('weight_kg', { ascending: false })
                         .limit(20),
                     supabase
                         .from('workouts')
-                        .select('*, workout_sets(id, exercise_name, weight_kg, reps, sets, is_pr, notes)')
+                        .select('*, workout_sets(id, exercise_name, weight_kg, reps, set_order, is_pr)')
                         .eq('user_id', data.id)
                         .order('start_time', { ascending: false })
                         .limit(30),
@@ -128,8 +128,11 @@ export default function ProfilePage() {
                     const best: Record<string, { exercise: string; weight: number; date: string }> = {};
                     prSets.forEach((s: any) => {
                         const name = s.exercise_name;
+                        // workout_sets no tiene fecha propia; la tomamos del workout padre
+                        const w = Array.isArray(s.workouts) ? s.workouts[0] : s.workouts;
+                        const date = w?.start_time || new Date().toISOString();
                         if (!best[name] || s.weight_kg > best[name].weight) {
-                            best[name] = { exercise: name, weight: s.weight_kg, date: s.created_at };
+                            best[name] = { exercise: name, weight: s.weight_kg, date };
                         }
                     });
                     const sorted = Object.values(best).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
