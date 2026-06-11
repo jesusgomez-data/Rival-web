@@ -298,6 +298,8 @@ toc = [
 ]
 for t in toc:
     story.append(Paragraph(t, toc_item))
+story.append(shot_block("ecosystem",
+    "RIVAL une la red social de tus atletas con la gestion de tu centro", max_w_mm=155))
 story.append(PageBreak())
 
 # =================== 1. QUE ES ===================
@@ -309,7 +311,7 @@ story.append(Paragraph(
     "es un motor de comunidad que mantiene a tus miembros enganchados cada dia.", body))
 story.append(shot_block("for-centers",
     "Tu portal para centros en rivalfit.app/for-centers: gestion + leads + comunidad",
-    max_w_mm=150))
+    max_w_mm=140))
 story.append(Paragraph("La diferencia frente a la competencia", h2))
 story.append(section_card([
     ("Wodify / SugarWOD", "Excelentes registrando WODs, pero cerrados: tus miembros no construyen comunidad publica ni atraen nuevos clientes por ti."),
@@ -322,13 +324,6 @@ story.append(callout(
     "Cada miembro que registra su PR, sube una historia o completa el WOD del dia "
     "esta exponiendo tu marca a su red. Tu comunidad se convierte en tu equipo de marketing.",
     title="POR QUE IMPORTA"))
-story.append(Spacer(1, 10))
-story.append(kpi_row([
-    ("4 min", "Crear tu centro"),
-    ("0 €", "Para empezar"),
-    ("100%", "Desde el navegador"),
-    ("24/7", "Tu centro online"),
-]))
 story.append(PageBreak())
 
 # =================== 2. PRIMEROS PASOS ===================
@@ -377,6 +372,9 @@ story.append(Paragraph("4 · Gestion de miembros y membresias", h1))
 story.append(Paragraph(
     "El corazon de tu centro. Da de alta atletas, asignales un plan y controla el estado "
     "de cada membresia.", body))
+story.append(shot_block("center-members",
+    "Gestion de atletas: tarifa, facturacion y estado de cada miembro de un vistazo",
+    max_w_mm=158))
 story.append(Paragraph("Lo que puedes hacer", h2))
 story.append(bullets([
     "Alta de miembros con nombre, email, telefono, plan y fecha de inicio.",
@@ -395,8 +393,8 @@ story.append(Paragraph(
     "Define los planes de tu centro (mensual, bono de clases, drop-in...) y asignalos a "
     "cada miembro. El sistema lleva el control de vigencia y te avisa de los vencimientos "
     "para que no pierdas ingresos por bajas silenciosas.", body))
-story.append(shot_block("center-members",
-    "Gestion de atletas: tarifa, facturacion y estado de cada miembro de un vistazo",
+story.append(shot_block("center-memberships",
+    "Membresias y tarifas del centro: DROP-IN, CrossFit, HYROX, Full Training...",
     max_w_mm=158))
 story.append(PageBreak())
 
@@ -494,6 +492,9 @@ story.append(Spacer(1, 6))
 story.append(callout(
     "Las notificaciones push funcionan aunque la app este cerrada, como una app nativa. "
     "Tasa de apertura muy superior al email.", title="LLEGADA DIRECTA"))
+story.append(shot_block("center-communications",
+    "Comunicaciones: redacta un anuncio y segmenta la audiencia (todos, activos, en prueba)",
+    max_w_mm=158))
 story.append(PageBreak())
 
 # =================== 10. LEADS ===================
@@ -511,6 +512,9 @@ story.append(Spacer(1, 8))
 story.append(callout(
     "Una clase de prueba bien gestionada es tu mejor comercial. RIVAL te da el embudo "
     "completo: descubrir → probar → convertir.", title="EMBUDO DE VENTA"))
+story.append(shot_block("public-center",
+    "Perfil publico de tu centro: portada, CTA 'Prueba Gratis' y pestañas de instalaciones, WODs y tienda",
+    max_h_mm=112))
 story.append(PageBreak())
 
 # =================== 11. ANALITICA ===================
@@ -555,6 +559,8 @@ story.append(PageBreak())
 
 # =================== 13. PLANES ===================
 story.append(Paragraph("13 · Planes, precios y soporte", h1))
+story.append(shot_block("graphic-plans",
+    "Cuatro planes que escalan con tu centro — empieza gratis", max_w_mm=160))
 plan_data = [
     ["PLAN", "PRECIO", "PARA QUIEN", "DESTACADO"],
     ["Free", "0 €/mes", "Centros que empiezan", "Hasta 50 miembros, 10 clases/sem, check-in"],
@@ -600,23 +606,9 @@ story.append(Paragraph("14 · Checklist de lanzamiento", h1))
 story.append(Paragraph(
     "Sigue estos pasos en orden para tener tu centro operativo y atrayendo miembros "
     "esta misma semana.", body))
-checklist = [
-    "Crear el centro en rivalfit.app/for-centers (4 pasos).",
-    "Completar el perfil publico: logo, descripcion, fotos y ubicacion.",
-    "Dar de alta a tu equipo (coaches) con sus roles.",
-    "Cargar el horario semanal de clases con capacidades.",
-    "Publicar el primer WOD / programacion del dia.",
-    "Importar o dar de alta a tus miembros actuales y sus planes.",
-    "Configurar la tienda con 2-3 productos y conectar Stripe.",
-    "Activar las notificaciones push y publicar tu primer anuncio en el feed.",
-    "Crear una oferta de clase de prueba para captar leads.",
-    "Pedir a tus miembros que instalen la app y registren sus entrenamientos.",
-]
-story.append(ListFlowable(
-    [ListItem(Paragraph(t, bullet), value=str(i+1)) for i, t in enumerate(checklist)],
-    bulletType="1", bulletColor=RED, bulletFontName="Helvetica-Bold", leftIndent=14,
-))
-story.append(Spacer(1, 16))
+story.append(shot_block("graphic-checklist",
+    "10 pasos para lanzar tu centro en RIVAL esta misma semana", max_w_mm=160))
+story.append(Spacer(1, 12))
 final = Table([[Paragraph("Tu centro. Tu comunidad. Tu terreno.<br/><br/>"
                           "<font size=9 color='#9ca3af'>Empieza gratis hoy en "
                           "<font color='#EF4444'>rivalfit.app</font></font>",
