@@ -53,6 +53,8 @@ async function shoot(page, route, file, vp) {
         try {
             localStorage.setItem('rival_theme', 'dark');
             localStorage.setItem('rival_install_prompt_seen', String(Date.now()));
+            localStorage.setItem('rival_tour_completed', 'true');   // evita modal de bienvenida
+            localStorage.setItem('rival_plus_hint_seen', 'true');
         } catch (e) {}
         // Bloquear beforeinstallprompt en fase de captura: impide que el componente
         // muestre el prompt PWA (puppeteer lo dispara siempre en Chrome).
@@ -63,10 +65,15 @@ async function shoot(page, route, file, vp) {
     });
     // Ocultar el indicador de build de Next dev en las capturas
     await page.evaluateOnNewDocument(() => {
-        const css = 'nextjs-portal,[data-nextjs-toast],#__next-build-watcher{display:none!important}';
-        const s = document.createElement('style');
-        s.textContent = css;
-        document.documentElement.appendChild(s);
+        const inject = () => {
+            const root = document.head || document.documentElement;
+            if (!root) return;
+            const s = document.createElement('style');
+            s.textContent = 'nextjs-portal,[data-nextjs-toast],#__next-build-watcher{display:none!important}';
+            root.appendChild(s);
+        };
+        if (document.documentElement) inject();
+        else document.addEventListener('DOMContentLoaded', inject);
     });
 
     for (const [route, file, vp] of PUBLIC) {
@@ -109,8 +116,10 @@ async function shoot(page, route, file, vp) {
             for (const [route, file] of AUTH) {
                 try {
                     const before = authErrors.length;
-                    const resp = await page.goto(BASE + route, { waitUntil: 'networkidle2', timeout: 30000 });
-                    await new Promise(r => setTimeout(r, 2500));
+                    const resp = await page.goto(BASE + route, { waitUntil: 'domcontentloaded', timeout: 40000 });
+                    await new Promise(r => setTimeout(r, 3000));
+                    await dismissOverlays(page);
+                    await new Promise(r => setTimeout(r, 400));
                     await page.screenshot({ path: path.join(OUT, file + '.png') });
                     const errs = authErrors.length - before;
                     console.log(`OK (auth) [${resp ? resp.status() : '?'}] ${route} -> ${file}.png` + (errs ? `  (${errs} console err)` : ''));
@@ -119,31 +128,43 @@ async function shoot(page, route, file, vp) {
 
             // Entrar a un centro concreto para capturar gestion interna
             try {
-                await page.goto(BASE + '/dashboard/gyms', { waitUntil: 'networkidle2' });
-                await new Promise(r => setTimeout(r, 2000));
-                const centerId = await page.evaluate(() => {
-                    const a = [...document.querySelectorAll('a[href*="/dashboard/gyms/"]')]
-                        .map(x => x.getAttribute('href'))
-                        .find(h => /\/dashboard\/gyms\/[0-9a-f-]{8,}/.test(h));
-                    if (!a) return null;
-                    const m = a.match(/\/dashboard\/gyms\/([0-9a-f-]{8,})/);
-                    return m ? m[1] : null;
-                });
+                let centerId = process.env.QA_CENTER_ID || null;
+                if (!centerId) {
+                    await page.goto(BASE + '/dashboard/gyms', { waitUntil: 'domcontentloaded' });
+                    await new Promise(r => setTimeout(r, 3000));
+                    centerId = await page.evaluate(() => {
+                        const a = [...document.querySelectorAll('a[href*="/dashboard/gyms/"]')]
+                            .map(x => x.getAttribute('href'))
+                            .find(h => /\/dashboard\/gyms\/[0-9a-f-]{8,}/.test(h));
+                        if (!a) return null;
+                        const m = a.match(/\/dashboard\/gyms\/([0-9a-f-]{8,})/);
+                        return m ? m[1] : null;
+                    });
+                }
                 console.log('centerId:', centerId || '(ninguno: la cuenta no gestiona centros)');
                 if (centerId) {
+                    // Pantallas de gestion = dashboards admin -> viewport desktop ancho
+                    await page.setViewport({ width: 1366, height: 1000, deviceScaleFactor: 2 });
                     const SUB = [
                         [`/dashboard/gyms/${centerId}`, 'center-dashboard'],
                         [`/dashboard/gyms/${centerId}/members`, 'center-members'],
                         [`/dashboard/gyms/${centerId}/schedule`, 'center-schedule'],
                         [`/dashboard/gyms/${centerId}/wods`, 'center-wods'],
+                        [`/dashboard/gyms/${centerId}/programming`, 'center-programming'],
                         [`/dashboard/gyms/${centerId}/analytics`, 'center-analytics'],
                         [`/dashboard/gyms/${centerId}/store`, 'center-store'],
+                        [`/dashboard/gyms/${centerId}/team`, 'center-team'],
+                        [`/dashboard/gyms/${centerId}/memberships`, 'center-memberships'],
+                        [`/dashboard/gyms/${centerId}/checkin`, 'center-checkin'],
+                        [`/dashboard/gyms/${centerId}/communications`, 'center-communications'],
                     ];
                     for (const [route, file] of SUB) {
                         try {
                             const before = authErrors.length;
-                            const resp = await page.goto(BASE + route, { waitUntil: 'networkidle2', timeout: 30000 });
-                            await new Promise(r => setTimeout(r, 2500));
+                            const resp = await page.goto(BASE + route, { waitUntil: 'domcontentloaded', timeout: 40000 });
+                            await new Promise(r => setTimeout(r, 3200));
+                            await dismissOverlays(page);
+                            await new Promise(r => setTimeout(r, 400));
                             await page.screenshot({ path: path.join(OUT, file + '.png') });
                             const errs = authErrors.length - before;
                             console.log(`OK (center) [${resp ? resp.status() : '?'}] ${route.replace(centerId,'<id>')} -> ${file}.png` + (errs ? `  (${errs} console err)` : ''));

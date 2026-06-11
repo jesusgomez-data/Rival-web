@@ -368,6 +368,8 @@ story.append(Spacer(1, 6))
 story.append(callout(
     "Navega a Dashboard → Mis Centros → [tu centro]. Cada modulo se abre en su propia "
     "seccion y los cambios se guardan al instante en la nube.", title="COMO LLEGAR"))
+story.append(shot_block("center-dashboard",
+    "Panel de gestion real del centro: todos los modulos a un clic", max_w_mm=158))
 story.append(PageBreak())
 
 # =================== 4. MIEMBROS ===================
@@ -393,6 +395,9 @@ story.append(Paragraph(
     "Define los planes de tu centro (mensual, bono de clases, drop-in...) y asignalos a "
     "cada miembro. El sistema lleva el control de vigencia y te avisa de los vencimientos "
     "para que no pierdas ingresos por bajas silenciosas.", body))
+story.append(shot_block("center-members",
+    "Gestion de atletas: tarifa, facturacion y estado de cada miembro de un vistazo",
+    max_w_mm=158))
 story.append(PageBreak())
 
 # =================== 5. CLASES ===================
@@ -409,6 +414,9 @@ story.append(Spacer(1, 8))
 story.append(callout(
     "La capacidad por clase evita aglomeraciones y te da datos de demanda: que franjas "
     "se llenan y cuales conviene reprogramar.", title="OPTIMIZA AFORO"))
+story.append(shot_block("center-schedule",
+    "Horario semanal: CrossFit, HYROX, Mobility y mas, con coach y aforo por clase",
+    max_w_mm=158))
 story.append(PageBreak())
 
 # =================== 6. WODS ===================
@@ -428,6 +436,8 @@ story.append(Spacer(1, 6))
 story.append(callout(
     "El leaderboard por WOD genera competicion sana y asistencia recurrente: nadie quiere "
     "quedarse fuera de la tabla de la semana.", title="RETENCION"))
+story.append(shot_block("center-wods",
+    "Publicador de WODs: titulo, calentamiento, bloques, score y programacion", max_w_mm=158))
 story.append(PageBreak())
 
 # =================== 7. CHECK-IN ===================
@@ -444,6 +454,9 @@ story.append(Spacer(1, 6))
 story.append(callout(
     "Un miembro que falta 2 semanas seguidas es un miembro en riesgo. RIVAL te lo senala "
     "para que actues antes de perderlo.", title="ANTICIPATE A LA BAJA"))
+story.append(shot_block("center-checkin",
+    "Check-in por clase: asistencia del dia, clases programadas y aforo en tiempo real",
+    max_w_mm=158))
 story.append(PageBreak())
 
 # =================== 8. TIENDA ===================
@@ -462,6 +475,9 @@ story.append(callout(
     "La pasarela usa Stripe, lider mundial en pagos. Las claves secretas viven solo en el "
     "servidor: ni tus datos ni los de tus clientes se exponen en el navegador.",
     title="PAGOS SEGUROS"))
+story.append(shot_block("center-store",
+    "Store Manager: productos con foto, precio y stock, cobrados online con Stripe",
+    max_w_mm=158))
 story.append(PageBreak())
 
 # =================== 9. COMUNICACIONES ===================
@@ -512,6 +528,9 @@ story.append(Spacer(1, 6))
 story.append(callout(
     "Saber a quien retener y que franjas potenciar es la diferencia entre crecer o "
     "estancarse. La analitica de RIVAL te da ese mapa.", title="DECIDE MEJOR"))
+story.append(shot_block("center-analytics",
+    "Analitica real: miembros activos, retencion, ingresos y evolucion a 12 meses",
+    max_w_mm=158))
 story.append(PageBreak())
 
 # =================== 12. PWA ===================
