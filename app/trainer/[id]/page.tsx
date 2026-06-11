@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
+import { PUBLIC_ORG_COLUMNS } from '@/lib/org-columns'
 
 const SPECIALTY_LABELS: Record<string, { label: string; icon: string }> = {
     strength:     { label: 'Fuerza',             icon: '🏋️' },
@@ -50,7 +51,8 @@ export default function TrainerPublicProfile() {
 
     async function loadProfile() {
         const [{ data: org }, { data: { user } }] = await Promise.all([
-            supabase.from('organizations').select('*').eq('id', id).single(),
+            // columnas publicas (anon no puede leer '*' tras el hardening RLS)
+            supabase.from('organizations').select(PUBLIC_ORG_COLUMNS).eq('id', id).single(),
             supabase.auth.getUser(),
         ])
         if (!org) { router.push('/dashboard/gyms'); return }

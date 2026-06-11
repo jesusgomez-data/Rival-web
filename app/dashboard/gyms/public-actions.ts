@@ -3,10 +3,15 @@
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { PUBLIC_ORG_COLUMNS } from "@/lib/org-columns";
 
 export async function getPublicCenter(centerId: string) {
     const supabase = await createClient();
-    const { data } = await supabase.from('organizations').select('*, head_coach:head_coach_id (id, full_name, avatar_url, username)').eq('id', centerId).single();
+    const { data } = await supabase
+        .from('organizations')
+        .select(`${PUBLIC_ORG_COLUMNS}, head_coach:head_coach_id (id, full_name, avatar_url, username)`)
+        .eq('id', centerId)
+        .single();
     return data;
 }
 
