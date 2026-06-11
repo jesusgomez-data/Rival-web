@@ -14,10 +14,27 @@ const PUBLIC = [
     ['/', 'landing', { width: 430, height: 920 }, 0],
 ];
 
+async function dismissOverlays(page) {
+    await page.evaluate(() => {
+        // Quitar el prompt de instalacion PWA (puppeteer dispara beforeinstallprompt)
+        document.querySelectorAll('div').forEach(d => {
+            if (d.textContent && d.textContent.includes('INSTALA RIVAL FIT') && d.className.includes('fixed')) {
+                d.remove();
+            }
+        });
+        // Quitar indicadores de Next dev
+        document.querySelectorAll('nextjs-portal,[data-next-mark],#__next-build-watcher,[data-nextjs-dialog-overlay]').forEach(e => e.remove());
+        const dev = document.querySelector('[data-nextjs-toast]');
+        if (dev) dev.remove();
+    }).catch(() => {});
+}
+
 async function shoot(page, route, file, vp) {
     await page.setViewport({ ...vp, deviceScaleFactor: 2 });
     await page.goto(BASE + route, { waitUntil: 'networkidle2', timeout: 45000 });
     await new Promise(r => setTimeout(r, 2500)); // dejar asentar animaciones
+    await dismissOverlays(page);
+    await new Promise(r => setTimeout(r, 400));
     const fs = require('fs');
     if (!fs.existsSync(OUT)) fs.mkdirSync(OUT, { recursive: true });
     await page.screenshot({ path: path.join(OUT, file + '.png') });
@@ -31,9 +48,25 @@ async function shoot(page, route, file, vp) {
     });
     const page = await browser.newPage();
 
-    // Forzar tema oscuro (la marca es negra)
+    // Forzar tema oscuro + suprimir el prompt de instalacion para capturas limpias
     await page.evaluateOnNewDocument(() => {
-        try { localStorage.setItem('rival_theme', 'dark'); } catch (e) {}
+        try {
+            localStorage.setItem('rival_theme', 'dark');
+            localStorage.setItem('rival_install_prompt_seen', String(Date.now()));
+        } catch (e) {}
+        // Bloquear beforeinstallprompt en fase de captura: impide que el componente
+        // muestre el prompt PWA (puppeteer lo dispara siempre en Chrome).
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+        }, true);
+    });
+    // Ocultar el indicador de build de Next dev en las capturas
+    await page.evaluateOnNewDocument(() => {
+        const css = 'nextjs-portal,[data-nextjs-toast],#__next-build-watcher{display:none!important}';
+        const s = document.createElement('style');
+        s.textContent = css;
+        document.documentElement.appendChild(s);
     });
 
     for (const [route, file, vp] of PUBLIC) {
