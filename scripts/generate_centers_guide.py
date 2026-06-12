@@ -127,7 +127,7 @@ def draw_bg(canvas, doc, cover=False):
             pass
         canvas.setFillColor(GRAY)
         canvas.setFont("Helvetica", 7.5)
-        canvas.drawRightString(PAGE_W - 20 * mm, PAGE_H - 12 * mm, "GUIA OFICIAL PARA CENTROS")
+        canvas.drawRightString(PAGE_W - 20 * mm, PAGE_H - 12 * mm, "PLATAFORMA PARA CENTROS DEPORTIVOS")
         # pie
         canvas.setFillColor(NEAR_BLACK)
         canvas.rect(0, 0, PAGE_W, 22 * mm, fill=1, stroke=0)
@@ -136,7 +136,7 @@ def draw_bg(canvas, doc, cover=False):
         canvas.line(20 * mm, 22 * mm, PAGE_W - 20 * mm, 22 * mm)
         canvas.setFillColor(GRAY)
         canvas.setFont("Helvetica", 7.5)
-        canvas.drawString(20 * mm, 12 * mm, "RIVAL FIT  ·  Guia Oficial para Centros Deportivos")
+        canvas.drawString(20 * mm, 12 * mm, "RIVAL FIT  ·  Plataforma Todo-en-Uno para Centros Deportivos")
         canvas.drawRightString(PAGE_W - 20 * mm, 12 * mm, "rivalfit.app")
         canvas.setFillColor(RED)
         canvas.setFont("Helvetica-Bold", 8)
@@ -261,17 +261,17 @@ def section_card(rows):
 
 # =================== PORTADA ===================
 story.append(Spacer(1, 52 * mm))
-story.append(Paragraph("GUIA OFICIAL · 2026", cover_kicker))
+story.append(Paragraph("PLATAFORMA TODO-EN-UNO", cover_kicker))
 story.append(Paragraph("RIVAL FIT", S("cover_title", fontName="Helvetica-Bold",
              fontSize=46, leading=48, textColor=WHITE, alignment=TA_CENTER)))
 story.append(Spacer(1, 4))
-story.append(Paragraph("para Centros Deportivos", S("cover_st", fontName="Helvetica",
+story.append(Paragraph("para Boxes y Gimnasios", S("cover_st", fontName="Helvetica",
              fontSize=18, leading=22, textColor=RED, alignment=TA_CENTER)))
 story.append(Spacer(1, 70 * mm))
 story.append(Paragraph(
-    "El ecosistema todo-en-uno para gimnasios, boxes de CrossFit, HYROX, "
-    "calistenia y entrenamiento funcional. Gestiona tu centro, fideliza a tus "
-    "miembros y convierte tu comunidad en tu mejor herramienta de marketing.",
+    "Gestiona tu centro, fideliza a tus miembros y haz crecer tu negocio. "
+    "El unico ecosistema que une la gestion profesional de tu box con una red "
+    "social que convierte a tu comunidad en tu mejor herramienta de marketing.",
     S("cover_desc", fontName="Helvetica", fontSize=11, leading=17, textColor=GRAY,
       alignment=TA_CENTER)))
 story.append(NextPageTemplate("Content"))
@@ -293,8 +293,10 @@ toc = [
     "10. Captacion de leads y clases de prueba",
     "11. Analitica e inteligencia de negocio",
     "12. Instalar RIVAL como app (sin App Store)",
-    "13. Planes, precios y soporte",
-    "14. Checklist de lanzamiento",
+    "13. Lo que consigue tu centro (resultados)",
+    "14. RIVAL frente a la competencia",
+    "15. Planes, precios y soporte",
+    "16. Checklist de lanzamiento",
 ]
 for t in toc:
     story.append(Paragraph(t, toc_item))
@@ -557,8 +559,35 @@ story.append(callout(
     "plataforma mucho mas y se mantienen mas tiempo en tu centro.", title="CONSEJO"))
 story.append(PageBreak())
 
-# =================== 13. PLANES ===================
-story.append(Paragraph("13 · Planes, precios y soporte", h1))
+# =================== 13. RESULTADOS ===================
+story.append(Paragraph("13 · Lo que consigue tu centro", h1))
+story.append(Paragraph(
+    "Un dueno de gimnasio no compra dashboards: compra <b>resultados</b>. Esto es "
+    "lo que RIVAL FIT mueve en tu negocio desde el primer mes.", body))
+story.append(shot_block("graphic-results",
+    "Mas reservas, menos bajas, mas ingresos — el impacto real en tu centro", max_w_mm=160))
+story.append(Spacer(1, 6))
+story.append(callout(
+    "La diferencia no es tener mas botones, es que tus miembros entrenen mas, se "
+    "queden mas tiempo y traigan a sus amigos. RIVAL convierte tu comunidad en crecimiento.",
+    title="EN UNA FRASE"))
+story.append(PageBreak())
+
+# =================== 14. COMPARATIVA ===================
+story.append(Paragraph("14 · RIVAL frente a la competencia", h1))
+story.append(Paragraph(
+    "Wodify y SugarWOD son buenos gestionando WODs. Pero ninguno convierte a tus "
+    "atletas en una comunidad que atrae nuevos miembros. RIVAL une las dos mitades.", body))
+story.append(shot_block("graphic-comparison",
+    "Gestion profesional + red social + IA: solo en RIVAL", max_w_mm=160))
+story.append(Spacer(1, 6))
+story.append(callout(
+    "Pagar dos herramientas (una de gestion y otra de comunidad) cuesta mas y funciona "
+    "peor que una sola plataforma que lo hace todo. Eso es RIVAL.", title="UN SOLO SISTEMA"))
+story.append(PageBreak())
+
+# =================== 15. PLANES ===================
+story.append(Paragraph("15 · Planes, precios y soporte", h1))
 story.append(shot_block("graphic-plans",
     "Cuatro planes que escalan con tu centro — empieza gratis", max_w_mm=160))
 plan_data = [
@@ -601,25 +630,34 @@ story.append(bullets([
 ]))
 story.append(PageBreak())
 
-# =================== 14. CHECKLIST ===================
-story.append(Paragraph("14 · Checklist de lanzamiento", h1))
+# =================== 16. CHECKLIST ===================
+story.append(Paragraph("16 · Checklist de lanzamiento", h1))
 story.append(Paragraph(
     "Sigue estos pasos en orden para tener tu centro operativo y atrayendo miembros "
     "esta misma semana.", body))
 story.append(shot_block("graphic-checklist",
     "10 pasos para lanzar tu centro en RIVAL esta misma semana", max_w_mm=160))
 story.append(Spacer(1, 12))
-final = Table([[Paragraph("Tu centro. Tu comunidad. Tu terreno.<br/><br/>"
-                          "<font size=9 color='#9ca3af'>Empieza gratis hoy en "
-                          "<font color='#EF4444'>rivalfit.app</font></font>",
-                          S("final", fontName="Helvetica-Bold", fontSize=16, leading=22,
-                            textColor=WHITE, alignment=TA_CENTER))]],
+story.append(Spacer(1, 4))
+final = Table([[Paragraph(
+    "Solicita una Demo Gratuita"
+    "<br/><br/>"
+    "<font size=11 color='#e5e7eb'>Te montamos tu centro contigo y resolvemos todas tus dudas.</font>"
+    "<br/><br/>"
+    "<font size=12 color='#EF4444'><b>&#9993;  sales@rivalfit.app</b></font>"
+    "<br/>"
+    "<font size=10 color='#9ca3af'>&#128241;  Configuracion en menos de 10 minutos &nbsp;·&nbsp; "
+    "&#128640;  Empieza hoy en rivalfit.app/for-centers</font>",
+    S("final", fontName="Helvetica-Bold", fontSize=22, leading=26,
+      textColor=WHITE, alignment=TA_CENTER))]],
               colWidths=[doc.width])
 final.setStyle(TableStyle([
     ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#1a0f0f")),
-    ("BOX", (0, 0), (-1, -1), 1, RED),
-    ("TOPPADDING", (0, 0), (-1, -1), 22),
-    ("BOTTOMPADDING", (0, 0), (-1, -1), 22),
+    ("BOX", (0, 0), (-1, -1), 1.5, RED),
+    ("TOPPADDING", (0, 0), (-1, -1), 28),
+    ("BOTTOMPADDING", (0, 0), (-1, -1), 28),
+    ("LEFTPADDING", (0, 0), (-1, -1), 18),
+    ("RIGHTPADDING", (0, 0), (-1, -1), 18),
 ]))
 story.append(final)
 

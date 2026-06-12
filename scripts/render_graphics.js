@@ -100,10 +100,60 @@ const checklist = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${bas
   </div>
 </div></body></html>`;
 
+// ---- D. Resultados (que consigue el centro) ----
+const results = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${base}
+  .grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+  .r { background:#151515; border:1px solid #2a2a2a; border-radius:18px; padding:22px; position:relative; overflow:hidden; }
+  .r::after { content:''; position:absolute; top:0; left:0; width:4px; height:100%; background:${RED}; }
+  .r .ic { font-size:26px; margin-bottom:10px; }
+  .r .big { font-size:19px; font-weight:900; font-style:italic; text-transform:uppercase; letter-spacing:-.5px; margin-bottom:6px; }
+  .r .big span { color:${RED}; }
+  .r .d { font-size:12.5px; color:#9ca3af; line-height:1.45; }
+</style></head><body><div class="wrap">
+  <div class="kicker">No vendemos dashboards, vendemos resultados</div>
+  <h1>Lo que <span class="r">consigue</span> tu centro</h1>
+  <div class="grid">
+    <div class="r"><div class="ic">📅</div><div class="big">Mas <span>reservas</span></div><div class="d">Los miembros reservan su plaza desde el movil. Menos huecos, clases mas llenas.</div></div>
+    <div class="r"><div class="ic">📉</div><div class="big">Menos <span>bajas</span></div><div class="d">Deteccion de miembros en riesgo y prediccion de churn para actuar a tiempo.</div></div>
+    <div class="r"><div class="ic">💰</div><div class="big">Mas <span>ingresos</span></div><div class="d">Cuotas, tienda y bonos cobrados online con Stripe. Diversifica tus fuentes.</div></div>
+    <div class="r"><div class="ic">🔥</div><div class="big">Mas <span>participacion</span></div><div class="d">WODs, leaderboards y duelos que enganchan a tus atletas cada dia.</div></div>
+    <div class="r"><div class="ic">🌐</div><div class="big">Mas <span>visibilidad</span></div><div class="d">Cada post de un miembro expone tu marca. Perfil publico que capta leads.</div></div>
+    <div class="r"><div class="ic">⚙️</div><div class="big">Menos <span>admin</span></div><div class="d">Miembros, clases, check-in y cobros en un solo panel. Menos hojas de calculo.</div></div>
+  </div>
+</div></body></html>`;
+
+// ---- E. Comparativa ----
+const comparison = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${base}
+  table { width:100%; border-collapse:separate; border-spacing:0 8px; }
+  th { text-align:left; font-size:13px; text-transform:uppercase; letter-spacing:1px; color:#9ca3af; padding:0 14px 6px; }
+  th.us { color:${RED}; }
+  td { background:#141414; padding:14px; font-size:13.5px; color:#e5e7eb; border-top:1px solid #232323; border-bottom:1px solid #232323; }
+  td:first-child { border-left:1px solid #232323; border-radius:12px 0 0 12px; font-weight:700; }
+  td:last-child { border-right:1px solid #232323; border-radius:0 12px 12px 0; }
+  td.us { background:rgba(239,68,68,0.07); font-weight:900; }
+  .yes { color:#22c55e; font-weight:900; } .no { color:#6b7280; font-weight:900; } .mid { color:#eab308; font-weight:900; }
+  .feat { text-align:center; }
+</style></head><body><div class="wrap">
+  <div class="kicker">Por que RIVAL y no otra</div>
+  <h1>RIVAL <span class="r">vs</span> la competencia</h1>
+  <table>
+    <tr><th>Funcion</th><th class="us">RivalFit</th><th class="feat">Wodify</th><th class="feat">SugarWOD</th></tr>
+    <tr><td>Gestion del centro</td><td class="us feat"><span class="yes">✓</span></td><td class="feat"><span class="yes">✓</span></td><td class="feat"><span class="mid">~</span></td></tr>
+    <tr><td>Red social integrada</td><td class="us feat"><span class="yes">✓</span></td><td class="feat"><span class="no">✕</span></td><td class="feat"><span class="no">✕</span></td></tr>
+    <tr><td>IA integrada (WODs, churn)</td><td class="us feat"><span class="yes">✓</span></td><td class="feat"><span class="no">✕</span></td><td class="feat"><span class="no">✕</span></td></tr>
+    <tr><td>Comunidad y leaderboards</td><td class="us feat"><span class="yes">✓</span></td><td class="feat"><span class="mid">~</span></td><td class="feat"><span class="mid">~</span></td></tr>
+    <tr><td>Tienda y cobros online</td><td class="us feat"><span class="yes">✓</span></td><td class="feat"><span class="mid">~</span></td><td class="feat"><span class="no">✕</span></td></tr>
+    <tr><td>App sin App Store (PWA)</td><td class="us feat"><span class="yes">✓</span></td><td class="feat"><span class="no">✕</span></td><td class="feat"><span class="no">✕</span></td></tr>
+  </table>
+  <p style="text-align:center; color:#9ca3af; font-size:12px; margin-top:18px;"><span class="yes">✓</span> incluido &nbsp; <span class="mid">~</span> parcial / con coste &nbsp; <span class="no">✕</span> no disponible</p>
+</div></body></html>`;
+
 const JOBS = [
     ['ecosystem', ecosystem, 1200, 720],
     ['graphic-plans', plans, 1200, 620],
     ['graphic-checklist', checklist, 1200, 600],
+    ['graphic-results', results, 1200, 640],
+    ['graphic-comparison', comparison, 1200, 620],
 ];
 
 (async () => {
