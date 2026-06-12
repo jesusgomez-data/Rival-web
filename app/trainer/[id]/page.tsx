@@ -61,9 +61,9 @@ export default function TrainerPublicProfile() {
 
         const [plansRes, reviewsRes, followRes, memberRes] = await Promise.all([
             supabase.from('membership_plans').select('*').eq('organization_id', id).eq('is_active', true).order('price'),
-            supabase.from('center_reviews').select('id, rating, comment, created_at, profiles:user_id(full_name, username, avatar_url)').eq('organization_id', id).order('created_at', { ascending: false }).limit(10),
+            supabase.from('center_reviews').select('id, rating, review_text, created_at, profiles:user_id(full_name, username, avatar_url)').eq('organization_id', id).order('created_at', { ascending: false }).limit(10),
             user ? supabase.from('center_followers').select('id').eq('organization_id', id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
-            user ? supabase.from('members').select('id, status').eq('organization_id', id).eq('user_id', user.id).eq('status', 'active').maybeSingle() : Promise.resolve({ data: null }),
+            user ? supabase.from('members').select('id, status').eq('center_id', id).eq('user_id', user.id).eq('status', 'active').maybeSingle() : Promise.resolve({ data: null }),
         ])
 
         setPlans(plansRes.data || [])
@@ -361,7 +361,7 @@ export default function TrainerPublicProfile() {
                                     </div>
                                     <p className="text-gray-600 text-xs">{new Date(r.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</p>
                                 </div>
-                                {r.comment && <p className="text-gray-300 text-sm">{r.comment}</p>}
+                                {r.review_text && <p className="text-gray-300 text-sm">{r.review_text}</p>}
                             </div>
                         ))}
                     </div>

@@ -48,7 +48,7 @@ export default function VideosPage() {
         .select(
           `
           id,
-          content,
+          caption,
           media_url,
           media_type,
           likes_count,
@@ -73,7 +73,7 @@ export default function VideosPage() {
         id: post.id,
         videoUrl: post.media_url,
         thumbnailUrl: undefined, // TODO: Generar thumbnails
-        caption: post.content || "",
+        caption: post.caption || "",
         author: {
           id: post.user?.id || "",
           username: post.user?.username || "Usuario",
