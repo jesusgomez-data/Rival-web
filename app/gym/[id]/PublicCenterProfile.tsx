@@ -681,20 +681,20 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                     <div className="flex justify-around md:justify-center gap-4 md:gap-16 px-2 overflow-x-auto no-scrollbar">
                         <button
                             onClick={() => setActiveTab('feed')}
-                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[9px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'feed' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[10px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'feed' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
                         >
                             <Grid className="w-4 h-4" /> Feed
                         </button>
                         <button
                             onClick={() => setActiveTab('gallery')}
-                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[9px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'gallery' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[10px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'gallery' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
                         >
                             <ImageIcon className="w-3.5 h-3.5 md:w-4 md:h-4" /> Instalaciones
                         </button>
                         {!isTrainer && (
                             <button
                                 onClick={() => setActiveTab('wods')}
-                                className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[10px] md:text-xs font-black uppercase tracking-widest ${activeTab === 'wods' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                                className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[10px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'wods' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
                             >
                                 <Dumbbell className="w-3.5 h-3.5 md:w-4 md:h-4" /> WODs
                             </button>
@@ -702,26 +702,26 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                         {!isTrainer && (
                             <button
                                 onClick={() => setActiveTab('store')}
-                                className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[9px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'store' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                                className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[10px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'store' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
                             >
                                 <ShoppingBag className="w-3.5 h-3.5 md:w-4 md:h-4" /> Tienda
                             </button>
                         )}
                         <button
                             onClick={() => setActiveTab('memberships')}
-                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[9px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'memberships' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[10px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'memberships' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
                         >
                             <CreditCard className="w-3.5 h-3.5 md:w-4 md:h-4" /> Membresías
                         </button>
                         <button
                             onClick={() => setActiveTab('schedule')}
-                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[9px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'schedule' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[10px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'schedule' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
                         >
                             <Calendar className="w-3.5 h-3.5 md:w-4 md:h-4" /> Horario
                         </button>
                         <button
                             onClick={() => setActiveTab('info')}
-                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[9px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'info' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
+                            className={`flex items-center gap-2 py-4 border-t-2 transition-all text-[10px] md:text-sm font-black uppercase tracking-widest flex-shrink-0 ${activeTab === 'info' ? 'border-brand-red ' + textContrast : 'border-transparent text-gray-500 hover:text-gray-400'}`}
                         >
                             <Info className="w-3.5 h-3.5 md:w-4 md:h-4" /> Info
                         </button>
@@ -877,295 +877,299 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                 )}
 
                 {activeTab === 'wods' && (
-                    <div className="space-y-6 relative max-w-3xl mx-auto">
-                        {/* WOD Content */}
-                        {initialPosts.filter((p: any) => p.post_type === 'wod').map((wod: any, idx: number) => {
-                            const isOpen = expandedWods.has(wod.id);
-                            // Community Pulse (Simulated or based on logic)
-                            const intensity = (idx % 3) + 8; // 8-10 level
-                            const athleteCount = 20 + (idx * 5);
-
-                            return (
-                                <div key={wod.id} className={clsx(
-                                    "border rounded-2xl sm:rounded-[1.5rem] overflow-hidden group relative transition-all duration-500",
-                                    bgCard,
-                                    !hasAccess ? 'bg-muted/10' : 'hover:border-white/20'
-                                )}>
-                                    {!hasAccess && (
-                                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md p-6 text-center">
-                                            <div className="w-16 h-16 rounded-full bg-brand-red/10 flex items-center justify-center mb-4 shadow-glow border border-brand-red/20">
-                                                <Dumbbell className="w-8 h-8 text-brand-red" />
-                                            </div>
-                                            <h3 className="font-heading font-black italic uppercase text-lg text-white mb-2 tracking-tight">WOD Exclusivo</h3>
-                                            <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest max-w-[200px] mb-6">
-                                                Solo los atletas inscritos en {org.name} pueden ver los detalles de los entrenamientos.
-                                            </p>
-                                            <button
-                                                onClick={() => setActiveTab('memberships')}
-                                                className="px-6 py-3 bg-brand-red text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg flex items-center gap-2"
-                                            >
-                                                Ver Planes <ArrowRight className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    )}
-                                    {/* WOD Header / Trigger */}
-                                    <button
-                                        onClick={() => toggleWod(wod.id)}
-                                        className="w-full text-left p-4 sm:p-5 flex items-center justify-between group/btn relative overflow-hidden"
-                                    >
-                                        {/* Background Glow on Hover */}
-                                        <div className="absolute inset-0 bg-gradient-to-r from-brand-red/5 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity" />
-
-                                        <div className="flex items-center gap-4 sm:gap-6 relative z-10">
-                                            <div className={clsx(
-                                                "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500",
-                                                isOpen ? "bg-brand-red text-white shadow-lg shadow-red-900/40 rotate-6" : "bg-white/5 text-gray-400 group-hover/btn:bg-white/10"
-                                            )}>
-                                                <Dumbbell className="w-5 h-5 sm:w-6 h-6" />
-                                            </div>
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="bg-brand-red/10 text-brand-red text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-brand-red/20">Official WOD</span>
-                                                    <div className="flex items-center gap-1 text-[8px] font-black text-green-500 uppercase tracking-widest">
-                                                        <Flame className="w-2.5 h-2.5" /> Intensity: {intensity}/10
-                                                    </div>
-                                                </div>
-                                                <h4 className={clsx(
-                                                    "font-black italic uppercase text-lg sm:text-2xl tracking-tighter transition-colors",
-                                                    isOpen ? "text-white" : "text-gray-300 group-hover/btn:text-white"
-                                                )}>
-                                                    WOD {new Date(wod.scheduled_for || wod.created_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
-                                                </h4>
-
-                                                {/* Community Pulse */}
-                                                {!isOpen && (
-                                                    <p className="text-[10px] text-gray-500 font-bold mt-1 flex items-center gap-2">
-                                                        <TrendingUp className="w-3 h-3 text-brand-red" /> {athleteCount} atletas ya entrenaron hoy
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div className={clsx(
-                                            "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300",
-                                            isOpen ? "bg-brand-red text-white" : "bg-white/5 text-gray-600"
-                                        )}>
-                                            <ChevronDown className={clsx("w-5 h-5 transition-transform duration-300", isOpen ? "rotate-180" : "")} />
-                                        </div>
-                                    </button>
-
-                                    {/* WOD Content / Accordion Body */}
-                                    <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[3000px] border-t border-white/5 opacity-100' : 'max-h-0 opacity-0'}`}>
-                                        <div className="p-4 sm:p-6 bg-gradient-to-b from-black/40 to-transparent space-y-4">
-                                            {(() => {
-                                                let wodData;
-                                                try {
-                                                    wodData = JSON.parse(wod.content);
-                                                } catch {
-                                                    wodData = { workout: wod.content };
-                                                }
-
-                                                return (
-                                                    <>
-                                                        {wodData.warmup && (
-                                                            <div className={`rounded-2xl border transition-all ${expandedBlocks.has(`${wod.id}-warmup`)
-                                                                ? (theme === 'dark' ? 'bg-black/40 border-white/10' : 'bg-gray-100 border-gray-200')
-                                                                : (theme === 'dark' ? 'bg-white/5 border-white/5 hover:border-white/10' : 'bg-white border-gray-100 hover:border-gray-200 shadow-sm')}`}>
-                                                                <button
-                                                                    onClick={() => toggleBlock(wod.id, 'warmup' as any)}
-                                                                    className="w-full flex items-center justify-between p-3"
-                                                                >
-                                                                    <div className="flex items-center gap-3">
-                                                                        <span className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.3)] shrink-0"></span>
-                                                                        <h5 className="text-white font-accent font-bold text-xs uppercase tracking-tight flex items-center gap-2">
-                                                                            <Zap className="w-3.5 h-3.5 text-orange-500" /> Calentamiento
-                                                                        </h5>
-                                                                    </div>
-                                                                    <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${expandedBlocks.has(`${wod.id}-warmup`) ? 'rotate-180 text-orange-500' : ''}`} />
-                                                                </button>
-
-                                                                <div className={`overflow-hidden transition-all duration-300 ${expandedBlocks.has(`${wod.id}-warmup`) ? 'max-h-[1000px] opacity-100 border-t border-white/5' : 'max-h-0 opacity-0'}`}>
-                                                                    <div className="p-4">
-                                                                        <div className={clsx(
-                                                                            "whitespace-pre-wrap font-accent font-semibold leading-relaxed text-sm sm:text-base selection:bg-brand-red/30 tracking-tight",
-                                                                            theme === 'dark' ? "text-foreground" : "text-black"
-                                                                        )}>
-                                                                            {wodData.warmup}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                        )}
-
-                                                        {/* Render Blocks as Cards (New Style + Collapsible) */}
-                                                        {(wodData.blocks || []).map((block: any, idx: number) => {
-                                                            const isBlockOpen = expandedBlocks.has(`${wod.id}-${idx}`);
-
-                                                            // Parse content into lines if it's a string, or use exercises array if available
-                                                            const lines = (block.exercises && block.exercises.length > 0)
-                                                                ? block.exercises
-                                                                : (block.content || '').split('\n').filter((line: string) => line.trim().length > 0);
-
-                                                            const title = (block.title || (block.format && block.format !== 'free' ? block.format : (block.type === 'wod' ? 'Workout' : block.type))).toUpperCase();
-                                                            const value = block.duration || block.value || "";
-
-                                                            return (
-                                                                <div key={idx} className={clsx(
-                                                                    "border rounded-[18px] md:rounded-[24px] p-0.5 relative overflow-hidden group/card shadow-2xl transition-all duration-300",
-                                                                    theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-md",
-                                                                    isBlockOpen ? "ring-1 ring-brand-red/30" : ""
-                                                                )}>
-                                                                    {/* Accent Background Glow */}
-                                                                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
-
-                                                                    <div className="relative z-10">
-                                                                        {/* Card Trigger Header */}
-                                                                        <button
-                                                                            onClick={() => toggleBlock(wod.id, idx)}
-                                                                            className="w-full text-left p-3 md:p-5 block space-y-4 focus:outline-none"
-                                                                        >
-                                                                            <div className="flex items-end justify-between gap-4">
-                                                                                <div className="min-w-0 flex-1">
-                                                                                    <h3 className={clsx(
-                                                                                        "text-lg md:text-2xl font-heading font-black italic uppercase tracking-tighter leading-none truncate pr-2 flex items-center gap-2",
-                                                                                        theme === 'dark' ? "text-white" : "text-gray-900"
-                                                                                    )}>
-                                                                                        {title}
-                                                                                        <ChevronDown className={clsx(
-                                                                                            "w-4 h-4 md:w-5 md:h-5 transition-transform duration-300 text-brand-red",
-                                                                                            isBlockOpen ? "rotate-180" : ""
-                                                                                        )} />
-                                                                                    </h3>
-                                                                                </div>
-                                                                                {value && (
-                                                                                    <div className="text-right shrink-0">
-                                                                                        <span className={clsx(
-                                                                                            "text-xl md:text-4xl font-heading font-black italic tracking-tighter leading-none",
-                                                                                            theme === 'dark' ? "text-brand-red" : "text-brand-red"
-                                                                                        )}>
-                                                                                            {value}
-                                                                                        </span>
-                                                                                        {block.format && block.format !== 'free' && !value.includes(block.format) && (
-                                                                                            <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mt-1">{block.format}</p>
-                                                                                        )}
-                                                                                    </div>
-                                                                                )}
-                                                                            </div>
-
-                                                                            {/* Progress Bar Style Decoration */}
-                                                                            <div className="w-full h-1.5 md:h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                                                                                <div className="bg-brand-red h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(220,38,38,0.5)]" style={{ width: '60%' }}></div>
-                                                                            </div>
-                                                                        </button>
-
-                                                                        {/* Expandable Body */}
-                                                                        <div className={clsx(
-                                                                            "overflow-hidden transition-all duration-500 px-3 md:px-5",
-                                                                            isBlockOpen ? "max-h-[1000px] opacity-100 pb-5" : "max-h-0 opacity-0 pb-0"
-                                                                        )}>
-                                                                            {/* Exercises List */}
-                                                                            {lines.length > 0 && (
-                                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
-                                                                                    {lines.map((lineItem: any, i: number) => {
-                                                                                        let text;
-                                                                                        if (typeof lineItem === 'string') {
-                                                                                            text = lineItem;
-                                                                                        } else {
-                                                                                            const prefix = [lineItem.sets, lineItem.reps].filter(Boolean).join('x');
-                                                                                            const suffix = lineItem.value ? `@ ${lineItem.value}` : '';
-                                                                                            text = `${prefix ? prefix + ' ' : ''}${lineItem.name} ${suffix}`.trim();
-                                                                                        }
-                                                                                        const mediaUrl = typeof lineItem === 'object' ? lineItem.media_url : null;
-                                                                                        const isClickable = !!mediaUrl;
-
-                                                                                        return (
-                                                                                            <div
-                                                                                                key={i}
-                                                                                                onClick={(e) => {
-                                                                                                    if (isClickable) {
-                                                                                                        e.stopPropagation();
-                                                                                                        setExerciseMedia({
-                                                                                                            url: mediaUrl,
-                                                                                                            type: mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? 'video' : 'image'
-                                                                                                        });
-                                                                                                    }
-                                                                                                }}
-                                                                                                className={clsx(
-                                                                                                    "px-3 py-2 rounded-xl border flex items-center justify-between group/ex",
-                                                                                                    theme === 'dark' ? "bg-white/5 border-white/5 text-gray-200" : "bg-gray-50 border-gray-100 text-gray-800",
-                                                                                                    isClickable ? "cursor-pointer hover:border-brand-red/50 hover:bg-white/10" : ""
-                                                                                                )}
-                                                                                            >
-                                                                                                <p className="text-xs md:text-sm font-black uppercase tracking-wide truncate w-full">
-                                                                                                    {text}
-                                                                                                </p>
-                                                                                                {isClickable && (
-                                                                                                    <div className="bg-brand-red/10 p-1.5 rounded-lg text-brand-red opacity-0 group-hover/ex:opacity-100 transition-opacity">
-                                                                                                        <Play className="w-3 h-3 fill-current" />
-                                                                                                    </div>
-                                                                                                )}
-                                                                                            </div>
-                                                                                        );
-                                                                                    })}
-                                                                                </div>
-                                                                            )}
-
-                                                                            {/* Block Media */}
-                                                                            {block.media_urls && block.media_urls.length > 0 && (
-                                                                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4 pt-4 border-t border-white/5">
-                                                                                    {block.media_urls.map((url: string, i: number) => (
-                                                                                        <div key={i} className={`rounded-xl overflow-hidden border ${theme === 'dark' ? 'border-white/5 bg-black' : 'border-gray-200 bg-gray-100'} aspect-video relative group`}>
-                                                                                            {url.match(/\.(mp4|webm|ogg)$/i) ? (
-                                                                                                <video src={url} className="w-full h-full object-cover" controls />
-                                                                                            ) : (
-                                                                                                <img src={url} alt="Block Media" className="w-full h-full object-cover" />
-                                                                                            )}
-                                                                                        </div>
-                                                                                    ))}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            );
-                                                        })}
-
-                                                        {/* Log this WOD Button */}
-                                                        <div className="pt-6 border-t border-white/5">
-                                                            <Link
-                                                                href={`/dashboard/training/session?wodId=${wod.id}`}
-                                                                className="flex items-center justify-center gap-2 w-full py-3 bg-white text-black rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all shadow-xl group"
-                                                            >
-                                                                <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" /> Log This Session
-                                                            </Link>
-                                                        </div>
-                                                    </>
-                                                );
-                                            })()}
-                                        </div>
+                    <div className="space-y-6 relative max-w-3xl mx-auto w-full">
+                        {!isMember ? (
+                            <div className="py-12 px-4 flex items-center justify-center min-h-[400px] w-full">
+                                <div className={`${theme === 'dark' ? 'bg-[#121212] border-white/5 shadow-2xl' : 'bg-white border-gray-200 shadow-md'} w-full max-w-md p-8 rounded-[2rem] border text-center relative overflow-hidden group`}>
+                                    {/* Red accent glow */}
+                                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
+                                    
+                                    <div className="w-16 h-16 bg-brand-red/10 rounded-full flex items-center justify-center mx-auto mb-6 border border-brand-red/20 shadow-glow relative z-10">
+                                        <Lock className="w-8 h-8 text-brand-red animate-pulse" />
                                     </div>
-                                </div>
-                            );
-                        })}
-
-                        {/* Lock Overlay for Non-Members */}
-                        {!isMember && (
-                            <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
-                                <div className={`${theme === 'dark' ? 'bg-black/80 border-white/10' : 'bg-white/90 border-gray-200'} backdrop-blur-md p-8 rounded-3xl border shadow-2xl text-center max-w-sm`}>
-                                    <div className="w-16 h-16 bg-brand-red/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                                        <Lock className="w-8 h-8 text-brand-red" />
-                                    </div>
-                                    <h3 className={`text-xl font-black italic uppercase mb-2 ${textContrast}`}>Contenido Exclusivo</h3>
-                                    <p className={`text-sm mb-6 ${textMuted}`}>
+                                    <h3 className={`text-2xl font-heading font-black italic uppercase mb-2 relative z-10 ${textContrast}`}>Contenido Exclusivo</h3>
+                                    <p className={`text-xs font-bold uppercase tracking-wide mb-6 max-w-xs mx-auto leading-relaxed relative z-10 ${textMuted}`}>
                                         Los entrenamientos (WODs) están reservados para los atletas afiliados a {org.name}.
                                     </p>
                                     <button
                                         onClick={() => setShowTrialModal(true)}
-                                        className="w-full py-3 bg-brand-red text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg"
+                                        className="w-full py-4 bg-brand-red text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-red-600 transition-all active:scale-95 shadow-glow relative z-10"
                                     >
                                         Solicitar Prueba Gratis
                                     </button>
                                 </div>
                             </div>
+                        ) : (
+                            <>
+                                {/* WOD Content */}
+                                {initialPosts.filter((p: any) => p.post_type === 'wod').map((wod: any, idx: number) => {
+                                    const isOpen = expandedWods.has(wod.id);
+                                    // Community Pulse (Simulated or based on logic)
+                                    const intensity = (idx % 3) + 8; // 8-10 level
+                                    const athleteCount = 20 + (idx * 5);
+
+                                    return (
+                                        <div key={wod.id} className={clsx(
+                                            "border rounded-2xl sm:rounded-[1.5rem] overflow-hidden group relative transition-all duration-500",
+                                            bgCard,
+                                            !hasAccess ? 'bg-muted/10' : 'hover:border-white/20'
+                                        )}>
+                                            {!hasAccess && (
+                                                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md p-6 text-center">
+                                                    <div className="w-16 h-16 rounded-full bg-brand-red/10 flex items-center justify-center mb-4 shadow-glow border border-brand-red/20">
+                                                        <Dumbbell className="w-8 h-8 text-brand-red" />
+                                                    </div>
+                                                    <h3 className="font-heading font-black italic uppercase text-lg text-white mb-2 tracking-tight">WOD Exclusivo</h3>
+                                                    <p className="text-[10px] text-gray-300 font-bold uppercase tracking-widest max-w-[200px] mb-6">
+                                                        Solo los atletas inscritos en {org.name} pueden ver los detalles de los entrenamientos.
+                                                    </p>
+                                                    <button
+                                                        onClick={() => setActiveTab('memberships')}
+                                                        className="px-6 py-3 bg-brand-red text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg flex items-center gap-2"
+                                                    >
+                                                        Ver Planes <ArrowRight className="w-3 h-3" />
+                                                    </button>
+                                                </div>
+                                            )}
+                                            {/* WOD Header / Trigger */}
+                                            <button
+                                                onClick={() => toggleWod(wod.id)}
+                                                className="w-full text-left p-4 sm:p-5 flex items-center justify-between group/btn relative overflow-hidden"
+                                            >
+                                                {/* Background Glow on Hover */}
+                                                <div className="absolute inset-0 bg-gradient-to-r from-brand-red/5 to-transparent opacity-0 group-hover/btn:opacity-100 transition-opacity" />
+
+                                                <div className="flex items-center gap-4 sm:gap-6 relative z-10">
+                                                    <div className={clsx(
+                                                        "w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 transition-all duration-500",
+                                                        isOpen ? "bg-brand-red text-white shadow-lg shadow-red-900/40 rotate-6" : "bg-white/5 text-gray-400 group-hover/btn:bg-white/10"
+                                                    )}>
+                                                        <Dumbbell className="w-5 h-5 sm:w-6 h-6" />
+                                                    </div>
+                                                    <div>
+                                                        <div className="flex items-center gap-2 mb-1">
+                                                            <span className="bg-brand-red/10 text-brand-red text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded-full border border-brand-red/20">Official WOD</span>
+                                                            <div className="flex items-center gap-1 text-[8px] font-black text-green-500 uppercase tracking-widest">
+                                                                <Flame className="w-2.5 h-2.5" /> Intensity: {intensity}/10
+                                                            </div>
+                                                        </div>
+                                                        <h4 className={clsx(
+                                                            "font-black italic uppercase text-lg sm:text-2xl tracking-tighter transition-colors",
+                                                            isOpen ? "text-white" : "text-gray-300 group-hover/btn:text-white"
+                                                        )}>
+                                                            WOD {new Date(wod.scheduled_for || wod.created_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                                        </h4>
+
+                                                        {/* Community Pulse */}
+                                                        {!isOpen && (
+                                                            <p className="text-[10px] text-gray-500 font-bold mt-1 flex items-center gap-2">
+                                                                <TrendingUp className="w-3 h-3 text-brand-red" /> {athleteCount} atletas ya entrenaron hoy
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                <div className={clsx(
+                                                    "w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300",
+                                                    isOpen ? "bg-brand-red text-white" : "bg-white/5 text-gray-600"
+                                                )}>
+                                                    <ChevronDown className={clsx("w-5 h-5 transition-transform duration-300", isOpen ? "rotate-180" : "")} />
+                                                </div>
+                                            </button>
+
+                                            {/* WOD Content / Accordion Body */}
+                                            <div className={`overflow-hidden transition-all duration-500 ease-in-out ${isOpen ? 'max-h-[3000px] border-t border-white/5 opacity-100' : 'max-h-0 opacity-0'}`}>
+                                                <div className="p-4 sm:p-6 bg-gradient-to-b from-black/40 to-transparent space-y-4">
+                                                    {(() => {
+                                                        let wodData;
+                                                        try {
+                                                            wodData = JSON.parse(wod.content);
+                                                        } catch {
+                                                            wodData = { workout: wod.content };
+                                                        }
+
+                                                        return (
+                                                            <>
+                                                                {wodData.warmup && (
+                                                                    <div className={`rounded-2xl border transition-all ${expandedBlocks.has(`${wod.id}-warmup`)
+                                                                        ? (theme === 'dark' ? 'bg-black/40 border-white/10' : 'bg-gray-100 border-gray-200')
+                                                                        : (theme === 'dark' ? 'bg-white/5 border-white/5 hover:border-white/10' : 'bg-white border-gray-100 hover:border-gray-200 shadow-sm')}`}>
+                                                                        <button
+                                                                            onClick={() => toggleBlock(wod.id, 'warmup' as any)}
+                                                                            className="w-full flex items-center justify-between p-3"
+                                                                        >
+                                                                            <div className="flex items-center gap-3">
+                                                                                <span className="w-2 h-2 rounded-full bg-orange-500 shadow-[0_0_10px_rgba(249,115,22,0.3)] shrink-0"></span>
+                                                                                <h5 className="text-white font-accent font-bold text-xs uppercase tracking-tight flex items-center gap-2">
+                                                                                    <Zap className="w-3.5 h-3.5 text-orange-500" /> Calentamiento
+                                                                                </h5>
+                                                                            </div>
+                                                                            <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform duration-300 ${expandedBlocks.has(`${wod.id}-warmup`) ? 'rotate-180 text-orange-500' : ''}`} />
+                                                                        </button>
+
+                                                                        <div className={`overflow-hidden transition-all duration-300 ${expandedBlocks.has(`${wod.id}-warmup`) ? 'max-h-[1000px] opacity-100 border-t border-white/5' : 'max-h-0 opacity-0'}`}>
+                                                                            <div className="p-4">
+                                                                                <div className={clsx(
+                                                                                    "whitespace-pre-wrap font-accent font-semibold leading-relaxed text-sm sm:text-base selection:bg-brand-red/30 tracking-tight",
+                                                                                    theme === 'dark' ? "text-foreground" : "text-black"
+                                                                                )}>
+                                                                                    {wodData.warmup}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Render Blocks as Cards (New Style + Collapsible) */}
+                                                                {(wodData.blocks || []).map((block: any, idx: number) => {
+                                                                    const isBlockOpen = expandedBlocks.has(`${wod.id}-${idx}`);
+
+                                                                    // Parse content into lines if it's a string, or use exercises array if available
+                                                                    const lines = (block.exercises && block.exercises.length > 0)
+                                                                        ? block.exercises
+                                                                        : (block.content || '').split('\n').filter((line: string) => line.trim().length > 0);
+
+                                                                    const title = (block.title || (block.format && block.format !== 'free' ? block.format : (block.type === 'wod' ? 'Workout' : block.type))).toUpperCase();
+                                                                    const value = block.duration || block.value || "";
+
+                                                                    return (
+                                                                        <div key={idx} className={clsx(
+                                                                            "border rounded-[18px] md:rounded-[24px] p-0.5 relative overflow-hidden group/card shadow-2xl transition-all duration-300",
+                                                                            theme === 'dark' ? "bg-[#121212] border-white/5" : "bg-white border-gray-100 shadow-md",
+                                                                            isBlockOpen ? "ring-1 ring-brand-red/30" : ""
+                                                                        )}>
+                                                                            {/* Accent Background Glow */}
+                                                                            <div className="absolute top-0 right-0 w-32 h-32 bg-brand-red/5 blur-3xl -mr-10 -mt-10" />
+
+                                                                            <div className="relative z-10">
+                                                                                {/* Card Trigger Header */}
+                                                                                <button
+                                                                                    onClick={() => toggleBlock(wod.id, idx)}
+                                                                                    className="w-full text-left p-3 md:p-5 block space-y-4 focus:outline-none"
+                                                                                >
+                                                                                    <div className="flex items-end justify-between gap-4">
+                                                                                        <div className="min-w-0 flex-1">
+                                                                                            <h3 className={clsx(
+                                                                                                "text-lg md:text-2xl font-heading font-black italic uppercase tracking-tighter leading-none truncate pr-2 flex items-center gap-2",
+                                                                                                theme === 'dark' ? "text-white" : "text-gray-900"
+                                                                                            )}>
+                                                                                                {title}
+                                                                                                <ChevronDown className={clsx(
+                                                                                                    "w-4 h-4 md:w-5 md:h-5 transition-transform duration-300 text-brand-red",
+                                                                                                    isBlockOpen ? "rotate-180" : ""
+                                                                                                )} />
+                                                                                            </h3>
+                                                                                        </div>
+                                                                                        {value && (
+                                                                                            <div className="text-right shrink-0">
+                                                                                                <span className={clsx(
+                                                                                                    "text-xl md:text-4xl font-heading font-black italic tracking-tighter leading-none",
+                                                                                                    theme === 'dark' ? "text-brand-red" : "text-brand-red"
+                                                                                                )}>
+                                                                                                    {value}
+                                                                                                </span>
+                                                                                                {block.format && block.format !== 'free' && !value.includes(block.format) && (
+                                                                                                    <p className="text-[9px] font-black text-gray-500 uppercase tracking-widest mt-1">{block.format}</p>
+                                                                                                )}
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+
+                                                                                    {/* Progress Bar Style Decoration */}
+                                                                                    <div className="w-full h-1.5 md:h-2 bg-white/5 rounded-full overflow-hidden border border-white/5">
+                                                                                        <div className="bg-brand-red h-full rounded-full transition-all duration-1000 shadow-[0_0_10px_rgba(220,38,38,0.5)]" style={{ width: '60%' }}></div>
+                                                                                    </div>
+                                                                                </button>
+
+                                                                                {/* Expandable Body */}
+                                                                                <div className={clsx(
+                                                                                    "overflow-hidden transition-all duration-500 px-3 md:px-5",
+                                                                                    isBlockOpen ? "max-h-[1000px] opacity-100 pb-5" : "max-h-0 opacity-0 pb-0"
+                                                                                )}>
+                                                                                    {/* Exercises List */}
+                                                                                    {lines.length > 0 && (
+                                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
+                                                                                            {lines.map((lineItem: any, i: number) => {
+                                                                                                let text;
+                                                                                                if (typeof lineItem === 'string') {
+                                                                                                    text = lineItem;
+                                                                                                } else {
+                                                                                                    const prefix = [lineItem.sets, lineItem.reps].filter(Boolean).join('x');
+                                                                                                    const suffix = lineItem.value ? `@ ${lineItem.value}` : '';
+                                                                                                    text = `${prefix ? prefix + ' ' : ''}${lineItem.name} ${suffix}`.trim();
+                                                                                                }
+                                                                                                const mediaUrl = typeof lineItem === 'object' ? lineItem.media_url : null;
+                                                                                                const isClickable = !!mediaUrl;
+
+                                                                                                return (
+                                                                                                    <div
+                                                                                                        key={i}
+                                                                                                        onClick={(e) => {
+                                                                                                            if (isClickable) {
+                                                                                                                e.stopPropagation();
+                                                                                                                setExerciseMedia({
+                                                                                                                    url: mediaUrl,
+                                                                                                                    type: mediaUrl.match(/\.(mp4|webm|ogg)$/i) ? 'video' : 'image'
+                                                                                                                });
+                                                                                                            }
+                                                                                                        }}
+                                                                                                        className={clsx(
+                                                                                                            "px-3 py-2 rounded-xl border flex items-center justify-between group/ex",
+                                                                                                            theme === 'dark' ? "bg-white/5 border-white/5 text-gray-200" : "bg-gray-50 border-gray-100 text-gray-800",
+                                                                                                            isClickable ? "cursor-pointer hover:border-brand-red/50 hover:bg-white/10" : ""
+                                                                                                        )}
+                                                                                                    >
+                                                                                                        <p className="text-xs md:text-sm font-black uppercase tracking-wide truncate w-full">
+                                                                                                            {text}
+                                                                                                        </p>
+                                                                                                        {isClickable && (
+                                                                                                            <div className="bg-brand-red/10 p-1.5 rounded-lg text-brand-red opacity-0 group-hover/ex:opacity-100 transition-opacity">
+                                                                                                                <Play className="w-3 h-3 fill-current" />
+                                                                                                            </div>
+                                                                                                        )}
+                                                                                                    </div>
+                                                                                                );
+                                                                                            })}
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    {/* Block Media */}
+                                                                                    {block.media_urls && block.media_urls.length > 0 && (
+                                                                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4 pt-4 border-t border-white/5">
+                                                                                            {block.media_urls.map((url: string, i: number) => (
+                                                                                                <div key={i} className={`rounded-xl overflow-hidden border ${theme === 'dark' ? 'border-white/5 bg-black' : 'border-gray-200 bg-gray-100'} aspect-video relative group`}>
+                                                                                                    {url.match(/\.(mp4|webm|ogg)$/i) ? (
+                                                                                                        <video src={url} className="w-full h-full object-cover" controls />
+                                                                                                    ) : (
+                                                                                                        <img src={url} alt="Block Media" className="w-full h-full object-cover" />
+                                                                                                    )}
+                                                                                                </div>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    )}
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    );
+                                                                })}
+
+                                                                {/* Log this WOD Button */}
+                                                                <div className="pt-6 border-t border-white/5">
+                                                                    <Link
+                                                                        href={`/dashboard/training/session?wodId=${wod.id}`}
+                                                                        className="flex items-center justify-center gap-2 w-full py-3 bg-white text-black rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all shadow-xl group"
+                                                                    >
+                                                                        <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" /> Log This Session
+                                                                    </Link>
+                                                                </div>
+                                                            </>
+                                                        );
+                                                    })()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </>
                         )}
                     </div>
                 )}

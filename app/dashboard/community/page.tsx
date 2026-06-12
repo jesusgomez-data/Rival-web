@@ -130,9 +130,9 @@ export default function CommunityPage({
                         *,
                         profiles:user_id (id, full_name, avatar_url, username, is_official),
                         workouts:workout_id (title, sport_type, total_volume_kg, workout_sets(*), location_name, metrics),
-                        likes:likes(user_id)
+                        likes:likes(user_id),
+                        comments:comments(count)
                     `)
-                    .eq('likes.user_id', user.id)
                     .order('created_at', { ascending: false });
 
                 if (activeTab === 'following' && !query) {
@@ -300,9 +300,9 @@ export default function CommunityPage({
                                         time={formatTimeAgo(post.created_at)}
                                         avatar={post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.profiles?.full_name || 'User')}&background=random`}
                                         image={post.media_url}
-                                        initialLikes={post.likes_count || 0}
-                                        hasLikedInitial={post.likes && post.likes.length > 0}
-                                        comments={post.comments_count || 0}
+                                        initialLikes={post.likes ? post.likes.length : 0}
+                                        hasLikedInitial={post.likes && post.likes.some((l: any) => l.user_id === data.user?.id)}
+                                        comments={post.comments?.[0]?.count || 0}
                                         highlight={post.workouts?.title}
                                         mediaType={post.media_type}
                                         caption={post.caption}

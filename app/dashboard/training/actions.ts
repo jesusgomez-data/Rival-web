@@ -6,7 +6,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createNotification } from '../notifications-actions';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const aiModel = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+const aiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 
 async function calculateWorkoutStreak(supabase: any, userId: string) {
@@ -1615,15 +1615,37 @@ export async function parseWodFromImage(base64Image: string) {
 
         const base64Data = base64Image.includes(',') ? base64Image.split(',')[1] : base64Image;
 
-        const result = await aiModel.generateContent([
-            prompt,
-            {
-                inlineData: {
-                    data: base64Data,
-                    mimeType: "image/jpeg"
+        let result;
+        let attempts = 0;
+        const maxAttempts = 3;
+        let delay = 1000;
+
+        while (attempts < maxAttempts) {
+            try {
+                result = await aiModel.generateContent([
+                    prompt,
+                    {
+                        inlineData: {
+                            data: base64Data,
+                            mimeType: "image/jpeg"
+                        }
+                    }
+                ]);
+                break;
+            } catch (err: any) {
+                attempts++;
+                console.warn(`[parseWodFromImage] Attempt ${attempts} failed:`, err.message || err);
+                if (attempts >= maxAttempts) {
+                    throw err;
                 }
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay *= 2;
             }
-        ]);
+        }
+
+        if (!result) {
+            return { error: 'No se recibió respuesta del servidor de IA. Por favor, intenta de nuevo.' };
+        }
 
         const response = await result.response;
         const text = response.text();

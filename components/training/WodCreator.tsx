@@ -502,14 +502,14 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                                 updateWod(newTitle, newBlocks, newSummary, date, cat.id);
                             }}
                             className={cn(
-                                "flex flex-col items-center justify-center p-3 rounded-2xl border transition-all gap-1.5",
+                                "flex flex-col items-center justify-center p-2.5 sm:p-3 rounded-2xl border transition-all gap-1.5 h-full text-center",
                                 category === cat.id
                                     ? "bg-brand-red/10 border-brand-red text-brand-red shadow-glow-sm"
                                     : "bg-black/20 border-white/5 text-gray-500 hover:border-white/20 hover:text-white"
                             )}
                         >
                             <span className="text-xl">{cat.icon}</span>
-                            <span className="text-[7px] font-black uppercase tracking-tighter whitespace-nowrap">{cat.label}</span>
+                            <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-tighter leading-tight">{cat.label}</span>
                         </button>
                     ))}
                 </div>

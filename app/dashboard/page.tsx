@@ -570,12 +570,12 @@ export default function DashboardHome() {
                 .select(`
                     id, user_id, caption, media_url, media_type, post_type,
                     wod_data, workout_id, music_url, music_title, music_artist,
-                    likes_count, comments_count, created_at,
+                    created_at,
                     profiles:user_id (id, username, full_name, avatar_url, level, is_official),
                     workouts:workout_id (*),
-                    likes:likes(user_id)
+                    likes:likes(user_id),
+                    comments:comments(count)
                 `)
-                .eq('likes.user_id', user.id)
                 .order('created_at', { ascending: false })
                 .limit(20);
 
@@ -975,9 +975,9 @@ export default function DashboardHome() {
                                                 time={formatTimeAgo(post.created_at)}
                                                 avatar={post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.profiles?.full_name || 'User')}&background=random`}
                                                 image={post.media_url}
-                                                initialLikes={post.likes_count || 0}
-                                                hasLikedInitial={post.likes && post.likes.length > 0}
-                                                comments={post.comments_count || 0}
+                                                initialLikes={post.likes ? post.likes.length : 0}
+                                                hasLikedInitial={post.likes && post.likes.some((l: any) => l.user_id === data.currentUser?.id)}
+                                                comments={post.comments?.[0]?.count || 0}
                                                 highlight={post.workouts?.title}
                                                 mediaType={post.media_type}
                                                 caption={post.caption}

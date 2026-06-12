@@ -67,11 +67,9 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
                 *,
                 profiles:user_id (full_name, avatar_url, username),
                 workouts:workout_id (title, sport_type, total_volume_kg, workout_sets(*), location_name, metrics),
-                likes:likes(user_id)
+                likes:likes(user_id),
+                comments:comments(count)
             `);
-            if (user) {
-                q = q.eq('likes.user_id', user.id);
-            }
             return q.eq('user_id', profile.id).order('created_at', { ascending: false });
         })(),
         user ? supabase.from('profiles').select('is_official').eq('id', user.id).single() : Promise.resolve({ data: null }),

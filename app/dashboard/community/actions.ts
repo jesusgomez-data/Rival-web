@@ -698,8 +698,7 @@ export async function getReelPosts(context: 'following' | 'global') {
 
     let query = supabase
         .from('posts')
-        .select('*, profiles:user_id(*), workouts:workout_id(*, metrics, workout_sets(*)), likes:likes(user_id)')
-        .eq('likes.user_id', user.id)
+        .select('*, profiles:user_id(*), workouts:workout_id(*, metrics, workout_sets(*)), likes:likes(user_id), comments:comments(count)')
         .eq('media_type', 'video')
         .order('created_at', { ascending: false })
         .limit(20);
@@ -731,8 +730,10 @@ export async function getReelPosts(context: 'following' | 'global') {
 
     return data.map((post: any) => ({
         ...post,
-        initialLikes: post.likes_count || 0,
-        hasLikedInitial: user && post.likes && post.likes.length > 0 ? true : false
+        initialLikes: post.likes ? post.likes.length : 0,
+        hasLikedInitial: user && post.likes && post.likes.some((l: any) => l.user_id === user.id) ? true : false,
+        commentsCount: post.comments?.[0]?.count || 0,
+        comments_count: post.comments?.[0]?.count || 0
     }));
 }
 export async function getWodResults(title: string) {

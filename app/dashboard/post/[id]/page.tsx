@@ -37,7 +37,8 @@ export default function PostPage() {
                         *,
                         profiles:user_id (*),
                         workouts:workout_id (title),
-                        likes (user_id)
+                        likes (user_id),
+                        comments:comments(count)
                     `)
                     .eq('id', postId)
                     .single()
@@ -152,9 +153,9 @@ export default function PostPage() {
                     time={formatTimeAgo(post.created_at)}
                     avatar={post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.profiles?.full_name || 'User')}&background=random`}
                     image={post.media_url}
-                    initialLikes={post.likes ? post.likes.length : (post.likes_count || 0)}
-                    hasLikedInitial={post.likes?.some((l: any) => l.user_id === currentUser?.id)}
-                    comments={post.comments_count || 0}
+                    initialLikes={post.likes ? post.likes.length : 0}
+                    hasLikedInitial={post.likes?.some((l: any) => l.user_id === currentUser?.id) || false}
+                    comments={post.comments?.[0]?.count || 0}
                     highlight={post.workouts?.title}
                     mediaType={post.media_type}
                     caption={post.caption}

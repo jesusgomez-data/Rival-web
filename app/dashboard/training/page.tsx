@@ -4,6 +4,7 @@ import { getMissions, getRecentPRs, getUserProfile, getScheduledWorkouts, getWor
 import { type TrainingPlan } from "./types";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { clsx } from "clsx";
 import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy, X, Activity } from "lucide-react";
 import Image from "next/image";
 
@@ -16,6 +17,7 @@ export default function TrainingPage() {
     const [publishedResults, setPublishedResults] = useState<any[]>([]);
     const [isWodExpanded, setIsWodExpanded] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [activeStep, setActiveStep] = useState<string>('1');
 
     useEffect(() => {
         async function fetchData() {
@@ -203,13 +205,80 @@ export default function TrainingPage() {
                         { n: '2', icon: '📝', title: 'Registra tu sesión', desc: 'Añade ejercicios, series, reps y tiempos' },
                         { n: '3', icon: '📊', title: 'Guarda y comparte', desc: 'Se guarda en tu historial y puedes publicarlo' },
                     ].map(step => (
-                        <div key={step.n} className="p-4 text-center">
-                            <div className="text-2xl mb-1">{step.icon}</div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-brand-red mb-0.5">Paso {step.n}</p>
-                            <p className="text-xs font-black text-foreground">{step.title}</p>
-                            <p className="text-[10px] text-muted-foreground font-medium leading-tight mt-0.5 hidden sm:block">{step.desc}</p>
+                        <div 
+                            key={step.n} 
+                            onClick={() => setActiveStep(step.n)}
+                            className={clsx(
+                                "p-5 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center relative",
+                                activeStep === step.n 
+                                    ? "bg-brand-red/5 text-white" 
+                                    : "bg-transparent text-gray-400 hover:bg-white/[0.02] hover:text-white"
+                            )}
+                        >
+                            {activeStep === step.n && (
+                                <div className="absolute top-0 left-0 right-0 h-1 bg-brand-red shadow-glow" />
+                            )}
+                            <div className={clsx("text-2xl mb-1.5 transition-transform duration-300", activeStep === step.n ? "scale-110" : "")}>{step.icon}</div>
+                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-red mb-0.5">Paso {step.n}</p>
+                            <p className={clsx("text-xs font-black uppercase tracking-tight transition-colors", activeStep === step.n ? "text-white" : "text-gray-300")}>{step.title}</p>
+                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider mt-1 hidden md:block max-w-[150px] leading-tight">{step.desc}</p>
                         </div>
                     ))}
+                </div>
+
+                {/* Detailed Step explanation / CTA */}
+                <div className="p-6 bg-white/[0.01] border-t border-border animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    {activeStep === '1' && (
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="space-y-2 max-w-xl text-left">
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-[9px] font-black uppercase tracking-wider">
+                                    Paso 1: Configurar Sesión
+                                </div>
+                                <h3 className="text-lg font-black uppercase italic text-white font-heading">Elige tu Especialidad Deportiva</h3>
+                                <p className="text-xs text-gray-400 leading-relaxed">
+                                    En Rival Fit adaptamos tu interfaz según tu disciplina. Elige entre Cross Training, Running, Musculación, Hyrox u OCR. Cada modalidad cuenta con formatos específicos de series, métricas de volumen, ritmos y puntuaciones personalizadas para tus combates.
+                                </p>
+                            </div>
+                            <Link href="/dashboard/training/session"
+                                className="w-full md:w-auto bg-brand-red hover:bg-red-600 text-white font-black text-xs uppercase tracking-widest px-6 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 shadow-glow shrink-0">
+                                <Play className="w-4 h-4 fill-current" /> CONFIGURAR SESIÓN
+                            </Link>
+                        </div>
+                    )}
+                    {activeStep === '2' && (
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="space-y-2 max-w-xl text-left">
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-[9px] font-black uppercase tracking-wider">
+                                    Paso 2: Registrar Actividad
+                                </div>
+                                <h3 className="text-lg font-black uppercase italic text-white font-heading">Registra Series o Escanea la Pizarra con IA</h3>
+                                <p className="text-xs text-gray-400 leading-relaxed">
+                                    ¿Entrenas en un box oficial? Saca una foto de la pizarra del WOD y nuestro escáner inteligente Rival AI transcribirá de forma automática los bloques, ejercicios, reps y pesos. También puedes registrar de manera manual tu entrenamiento set a set en tiempo real.
+                                </p>
+                            </div>
+                            <Link href="/dashboard/training/session"
+                                className="w-full md:w-auto bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black text-xs uppercase tracking-widest px-6 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 shrink-0">
+                                <List className="w-4 h-4" /> REGISTRAR O ESCANEAR
+                            </Link>
+                        </div>
+                    )}
+                    {activeStep === '3' && (
+                        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+                            <div className="space-y-2 max-w-xl text-left">
+                                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-[9px] font-black uppercase tracking-wider">
+                                    Paso 3: Obtener Recompensas
+                                </div>
+                                <h3 className="text-lg font-black uppercase italic text-white font-heading">Suma XP, Desbloquea Misiones y Comparte tu Récord</h3>
+                                <p className="text-xs text-gray-400 leading-relaxed">
+                                    Al completar cada entrenamiento ganas +100 XP para subir de nivel en el ranking global. Además, sumas volumen para tus misiones semanales de escuadrón. Puedes descargar tu Tarjeta Elite o compartirla en el Feed de la Arena y en tus Historias para motivar a tus rivales.
+                                </p>
+                            </div>
+                            <Link href="/dashboard/community"
+                                className="w-full md:w-auto bg-brand-red/10 border border-brand-red/20 hover:bg-brand-red hover:text-white text-brand-red font-black text-xs uppercase tracking-widest px-6 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 shrink-0">
+                                <Trophy className="w-4 h-4" /> EXPLORAR RADAR
+                            </Link>
+                        </div>
+                    )}
                 </div>
             </div>
 

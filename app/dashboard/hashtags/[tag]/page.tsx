@@ -38,12 +38,9 @@ export default function HashtagPage({ params }: { params: Promise<{ tag: string 
                         *,
                         workout_sets (*)
                     ),
-                    likes:likes(user_id)
+                    likes:likes(user_id),
+                    comments:comments(count)
                 `, { count: 'exact' });
-
-            if (user) {
-                postsQuery = postsQuery.eq('likes.user_id', user.id);
-            }
 
             const { data, error, count } = await postsQuery
                 .ilike('caption', `%#${tag}%`)
@@ -135,9 +132,9 @@ export default function HashtagPage({ params }: { params: Promise<{ tag: string 
                                     image={post.media_url}
                                     mediaType={post.media_type}
                                     caption={post.caption}
-                                    initialLikes={post.likes_count || 0}
-                                    hasLikedInitial={currentUserId && post.likes && post.likes.length > 0 ? true : false}
-                                    comments={post.comments_count || 0}
+                                    initialLikes={post.likes ? post.likes.length : 0}
+                                    hasLikedInitial={currentUserId && post.likes && post.likes.some((l: any) => l.user_id === currentUserId) ? true : false}
+                                    comments={post.comments?.[0]?.count || 0}
                                     currentUserId={currentUserId || undefined}
                                     authorId={post.user_id}
                                     workoutData={post.workouts}

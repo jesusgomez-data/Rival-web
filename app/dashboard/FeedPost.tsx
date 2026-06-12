@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink, ZapOff } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink, ZapOff, MapPin } from "lucide-react";
 import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
@@ -482,9 +482,14 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
             try {
                 const parsed = JSON.parse(url.trim());
                 if (Array.isArray(parsed)) {
-                    isCar = true;
-                    items = parsed;
-                    url = parsed[0];
+                    if (mediaType !== 'class_result' && post_type !== 'class_result') {
+                        isCar = true;
+                        items = parsed;
+                        url = parsed[0];
+                    } else {
+                        // For class_result, we don't have a background image URL in the array itself
+                        url = undefined;
+                    }
                 } else {
                     url = parsed.image || parsed.backgroundImage || parsed.media_url || parsed.mediaUrl || parsed.url || url;
                 }
@@ -1502,45 +1507,94 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                         <div className="space-y-4">
                             {(() => {
                                 let blocks: any[] = [];
+                                let centerName = "";
                                 try {
                                     const parsed = JSON.parse(image);
-                                    if (Array.isArray(parsed)) blocks = parsed.filter(b => b.type !== 'metadata');
+                                    if (Array.isArray(parsed)) {
+                                        blocks = parsed.filter(b => b.type !== 'metadata');
+                                        const metadata = parsed.find(b => b.type === 'metadata');
+                                        centerName = metadata?.centerName || "";
+                                    }
                                 } catch (e) { }
 
-                                if (!isExpanded) {
-                                    return (
-                                        <button onClick={() => setIsExpanded(true)} className="w-full border rounded-3xl p-6 bg-white/5 border-white/10 hover:border-brand-red/50 transition-all flex items-center justify-between group">
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 group-hover:scale-110 transition-all">
-                                                    <Dumbbell className="w-6 h-6" />
+                                return (
+                                    <div className="border border-white/10 rounded-3xl p-5 bg-white/[0.02] shadow-2xl relative overflow-hidden backdrop-blur-xl">
+                                        {/* Premium subtle background glow */}
+                                        <div className="absolute -top-12 -right-12 w-36 h-36 bg-brand-red/10 rounded-full blur-3xl pointer-events-none" />
+                                        
+                                        {/* Box / Gym Location Info */}
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-white/5">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 shrink-0">
+                                                    <Dumbbell className="w-5 h-5" />
                                                 </div>
-                                                <div className="text-left">
-                                                    <h4 className="text-lg font-black italic uppercase text-white leading-none">ENTRENAMIENTO COMPLETADO</h4>
-                                                    <p className="text-[10px] text-brand-red font-bold uppercase tracking-widest mt-1">{blocks.length} EJERCICIOS REGISTRADOS</p>
+                                                <div>
+                                                    <h4 className="text-sm font-black italic uppercase text-white tracking-wider leading-none">ENTRENAMIENTO COMPLETADO</h4>
+                                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Resultado de Clase Oficial</p>
                                                 </div>
                                             </div>
-                                            <ChevronDown className="w-5 h-5 text-gray-500" />
-                                        </button>
-                                    );
-                                }
-
-                                return (
-                                    <div className="space-y-4 animate-in slide-in-from-top-4 duration-300">
-                                        <div className="flex justify-between items-center px-1">
-                                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">DESGLOSE</span>
-                                            <button onClick={() => setIsExpanded(false)} className="text-[10px] font-black text-brand-red uppercase flex items-center gap-1">CERRAR <ChevronUp className="w-3 h-3" /></button>
-                                        </div>
-                                        {blocks.map((block: any, idx: number) => {
-                                            const isInnerExpanded = expandedInnerBlocks.includes(idx);
-                                            return (
-                                                <div key={idx} className="bg-white/5 border border-white/10 rounded-2xl p-4 cursor-pointer" onClick={() => toggleInnerBlock(idx)}>
-                                                    <div className="flex justify-between items-center">
-                                                        <h5 className="text-sm font-black text-white italic uppercase">{block.title}</h5>
-                                                        <span className="text-xl font-black text-brand-red italic">{block.value}</span>
-                                                    </div>
+                                            {centerName && (
+                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-red/10 border border-brand-red/20 rounded-full text-brand-red text-[10px] font-black uppercase tracking-widest self-start sm:self-center">
+                                                    <MapPin className="w-3.5 h-3.5 animate-pulse" />
+                                                    {centerName}
                                                 </div>
-                                            );
-                                        })}
+                                            )}
+                                        </div>
+
+                                        {/* Blocks & Exercises List */}
+                                        <div className="space-y-5">
+                                            {blocks.length === 0 ? (
+                                                <p className="text-xs text-gray-500 italic uppercase font-bold tracking-wider py-4 text-center">No se encontraron detalles del entrenamiento.</p>
+                                            ) : (
+                                                blocks.map((block: any, idx: number) => {
+                                                    const exercises = block.exercises || [];
+                                                    const blockScore = block.value ? `${block.value}${block.wod_weight ? ` (${block.wod_weight}KG)` : ''}` : '';
+                                                    return (
+                                                        <div key={idx} className="border border-white/5 bg-white/[0.01] rounded-2xl overflow-hidden shadow-inner">
+                                                            {/* Block Header */}
+                                                            <div className="px-4 py-3 bg-white/[0.03] border-b border-white/5 flex justify-between items-center gap-3 flex-wrap">
+                                                                <span className="text-[11px] font-black text-brand-red uppercase tracking-[0.2em]">{block.title || `BLOQUE ${idx + 1}`}</span>
+                                                                {blockScore && (
+                                                                    <span className="bg-brand-red/10 border border-brand-red/20 text-brand-red px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider italic">
+                                                                        {blockScore}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Block Exercises */}
+                                                            <div className="px-4 py-2 divide-y divide-white/[0.03]">
+                                                                {exercises.length === 0 ? (
+                                                                    <div className="py-2.5 text-xs text-gray-600 italic">Entrenamiento sin ejercicios específicos</div>
+                                                                ) : (
+                                                                    exercises.map((ex: any, exIdx: number) => {
+                                                                        const name = (ex.name || ex.exercise || ex.movement || "").toUpperCase();
+                                                                        if (!name) return null;
+                                                                        
+                                                                        // Calculate exercise details (reps, sets, load)
+                                                                        const parts = [];
+                                                                        if (ex.sets && ex.reps) parts.push(`${ex.sets}x${ex.reps}`);
+                                                                        else if (ex.reps) parts.push(ex.reps);
+                                                                        if (ex.value) parts.push(`${ex.value}${block.type === 'weight' ? 'KG' : ''}`);
+                                                                        const detail = parts.join(" · ");
+
+                                                                        return (
+                                                                            <div key={exIdx} className="flex justify-between items-center py-2.5 gap-4">
+                                                                                <span className="text-xs sm:text-sm font-semibold text-white/95 uppercase tracking-wide leading-tight">{name}</span>
+                                                                                {detail && (
+                                                                                    <span className="text-xs sm:text-sm font-black text-brand-red uppercase tracking-wider shrink-0 italic">
+                                                                                        {detail}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        );
+                                                                    })
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })
+                                            )}
+                                        </div>
                                     </div>
                                 );
                             })()}
