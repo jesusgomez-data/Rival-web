@@ -156,6 +156,8 @@ export async function createPRPost(formData: FormData) {
                     duration_seconds: 0,
                     is_pr: true,
                     max_weight_kg: weightNum,
+                    start_time: new Date().toISOString(),
+                    end_time: new Date().toISOString(),
                     notes: `Récord personal registrado desde el feed`
                 })
                 .select()
