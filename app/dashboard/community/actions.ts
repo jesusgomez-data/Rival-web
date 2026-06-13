@@ -5,6 +5,7 @@ import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 import { updateMissionProgress } from '../training/actions'
+import { syncFeaturedRm } from '@/lib/pr-sync'
 import { createNotification } from '../notifications-actions'
 
 export async function toggleLike(postId: string) {
@@ -172,6 +173,9 @@ export async function createPRPost(formData: FormData) {
 
                 // XP for PR
                 await supabase.rpc('increment_xp', { amount: 75, profile_id: user.id });
+
+                // Sync with Featured RMs
+                await syncFeaturedRm(user.id, exercise, weightNum);
             }
 
             // ── Send in-app notification ──────────────────────────────────────

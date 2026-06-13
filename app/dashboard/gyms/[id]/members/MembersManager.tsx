@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { Plus, Search, User, CheckCircle, Trash2, Edit2, X, CreditCard, Phone, Mail, Landmark, Power, Cake, Calendar, Link as LinkIcon, Loader2, ChevronDown, Check, Send, Download, Upload, FileText, AlertCircle, Building2 } from "lucide-react";
 import { addMember, addGuestMember, requestMemberPayment, approveTrialRequest, removeMember, updateMemberDetails, toggleMemberStatus, searchAthletes, linkMemberToUser, bulkImportMembers, getCenterMembers } from "../../member-actions";
 import { sendRegistrationEmail } from "../../email-actions";
@@ -751,13 +752,13 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                         </div>
                                         {viewingMember.user?.username && (
                                             <div className="mt-1">
-                                                <a
+                                                <Link
                                                     href={`/dashboard/profile/${viewingMember.user.username}`}
-                                                    target="_blank"
+                                                    onClick={() => setViewingMember(null)}
                                                     className="text-[9px] text-brand-red hover:underline font-bold uppercase shrink-0"
                                                 >
                                                     Ver Perfil ↗
-                                                </a>
+                                                </Link>
                                             </div>
                                         )}
                                     </div>

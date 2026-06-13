@@ -3,12 +3,14 @@
 import { getMissions, getRecentPRs, getUserProfile, getScheduledWorkouts, getWorkoutHistory, getPublishedResults, deleteScheduledWorkout } from "./actions";
 import { type TrainingPlan } from "./types";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { clsx } from "clsx";
 import { Calendar, ChevronRight, Play, Clock, Dumbbell, Zap, Target, Award, List, ChevronDown, ChevronUp, Trophy, X, Activity } from "lucide-react";
 import Image from "next/image";
 
 export default function TrainingPage() {
+    const router = useRouter();
     const [missions, setMissions] = useState<any[]>([]);
     const [prs, setPrs] = useState<any[]>([]);
     const [profile, setProfile] = useState<any>(null);
@@ -303,6 +305,7 @@ export default function TrainingPage() {
                             {weekDays.map((d, i) => (
                                 <div
                                     key={i}
+                                    onClick={() => router.push(`/dashboard/training/logs?date=${d.fullDate}`)}
                                     className={`
                                             flex flex-col items-center p-4 rounded-2xl border transition-all cursor-pointer relative group
                                             ${d.status === 'active' ? 'bg-brand-red border-brand-red text-white shadow-[0_0_20px_rgba(220,38,38,0.3)] scale-105' :

@@ -423,8 +423,8 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
             </div>
 
             <div className="flex gap-4 items-start">
-                {/* Avatar - Always visible */}
-                <div className="shrink-0 pt-1">
+                {/* Avatar - Hidden on mobile if post type is WOD to maximize screen width */}
+                <div className={clsx("shrink-0 pt-1", postType === 'wod' && "hidden md:block")}>
                     <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full border border-white/10 bg-black/40 overflow-hidden relative shadow-md">
                         {currentUser?.user_metadata?.avatar_url ? (
                             <Image src={currentUser.user_metadata.avatar_url} alt="User" fill className="object-cover" />

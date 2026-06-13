@@ -482,7 +482,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
             try {
                 const parsed = JSON.parse(url.trim());
                 if (Array.isArray(parsed)) {
-                    if (mediaType !== 'class_result' && post_type !== 'class_result') {
+                    if (mediaType !== 'class_result' && post_type !== 'class_result' && typeof parsed[0] === 'string') {
                         isCar = true;
                         items = parsed;
                         url = parsed[0];
@@ -1507,13 +1507,13 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                         <div className="space-y-4">
                             {(() => {
                                 let blocks: any[] = [];
-                                let centerName = "";
+                                let resolvedCenterName = "";
                                 try {
                                     const parsed = JSON.parse(image);
                                     if (Array.isArray(parsed)) {
                                         blocks = parsed.filter(b => b.type !== 'metadata');
                                         const metadata = parsed.find(b => b.type === 'metadata');
-                                        centerName = metadata?.centerName || "";
+                                        resolvedCenterName = metadata?.centerName || centerName || "";
                                     }
                                 } catch (e) { }
 
@@ -1533,10 +1533,10 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                                     <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Resultado de Clase Oficial</p>
                                                 </div>
                                             </div>
-                                            {centerName && (
+                                            {resolvedCenterName && (
                                                 <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-red/10 border border-brand-red/20 rounded-full text-brand-red text-[10px] font-black uppercase tracking-widest self-start sm:self-center">
                                                     <MapPin className="w-3.5 h-3.5 animate-pulse" />
-                                                    {centerName}
+                                                    {resolvedCenterName}
                                                 </div>
                                             )}
                                         </div>

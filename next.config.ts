@@ -35,24 +35,31 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
-    return [
+    const isDev = process.env.NODE_ENV === 'development';
+    const headersList = [
       {
         source: '/(.*)',
         headers: securityHeaders,
-      },
-      {
+      }
+    ];
+
+    if (!isDev) {
+      headersList.push({
         source: '/_next/static/(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
-      },
-      {
-        source: '/fonts/(.*)',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
-    ];
+      });
+    }
+
+    headersList.push({
+      source: '/fonts/(.*)',
+      headers: [
+        { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+      ],
+    });
+
+    return headersList;
   },
   images: {
     // Use modern formats: AVIF first (best compression), then WebP

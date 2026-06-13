@@ -22,7 +22,7 @@ interface WODPostDisplayProps {
 
 export default function WODPostDisplay({ wod, compact = false }: WODPostDisplayProps) {
   // Estado para expandir/colapsar
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(true);
 
   // Validación: si no hay WOD o no tiene blocks, no renderizar
   if (!wod || !wod.blocks || !Array.isArray(wod.blocks)) {

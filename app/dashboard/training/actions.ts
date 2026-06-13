@@ -4,6 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createNotification } from '../notifications-actions';
+import { syncFeaturedRm } from '@/lib/pr-sync';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const aiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
@@ -401,6 +402,24 @@ export async function saveWorkout(workoutData: any) {
                 is_pr: hasAtLeastOnePR
             })
             .eq('id', workout.id);
+
+        // Sync Featured RMs for any exercises that got a PR
+        for (const exercise of workoutData.exercises) {
+            if (!exercise.name) continue;
+            const currentExerciseMax = prMap[exercise.name] || 0;
+            let maxWeightInSessionForExercise = 0;
+            let isExercisePR = false;
+            for (const set of exercise.sets) {
+                const weight = parseFloat(set.weight) || 0;
+                if (weight > maxWeightInSessionForExercise) maxWeightInSessionForExercise = weight;
+                if (weight > currentExerciseMax) {
+                    isExercisePR = true;
+                }
+            }
+            if (isExercisePR) {
+                await syncFeaturedRm(user.id, exercise.name, maxWeightInSessionForExercise);
+            }
+        }
     }
 
     // 4b. Send PR notifications — one per exercise that set a new record
@@ -1619,10 +1638,12 @@ export async function parseWodFromImage(base64Image: string) {
         let attempts = 0;
         const maxAttempts = 3;
         let delay = 1000;
+        let currentModel = aiModel;
+        let usedFallback = false;
 
         while (attempts < maxAttempts) {
             try {
-                result = await aiModel.generateContent([
+                result = await currentModel.generateContent([
                     prompt,
                     {
                         inlineData: {
@@ -1633,8 +1654,24 @@ export async function parseWodFromImage(base64Image: string) {
                 ]);
                 break;
             } catch (err: any) {
+                const errMsg = err.message || String(err);
+                const isQuotaError = errMsg.includes('429') || 
+                                     errMsg.toLowerCase().includes('quota') || 
+                                     errMsg.toLowerCase().includes('limit') || 
+                                     errMsg.toLowerCase().includes('exceeded') ||
+                                     errMsg.toLowerCase().includes('requests');
+
+                if (isQuotaError && !usedFallback) {
+                    console.warn('[parseWodFromImage] Quota exceeded on gemini-2.0-flash. Falling back to gemini-2.5-flash...');
+                    currentModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+                    usedFallback = true;
+                    attempts = 0; // Reset attempts for the fallback model
+                    delay = 1000;
+                    continue;
+                }
+
                 attempts++;
-                console.warn(`[parseWodFromImage] Attempt ${attempts} failed:`, err.message || err);
+                console.warn(`[parseWodFromImage] Attempt ${attempts} failed:`, errMsg);
                 if (attempts >= maxAttempts) {
                     throw err;
                 }
@@ -1663,6 +1700,17 @@ export async function parseWodFromImage(base64Image: string) {
         return { success: true, data: parsed };
     } catch (e: any) {
         console.error('Error parsing WOD image with Gemini:', e);
-        return { error: `Error de IA: ${e.message || 'No se pudo analizar la imagen.'}` };
+        const errMsg = e.message || String(e) || '';
+        
+        if (errMsg.includes('429') || errMsg.toLowerCase().includes('quota') || errMsg.toLowerCase().includes('limit') || errMsg.toLowerCase().includes('exceeded') || errMsg.toLowerCase().includes('requests')) {
+            return { error: 'Límite de cuota superado: La API gratuita de Google Gemini ha alcanzado su límite de peticiones. Por favor, espera un minuto o reinténtalo más tarde.' };
+        }
+        
+        if (errMsg.includes('503') || errMsg.toLowerCase().includes('service unavailable') || errMsg.toLowerCase().includes('high demand') || errMsg.toLowerCase().includes('overloaded') || errMsg.toLowerCase().includes('rate limit')) {
+            return { error: 'El servidor de IA de Google está temporalmente saturado o experimentando una alta demanda. Por favor, espera unos segundos e inténtalo de nuevo.' };
+        }
+        return { error: `Error de IA: ${errMsg || 'No se pudo analizar la imagen.'}` };
     }
 }
+
+

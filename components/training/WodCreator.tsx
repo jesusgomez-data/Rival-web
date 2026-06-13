@@ -1176,13 +1176,36 @@ function ConfigInput({ label, value, onChange, placeholder }: { label: string, v
 function TimeInput({ label, value, onChange, optional }: { label: string, value: string, onChange: (v: string) => void, optional?: boolean }) {
     const parse = (v: string) => {
         const parts = (v || '').split(':');
-        const m = parseInt(parts[0]) || 0;
-        const s = parseInt(parts[1]) || 0;
+        let m = parts[0] || '';
+        let s = parts[1] || '';
         return { m, s };
     };
     const { m, s } = parse(value);
-    const set = (mins: number, secs: number) => onChange(`${String(mins).padStart(2,'0')}:${String(Math.min(59, secs)).padStart(2,'0')}`);
+
+    const setM = (newM: string) => {
+        const cleanM = newM.replace(/\D/g, '').slice(0, 2);
+        onChange(`${cleanM}:${s}`);
+    };
+
+    const setS = (newS: string) => {
+        const cleanS = newS.replace(/\D/g, '').slice(0, 2);
+        onChange(`${m}:${cleanS}`);
+    };
+
+    const handleBlur = () => {
+        const cleanM = String(parseInt(m) || 0).padStart(2, '0');
+        const cleanS = String(Math.min(59, parseInt(s) || 0)).padStart(2, '0');
+        onChange(`${cleanM}:${cleanS}`);
+    };
+
+    const setPreset = (mins: number, secs: number) => {
+        onChange(`${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
+    };
+
     const presets = [5, 10, 12, 15, 20, 30];
+    const numericM = parseInt(m) || 0;
+    const numericS = parseInt(s) || 0;
+
     return (
         <div className="flex flex-col gap-2">
             <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest leading-none">
@@ -1191,21 +1214,25 @@ function TimeInput({ label, value, onChange, optional }: { label: string, value:
             {/* MM : SS inputs */}
             <div className="flex items-center gap-1 bg-black/20 border border-white/10 rounded-xl px-3 py-2 w-fit">
                 <input
-                    type="number" min={0} max={99}
-                    className="bg-transparent text-brand-red font-black text-base w-10 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-                    value={m === 0 && !value ? '' : m}
-                    placeholder="00"
+                    type="text"
                     inputMode="numeric"
-                    onChange={e => set(Math.max(0, parseInt(e.target.value) || 0), s)}
+                    maxLength={2}
+                    className="bg-transparent text-brand-red font-black text-base w-10 text-center focus:outline-none"
+                    value={m}
+                    placeholder="00"
+                    onChange={e => setM(e.target.value)}
+                    onBlur={handleBlur}
                 />
                 <span className="text-brand-red font-black text-base select-none">:</span>
                 <input
-                    type="number" min={0} max={59}
-                    className="bg-transparent text-brand-red font-black text-base w-10 text-center focus:outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-                    value={s === 0 && !value ? '' : s}
-                    placeholder="00"
+                    type="text"
                     inputMode="numeric"
-                    onChange={e => set(m, Math.min(59, Math.max(0, parseInt(e.target.value) || 0)))}
+                    maxLength={2}
+                    className="bg-transparent text-brand-red font-black text-base w-10 text-center focus:outline-none"
+                    value={s}
+                    placeholder="00"
+                    onChange={e => setS(e.target.value)}
+                    onBlur={handleBlur}
                 />
                 <span className="text-gray-600 text-[9px] font-bold ml-1">MIN</span>
             </div>
@@ -1215,8 +1242,8 @@ function TimeInput({ label, value, onChange, optional }: { label: string, value:
                     <button
                         key={p}
                         type="button"
-                        onClick={() => set(p, 0)}
-                        className={`text-[10px] font-black px-2 py-1 rounded-lg border transition-all ${m === p && s === 0 ? 'bg-brand-red text-black border-brand-red' : 'bg-white/5 text-gray-400 border-white/10 hover:border-brand-red/50 hover:text-white'}`}
+                        onClick={() => setPreset(p, 0)}
+                        className={`text-[10px] font-black px-2 py-1 rounded-lg border transition-all ${numericM === p && numericS === 0 ? 'bg-brand-red text-black border-brand-red' : 'bg-white/5 text-gray-400 border-white/10 hover:border-brand-red/50 hover:text-white'}`}
                     >
                         {p}'
                     </button>

@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { clsx } from "clsx";
 import { motion } from "framer-motion";
-import { Trophy, Swords, ShieldCheck, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, X, MessageSquare, Edit2, Globe, Users, Plus, ArrowRight, Play, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
+import { Trophy, Swords, ShieldCheck, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, X, MessageSquare, Edit2, Globe, Users, Plus, ArrowRight, Play, Loader2, CheckCircle, AlertTriangle, ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import DuelButton from "../../community/DuelButton";
@@ -38,6 +39,7 @@ interface ProfileContentProps {
 }
 
 export default function ProfileContent({ profile, combatStats, user, isFollowing: isFollowingProp, posts, canViewContent, privacy, workouts, badges, gear, isAdminUser = false, hasActiveDuel = false, medals = [] }: ProfileContentProps) {
+    const router = useRouter();
     const [following, setFollowing] = useState(isFollowingProp);
 
     // Sync server-side value on navigation (handles Next.js page cache)
@@ -140,6 +142,16 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                 {/* Cover Photo Banner */}
                 <div className="h-48 md:h-64 relative w-full select-none overflow-hidden border-b border-white/10"
                     style={profile.is_official ? { background: 'linear-gradient(135deg, #000 0%, #0a0a0a 40%, #1a0000 70%, #000 100%)' } : { background: 'linear-gradient(to right, #dc2626, rgba(220,38,38,0.8), #111)' }}>
+                    
+                    {/* Back Arrow Button */}
+                    <button
+                        onClick={() => router.back()}
+                        className="absolute top-5 left-5 w-10 h-10 bg-black/60 border border-white/10 hover:bg-black/80 hover:border-brand-red/50 text-white rounded-full flex items-center justify-center backdrop-blur-md transition-all shadow-lg hover:scale-105 active:scale-95 group z-30"
+                        title="Volver"
+                    >
+                        <ChevronLeft className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" />
+                    </button>
+
                     {profile.is_official ? (
                         /* Official branded cover */
                         <>
@@ -150,7 +162,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                             {/* Large faint R symbol */}
                             <div className="absolute right-8 top-1/2 -translate-y-1/2 text-[160px] font-black text-white/[0.03] italic tracking-tighter select-none pointer-events-none leading-none">R</div>
                             {/* Official ribbon */}
-                            <div className="absolute top-5 left-5 flex items-center gap-2 bg-black/60 border border-blue-500/30 backdrop-blur-md px-4 py-1.5 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+                            <div className="absolute top-5 left-[70px] flex items-center gap-2 bg-black/60 border border-blue-500/30 backdrop-blur-md px-4 py-1.5 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.2)] z-30">
                                 <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
                                 <span className="text-[9px] font-black text-blue-400 uppercase tracking-[0.3em]">Cuenta Oficial · RivalFit</span>
                             </div>
