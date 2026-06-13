@@ -72,6 +72,12 @@ export async function createPRPost(formData: FormData) {
 
         if (!user) return { error: 'Unauthorized' }
 
+        const { data: profile } = await supabase
+            .from('profiles')
+            .select('username, full_name')
+            .eq('id', user.id)
+            .single();
+
         const exercise = formData.get('exercise') as string
         const weight = formData.get('weight') as string
         const sport = formData.get('sport') as string
@@ -205,7 +211,8 @@ export async function createPRPost(formData: FormData) {
                 previousMax: currentMax,
                 newMax: weightNum,
                 improvement: isNewPR && currentMax > 0 ? parseFloat((weightNum - currentMax).toFixed(1)) : 0,
-                isNewPR: isNewPR
+                isNewPR: isNewPR,
+                userName: profile?.username || profile?.full_name || user.email?.split('@')[0] || "Atleta"
             }
         }
     } catch (e: any) {

@@ -56,7 +56,7 @@ export default function PRCelebrationModal({ achievements, onClose, userName }: 
             </div>
 
             <div className={clsx(
-                "w-full max-w-xl relative transform transition-all duration-700 delay-100",
+                "w-full max-w-xl relative transform transition-all duration-700 delay-100 flex flex-col max-h-[92vh] sm:max-h-[90vh]",
                 visible ? "translate-y-0 scale-100" : "translate-y-12 scale-95",
                 theme === 'dark' ? "bg-[#0A0A0A] border border-white/10" : "bg-white border border-gray-100 shadow-2xl",
                 "rounded-[40px] overflow-hidden shadow-glow-red"
@@ -70,24 +70,24 @@ export default function PRCelebrationModal({ achievements, onClose, userName }: 
                 </button>
 
                 {/* Hero Header */}
-                <div className="relative h-48 md:h-64 flex flex-col items-center justify-center text-center p-8 overflow-hidden">
+                <div className="relative min-h-[12rem] md:min-h-[16rem] py-6 flex flex-col items-center justify-center text-center px-4 overflow-hidden shrink-0">
                     <div className="absolute inset-0 bg-gradient-to-b from-brand-red/20 to-transparent" />
 
                     {/* Animated Trophy Icon */}
-                    <div className="relative z-10 mb-4 animate-in zoom-in duration-500 delay-300">
-                        <div className="w-20 h-20 md:w-24 md:h-24 bg-brand-red rounded-full flex items-center justify-center shadow-glow-red">
-                            <Trophy className="w-10 h-10 md:w-12 md:h-12 text-white animate-pulse" />
+                    <div className="relative z-10 mb-3 animate-in zoom-in duration-500 delay-300">
+                        <div className="w-16 h-16 md:w-24 md:h-24 bg-brand-red rounded-full flex items-center justify-center shadow-glow-red">
+                            <Trophy className="w-8 h-8 md:w-12 md:h-12 text-white animate-pulse" />
                         </div>
                         {/* Orbiting elements */}
-                        <div className="absolute -top-2 -right-2 w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center animate-bounce">
-                            <Star className="w-4 h-4 text-white fill-current" />
+                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-500 rounded-full flex items-center justify-center animate-bounce">
+                            <Star className="w-3.5 h-3.5 text-white fill-current" />
                         </div>
                     </div>
 
-                    <h2 className="text-3xl md:text-5xl font-heading font-black italic text-brand-red uppercase tracking-tighter leading-none relative z-10 drop-shadow-lg">
+                    <h2 className="text-xl sm:text-2xl md:text-4xl font-heading font-black italic text-brand-red uppercase tracking-tighter leading-tight relative z-10 drop-shadow-lg max-w-full break-words px-4">
                         ¡BRUTAL, {userName}!
                     </h2>
-                    <p className="text-[10px] md:text-xs font-black text-gray-500 uppercase tracking-[0.4em] mt-3 relative z-10 italic">
+                    <p className="text-[9px] md:text-xs font-black text-gray-500 uppercase tracking-[0.3em] mt-2 relative z-10 italic">
                         HAS SUPERADO TUS LÍMITES
                     </p>
                 </div>

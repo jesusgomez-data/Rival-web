@@ -152,7 +152,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
             setUploads(prev => prev.map(u => u.id === id ? { ...u, status: 'completed', progress: 100 } : u));
             if (data.postType === 'pr' && res?.prDetails && res.prDetails.isNewPR) {
                 setCelebrationPRs([res.prDetails]);
-                setCelebrationUser(data.currentUser?.full_name || data.currentUser?.email || "Atleta");
+                setCelebrationUser(res.prDetails.userName || data.currentUser?.username || data.currentUser?.full_name || data.currentUser?.email?.split('@')[0] || "Atleta");
             }
             setTimeout(() => setUploads(prev => prev.filter(u => u.id !== id)), 5000);
 

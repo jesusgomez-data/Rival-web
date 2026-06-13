@@ -806,7 +806,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                         if (fileInputRef.current) fileInputRef.current.value = "";
                         onSuccess?.();
                     }}
-                    userName={currentUser?.full_name || currentUser?.email || "Atleta"}
+                    userName={celebrationPRs[0]?.userName || currentUser?.username || currentUser?.full_name || currentUser?.email?.split('@')[0] || "Atleta"}
                 />
             )}
         </div>
