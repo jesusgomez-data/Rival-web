@@ -6,6 +6,7 @@ import { createUserPost, createPRPost, createWodPost } from './community/actions
 import { Loader2, CheckCircle2, XCircle, Clock, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
+import PRCelebrationModal from './training/session/PRCelebrationModal';
 
 interface UploadTask {
     id: string;
@@ -28,6 +29,8 @@ const UploadContext = createContext<UploadContextType | undefined>(undefined);
 
 export function UploadProvider({ children }: { children: React.ReactNode }) {
     const [uploads, setUploads] = useState<UploadTask[]>([]);
+    const [celebrationPRs, setCelebrationPRs] = useState<any[]>([]);
+    const [celebrationUser, setCelebrationUser] = useState<string>("");
     const supabase = createClient();
 
     const startUpload = useCallback(async (data: {
@@ -120,7 +123,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                 formData.append("music_artist", data.selectedTrack.artist);
             }
 
-            let res;
+            let res: any;
             if (data.postType === 'pr') {
                 formData.append("exercise", data.exercise || '');
                 formData.append("weight", data.weight || '');
@@ -147,6 +150,10 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
 
             if (res?.error) throw new Error(res.error);
             setUploads(prev => prev.map(u => u.id === id ? { ...u, status: 'completed', progress: 100 } : u));
+            if (data.postType === 'pr' && res?.prDetails && res.prDetails.isNewPR) {
+                setCelebrationPRs([res.prDetails]);
+                setCelebrationUser(data.currentUser?.full_name || data.currentUser?.email || "Atleta");
+            }
             setTimeout(() => setUploads(prev => prev.filter(u => u.id !== id)), 5000);
 
         } catch (error: any) {
@@ -425,6 +432,14 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                     ))}
                 </AnimatePresence>
             </div>
+
+            {celebrationPRs.length > 0 && (
+                <PRCelebrationModal
+                    achievements={celebrationPRs}
+                    onClose={() => setCelebrationPRs([])}
+                    userName={celebrationUser}
+                />
+            )}
         </UploadContext.Provider>
     );
 }

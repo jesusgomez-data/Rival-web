@@ -16,6 +16,7 @@ import WodCreator, { WodBlock, WodSummary, WorkoutCategory } from "@/components/
 import { useLanguage } from "@/app/LanguageContext";
 import VideoEditor from "@/components/video/VideoEditor";
 import clsx from "clsx";
+import PRCelebrationModal from "./training/session/PRCelebrationModal";
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
@@ -40,6 +41,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const [exercise, setExercise] = useState("");
     const [weight, setWeight] = useState("");
     const [sport, setSport] = useState("Cross Training");
+    const [celebrationPRs, setCelebrationPRs] = useState<any[]>([]);
     const [selectedTrack, setSelectedTrack] = useState<MusicTrack | null>(null);
     const [lastFocusedInput, setLastFocusedInput] = useState<string>("content");
     const lastFocusedElementRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
@@ -251,18 +253,26 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
             if (res?.error) {
                 alert(`Error al publicar: ${res.error}`);
             } else {
-                setContent("");
-                setExercise("");
-                setWeight("");
-                setPreviews([]);
-                setDuration(null);
-                setPendingFiles([]);
-                setWodData(null);
-                setShowEmojiPicker(false);
-                setPostType('standard');
-                setSelectedTrack(null);
-                if (fileInputRef.current) fileInputRef.current.value = "";
-                onSuccess?.();
+                const clearAll = () => {
+                    setContent("");
+                    setExercise("");
+                    setWeight("");
+                    setPreviews([]);
+                    setDuration(null);
+                    setPendingFiles([]);
+                    setWodData(null);
+                    setShowEmojiPicker(false);
+                    setPostType('standard');
+                    setSelectedTrack(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                };
+
+                if (postType === 'pr' && res?.prDetails && res.prDetails.isNewPR) {
+                    setCelebrationPRs([res.prDetails]);
+                } else {
+                    clearAll();
+                    onSuccess?.();
+                }
             }
         } catch (error: any) {
             console.error("Post error:", error);
@@ -775,6 +785,28 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                         setIsVideoEditing(false);
                         setEditorVideoFile(null);
                     }}
+                />
+            )}
+
+            {celebrationPRs.length > 0 && (
+                <PRCelebrationModal
+                    achievements={celebrationPRs}
+                    onClose={() => {
+                        setCelebrationPRs([]);
+                        setContent("");
+                        setExercise("");
+                        setWeight("");
+                        setPreviews([]);
+                        setDuration(null);
+                        setPendingFiles([]);
+                        setWodData(null);
+                        setShowEmojiPicker(false);
+                        setPostType('standard');
+                        setSelectedTrack(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                        onSuccess?.();
+                    }}
+                    userName={currentUser?.full_name || currentUser?.email || "Atleta"}
                 />
             )}
         </div>

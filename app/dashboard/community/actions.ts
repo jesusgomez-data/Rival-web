@@ -133,6 +133,9 @@ export async function createPRPost(formData: FormData) {
         // ── Record PR in workout_sets so it appears in profile Personal Records ──
         // 1. Create a virtual workout entry for this PR
         const weightNum = parseFloat(weight) || 0;
+        let isNewPR = false;
+        let currentMax = 0;
+
         if (weightNum > 0) {
             // Check if this is actually a new PR vs existing records
             const { data: existingSets } = await supabase
@@ -143,8 +146,8 @@ export async function createPRPost(formData: FormData) {
                 .order('weight_kg', { ascending: false })
                 .limit(1);
 
-            const currentMax = existingSets?.[0]?.weight_kg || 0;
-            const isNewPR = weightNum > currentMax;
+            currentMax = existingSets?.[0]?.weight_kg || 0;
+            isNewPR = weightNum > currentMax;
 
             // Create a PR workout entry to record it permanently
             const { data: prWorkout } = await supabase
@@ -195,7 +198,16 @@ export async function createPRPost(formData: FormData) {
 
         revalidatePath('/dashboard/community')
         revalidatePath('/dashboard')
-        return { success: true }
+        return { 
+            success: true,
+            prDetails: {
+                name: exercise,
+                previousMax: currentMax,
+                newMax: weightNum,
+                improvement: isNewPR && currentMax > 0 ? parseFloat((weightNum - currentMax).toFixed(1)) : 0,
+                isNewPR: isNewPR
+            }
+        }
     } catch (e: any) {
         console.error("Critical error in createPRPost:", e)
         return { error: `Server exception: ${e.message || "Unknown error"}` }
