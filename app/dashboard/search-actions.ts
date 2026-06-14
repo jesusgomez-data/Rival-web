@@ -19,7 +19,7 @@ export async function searchGlobal(query: string) {
     // 2. Search Gyms
     const { data: gyms } = await supabase
         .from('organizations')
-        .select('id, name, city, logo_url')
+        .select('id, name, city, logo_url, center_type')
         .or(`name.ilike.%${query}%,city.ilike.%${query}%`)
         .limit(20);
 
@@ -62,7 +62,7 @@ export async function searchGlobal(query: string) {
         title: g.name,
         subtitle: g.city,
         image: g.logo_url,
-        url: `/gym/${g.id}`
+        url: g.center_type === 'personal_trainer' ? `/trainer/${g.id}` : `/gym/${g.id}`
     }));
 
     return [...userResults, ...gymResults];

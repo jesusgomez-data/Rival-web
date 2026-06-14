@@ -1,10 +1,17 @@
 import { getCenterPosts, getPublicCenter, checkFollowStatus, getCenterProducts, getMemberStatus, getMembershipPlans } from "../../dashboard/gyms/management-actions";
 import PublicCenterProfile from "./PublicCenterProfile";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 
-export default async function PublicCenterPage({ params }: { params: { id: string } }) {
+export default async function PublicCenterPage({ 
+    params,
+    searchParams
+}: { 
+    params: Promise<{ id: string }>,
+    searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
     const { id } = await params;
+    const sp = await searchParams;
 
     // Parallel fetching
     const [org, posts, isFollowing, products, memberStatus, membershipPlans] = await Promise.all([
@@ -18,6 +25,11 @@ export default async function PublicCenterPage({ params }: { params: { id: strin
 
     if (!org) {
         notFound();
+    }
+
+    if (org.center_type === 'personal_trainer') {
+        const query = sp ? new URLSearchParams(sp as any).toString() : "";
+        redirect(`/trainer/${id}${query ? `?${query}` : ""}`);
     }
 
     // Get followers count

@@ -108,11 +108,29 @@ export async function getClassesRange(id: string, startDate: string, endDate: st
         coaches = coachData || [];
     }
 
+    const classIds = data.map(c => c.id);
+    let pendingRequestCounts: Record<string, number> = {};
+    if (classIds.length > 0) {
+        const { data: pendingReqs } = await supabase
+            .from('trial_requests')
+            .select('class_id')
+            .in('class_id', classIds)
+            .eq('status', 'pending');
+
+        if (pendingReqs) {
+            pendingReqs.forEach(req => {
+                if (req.class_id) {
+                    pendingRequestCounts[req.class_id] = (pendingRequestCounts[req.class_id] || 0) + 1;
+                }
+            });
+        }
+    }
+
     return data.map((c: any) => {
         const coach = coaches.find(coach => coach.id === c.coach_id);
         return {
             ...c,
-            enrolled_count: c.enrollments?.[0]?.count || 0,
+            enrolled_count: (c.enrollments?.[0]?.count || 0) + (pendingRequestCounts[c.id] || 0),
             coach: coach || { full_name: 'Staff' }
         };
     });

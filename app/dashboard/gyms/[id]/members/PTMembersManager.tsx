@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
+import { getCenterMembers, approveTrialRequest, rejectBookingRequest } from '../../member-actions'
 
 const GOALS = [
     { key: 'fat_loss',    label: 'Pérdida de grasa',    icon: '🔥' },
@@ -47,6 +48,13 @@ export default function PTMembersManager({ centerId, initialMembers, plans, orgD
     const [toast,         setToast]         = useState<string | null>(null)
     const [modalError,    setModalError]    = useState<string | null>(null)
 
+    // Booking requests states
+    const [activeTab,     setActiveTab]     = useState<'members' | 'requests'>('members')
+    const [rejectingRequest, setRejectingRequest] = useState<any | null>(null)
+    const [rejectReason,  setRejectReason]  = useState('')
+    const [rejecting,     setRejecting]     = useState(false)
+    const [processingRequestId, setProcessingRequestId] = useState<string | null>(null)
+
     // Add form
     const [tab,          setTab]          = useState<'search' | 'manual'>('search')
     const [profileQuery, setProfileQuery] = useState('')
@@ -62,7 +70,7 @@ export default function PTMembersManager({ centerId, initialMembers, plans, orgD
         startDate: new Date().toISOString().split('T')[0],
     })
 
-    const activeCount = members.filter(m => m.status === 'active').length
+    const activeCount = members.filter(m => !m.is_request && m.status === 'active').length
     const atLimit     = maxStudents < Infinity && activeCount >= maxStudents
 
     function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000) }
@@ -85,12 +93,51 @@ export default function PTMembersManager({ centerId, initialMembers, plans, orgD
     }, [profileQuery])
 
     async function refreshMembers() {
-        const { data } = await supabase
-            .from('members')
-            .select('id, center_id, user_id, full_name, email, phone, plan, status, membership_start_date, notes, goal, modality, profiles:user_id(full_name, username, avatar_url, level, xp_points)')
-            .eq('center_id', centerId)
-            .order('created_at', { ascending: false })
+        const data = await getCenterMembers(centerId)
         setMembers(data || [])
+    }
+
+    async function handleApproveRequest(req: any) {
+        setProcessingRequestId(req.id)
+        try {
+            const res = await approveTrialRequest(
+                centerId,
+                req.id,
+                req.user_id,
+                req.user?.full_name || req.full_name || 'Athlete',
+                req.user?.avatar_url || ''
+            )
+            if (res.error) {
+                showToast(`Error: ${res.error}`)
+            } else {
+                showToast('Reserva aprobada ✓')
+                await refreshMembers()
+            }
+        } catch (e: any) {
+            showToast('No se pudo aprobar la reserva.')
+        } finally {
+            setProcessingRequestId(null)
+        }
+    }
+
+    async function handleRejectRequestSubmit() {
+        if (!rejectReason.trim() || !rejectingRequest) return
+        setRejecting(true)
+        try {
+            const res = await rejectBookingRequest(centerId, rejectingRequest.id, rejectReason.trim())
+            if (res.error) {
+                showToast(`Error: ${res.error}`)
+            } else {
+                showToast('Reserva rechazada')
+                setRejectingRequest(null)
+                setRejectReason('')
+                await refreshMembers()
+            }
+        } catch (e: any) {
+            showToast('No se pudo rechazar la reserva.')
+        } finally {
+            setRejecting(false)
+        }
     }
 
     async function handleAdd() {
@@ -174,8 +221,19 @@ export default function PTMembersManager({ centerId, initialMembers, plans, orgD
         setForm({ fullName: '', email: '', phone: '', goalKey: '', modality: 'presential', planId: '', notes: '', startDate: new Date().toISOString().split('T')[0] })
     }
 
-    const filtered = members.filter(m => {
-        const name = m.profiles?.full_name || m.profiles?.username || m.full_name || ''
+    // Split into normal members and requests
+    const activeMembers = members.filter(m => !m.is_request)
+    const pendingRequests = members.filter(m => m.is_request)
+
+    const filtered = activeMembers.filter(m => {
+        const p = m.user || m.profiles
+        const name = p?.full_name || p?.username || m.full_name || ''
+        return name.toLowerCase().includes(search.toLowerCase())
+    })
+
+    const filteredRequests = pendingRequests.filter(req => {
+        const p = req.user || req.profiles
+        const name = p?.full_name || p?.username || req.full_name || ''
         return name.toLowerCase().includes(search.toLowerCase())
     })
 
@@ -196,7 +254,7 @@ export default function PTMembersManager({ centerId, initialMembers, plans, orgD
     return (
         <div className="space-y-6 max-w-3xl mx-auto animate-fade-in">
             {toast && (
-                <div className="fixed top-4 right-4 z-50 bg-green-500/90 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-xl">
+                <div className="fixed top-4 right-4 z-50 bg-green-500/90 text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-xl animate-fade-in">
                     {toast}
                 </div>
             )}
@@ -219,64 +277,228 @@ export default function PTMembersManager({ centerId, initialMembers, plans, orgD
                 </button>
             </div>
 
-            {/* Plan limit bar (free) */}
-            {maxStudents < Infinity && (
-                <div className="bg-white/3 border border-white/8 rounded-xl p-4">
-                    <div className="flex justify-between text-xs mb-2">
-                        <span className="text-gray-400 font-bold">{activeCount} de {maxStudents} alumnos activos</span>
-                        {atLimit && <span className="text-yellow-400 font-bold">Límite alcanzado · Actualiza a Pro</span>}
-                    </div>
-                    <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full transition-all ${atLimit ? 'bg-yellow-500' : 'bg-brand-red'}`}
-                            style={{ width: `${Math.min(100, (activeCount / maxStudents) * 100)}%` }} />
-                    </div>
-                </div>
-            )}
-
-            {/* Members list */}
-            {filtered.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 gap-3">
-                    <Users className="w-12 h-12 text-gray-700" />
-                    <p className="text-gray-500 font-bold">Sin alumnos{search ? ' que coincidan' : ' registrados'}</p>
-                    {!search && (
-                        <button onClick={() => setShowModal(true)} className="text-brand-red text-sm font-bold hover:underline flex items-center gap-1">
-                            <Plus className="w-3.5 h-3.5" /> Añadir primer alumno
-                        </button>
+            {/* Tabs */}
+            <div className="flex gap-2 border-b border-white/5 pb-px">
+                <button
+                    onClick={() => setActiveTab('members')}
+                    className={`pb-3 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 px-2 -mb-px ${
+                        activeTab === 'members'
+                            ? 'text-white border-brand-red'
+                            : 'text-gray-500 border-transparent hover:text-gray-300'
+                    }`}
+                >
+                    Mis Alumnos ({activeMembers.length})
+                </button>
+                <button
+                    onClick={() => setActiveTab('requests')}
+                    className={`pb-3 text-sm font-bold uppercase tracking-wider transition-colors border-b-2 px-2 -mb-px flex items-center gap-2 ${
+                        activeTab === 'requests'
+                            ? 'text-white border-brand-red'
+                            : 'text-gray-500 border-transparent hover:text-gray-300'
+                    }`}
+                >
+                    Solicitudes de Reserva
+                    {pendingRequests.length > 0 && (
+                        <span className="bg-brand-red text-white text-[10px] px-1.5 py-0.5 rounded-full font-black animate-pulse">
+                            {pendingRequests.length}
+                        </span>
                     )}
-                </div>
+                </button>
+            </div>
+
+            {activeTab === 'members' ? (
+                <>
+                    {/* Plan limit bar (free) */}
+                    {maxStudents < Infinity && (
+                        <div className="bg-white/3 border border-white/8 rounded-xl p-4">
+                            <div className="flex justify-between text-xs mb-2">
+                                <span className="text-gray-400 font-bold">{activeCount} de {maxStudents} alumnos activos</span>
+                                {atLimit && <span className="text-yellow-400 font-bold">Límite alcanzado · Actualiza a Pro</span>}
+                            </div>
+                            <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full transition-all ${atLimit ? 'bg-yellow-500' : 'bg-brand-red'}`}
+                                    style={{ width: `${Math.min(100, (activeCount / maxStudents) * 100)}%` }} />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Members list */}
+                    {filtered.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16 gap-3">
+                            <Users className="w-12 h-12 text-gray-700" />
+                            <p className="text-gray-500 font-bold">Sin alumnos{search ? ' que coincidan' : ' registrados'}</p>
+                            {!search && (
+                                <button onClick={() => setShowModal(true)} className="text-brand-red text-sm font-bold hover:underline flex items-center gap-1">
+                                    <Plus className="w-3.5 h-3.5" /> Añadir primer alumno
+                                </button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="space-y-2">
+                            {filtered.map(m => {
+                                const p      = m.user || m.profiles
+                                const name   = p?.full_name || p?.username || m.full_name || 'Alumno'
+                                const goal   = GOALS.find(g => g.key === m.goal)
+                                const modal  = MODALITIES.find(md => md.key === m.modality)
+                                return (
+                                    <button key={m.id} onClick={() => setViewingMember(m)}
+                                        className="w-full flex items-center gap-4 p-4 bg-card border border-border rounded-2xl hover:border-brand-red/30 transition-all group text-left">
+                                        {p?.avatar_url
+                                            ? <img src={p.avatar_url} className="w-11 h-11 rounded-xl object-cover flex-shrink-0" alt={name} />
+                                            : <div className="w-11 h-11 rounded-xl bg-brand-red/20 flex items-center justify-center text-brand-red font-black flex-shrink-0">
+                                                {name[0].toUpperCase()}
+                                              </div>
+                                        }
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-white font-bold truncate">{name}</p>
+                                            <div className="flex items-center gap-3 mt-0.5">
+                                                {goal && <span className="text-gray-500 text-xs">{goal.icon} {goal.label}</span>}
+                                                {modal && <span className="text-gray-600 text-xs">{modal.icon} {modal.label}</span>}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${m.status === 'active' ? 'bg-green-500/10 text-green-400' : 'bg-gray-500/10 text-gray-400'}`}>
+                                                {m.status === 'active' ? 'Activo' : 'Baja'}
+                                            </span>
+                                            {p && <span className="text-gray-600 text-xs font-bold">Nv.{p.level ?? 1}</span>}
+                                            <ChevronRight className="w-4 h-4 text-gray-700 group-hover:text-white transition-colors" />
+                                        </div>
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    )}
+                </>
             ) : (
-                <div className="space-y-2">
-                    {filtered.map(m => {
-                        const p      = m.profiles
-                        const name   = p?.full_name || p?.username || m.full_name || 'Alumno'
-                        const goal   = GOALS.find(g => g.key === m.goal)
-                        const modal  = MODALITIES.find(md => md.key === m.modality)
-                        return (
-                            <button key={m.id} onClick={() => setViewingMember(m)}
-                                className="w-full flex items-center gap-4 p-4 bg-card border border-border rounded-2xl hover:border-brand-red/30 transition-all group text-left">
-                                {p?.avatar_url
-                                    ? <img src={p.avatar_url} className="w-11 h-11 rounded-xl object-cover flex-shrink-0" alt={name} />
-                                    : <div className="w-11 h-11 rounded-xl bg-brand-red/20 flex items-center justify-center text-brand-red font-black flex-shrink-0">
-                                        {name[0].toUpperCase()}
-                                      </div>
-                                }
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-white font-bold truncate">{name}</p>
-                                    <div className="flex items-center gap-3 mt-0.5">
-                                        {goal && <span className="text-gray-500 text-xs">{goal.icon} {goal.label}</span>}
-                                        {modal && <span className="text-gray-600 text-xs">{modal.icon} {modal.label}</span>}
+                /* Requests list */
+                filteredRequests.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-16 gap-3">
+                        <Calendar className="w-12 h-12 text-gray-700" />
+                        <p className="text-gray-500 font-bold">Sin solicitudes de reserva{search ? ' que coincidan' : ' pendientes'}</p>
+                    </div>
+                ) : (
+                    <div className="space-y-2">
+                        {filteredRequests.map(req => {
+                            const p = req.user || req.profiles
+                            const name = p?.full_name || p?.username || req.full_name || 'Atleta'
+                            const classObj = req.classes as any
+                            const className = classObj?.name || 'Sesión de Entrenamiento'
+                            const classTime = classObj?.scheduled_time
+                                ? new Date(classObj.scheduled_time).toLocaleString('es-ES', {
+                                      weekday: 'short',
+                                      day: 'numeric',
+                                      month: 'short',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                  })
+                                : ''
+                            const formattedTime = classTime ? classTime.charAt(0).toUpperCase() + classTime.slice(1) : ''
+
+                            return (
+                                <div key={req.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-card border border-border rounded-2xl hover:border-brand-red/20 transition-all">
+                                    <div className="flex items-center gap-4">
+                                        {p?.avatar_url ? (
+                                            <img src={p.avatar_url} className="w-11 h-11 rounded-xl object-cover flex-shrink-0" alt={name} />
+                                        ) : (
+                                            <div className="w-11 h-11 rounded-xl bg-brand-red/20 flex items-center justify-center text-brand-red font-black flex-shrink-0">
+                                                {name[0].toUpperCase()}
+                                            </div>
+                                        )}
+                                        <div className="min-w-0">
+                                            <p className="text-white font-bold truncate">{name}</p>
+                                            <p className="text-gray-400 text-xs mt-0.5 font-medium flex items-center gap-1.5">
+                                                <Clock className="w-3.5 h-3.5 text-brand-red" />
+                                                <span>{className} · <span className="text-white/80">{formattedTime}</span></span>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 self-end sm:self-center">
+                                        <button
+                                            onClick={() => handleApproveRequest(req)}
+                                            disabled={processingRequestId !== null}
+                                            className="flex items-center gap-1.5 bg-green-500/10 hover:bg-green-500/20 text-green-400 px-3.5 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                                        >
+                                            {processingRequestId === req.id ? (
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            ) : (
+                                                <Check className="w-3.5 h-3.5" />
+                                            )}
+                                            Aceptar
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setRejectingRequest(req)
+                                                setRejectReason('')
+                                            }}
+                                            disabled={processingRequestId !== null}
+                                            className="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3.5 py-2 rounded-xl text-xs font-bold transition-all disabled:opacity-50"
+                                        >
+                                            <X className="w-3.5 h-3.5" />
+                                            Rechazar
+                                        </button>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${m.status === 'active' ? 'bg-green-500/10 text-green-400' : 'bg-gray-500/10 text-gray-400'}`}>
-                                        {m.status === 'active' ? 'Activo' : 'Baja'}
-                                    </span>
-                                    {p && <span className="text-gray-600 text-xs font-bold">Nv.{p.level ?? 1}</span>}
-                                    <ChevronRight className="w-4 h-4 text-gray-700 group-hover:text-white transition-colors" />
-                                </div>
+                            )
+                        })}
+                    </div>
+                )
+            )}
+
+            {/* ── REJECTION MODAL ────────────────────────────────────────────── */}
+            {rejectingRequest && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4 animate-fade-in">
+                    <div className="bg-slate-900 border border-white/10 rounded-3xl w-full max-w-md overflow-hidden shadow-2xl">
+                        <div className="flex items-center justify-between p-5 border-b border-white/8 bg-slate-900">
+                            <h3 className="text-white font-black uppercase tracking-wider text-sm">Rechazar Reserva</h3>
+                            <button onClick={() => setRejectingRequest(null)}
+                                className="p-1.5 rounded-lg hover:bg-white/8 text-gray-400 hover:text-white transition-colors">
+                                <X className="w-5 h-5" />
                             </button>
-                        )
-                    })}
+                        </div>
+
+                        <div className="p-5 space-y-4">
+                            <p className="text-gray-400 text-xs leading-relaxed">
+                                Explica al alumno el motivo por el cual no puedes aceptar la reserva. Le llegará una notificación con tu comentario.
+                            </p>
+
+                            <div>
+                                <label className="text-[11px] font-black uppercase tracking-widest text-gray-500 mb-1.5 block">
+                                    Motivo del rechazo
+                                </label>
+                                <textarea
+                                    value={rejectReason}
+                                    onChange={e => setRejectReason(e.target.value)}
+                                    rows={4}
+                                    placeholder="Ej: Tengo un compromiso a esa hora, por favor reserva en otra de mis horas libres..."
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2.5 text-white text-sm focus:outline-none focus:border-brand-red/50 resize-none placeholder:text-gray-600 focus:ring-1 focus:ring-brand-red/30"
+                                />
+                            </div>
+
+                            <div className="flex gap-2.5 pt-2">
+                                <button
+                                    onClick={() => setRejectingRequest(null)}
+                                    className="flex-1 py-3 rounded-xl border border-white/10 text-gray-400 text-xs font-black uppercase tracking-wider hover:bg-white/5 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleRejectRequestSubmit}
+                                    disabled={rejecting || !rejectReason.trim()}
+                                    className="flex-[2] py-3 rounded-xl bg-brand-red disabled:bg-brand-red/40 text-white text-xs font-black uppercase tracking-wider hover:bg-red-600 transition-colors flex items-center justify-center gap-1.5 disabled:cursor-not-allowed"
+                                >
+                                    {rejecting ? (
+                                        <>
+                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                            Rechazando...
+                                        </>
+                                    ) : (
+                                        'Confirmar Rechazo'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -435,7 +657,7 @@ function DetailView({ member, centerId, plans, supabase, onBack, onUpdated, onRe
     member: any; centerId: string; plans: any[]; supabase: any
     onBack: () => void; onUpdated: () => void; onRemoved: () => void
 }) {
-    const p              = member.profiles
+    const p              = member.user || member.profiles
     const displayName    = p?.full_name || member.full_name || 'Alumno'
     const initial        = displayName[0]?.toUpperCase() ?? '?'
     const fakeEmail      = member.email?.includes('@rival.app')

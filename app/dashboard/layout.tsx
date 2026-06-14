@@ -402,8 +402,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const showMobileNav = !isBusinessCenterRoute && (!hideSidebarDefault || isMenuOpen);
 
     return (
-        <div className="min-h-screen bg-background flex font-sans text-foreground selection:bg-brand-red selection:text-white transition-colors duration-300 overflow-x-hidden">
-            <AnalyticsTracker />
+        <>
+            <div className="min-h-screen bg-background flex font-sans text-foreground selection:bg-brand-red selection:text-white transition-colors duration-300 overflow-x-hidden">
+                <AnalyticsTracker />
             {/* Sidebar Toggle Button (Floating) - Only for Admin, not for business centers */}
             {hideSidebarDefault && !isBusinessCenterRoute && (
                 <button
@@ -644,8 +645,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                     {children}
                 </div>
             </main>
+            </div>
 
-            {/* Mobile Bottom Navigation */}
+            {/* Mobile Bottom Navigation - Placed outside the flex container to ensure standard viewport fixed layout */}
             {showMobileNav && (
                 <nav className={clsx(
                     "lg:hidden fixed bottom-4 left-4 right-4 bg-background/90 backdrop-blur-2xl border border-border py-3 px-6 z-[100] rounded-[2rem] shadow-2xl safe-area-inset-bottom transition-transform duration-300",
@@ -699,7 +701,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
             <PendingReviewPrompt />
             <OnboardingTour />
-        </div>
+        </>
     );
 }
 

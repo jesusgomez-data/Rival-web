@@ -116,7 +116,12 @@ function CenterListPageContent() {
             if (searchTerm.length >= 2) {
                 setIsSearching(true);
                 const results = await searchOrganizations(searchTerm);
-                setSearchResults(results);
+                const filtered = results.filter(o => 
+                    filterType === 'personal_trainer'
+                        ? o.center_type === 'personal_trainer'
+                        : o.center_type !== 'personal_trainer'
+                );
+                setSearchResults(filtered);
                 setIsSearching(false);
             } else {
                 setSearchResults([]);
@@ -124,7 +129,7 @@ function CenterListPageContent() {
         }, 500); // 500ms debounce
 
         return () => clearTimeout(timer);
-    }, [searchTerm]);
+    }, [searchTerm, filterType]);
 
     async function loadOrgs() {
         const [data, adminStatus] = await Promise.all([
@@ -594,7 +599,7 @@ function CenterListPageContent() {
                             ) : (
                                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {searchResults.map((org) => (
-                                        <Link key={org.id} href={`/gym/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
+                                        <Link key={org.id} href={org.center_type === 'personal_trainer' ? `/trainer/${org.id}` : `/gym/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
                                             <div className="h-32 bg-gradient-to-br from-gray-800 to-black relative">
                                                 {org.cover_photo_url ? (
                                                     <img src={org.cover_photo_url} alt={org.name} className="w-full h-full object-cover opacity-50" />
@@ -644,7 +649,7 @@ function CenterListPageContent() {
                         </h2>
                     </div>
 
-                    {orgs.filter(o => !filterType || o.center_type === filterType).length === 0 ? (
+                    {orgs.filter(o => filterType === 'personal_trainer' ? o.center_type === 'personal_trainer' : o.center_type !== 'personal_trainer').length === 0 ? (
                         <div className={`text-center py-20 border-2 border-dashed rounded-3xl ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-200 bg-gray-50'}`}>
                             {filterType === 'personal_trainer' ? <User className={`w-16 h-16 mx-auto mb-4 ${textMuted}`} /> : <Building2 className={`w-16 h-16 mx-auto mb-4 ${textMuted}`} />}
                             <h3 className={`text-xl font-bold mb-2 ${textHeading}`}>
@@ -664,7 +669,7 @@ function CenterListPageContent() {
                         </div>
                     ) : (
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {orgs.filter(o => !filterType || o.center_type === filterType).map((org) => (
+                            {orgs.filter(o => filterType === 'personal_trainer' ? o.center_type === 'personal_trainer' : o.center_type !== 'personal_trainer').map((org) => (
                                 <Link key={org.id} href={`/dashboard/gyms/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
                                     <div className="h-32 bg-gradient-to-br from-gray-800 to-black relative">
                                         {org.cover_photo_url ? (
@@ -771,8 +776,8 @@ function CenterListPageContent() {
                         </div>
                     ) : (
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {nearbyOrgs.filter(o => !filterType || o.center_type === filterType).map((org) => (
-                                <Link key={org.id} href={`/gym/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
+                            {nearbyOrgs.filter(o => filterType === 'personal_trainer' ? o.center_type === 'personal_trainer' : o.center_type !== 'personal_trainer').map((org) => (
+                                <Link key={org.id} href={org.center_type === 'personal_trainer' ? `/trainer/${org.id}` : `/gym/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
                                     <div className="h-32 bg-gradient-to-br from-gray-800 to-black relative">
                                         {org.cover_photo_url ? (
                                             <img src={org.cover_photo_url} alt={org.name} className="w-full h-full object-cover opacity-50" />

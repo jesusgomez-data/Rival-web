@@ -451,7 +451,7 @@ export default function DashboardHome() {
 
             // Fetch secondary data (gyms, counts, trending, official, missions, duels) in the background
             Promise.all([
-                supabase.from('members').select('*, organization:center_id(id, name, logo_url, city)').eq('user_id', user.id).in('status', ['active', 'trial']),
+                supabase.from('members').select('*, organization:center_id(id, name, logo_url, city, center_type)').eq('user_id', user.id).in('status', ['active', 'trial']),
                 supabase.from('workouts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
                 supabase.from('class_results').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
                 supabase.from('follows').select('following_id').eq('follower_id', user.id),
@@ -782,7 +782,7 @@ export default function DashboardHome() {
                             </h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 {data.myGyms.map((gym: any) => (
-                                    <Link key={gym.id} href={`/gym/${gym.id}`} className="group relative overflow-hidden rounded-2xl bg-brand-gray/40 border border-border/10 hover:border-brand-red/50 transition-all p-4 flex items-center gap-4">
+                                    <Link key={gym.id} href={gym.center_type === 'personal_trainer' ? `/trainer/${gym.id}` : `/gym/${gym.id}`} className="group relative overflow-hidden rounded-2xl bg-brand-gray/40 border border-border/10 hover:border-brand-red/50 transition-all p-4 flex items-center gap-4">
                                         <div className="w-12 h-12 rounded-xl bg-gray-800 border border-white/10 overflow-hidden relative shrink-0">
                                             {gym.logo_url ? (
                                                 <Image src={gym.logo_url} alt={gym.name} fill className="object-cover" />

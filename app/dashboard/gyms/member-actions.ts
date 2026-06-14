@@ -25,7 +25,7 @@ export async function getCenterMembers(id: string, isCenterId: boolean = false) 
     // Note: members.center_id FK points to organizations table in this schema.
     // So when isCenterId=false, the orgId IS the center_id to query by.
     let memberQuery = admin.from('members').select('*');
-    let requestQuery = admin.from('trial_requests').select('*').eq('status', 'pending');
+    let requestQuery = admin.from('trial_requests').select('*, classes:class_id(name, scheduled_time)').eq('status', 'pending');
 
     if (isCenterId) {
         memberQuery = memberQuery.eq('center_id', id);
@@ -531,3 +531,174 @@ export async function linkMemberToUser(centerId: string, memberId: string, userI
     revalidatePath(`/dashboard/gyms/${centerId}/members`);
     return { success: true };
 }
+
+export async function bookTrainerSlot(classId: string, trainerId: string) {
+    const supabase = await createClient();
+    const adminSupabase = createAdminClient();
+
+    // 1. Check authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+        return { error: "Debes iniciar sesión para reservar una sesión" };
+    }
+
+    // 2. Get class details and check availability
+    const { data: classData, error: classError } = await adminSupabase
+        .from('classes')
+        .select(`
+            id,
+            name,
+            scheduled_time,
+            max_capacity,
+            organization_id,
+            center_id,
+            enrollments:class_enrollments(count)
+        `)
+        .eq('id', classId)
+        .single();
+
+    if (classError || !classData) {
+        return { error: "Sesión no encontrada" };
+    }
+
+    // Check if it's already booked (pending or approved request exists)
+    const { data: existingRequests } = await adminSupabase
+        .from('trial_requests')
+        .select('id')
+        .eq('class_id', classId)
+        .in('status', ['pending', 'approved']);
+
+    const totalOccupied = (classData.enrollments?.[0]?.count || 0) + (existingRequests?.length || 0);
+
+    if (totalOccupied >= classData.max_capacity) {
+        return { error: "Esta sesión ya está reservada u ocupada." };
+    }
+
+    // 3. Check if user already has a pending/approved request for this class
+    const { data: userExistingRequest } = await adminSupabase
+        .from('trial_requests')
+        .select('id, status')
+        .eq('class_id', classId)
+        .eq('user_id', user.id)
+        .in('status', ['pending', 'approved'])
+        .maybeSingle();
+
+    if (userExistingRequest) {
+        return { error: `Ya tienes una solicitud ${userExistingRequest.status === 'pending' ? 'pendiente' : 'aprobada'} para esta sesión.` };
+    }
+
+    // 4. Insert pending trial request
+    const { error: insertError } = await adminSupabase
+        .from('trial_requests')
+        .insert({
+            user_id: user.id,
+            organization_id: trainerId,
+            center_id: classData.center_id || trainerId,
+            class_id: classId,
+            scheduled_date: classData.scheduled_time,
+            status: 'pending'
+        });
+
+    if (insertError) {
+        console.error("Error creating booking request:", insertError);
+        return { error: "No se pudo enviar la solicitud de reserva." };
+    }
+
+    // 5. Notify the trainer
+    const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name')
+        .eq('id', user.id)
+        .single();
+
+    const { data: gym } = await adminSupabase
+        .from('organizations')
+        .select('name, owner_id')
+        .eq('id', trainerId)
+        .single();
+
+    if (gym?.owner_id) {
+        const dateStr = new Date(classData.scheduled_time).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+        const timeStr = new Date(classData.scheduled_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        await createNotification({
+            userId: gym.owner_id,
+            type: 'trial_request',
+            title: 'Nueva Solicitud de Cita',
+            content: `${profile?.full_name || 'Un alumno'} ha solicitado reservar la sesión "${classData.name}" el ${dateStr} a las ${timeStr}.`,
+            link: `/dashboard/gyms/${trainerId}/members`
+        });
+    }
+
+    revalidatePath(`/trainer/${trainerId}`);
+    revalidatePath(`/dashboard/gyms/${trainerId}/members`);
+    revalidatePath(`/dashboard/gyms/${trainerId}/schedule`);
+    return { success: true };
+}
+
+export async function rejectBookingRequest(centerId: string, requestId: string, reason: string) {
+    const admin = createAdminClient();
+
+    // 1. Get request details to find the user ID and class name
+    const { data: request } = await admin
+        .from('trial_requests')
+        .select('user_id, class_id, classes:class_id(name, scheduled_time)')
+        .eq('id', requestId)
+        .single();
+
+    if (!request) return { error: "Solicitud no encontrada" };
+
+    // 2. Update status and save reason in feedback_text
+    const { error } = await admin
+        .from('trial_requests')
+        .update({ 
+            status: 'rejected', 
+            feedback_text: reason, 
+            updated_at: new Date().toISOString() 
+        })
+        .eq('id', requestId);
+
+    if (error) return { error: error.message };
+
+    // 3. Notify the client
+    const { data: org } = await admin.from('organizations').select('name').eq('id', centerId).single();
+    const gymName = org?.name || 'El Profesional';
+    const className = (request.classes as any)?.name || 'la sesión';
+    const classTime = (request.classes as any)?.scheduled_time 
+        ? new Date((request.classes as any).scheduled_time).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+        : '';
+
+    await createNotification({
+        userId: request.user_id,
+        type: 'trial_rejected',
+        title: `Reserva rechazada: ${gymName}`,
+        content: `Tu solicitud para la sesión "${className}"${classTime ? ` del ${classTime}` : ''} ha sido rechazada. Motivo: ${reason}`,
+        link: `/trainer/${centerId}`
+    });
+
+    revalidatePath(`/dashboard/gyms/${centerId}/members`);
+    revalidatePath(`/dashboard/gyms/${centerId}/schedule`);
+    revalidatePath(`/trainer/${centerId}`);
+    return { success: true };
+}
+
+export async function cancelPendingBooking(requestId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "Debes iniciar sesión." };
+
+    const admin = createAdminClient();
+    // Verify ownership
+    const { data: req } = await admin.from('trial_requests').select('user_id, organization_id').eq('id', requestId).single();
+    if (!req || req.user_id !== user.id) {
+        return { error: "No autorizado" };
+    }
+
+    const { error } = await admin.from('trial_requests').delete().eq('id', requestId);
+    if (error) return { error: error.message };
+
+    revalidatePath(`/trainer/${req.organization_id}`);
+    revalidatePath(`/dashboard/gyms/${req.organization_id}/members`);
+    revalidatePath(`/dashboard/gyms/${req.organization_id}/schedule`);
+    return { success: true };
+}
+

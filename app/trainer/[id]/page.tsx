@@ -1,15 +1,23 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import {
     MapPin, Globe, Instagram, Phone, Star, Award, Monitor,
-    Users, Smartphone, Check, ArrowLeft, Calendar, MessageSquare,
-    ChevronRight, Loader2, UserPlus, UserCheck, Zap
+    Users, Check, ArrowLeft, Calendar, MessageSquare,
+    Loader2, UserPlus, UserCheck, Zap, Flame, Lock, Trophy,
+    Clock, List, LayoutGrid, Grid
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { PUBLIC_ORG_COLUMNS } from '@/lib/org-columns'
+import { getCenterPosts } from '@/app/dashboard/gyms/feed-actions'
+import GymPostCard from '@/app/dashboard/gyms/GymPostCard'
+import { 
+    getClassesForDate, getClassesRange, enrollInClass, 
+    unenrollFromClass, getClassAttendees, requestMemberPayment,
+    bookTrainerSlot, cancelPendingBooking
+} from '@/app/dashboard/gyms/management-actions'
 
 const SPECIALTY_LABELS: Record<string, { label: string; icon: string }> = {
     strength:     { label: 'Fuerza',             icon: '🏋️' },
@@ -19,11 +27,14 @@ const SPECIALTY_LABELS: Record<string, { label: string; icon: string }> = {
     yoga:         { label: 'Yoga / Pilates',      icon: '🧘' },
     boxing:       { label: 'Boxeo / MMA',         icon: '🥊' },
     nutrition:    { label: 'Nutrición',           icon: '🥗' },
-    rehab:        { label: 'Rehabilitación',      icon: '🩺' },
+    rehab:        { label: 'Rehabilitación / Fisioterapia', icon: '🩺' },
     swimming:     { label: 'Natación',            icon: '🏊' },
     cycling:      { label: 'Ciclismo',            icon: '🚴' },
     functional:   { label: 'Funcional',           icon: '💪' },
     wellness:     { label: 'Wellness / Mindset',  icon: '🌿' },
+    physiotherapy:{ label: 'Fisioterapia',        icon: '💆' },
+    nutritionist: { label: 'Nutrición Deportiva',  icon: '🥑' },
+    psychology:   { label: 'Psicología Deportiva', icon: '🧠' },
 }
 
 const MODALITY_LABELS: Record<string, string> = {
@@ -35,6 +46,8 @@ const MODALITY_LABELS: Record<string, string> = {
 export default function TrainerPublicProfile() {
     const params   = useParams()
     const router   = useRouter()
+    const searchParams = useSearchParams()
+    const paymentStatus = searchParams?.get('status')
     const id       = params.id as string
     const supabase = createClient()
 
@@ -45,7 +58,24 @@ export default function TrainerPublicProfile() {
     const [following,   setFollowing]   = useState(false)
     const [isMember,    setIsMember]    = useState(false)
     const [loading,     setLoading]     = useState(true)
-    const [tab,         setTab]         = useState<'about' | 'plans' | 'reviews'>('about')
+    const [tab,         setTab]         = useState<'about' | 'plans' | 'reviews' | 'feed' | 'schedule'>('about')
+    const [ownerUsername, setOwnerUsername] = useState<string | null>(null)
+    const [posts,       setPosts]       = useState<any[]>([])
+
+    // Schedule Tab State
+    const [scheduleDate, setScheduleDate] = useState(new Date().toISOString().split('T')[0])
+    const [scheduleViewMode, setScheduleViewMode] = useState<'day' | 'week'>('day')
+    const [scheduleClasses, setScheduleClasses] = useState<any[]>([])
+    const [weeklyClasses, setWeeklyClasses] = useState<Record<string, any[]>>({})
+    const [bookingClassId, setBookingClassId] = useState<string | null>(null)
+    const [hoveredClassId, setHoveredClassId] = useState<string | null>(null)
+    const [attendeesList, setAttendeesList] = useState<any[] | null>(null)
+    const [isLoadingAttendees, setIsLoadingAttendees] = useState(false)
+    const [bookingLoading, setBookingLoading] = useState(false)
+
+    // User Booking Requests
+    const [userRequests, setUserRequests] = useState<any[]>([])
+    const [subscribingPlanId, setSubscribingPlanId] = useState<string | null>(null)
 
     useEffect(() => { loadProfile() }, [id])
 
@@ -56,21 +86,186 @@ export default function TrainerPublicProfile() {
             supabase.auth.getUser(),
         ])
         if (!org) { router.push('/dashboard/gyms'); return }
+        
+        // Redirigir a perfil de centro si la organización no es de tipo entrenador personal
+        if (org.center_type !== 'personal_trainer') {
+            const query = window.location.search;
+            router.replace(`/gym/${id}${query}`);
+            return;
+        }
+
         setTrainer(org)
         setCurrentUser(user)
 
-        const [plansRes, reviewsRes, followRes, memberRes] = await Promise.all([
+        // Fetch owner username
+        const { data: ownerProf } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', org.owner_id)
+            .single()
+        
+        setOwnerUsername(ownerProf?.username || null)
+
+        const [plansRes, reviewsRes, followRes, memberRes, postsRes, requestsRes] = await Promise.all([
             supabase.from('membership_plans').select('*').eq('organization_id', id).eq('is_active', true).order('price'),
             supabase.from('center_reviews').select('id, rating, review_text, created_at, profiles:user_id(full_name, username, avatar_url)').eq('organization_id', id).order('created_at', { ascending: false }).limit(10),
             user ? supabase.from('center_followers').select('id').eq('organization_id', id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
             user ? supabase.from('members').select('id, status').eq('center_id', id).eq('user_id', user.id).eq('status', 'active').maybeSingle() : Promise.resolve({ data: null }),
+            getCenterPosts(id),
+            user ? supabase.from('trial_requests').select('*').eq('organization_id', id).eq('user_id', user.id) : Promise.resolve({ data: null })
         ])
 
         setPlans(plansRes.data || [])
         setReviews(reviewsRes.data || [])
         setFollowing(!!followRes.data)
         setIsMember(!!memberRes.data)
+        setPosts(postsRes || [])
+        setUserRequests(requestsRes?.data || [])
         setLoading(false)
+    }
+
+    // Load schedule when tab changes or date changes
+    const loadSchedule = async (date: string) => {
+        setBookingLoading(true)
+        try {
+            const promises: Promise<any>[] = []
+            if (scheduleViewMode === 'week') {
+                const start = new Date(date)
+                const end = new Date(date)
+                end.setDate(end.getDate() + 6)
+                promises.push(getClassesRange(id, start.toISOString(), end.toISOString()))
+            } else {
+                promises.push(getClassesForDate(id, date))
+            }
+
+            if (currentUser) {
+                promises.push(supabase.from('trial_requests').select('*').eq('organization_id', id).eq('user_id', currentUser.id))
+            }
+
+            const [classesRes, requestsRes] = await Promise.all(promises)
+
+            if (scheduleViewMode === 'week') {
+                const grouped: Record<string, any[]> = {}
+                // @ts-ignore
+                classesRes.forEach((cls: any) => {
+                    const dateKey = cls.scheduled_time.split('T')[0]
+                    if (!grouped[dateKey]) grouped[dateKey] = []
+                    grouped[dateKey].push(cls)
+                });
+                setWeeklyClasses(grouped)
+            } else {
+                setScheduleClasses(classesRes || [])
+            }
+
+            if (requestsRes) {
+                setUserRequests(requestsRes.data || [])
+            }
+        } catch (e) {
+            console.error("Error loading schedule:", e)
+        }
+        setBookingLoading(false)
+    }
+
+    useEffect(() => {
+        if (tab === 'schedule') {
+            loadSchedule(scheduleDate)
+        }
+    }, [tab, scheduleDate, scheduleViewMode])
+
+    // Subscription Flow
+    async function handleContratar(plan: any) {
+        if (!currentUser) {
+            router.push('/auth')
+            return
+        }
+        if (isMember) {
+            alert("Ya eres miembro de este profesional.")
+            return
+        }
+        setSubscribingPlanId(plan.id)
+        const res = await requestMemberPayment(id, plan.id, currentUser.id, {
+            email: currentUser.email,
+            fullName: currentUser.user_metadata?.full_name || currentUser.email,
+            phone: "",
+            birth_date: "",
+            notes: "Suscripción desde perfil público"
+        })
+        setSubscribingPlanId(null)
+        if (res.error) {
+            alert(res.error)
+        } else if (res.checkoutUrl) {
+            window.location.href = res.checkoutUrl
+        } else {
+            alert("Solicitud procesada con éxito.")
+        }
+    }
+
+    // Booking Flow
+    async function handleBook(classId: string, userReq: any, clsIsEnrolled = false) {
+        if (!currentUser) {
+            router.push('/auth')
+            return
+        }
+
+        if (userReq) {
+            if (userReq.status === 'pending') {
+                if (!confirm("¿Seguro que deseas cancelar tu solicitud de reserva?")) return
+                setBookingClassId(classId)
+                const res = await cancelPendingBooking(userReq.id)
+                setBookingClassId(null)
+                if (res.error) {
+                    alert(res.error)
+                } else {
+                    alert("¡Solicitud de reserva cancelada!")
+                    loadSchedule(scheduleDate)
+                }
+            } else if (userReq.status === 'approved') {
+                if (!confirm("¿Seguro que deseas cancelar tu reserva confirmada?")) return
+                setBookingClassId(classId)
+                const res = await unenrollFromClass(id, classId)
+                setBookingClassId(null)
+                if (res.error) {
+                    alert(res.error)
+                } else {
+                    alert("¡Reserva cancelada con éxito!")
+                    loadSchedule(scheduleDate)
+                }
+            }
+            return
+        }
+
+        if (clsIsEnrolled) {
+            if (!confirm("¿Seguro que deseas cancelar tu reserva?")) return
+            setBookingClassId(classId)
+            const res = await unenrollFromClass(id, classId)
+            setBookingClassId(null)
+            if (res.error) {
+                alert(res.error)
+            } else {
+                alert("¡Reserva cancelada con éxito!")
+                loadSchedule(scheduleDate)
+            }
+            return
+        }
+
+        setBookingClassId(classId)
+        const res = await bookTrainerSlot(classId, id)
+        setBookingClassId(null)
+
+        if (res.error) {
+            alert(res.error)
+        } else {
+            alert("¡Cita solicitada con éxito! El profesional recibirá una notificación para confirmarla.")
+            loadSchedule(scheduleDate)
+        }
+    }
+
+    async function handleViewAttendees(classId: string) {
+        if (!isMember) return
+        setIsLoadingAttendees(true)
+        const list = await getClassAttendees(classId)
+        setAttendeesList(list)
+        setIsLoadingAttendees(false)
     }
 
     async function toggleFollow() {
@@ -99,14 +294,26 @@ export default function TrainerPublicProfile() {
 
     const specialties: string[] = trainer.specialties || []
     const languages:   string[] = trainer.languages   || []
+    const isOwner = trainer.owner_id === currentUser?.id
 
     return (
-        <div className="min-h-screen bg-black text-white">
-            {/* Back */}
-            <div className="sticky top-0 z-30 bg-black/80 backdrop-blur border-b border-white/5 px-4 py-3 flex items-center gap-3">
+        <div className="min-h-screen bg-black text-white pb-10 flex flex-col items-center px-0 sm:px-4">
+            {paymentStatus === 'success_payment' && (
+                <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-4 text-center text-sm font-bold rounded-2xl mb-4 mt-4 max-w-4xl w-[92%] shadow-lg">
+                    🎉 ¡Pago completado con éxito! Tu suscripción se ha procesado. El profesional se pondrá en contacto contigo pronto.
+                </div>
+            )}
+            {paymentStatus === 'canceled_payment' && (
+                <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-4 text-center text-sm font-bold rounded-2xl mb-4 mt-4 max-w-4xl w-[92%] shadow-lg">
+                    ⚠️ El proceso de pago ha sido cancelado o ha fallado. Puedes intentarlo de nuevo cuando quieras.
+                </div>
+            )}
+            
+            <div className="w-full max-w-4xl border-x border-white/5 bg-zinc-950/40 min-h-screen">
+                {/* Back */}
+                <div className="sticky top-0 z-30 bg-black/80 backdrop-blur border-b border-white/5 px-4 py-3 flex items-center gap-3">
                 <button
                     onClick={() => {
-                        // Check if we have real history to go back to
                         if (window.history.length > 1 && document.referrer && document.referrer.includes(window.location.hostname)) {
                             window.history.back()
                         } else {
@@ -183,7 +390,7 @@ export default function TrainerPublicProfile() {
             </div>
 
             {/* ── ACTION BUTTONS ───────────────────────────────────────── */}
-            <div className="px-4 sm:px-8 py-4 flex gap-3">
+            <div className="px-4 sm:px-8 py-4 flex flex-wrap gap-3 items-center">
                 <button onClick={toggleFollow}
                     className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm transition-all ${
                         following
@@ -212,16 +419,23 @@ export default function TrainerPublicProfile() {
                         <Instagram className="w-4 h-4" />
                     </a>
                 )}
+                {ownerUsername && (
+                    <Link href={`/dashboard/profile/${ownerUsername}`}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm bg-white/8 border border-white/10 text-white hover:bg-white/15 hover:border-brand-red/30 transition-colors">
+                        <Flame className="w-4 h-4 text-brand-red fill-current" />
+                        <span className="hidden sm:inline">Rival Perfil</span>
+                    </Link>
+                )}
             </div>
 
             {/* ── TABS ─────────────────────────────────────────────────── */}
-            <div className="px-4 sm:px-8 flex gap-1 border-b border-white/8">
-                {(['about', 'plans', 'reviews'] as const).map(t => (
+            <div className="px-4 sm:px-8 flex gap-1 border-b border-white/8 overflow-x-auto no-scrollbar">
+                {(['about', 'schedule', 'feed', 'plans', 'reviews'] as const).map(t => (
                     <button key={t} onClick={() => setTab(t)}
-                        className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all ${
+                        className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all flex-shrink-0 ${
                             tab === t ? 'border-brand-red text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
                         }`}>
-                        {t === 'about' ? 'Sobre mí' : t === 'plans' ? 'Servicios' : 'Reseñas'}
+                        {t === 'about' ? 'Sobre mí' : t === 'schedule' ? 'Reservas' : t === 'feed' ? 'Vídeos' : t === 'plans' ? 'Servicios' : 'Reseñas'}
                     </button>
                 ))}
             </div>
@@ -286,6 +500,255 @@ export default function TrainerPublicProfile() {
                     </div>
                 )}
 
+                {/* ── SCHEDULE TAB (RESERVAS) ─────────────────────────── */}
+                {tab === 'schedule' && (
+                    <div className="space-y-6">
+                        {/* Header with View Toggle and Date Selection */}
+                        <div className="bg-white/5 p-4 md:p-6 rounded-3xl border border-white/5 shadow-xl flex flex-col gap-4">
+                            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+                                <div className="flex items-center gap-4 w-full sm:w-auto">
+                                    <div className="p-2 rounded-xl bg-white/5">
+                                        <Calendar className="w-5 h-5 text-brand-red" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">
+                                            {scheduleViewMode === 'day' ? 'Fecha Seleccionada' : 'Desde el día'}
+                                        </span>
+                                        <input
+                                            type="date"
+                                            value={scheduleDate}
+                                            onChange={(e) => setScheduleDate(e.target.value)}
+                                            className="bg-transparent text-white font-black outline-none uppercase tracking-widest text-xs sm:text-sm cursor-pointer w-full"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                                    <div className="flex p-1 rounded-xl border bg-black/40 border-white/10">
+                                        <button
+                                            onClick={() => setScheduleViewMode('day')}
+                                            className={`px-3 sm:px-4 py-2 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${scheduleViewMode === 'day' ? 'bg-brand-red text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                                        >
+                                            <List className="w-3.5 h-3.5" /> Día
+                                        </button>
+                                        <button
+                                            onClick={() => setScheduleViewMode('week')}
+                                            className={`px-3 sm:px-4 py-2 rounded-lg text-[9px] sm:text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 ${scheduleViewMode === 'week' ? 'bg-brand-red text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}
+                                        >
+                                            <LayoutGrid className="w-3.5 h-3.5" /> Semana
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Quick Day Selector */}
+                            {scheduleViewMode === 'day' && (
+                                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                                    {Array.from({ length: 7 }).map((_, i) => {
+                                        const d = new Date()
+                                        d.setDate(d.getDate() + i)
+                                        const active = d.toISOString().split('T')[0] === scheduleDate
+                                        return (
+                                            <button
+                                                key={i}
+                                                onClick={() => setScheduleDate(d.toISOString().split('T')[0])}
+                                                className={`flex-shrink-0 w-12 sm:w-14 h-16 sm:h-20 rounded-2xl flex flex-col items-center justify-center gap-1 transition-all border ${active
+                                                    ? 'bg-brand-red border-brand-red text-white shadow-lg scale-105'
+                                                    : 'bg-black/40 border-white/5 text-gray-500 hover:border-white/20'}`}
+                                            >
+                                                <span className="text-[10px] font-black uppercase tracking-widest">
+                                                    {d.toLocaleDateString('es-ES', { weekday: 'short' })}
+                                                </span>
+                                                <span className="text-xl font-black italic">{d.getDate()}</span>
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {bookingLoading ? (
+                            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                <Loader2 className="w-8 h-8 text-brand-red animate-spin" />
+                                <p className="text-xs font-black uppercase tracking-[0.2em] text-gray-500">Cargando Horarios...</p>
+                            </div>
+                        ) : scheduleViewMode === 'day' ? (
+                            <div className="space-y-4">
+                                {scheduleClasses.length === 0 ? (
+                                    <div className="text-center py-20 rounded-3xl border border-dashed border-white/10 bg-white/[0.01]">
+                                        <Calendar className="w-12 h-12 text-gray-600 mx-auto mb-4 opacity-20" />
+                                        <p className="text-sm font-medium text-gray-500 font-bold uppercase tracking-widest">No hay citas ni sesiones programadas para hoy.</p>
+                                    </div>
+                                ) : (
+                                    scheduleClasses.map((cls: any) => {
+                                        const userReq = userRequests.find((r: any) => r.class_id === cls.id && r.status !== 'rejected');
+                                        const rejectedReq = userRequests.find((r: any) => r.class_id === cls.id && r.status === 'rejected');
+                                        const isPending = userReq?.status === 'pending';
+                                        const isApproved = userReq?.status === 'approved' || cls.is_enrolled;
+                                        const isOccupied = cls.enrolled_count >= cls.max_capacity && !isPending && !isApproved;
+
+                                        return (
+                                            <div key={cls.id} className="bg-white/3 p-4 md:p-6 rounded-3xl border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-brand-red/30 transition-all shadow-xl">
+                                                <div>
+                                                    <div className="flex items-center gap-3 mb-2">
+                                                        <span className="bg-brand-red/10 text-brand-red text-[10px] font-black uppercase tracking-[0.15em] px-3 py-1 rounded-full flex items-center gap-2">
+                                                            <Clock className="w-3 h-3" />
+                                                            {new Date(cls.scheduled_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                        <span className="text-[10px] uppercase font-bold tracking-widest text-gray-500">{cls.duration_minutes} min</span>
+                                                    </div>
+                                                    <h4 className="text-lg font-black italic uppercase tracking-tighter text-white">{cls.name}</h4>
+                                                    {rejectedReq && (
+                                                        <p className="text-xs text-red-400 font-bold mt-1 max-w-md">
+                                                            ❌ Reserva rechazada: "{rejectedReq.feedback_text || 'No se especificó motivo'}"
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex items-center gap-6 justify-between sm:justify-end">
+                                                    <div className="text-center shrink-0">
+                                                        <span className={`block font-black text-xl italic ${isOccupied ? 'text-red-500' : 'text-green-500'}`}>
+                                                            {cls.enrolled_count}/{cls.max_capacity}
+                                                        </span>
+                                                        <span className="text-[8px] uppercase font-black tracking-widest text-gray-500">Reservados</span>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => handleBook(cls.id, userReq, cls.is_enrolled)}
+                                                        onMouseEnter={() => setHoveredClassId(cls.id)}
+                                                        onMouseLeave={() => setHoveredClassId(null)}
+                                                        disabled={bookingClassId === cls.id || (isOccupied && !isApproved && !isPending)}
+                                                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                                            isPending
+                                                                ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/30'
+                                                                : isApproved
+                                                                    ? 'bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/30'
+                                                                    : isOccupied
+                                                                        ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5'
+                                                                        : 'bg-brand-red text-white hover:bg-red-600 shadow-xl'
+                                                            }`}
+                                                    >
+                                                        {bookingClassId === cls.id ? '...' :
+                                                            isPending
+                                                                ? (hoveredClassId === cls.id ? 'Cancelar' : 'Pendiente ⏳')
+                                                                : isApproved
+                                                                    ? (hoveredClassId === cls.id ? 'Cancelar' : 'Reservado ✓')
+                                                                    : isOccupied ? 'Completo' : 'Reservar Cita'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )
+                                    })
+                                )}
+                            </div>
+                        ) : (
+                            /* WEEK VIEW */
+                            <div className="space-y-8">
+                                {Object.entries(weeklyClasses).map(([date, classes]) => {
+                                    const d = new Date(date + 'T12:00:00')
+                                    return (
+                                        <div key={date} className="relative">
+                                            <div className="mb-4 flex items-center gap-4">
+                                                <div className="bg-brand-red text-white w-12 h-12 rounded-xl flex flex-col items-center justify-center shadow-lg">
+                                                    <span className="text-[9px] font-black uppercase tracking-tighter leading-none">{d.toLocaleDateString('es-ES', { weekday: 'short' })}</span>
+                                                    <span className="text-lg font-black italic">{d.getDate()}</span>
+                                                </div>
+                                                <div className="flex-1 h-px bg-white/10" />
+                                                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-gray-500">
+                                                    {d.toLocaleDateString('es-ES', { month: 'short' })}
+                                                </span>
+                                            </div>
+
+                                            <div className="space-y-3 pl-4 border-l border-white/5 ml-6">
+                                                {classes.length === 0 ? (
+                                                    <p className="text-xs italic text-gray-600 py-2">No hay citas agendadas.</p>
+                                                ) : (
+                                                    classes.map((cls: any) => (
+                                                        <div key={cls.id} className="bg-white/3 p-4 rounded-2xl border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 group hover:border-brand-red/30 transition-all">
+                                                            <div>
+                                                                <div className="flex items-center gap-3 mb-1">
+                                                                    <span className="text-brand-red text-[11px] font-black tracking-widest">
+                                                                        {new Date(cls.scheduled_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                    </span>
+                                                                    <span className="text-[8px] font-black text-gray-600 uppercase tracking-widest">{cls.duration_minutes} MIN</span>
+                                                                </div>
+                                                                <h5 className="text-md font-black italic uppercase text-white">{cls.name}</h5>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-4 justify-between sm:justify-end">
+                                                                <div className="text-right">
+                                                                    <span className={`block font-black text-sm ${cls.enrolled_count >= cls.max_capacity ? 'text-red-500' : 'text-green-500'}`}>
+                                                                        {cls.enrolled_count}/{cls.max_capacity}
+                                                                    </span>
+                                                                </div>
+
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setScheduleDate(date)
+                                                                        setScheduleViewMode('day')
+                                                                    }}
+                                                                    className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border border-white/10 hover:bg-white/5 transition-all text-white"
+                                                                >
+                                                                    Ver Día
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* ── FEED TAB (VIDEOS) ───────────────────────────────── */}
+                {tab === 'feed' && (
+                    <div className="space-y-6">
+                        {isMember || isOwner ? (
+                            <div className="space-y-6 max-w-2xl">
+                                {posts.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                                        <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4 border border-white/5">
+                                            <Grid className="w-7 h-7 text-white/20" />
+                                        </div>
+                                        <p className="font-black text-sm uppercase tracking-widest text-gray-500">Sin publicaciones todavía</p>
+                                    </div>
+                                ) : (
+                                    posts.map((post: any) => (
+                                        <GymPostCard
+                                            key={post.id}
+                                            post={post}
+                                            centerId={id}
+                                            isAdmin={isOwner}
+                                            currentUserId={currentUser?.id}
+                                            isMember={isMember || isOwner}
+                                        />
+                                    ))
+                                )}
+                            </div>
+                        ) : (
+                            <div className="bg-white/[0.02] border border-white/5 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center text-center gap-4 max-w-xl mx-auto mt-6">
+                                <div className="w-16 h-16 rounded-full bg-brand-red/10 flex items-center justify-center mb-2 shadow-glow border border-brand-red/20">
+                                    <Lock className="w-6 h-6 text-brand-red" />
+                                </div>
+                                <h3 className="font-heading font-black italic uppercase text-xl text-white">Contenido Exclusivo para Alumnos</h3>
+                                <p className="text-xs text-gray-400 font-medium max-w-sm mt-1 leading-relaxed">
+                                    Este profesional comparte rutinas en vídeo, consejos de salud y contenido exclusivo con sus alumnos y pacientes activos.
+                                </p>
+                                <button
+                                    onClick={() => setTab('plans')}
+                                    className="mt-4 px-8 py-3 bg-brand-red text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-colors shadow-lg flex items-center gap-2"
+                                >
+                                    Ver Planes y Servicios
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* ── PLANS TAB ──────────────────────────────────────── */}
                 {tab === 'plans' && (
                     <div className="space-y-4">
@@ -315,8 +778,14 @@ export default function TrainerPublicProfile() {
                                         ))}
                                     </ul>
                                 )}
-                                <button className="w-full bg-brand-red text-white py-2.5 rounded-xl font-black text-sm hover:bg-red-600 transition-colors">
-                                    Contratar
+                                <button 
+                                    onClick={() => handleContratar(p)}
+                                    disabled={subscribingPlanId === p.id}
+                                    className="w-full bg-brand-red text-white py-2.5 rounded-xl font-black text-sm hover:bg-red-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                                >
+                                    {subscribingPlanId === p.id ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : 'Contratar'}
                                 </button>
                             </div>
                         ))}
@@ -368,6 +837,7 @@ export default function TrainerPublicProfile() {
                 )}
             </div>
         </div>
+    </div>
     )
 }
 

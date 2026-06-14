@@ -131,15 +131,12 @@ export async function getClassesForDate(centerId: string, date: string) {
 
     // Check user enrollment if logged in
     let userEnrollments = new Set();
-    if (user) {
-        const classIds = sorted.map(c => c.id);
+    const classIds = sorted.map(c => c.id);
+    let pendingRequestCounts: Record<string, number> = {};
+
+    if (user && classIds.length > 0) {
         const { data: enrolls } = await supabase
             .from('class_enrollments')
-            .select('class_id')
-            // @ts-ignore
-            .eq('member.user_id', user.id) // This likely requires !inner join on member, but let's assume direct check or adjust
-            // If we can't do .eq('member.user_id', user.id) directly on this table without join...
-            // Standard approach: Join member table
             .select('class_id, member!inner(user_id)')
             .eq('member.user_id', user.id)
             .in('class_id', classIds);
@@ -149,11 +146,29 @@ export async function getClassesForDate(centerId: string, date: string) {
         }
     }
 
+    if (classIds.length > 0) {
+        const { data: pendingReqs } = await supabase
+            .from('trial_requests')
+            .select('class_id')
+            .in('class_id', classIds)
+            .eq('status', 'pending');
+
+        if (pendingReqs) {
+            pendingReqs.forEach(req => {
+                if (req.class_id) {
+                    pendingRequestCounts[req.class_id] = (pendingRequestCounts[req.class_id] || 0) + 1;
+                }
+            });
+        }
+    }
+
     const finalClasses = sorted.map((c: any) => ({
         ...c,
         coach: coaches.find(coach => coach.id === c.coach_id) || { full_name: 'Staff' },
         scheduled_time: c.scheduled_time || `${date}T${c.time || '00:00:00'}`,
-        enrolled_count: (c.scheduled_time && c.scheduled_time.split('T')[0] === date) ? (c.enrollments?.[0]?.count || 0) : 0,
+        enrolled_count: (c.scheduled_time && c.scheduled_time.split('T')[0] === date) 
+            ? ((c.enrollments?.[0]?.count || 0) + (pendingRequestCounts[c.id] || 0)) 
+            : 0,
         wod: dailyWod,
         is_enrolled: userEnrollments.has(c.id)
     }));
