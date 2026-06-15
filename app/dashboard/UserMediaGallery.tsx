@@ -58,7 +58,7 @@ function MediaCard({ item, isActive, globalMuted, onMuteChange }: {
                 <>
                     <video
                         ref={videoRef}
-                        key={item.id}
+                        key={item.uniqueId || item.id}
                         src={item.media_url}
                         className="absolute inset-0 w-full h-full object-cover"
                         loop
@@ -123,29 +123,47 @@ export default function UserMediaGallery({ userId, limit }: { userId: string; li
     useEffect(() => {
         if (!userId) return;
         getUserMedia(userId).then((data) => {
-            const mapped = (data || []).map((item: any) => {
+            const flattened: any[] = [];
+            (data || []).forEach((item: any) => {
                 let url = item.media_url;
                 if (url && typeof url === 'string' && (url.trim().startsWith('{') || url.trim().startsWith('['))) {
                     try {
                         const parsed = JSON.parse(url.trim());
                         if (Array.isArray(parsed)) {
-                            if (item.media_type !== 'class_result' && typeof parsed[0] === 'string') {
-                                url = parsed[0];
-                            } else {
-                                url = null;
+                            if (item.media_type !== 'class_result') {
+                                parsed.forEach((subUrl: string, idx: number) => {
+                                    if (typeof subUrl === 'string') {
+                                        flattened.push({
+                                            ...item,
+                                            uniqueId: `${item.id}-${idx}`,
+                                            media_url: subUrl
+                                        });
+                                    }
+                                });
                             }
                         } else {
-                            url = parsed.image || parsed.backgroundImage || parsed.media_url || parsed.mediaUrl || parsed.url || null;
+                            const resolvedUrl = parsed.image || parsed.backgroundImage || parsed.media_url || parsed.mediaUrl || parsed.url;
+                            if (resolvedUrl) {
+                                flattened.push({
+                                    ...item,
+                                    uniqueId: item.id,
+                                    media_url: resolvedUrl
+                                });
+                            }
                         }
                     } catch (e) {
                         console.warn("[UserMediaGallery] Error parsing JSON media:", e);
-                        url = null;
                     }
+                } else if (url) {
+                    flattened.push({
+                        ...item,
+                        uniqueId: item.id,
+                        media_url: url
+                    });
                 }
-                return { ...item, media_url: url };
             });
 
-            const valid = mapped.filter((item: any) => {
+            const valid = flattened.filter((item: any) => {
                 return item.media_type !== 'class_result' && isImageUrl(item.media_url);
             });
             setMediaItems(valid);
@@ -223,7 +241,7 @@ export default function UserMediaGallery({ userId, limit }: { userId: string; li
                         const isVideo = isVideoItem(item);
                         return (
                             <div
-                                key={item.id}
+                                key={item.uniqueId || item.id}
                                 className="relative aspect-square bg-gray-900 rounded-lg overflow-hidden cursor-pointer hover:opacity-80 transition-opacity border border-white/5 group"
                                 onClick={() => setLightboxIndex(index)}
                             >
@@ -276,7 +294,7 @@ export default function UserMediaGallery({ userId, limit }: { userId: string; li
                     >
                         {mediaItems.map((item, index) => (
                             <MediaCard
-                                key={item.id}
+                                key={item.uniqueId || item.id}
                                 item={item}
                                 isActive={index === activeIndex}
                                 globalMuted={globalMuted}
