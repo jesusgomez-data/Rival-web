@@ -17,6 +17,7 @@ import {
     getConnectDashboardLink,
 } from "@/app/dashboard/gyms/connect-actions";
 import { PLATFORM_FEE_PERCENT } from "@/lib/stripe-config";
+import { isProfessional } from "@/lib/professional-types";
 
 // ─── Platform Plans ────────────────────────────────────────────────────────────
 
@@ -356,21 +357,21 @@ function BillingContent({ organizationId }: { organizationId: string }) {
 
             <header className="text-center space-y-4">
                 <div className="inline-flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-1.5 rounded-full mb-4">
-                    {org?.center_type === 'personal_trainer'
+                    {isProfessional(org?.center_type)
                         ? <User className="w-4 h-4 text-brand-red" />
                         : <Building2 className="w-4 h-4 text-brand-red" />}
                     <span className="text-[10px] uppercase tracking-widest font-bold text-gray-400">
-                        {org?.center_type === 'personal_trainer' ? 'Planes para Entrenadores' : 'Planes para Centros'}
+                        {isProfessional(org?.center_type) ? 'Planes para Entrenadores' : 'Planes para Centros'}
                     </span>
                 </div>
                 <h1 className="text-4xl lg:text-5xl font-heading font-extrabold italic uppercase tracking-tighter text-white">
-                    {org?.center_type === 'personal_trainer'
+                    {isProfessional(org?.center_type)
                         ? <>Eleva tu <span className="text-brand-red">Carrera</span></>
                         : <>Potencia tu <span className="text-brand-red">Centro</span></>}
                 </h1>
                 <p className="text-gray-400 max-w-xl mx-auto text-sm leading-relaxed">
                     Herramientas profesionales para gestionar, medir y escalar tu{' '}
-                    {org?.center_type === 'personal_trainer' ? 'negocio de coaching' : 'comunidad fitness'}.
+                    {isProfessional(org?.center_type) ? 'negocio de coaching' : 'comunidad fitness'}.
                 </p>
             </header>
 
@@ -390,7 +391,7 @@ function BillingContent({ organizationId }: { organizationId: string }) {
                     Plan de Plataforma
                 </h2>
                 <div className="grid md:grid-cols-3 gap-8">
-                    {(org?.center_type === 'personal_trainer' ? PT_PLANS : plans).map((plan) => {
+                    {(isProfessional(org?.center_type) ? PT_PLANS : plans).map((plan) => {
                         const isCurrent = (org?.plan || 'free') === plan.id;
                         return (
                             <motion.div

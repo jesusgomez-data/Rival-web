@@ -13,11 +13,17 @@ import { createClient } from '@/utils/supabase/client'
 import { PUBLIC_ORG_COLUMNS } from '@/lib/org-columns'
 import { getCenterPosts } from '@/app/dashboard/gyms/feed-actions'
 import GymPostCard from '@/app/dashboard/gyms/GymPostCard'
-import { 
-    getClassesForDate, getClassesRange, enrollInClass, 
+import {
+    getClassesForDate, getClassesRange, enrollInClass,
     unenrollFromClass, getClassAttendees, requestMemberPayment,
     bookTrainerSlot, cancelPendingBooking
 } from '@/app/dashboard/gyms/management-actions'
+import {
+    getPublicProfessionalServices, createServiceBooking,
+    getProfessionalAvailability, getProfessionalReviews
+} from '@/app/dashboard/gyms/professional-service-actions'
+import { isProfessional, getTypeLabel, getTypeIcon, SERVICE_MODALITIES } from '@/lib/professional-types'
+import PublicBookingCalendar from './PublicBookingCalendar'
 
 const SPECIALTY_LABELS: Record<string, { label: string; icon: string }> = {
     strength:     { label: 'Fuerza',             icon: '🏋️' },
@@ -57,10 +63,23 @@ export default function TrainerPublicProfile() {
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [following,   setFollowing]   = useState(false)
     const [isMember,    setIsMember]    = useState(false)
+    const [isClient,    setIsClient]    = useState(false)
     const [loading,     setLoading]     = useState(true)
-    const [tab,         setTab]         = useState<'about' | 'plans' | 'reviews' | 'feed' | 'schedule'>('about')
+    const [tab,         setTab]         = useState<'about' | 'services' | 'reviews' | 'feed' | 'schedule'>('about')
+    const [preSelectedServiceId, setPreSelectedServiceId] = useState<string | null>(null)
     const [ownerUsername, setOwnerUsername] = useState<string | null>(null)
     const [posts,       setPosts]       = useState<any[]>([])
+
+    // Professional Services & Booking
+    const [profServices,    setProfServices]    = useState<any[]>([])
+    const [availability,    setAvailability]    = useState<any[]>([])
+    const [selectedService, setSelectedService] = useState<any | null>(null)
+    const [bookingForm,     setBookingForm]     = useState({
+        modality: 'presential', scheduledAt: '', address: '', notes: ''
+    })
+    const [bookingSubmitting, setBookingSubmitting] = useState(false)
+    const [bookingSuccess,    setBookingSuccess]    = useState(false)
+    const [serviceReviews,    setServiceReviews]    = useState<any[]>([])
 
     // Schedule Tab State
     const [scheduleDate, setScheduleDate] = useState(new Date().toISOString().split('T')[0])
@@ -87,8 +106,8 @@ export default function TrainerPublicProfile() {
         ])
         if (!org) { router.push('/dashboard/gyms'); return }
         
-        // Redirigir a perfil de centro si la organización no es de tipo entrenador personal
-        if (org.center_type !== 'personal_trainer') {
+        // Redirigir a perfil de centro si no es un profesional individual
+        if (!isProfessional(org.center_type)) {
             const query = window.location.search;
             router.replace(`/gym/${id}${query}`);
             return;
@@ -106,21 +125,29 @@ export default function TrainerPublicProfile() {
         
         setOwnerUsername(ownerProf?.username || null)
 
-        const [plansRes, reviewsRes, followRes, memberRes, postsRes, requestsRes] = await Promise.all([
+        const [plansRes, reviewsRes, followRes, memberRes, postsRes, requestsRes, servicesRes, availRes, svcReviewsRes, clientRes] = await Promise.all([
             supabase.from('membership_plans').select('*').eq('organization_id', id).eq('is_active', true).order('price'),
             supabase.from('center_reviews').select('id, rating, review_text, created_at, profiles:user_id(full_name, username, avatar_url)').eq('organization_id', id).order('created_at', { ascending: false }).limit(10),
             user ? supabase.from('center_followers').select('id').eq('organization_id', id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
             user ? supabase.from('members').select('id, status').eq('center_id', id).eq('user_id', user.id).eq('status', 'active').maybeSingle() : Promise.resolve({ data: null }),
             getCenterPosts(id),
-            user ? supabase.from('trial_requests').select('*').eq('organization_id', id).eq('user_id', user.id) : Promise.resolve({ data: null })
+            user ? supabase.from('trial_requests').select('*').eq('organization_id', id).eq('user_id', user.id) : Promise.resolve({ data: null }),
+            getPublicProfessionalServices(id),
+            getProfessionalAvailability(id),
+            getProfessionalReviews(id),
+            user ? supabase.from('service_bookings').select('id').eq('professional_id', id).eq('client_id', user.id).not('status', 'in', '(rejected,cancelled)').limit(1).maybeSingle() : Promise.resolve({ data: null }),
         ])
 
         setPlans(plansRes.data || [])
         setReviews(reviewsRes.data || [])
         setFollowing(!!followRes.data)
         setIsMember(!!memberRes.data)
+        setIsClient(!!clientRes.data)
         setPosts(postsRes || [])
         setUserRequests(requestsRes?.data || [])
+        setProfServices(servicesRes)
+        setAvailability(availRes)
+        setServiceReviews(svcReviewsRes)
         setLoading(false)
     }
 
@@ -266,6 +293,28 @@ export default function TrainerPublicProfile() {
         const list = await getClassAttendees(classId)
         setAttendeesList(list)
         setIsLoadingAttendees(false)
+    }
+
+    async function handleServiceBooking() {
+        if (!currentUser) { router.push('/auth'); return }
+        if (!selectedService) return
+        setBookingSubmitting(true)
+        const res = await createServiceBooking({
+            professionalId: id,
+            serviceId: selectedService.id,
+            modality: bookingForm.modality,
+            scheduledAt: bookingForm.scheduledAt || undefined,
+            address: bookingForm.address || undefined,
+            notes: bookingForm.notes || undefined,
+        })
+        setBookingSubmitting(false)
+        if (res.error) {
+            alert(res.error)
+        } else {
+            setBookingSuccess(true)
+            setSelectedService(null)
+            setBookingForm({ modality: 'presential', scheduledAt: '', address: '', notes: '' })
+        }
     }
 
     async function toggleFollow() {
@@ -430,12 +479,12 @@ export default function TrainerPublicProfile() {
 
             {/* ── TABS ─────────────────────────────────────────────────── */}
             <div className="px-4 sm:px-8 flex gap-1 border-b border-white/8 overflow-x-auto no-scrollbar">
-                {(['about', 'schedule', 'feed', 'plans', 'reviews'] as const).map(t => (
+                {(['about', 'services', 'schedule', 'feed', 'reviews'] as const).map(t => (
                     <button key={t} onClick={() => setTab(t)}
                         className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all flex-shrink-0 ${
                             tab === t ? 'border-brand-red text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
                         }`}>
-                        {t === 'about' ? 'Sobre mí' : t === 'schedule' ? 'Reservas' : t === 'feed' ? 'Vídeos' : t === 'plans' ? 'Servicios' : 'Reseñas'}
+                        {t === 'about' ? 'Sobre mí' : t === 'services' ? `Servicios (${profServices.length})` : t === 'schedule' ? 'Agenda' : t === 'feed' ? 'Vídeos' : 'Reseñas'}
                     </button>
                 ))}
             </div>
@@ -500,8 +549,22 @@ export default function TrainerPublicProfile() {
                     </div>
                 )}
 
-                {/* ── SCHEDULE TAB (RESERVAS) ─────────────────────────── */}
+                {/* ── SCHEDULE TAB (AGENDA / BOOKING CALENDAR) ─────── */}
                 {tab === 'schedule' && (
+                    <div className="space-y-6">
+                        <PublicBookingCalendar
+                            key={preSelectedServiceId ?? 'default'}
+                            professionalId={id}
+                            services={profServices}
+                            availability={availability}
+                            currentUser={currentUser}
+                            defaultServiceId={preSelectedServiceId ?? undefined}
+                        />
+                    </div>
+                )}
+
+                {/* ── SCHEDULE TAB OLD (CLASES GIMNASIO) — LEGACY ─── */}
+                {false && tab === 'schedule' && (
                     <div className="space-y-6">
                         {/* Header with View Toggle and Date Selection */}
                         <div className="bg-white/5 p-4 md:p-6 rounded-3xl border border-white/5 shadow-xl flex flex-col gap-4">
@@ -707,7 +770,7 @@ export default function TrainerPublicProfile() {
                 {/* ── FEED TAB (VIDEOS) ───────────────────────────────── */}
                 {tab === 'feed' && (
                     <div className="space-y-6">
-                        {isMember || isOwner ? (
+                        {isClient || isOwner ? (
                             <div className="space-y-6 max-w-2xl">
                                 {posts.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -724,7 +787,7 @@ export default function TrainerPublicProfile() {
                                             centerId={id}
                                             isAdmin={isOwner}
                                             currentUserId={currentUser?.id}
-                                            isMember={isMember || isOwner}
+                                            isMember={isClient || isOwner}
                                         />
                                     ))
                                 )}
@@ -734,58 +797,86 @@ export default function TrainerPublicProfile() {
                                 <div className="w-16 h-16 rounded-full bg-brand-red/10 flex items-center justify-center mb-2 shadow-glow border border-brand-red/20">
                                     <Lock className="w-6 h-6 text-brand-red" />
                                 </div>
-                                <h3 className="font-heading font-black italic uppercase text-xl text-white">Contenido Exclusivo para Alumnos</h3>
+                                <h3 className="font-heading font-black italic uppercase text-xl text-white">Contenido exclusivo para clientes</h3>
                                 <p className="text-xs text-gray-400 font-medium max-w-sm mt-1 leading-relaxed">
-                                    Este profesional comparte rutinas en vídeo, consejos de salud y contenido exclusivo con sus alumnos y pacientes activos.
+                                    Este profesional comparte vídeos, rutinas y consejos exclusivos solo con sus clientes y pacientes con reservas activas.
                                 </p>
                                 <button
-                                    onClick={() => setTab('plans')}
+                                    onClick={() => setTab('schedule')}
                                     className="mt-4 px-8 py-3 bg-brand-red text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-colors shadow-lg flex items-center gap-2"
                                 >
-                                    Ver Planes y Servicios
+                                    Reservar cita
                                 </button>
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* ── PLANS TAB ──────────────────────────────────────── */}
-                {tab === 'plans' && (
-                    <div className="space-y-4">
-                        {plans.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-12 gap-3">
-                                <Zap className="w-10 h-10 text-gray-700" />
-                                <p className="text-gray-500 text-sm">Sin planes publicados aún</p>
+                {/* ── SERVICES TAB ───────────────────────────────────── */}
+                {tab === 'services' && (
+                    <div className="space-y-6">
+                        {bookingSuccess && (
+                            <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-4 rounded-2xl text-sm font-bold text-center">
+                                🎉 ¡Solicitud enviada! El profesional la revisará y recibirás una notificación.
                             </div>
-                        ) : plans.map((p: any) => (
-                            <div key={p.id} className="bg-white/3 border border-white/8 rounded-2xl p-5 hover:border-brand-red/30 transition-all">
-                                <div className="flex items-start justify-between gap-4 mb-3">
-                                    <div>
-                                        <h4 className="text-white font-black text-lg">{p.name}</h4>
-                                        {p.description && <p className="text-gray-400 text-sm mt-0.5">{p.description}</p>}
+                        )}
+
+                        {/* Availability summary */}
+                        {availability.length > 0 && (
+                            <div className="bg-white/3 border border-white/8 rounded-2xl p-4">
+                                <h4 className="text-xs font-black uppercase tracking-widest text-gray-500 mb-3">Disponibilidad semanal</h4>
+                                <div className="flex flex-wrap gap-2">
+                                    {['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map((d, i) => {
+                                        const slot = availability.find((a: any) => a.day_of_week === i)
+                                        return slot ? (
+                                            <div key={i} className="flex flex-col items-center px-3 py-2 bg-brand-red/8 border border-brand-red/20 rounded-xl">
+                                                <span className="text-[9px] font-black uppercase tracking-wider text-brand-red">{d}</span>
+                                                <span className="text-white text-xs font-bold mt-0.5">{slot.start_time?.slice(0,5)}–{slot.end_time?.slice(0,5)}</span>
+                                            </div>
+                                        ) : (
+                                            <div key={i} className="flex flex-col items-center px-3 py-2 bg-white/2 border border-white/5 rounded-xl opacity-30">
+                                                <span className="text-[9px] font-black uppercase tracking-wider text-gray-500">{d}</span>
+                                                <span className="text-gray-600 text-xs font-bold mt-0.5">—</span>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Services list */}
+                        {profServices.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-white/8 rounded-3xl">
+                                <Zap className="w-10 h-10 text-gray-700" />
+                                <p className="text-gray-500 text-sm">Sin servicios publicados aún</p>
+                            </div>
+                        ) : profServices.map((s: any) => (
+                            <div key={s.id} className="bg-white/3 border border-white/8 hover:border-brand-red/30 rounded-2xl p-5 transition-all">
+                                <div className="flex items-start justify-between gap-4 mb-4">
+                                    <div className="flex-1 min-w-0">
+                                        <h4 className="text-white font-black text-lg">{s.name}</h4>
+                                        {s.description && <p className="text-gray-400 text-sm mt-0.5">{s.description}</p>}
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            <span className="flex items-center gap-1 text-xs text-gray-500"><Clock className="w-3 h-3" /> {s.duration_minutes} min</span>
+                                            {(s.modalities || []).map((m: string) => {
+                                                const mod = SERVICE_MODALITIES.find(x => x.key === m)
+                                                return <span key={m} className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-gray-400 font-bold">{mod?.icon} {mod?.label}</span>
+                                            })}
+                                        </div>
                                     </div>
                                     <div className="text-right flex-shrink-0">
-                                        <p className="text-brand-red font-black text-2xl">€{p.price}</p>
-                                        <p className="text-gray-600 text-xs">/{p.duration_type === 'monthly' ? 'mes' : p.duration_type === 'session' ? 'sesión' : p.duration_type || 'mes'}</p>
+                                        <p className="text-brand-red font-black text-2xl">€{Number(s.price).toFixed(2)}</p>
+                                        <p className="text-gray-600 text-xs">por sesión</p>
                                     </div>
                                 </div>
-                                {p.features && p.features.length > 0 && (
-                                    <ul className="space-y-1 mb-4">
-                                        {(Array.isArray(p.features) ? p.features : [p.features]).map((f: string, i: number) => (
-                                            <li key={i} className="flex items-center gap-2 text-xs text-gray-400">
-                                                <Check className="w-3.5 h-3.5 text-brand-red flex-shrink-0" /> {f}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                                <button 
-                                    onClick={() => handleContratar(p)}
-                                    disabled={subscribingPlanId === p.id}
-                                    className="w-full bg-brand-red text-white py-2.5 rounded-xl font-black text-sm hover:bg-red-600 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
-                                >
-                                    {subscribingPlanId === p.id ? (
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                    ) : 'Contratar'}
+
+                                <button onClick={() => {
+                                    if (!currentUser) { router.push('/auth'); return }
+                                    setPreSelectedServiceId(s.id)
+                                    setTab('schedule')
+                                }}
+                                    className="w-full bg-brand-red text-white py-2.5 rounded-xl font-black text-sm hover:bg-red-600 transition-colors flex items-center justify-center gap-2">
+                                    <Calendar className="w-4 h-4" /> Ver disponibilidad y reservar
                                 </button>
                             </div>
                         ))}
@@ -793,48 +884,68 @@ export default function TrainerPublicProfile() {
                 )}
 
                 {/* ── REVIEWS TAB ────────────────────────────────────── */}
-                {tab === 'reviews' && (
-                    <div className="space-y-4">
-                        {avgRating && (
-                            <div className="flex items-center gap-4 p-4 bg-white/3 border border-white/8 rounded-2xl">
-                                <div className="text-center">
-                                    <p className="text-5xl font-black text-white">{avgRating}</p>
-                                    <div className="flex gap-0.5 mt-1 justify-center">
-                                        {[1,2,3,4,5].map(i => (
-                                            <Star key={i} className={`w-4 h-4 ${Number(avgRating) >= i ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} />
-                                        ))}
-                                    </div>
-                                    <p className="text-gray-500 text-xs mt-1">{reviews.length} reseña{reviews.length !== 1 ? 's' : ''}</p>
-                                </div>
-                            </div>
-                        )}
-                        {reviews.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-12 gap-3">
-                                <Star className="w-10 h-10 text-gray-700" />
-                                <p className="text-gray-500 text-sm">Sin reseñas aún</p>
-                            </div>
-                        ) : reviews.map((r: any) => (
-                            <div key={r.id} className="bg-white/3 border border-white/8 rounded-2xl p-4">
-                                <div className="flex items-center gap-3 mb-2">
-                                    {r.profiles?.avatar_url
-                                        ? <img src={r.profiles.avatar_url} className="w-8 h-8 rounded-full object-cover" alt={r.profiles.full_name} />
-                                        : <div className="w-8 h-8 rounded-full bg-brand-red/20 flex items-center justify-center text-brand-red font-black text-xs">{(r.profiles?.full_name || '?')[0]}</div>
-                                    }
-                                    <div className="flex-1">
-                                        <p className="text-white font-bold text-sm">{r.profiles?.full_name || 'Usuario'}</p>
-                                        <div className="flex gap-0.5">
+                {tab === 'reviews' && (() => {
+                    const allReviews = [
+                        ...serviceReviews.map((r: any) => ({
+                            id: r.id, rating: r.rating, review_text: r.review_text,
+                            created_at: r.created_at, profiles: r.client,
+                            source: 'service'
+                        })),
+                        ...reviews.map((r: any) => ({ ...r, source: 'center' }))
+                    ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+                    const avgAll = allReviews.length > 0
+                        ? (allReviews.reduce((s, r) => s + (r.rating || 0), 0) / allReviews.length).toFixed(1)
+                        : null
+
+                    return (
+                        <div className="space-y-4">
+                            {avgAll && (
+                                <div className="flex items-center gap-4 p-4 bg-white/3 border border-white/8 rounded-2xl">
+                                    <div className="text-center">
+                                        <p className="text-5xl font-black text-white">{avgAll}</p>
+                                        <div className="flex gap-0.5 mt-1 justify-center">
                                             {[1,2,3,4,5].map(i => (
-                                                <Star key={i} className={`w-3 h-3 ${r.rating >= i ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} />
+                                                <Star key={i} className={`w-4 h-4 ${Number(avgAll) >= i ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} />
                                             ))}
                                         </div>
+                                        <p className="text-gray-500 text-xs mt-1">{allReviews.length} reseña{allReviews.length !== 1 ? 's' : ''}</p>
                                     </div>
-                                    <p className="text-gray-600 text-xs">{new Date(r.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</p>
                                 </div>
-                                {r.review_text && <p className="text-gray-300 text-sm">{r.review_text}</p>}
-                            </div>
-                        ))}
-                    </div>
-                )}
+                            )}
+                            {allReviews.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center py-12 gap-3">
+                                    <Star className="w-10 h-10 text-gray-700" />
+                                    <p className="text-gray-500 text-sm">Sin reseñas aún</p>
+                                </div>
+                            ) : allReviews.map((r: any) => (
+                                <div key={r.id} className="bg-white/3 border border-white/8 rounded-2xl p-4">
+                                    <div className="flex items-center gap-3 mb-2">
+                                        {r.profiles?.avatar_url
+                                            ? <img src={r.profiles.avatar_url} className="w-8 h-8 rounded-full object-cover" alt={r.profiles.full_name} />
+                                            : <div className="w-8 h-8 rounded-full bg-brand-red/20 flex items-center justify-center text-brand-red font-black text-xs">{(r.profiles?.full_name || '?')[0]}</div>
+                                        }
+                                        <div className="flex-1">
+                                            <p className="text-white font-bold text-sm">{r.profiles?.full_name || 'Usuario'}</p>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex gap-0.5">
+                                                    {[1,2,3,4,5].map(i => (
+                                                        <Star key={i} className={`w-3 h-3 ${r.rating >= i ? 'text-yellow-400 fill-yellow-400' : 'text-gray-600'}`} />
+                                                    ))}
+                                                </div>
+                                                {r.source === 'service' && (
+                                                    <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-brand-red/10 text-brand-red font-bold">Servicio verificado</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <p className="text-gray-600 text-xs">{new Date(r.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</p>
+                                    </div>
+                                    {r.review_text && <p className="text-gray-300 text-sm">{r.review_text}</p>}
+                                </div>
+                            ))}
+                        </div>
+                    )
+                })()}
             </div>
         </div>
     </div>

@@ -44,7 +44,41 @@ export async function POST(req: Request) {
                 const priceId = lineItems.data[0]?.price?.id;
                 const organizationId = session.metadata?.organizationId;
 
-                if (session.metadata?.type === 'store_purchase') {
+                if (session.metadata?.type === 'service_booking') {
+                    const { bookingId, organizationId: orgId } = session.metadata
+
+                    // Mark booking as paid
+                    const { error: bookingErr } = await supabase
+                        .from('service_bookings')
+                        .update({ status: 'paid', stripe_payment_intent_id: session.payment_intent as string })
+                        .eq('id', bookingId)
+                        .eq('status', 'accepted')
+
+                    if (bookingErr) {
+                        console.error('Error updating service_booking to paid:', bookingErr)
+                    } else {
+                        // Notify professional
+                        const { data: booking } = await supabase
+                            .from('service_bookings')
+                            .select('client_id, service_name, organization:organization_id(owner_id)')
+                            .eq('id', bookingId)
+                            .single()
+
+                        if (booking) {
+                            const ownerIdRaw = (booking.organization as any)?.owner_id
+                            if (ownerIdRaw) {
+                                await createNotification({
+                                    userId: ownerIdRaw,
+                                    type: 'booking_paid',
+                                    title: 'Pago recibido',
+                                    content: `El cliente ha pagado la sesión de ${booking.service_name}. Ya puedes confirmar el servicio cuando lo realices.`,
+                                    link: `/dashboard/gyms/${orgId}/bookings`,
+                                })
+                            }
+                        }
+                        console.log(`Service booking ${bookingId} marked as paid`)
+                    }
+                } else if (session.metadata?.type === 'store_purchase') {
                     const { productId, centerId, userId, memberId } = session.metadata;
 
                     // 1. Create Sale Record (Admin Client)

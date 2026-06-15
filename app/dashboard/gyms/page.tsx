@@ -8,6 +8,7 @@ import clsx from "clsx";
 import { useTheme } from "../../ThemeContext";
 import { getUserOrganizations, createOrganization, searchOrganizations, deleteOrganization, leaveOrganization, getNearbyOrganizations, checkIsAdmin } from "./actions";
 import B2BShareCard from "./B2BShareCard";
+import { isProfessional, PROFESSIONAL_TYPES, CENTER_TYPES, getTypeLabel, getTypeIcon } from "@/lib/professional-types";
 
 export default function CenterListPage() {
     return (
@@ -19,6 +20,62 @@ export default function CenterListPage() {
             <CenterListPageContent />
         </Suspense>
     );
+}
+
+function ProTypeFilter({ proTypeFilter, setProTypeFilter }: {
+    proTypeFilter: string | null
+    setProTypeFilter: (v: string | null) => void
+}) {
+    const [open, setOpen] = useState(false)
+    const selected = proTypeFilter ? PROFESSIONAL_TYPES[proTypeFilter] : null
+
+    return (
+        <div className="flex items-center gap-2 flex-wrap">
+            {/* Always-visible: TODOS + active filter chip */}
+            <button
+                onClick={() => { setProTypeFilter(null); setOpen(false) }}
+                className={`px-3.5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider transition-all ${!proTypeFilter ? 'bg-brand-red text-white shadow-[0_0_12px_rgba(220,38,38,0.4)]' : 'bg-white/5 text-gray-400 hover:bg-white/10'}`}
+            >
+                Todos
+            </button>
+
+            {selected && (
+                <button
+                    onClick={() => setProTypeFilter(null)}
+                    className="px-3.5 py-1.5 rounded-full text-[10px] font-bold bg-brand-red text-white flex items-center gap-1.5 shadow-[0_0_12px_rgba(220,38,38,0.4)]"
+                >
+                    <span>{selected.icon}</span>
+                    {selected.label}
+                    <span className="ml-0.5 opacity-70">✕</span>
+                </button>
+            )}
+
+            {/* Toggle button */}
+            <button
+                onClick={() => setOpen(o => !o)}
+                className={`px-3.5 py-1.5 rounded-full text-[10px] font-bold flex items-center gap-1.5 transition-all border ${open ? 'bg-white/10 border-white/20 text-white' : 'bg-white/5 border-white/8 text-gray-400 hover:bg-white/10 hover:text-white'}`}
+            >
+                {open ? 'Ocultar' : 'Ver especialidades'}
+                <span className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`}>▾</span>
+            </button>
+
+            {/* Expandable grid */}
+            {open && (
+                <div className="w-full grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 mt-1 animate-in fade-in slide-in-from-top-2 duration-200">
+                    {Object.entries(PROFESSIONAL_TYPES).map(([key, { label, icon }]) => (
+                        <button
+                            key={key}
+                            onClick={() => { setProTypeFilter(proTypeFilter === key ? null : key); setOpen(false) }}
+                            className={`px-3 py-2 rounded-xl text-[11px] font-bold transition-all flex items-center gap-2 text-left ${proTypeFilter === key ? 'bg-brand-red text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white'}`}
+                        >
+                            <span className="text-base leading-none shrink-0">{icon}</span>
+                            <span className="truncate">{label}</span>
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
 }
 
 function CenterListPageContent() {
@@ -33,6 +90,10 @@ function CenterListPageContent() {
     const { theme } = useTheme();
     const searchParams = useSearchParams();
     const filterType = searchParams.get('type');
+    const isProTab = filterType === 'personal_trainer';
+
+    // Professional sub-filter
+    const [proTypeFilter, setProTypeFilter] = useState<string | null>(null);
 
     // Search State
     const [searchTerm, setSearchTerm] = useState("");
@@ -48,7 +109,7 @@ function CenterListPageContent() {
     const [isCapturingLoc, setIsCapturingLoc] = useState(false);
     const [fieldValues, setFieldValues] = useState({
         name: '', city: '', country: '', address: '', zip_code: '',
-        type: filterType === 'personal_trainer' ? 'personal_trainer' : 'cross_training',
+        type: isProTab ? 'personal_trainer' : 'cross_training',
     });
 
 
@@ -116,10 +177,10 @@ function CenterListPageContent() {
             if (searchTerm.length >= 2) {
                 setIsSearching(true);
                 const results = await searchOrganizations(searchTerm);
-                const filtered = results.filter(o => 
-                    filterType === 'personal_trainer'
-                        ? o.center_type === 'personal_trainer'
-                        : o.center_type !== 'personal_trainer'
+                const filtered = results.filter(o =>
+                    isProTab
+                        ? isProfessional(o.center_type) && (!proTypeFilter || o.center_type === proTypeFilter)
+                        : !isProfessional(o.center_type)
                 );
                 setSearchResults(filtered);
                 setIsSearching(false);
@@ -265,28 +326,40 @@ function CenterListPageContent() {
                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                     <div>
                         <h1 className={`text-3xl font-heading font-black italic uppercase ${textHeading}`}>
-                            {filterType === 'personal_trainer' ? 'Profesionales' : 'Centros'}
+                            {isProTab ? (proTypeFilter ? getTypeLabel(proTypeFilter) : 'Profesionales') : 'Centros'}
                         </h1>
                         <p className={textMuted}>
-                            {filterType === 'personal_trainer'
+                            {isProTab
                                 ? 'Gestiona tus clientes o descubre nuevos profesionales del sector.'
                                 : 'Gestiona tus centros o explora nuevos campos de batalla cercanos.'}
                         </p>
                     </div>
 
-                    <div className="flex bg-black/20 p-1 rounded-xl border border-white/5 w-fit mb-6">
-                        <Link
-                            href="/dashboard/gyms"
-                            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${!filterType ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}
-                        >
-                            Centros Deportivos
-                        </Link>
-                        <Link
-                            href="/dashboard/gyms?type=personal_trainer"
-                            className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${filterType === 'personal_trainer' ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}
-                        >
-                            Profesionales
-                        </Link>
+                    <div className="space-y-3">
+                        <div className="flex bg-black/20 p-1 rounded-xl border border-white/5 w-fit">
+                            <Link
+                                href="/dashboard/gyms"
+                                onClick={() => setProTypeFilter(null)}
+                                className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${!isProTab ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                            >
+                                Centros
+                            </Link>
+                            <Link
+                                href="/dashboard/gyms?type=personal_trainer"
+                                onClick={() => setProTypeFilter(null)}
+                                className={`px-4 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${isProTab ? 'bg-white text-black shadow-lg' : 'text-gray-500 hover:text-white'}`}
+                            >
+                                Profesionales
+                            </Link>
+                        </div>
+
+                        {/* Professional type filter — collapsed by default */}
+                        {isProTab && (
+                            <ProTypeFilter
+                                proTypeFilter={proTypeFilter}
+                                setProTypeFilter={setProTypeFilter}
+                            />
+                        )}
                     </div>
 
                     <div className="flex items-center gap-4 w-full md:w-auto">
@@ -350,14 +423,14 @@ function CenterListPageContent() {
                                         <span className="bg-brand-red transition-colors text-white px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest">Paso {step} de 3</span>
                                     </div>
                                     <h2 className={`text-2xl font-black italic uppercase italic tracking-tight ${textHeading}`}>
-                                        {step === 1 && (filterType === 'personal_trainer' ? "Identidad Profesional" : "Identidad del Centro")}
-                                        {step === 2 && (filterType === 'personal_trainer' ? "Zona de Operaciones" : "Ubicación e Impacto")}
-                                        {step === 3 && (filterType === 'personal_trainer' ? "Tu Plan Profesional" : "Selecciona tu Arsenal")}
+                                        {step === 1 && (isProTab ? "Identidad Profesional" : "Identidad del Centro")}
+                                        {step === 2 && (isProTab ? "Zona de Operaciones" : "Ubicación e Impacto")}
+                                        {step === 3 && (isProTab ? "Tu Plan Profesional" : "Selecciona tu Arsenal")}
                                     </h2>
                                     <p className={textMuted}>
-                                        {step === 1 && (filterType === 'personal_trainer' ? "Define tu marca personal y especialidad." : "Cuéntanos sobre tu marca y visión.")}
-                                        {step === 2 && (filterType === 'personal_trainer' ? "¿Dónde entrenas a tus alumnos?" : "¿Dónde te encontrarán tus futuros atletas?")}
-                                        {step === 3 && (filterType === 'personal_trainer' ? "Elige las herramientas que necesitas." : "Elegir el plan adecuado para el tamaño de tu centro.")}
+                                        {step === 1 && (isProTab ? "Define tu marca personal y especialidad." : "Cuéntanos sobre tu marca y visión.")}
+                                        {step === 2 && (isProTab ? "¿Dónde entrenas a tus alumnos?" : "¿Dónde te encontrarán tus futuros atletas?")}
+                                        {step === 3 && (isProTab ? "Elige las herramientas que necesitas." : "Elegir el plan adecuado para el tamaño de tu centro.")}
                                     </p>
                                 </div>
 
@@ -368,38 +441,35 @@ function CenterListPageContent() {
                                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                                             <div>
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
-                                                    {filterType === 'personal_trainer' ? 'Marca Personal o Nombre Profesional' : 'Nombre del Campo de Batalla'}
+                                                    {isProTab ? 'Marca Personal o Nombre Profesional' : 'Nombre del Campo de Batalla'}
                                                 </label>
-                                                <input name="name" required placeholder={filterType === 'personal_trainer' ? "e.g. Coach David Elite" : "e.g. Iron Forge Cross Training"} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} onChange={(e) => setFieldValues(p => ({ ...p, name: e.target.value }))} />
+                                                <input name="name" required placeholder={isProTab ? "e.g. Coach David Elite" : "e.g. Iron Forge Cross Training"} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} onChange={(e) => setFieldValues(p => ({ ...p, name: e.target.value }))} />
                                             </div>
                                             <div>
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
-                                                    {filterType === 'personal_trainer' ? 'Tu especialidad (Bio)' : 'Manifiesto / Bio'}
+                                                    {isProTab ? 'Tu especialidad (Bio)' : 'Manifiesto / Bio'}
                                                 </label>
-                                                <textarea name="bio" placeholder={filterType === 'personal_trainer' ? "Cuéntanos en qué te especializas (Fisioterapia, Nutrición, Psicología, Entrenamiento...)" : "Describe la esencia de tu centro..."} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 h-20 resize-none ${bgInput}`} />
+                                                <textarea name="bio" placeholder={isProTab ? "Cuéntanos en qué te especializas (Fisioterapia, Nutrición, Psicología, Entrenamiento...)" : "Describe la esencia de tu centro..."} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 h-20 resize-none ${bgInput}`} />
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Tipo de Perfil</label>
-                                                    <select name="type" defaultValue={filterType === 'personal_trainer' ? 'personal_trainer' : 'cross_training'} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 appearance-none ${bgInput}`} onChange={(e) => setFieldValues(p => ({ ...p, type: e.target.value }))}>
-                                                        {filterType === 'personal_trainer' ? (
-                                                            <option value="personal_trainer">Perfil Profesional</option>
+                                                    <select name="type" defaultValue={isProTab ? 'personal_trainer' : 'cross_training'} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 appearance-none ${bgInput}`} onChange={(e) => setFieldValues(p => ({ ...p, type: e.target.value }))}>
+                                                        {isProTab ? (
+                                                            Object.entries(PROFESSIONAL_TYPES).map(([key, { label, icon }]) => (
+                                                                <option key={key} value={key}>{icon} {label}</option>
+                                                            ))
                                                         ) : (
-                                                            <>
-                                                                <option value="cross_training">Box de Cross Training</option>
-                                                                <option value="gym">Gimnasio Comercial</option>
-                                                                <option value="studio">Estudio Personal</option>
-                                                                <option value="personal_trainer">Entrenador Personal</option>
-                                                                <option value="club">Club Deportivo</option>
-                                                                <option value="other">Otro</option>
-                                                            </>
+                                                            Object.entries(CENTER_TYPES).map(([key, { label, icon }]) => (
+                                                                <option key={key} value={key}>{icon} {label}</option>
+                                                            ))
                                                         )}
                                                     </select>
                                                 </div>
                                                 <div className="grid grid-cols-2 gap-2">
                                                     <div>
                                                         <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
-                                                            {filterType === 'personal_trainer' ? 'Foto Perfil' : 'Logo'}
+                                                            {isProTab ? 'Foto Perfil' : 'Logo'}
                                                         </label>
                                                         <div className={`relative group w-full h-14 mt-1 border border-dashed rounded-xl flex items-center justify-center cursor-pointer hover:border-brand-red transition-colors ${bgInput}`}>
                                                             <Plus className="w-4 h-4 text-gray-500 group-hover:text-brand-red" />
@@ -428,9 +498,9 @@ function CenterListPageContent() {
                                         <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                                             <div>
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
-                                                    {filterType === 'personal_trainer' ? 'Gimnasio Base / Dirección' : 'Dirección Física'}
+                                                    {isProTab ? 'Gimnasio Base / Dirección' : 'Dirección Física'}
                                                 </label>
-                                                <input name="address" required placeholder={filterType === 'personal_trainer' ? "Donde realizas tus entrenamientos" : "Calle Principal 123"} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} onChange={(e) => setFieldValues(p => ({ ...p, address: e.target.value }))} />
+                                                <input name="address" required placeholder={isProTab ? "Donde realizas tus entrenamientos" : "Calle Principal 123"} className={`w-full rounded-xl p-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} onChange={(e) => setFieldValues(p => ({ ...p, address: e.target.value }))} />
                                             </div>
                                             <div className="grid grid-cols-3 gap-4">
                                                 <div className="col-span-1">
@@ -458,13 +528,13 @@ function CenterListPageContent() {
                                                     <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>Instagram</label>
                                                     <div className="relative">
                                                         <Instagram className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-                                                        <input name="instagram" placeholder={filterType === 'personal_trainer' ? "@coach_david" : "@centro_gym"} className={`w-full rounded-xl pl-12 pr-4 py-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
+                                                        <input name="instagram" placeholder={isProTab ? "@coach_david" : "@centro_gym"} className={`w-full rounded-xl pl-12 pr-4 py-3 focus:border-brand-red outline-none border mt-1 ${bgInput}`} />
                                                     </div>
                                                 </div>
                                             </div>
                                             <div>
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
-                                                    {filterType === 'personal_trainer' ? 'Sitio Web / Linktree' : 'Sitio Web'}
+                                                    {isProTab ? 'Sitio Web / Linktree' : 'Sitio Web'}
                                                 </label>
                                                 <div className="relative">
                                                     <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -475,7 +545,7 @@ function CenterListPageContent() {
                                             {/* Geolocation capture */}
                                             <div className="space-y-2">
                                                 <label className={`text-[10px] font-black uppercase tracking-widest ml-1 ${textMuted}`}>
-                                                    {filterType === 'personal_trainer' ? 'Ubicación Principal (Opcional)' : 'Coordenadas GPS (Opcional)'}
+                                                    {isProTab ? 'Ubicación Principal (Opcional)' : 'Coordenadas GPS (Opcional)'}
                                                 </label>
                                                 <button
                                                     type="button"
@@ -484,7 +554,7 @@ function CenterListPageContent() {
                                                     className={`w-full py-3 rounded-xl border-2 border-dashed flex items-center justify-center gap-2 transition-all ${newOrgLat ? 'border-brand-red text-brand-red bg-brand-red/5' : 'border-white/10 text-gray-400 hover:border-brand-red/30 hover:text-brand-red'}`}
                                                 >
                                                     {isCapturingLoc ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
-                                                    {newOrgLat ? `Ubicación Capturada: ${newOrgLat.toFixed(4)}, ${newOrgLng?.toFixed(4)}` : (filterType === 'personal_trainer' ? "Establecer ubicación de entrenamiento" : "Establecer ubicación actual del centro")}
+                                                    {newOrgLat ? `Ubicación Capturada: ${newOrgLat.toFixed(4)}, ${newOrgLng?.toFixed(4)}` : (isProTab ? "Establecer ubicación de entrenamiento" : "Establecer ubicación actual del centro")}
                                                 </button>
                                                 <input type="hidden" name="latitude" value={newOrgLat || ""} />
                                                 <input type="hidden" name="longitude" value={newOrgLng || ""} />
@@ -531,7 +601,7 @@ function CenterListPageContent() {
                                             <input type="hidden" name="address" value={fieldValues.address} />
                                             <input type="hidden" name="zip_code" value={fieldValues.zip_code} />
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                {(filterType === 'personal_trainer' ? PT_PLANS : PLANS).map((p) => (
+                                                {(isProTab ? PT_PLANS : PLANS).map((p) => (
                                                     <div
                                                         key={p.id}
                                                         onClick={() => setSelectedPlan(p.id)}
@@ -599,12 +669,17 @@ function CenterListPageContent() {
                             ) : (
                                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {searchResults.map((org) => (
-                                        <Link key={org.id} href={org.center_type === 'personal_trainer' ? `/trainer/${org.id}` : `/gym/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
+                                                        <Link key={org.id} href={isProfessional(org.center_type) ? `/trainer/${org.id}` : `/gym/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
                                             <div className="h-32 bg-gradient-to-br from-gray-800 to-black relative">
                                                 {org.cover_photo_url ? (
                                                     <img src={org.cover_photo_url} alt={org.name} className="w-full h-full object-cover opacity-50" />
                                                 ) : (
                                                     <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-20 grayscale"></div>
+                                                )}
+                                                {isProfessional(org.center_type) && (
+                                                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-black text-white border border-white/10">
+                                                        {getTypeIcon(org.center_type)} {getTypeLabel(org.center_type)}
+                                                    </div>
                                                 )}
                                             </div>
 
@@ -643,20 +718,20 @@ function CenterListPageContent() {
                 {/* My Centers Section */}
                 <div className={searchTerm.length >= 2 ? 'opacity-50 hover:opacity-100 transition-opacity' : ''}>
                     <div className="flex items-center gap-2 mb-6">
-                        {filterType === 'personal_trainer' ? <User className={`w-4 h-4 ${textMuted}`} /> : <Building2 className={`w-4 h-4 ${textMuted}`} />}
+                        {isProTab ? <User className={`w-4 h-4 ${textMuted}`} /> : <Building2 className={`w-4 h-4 ${textMuted}`} />}
                         <h2 className={`text-sm font-black uppercase tracking-widest ${textMuted}`}>
-                            {filterType === 'personal_trainer' ? 'Mis Perfiles Profesionales' : 'Mis Centros'}
+                            {isProTab ? 'Mis Perfiles Profesionales' : 'Mis Centros'}
                         </h2>
                     </div>
 
-                    {orgs.filter(o => filterType === 'personal_trainer' ? o.center_type === 'personal_trainer' : o.center_type !== 'personal_trainer').length === 0 ? (
+                    {orgs.filter(o => isProTab ? isProfessional(o.center_type) && (!proTypeFilter || o.center_type === proTypeFilter) : !isProfessional(o.center_type)).length === 0 ? (
                         <div className={`text-center py-20 border-2 border-dashed rounded-3xl ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-200 bg-gray-50'}`}>
-                            {filterType === 'personal_trainer' ? <User className={`w-16 h-16 mx-auto mb-4 ${textMuted}`} /> : <Building2 className={`w-16 h-16 mx-auto mb-4 ${textMuted}`} />}
+                            {isProTab ? <User className={`w-16 h-16 mx-auto mb-4 ${textMuted}`} /> : <Building2 className={`w-16 h-16 mx-auto mb-4 ${textMuted}`} />}
                             <h3 className={`text-xl font-bold mb-2 ${textHeading}`}>
-                                {filterType === 'personal_trainer' ? '¿Eres un profesional?' : '¿Eres dueño de un centro deportivo?'}
+                                {isProTab ? '¿Eres un profesional?' : '¿Eres dueño de un centro deportivo?'}
                             </h3>
                             <p className={`mb-8 ${textMuted}`}>
-                                {filterType === 'personal_trainer'
+                                {isProTab
                                     ? 'Gestiona a tus clientes de forma profesional y automatiza tu servicio con RIVAL.'
                                     : 'Únete a nosotros y lleva el rendimiento de tus atletas al próximo nivel con RIVAL.'}
                             </p>
@@ -664,12 +739,12 @@ function CenterListPageContent() {
                                 onClick={() => { setShowCreate(true); setStep(1); }}
                                 className="text-brand-red font-bold uppercase tracking-widest hover:text-white transition-colors"
                             >
-                                {filterType === 'personal_trainer' ? 'Empezar ahora' : 'Afiliar ahora'}
+                                {isProTab ? 'Empezar ahora' : 'Afiliar ahora'}
                             </button>
                         </div>
                     ) : (
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {orgs.filter(o => filterType === 'personal_trainer' ? o.center_type === 'personal_trainer' : o.center_type !== 'personal_trainer').map((org) => (
+                            {orgs.filter(o => isProTab ? isProfessional(o.center_type) && (!proTypeFilter || o.center_type === proTypeFilter) : !isProfessional(o.center_type)).map((org) => (
                                 <Link key={org.id} href={`/dashboard/gyms/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
                                     <div className="h-32 bg-gradient-to-br from-gray-800 to-black relative">
                                         {org.cover_photo_url ? (
@@ -736,9 +811,9 @@ function CenterListPageContent() {
                 <div className="space-y-6 pt-8">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            {filterType === 'personal_trainer' ? <User className="w-4 h-4 text-brand-red" /> : <MapPin className="w-4 h-4 text-brand-red" />}
+                            {isProTab ? <User className="w-4 h-4 text-brand-red" /> : <MapPin className="w-4 h-4 text-brand-red" />}
                             <h2 className={`text-sm font-black uppercase tracking-widest ${textHeading}`}>
-                                {filterType === 'personal_trainer' ? 'Profesionales Cercanos' : 'Centros Cercanos'}
+                                {isProTab ? 'Profesionales Cercanos' : 'Centros Cercanos'}
                             </h2>
                         </div>
                         {!userLocation && (
@@ -776,8 +851,8 @@ function CenterListPageContent() {
                         </div>
                     ) : (
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {nearbyOrgs.filter(o => filterType === 'personal_trainer' ? o.center_type === 'personal_trainer' : o.center_type !== 'personal_trainer').map((org) => (
-                                <Link key={org.id} href={org.center_type === 'personal_trainer' ? `/trainer/${org.id}` : `/gym/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
+                            {nearbyOrgs.filter(o => isProTab ? isProfessional(o.center_type) && (!proTypeFilter || o.center_type === proTypeFilter) : !isProfessional(o.center_type)).map((org) => (
+                                <Link key={org.id} href={isProfessional(org.center_type) ? `/trainer/${org.id}` : `/gym/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
                                     <div className="h-32 bg-gradient-to-br from-gray-800 to-black relative">
                                         {org.cover_photo_url ? (
                                             <img src={org.cover_photo_url} alt={org.name} className="w-full h-full object-cover opacity-50" />

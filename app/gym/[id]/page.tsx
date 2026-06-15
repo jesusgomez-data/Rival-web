@@ -2,6 +2,7 @@ import { getCenterPosts, getPublicCenter, checkFollowStatus, getCenterProducts, 
 import PublicCenterProfile from "./PublicCenterProfile";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { isProfessional } from "@/lib/professional-types";
 
 export default async function PublicCenterPage({ 
     params,
@@ -27,7 +28,7 @@ export default async function PublicCenterPage({
         notFound();
     }
 
-    if (org.center_type === 'personal_trainer') {
+    if (isProfessional(org.center_type)) {
         const query = sp ? new URLSearchParams(sp as any).toString() : "";
         redirect(`/trainer/${id}${query ? `?${query}` : ""}`);
     }

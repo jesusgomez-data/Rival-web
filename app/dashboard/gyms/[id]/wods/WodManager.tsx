@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Plus, Minus, Trash2, FileText, Image as ImageIcon, X, Video, ChevronDown, Check, Edit2, Search, Clock, Trophy, Calendar } from "lucide-react";
+import { Plus, Minus, Trash2, FileText, Image as ImageIcon, X, Video, ChevronDown, Check, Edit2, Search, Clock, Trophy, Calendar, Download } from "lucide-react";
 import { createWod, updateWod, addExerciseToCatalog } from "../../wod-actions";
 import { getExercises } from "../../actions";
 import { deletePost } from "../../feed-actions";
@@ -521,6 +521,88 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
         newBlocks[blockIndex].media_urls = currentUrls.filter(url => url !== urlToDelete);
         setBlocks(newBlocks);
     };
+
+    function downloadWod(post: any) {
+        let wod: any;
+        try { wod = JSON.parse(post.content); } catch { wod = { workout: post.content }; }
+
+        const date = new Date(post.scheduled_for || post.created_at)
+            .toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        const centerName = post.post_as_center ? (center?.name || 'Centro') : (post.author?.full_name || 'Coach');
+
+        const lines: string[] = [];
+        const line = (s = '') => lines.push(s);
+
+        line('═'.repeat(60));
+        line(`  ${wod.title || 'ENTRENAMIENTO'}`.toUpperCase());
+        line(`  ${date.toUpperCase()}`);
+        line(`  ${centerName.toUpperCase()}`);
+        line('═'.repeat(60));
+
+        if (wod.warmup) {
+            line();
+            line('── WARM UP ─────────────────────────────────────────────');
+            line(wod.warmup);
+        }
+
+        if (wod.blocks?.length) {
+            wod.blocks.forEach((block: WodBlock, idx: number) => {
+                line();
+                const partLabel = `PARTE ${String.fromCharCode(65 + idx)}: ${(PART_NAMES[block.type] || block.type).toUpperCase()}`;
+                let formatInfo = '';
+                if (block.format && block.format !== 'FREE') {
+                    const cfg = block.config;
+                    if (block.format === 'EMOM')              formatInfo = ` · ${cfg?.minutes || '?'} MINS EMOM`;
+                    else if (block.format === 'AMRAP')        formatInfo = ` · AMRAP ${cfg?.timecap || ''}`;
+                    else if (block.format === 'FOR TIME')     formatInfo = ` · FOR TIME ${cfg?.timecap ? `(CAP: ${cfg.timecap})` : ''}`;
+                    else if (block.format === 'ROUNDS FOR TIME') formatInfo = ` · ${cfg?.rounds || '?'} RDS FOR TIME ${cfg?.timecap ? `(CAP: ${cfg.timecap})` : ''}`;
+                    else if (block.format === 'TABATA')       formatInfo = ` · TABATA ${cfg?.rounds || 8} RDS (${cfg?.work || '20S'}/${cfg?.rest || '10S'})`;
+                    else formatInfo = ` · ${block.format}`;
+                }
+                line(`── ${partLabel}${formatInfo} ${'─'.repeat(Math.max(0, 57 - partLabel.length - formatInfo.length))}`);
+                line();
+
+                if (block.exercises?.length) {
+                    block.exercises.forEach((ex, i) => {
+                        const parts: string[] = [];
+                        if (ex.sets && ex.reps) parts.push(`${ex.sets}x${ex.reps}${ex.repUnit && ex.repUnit !== 'reps' ? ' ' + ex.repUnit : ''}`);
+                        else if (ex.reps)       parts.push(`${ex.reps}${ex.repUnit && ex.repUnit !== 'reps' ? ' ' + ex.repUnit : ' reps'}`);
+                        if (ex.value)           parts.push(`@ ${ex.value} ${ex.weightUnit || 'kg'}`);
+                        const prefix = parts.length ? parts.join(' ') + '  ' : '';
+                        const note = ex.note ? `  (${ex.note})` : '';
+                        lines.push(`  ${i + 1}. ${prefix}${ex.name}${note}`);
+                    });
+                } else if (block.content) {
+                    block.content.split('\n').forEach(l => line(`  ${l}`));
+                }
+            });
+        } else if (wod.workout) {
+            line();
+            line('── WOD ──────────────────────────────────────────────────');
+            wod.workout.split('\n').forEach((l: string) => line(`  ${l}`));
+        }
+
+        if (wod.summary) {
+            line();
+            line('── OBJETIVO / SCORE ─────────────────────────────────────');
+            if (wod.summary.totalTime) line(`  Tiempo estimado: ${wod.summary.totalTime}`);
+            if (wod.summary.scoreType) line(`  Tipo de score:   ${wod.summary.scoreType}`);
+            if (wod.summary.scoreLabel) line(`  Objetivo:        ${wod.summary.scoreLabel}`);
+        }
+
+        line();
+        line('═'.repeat(60));
+        line(`  Generado por RIVAL FIT · rivalfit.app`);
+        line('═'.repeat(60));
+
+        const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `WOD_${(wod.title || 'entrenamiento').replace(/\s+/g, '_')}_${date.replace(/[^a-z0-9]/gi, '_')}.txt`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
 
     return (
         <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
@@ -1169,6 +1251,13 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <div className="flex items-center gap-2 transition-opacity">
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); downloadWod(post); }}
+                                                className="p-2 bg-muted rounded-full text-muted-foreground hover:text-brand-red transition-colors"
+                                                title="Descargar entrenamiento"
+                                            >
+                                                <Download className="w-3.5 h-3.5" />
+                                            </button>
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); handleEdit(post); }}
                                                 className="p-2 bg-muted rounded-full text-muted-foreground hover:text-foreground transition-colors"

@@ -11,8 +11,10 @@ import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import ActivityFeed from "./ActivityFeed";
 import TeamChat from "./TeamChat";
 import TrainerDashboard from "./TrainerDashboard";
+import ProfessionalDashboard from "./ProfessionalDashboard";
 import { checkStaffRole } from "../team-actions";
 import { getCenterDetails, getOrganizationCenters, createCenter, deleteCenter } from "../actions";
+import { isProfessional } from "@/lib/professional-types";
 import { Trash2 } from "lucide-react";
 import { useLanguage } from "@/app/LanguageContext";
 import { translations } from "@/utils/i18n";
@@ -125,13 +127,11 @@ export default function CenterDashboardHome() {
 
     const canViewKPIs = userRole === 'owner' || userRole === 'head_coach';
 
-    if (centerDetails?.center_type === 'personal_trainer') {
+    if (isProfessional(centerDetails?.center_type)) {
         return (
-            <TrainerDashboard
+            <ProfessionalDashboard
                 id={id}
                 centerDetails={centerDetails}
-                metrics={metrics}
-                analytics={analytics}
                 userRole={userRole}
             />
         );

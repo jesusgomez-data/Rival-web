@@ -5,7 +5,8 @@ import { useParams, usePathname } from "next/navigation";
 import {
     LayoutDashboard, Calendar, Users, Shield, Dumbbell,
     Zap, ShoppingBag, Edit, CreditCard, BarChart2,
-    ScanLine, Megaphone, Star, HelpCircle, ChevronRight
+    ScanLine, Megaphone, Star, HelpCircle, ChevronRight,
+    Briefcase, BookOpen
 } from "lucide-react";
 import SupportModal from "../SupportModal";
 import clsx from "clsx";
@@ -32,23 +33,23 @@ export default function SidebarNav({
     const pathname = usePathname();
     const sedeId   = params.sedeId as string;
     const query    = sedeId ? `?centerId=${sedeId}` : "";
-    const isPT     = centerType === 'personal_trainer';
+    const INDIVIDUAL_PRO_TYPES = [
+        'personal_trainer','physiotherapist','nutritionist','psychologist',
+        'doctor','osteopath','massage_therapist','yoga_instructor','pilates_instructor',
+        'coach','dietitian','chiropractor','swimming_coach','boxing_coach',
+        'running_coach','cycling_coach','personal_shopper',
+    ]
+    const isProfessional = centerType ? INDIVIDUAL_PRO_TYPES.includes(centerType) : false
 
-    const sections: NavSection[] = isPT ? [
+    const sections: NavSection[] = isProfessional ? [
         {
-            label: 'Entrenador',
+            label: 'Profesional',
             items: [
                 { name: 'Resumen',       href: `/dashboard/gyms/${id}`,                icon: LayoutDashboard },
                 { name: 'Agenda',        href: `/dashboard/gyms/${id}/schedule`,        icon: Calendar },
-                { name: 'Alumnos',       href: `/dashboard/gyms/${id}/members`,         icon: Users, badge: pendingTrials || null },
-                { name: 'Programación',  href: `/dashboard/gyms/${id}/programming`,     icon: Dumbbell },
-            ]
-        },
-        {
-            label: 'Negocio',
-            items: [
-                { name: 'Tarifas',       href: `/dashboard/gyms/${id}/memberships`,     icon: Star,       adminOnly: true },
-                { name: 'Cobros',        href: `/dashboard/gyms/${id}/store`,           icon: ShoppingBag },
+                { name: 'Clientes',      href: `/dashboard/gyms/${id}/members`,         icon: Users, badge: pendingTrials || null },
+                { name: 'Mis Servicios', href: `/dashboard/gyms/${id}/services`,        icon: Briefcase,  adminOnly: true },
+                { name: 'Reservas',      href: `/dashboard/gyms/${id}/bookings`,        icon: BookOpen,   adminOnly: true },
             ]
         },
         {

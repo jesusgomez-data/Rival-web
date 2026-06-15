@@ -80,6 +80,13 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
         fetchCalendar();
     }, [profile.id, user]);
 
+    const handleDiscardWorkout = async (workout: any) => {
+        if (!user || user.id !== profile.id) return;
+        if (!confirm(`¿Descartar "${workout.title}"? Se eliminará de tu agenda.`)) return;
+        await supabase.from('scheduled_workouts').delete().eq('id', workout.id).eq('user_id', user.id);
+        setScheduledWorkouts(prev => prev.filter(w => w.id !== workout.id));
+    };
+
     const handleSendReminder = async (workout: any) => {
         try {
             const title = "Recordatorio de Entrenamiento ⚡";
@@ -639,6 +646,14 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                                                                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/15 hover:bg-amber-500/20 transition-all active:scale-95"
                                                                                     >
                                                                                         <MessageCircle className="w-3 h-3" /> Recordar
+                                                                                    </button>
+                                                                                )}
+                                                                                {user?.id === profile.id && (
+                                                                                    <button
+                                                                                        onClick={() => handleDiscardWorkout(workout)}
+                                                                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-white/5 text-gray-500 border border-white/5 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/20 transition-all active:scale-95"
+                                                                                    >
+                                                                                        <X className="w-3 h-3" /> Descartar
                                                                                     </button>
                                                                                 )}
                                                                             </div>
