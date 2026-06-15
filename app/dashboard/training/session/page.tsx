@@ -105,6 +105,7 @@ function SessionContent() {
     const lastScrollY = useRef(0);
     const [prAchievements, setPrAchievements] = useState<any[]>([]);
     const [userName, setUserName] = useState<string>("Atleta");
+    const [logMode, setLogMode] = useState<'manual' | 'live'>('manual');
 
     // Video Trimming State
     const [isVideoTrimming, setIsVideoTrimming] = useState(false);
@@ -1144,17 +1145,13 @@ function SessionContent() {
                         else if (mode === 'ocr') defaultTitle = "Simulación OCR & Trail";
                         else if (mode === 'other') defaultTitle = "Entrenamiento Complementario";
 
+                        setWorkoutTitle(defaultTitle);
+                        setSportMode(mode as SportMode);
                         setIsGuided(false);
-                        setPreStartPlan({
-                            id: 'freestyle',
-                            title: defaultTitle,
-                            description: 'Entrenamiento libre sin rutina predefinida. Tú marcas el ritmo y los ejercicios.',
-                            sport: mode as SportType,
-                            difficulty: 'intermediate',
-                            duration_min: 60,
-                            exercises: [],
-                            is_premium: false
-                        });
+                        setLogMode('manual');
+                        setExercises([]);
+                        setBlocks([]);
+                        setPreStartPlan(null);
                     }}
                     onPlanSelect={(plan) => {
                         setIsGuided(true);
@@ -1476,44 +1473,53 @@ function SessionContent() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <div className="text-right hidden sm:block">
-                        <div className="flex items-center gap-2 justify-end mb-0.5">
-                            <input
-                                type="text"
-                                value={isEditingTime ? manualTimeInput : formatTime(displayTime)}
-                                onChange={(e) => handleManualTimeChange(e.target.value)}
-                                onFocus={() => { setManualTimeInput(formatTime(displayTime)); setIsEditingTime(true); }}
-                                onBlur={commitManualTime}
-                                onKeyDown={(e) => e.key === 'Enter' && commitManualTime()}
-                                disabled={!isPaused}
+                    {logMode === 'live' ? (
+                        <>
+                            <div className="text-right hidden sm:block">
+                                <div className="flex items-center gap-2 justify-end mb-0.5">
+                                    <input
+                                        type="text"
+                                        value={isEditingTime ? manualTimeInput : formatTime(displayTime)}
+                                        onChange={(e) => handleManualTimeChange(e.target.value)}
+                                        onFocus={() => { setManualTimeInput(formatTime(displayTime)); setIsEditingTime(true); }}
+                                        onBlur={commitManualTime}
+                                        onKeyDown={(e) => e.key === 'Enter' && commitManualTime()}
+                                        disabled={!isPaused}
+                                        className={clsx(
+                                            "font-mono text-3xl font-black bg-transparent text-right outline-none w-32 transition-colors transition-transform",
+                                            !isPaused ? (timerMode === 'down' ? "text-brand-red scale-110" : themeColor) : "text-white/40 focus:text-white"
+                                        )}
+                                    />
+                                    {targetDuration && timerMode === 'up' && (
+                                        <span className="text-xs text-white/20 font-black font-mono">/ {formatTime(targetDuration * 60)}</span>
+                                    )}
+                                </div>
+                                <p className="text-[8px] text-white/40 font-black uppercase tracking-widest text-right">
+                                    {timerMode === 'down' ? 'TIEMPO RESTANTE' : (isPaused ? "TIEMPO (EDITAR)" : "TIEMPO TRANSCURRIDO")}
+                                </p>
+                            </div>
+                            <button
+                                onClick={toggleTimer}
                                 className={clsx(
-                                    "font-mono text-3xl font-black bg-transparent text-right outline-none w-32 transition-colors transition-transform",
-                                    !isPaused ? (timerMode === 'down' ? "text-brand-red scale-110" : themeColor) : "text-white/40 focus:text-white"
+                                    "p-3 rounded-xl transition-all relative",
+                                    isPaused ? "bg-white/10 text-white" : "bg-white/10 text-white hover:bg-white/20"
                                 )}
-                            />
-                            {targetDuration && timerMode === 'up' && (
-                                <span className="text-xs text-white/20 font-black font-mono">/ {formatTime(targetDuration * 60)}</span>
-                            )}
+                            >
+                                {countdown !== null ? (
+                                    <span className="text-xl font-black text-brand-red animate-ping">{countdown}</span>
+                                ) : isPaused ? (
+                                    <Play className="w-5 h-5 fill-current" />
+                                ) : (
+                                    <Pause className="w-5 h-5 fill-current" />
+                                )}
+                            </button>
+                        </>
+                    ) : (
+                        <div className="bg-white/5 border border-white/10 px-3.5 py-2 rounded-xl flex items-center gap-1.5 shrink-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">✍ MANUAL</span>
                         </div>
-                        <p className="text-[8px] text-white/40 font-black uppercase tracking-widest text-right">
-                            {timerMode === 'down' ? 'TIEMPO RESTANTE' : (isPaused ? "TIEMPO (EDITAR)" : "TIEMPO TRANSCURRIDO")}
-                        </p>
-                    </div>
-                    <button
-                        onClick={toggleTimer}
-                        className={clsx(
-                            "p-3 rounded-xl transition-all relative",
-                            isPaused ? "bg-white/10 text-white" : "bg-white/10 text-white hover:bg-white/20"
-                        )}
-                    >
-                        {countdown !== null ? (
-                            <span className="text-xl font-black text-brand-red animate-ping">{countdown}</span>
-                        ) : isPaused ? (
-                            <Play className="w-5 h-5 fill-current" />
-                        ) : (
-                            <Pause className="w-5 h-5 fill-current" />
-                        )}
-                    </button>
+                    )}
                     <button
                         onClick={() => {
                             setIsPaused(true);
@@ -1534,31 +1540,62 @@ function SessionContent() {
             </header>
 
             <div className="pt-28 px-4 max-w-2xl mx-auto space-y-8">
-                <div className="sm:hidden text-center mb-6">
-                    <div className="flex items-center justify-center gap-2">
-                        <input
-                            type="text"
-                            value={isEditingTime ? manualTimeInput : formatTime(displayTime)}
-                            onChange={(e) => handleManualTimeChange(e.target.value)}
-                            onFocus={() => { setManualTimeInput(formatTime(displayTime)); setIsEditingTime(true); }}
-                            onBlur={commitManualTime}
-                            onKeyDown={(e) => e.key === 'Enter' && commitManualTime()}
-                            disabled={!isPaused}
+                {/* Mode Selector */}
+                <div className="flex justify-center mb-2 animate-in fade-in duration-300">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-1 flex gap-1">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setLogMode('manual');
+                                setIsPaused(true);
+                            }}
                             className={clsx(
-                                "text-6xl font-mono font-black tracking-tighter bg-transparent text-center outline-none w-full",
-                                !isPaused ? (timerMode === 'down' ? 'text-brand-red' : themeColor) : "text-white/40"
+                                "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                logMode === 'manual' ? "bg-brand-red text-white shadow-lg shadow-brand-red/10" : "text-gray-500 hover:text-white"
                             )}
-                        />
-                    </div>
-                    <div className="flex flex-col items-center">
-                        <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em]">
-                            {countdown !== null ? `INICIO EN ${countdown}...` : (timerMode === 'down' ? "Protocolo Activo" : (isPaused ? "Tiempo (Click para Editar)" : "Tiempo Transcurrido"))}
-                        </p>
-                        {targetDuration && (
-                            <p className="text-brand-red text-[8px] font-black uppercase tracking-widest mt-1">Objetivo: {targetDuration} min</p>
-                        )}
+                        >
+                            ✍ Registro Rápido
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setLogMode('live')}
+                            className={clsx(
+                                "px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
+                                logMode === 'live' ? "bg-brand-red text-white shadow-lg shadow-brand-red/10" : "text-gray-500 hover:text-white"
+                            )}
+                        >
+                            ⏱ Cronómetro en Vivo
+                        </button>
                     </div>
                 </div>
+
+                {logMode === 'live' && (
+                    <div className="sm:hidden text-center mb-6 animate-in slide-in-from-top-2 duration-300">
+                        <div className="flex items-center justify-center gap-2">
+                            <input
+                                type="text"
+                                value={isEditingTime ? manualTimeInput : formatTime(displayTime)}
+                                onChange={(e) => handleManualTimeChange(e.target.value)}
+                                onFocus={() => { setManualTimeInput(formatTime(displayTime)); setIsEditingTime(true); }}
+                                onBlur={commitManualTime}
+                                onKeyDown={(e) => e.key === 'Enter' && commitManualTime()}
+                                disabled={!isPaused}
+                                className={clsx(
+                                    "text-6xl font-mono font-black tracking-tighter bg-transparent text-center outline-none w-full",
+                                    !isPaused ? (timerMode === 'down' ? 'text-brand-red' : themeColor) : "text-white/40"
+                                )}
+                            />
+                        </div>
+                        <div className="flex flex-col items-center">
+                            <p className="text-gray-500 text-[10px] font-black uppercase tracking-[0.3em]">
+                                {countdown !== null ? `INICIO EN ${countdown}...` : (timerMode === 'down' ? "Protocolo Activo" : (isPaused ? "Tiempo (Click para Editar)" : "Tiempo Transcurrido"))}
+                            </p>
+                            {targetDuration && (
+                                <p className="text-brand-red text-[8px] font-black uppercase tracking-widest mt-1">Objetivo: {targetDuration} min</p>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {/* Specific Views */}
                 {(sportMode === 'gym' || sportMode === 'calisthenics') && (
@@ -1588,6 +1625,8 @@ function SessionContent() {
                         elevationGain={elevationGain}
                         openSync={() => setShowSyncModal(true)}
                         accuracy={gpsAccuracy}
+                        logMode={logMode}
+                        setTime={setElapsedSeconds}
                     />
                 )}
                 {(sportMode === 'cross_training' || sportMode === 'ocr') && (
@@ -1597,9 +1636,10 @@ function SessionContent() {
                         distance={runDistance}
                         setDistance={updateDistanceManual}
                         isOCR={sportMode === 'ocr'}
-                        isGuided={searchParams.get('mode') === 'recommendation' || searchParams.get('mode') === 'ai-coach' || !!wodId}
+                        isGuided={isGuided}
                         workoutTitle={workoutTitle}
                         setWorkoutTitle={setWorkoutTitle}
+                        elapsedSeconds={elapsedSeconds}
                     />
                 )}
                 {sportMode === 'other' && (
@@ -1880,7 +1920,7 @@ function SessionContent() {
             </div>
 
             {/* Mobile Fixed Controls - Dynamic hide on scroll */}
-            {((sportMode === 'cross_training' || sportMode === 'ocr' || sportMode === 'hybrid' ? blocks.length > 0 : true) || elapsedSeconds > 0) && (
+            {logMode === 'live' && ((sportMode === 'cross_training' || sportMode === 'ocr' || sportMode === 'hybrid' ? blocks.length > 0 : true) || elapsedSeconds > 0) && (
                 <div className={clsx(
                     "sm:hidden fixed bottom-6 inset-x-4 z-[250] bg-[#0a0a0a]/90 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 transition-all duration-500 shadow-2xl",
                     showControls ? "translate-y-0 opacity-100" : "translate-y-[150%] opacity-0"
@@ -2538,7 +2578,9 @@ function RunningView({
     currentZone,
     elevationGain,
     openSync,
-    accuracy
+    accuracy,
+    logMode,
+    setTime
 }: {
     distance: number,
     setDistance: (d: number) => void,
@@ -2555,9 +2597,100 @@ function RunningView({
     currentZone: number,
     elevationGain: number,
     openSync: () => void,
-    accuracy: number | null
+    accuracy: number | null,
+    logMode: 'manual' | 'live',
+    setTime: (t: number) => void
 }) {
     const { theme } = useTheme();
+
+    if (logMode === 'manual') {
+        const kms = distance / 1000;
+        const mins = Math.floor(time / 60);
+        const secs = time % 60;
+
+        return (
+            <div className="space-y-6 animate-in fade-in duration-500 pb-32 max-w-md mx-auto">
+                <div className={clsx(
+                    "rounded-[32px] border p-6 space-y-6",
+                    theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-100 shadow-md"
+                )}>
+                    <div className="text-center border-b border-white/5 pb-4">
+                        <h3 className="text-lg font-black uppercase italic text-white font-heading">Ingresar Combate de Carrera</h3>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Escribe tu distancia y tiempo final</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
+                            <label className="text-[9px] text-gray-500 font-black uppercase tracking-widest block mb-2">Distancia</label>
+                            <div className="flex items-baseline justify-center gap-1.5">
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={kms || ''}
+                                    onChange={(e) => {
+                                        const val = parseFloat(e.target.value) || 0;
+                                        setDistance(val * 1000);
+                                    }}
+                                    placeholder="0.00"
+                                    className="bg-transparent text-3xl font-mono font-black text-center w-24 outline-none text-white focus:text-brand-red [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <span className="text-xs font-black text-gray-500 uppercase">KM</span>
+                            </div>
+                        </div>
+
+                        <div className="bg-white/5 p-4 rounded-2xl border border-white/5 text-center">
+                            <label className="text-[9px] text-gray-500 font-black uppercase tracking-widest block mb-2">Tiempo Total</label>
+                            <div className="flex items-baseline justify-center gap-1">
+                                <input
+                                    type="number"
+                                    min="0"
+                                    value={mins || ''}
+                                    onChange={(e) => {
+                                        const m = parseInt(e.target.value) || 0;
+                                        const s = time % 60;
+                                        setTime(m * 60 + s);
+                                    }}
+                                    placeholder="00"
+                                    className="bg-transparent text-3xl font-mono font-black text-center w-12 outline-none text-white focus:text-brand-red [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <span className="text-gray-600 font-bold">:</span>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    max="59"
+                                    value={secs || ''}
+                                    onChange={(e) => {
+                                        const m = Math.floor(time / 60);
+                                        const s = parseInt(e.target.value) || 0;
+                                        setTime(m * 60 + s);
+                                    }}
+                                    placeholder="00"
+                                    className="bg-transparent text-3xl font-mono font-black text-center w-12 outline-none text-white focus:text-brand-red [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <span className="text-[9px] font-black text-gray-500 uppercase ml-1">Min</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {distance > 0 && time > 0 && (
+                        <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl text-center animate-in zoom-in-95 duration-200">
+                            <p className="text-[9px] text-blue-500 font-black uppercase tracking-widest mb-1">Ritmo Medio Calculado</p>
+                            <p className="text-2xl font-mono font-black text-white">
+                                {(() => {
+                                    const minPerKm = (time / 60) / (distance / 1000);
+                                    const pMin = Math.floor(minPerKm);
+                                    const pSec = Math.floor((minPerKm - pMin) * 60);
+                                    return `${pMin}:${pSec < 10 ? '0' + pSec : pSec}`;
+                                })()}
+                                <span className="text-xs text-gray-500 font-bold uppercase tracking-wider ml-1">/km</span>
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
     const [view, setView] = useState<'stats' | 'zones'>('stats');
 
     // Smooth average pace calculation
@@ -2791,10 +2924,11 @@ function SyncWatchModal({ isOpen, onClose }: { isOpen: boolean, onClose: () => v
 // ── GuidedWODView — clean WOD display for recommendation/plan mode ────────────
 // Replaces the complex editor when a pre-built WOD is loaded.
 // User sees: WOD format + exercises checklist + result entry. That's it.
-function GuidedWODView({ blocks, setBlocks, workoutTitle }: {
+function GuidedWODView({ blocks, setBlocks, workoutTitle, elapsedSeconds }: {
     blocks: WorkoutBlock[];
     setBlocks: (b: WorkoutBlock[]) => void;
     workoutTitle?: string;
+    elapsedSeconds?: number;
 }) {
     const { theme } = useTheme();
     const [checked, setChecked] = useState<Set<string>>(new Set());
@@ -2979,10 +3113,32 @@ function GuidedWODView({ blocks, setBlocks, workoutTitle }: {
             {/* Result entry */}
             <div className={clsx("rounded-3xl border p-5 space-y-4",
                 theme === 'dark' ? "bg-[#111] border-white/10" : "bg-white border-gray-200 shadow-sm")}>
-                <p className={clsx("text-[10px] font-black uppercase tracking-widest",
-                    theme === 'dark' ? "text-gray-500" : "text-gray-400")}>
-                    {isForTime ? '⏱ ¿Cuál fue tu tiempo?' : isAmrap || isEmom ? '🔄 ¿Cuántas rondas completaste?' : '📝 Tu resultado'}
-                </p>
+                <div className="flex justify-between items-center flex-wrap gap-2">
+                    <p className={clsx("text-[10px] font-black uppercase tracking-widest",
+                        theme === 'dark' ? "text-gray-500" : "text-gray-400")}>
+                        {isForTime ? '⏱ ¿Cuál fue tu tiempo?' : isAmrap || isEmom ? '🔄 ¿Cuántas rondas completaste?' : '📝 Tu resultado'}
+                    </p>
+                    {isForTime && elapsedSeconds !== undefined && elapsedSeconds > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                const mins = Math.floor(elapsedSeconds / 60);
+                                const secs = elapsedSeconds % 60;
+                                setResultMin(String(mins));
+                                setResultSec(String(secs).padStart(2, '0'));
+                                // Trigger result update
+                                const timeStr = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+                                const updated = [...blocks];
+                                updated[0] = { ...updated[0], result: { ...updated[0].result, time: timeStr } };
+                                setBlocks(updated);
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-[9px] font-black uppercase tracking-widest transition-colors flex items-center gap-1 shadow-md shadow-orange-600/10 animate-in zoom-in-95 duration-200"
+                        >
+                            <Clock className="w-3.5 h-3.5" />
+                            Usar cronómetro ({Math.floor(elapsedSeconds / 60)}:{(elapsedSeconds % 60) < 10 ? '0' + (elapsedSeconds % 60) : (elapsedSeconds % 60)})
+                        </button>
+                    )}
+                </div>
 
                 {isForTime ? (
                     <div className="flex items-center gap-3">
@@ -3043,7 +3199,7 @@ function GuidedWODView({ blocks, setBlocks, workoutTitle }: {
 // Helper var for mock
 let isPausedGlobal = false;
 
-function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, isGuided, workoutTitle, setWorkoutTitle }: {
+function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, isGuided, workoutTitle, setWorkoutTitle, elapsedSeconds }: {
     blocks: WorkoutBlock[];
     setBlocks: (b: WorkoutBlock[]) => void;
     distance?: number;
@@ -3052,10 +3208,11 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
     isGuided?: boolean;
     workoutTitle?: string;
     setWorkoutTitle?: (t: string) => void;
+    elapsedSeconds?: number;
 }) {
     // ── Guided mode: show simple WOD checklist instead of complex editor ─────
     if (isGuided && blocks.length > 0) {
-        return <GuidedWODView blocks={blocks} setBlocks={setBlocks} workoutTitle={workoutTitle} />;
+        return <GuidedWODView blocks={blocks} setBlocks={setBlocks} workoutTitle={workoutTitle} elapsedSeconds={elapsedSeconds} />;
     }
 
     const { theme } = useTheme();

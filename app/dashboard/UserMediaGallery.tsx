@@ -123,9 +123,30 @@ export default function UserMediaGallery({ userId, limit }: { userId: string; li
     useEffect(() => {
         if (!userId) return;
         getUserMedia(userId).then((data) => {
-            const valid = (data || []).filter((item: any) => {
-                const isJson = !isImageUrl(item.media_url);
-                return item.media_type !== 'class_result' && !isJson;
+            const mapped = (data || []).map((item: any) => {
+                let url = item.media_url;
+                if (url && typeof url === 'string' && (url.trim().startsWith('{') || url.trim().startsWith('['))) {
+                    try {
+                        const parsed = JSON.parse(url.trim());
+                        if (Array.isArray(parsed)) {
+                            if (item.media_type !== 'class_result' && typeof parsed[0] === 'string') {
+                                url = parsed[0];
+                            } else {
+                                url = null;
+                            }
+                        } else {
+                            url = parsed.image || parsed.backgroundImage || parsed.media_url || parsed.mediaUrl || parsed.url || null;
+                        }
+                    } catch (e) {
+                        console.warn("[UserMediaGallery] Error parsing JSON media:", e);
+                        url = null;
+                    }
+                }
+                return { ...item, media_url: url };
+            });
+
+            const valid = mapped.filter((item: any) => {
+                return item.media_type !== 'class_result' && isImageUrl(item.media_url);
             });
             setMediaItems(valid);
             setIsLoading(false);
