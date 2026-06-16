@@ -688,10 +688,16 @@ export async function updatePost(postId: string, newCaption: string, mediaUrl?: 
     if (isAdmin) {
         const adminSupabase = createAdminClient();
         const { error: adminError } = await adminSupabase.from('posts').update(updateData).eq('id', postId);
-        if (adminError) return { error: 'Error al actualizar el post.' };
+        if (adminError) {
+            console.error('[updatePost] Admin DB error:', adminError);
+            return { error: 'Error al actualizar el post.' };
+        }
     } else {
         const { error } = await supabase.from('posts').update(updateData).eq('id', postId).eq('user_id', user.id);
-        if (error) return { error: 'Error al actualizar el post.' };
+        if (error) {
+            console.error('[updatePost] DB error:', error);
+            return { error: 'Error al actualizar el post.' };
+        }
     }
 
     // --- NEW: Sync WOD result if it's a WOD post ---

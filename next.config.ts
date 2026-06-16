@@ -23,7 +23,7 @@ const securityHeaders = [
       "img-src 'self' data: blob: https://images.unsplash.com https://ui-avatars.com https://api.dicebear.com https://ralskslspvskjqqgzbiv.supabase.co https://rivalfit.app https://randomuser.me https://lh3.googleusercontent.com https://*.mzstatic.com https://*.apple.com https://cdn.jsdelivr.net",
       "font-src 'self'",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.groq.com https://api.stripe.com https://api.resend.com https://cdn.jsdelivr.net",
-      "frame-src 'none'",
+      "frame-src 'self' https://www.openstreetmap.org/",
       "frame-ancestors 'none'",
       "media-src 'self' https://*.supabase.co blob: data: https://*.apple.com https://*.itunes.apple.com https://assets.mixkit.co",
       "object-src 'none'",

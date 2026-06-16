@@ -163,6 +163,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
 
     const [coverBlob, setCoverBlob] = useState<Blob | null>(null)
     const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null)
+    const [selectedCoverFrameIdx, setSelectedCoverFrameIdx] = useState<number | null>(null)
     const coverFileRef = useRef<HTMLInputElement>(null)
 
     const containerRef    = useRef<HTMLDivElement>(null)
@@ -256,6 +257,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
             setCoverBlob(file)
             if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl)
             setCoverPreviewUrl(URL.createObjectURL(file))
+            setSelectedCoverFrameIdx(null) // custom upload - no frame selected
         }
     }
 
@@ -1659,17 +1661,37 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                         
                         {/* Horizontal scroll of 12 video frames */}
                         <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 mb-4">
-                            {thumbnails.map((src, i) => {
+                            {thumbnails.length === 0 ? (
+                                <div className="flex items-center justify-center w-full h-20 text-white/20 text-[9px] font-black uppercase tracking-widest animate-pulse">
+                                    Generando fotogramas...
+                                </div>
+                            ) : thumbnails.map((src, i) => {
                                 const frameTime = (i / 12) * videoDuration;
+                                const isSelected = selectedCoverFrameIdx === i;
                                 return (
                                     <button 
                                         key={i} 
                                         type="button"
-                                        onClick={() => captureFrameAsCover(frameTime)} 
+                                        onClick={async () => {
+                                            setSelectedCoverFrameIdx(i);
+                                            await captureFrameAsCover(frameTime);
+                                        }} 
                                         className="flex flex-col items-center gap-1 shrink-0 group focus:outline-none"
                                     >
-                                        <div className="w-14 h-20 rounded-xl overflow-hidden border-2 border-white/10 hover:border-white transition-all">
-                                            <img src={src} className="w-full h-full object-cover grayscale-0 group-hover:scale-105 transition-transform" alt=""/>
+                                        <div className={clsx(
+                                            "w-14 h-20 rounded-xl overflow-hidden border-2 transition-all relative",
+                                            isSelected 
+                                                ? "border-brand-red scale-105 shadow-[0_0_12px_rgba(220,38,38,0.5)]" 
+                                                : "border-white/10 hover:border-white/40"
+                                        )}>
+                                            <img src={src} className="w-full h-full object-cover" alt=""/>
+                                            {isSelected && (
+                                                <div className="absolute inset-0 bg-brand-red/20 flex items-center justify-center">
+                                                    <div className="w-5 h-5 rounded-full bg-brand-red flex items-center justify-center">
+                                                        <span className="text-white text-[10px] font-black">✓</span>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                         <span className="text-[8px] font-bold text-white/40">{frameTime.toFixed(1)}s</span>
                                     </button>

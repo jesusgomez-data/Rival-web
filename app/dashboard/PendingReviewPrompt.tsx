@@ -57,6 +57,24 @@ export default function PendingReviewPrompt() {
         setIsLoading(true);
 
         let finalData: any[] = [];
+        
+        // Include WOD data blocks if they exist
+        if (wodData) {
+            if (wodData.blocks && Array.isArray(wodData.blocks)) {
+                finalData = wodData.blocks.map((b: any) => ({
+                    ...b,
+                    // keep fields
+                }));
+            } else if (wodData.workout) {
+                finalData.push({
+                    type: 'custom',
+                    title: wodData.title || 'WOD',
+                    content: wodData.workout,
+                    exercises: []
+                });
+            }
+        }
+
         if (resultValue) {
             finalData.push({
                 type: 'custom',

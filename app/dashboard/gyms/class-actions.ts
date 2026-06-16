@@ -116,6 +116,9 @@ export async function saveClassResult(classId: string, resultData: any, notes: s
                         if (block.wod_weight) caption += ` (${block.wod_weight}KG)`;
                         caption += '\n';
                     }
+                    if (block.content) {
+                        caption += ` ${block.content.trim()}\n`;
+                    }
                     if (block.exercises && block.exercises.length > 0) {
                         block.exercises.forEach((ex: any) => {
                             if (ex.name) caption += ` - ${ex.name.trim().toUpperCase()}\n`;
@@ -215,13 +218,15 @@ export async function getPendingClassReviews() {
         return cls?.organization_id;
     }).filter(Boolean))];
 
+    const fifteenDaysAgo = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000).toISOString();
+
     const { data: wods } = await supabase
         .from('center_posts')
         .select('organization_id, scheduled_for, content')
         .eq('post_type', 'wod')
         .in('organization_id', orgIds)
-        .gte('scheduled_for', yesterday)
-        .lte('scheduled_for', now.toISOString());
+        .gte('scheduled_for', fifteenDaysAgo)
+        .order('scheduled_for', { ascending: false });
 
     // Attach WOD to class
     return pending.map((p: any) => {
@@ -229,7 +234,14 @@ export async function getPendingClassReviews() {
         if (!cls) return null;
 
         const dateStr = cls.scheduled_time ? cls.scheduled_time.split('T')[0] : '';
-        const wod = wods?.find(w => w.organization_id === cls.organization_id && w.scheduled_for.split('T')[0] === dateStr);
+        
+        // Try to match the WOD on the exact same date first
+        let wod = wods?.find(w => w.organization_id === cls.organization_id && w.scheduled_for.split('T')[0] === dateStr);
+        
+        // Fallback: use the latest WOD of the organization
+        if (!wod) {
+            wod = wods?.find(w => w.organization_id === cls.organization_id);
+        }
 
         const coach = Array.isArray(cls.coach) ? cls.coach[0] : cls.coach;
         const org = Array.isArray(cls.organization) ? cls.organization[0] : cls.organization;
