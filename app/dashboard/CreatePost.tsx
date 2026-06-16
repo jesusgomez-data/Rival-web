@@ -64,9 +64,12 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const [editorVideoFile, setEditorVideoFile] = useState<File | null>(null);
     const [videoDuration, setVideoDuration] = useState(0);
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+    const [coverFile, setCoverFile] = useState<File | null>(null);
+    const [coverPreview, setCoverPreview] = useState<string | null>(null);
     const dragIndexRef = useRef<number | null>(null);
     const trimmerVideoRef = useRef<HTMLVideoElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const coverInputRef = useRef<HTMLInputElement>(null);
     const emojiPickerRef = useRef<HTMLDivElement>(null);
     const supabaseClient = createClient();
 
@@ -145,7 +148,8 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                         preview: previews[0],
                         wodData,
                         scheduledFor,
-                        selectedTrack
+                        selectedTrack,
+                        coverFile: coverFile || null
                     });
                     
                     // Immediate success feedback to the parent to close the modal/form
@@ -307,6 +311,14 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
             setPendingFiles([]);
             setDuration(null);
         }
+    };
+
+    const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (coverPreview) URL.revokeObjectURL(coverPreview);
+        setCoverFile(file);
+        setCoverPreview(URL.createObjectURL(file));
     };
 
     const handleFocusCapture = (e: React.FocusEvent) => {
@@ -638,7 +650,10 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                         onClick={() => {
                                             setPreviews([]);
                                             setPendingFiles([]);
+                                            setCoverFile(null);
+                                            setCoverPreview(null);
                                             if (fileInputRef.current) fileInputRef.current.value = "";
+                                            if (coverInputRef.current) coverInputRef.current.value = "";
                                         }}
                                         className="absolute top-3 right-3 bg-black/60 text-white p-2 rounded-full hover:bg-brand-red transition-all z-10 backdrop-blur-md border border-white/10"
                                     >
@@ -650,17 +665,46 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
 
                         {/* Edit Video Button — shown when first selected file is a video */}
                         {previews.length > 0 && pendingFiles[0]?.type.startsWith('video/') && !isVideoEditing && (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setEditorVideoFile(pendingFiles[0]);
-                                    setIsVideoEditing(true);
-                                }}
-                                className="w-full mt-3 py-3 border border-brand-red/40 rounded-2xl text-brand-red font-black uppercase tracking-widest text-[10px] hover:bg-brand-red/10 transition-all flex items-center justify-center gap-2"
-                            >
-                                <Sparkles className="w-4 h-4" />
-                                Editar Video (filtros, trim, efectos)
-                            </button>
+                            <div className="flex gap-2 mt-3">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setEditorVideoFile(pendingFiles[0]);
+                                        setIsVideoEditing(true);
+                                    }}
+                                    className="flex-1 py-3 border border-brand-red/40 rounded-2xl text-brand-red font-black uppercase tracking-widest text-[10px] hover:bg-brand-red/10 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <Sparkles className="w-4 h-4" />
+                                    Editar Video
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => coverInputRef.current?.click()}
+                                    className="flex-1 py-3 border border-white/10 rounded-2xl text-gray-400 hover:text-white hover:border-white/30 font-black uppercase tracking-widest text-[10px] transition-all flex items-center justify-center gap-2 relative overflow-hidden"
+                                >
+                                    {coverPreview ? (
+                                        <>
+                                            <img src={coverPreview} alt="Cover" className="absolute inset-0 w-full h-full object-cover opacity-30" />
+                                            <span className="relative z-10 flex items-center gap-1.5">
+                                                <ImageIcon className="w-3.5 h-3.5" />
+                                                Cambiar Portada
+                                            </span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ImageIcon className="w-3.5 h-3.5" />
+                                            Portada del Video
+                                        </>
+                                    )}
+                                </button>
+                                <input
+                                    ref={coverInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleCoverChange}
+                                    className="hidden"
+                                />
+                            </div>
                         )}
 
                         {/* Actions Bar */}

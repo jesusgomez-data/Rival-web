@@ -48,6 +48,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
         preview?: string;
         wodData?: any;
         scheduledFor?: string;
+        coverFile?: File | null;
     }) => {
         const id = Math.random().toString(36).substring(7);
         const newTask: UploadTask = {
@@ -113,6 +114,21 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                 setUploads(prev => prev.map(u => u.id === id ? { ...u, progress: 60, status: 'processing' } : u));
             }
 
+            // Upload cover/thumbnail if provided
+            let thumbnailUrl: string | null = null;
+            if (data.coverFile) {
+                const coverExt = data.coverFile.name.split('.').pop() || 'jpg';
+                const userId = data.currentUser?.id || 'anon';
+                const coverFileName = `${userId}/cover_${Date.now()}.${coverExt}`;
+                const { error: coverError } = await supabase.storage
+                    .from('posts')
+                    .upload(coverFileName, data.coverFile, { cacheControl: '3600', upsert: true });
+                if (!coverError) {
+                    const { data: { publicUrl: coverUrl } } = supabase.storage.from('posts').getPublicUrl(coverFileName);
+                    thumbnailUrl = coverUrl;
+                }
+            }
+
             const formData = new FormData();
             if (data.scheduledFor) {
                 formData.append("scheduled_for", data.scheduledFor);
@@ -145,6 +161,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                 } else if (data.file) {
                     formData.append("media", data.file);
                 }
+                if (thumbnailUrl) formData.append("thumbnail_url", thumbnailUrl);
                 res = await createUserPost(formData);
             }
 

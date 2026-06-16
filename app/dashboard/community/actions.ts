@@ -415,6 +415,7 @@ export async function createUserPost(formData: FormData) {
 
         const dateStr = formData.get('scheduled_for') as string;
         const createdAt = dateStr ? new Date(`${dateStr}T${new Date().toISOString().split('T')[1]}`).toISOString() : undefined;
+        const thumbnailUrl = formData.get('thumbnail_url') as string || null;
 
         const { error: insertError } = await supabase
             .from('posts')
@@ -426,7 +427,8 @@ export async function createUserPost(formData: FormData) {
                 created_at: createdAt,
                 music_url: formData.get('music_url') as string || null,
                 music_title: formData.get('music_title') as string || null,
-                music_artist: formData.get('music_artist') as string || null
+                music_artist: formData.get('music_artist') as string || null,
+                thumbnail_url: thumbnailUrl
             })
 
         if (insertError) {

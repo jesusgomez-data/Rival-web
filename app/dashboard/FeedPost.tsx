@@ -389,6 +389,7 @@ interface FeedPostProps {
     music_url?: string | null;
     music_title?: string | null;
     music_artist?: string | null;
+    thumbnail_url?: string | null;
     isMember?: boolean;
     context?: 'following' | 'global';
     isAdminUser?: boolean;
@@ -413,7 +414,7 @@ interface Comment {
 }
 
 const FeedPost = memo(function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId, centerName,
-    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global', isAdminUser, hasActiveDuel, post_type, wod_data, repostOriginalPost
+    workoutData, music_url, music_title, music_artist, thumbnail_url, isOfficial, isMember = false, context = 'global', isAdminUser, hasActiveDuel, post_type, wod_data, repostOriginalPost
 }: FeedPostProps) {
     const { theme } = useTheme();
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -1313,6 +1314,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 className="w-full h-full object-cover"
                                 loop
                                 playsInline
+                                poster={thumbnail_url || undefined}
                                 muted={isMuted || !isVisible || (typeof document !== 'undefined' && document.hidden) || !!music_url}
                                 preload={isNearViewport ? "metadata" : "none"}
                                 onCanPlay={() => {

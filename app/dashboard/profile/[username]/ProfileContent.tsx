@@ -761,6 +761,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                                     caption={post.caption}
                                                     workoutData={post.workouts}
                                                     music_url={post.music_url}
+                                                    thumbnail_url={post.thumbnail_url}
                                                     isAdminUser={isAdminUser}
                                                     currentUserId={user?.id}
                                                     authorId={post.user_id}
