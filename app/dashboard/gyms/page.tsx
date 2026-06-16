@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Plus, Building2, MapPin, Users, User, ArrowRight, ArrowLeft, Loader2, Sun, Moon, Search, Check, Rocket, Zap, Shield, Globe, Instagram, Phone, Trash2, LogOut, Megaphone } from "lucide-react";
 import clsx from "clsx";
 import { useTheme } from "../../ThemeContext";
-import { getUserOrganizations, createOrganization, searchOrganizations, deleteOrganization, leaveOrganization, getNearbyOrganizations, checkIsAdmin } from "./actions";
+import { getUserOrganizations, createOrganization, searchOrganizations, deleteOrganization, leaveOrganization, getNearbyOrganizations, checkIsAdmin, getAllProfessionals } from "./actions";
 import B2BShareCard from "./B2BShareCard";
 import { isProfessional, PROFESSIONAL_TYPES, CENTER_TYPES, getTypeLabel, getTypeIcon } from "@/lib/professional-types";
 
@@ -99,6 +99,9 @@ function CenterListPageContent() {
     const [searchTerm, setSearchTerm] = useState("");
     const [searchResults, setSearchResults] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
+
+    // All professionals directory
+    const [allProfessionals, setAllProfessionals] = useState<any[]>([]);
 
     // Geolocation & Nearby Orgs
     const [nearbyOrgs, setNearbyOrgs] = useState<any[]>([]);
@@ -201,6 +204,13 @@ function CenterListPageContent() {
         setIsAdmin(adminStatus);
         setLoading(false);
     }
+
+    // Load all professionals when on pro tab
+    useEffect(() => {
+        if (isProTab) {
+            getAllProfessionals(proTypeFilter).then(setAllProfessionals);
+        }
+    }, [isProTab, proTypeFilter]);
 
     const requestLocation = (showAlert: boolean = true) => {
         if (!navigator.geolocation) {
@@ -806,6 +816,60 @@ function CenterListPageContent() {
                         </div>
                     )}
                 </div>
+
+                {/* All Professionals Directory — only on pro tab */}
+                {isProTab && searchTerm.length < 2 && (
+                    <div className="space-y-6 pt-4">
+                        <div className="flex items-center gap-2">
+                            <User className={`w-4 h-4 text-brand-red`} />
+                            <h2 className={`text-sm font-black uppercase tracking-widest ${textHeading}`}>
+                                Directorio de Profesionales
+                            </h2>
+                            <span className={`text-[10px] font-bold ${textMuted}`}>({allProfessionals.length})</span>
+                        </div>
+
+                        {allProfessionals.length === 0 ? (
+                            <div className={`text-center py-12 border-2 border-dashed rounded-3xl ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-200 bg-gray-50'}`}>
+                                <p className={textMuted}>No hay profesionales registrados aún.</p>
+                            </div>
+                        ) : (
+                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {allProfessionals.map((org) => (
+                                    <Link key={org.id} href={`/trainer/${org.id}`} className={`group relative rounded-3xl overflow-hidden hover:border-brand-red/30 transition-all shadow-lg hover:shadow-2xl border ${bgCard}`}>
+                                        <div className="h-32 bg-gradient-to-br from-gray-800 to-black relative">
+                                            {org.cover_photo_url ? (
+                                                <img src={org.cover_photo_url} alt={org.name} className="w-full h-full object-cover opacity-60" />
+                                            ) : (
+                                                <div className="absolute inset-0 bg-gradient-to-br from-brand-red/20 to-black opacity-60" />
+                                            )}
+                                            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-black text-white border border-white/10">
+                                                {getTypeIcon(org.center_type)} {getTypeLabel(org.center_type)}
+                                            </div>
+                                        </div>
+                                        <div className="p-6 relative">
+                                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center -mt-14 mb-4 relative z-10 overflow-hidden border-2 ${theme === 'dark' ? 'bg-black border-brand-gray' : 'bg-white border-gray-100'}`}>
+                                                {org.logo_url ? (
+                                                    <img src={org.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <User className="w-8 h-8 text-gray-500" />
+                                                )}
+                                            </div>
+                                            <h3 className={`text-xl font-heading font-black italic uppercase mb-1 group-hover:text-brand-red transition-colors ${textHeading}`}>{org.name}</h3>
+                                            {org.bio && <p className={`text-[11px] mb-3 line-clamp-2 ${textMuted}`}>{org.bio}</p>}
+                                            <div className={`flex items-center gap-2 text-xs mb-4 ${textMuted}`}>
+                                                <MapPin className="w-3 h-3" /> {org.city}, {org.country}
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-brand-red">
+                                                <span>Ver Perfil</span>
+                                                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                            </div>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Nearby Centers Section */}
                 <div className="space-y-6 pt-8">
