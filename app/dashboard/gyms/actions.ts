@@ -557,6 +557,35 @@ export async function getNearbyOrganizations(lat: number, lng: number) {
     return orgsWithDistance;
 }
 
+export async function getAllProfessionals(centerType?: string | null) {
+    const supabase = await createClient();
+
+    const PROFESSIONAL_TYPE_KEYS = ['personal_trainer', 'physiotherapist', 'nutritionist', 'psychologist', 'sports_coach', 'strength_coach', 'yoga_instructor', 'pilates_instructor'];
+
+    let query = supabase
+        .from('organizations')
+        .select('*')
+        .in('center_type', centerType ? [centerType] : PROFESSIONAL_TYPE_KEYS)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+    const { data } = await query;
+    if (!data || data.length === 0) return [];
+
+    const orgIds = data.map((o: any) => o.id);
+    const { data: counts } = await supabase
+        .from('members')
+        .select('center_id')
+        .in('center_id', orgIds);
+
+    const countMap = (counts || []).reduce((acc: any, curr: any) => {
+        acc[curr.center_id] = (acc[curr.center_id] || 0) + 1;
+        return acc;
+    }, {});
+
+    return data.map((o: any) => ({ ...o, member_count: countMap[o.id] || 0 }));
+}
+
 export async function deleteCenter(orgId: string, centerId: string) {
     const supabase = await createClient();
     const admin = createAdminClient();
