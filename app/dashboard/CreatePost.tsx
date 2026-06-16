@@ -65,7 +65,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const [videoDuration, setVideoDuration] = useState(0);
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const [coverFile, setCoverFile] = useState<File | null>(null);
-    const [coverPreview, setCoverPreview] = useState<string | null>(null);
+    const [coverPreview, setCoverPreview] = useState<string | null>(initialData?.thumbnail_url || null);
     const dragIndexRef = useRef<number | null>(null);
     const trimmerVideoRef = useRef<HTMLVideoElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -240,14 +240,29 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                     res = await createWodPost(formData);
                 }
             } else {
+                // Upload cover file if selected (applies to both new posts and edits)
+                let uploadedThumbnailUrl: string | undefined = undefined;
+                if (coverFile) {
+                    const coverExt = coverFile.name.split('.').pop() || 'jpg';
+                    const coverFileName = `${currentUser.id}/cover_${Date.now()}.${coverExt}`;
+                    const { error: coverError } = await supabaseClient.storage
+                        .from('posts')
+                        .upload(coverFileName, coverFile, { cacheControl: '3600', upsert: true });
+                    if (!coverError) {
+                        const { data: { publicUrl: coverUrl } } = supabaseClient.storage.from('posts').getPublicUrl(coverFileName);
+                        uploadedThumbnailUrl = coverUrl;
+                    }
+                }
+
                 if (editingPostId) {
-                    res = await updatePost(editingPostId, content, finalMediaUrl || undefined, undefined, mediaType || undefined);
+                    res = await updatePost(editingPostId, content, finalMediaUrl || undefined, undefined, mediaType || undefined, uploadedThumbnailUrl);
                 } else {
                     formData.append("content", content);
                     if (finalMediaUrl) {
                         formData.append("media_url", finalMediaUrl);
                         formData.append("media_type", mediaType!);
                     }
+                    if (uploadedThumbnailUrl) formData.append("thumbnail_url", uploadedThumbnailUrl);
                     res = await createUserPost(formData);
                 }
             }
@@ -663,20 +678,24 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                             </div>
                         )}
 
-                        {/* Edit Video Button — shown when first selected file is a video */}
-                        {previews.length > 0 && pendingFiles[0]?.type.startsWith('video/') && !isVideoEditing && (
+                        {/* Video action buttons */}
+                        {previews.length > 0 && (pendingFiles[0]?.type.startsWith('video/') || (editingPostId && initialData?.media_type === 'video')) && !isVideoEditing && (
                             <div className="flex gap-2 mt-3">
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setEditorVideoFile(pendingFiles[0]);
-                                        setIsVideoEditing(true);
-                                    }}
-                                    className="flex-1 py-3 border border-brand-red/40 rounded-2xl text-brand-red font-black uppercase tracking-widest text-[10px] hover:bg-brand-red/10 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <Sparkles className="w-4 h-4" />
-                                    Editar Video
-                                </button>
+                                {/* Edit Video — only available for newly selected files */}
+                                {pendingFiles[0]?.type.startsWith('video/') && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setEditorVideoFile(pendingFiles[0]);
+                                            setIsVideoEditing(true);
+                                        }}
+                                        className="flex-1 py-3 border border-brand-red/40 rounded-2xl text-brand-red font-black uppercase tracking-widest text-[10px] hover:bg-brand-red/10 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <Sparkles className="w-4 h-4" />
+                                        Editar Video
+                                    </button>
+                                )}
+                                {/* Cover photo — works for new uploads and editing existing posts */}
                                 <button
                                     type="button"
                                     onClick={() => coverInputRef.current?.click()}
