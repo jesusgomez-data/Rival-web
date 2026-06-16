@@ -35,6 +35,8 @@ interface WodCardProps {
     postId?: string;
     completionsCount?: number;
     hasCompleted?: boolean;
+    isOfficial?: boolean;
+    authorAvatar?: string;
 }
 
 const FORMAT_CONFIG: Partial<Record<WodFormat, { label: string, color: string, icon: any }>> = {
@@ -71,7 +73,7 @@ const CATEGORY_CONFIG: Record<WorkoutCategory, { label: string, color: string, i
     'BOXING': { label: 'BOXING', color: 'bg-red-800', icon: '🥊', gradient: 'from-red-800 to-red-600' }
 };
 
-export default function WodCard({ data, userName, publishDate, postId, completionsCount = 0, hasCompleted: initialHasCompleted = false }: WodCardProps) {
+export default function WodCard({ data, userName, publishDate, postId, completionsCount = 0, hasCompleted: initialHasCompleted = false, isOfficial = false, authorAvatar }: WodCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showWODLeaderboard, setShowWODLeaderboard] = useState(false);
     const [showWODTracker, setShowWODTracker] = useState(false);
@@ -393,6 +395,133 @@ export default function WodCard({ data, userName, publishDate, postId, completio
                         </>
                     )}
                 </div>
+            </div>
+        );
+    }
+
+    // ── Official "WOD del día" premium card ──────────────────────────────────
+    if (isOfficial) {
+        const catCfg = CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'];
+        const firstBlock = data.blocks?.[0];
+        const formatLabel = firstBlock ? (FORMAT_CONFIG[firstBlock.format]?.label || firstBlock.format) : 'WOD';
+        const formatColor = firstBlock ? (FORMAT_CONFIG[firstBlock.format]?.color || 'text-brand-red') : 'text-brand-red';
+        const exercisePreview = firstBlock?.exercises?.slice(0, 4) ?? [];
+
+        return (
+            <div className="w-full bg-[#0d0d0d] border border-white/8 rounded-3xl overflow-hidden shadow-2xl keep-all dark-section">
+                <div className="p-4 flex gap-4 items-stretch">
+                    {/* Left: cover / avatar */}
+                    <div className="relative w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-brand-red/30 to-black border border-white/10">
+                        {data.media_url ? (
+                            <img src={data.media_url} alt="WOD" className="w-full h-full object-cover" />
+                        ) : authorAvatar ? (
+                            <img src={authorAvatar} alt={userName} className="w-full h-full object-cover grayscale" />
+                        ) : (
+                            <div className="w-full h-full flex items-center justify-center text-3xl">{catCfg.icon}</div>
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                        <span className={cn("absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded text-white", catCfg.color)}>
+                            {catCfg.icon}
+                        </span>
+                    </div>
+
+                    {/* Right: content */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-between gap-2">
+                        <div>
+                            <p className="text-[9px] font-black uppercase tracking-[0.25em] text-gray-500 mb-0.5">Próximo entrenamiento</p>
+                            <h3 className="text-base font-black text-white leading-tight truncate">{data.title || 'WOD del día'}</h3>
+                            <p className={cn("text-xs font-bold mt-0.5", formatColor)}>{formatLabel}</p>
+                        </div>
+                        <div className="space-y-0.5">
+                            {exercisePreview.map((ex, i) => (
+                                <p key={i} className="text-xs text-gray-400 truncate">
+                                    {ex.reps ? <span className="text-white font-bold mr-1">{ex.reps}</span> : null}{ex.name}
+                                </p>
+                            ))}
+                            {(firstBlock?.exercises?.length ?? 0) > 4 && (
+                                <p className="text-[10px] text-gray-600">+{(firstBlock?.exercises?.length ?? 0) - 4} más...</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+
+                {/* CTA button */}
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="w-full bg-brand-red hover:bg-red-600 active:scale-[0.98] transition-all text-white py-3.5 px-4 flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest"
+                >
+                    {isExpanded ? 'Ocultar entrenamiento' : 'Ver entrenamiento'} <span className="text-base leading-none">→</span>
+                </button>
+
+                {/* Expandable details */}
+                {isExpanded && (
+                    <div className="border-t border-white/5">
+                        <div className="p-4 space-y-3">
+                            {data.blocks.map((block) => {
+                                const cfg = FORMAT_CONFIG[block.format] || DEFAULT_CONFIG;
+                                const Icon = cfg.icon;
+                                return (
+                                    <div key={block.id} className="bg-white/[0.03] border border-white/5 rounded-2xl p-3">
+                                        <div className="flex items-center gap-2 mb-3">
+                                            <Icon className={cn("w-3.5 h-3.5", cfg.color)} />
+                                            <span className={cn("text-[10px] font-black uppercase tracking-widest", cfg.color)}>{block.format}</span>
+                                            {block.config?.timecap && <span className="text-[9px] text-gray-500 font-bold">· {block.config.timecap} TIME CAP</span>}
+                                            {block.config?.rounds && <span className="text-[9px] text-gray-500 font-bold">· {block.config.rounds} RONDAS</span>}
+                                        </div>
+                                        <div className="space-y-2">
+                                            {block.exercises.map((ex) => (
+                                                <div key={ex.id} className="flex items-center justify-between">
+                                                    <span className="text-xs text-gray-300 font-medium">{ex.name}</span>
+                                                    <div className="flex items-center gap-1">
+                                                        {ex.reps && <span className="text-xs font-black text-white">{ex.reps}</span>}
+                                                        {ex.detail && <span className="text-xs font-black text-brand-red">{ex.detail}{ex.unit}</span>}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Leaderboard / Track */}
+                        {postId && (
+                            <div className="px-4 pb-4 flex gap-2">
+                                <button
+                                    onClick={() => setShowWODTracker(true)}
+                                    className="flex-1 py-2.5 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black uppercase tracking-widest text-white hover:bg-white/10 transition-all"
+                                >
+                                    Registrar resultado
+                                </button>
+                                <button
+                                    onClick={() => setShowWODLeaderboard(true)}
+                                    className="flex-1 py-2.5 bg-brand-red/10 border border-brand-red/20 rounded-xl text-[10px] font-black uppercase tracking-widest text-brand-red hover:bg-brand-red/20 transition-all"
+                                >
+                                    Ver ranking
+                                </button>
+                            </div>
+                        )}
+
+                        {postId && (
+                            <>
+                                <WODTrackerModal
+                                    wodPostId={(data as any).original_wod_post_id || postId}
+                                    wodTitle={data.title || "WOD"}
+                                    wodType={data.summary?.scoreType?.toUpperCase() === 'TIME' ? 'time' : 'rounds'}
+                                    isOpen={showWODTracker}
+                                    onClose={() => setShowWODTracker(false)}
+                                    onSuccess={() => window.location.reload()}
+                                />
+                                <WODLeaderboardModal
+                                    wodPostId={(data as any).original_wod_post_id || postId}
+                                    wodTitle={data.title || "WOD"}
+                                    isOpen={showWODLeaderboard}
+                                    onClose={() => setShowWODLeaderboard(false)}
+                                />
+                            </>
+                        )}
+                    </div>
+                )}
             </div>
         );
     }

@@ -415,6 +415,7 @@ export async function createUserPost(formData: FormData) {
 
         const dateStr = formData.get('scheduled_for') as string;
         const createdAt = dateStr ? new Date(`${dateStr}T${new Date().toISOString().split('T')[1]}`).toISOString() : undefined;
+        const thumbnailUrl = formData.get('thumbnail_url') as string || null;
 
         const { error: insertError } = await supabase
             .from('posts')
@@ -426,7 +427,8 @@ export async function createUserPost(formData: FormData) {
                 created_at: createdAt,
                 music_url: formData.get('music_url') as string || null,
                 music_title: formData.get('music_title') as string || null,
-                music_artist: formData.get('music_artist') as string || null
+                music_artist: formData.get('music_artist') as string || null,
+                thumbnail_url: thumbnailUrl
             })
 
         if (insertError) {
@@ -653,7 +655,7 @@ export async function deleteComment(commentId: string) {
     return { success: true }
 }
 
-export async function updatePost(postId: string, newCaption: string, mediaUrl?: string, scheduledFor?: string, mediaType?: string) {
+export async function updatePost(postId: string, newCaption: string, mediaUrl?: string, scheduledFor?: string, mediaType?: string, thumbnailUrl?: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
@@ -662,6 +664,7 @@ export async function updatePost(postId: string, newCaption: string, mediaUrl?: 
     const isAdmin = profile?.is_official === true;
 
     const updateData: any = { caption: newCaption };
+    if (thumbnailUrl !== undefined) updateData.thumbnail_url = thumbnailUrl || null;
     if (mediaUrl) {
         updateData.media_url = mediaUrl;
         if (mediaType) updateData.media_type = mediaType;

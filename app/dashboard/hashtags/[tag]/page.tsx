@@ -141,6 +141,7 @@ export default function HashtagPage({ params }: { params: Promise<{ tag: string 
                                     music_url={post.music_url}
                                     music_title={post.music_title}
                                     music_artist={post.music_artist}
+                                    thumbnail_url={post.thumbnail_url}
                                     isOfficial={post.profiles?.is_official}
                                     highlight={post.workouts?.title}
                                 />

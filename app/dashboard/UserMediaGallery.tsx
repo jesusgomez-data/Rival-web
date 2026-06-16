@@ -247,9 +247,15 @@ export default function UserMediaGallery({ userId, limit }: { userId: string; li
                             >
                                 {isVideo ? (
                                     <>
-                                        <video src={item.media_url} className="w-full h-full object-cover" muted playsInline preload="metadata" />
-                                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center group-hover:bg-black/10 transition-colors">
-                                            <Play className="w-7 h-7 text-white fill-white drop-shadow-lg" />
+                                        {item.thumbnail_url ? (
+                                            <img src={item.thumbnail_url} alt="Video thumbnail" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <video src={`${item.media_url}#t=0.5`} className="w-full h-full object-cover" muted playsInline preload="metadata" />
+                                        )}
+                                        <div className="absolute inset-0 bg-black/25 flex items-center justify-center group-hover:bg-black/10 transition-colors">
+                                            <div className="w-9 h-9 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center">
+                                                <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+                                            </div>
                                         </div>
                                     </>
                                 ) : (

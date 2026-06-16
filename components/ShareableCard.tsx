@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Trophy, Share2, Download, Activity, Calendar, Award, ShieldCheck } from "lucide-react";
+import { Trophy, Share2, Download, Activity, Calendar, Award, ShieldCheck, X } from "lucide-react";
 import Image from "next/image";
 import { clsx } from "clsx";
 import { useRef, useState } from "react";
@@ -24,7 +24,7 @@ interface ShareableCardProps {
     };
 }
 
-export default function ShareableCard({ user, data }: ShareableCardProps) {
+export default function ShareableCard({ user, data, onClose }: ShareableCardProps & { onClose?: () => void }) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [isDownloading, setIsDownloading] = useState(false);
 
@@ -70,6 +70,16 @@ export default function ShareableCard({ user, data }: ShareableCardProps) {
 
     return (
         <div className="w-full max-w-lg mx-auto">
+            {onClose && (
+                <div className="flex justify-end mb-3">
+                    <button
+                        onClick={onClose}
+                        className="p-2 bg-white/10 hover:bg-brand-red rounded-full text-white transition-colors active:scale-95"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+            )}
             <div
                 ref={cardRef}
                 className="w-full aspect-[4/5] bg-[#050505] rounded-[48px] overflow-hidden relative border border-white/5 shadow-2xl group/card selection:bg-brand-red/30 keep-all dark-section"
