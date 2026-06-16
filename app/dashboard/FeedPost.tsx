@@ -1311,12 +1311,11 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             <video
                                 ref={videoRef}
                                 src={isNearViewport ? image : undefined}
-                                poster={cover_url || undefined}
+                                poster={thumbnail_url || cover_url || undefined}
                                 data-feed-video="true"
                                 className="w-full h-full object-cover"
                                 loop
                                 playsInline
-                                poster={thumbnail_url || undefined}
                                 muted={isMuted || !isVisible || (typeof document !== 'undefined' && document.hidden) || !!music_url}
                                 preload={isNearViewport ? "metadata" : "none"}
                                 onCanPlay={() => {
