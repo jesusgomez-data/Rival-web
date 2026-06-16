@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Award, Loader2, CheckCircle2 } from "lucide-react";
+import { Award, Loader2, CheckCircle2, Clock } from "lucide-react";
 import { joinChallenge } from "./ranking-actions";
 import { clsx } from "clsx";
 import Link from "next/link";
@@ -19,6 +19,10 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
     const [isJoined, setIsJoined] = useState(isParticipatingInitial);
 
     const participation = challenge.participants?.find((p: any) => p.user_id === userId);
+
+    const daysLeft = challenge.end_date
+        ? Math.max(0, Math.ceil((new Date(challenge.end_date).getTime() - Date.now()) / 86400000))
+        : null;
 
     const handleJoin = async () => {
         if (!userId || isJoined) return;
@@ -52,7 +56,15 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
                         </div>
                     </div>
                     <h4 className="text-base sm:text-lg font-black text-white italic uppercase tracking-tight mb-2 group-hover:text-brand-red transition-colors">{challenge.title}</h4>
-                    <p className="text-[11px] sm:text-xs text-gray-400 font-medium mb-5 sm:mb-6 line-clamp-2">{challenge.description}</p>
+                    <p className="text-[11px] sm:text-xs text-gray-400 font-medium mb-3 line-clamp-2">{challenge.description}</p>
+                    {daysLeft !== null && (
+                        <div className="flex items-center gap-1.5 mb-4">
+                            <Clock className="w-3 h-3 text-orange-400" />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-orange-400">
+                                {daysLeft === 0 ? 'Termina hoy' : `${daysLeft} días restantes`}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {isJoined ? (

@@ -1627,6 +1627,8 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             userName={username || user}
                             publishDate={time}
                             postId={postId}
+                            isOfficial={isOfficial}
+                            authorAvatar={avatar}
                         />
                     )}
                 </div>

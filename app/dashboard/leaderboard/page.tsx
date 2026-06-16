@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { Trophy, Flame, TrendingUp, Award, Swords } from "lucide-react";
+import Link from "next/link";
 import LeaderboardClient from "./LeaderboardClient";
 import ChallengeCard from "./ChallengeCard";
 import { getActiveChallenges } from "./ranking-actions";
@@ -152,9 +153,9 @@ export default async function LeaderboardPage() {
                         <Swords className="absolute -bottom-10 -left-10 w-48 h-48 opacity-10 -rotate-12 group-hover:rotate-0 transition-all duration-700 hidden sm:block" />
                         <h3 className="text-2xl font-heading font-black text-white italic uppercase tracking-tighter mb-4 leading-none">Únete a la<br />Élite Premium</h3>
                         <p className="text-sm text-white/70 mb-6 font-medium">Desbloquea multiplicadores de XP y duelos exclusivos de temporada.</p>
-                        <button className="w-full bg-white text-black py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-black hover:text-white transition-all">
+                        <Link href="/dashboard/settings/billing" className="block w-full bg-white text-black py-4 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-black hover:text-white transition-all text-center">
                             Mejora tu Plan
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </div>
