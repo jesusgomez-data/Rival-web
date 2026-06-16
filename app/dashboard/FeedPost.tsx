@@ -397,6 +397,7 @@ interface FeedPostProps {
     post_type?: string;
     wod_data?: any;
     repostOriginalPost?: any; // Pre-fetched original post for repost cards (avoids N+1)
+    cover_url?: string | null;
 }
 
 interface Comment {
@@ -414,7 +415,7 @@ interface Comment {
 }
 
 const FeedPost = memo(function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId, centerName,
-    workoutData, music_url, music_title, music_artist, thumbnail_url, isOfficial, isMember = false, context = 'global', isAdminUser, hasActiveDuel, post_type, wod_data, repostOriginalPost
+    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global', isAdminUser, hasActiveDuel, post_type, wod_data, repostOriginalPost, cover_url
 }: FeedPostProps) {
     const { theme } = useTheme();
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -1184,7 +1185,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     </button>
                     {showMenu && (
                         <div className="absolute right-0 top-full mt-2 w-52 bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in zoom-in-95">
-                            <button onClick={() => { window.dispatchEvent(new CustomEvent('edit-post', { detail: { postId, content: caption || '', mediaType } })); setShowMenu(false); }} className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-brand-red flex items-center gap-3 border-b border-white/5">
+                            <button onClick={() => { window.dispatchEvent(new CustomEvent('edit-post', { detail: { postId, content: caption || '', mediaType, mediaUrl: image, cover_url: cover_url || null } })); setShowMenu(false); }} className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-brand-red flex items-center gap-3 border-b border-white/5">
                                 <Edit2 className="w-4 h-4" /> EDITAR
                             </button>
                             <button
@@ -1310,6 +1311,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             <video
                                 ref={videoRef}
                                 src={isNearViewport ? image : undefined}
+                                poster={cover_url || undefined}
                                 data-feed-video="true"
                                 className="w-full h-full object-cover"
                                 loop

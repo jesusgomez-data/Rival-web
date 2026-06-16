@@ -198,8 +198,8 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
         const handleEdit = (e: any) => {
-            const { postId, content, wodData, mediaUrl, mediaType } = e.detail;
-            setRepostData({ ...wodData, caption: content, media_url: mediaUrl, media_type: mediaType });
+            const { postId, content, wodData, mediaUrl, mediaType, cover_url } = e.detail;
+            setRepostData({ ...wodData, caption: content, media_url: mediaUrl, media_type: mediaType, cover_url: cover_url ?? null });
             setEditMode({ id: postId });
             setIsOpen(true);
             window.scrollTo({ top: 0, behavior: 'smooth' });

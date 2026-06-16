@@ -64,8 +64,9 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const [editorVideoFile, setEditorVideoFile] = useState<File | null>(null);
     const [videoDuration, setVideoDuration] = useState(0);
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-    const [coverFile, setCoverFile] = useState<File | null>(null);
-    const [coverPreview, setCoverPreview] = useState<string | null>(initialData?.thumbnail_url || null);
+    const [coverUrl, setCoverUrl] = useState<string | null>(initialData?.cover_url ?? null);
+    const [coverPreview, setCoverPreview] = useState<string | null>(initialData?.cover_url ?? null);
+    const [isUploadingCover, setIsUploadingCover] = useState(false);
     const dragIndexRef = useRef<number | null>(null);
     const trimmerVideoRef = useRef<HTMLVideoElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -92,6 +93,8 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
             if (initialPostType === 'wod') {
                 setWodData(initialData);
             }
+            setCoverUrl(initialData.cover_url ?? null);
+            setCoverPreview(initialData.cover_url ?? null);
         }
     }, [initialData, initialPostType]);
 
@@ -255,7 +258,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                 }
 
                 if (editingPostId) {
-                    res = await updatePost(editingPostId, content, finalMediaUrl || undefined, undefined, mediaType || undefined, uploadedThumbnailUrl);
+                    res = await updatePost(editingPostId, content, finalMediaUrl || undefined, undefined, mediaType || undefined, coverUrl ?? undefined);
                 } else {
                     formData.append("content", content);
                     if (finalMediaUrl) {
@@ -722,6 +725,69 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                     accept="image/*"
                                     onChange={handleCoverChange}
                                     className="hidden"
+                                />
+                            </div>
+                        )}
+
+                        {/* Cover photo picker — shown when editing an existing video post */}
+                        {editingPostId && initialData?.media_type === 'video' && (
+                            <div className="mt-3 p-3 border border-white/8 rounded-2xl bg-white/[0.02]">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-500 mb-2">Portada del video</p>
+                                <div className="flex items-center gap-3">
+                                    {coverPreview ? (
+                                        <div className="relative w-16 h-16 rounded-xl overflow-hidden shrink-0 border border-white/10">
+                                            <img src={coverPreview} alt="Portada" className="w-full h-full object-cover" />
+                                            <button
+                                                type="button"
+                                                onClick={() => { setCoverUrl(null); setCoverPreview(null); }}
+                                                className="absolute top-0.5 right-0.5 w-4 h-4 bg-black/70 rounded-full flex items-center justify-center"
+                                            >
+                                                <X className="w-2.5 h-2.5 text-white" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="w-16 h-16 rounded-xl border border-dashed border-white/15 flex items-center justify-center shrink-0">
+                                            <ImageIcon className="w-5 h-5 text-gray-600" />
+                                        </div>
+                                    )}
+                                    <div className="flex-1">
+                                        <p className="text-[11px] text-gray-400 leading-snug">
+                                            {coverPreview ? 'Portada configurada' : 'Sin portada — se mostrará el primer frame del video'}
+                                        </p>
+                                        <button
+                                            type="button"
+                                            disabled={isUploadingCover}
+                                            onClick={() => coverInputRef.current?.click()}
+                                            className="mt-1.5 px-3 py-1.5 bg-white/5 border border-white/10 rounded-lg text-[10px] font-black text-white hover:bg-white/10 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                                        >
+                                            {isUploadingCover ? <Loader2 className="w-3 h-3 animate-spin" /> : <ImageIcon className="w-3 h-3" />}
+                                            {isUploadingCover ? 'Subiendo...' : coverPreview ? 'Cambiar portada' : 'Elegir portada'}
+                                        </button>
+                                    </div>
+                                </div>
+                                <input
+                                    ref={coverInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        setCoverPreview(URL.createObjectURL(file));
+                                        setIsUploadingCover(true);
+                                        try {
+                                            const ext = file.name.split('.').pop();
+                                            const path = `${currentUser.id}/cover_${Date.now()}.${ext}`;
+                                            const { error } = await supabaseClient.storage.from('posts').upload(path, file, { upsert: true });
+                                            if (!error) {
+                                                const { data: { publicUrl } } = supabaseClient.storage.from('posts').getPublicUrl(path);
+                                                setCoverUrl(publicUrl);
+                                            }
+                                        } finally {
+                                            setIsUploadingCover(false);
+                                            e.target.value = '';
+                                        }
+                                    }}
                                 />
                             </div>
                         )}

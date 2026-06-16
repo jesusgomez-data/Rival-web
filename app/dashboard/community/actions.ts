@@ -655,7 +655,7 @@ export async function deleteComment(commentId: string) {
     return { success: true }
 }
 
-export async function updatePost(postId: string, newCaption: string, mediaUrl?: string, scheduledFor?: string, mediaType?: string, thumbnailUrl?: string) {
+export async function updatePost(postId: string, newCaption: string, mediaUrl?: string, scheduledFor?: string, mediaType?: string, coverUrl?: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
@@ -664,7 +664,7 @@ export async function updatePost(postId: string, newCaption: string, mediaUrl?: 
     const isAdmin = profile?.is_official === true;
 
     const updateData: any = { caption: newCaption };
-    if (thumbnailUrl !== undefined) updateData.thumbnail_url = thumbnailUrl || null;
+    if (coverUrl !== undefined) updateData.cover_url = coverUrl || null;
     if (mediaUrl) {
         updateData.media_url = mediaUrl;
         if (mediaType) updateData.media_type = mediaType;
