@@ -7,8 +7,8 @@ import { sendPushNotificationImpl } from '@/utils/web-push-service';
 // It should NOT be imported by client components directly if possible, although 'use server' makes it safe.
 // However, to be extra safe, we moved savePushSubscription to subscription-actions.ts.
 
-export async function sendPushNotification(userId: string, title: string, body: string, url: string = '/') {
-    return sendPushNotificationImpl(userId, title, body, url);
+export async function sendPushNotification(userId: string, title: string, body: string, url: string = '/', type: string = 'default') {
+    return sendPushNotificationImpl(userId, title, body, url, type);
 }
 
 // Re-export savePushSubscription just in case existing imports rely on it, BUT marked deprecated

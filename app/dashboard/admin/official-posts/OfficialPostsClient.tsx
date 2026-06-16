@@ -129,7 +129,7 @@ export default function OfficialPostsClient({ rivalfitProfile, posts: initialPos
             try {
                 const post = await publishInAppOfficialPost({
                     caption: caption.trim(),
-                    media_url: mediaUrl || undefined,
+                    media_url: postType === 'wod' && wodData ? JSON.stringify(wodData) : (mediaUrl || undefined),
                     media_type: postType === 'image' && mediaUrl ? 'image' : postType === 'wod' ? 'wod' : 'text',
                     post_type: postType,
                 });

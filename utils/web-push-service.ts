@@ -1,7 +1,7 @@
 import 'server-only';
 // No static import for web-push to ensure it's not bundled on client accidentally
-// import webpush from 'web-push'; 
-import { createClient } from '@/utils/supabase/server';
+// import webpush from 'web-push';
+import { createAdminClient } from '@/utils/supabase/admin';
 
 async function getWebPush() {
     // Dynamic import to be 100% sure this doesn't run on client or break build
@@ -29,11 +29,12 @@ async function setupWebPush() {
     return { success: false, webpush: null };
 }
 
-export async function sendPushNotificationImpl(userId: string, title: string, body: string, url: string = '/') {
+export async function sendPushNotificationImpl(userId: string, title: string, body: string, url: string = '/', type: string = 'default') {
     const { success, webpush } = await setupWebPush();
     if (!success || !webpush) return;
 
-    const supabase = await createClient();
+    // Use admin client to bypass RLS — subscriptions must always be readable server-side
+    const supabase = createAdminClient();
 
     // Fetch valid subscriptions
     const { data: subscriptions } = await supabase
@@ -43,7 +44,7 @@ export async function sendPushNotificationImpl(userId: string, title: string, bo
 
     if (!subscriptions || subscriptions.length === 0) return;
 
-    const payload = JSON.stringify({ title, body, url });
+    const payload = JSON.stringify({ title, body, url, type });
 
     const promises = subscriptions.map(async (sub) => {
         try {
