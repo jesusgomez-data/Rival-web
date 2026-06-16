@@ -1427,7 +1427,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     ref={videoContainerRef}
                     className={clsx(
                         "relative w-full overflow-hidden bg-black",
-                        isVideo ? "aspect-[9/16]" : "aspect-[4/5]"
+                        isVideo ? "aspect-[9/16]" : "aspect-[3/4]"
                     )}
                 >
                     {/* Media rendering */}
@@ -1606,11 +1606,11 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 )}
                             </div>
                         ) : (
-                            <Image 
-                                src={photoUrl || '/placeholder.png'} 
-                                alt="Post Media" 
-                                fill 
-                                className="object-cover hover:scale-105 transition-transform duration-1000" 
+                            <Image
+                                src={photoUrl || '/placeholder.png'}
+                                alt="Post Media"
+                                fill
+                                className="object-contain"
                                 unoptimized={photoUrl?.startsWith('data:')}
                                 onLoadingComplete={() => setIsBuffering(false)}
                                 onError={() => {
