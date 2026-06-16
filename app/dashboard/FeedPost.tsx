@@ -1944,12 +1944,14 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             <div className="relative w-full max-w-lg animate-in zoom-in-95 duration-500">
                                 <button
                                     onClick={() => setShowShareCard(false)}
-                                    className="fixed top-6 right-6 z-[110] bg-black/50 backdrop-blur-md p-3 rounded-full text-white hover:text-brand-red transition-all active:scale-95 flex items-center gap-2 border border-white/10"
+                                    className="fixed right-6 z-[110] bg-black/50 backdrop-blur-md p-3 rounded-full text-white hover:text-brand-red transition-all active:scale-95 flex items-center gap-2 border border-white/10"
+                                    style={{ top: 'max(1.5rem, env(safe-area-inset-top))' }}
                                 >
                                     <X className="w-5 h-5" />
                                     <span className="text-[10px] font-black uppercase tracking-widest mr-1 hidden sm:inline">Cerrar</span>
                                 </button>
                                 <ShareableCard
+                                    onClose={() => setShowShareCard(false)}
                                     user={{
                                         name: user,
                                         username: username || user,

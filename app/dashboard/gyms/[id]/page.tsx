@@ -127,6 +127,14 @@ export default function CenterDashboardHome() {
 
     const canViewKPIs = userRole === 'owner' || userRole === 'head_coach';
 
+    if (loading && !centerDetails) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-brand-red border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
     if (isProfessional(centerDetails?.center_type)) {
         return (
             <ProfessionalDashboard
