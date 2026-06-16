@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { UserPlus, UserCheck, MapPin, Globe, CheckCircle2, Grid, Dumbbell, ShoppingBag, X, CreditCard, Check, Lock, Calendar, ArrowRight, ArrowLeft, Trophy, ChevronRight, ChevronLeft, Clock, ChevronDown, Zap, Flame, TrendingUp, Info, Play, Banknote, Instagram, Youtube, Facebook, Hash, Navigation, Image as ImageIcon, Star, Users, Building2, List, LayoutGrid } from "lucide-react";
 import { toggleFollow, requestTrial, purchaseProduct, getClassesForDate, getClassesRange, enrollInClass, unenrollFromClass, getClassAttendees, saveClassResult, getDayRankings, requestMemberPayment } from "../../dashboard/gyms/management-actions";
+import { requestMemberLeave } from "../../dashboard/gyms/member-actions";
 import { bookTrialClass } from "../../dashboard/gyms/trial-booking-actions";
 import GymPostCard from "../../dashboard/gyms/GymPostCard";
 import Link from "next/link";
@@ -62,6 +63,12 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
 
     // Payment Status Params
     const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
+
+    // Leave Request
+    const [showLeaveModal, setShowLeaveModal] = useState(false);
+    const [leaveReason, setLeaveReason] = useState("");
+    const [isSubmittingLeave, setIsSubmittingLeave] = useState(false);
+    const [leaveRequested, setLeaveRequested] = useState(false);
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
@@ -490,6 +497,21 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
         }
     };
 
+    // Leave Request Handler
+    const handleRequestLeave = async () => {
+        if (!memberStatus?.id) return;
+        setIsSubmittingLeave(true);
+        const res = await requestMemberLeave(org.id, memberStatus.id, leaveReason || undefined);
+        setIsSubmittingLeave(false);
+        if ((res as any).error) {
+            showToast((res as any).error, false);
+        } else {
+            setLeaveRequested(true);
+            setShowLeaveModal(false);
+            showToast("Solicitud de baja enviada. El centro te informará.");
+        }
+    };
+
     // Leaderboard Handler
     const handleViewLeaderboard = async () => {
         if (!memberStatus?.status) return;
@@ -628,6 +650,15 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                             className={`h-9 px-5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg bg-white text-black hover:bg-gray-100 border border-gray-200`}
                                         >
                                             {isTrainer ? "Reservar" : "Prueba Gratis"}
+                                        </button>
+                                    )}
+                                    {isMember && !isOwner && (
+                                        <button
+                                            onClick={() => setShowLeaveModal(true)}
+                                            disabled={leaveRequested}
+                                            className={`h-9 px-4 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all border ${leaveRequested ? 'border-orange-500/30 text-orange-400 bg-orange-500/10' : 'border-white/10 text-gray-400 hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5'}`}
+                                        >
+                                            {leaveRequested ? 'Baja Solicitada' : 'Solicitar Baja'}
                                         </button>
                                     )}
                                 </div>
@@ -1613,6 +1644,50 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                 )}
 
                 {/* --- MODALS --- */}
+
+                {/* Leave Request Modal */}
+                {showLeaveModal && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
+                        <div className={`${theme === 'dark' ? 'bg-[#111] border-white/10 text-white' : 'bg-white border-gray-200 text-black'} border rounded-3xl w-full max-w-md p-6 relative shadow-2xl`}>
+                            <button onClick={() => setShowLeaveModal(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                            <div className="mb-6">
+                                <div className="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center mb-4 border border-red-500/20">
+                                    <ArrowLeft className="w-6 h-6 text-red-400" />
+                                </div>
+                                <h3 className="text-xl font-black italic uppercase tracking-tight mb-1">Solicitar Baja</h3>
+                                <p className="text-[11px] text-gray-400 font-medium leading-relaxed">
+                                    Tu solicitud será enviada a <strong>{org.name}</strong>. Ellos la revisarán y te notificarán con la decisión. Hasta que sea aprobada, tu membresía permanece activa.
+                                </p>
+                            </div>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Motivo (opcional)</label>
+                                    <textarea
+                                        value={leaveReason}
+                                        onChange={(e) => setLeaveReason(e.target.value)}
+                                        placeholder="Cuéntanos el motivo de tu baja..."
+                                        rows={3}
+                                        className={`w-full rounded-2xl p-4 text-sm resize-none border outline-none focus:border-red-400/50 ${theme === 'dark' ? 'bg-black/40 border-white/10 text-white placeholder:text-gray-600' : 'bg-gray-50 border-gray-200 text-gray-900'}`}
+                                    />
+                                </div>
+                                <div className="flex gap-3 pt-2">
+                                    <button onClick={() => setShowLeaveModal(false)} className="flex-1 py-3 rounded-2xl border border-white/10 text-gray-400 font-black uppercase text-[10px] tracking-widest hover:bg-white/5 transition-all">
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        onClick={handleRequestLeave}
+                                        disabled={isSubmittingLeave}
+                                        className="flex-[2] py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-black uppercase text-[10px] tracking-widest hover:bg-red-500/20 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        {isSubmittingLeave ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enviar Solicitud de Baja'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Trial Modal */}
                 {showTrialModal && (

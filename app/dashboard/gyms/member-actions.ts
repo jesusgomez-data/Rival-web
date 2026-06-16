@@ -702,3 +702,101 @@ export async function cancelPendingBooking(requestId: string) {
     return { success: true };
 }
 
+// ─── MEMBER LEAVE REQUESTS ────────────────────────────────────────────────────
+
+export async function requestMemberLeave(centerId: string, memberId: string, reason?: string) {
+    const supabase = await createClient();
+    const admin = createAdminClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "No autenticado" };
+
+    // Check already pending
+    const { data: existing } = await admin
+        .from('member_leave_requests')
+        .select('id')
+        .eq('member_id', memberId)
+        .eq('status', 'pending')
+        .maybeSingle();
+    if (existing) return { error: "Ya tienes una solicitud de baja pendiente." };
+
+    const { error } = await admin.from('member_leave_requests').insert({
+        member_id: memberId,
+        center_id: centerId,
+        user_id: user.id,
+        reason: reason || null,
+        status: 'pending'
+    });
+    if (error) return { error: error.message };
+
+    // Notify center owner
+    const { data: org } = await admin.from('organizations').select('name, owner_id').eq('id', centerId).single();
+    const { data: profile } = await admin.from('profiles').select('full_name').eq('id', user.id).single();
+    if (org?.owner_id) {
+        await createNotification({
+            userId: org.owner_id,
+            type: 'member_leave_requested',
+            title: `Solicitud de baja — ${profile?.full_name || 'Un miembro'}`,
+            content: reason ? `Motivo: ${reason}` : 'Ha solicitado darse de baja del centro.',
+            link: `/dashboard/gyms/${centerId}/members`
+        });
+    }
+
+    return { success: true };
+}
+
+export async function getLeaveRequests(centerId: string) {
+    const admin = createAdminClient();
+    const { data } = await admin
+        .from('member_leave_requests')
+        .select('*, profiles:user_id(full_name, avatar_url, username), members:member_id(plan, email)')
+        .eq('center_id', centerId)
+        .eq('status', 'pending')
+        .order('requested_at', { ascending: false });
+    return data || [];
+}
+
+export async function processLeaveRequest(requestId: string, action: 'approve' | 'reject', responseReason?: string) {
+    const supabase = await createClient();
+    const admin = createAdminClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "No autenticado" };
+
+    const { data: req } = await admin
+        .from('member_leave_requests')
+        .select('*, organizations:center_id(name)')
+        .eq('id', requestId)
+        .single();
+    if (!req) return { error: "Solicitud no encontrada" };
+
+    // Update request status
+    await admin.from('member_leave_requests').update({
+        status: action === 'approve' ? 'approved' : 'rejected',
+        response_reason: responseReason || null,
+        responded_at: new Date().toISOString()
+    }).eq('id', requestId);
+
+    if (action === 'approve') {
+        // Set member as inactive
+        await admin.from('members').update({ status: 'inactive', updated_at: new Date().toISOString() }).eq('id', req.member_id);
+        // Notify member
+        await createNotification({
+            userId: req.user_id,
+            type: 'member_leave_approved',
+            title: `Baja aprobada — ${(req.organizations as any)?.name || 'Centro'}`,
+            content: responseReason || 'Tu solicitud de baja ha sido aprobada.',
+            link: `/gym/${req.center_id}`
+        });
+    } else {
+        await createNotification({
+            userId: req.user_id,
+            type: 'member_leave_rejected',
+            title: `Solicitud de baja rechazada — ${(req.organizations as any)?.name || 'Centro'}`,
+            content: responseReason || 'El centro ha rechazado tu solicitud de baja. Contacta con ellos para más información.',
+            link: `/gym/${req.center_id}`
+        });
+    }
+
+    revalidatePath(`/dashboard/gyms/${req.center_id}/members`);
+    return { success: true };
+}
+
