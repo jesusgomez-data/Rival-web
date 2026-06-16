@@ -645,7 +645,8 @@ export default function VideoReelsModal({ isOpen, onClose, initialPostId, contex
                 {/* Desktop Close Button */}
                 <button
                     onClick={onClose}
-                    className="absolute top-6 right-6 z-[210] p-2 bg-white/10 hover:bg-brand-red text-white rounded-full transition-colors hidden md:block"
+                    className="absolute right-6 z-[210] p-2 bg-white/10 hover:bg-brand-red text-white rounded-full transition-colors hidden md:block"
+                    style={{ top: 'max(1.5rem, env(safe-area-inset-top))' }}
                 >
                     <X className="w-6 h-6" />
                 </button>
@@ -653,7 +654,8 @@ export default function VideoReelsModal({ isOpen, onClose, initialPostId, contex
                 {/* Mobile Close Button (floating) */}
                 <button
                     onClick={onClose}
-                    className="absolute top-4 left-4 z-[210] p-2 bg-black/20 text-white rounded-full md:hidden"
+                    className="absolute left-4 z-[210] p-2 bg-black/40 backdrop-blur-md text-white rounded-full md:hidden border border-white/10"
+                    style={{ top: 'max(1rem, env(safe-area-inset-top))' }}
                 >
                     <X className="w-6 h-6" />
                 </button>

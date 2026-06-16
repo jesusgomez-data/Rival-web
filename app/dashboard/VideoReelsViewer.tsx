@@ -489,19 +489,22 @@ export default function VideoReelsViewer({ posts, startIndex, onClose }: VideoRe
         <div className="fixed inset-0 z-[9999] bg-black">
             {/* Close */}
             <button onClick={onClose}
-                className="absolute top-4 left-4 z-50 w-9 h-9 bg-black/40 backdrop-blur rounded-full flex items-center justify-center text-white border border-white/10">
+                className="absolute left-4 z-50 w-9 h-9 bg-black/40 backdrop-blur rounded-full flex items-center justify-center text-white border border-white/10"
+                style={{ top: 'max(1rem, env(safe-area-inset-top))' }}>
                 <X className="w-5 h-5" />
             </button>
 
             {/* Mute */}
             <button onClick={toggleMute}
-                className="absolute top-4 right-4 z-50 w-9 h-9 bg-black/40 backdrop-blur rounded-full flex items-center justify-center text-white border border-white/10">
+                className="absolute right-4 z-50 w-9 h-9 bg-black/40 backdrop-blur rounded-full flex items-center justify-center text-white border border-white/10"
+                style={{ top: 'max(1rem, env(safe-area-inset-top))' }}>
                 {isMuted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
             </button>
 
             {/* Progress dots */}
             {posts.length > 1 && posts.length <= 12 && (
-                <div className="absolute top-5 left-1/2 -translate-x-1/2 z-50 flex gap-1">
+                <div className="absolute left-1/2 -translate-x-1/2 z-50 flex gap-1"
+                     style={{ top: 'max(1.25rem, env(safe-area-inset-top))' }}>
                     {posts.map((_, i) => (
                         <div key={i} className={`h-0.5 rounded-full transition-all duration-300 ${i === currentIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/30'}`} />
                     ))}

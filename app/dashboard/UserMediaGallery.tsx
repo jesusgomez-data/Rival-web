@@ -279,16 +279,16 @@ export default function UserMediaGallery({ userId, limit }: { userId: string; li
                     {/* Close */}
                     <button
                         onClick={() => setLightboxIndex(null)}
-                        className="absolute top-4 right-4 p-2 rounded-full bg-black/50 text-white/80 hover:text-white transition-colors"
-                        style={{ zIndex: 300 }}
+                        className="absolute right-4 p-2 rounded-full bg-black/50 text-white/80 hover:text-white transition-colors"
+                        style={{ zIndex: 300, top: 'max(1rem, env(safe-area-inset-top))' }}
                     >
                         <X className="w-6 h-6" />
                     </button>
 
                     {/* Counter */}
                     <div
-                        className="absolute top-4 left-1/2 -translate-x-1/2 text-white/60 text-xs font-bold tracking-widest"
-                        style={{ zIndex: 300 }}
+                        className="absolute left-1/2 -translate-x-1/2 text-white/60 text-xs font-bold tracking-widest"
+                        style={{ zIndex: 300, top: 'max(1rem, env(safe-area-inset-top))' }}
                     >
                         {activeIndex + 1} / {mediaItems.length}
                     </div>
