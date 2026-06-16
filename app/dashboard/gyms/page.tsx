@@ -8,6 +8,7 @@ import clsx from "clsx";
 import { useTheme } from "../../ThemeContext";
 import { getUserOrganizations, createOrganization, searchOrganizations, deleteOrganization, leaveOrganization, getNearbyOrganizations, checkIsAdmin } from "./actions";
 import B2BShareCard from "./B2BShareCard";
+import CancellationRequestModal from "./CancellationRequestModal";
 import { isProfessional, PROFESSIONAL_TYPES, CENTER_TYPES, getTypeLabel, getTypeIcon } from "@/lib/professional-types";
 
 export default function CenterListPage() {
@@ -87,6 +88,7 @@ function CenterListPageContent() {
     const [showMarketing, setShowMarketing] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [cancellationTarget, setCancellationTarget] = useState<{ id: string; name: string; type: 'gym' | 'professional' } | null>(null);
     const { theme } = useTheme();
     const searchParams = useSearchParams();
     const filterType = searchParams.get('type');
@@ -766,9 +768,16 @@ function CenterListPageContent() {
                                                 </button>
                                             ) : (
                                                 <button
-                                                    onClick={(e) => { e.preventDefault(); handleLeave(org.id, org.name); }}
-                                                    className="p-2 bg-black/60 backdrop-blur-md rounded-full border border-white/10 text-gray-400 hover:text-brand-red transition-colors"
-                                                    title="Desafiliarse"
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        setCancellationTarget({
+                                                            id: org.id,
+                                                            name: org.name,
+                                                            type: isProfessional(org.center_type) ? 'professional' : 'gym',
+                                                        });
+                                                    }}
+                                                    className="p-2 bg-black/60 backdrop-blur-md rounded-full border border-white/10 text-gray-400 hover:text-red-400 transition-colors"
+                                                    title="Solicitar Baja"
                                                 >
                                                     <LogOut className="w-3.5 h-3.5" />
                                                 </button>
@@ -897,7 +906,16 @@ function CenterListPageContent() {
                         </div>
                     )}
                 </div>
-            </div >
-        </div >
+            </div>
+            {cancellationTarget && (
+                <CancellationRequestModal
+                    orgId={cancellationTarget.id}
+                    orgName={cancellationTarget.name}
+                    orgType={cancellationTarget.type}
+                    onClose={() => setCancellationTarget(null)}
+                    onSuccess={() => { loadOrgs(); setCancellationTarget(null); }}
+                />
+            )}
+        </div>
     );
 }

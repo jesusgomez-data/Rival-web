@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Plus, Search, User, CheckCircle, Trash2, Edit2, X, CreditCard, Phone, Mail, Landmark, Power, Cake, Calendar, Link as LinkIcon, Loader2, ChevronDown, Check, Send, Download, Upload, FileText, AlertCircle, Building2 } from "lucide-react";
 import { addMember, addGuestMember, requestMemberPayment, approveTrialRequest, removeMember, updateMemberDetails, toggleMemberStatus, searchAthletes, linkMemberToUser, bulkImportMembers, getCenterMembers } from "../../member-actions";
 import { sendRegistrationEmail } from "../../email-actions";
+import { getPendingCancellations } from "../../cancellation-actions";
+import CancellationRequestsPanel from "./CancellationRequestsPanel";
 
 export default function MembersManager({ centerId, initialMembers, plans = [], centers = [], orgDetails }: any) {
     const searchParams = useSearchParams();
@@ -17,8 +19,10 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
     const [selectedCenterId, setSelectedCenterId] = useState<string | null>(centerIdParam || (centers.length > 0 ? centers[0].id : null));
     const [centerDropdownOpen, setCenterDropdownOpen] = useState(false);
     const isMultiCenter = orgDetails?.is_multi_center;
+    const [pendingCancellations, setPendingCancellations] = useState<any[]>([]);
     useEffect(() => {
         console.log("[MembersManager] initialMembers count:", initialMembers?.length || 0);
+        getPendingCancellations(centerId).then(setPendingCancellations);
     }, [initialMembers]);
     const [showModal, setShowModal] = useState(false);
     const [viewingMember, setViewingMember] = useState<any>(null);
@@ -502,6 +506,14 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
 
     return (
         <div className="space-y-4 sm:space-y-6">
+            <CancellationRequestsPanel
+                centerId={centerId}
+                requests={pendingCancellations}
+                onUpdate={() => {
+                    getPendingCancellations(centerId).then(setPendingCancellations);
+                    getCenterMembers(centerId).then(d => setMembers(d));
+                }}
+            />
             <div className="flex justify-between items-end mb-2 sm:mb-4">
                 <div className="flex flex-col">
                     <h2 className="text-xl sm:text-2xl italic font-black text-foreground uppercase tracking-tighter">Gestión de {orgDetails?.center_type === 'personal_trainer' ? 'Alumnos' : 'Atletas'}</h2>
