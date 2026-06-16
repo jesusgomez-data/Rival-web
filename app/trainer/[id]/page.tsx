@@ -6,13 +6,11 @@ import {
     MapPin, Globe, Instagram, Phone, Star, Award, Monitor,
     Users, Check, ArrowLeft, Calendar, MessageSquare,
     Loader2, UserPlus, UserCheck, Zap, Flame, Lock, Trophy,
-    Clock, List, LayoutGrid, Grid
+    Clock, List, LayoutGrid
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { PUBLIC_ORG_COLUMNS } from '@/lib/org-columns'
-import { getCenterPosts } from '@/app/dashboard/gyms/feed-actions'
-import GymPostCard from '@/app/dashboard/gyms/GymPostCard'
 import {
     getClassesForDate, getClassesRange, enrollInClass,
     unenrollFromClass, getClassAttendees, requestMemberPayment,
@@ -63,12 +61,10 @@ export default function TrainerPublicProfile() {
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [following,   setFollowing]   = useState(false)
     const [isMember,    setIsMember]    = useState(false)
-    const [isClient,    setIsClient]    = useState(false)
     const [loading,     setLoading]     = useState(true)
-    const [tab,         setTab]         = useState<'about' | 'services' | 'reviews' | 'feed' | 'schedule'>('about')
+    const [tab,         setTab]         = useState<'about' | 'services' | 'reviews' | 'schedule'>('about')
     const [preSelectedServiceId, setPreSelectedServiceId] = useState<string | null>(null)
     const [ownerUsername, setOwnerUsername] = useState<string | null>(null)
-    const [posts,       setPosts]       = useState<any[]>([])
 
     // Professional Services & Booking
     const [profServices,    setProfServices]    = useState<any[]>([])
@@ -125,25 +121,21 @@ export default function TrainerPublicProfile() {
         
         setOwnerUsername(ownerProf?.username || null)
 
-        const [plansRes, reviewsRes, followRes, memberRes, postsRes, requestsRes, servicesRes, availRes, svcReviewsRes, clientRes] = await Promise.all([
+        const [plansRes, reviewsRes, followRes, memberRes, requestsRes, servicesRes, availRes, svcReviewsRes] = await Promise.all([
             supabase.from('membership_plans').select('*').eq('organization_id', id).eq('is_active', true).order('price'),
             supabase.from('center_reviews').select('id, rating, review_text, created_at, profiles:user_id(full_name, username, avatar_url)').eq('organization_id', id).order('created_at', { ascending: false }).limit(10),
             user ? supabase.from('center_followers').select('id').eq('organization_id', id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
             user ? supabase.from('members').select('id, status').eq('center_id', id).eq('user_id', user.id).eq('status', 'active').maybeSingle() : Promise.resolve({ data: null }),
-            getCenterPosts(id),
             user ? supabase.from('trial_requests').select('*').eq('organization_id', id).eq('user_id', user.id) : Promise.resolve({ data: null }),
             getPublicProfessionalServices(id),
             getProfessionalAvailability(id),
             getProfessionalReviews(id),
-            user ? supabase.from('service_bookings').select('id').eq('professional_id', id).eq('client_id', user.id).not('status', 'in', '(rejected,cancelled)').limit(1).maybeSingle() : Promise.resolve({ data: null }),
         ])
 
         setPlans(plansRes.data || [])
         setReviews(reviewsRes.data || [])
         setFollowing(!!followRes.data)
         setIsMember(!!memberRes.data)
-        setIsClient(!!clientRes.data)
-        setPosts(postsRes || [])
         setUserRequests(requestsRes?.data || [])
         setProfServices(servicesRes)
         setAvailability(availRes)
@@ -343,7 +335,6 @@ export default function TrainerPublicProfile() {
 
     const specialties: string[] = trainer.specialties || []
     const languages:   string[] = trainer.languages   || []
-    const isOwner = trainer.owner_id === currentUser?.id
 
     return (
         <div className="min-h-screen bg-black text-white pb-10 flex flex-col items-center px-0 sm:px-4">
@@ -479,12 +470,12 @@ export default function TrainerPublicProfile() {
 
             {/* ── TABS ─────────────────────────────────────────────────── */}
             <div className="px-4 sm:px-8 flex gap-1 border-b border-white/8 overflow-x-auto no-scrollbar">
-                {(['about', 'services', 'schedule', 'feed', 'reviews'] as const).map(t => (
+                {(['about', 'services', 'schedule', 'reviews'] as const).map(t => (
                     <button key={t} onClick={() => setTab(t)}
                         className={`px-4 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-all flex-shrink-0 ${
                             tab === t ? 'border-brand-red text-white' : 'border-transparent text-gray-500 hover:text-gray-300'
                         }`}>
-                        {t === 'about' ? 'Sobre mí' : t === 'services' ? `Servicios (${profServices.length})` : t === 'schedule' ? 'Agenda' : t === 'feed' ? 'Vídeos' : 'Reseñas'}
+                        {t === 'about' ? 'Sobre mí' : t === 'services' ? `Servicios (${profServices.length})` : t === 'schedule' ? 'Agenda' : 'Reseñas'}
                     </button>
                 ))}
             </div>
@@ -767,50 +758,7 @@ export default function TrainerPublicProfile() {
                     </div>
                 )}
 
-                {/* ── FEED TAB (VIDEOS) ───────────────────────────────── */}
-                {tab === 'feed' && (
-                    <div className="space-y-6">
-                        {isClient || isOwner ? (
-                            <div className="space-y-6 max-w-2xl">
-                                {posts.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                                        <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4 border border-white/5">
-                                            <Grid className="w-7 h-7 text-white/20" />
-                                        </div>
-                                        <p className="font-black text-sm uppercase tracking-widest text-gray-500">Sin publicaciones todavía</p>
-                                    </div>
-                                ) : (
-                                    posts.map((post: any) => (
-                                        <GymPostCard
-                                            key={post.id}
-                                            post={post}
-                                            centerId={id}
-                                            isAdmin={isOwner}
-                                            currentUserId={currentUser?.id}
-                                            isMember={isClient || isOwner}
-                                        />
-                                    ))
-                                )}
-                            </div>
-                        ) : (
-                            <div className="bg-white/[0.02] border border-white/5 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center text-center gap-4 max-w-xl mx-auto mt-6">
-                                <div className="w-16 h-16 rounded-full bg-brand-red/10 flex items-center justify-center mb-2 shadow-glow border border-brand-red/20">
-                                    <Lock className="w-6 h-6 text-brand-red" />
-                                </div>
-                                <h3 className="font-heading font-black italic uppercase text-xl text-white">Contenido exclusivo para clientes</h3>
-                                <p className="text-xs text-gray-400 font-medium max-w-sm mt-1 leading-relaxed">
-                                    Este profesional comparte vídeos, rutinas y consejos exclusivos solo con sus clientes y pacientes con reservas activas.
-                                </p>
-                                <button
-                                    onClick={() => setTab('schedule')}
-                                    className="mt-4 px-8 py-3 bg-brand-red text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-colors shadow-lg flex items-center gap-2"
-                                >
-                                    Reservar cita
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                )}
+
 
                 {/* ── SERVICES TAB ───────────────────────────────────── */}
                 {tab === 'services' && (

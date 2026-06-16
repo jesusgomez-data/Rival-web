@@ -903,11 +903,17 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
             {isVideoEditing && editorVideoFile && (
                 <VideoEditor
                     videoFile={editorVideoFile}
-                    onSave={(editedFile, dur) => {
+                    onSave={(editedFile, dur, coverBlob) => {
                         const url = URL.createObjectURL(editedFile);
                         setPreviews([url]);
                         setDuration(dur);
                         setPendingFiles([editedFile]);
+                        if (coverBlob) {
+                            const fileExt = coverBlob.type.split('/').pop() || 'jpg';
+                            const file = new File([coverBlob], `cover_${Date.now()}.${fileExt}`, { type: coverBlob.type });
+                            setCoverFile(file);
+                            setCoverPreview(URL.createObjectURL(coverBlob));
+                        }
                         setIsVideoEditing(false);
                         setEditorVideoFile(null);
                     }}

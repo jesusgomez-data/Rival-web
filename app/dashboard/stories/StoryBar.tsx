@@ -2947,7 +2947,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
             {isVideoEditing && editorVideoFile && (
                 <VideoEditor
                     videoFile={editorVideoFile}
-                    onSave={(editedFile, dur) => {
+                    onSave={(editedFile, dur, coverBlob) => {
                         setupPreview(editedFile);
                         setIsVideoEditing(false);
                         setEditorVideoFile(null);

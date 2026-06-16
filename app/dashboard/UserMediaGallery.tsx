@@ -247,8 +247,8 @@ export default function UserMediaGallery({ userId, limit }: { userId: string; li
                             >
                                 {isVideo ? (
                                     <>
-                                        {item.thumbnail_url ? (
-                                            <img src={item.thumbnail_url} alt="Video thumbnail" className="w-full h-full object-cover" />
+                                        {item.cover_url || item.thumbnail_url ? (
+                                            <img src={item.cover_url || item.thumbnail_url} alt="Video thumbnail" className="w-full h-full object-cover" />
                                         ) : (
                                             <video src={`${item.media_url}#t=0.5`} className="w-full h-full object-cover" muted playsInline preload="metadata" />
                                         )}

@@ -179,6 +179,7 @@ export async function getPendingClassReviews() {
                 name,
                 scheduled_time,
                 organization_id,
+                organization:organization_id (name),
                 coach:profiles!coach_id (full_name)
             ),
             member:member_id!inner (
@@ -231,11 +232,13 @@ export async function getPendingClassReviews() {
         const wod = wods?.find(w => w.organization_id === cls.organization_id && w.scheduled_for.split('T')[0] === dateStr);
 
         const coach = Array.isArray(cls.coach) ? cls.coach[0] : cls.coach;
+        const org = Array.isArray(cls.organization) ? cls.organization[0] : cls.organization;
 
         return {
             ...cls,
             coach: coach,
-            wod: wod
+            wod: wod,
+            organizationName: org?.name || 'Rival Fit Madrid'
         };
     }).filter(Boolean);
 }
