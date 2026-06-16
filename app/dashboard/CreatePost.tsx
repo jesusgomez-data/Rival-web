@@ -66,6 +66,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const [pendingFiles, setPendingFiles] = useState<File[]>([]);
     const [coverUrl, setCoverUrl] = useState<string | null>(initialData?.cover_url ?? null);
     const [coverPreview, setCoverPreview] = useState<string | null>(initialData?.cover_url ?? null);
+    const [coverFile, setCoverFile] = useState<File | null>(null);
     const [isUploadingCover, setIsUploadingCover] = useState(false);
     const dragIndexRef = useRef<number | null>(null);
     const trimmerVideoRef = useRef<HTMLVideoElement>(null);
