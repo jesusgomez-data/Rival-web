@@ -51,9 +51,13 @@ export default function BookingChat({
                 { event: 'INSERT', schema: 'public', table: 'service_messages', filter: `conversation_id=eq.${conversationId}` },
                 async (payload: { new: Record<string, unknown> }) => {
                     const msg = payload.new as unknown as Message
-                    // Only add if not already in list (avoid duplicate from optimistic)
                     setMessages(prev => {
                         if (prev.some(m => m.id === msg.id)) return prev
+                        // Replace the matching optimistic message instead of appending a duplicate
+                        const optIdx = prev.findIndex(m => m.id.startsWith('opt-') && m.sender_id === msg.sender_id && m.content === msg.content)
+                        const next = optIdx !== -1
+                            ? prev.map((m, i) => i === optIdx ? msg : m)
+                            : [...prev, msg]
                         // Fetch sender profile
                         supabase.from('profiles').select('id, full_name, avatar_url').eq('id', msg.sender_id).single()
                             .then((result: { data: { id: string; full_name: string; avatar_url: string | null } | null }) => {
@@ -61,7 +65,7 @@ export default function BookingChat({
                                     m.id === msg.id ? { ...m, sender: result.data || undefined } : m
                                 ))
                             })
-                        return [...prev, msg]
+                        return next
                     })
                 }
             )
