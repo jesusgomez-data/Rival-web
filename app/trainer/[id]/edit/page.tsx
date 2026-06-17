@@ -240,7 +240,7 @@ export default function TrainerEditPage() {
             )}
 
             {/* Header */}
-            <div className="sticky top-0 z-40 bg-black/90 backdrop-blur border-b border-white/8 px-6 py-4 flex items-center justify-between">
+            <div className="sticky top-0 z-40 bg-black/90 backdrop-blur border-b border-white/8 px-6 py-4 flex items-center justify-between" style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}>
                 <div className="flex items-center gap-3">
                     <Link href={`/dashboard/gyms/${id}`} className="p-2 rounded-xl hover:bg-white/8 transition-colors text-gray-400 hover:text-white">
                         <ArrowLeft className="w-5 h-5" />

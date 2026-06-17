@@ -545,7 +545,8 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
             {/* Back button */}
             <Link
                 href={isOwner ? `/dashboard/gyms/${org.id}` : "/dashboard"}
-                className={`fixed top-4 left-4 z-50 p-3 rounded-full shadow-xl transition-all group flex items-center gap-2 ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}
+                className={`fixed left-4 z-50 p-3 rounded-full shadow-xl transition-all group flex items-center gap-2 ${theme === 'dark' ? 'bg-white text-black hover:bg-gray-200' : 'bg-black text-white hover:bg-gray-800'}`}
+                style={{ top: 'max(1rem, env(safe-area-inset-top))' }}
                 title={isOwner ? "Ir al Panel de Control" : "Volver al Dashboard"}
             >
                 <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
