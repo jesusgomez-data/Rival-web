@@ -397,6 +397,7 @@ interface FeedPostProps {
     post_type?: string;
     wod_data?: any;
     repostOriginalPost?: any; // Pre-fetched original post for repost cards (avoids N+1)
+    cover_url?: string | null;
 }
 
 interface Comment {
@@ -414,9 +415,219 @@ interface Comment {
 }
 
 const FeedPost = memo(function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId, centerName,
-    workoutData, music_url, music_title, music_artist, thumbnail_url, isOfficial, isMember = false, context = 'global', isAdminUser, hasActiveDuel, post_type, wod_data, repostOriginalPost
+    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global', isAdminUser, hasActiveDuel, post_type, wod_data, repostOriginalPost, cover_url, thumbnail_url
 }: FeedPostProps) {
     const { theme } = useTheme();
+    const [currentCaption, setCurrentCaption] = useState(caption || "");
+    const [currentCoverUrl, setCurrentCoverUrl] = useState(cover_url || thumbnail_url || null);
+    const [isEditingLocal, setIsEditingLocal] = useState(false);
+    const [localCaption, setLocalCaption] = useState(caption || "");
+    const [localCoverPreview, setLocalCoverPreview] = useState<string | null>(cover_url || thumbnail_url || null);
+    const [localCoverBlob, setLocalCoverBlob] = useState<Blob | File | null>(null);
+    const [isSavingLocal, setIsSavingLocal] = useState(false);
+    const [localFrames, setLocalFrames] = useState<string[]>([]);
+    const [isLoadingFrames, setIsLoadingFrames] = useState(false);
+    const localCoverInputRef = useRef<HTMLInputElement>(null);
+    const [scrubTime, setScrubTime] = useState(0);
+    const [isCustomCoverActive, setIsCustomCoverActive] = useState(false);
+    const [videoDuration, setVideoDuration] = useState(0);
+    const localVideoRef = useRef<HTMLVideoElement>(null);
+
+    const handleEditClick = () => {
+        setShowMenu(false);
+        if (mediaType === 'wod' || mediaType === 'pr') {
+            window.dispatchEvent(new CustomEvent('edit-post', { detail: { postId, content: currentCaption || '', mediaType, mediaUrl: image, cover_url: currentCoverUrl || null, wodData: parsedWodData } }));
+        } else {
+            setIsEditingLocal(true);
+        }
+    };
+
+    const loadFramesForLocalEdit = async () => {
+        if (!isVideo || !resolvedUrl || localFrames.length > 0) return;
+        setIsLoadingFrames(true);
+        try {
+            const v = document.createElement('video');
+            v.src = resolvedUrl;
+            v.preload = 'metadata';
+            v.muted = true;
+            v.crossOrigin = 'anonymous';
+            
+            await new Promise((resolve, reject) => {
+                v.onloadedmetadata = resolve;
+                v.onerror = reject;
+                setTimeout(reject, 12000);
+            });
+
+            const duration = v.duration || 10;
+            const canvas = document.createElement('canvas');
+            canvas.width = 120;
+            canvas.height = 160;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) throw new Error("Could not get canvas context");
+            
+            const frames: string[] = [];
+            for (let i = 0; i < 12; i++) {
+                v.currentTime = (i / 12) * duration;
+                await new Promise(resolve => {
+                    v.onseeked = resolve;
+                });
+                ctx.drawImage(v, 0, 0, 120, 160);
+                frames.push(canvas.toDataURL('image/jpeg', 0.6));
+            }
+            setLocalFrames(frames);
+        } catch (e) {
+            console.error("Failed to load video frames for cover selection:", e);
+        } finally {
+            setIsLoadingFrames(false);
+        }
+    };
+
+    const captureLocalFrame = async (timePct: number) => {
+        if (!resolvedUrl) return;
+        try {
+            const v = document.createElement('video');
+            v.src = resolvedUrl;
+            v.preload = 'metadata';
+            v.muted = true;
+            v.crossOrigin = 'anonymous';
+            
+            await new Promise(resolve => {
+                v.onloadedmetadata = resolve;
+            });
+            
+            const duration = v.duration || 10;
+            v.currentTime = timePct * duration;
+            await new Promise(resolve => {
+                v.onseeked = resolve;
+            });
+            
+            const canvas = document.createElement('canvas');
+            canvas.width = v.videoWidth || 720;
+            canvas.height = v.videoHeight || 1280;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+                ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+                canvas.toBlob((blob) => {
+                    if (blob) {
+                        setLocalCoverBlob(blob);
+                        setLocalCoverPreview(URL.createObjectURL(blob));
+                    }
+                }, 'image/jpeg', 0.9);
+            }
+        } catch (e) {
+            console.error("Failed to capture local frame:", e);
+        }
+    };
+
+    const handleLocalCoverFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setLocalCoverBlob(file);
+            setLocalCoverPreview(URL.createObjectURL(file));
+            setIsCustomCoverActive(true);
+        }
+    };
+
+    const handleVideoLoadedMetadata = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+        const video = e.currentTarget;
+        setVideoDuration(video.duration || 10);
+        video.currentTime = 0;
+    };
+
+    const handleScrubChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = parseFloat(e.target.value);
+        setScrubTime(val);
+        setIsCustomCoverActive(false);
+        if (localVideoRef.current) {
+            localVideoRef.current.currentTime = val;
+        }
+    };
+
+    const handleResetToVideo = () => {
+        setIsCustomCoverActive(false);
+        if (localVideoRef.current) {
+            localVideoRef.current.currentTime = scrubTime;
+        }
+    };
+
+    const handleSaveLocalEdit = async () => {
+        setIsSavingLocal(true);
+        try {
+            let finalCoverUrl = currentCoverUrl;
+            let finalCoverBlob = localCoverBlob;
+
+            // If we are choosing a video frame as cover (not custom gallery cover)
+            if (isVideo && !isCustomCoverActive && localVideoRef.current) {
+                const videoEl = localVideoRef.current;
+                const capturedBlob = await new Promise<Blob | null>((resolve) => {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = videoEl.videoWidth || 720;
+                        canvas.height = videoEl.videoHeight || 1280;
+                        const ctx = canvas.getContext('2d');
+                        if (ctx) {
+                            ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+                            canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.9);
+                        } else {
+                            resolve(null);
+                        }
+                    } catch (e) {
+                        console.error("Error drawing video frame to canvas:", e);
+                        resolve(null);
+                    }
+                });
+                if (capturedBlob) {
+                    finalCoverBlob = capturedBlob;
+                }
+            }
+
+            if (finalCoverBlob) {
+                const supabase = createClient();
+                const fileExt = finalCoverBlob instanceof File ? finalCoverBlob.name.split('.').pop() : 'jpg';
+                const fileName = `${currentUserId}/cover_${Date.now()}.${fileExt}`;
+                
+                const { error: uploadError } = await supabase.storage
+                    .from('posts')
+                    .upload(fileName, finalCoverBlob, { cacheControl: '3600', upsert: true });
+                    
+                if (uploadError) throw uploadError;
+                
+                const { data: { publicUrl } } = supabase.storage
+                    .from('posts')
+                    .getPublicUrl(fileName);
+                    
+                finalCoverUrl = publicUrl;
+            }
+            
+            const res = await updatePost(postId, localCaption, undefined, undefined, undefined, finalCoverUrl || undefined);
+            if (res.error) {
+                alert("Error al guardar: " + res.error);
+            } else {
+                setCurrentCaption(localCaption);
+                setCurrentCoverUrl(finalCoverUrl);
+                setIsEditingLocal(false);
+            }
+        } catch (e: any) {
+            console.error("Error saving local edit:", e);
+            alert("Ocurrió un error al guardar los cambios: " + (e.message || String(e)));
+        } finally {
+            setIsSavingLocal(false);
+        }
+    };
+
+    useEffect(() => {
+        if (isEditingLocal) {
+            setLocalCaption(currentCaption || "");
+            setLocalCoverPreview(currentCoverUrl || null);
+            setLocalCoverBlob(null);
+            setIsCustomCoverActive(!!currentCoverUrl && !currentCoverUrl.includes('/posts/'));
+            setScrubTime(0);
+            if (isVideo) {
+                loadFramesForLocalEdit();
+            }
+        }
+    }, [isEditingLocal]);
+
     const [isLightboxOpen, setIsLightboxOpen] = useState(false);
     const [showInstagramCard, setShowInstagramCard] = useState(false);
     const [showShareCard, setShowShareCard] = useState(false);
@@ -1184,7 +1395,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     </button>
                     {showMenu && (
                         <div className="absolute right-0 top-full mt-2 w-52 bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in zoom-in-95">
-                            <button onClick={() => { window.dispatchEvent(new CustomEvent('edit-post', { detail: { postId, content: caption || '', mediaType } })); setShowMenu(false); }} className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-brand-red flex items-center gap-3 border-b border-white/5">
+                            <button onClick={handleEditClick} className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-brand-red flex items-center gap-3 border-b border-white/5">
                                 <Edit2 className="w-4 h-4" /> EDITAR
                             </button>
                             <button
@@ -1232,7 +1443,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                         username: username || user,
                                         userFullName: user,
                                         avatar,
-                                        caption,
+                                        caption: currentCaption,
                                         initialLikes,
                                         hasLikedInitial,
                                         commentsCount: initialCommentsCount,
@@ -1310,11 +1521,11 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             <video
                                 ref={videoRef}
                                 src={isNearViewport ? image : undefined}
+                                poster={currentCoverUrl || undefined}
                                 data-feed-video="true"
                                 className="w-full h-full object-cover"
                                 loop
                                 playsInline
-                                poster={thumbnail_url || undefined}
                                 muted={isMuted || !isVisible || (typeof document !== 'undefined' && document.hidden) || !!music_url}
                                 preload={isNearViewport ? "metadata" : "none"}
                                 onCanPlay={() => {
@@ -1415,7 +1626,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
 
 
             {/* CAPTION: Sleek text container */}
-            {caption && (
+            {currentCaption && (
                 <div className={clsx(
                     "px-6 pb-4",
                     isTextOnly ? "pt-4" : ""
@@ -1431,7 +1642,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 "text-base md:text-lg font-bold leading-relaxed italic tracking-wide relative z-10",
                                 theme === 'dark' ? "text-gray-100" : "text-zinc-800"
                             )}>
-                                <MentionText text={caption} />
+                                <MentionText text={currentCaption} />
                             </p>
                         </div>
                     ) : (
@@ -1441,7 +1652,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 "inline transition-all duration-300",
                                 theme === 'dark' ? "text-white/90" : "text-zinc-900"
                             )}>
-                                <MentionText text={caption} />
+                                <MentionText text={currentCaption} />
                             </div>
                         </div>
                     )}
@@ -1605,7 +1816,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
 
                     {/* Repost Card */}
                     {mediaType === 'repost' && (
-                        <RepostCard image={image} caption={caption} prefetchedPost={repostOriginalPost} />
+                        <RepostCard image={image} caption={currentCaption} prefetchedPost={repostOriginalPost} />
                     )}
 
                     {/* Membership Activation */}
@@ -1616,7 +1827,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 <CheckCircle2 className="w-12 h-12 text-brand-red" />
                             </div>
                             <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">¡MEMBRESÍA ACTIVA!</h3>
-                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{caption || 'Iniciando una nueva etapa de alto rendimiento.'}</p>
+                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{currentCaption || 'Iniciando una nueva etapa de alto rendimiento.'}</p>
                         </div>
                     )}
 
@@ -1658,7 +1869,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             mediaType={mediaType}
                             postId={postId}
                             photoUrl={photoUrl}
-                            caption={caption}
+                            caption={currentCaption}
                             className="flex flex-col items-center gap-1 text-zinc-400 hover:text-white transition-all active:scale-90"
                             iconClassName="w-7 h-7"
                             onInstagramShare={() => setShowInstagramCard(true)}
@@ -1777,7 +1988,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 <X className="w-8 h-8 md:w-10 md:h-10" />
                             </button>
                             <div className="relative w-full max-w-5xl max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                                <img src={photoUrl} alt="Full size" className="max-w-full max-h-[90vh] object-contain rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)]" />
+                                <img src={photoUrl || '/placeholder.png'} alt="Full size" className="max-w-full max-h-[90vh] object-contain rounded-3xl shadow-[0_0_50px_rgba(0,0,0,0.8)]" />
                             </div>
                         </div>
                     )
@@ -1843,7 +2054,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             content={{
                                 type: (resolvedWorkoutData as any)?.metrics?.type === 'running' ? 'running' : (mediaType === 'pr' ? 'pr' : (resolvedWorkoutData ? 'wod' : (mediaType as any || 'workout'))),
                                 title: (resolvedWorkoutData?.title === 'Entrenamiento Híbrido Libre' || resolvedWorkoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (resolvedWorkoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (resolvedWorkoutData?.title || (mediaType === 'running' ? 'RUNNING' : 'ENTRENAMIENTO'))),
-                                highlight: highlight || caption,
+                                highlight: highlight || currentCaption,
                                 stats: (resolvedWorkoutData as any)?.metrics?.type === 'running'
                                     ? [
                                         { label: 'DISTANCIA', value: `${(((resolvedWorkoutData as any).metrics.distance || 0) / 1000).toFixed(2)} KM`, icon: 'distance' },
@@ -2079,6 +2290,197 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 </button>
                             </div>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Local Edit Modal (Instagram Style) */}
+            {isEditingLocal && (
+                <div className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4 backdrop-blur-md" onClick={() => setIsEditingLocal(false)}>
+                    <div className="bg-zinc-950 border border-white/10 rounded-3xl w-full max-w-4xl overflow-hidden flex flex-col md:flex-row shadow-[0_0_60px_rgba(0,0,0,0.85)] max-h-[90vh] md:h-[600px] animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                        {/* Panel Izquierdo: Vista previa en formato exacto del Feed */}
+                        <div className="md:w-1/2 flex flex-col bg-zinc-950 p-6 justify-between h-[45vh] md:h-full border-b md:border-b-0 border-white/10">
+                            <div className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] text-center">
+                                {isCustomCoverActive ? "Vista previa de Portada (Personalizada)" : "Vista previa de Portada (Ajuste en Feed)"}
+                            </div>
+                            
+                            <div className="flex-1 flex items-center justify-center min-h-0 relative my-4">
+                                <div className={clsx(
+                                    "relative rounded-2xl overflow-hidden shadow-2xl bg-black border border-white/10 transition-all duration-300 w-auto h-[90%]",
+                                    isVideo ? "aspect-[9/16]" : "aspect-[4/5]"
+                                )}>
+                                    {isCustomCoverActive && localCoverPreview ? (
+                                        <img
+                                            src={localCoverPreview}
+                                            alt="Custom Cover Preview"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : isVideo ? (
+                                        <video
+                                            ref={localVideoRef}
+                                            src={resolvedUrl}
+                                            crossOrigin="anonymous"
+                                            className="w-full h-full object-cover"
+                                            muted
+                                            playsInline
+                                            onLoadedMetadata={handleVideoLoadedMetadata}
+                                        />
+                                    ) : (
+                                        <img
+                                            src={localCoverPreview || photoUrl || '/placeholder.png'}
+                                            alt="Preview"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    )}
+                                    
+                                    {/* Cover Badge Overlay */}
+                                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10 text-[8px] font-black text-white uppercase tracking-widest pointer-events-none">
+                                        PORTADA
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Selector de portada para Video */}
+                            {isVideo && (
+                                <div className="mt-2 space-y-3 bg-black/40 p-3 rounded-2xl border border-white/5">
+                                    <div className="flex justify-between items-center text-[9px] font-black text-white/50 uppercase tracking-widest">
+                                        <span>Desliza para elegir portada</span>
+                                        <span className="text-brand-red font-mono">{scrubTime.toFixed(1)}s / {videoDuration.toFixed(1)}s</span>
+                                    </div>
+                                    
+                                    <input
+                                        type="range"
+                                        min={0}
+                                        max={videoDuration || 10}
+                                        step={0.05}
+                                        value={scrubTime}
+                                        onChange={handleScrubChange}
+                                        className="w-full accent-brand-red h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer"
+                                    />
+
+                                    {/* Fotogramas y Galeria */}
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[8px] font-black text-white/30 uppercase tracking-widest">
+                                                Fotogramas sugeridos
+                                            </span>
+                                            <div className="flex gap-2">
+                                                {isCustomCoverActive && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleResetToVideo}
+                                                        className="text-[8px] font-black text-white/60 hover:text-white uppercase tracking-widest transition-colors"
+                                                    >
+                                                        Usar fotograma
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => localCoverInputRef.current?.click()}
+                                                    className="text-[8px] font-black text-brand-red uppercase tracking-widest bg-brand-red/10 border border-brand-red/20 px-2 py-1 rounded-lg hover:bg-brand-red/20 transition-all flex items-center gap-1"
+                                                >
+                                                    <svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                                        <circle cx="8.5" cy="8.5" r="1.5" />
+                                                        <polyline points="21 15 16 10 5 21" />
+                                                    </svg>
+                                                    GALERÍA
+                                                </button>
+                                            </div>
+                                            <input
+                                                ref={localCoverInputRef}
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleLocalCoverFileChange}
+                                                className="hidden"
+                                            />
+                                        </div>
+
+                                        {localFrames.length > 0 && !isLoadingFrames && (
+                                            <div className="flex gap-1 overflow-x-auto no-scrollbar py-0.5 border border-white/5 bg-zinc-950/40 p-1.5 rounded-xl">
+                                                {localFrames.map((frame, idx) => {
+                                                    const frameTime = (idx / 12) * videoDuration;
+                                                    const isSelected = !isCustomCoverActive && Math.abs(scrubTime - frameTime) < (videoDuration / 20);
+                                                    return (
+                                                        <button
+                                                            key={idx}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setScrubTime(frameTime);
+                                                                setIsCustomCoverActive(false);
+                                                                if (localVideoRef.current) localVideoRef.current.currentTime = frameTime;
+                                                            }}
+                                                            className={clsx(
+                                                                "w-10 h-14 rounded-lg overflow-hidden border transition-all shrink-0 relative",
+                                                                isSelected ? "border-brand-red scale-105 shadow-glow" : "border-white/5 opacity-60 hover:opacity-100"
+                                                            )}
+                                                        >
+                                                            <img src={frame} alt={`Frame ${idx}`} className="w-full h-full object-cover" />
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Panel Derecho: Descripción y Botones de Guardar */}
+                        <div className="md:w-1/2 p-6 flex flex-col justify-between border-t md:border-t-0 md:border-l border-white/10 bg-zinc-900/40">
+                            <div className="flex-1 flex flex-col gap-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full overflow-hidden relative border border-white/10 bg-black">
+                                        {avatar && isImageUrl(avatar) ? (
+                                            <Image src={avatar} alt={user} fill className="object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-[8px] font-black text-white bg-brand-red uppercase">
+                                                {user?.substring(0, 2)}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-black uppercase text-white tracking-wider leading-none">{user}</p>
+                                        <p className="text-[8px] text-white/30 font-bold uppercase tracking-widest mt-1">EDITAR INFORMACIÓN</p>
+                                    </div>
+                                </div>
+
+                                <div className="flex-1 flex flex-col min-h-[150px]">
+                                    <label className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1.5 ml-1">DESCRIPCIÓN</label>
+                                    <textarea
+                                        value={localCaption}
+                                        onChange={(e) => setLocalCaption(e.target.value)}
+                                        placeholder="Escribe un pie de foto..."
+                                        className="flex-1 bg-black/45 border border-white/5 rounded-2xl p-4 text-sm text-white focus:border-brand-red/50 focus:outline-none resize-none leading-relaxed"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-6 pt-4 border-t border-white/5">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditingLocal(false)}
+                                    className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all active:scale-95 flex items-center justify-center"
+                                >
+                                    CANCELAR
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSaveLocalEdit}
+                                    disabled={isSavingLocal}
+                                    className="flex-1 py-3.5 bg-brand-red hover:bg-red-600 text-white font-black uppercase tracking-widest text-[10px] rounded-2xl transition-all active:scale-95 shadow-glow disabled:opacity-50 flex items-center justify-center gap-2"
+                                >
+                                    {isSavingLocal ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            GUARDANDO...
+                                        </>
+                                    ) : (
+                                        'GUARDAR CAMBIOS'
+                                    )}
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

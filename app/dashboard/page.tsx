@@ -198,8 +198,8 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
         const handleEdit = (e: any) => {
-            const { postId, content, wodData, mediaUrl, mediaType } = e.detail;
-            setRepostData({ ...wodData, caption: content, media_url: mediaUrl, media_type: mediaType });
+            const { postId, content, wodData, mediaUrl, mediaType, cover_url } = e.detail;
+            setRepostData({ ...wodData, caption: content, media_url: mediaUrl, media_type: mediaType, cover_url: cover_url ?? null });
             setEditMode({ id: postId });
             setIsOpen(true);
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -298,7 +298,10 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
                             setEditMode(null);
                             refresh();
                         }}
-                        initialPostType={repostData ? 'wod' : (newPostType || 'standard')}
+                        initialPostType={
+                            editMode ? (repostData?.media_type === 'wod' || repostData?.post_type === 'wod' ? 'wod' : repostData?.media_type === 'pr' ? 'pr' : 'standard') :
+                            (repostData && (repostData.media_type === 'wod' || repostData.post_type === 'wod') ? 'wod' : (newPostType || 'standard'))
+                        }
                         initialData={repostData}
                         editingPostId={editMode?.id}
                     />
@@ -988,6 +991,7 @@ export default function DashboardHome() {
                                                 music_title={post.music_title}
                                                 music_artist={post.music_artist}
                                                 thumbnail_url={post.thumbnail_url}
+                                                cover_url={post.cover_url}
                                                 isOfficial={post.profiles?.is_official}
                                                 isMember={data.activeCenterIds.has(post.user_id) || post.user_id === data.currentUser?.id}
                                                 context={activeTab as 'following' | 'global'}

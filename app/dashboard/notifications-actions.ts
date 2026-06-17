@@ -91,7 +91,7 @@ export async function createNotification({ userId, type, title, content, link }:
     }
 
     // ── Send Push Notification (background, no await) ──────────────────────────
-    sendPushNotification(userId, title, content || '', link || '/')
+    sendPushNotification(userId, title, content || '', link || '/', type)
         .catch(err => console.error("Failed to send push:", err));
 
     return { success: true };

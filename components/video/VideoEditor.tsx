@@ -119,7 +119,7 @@ const TRACKS = [
 
 interface VideoEditorProps {
     videoFile: File
-    onSave: (editedFile: File, duration: number) => void
+    onSave: (editedFile: File, duration: number, coverBlob?: Blob | null) => void
     onCancel: () => void
 }
 
@@ -134,7 +134,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const [imageOverlays, setImageOverlays] = useState<ImageOverlay[]>([])
     const [isSaving, setIsSaving]           = useState(false)
     const [saveProgress, setSaveProgress]   = useState(0)
-    const [activeTool, setActiveTool]       = useState<'filter'|'fx'|'adjust'|'speed'|'format'|'text'|'sticker'|'trim'|'image'|'music'|'tag'|'stats'|'fade'|'none'>('none')
+    const [activeTool, setActiveTool]       = useState<'filter'|'fx'|'adjust'|'speed'|'format'|'text'|'sticker'|'trim'|'image'|'music'|'tag'|'stats'|'fade'|'cover'|'none'>('none')
     const [tagOverlays, setTagOverlays]     = useState<TagOverlay[]>([])
     const [tagSearch, setTagSearch]         = useState('')
     const [tagResults, setTagResults]       = useState<UserProfile[]>([])
@@ -160,6 +160,11 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const [aspectRatio, setAspectRatio]     = useState(ASPECT_RATIOS[0])
     const [videoScale, setVideoScale]       = useState(1)
     const [videoPan, setVideoPan]           = useState({ x: 0, y: 0 })
+
+    const [coverBlob, setCoverBlob] = useState<Blob | null>(null)
+    const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null)
+    const [selectedCoverFrameIdx, setSelectedCoverFrameIdx] = useState<number | null>(null)
+    const coverFileRef = useRef<HTMLInputElement>(null)
 
     const containerRef    = useRef<HTMLDivElement>(null)
     const videoRef        = useRef<HTMLVideoElement>(null)
@@ -216,6 +221,46 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
         if (activeTool === 'filter' || activeTool === 'fx') captureFilterFrame()
     }, [activeTool, captureFilterFrame])
 
+    const captureFrameAsCover = async (time: number) => {
+        const video = videoRef.current
+        if (!video) return
+        const originalTime = video.currentTime
+        video.currentTime = time
+        await new Promise(r => { video.onseeked = r })
+        
+        const canvas = document.createElement('canvas')
+        canvas.width = video.videoWidth || 720
+        canvas.height = video.videoHeight || 1280
+        const ctx = canvas.getContext('2d')
+        if (ctx) {
+            if (computedFilter !== 'none') {
+                ctx.filter = computedFilter
+            }
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+            if (computedFilter !== 'none') {
+                ctx.filter = 'none'
+            }
+            canvas.toBlob((blob) => {
+                if (blob) {
+                    setCoverBlob(blob)
+                    if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl)
+                    setCoverPreviewUrl(URL.createObjectURL(blob))
+                }
+            }, 'image/jpeg', 0.9)
+        }
+        video.currentTime = originalTime
+    }
+
+    const handleCustomCoverUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            setCoverBlob(file)
+            if (coverPreviewUrl) URL.revokeObjectURL(coverPreviewUrl)
+            setCoverPreviewUrl(URL.createObjectURL(file))
+            setSelectedCoverFrameIdx(null) // custom upload - no frame selected
+        }
+    }
+
     const generateThumbnails = async (duration: number) => {
         if (!videoUrl || thumbnails.length > 0) return
         const v = document.createElement('video')
@@ -236,7 +281,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
 
     useEffect(() => {
         if (videoDuration > 0 && trimRange.end === 0) {
-            setTrimRange({ start: 0, end: videoDuration })
+            setTrimRange({ start: 0, end: Math.min(videoDuration, 30) })
             generateThumbnails(videoDuration)
         }
     }, [videoDuration])
@@ -305,9 +350,9 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
             const ratio = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width))
             const t = ratio * videoDuration
             if (activeHandle === 'start') {
-                setTrimRange(p => ({ ...p, start: Math.max(0, Math.min(t, p.end - 0.5)) }))
+                setTrimRange(p => ({ ...p, start: Math.max(0, p.end - 30, Math.min(t, p.end - 0.5)) }))
             } else {
-                setTrimRange(p => ({ ...p, end: Math.min(videoDuration, Math.max(t, p.start + 0.5)) }))
+                setTrimRange(p => ({ ...p, end: Math.min(videoDuration, p.start + 30, Math.max(t, p.start + 0.5)) }))
             }
             if (videoRef.current) videoRef.current.currentTime = t
         }
@@ -424,7 +469,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
         if (!captureStreamFn || !supportedMime) {
             // No canvas recording support (iOS Safari) — upload original video as-is
             setSaveProgress(100)
-            onSave(videoFile, durationToRecord)
+            onSave(videoFile, durationToRecord, coverBlob)
             setIsSaving(false)
             return
         }
@@ -502,7 +547,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
             recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data) }
             
             recorder.onerror = () => {
-                onSave(videoFile, durationToRecord)
+                onSave(videoFile, durationToRecord, coverBlob)
                 setIsSaving(false)
             }
 
@@ -573,7 +618,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                     isExportingActive = false;
                     const blob = new Blob(chunks, { type: supportedMime })
                     const ext  = supportedMime.includes('mp4') ? 'mp4' : 'webm'
-                    onSave(new File([blob], `rival_video.${ext}`, { type: supportedMime }), durationToRecord)
+                    onSave(new File([blob], `rival_video.${ext}`, { type: supportedMime }), durationToRecord, coverBlob)
                     setIsSaving(false)
                 }
 
@@ -798,7 +843,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
 
         } catch (err) {
             console.error('Video export failed, uploading original:', err)
-            onSave(videoFile, durationToRecord)
+            onSave(videoFile, durationToRecord, coverBlob)
             setIsSaving(false)
         }
     }
@@ -845,10 +890,10 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
         const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
         const t = ratio * videoDuration
         if (handle === 'start') {
-            setTrimRange(p => ({ ...p, start: Math.max(0, Math.min(t, p.end - 0.5)) }))
+            setTrimRange(p => ({ ...p, start: Math.max(0, p.end - 30, Math.min(t, p.end - 0.5)) }))
             if (videoRef.current) videoRef.current.currentTime = t
         } else {
-            setTrimRange(p => ({ ...p, end: Math.min(videoDuration, Math.max(t, p.start + 0.5)) }))
+            setTrimRange(p => ({ ...p, end: Math.min(videoDuration, p.start + 30, Math.max(t, p.start + 0.5)) }))
             if (videoRef.current) videoRef.current.currentTime = t
         }
     }
@@ -1052,6 +1097,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                         <NavBtn icon={<Gauge size={17}/>}           onClick={() => setActiveTool('speed')}  active={activeTool==='speed'}  title="Velocidad" />
                         <NavBtn icon={<span className="text-[11px] font-black leading-none">9:16</span>} onClick={() => setActiveTool('format')} active={activeTool==='format'} title="Formato" />
                         <NavBtn icon={<Scissors size={17}/>}        onClick={() => setActiveTool('trim')}   active={activeTool==='trim'}   title="Cortar" />
+                        <NavBtn icon={<ImageIcon size={17}/>}       onClick={() => setActiveTool('cover')}  active={activeTool==='cover'}  title="Portada" />
                         <NavBtn icon={<MusicIcon size={17}/>}       onClick={() => setActiveTool('music')}  active={activeTool==='music'}  title="Música" />
                         <NavBtn icon={<Smile size={17}/>}           onClick={() => setActiveTool('sticker')} active={activeTool==='sticker'} title="Stickers" />
                         <NavBtn icon={<ImageIcon size={17}/>}       onClick={() => { setActiveTool('image'); imageInputRef.current?.click() }} active={activeTool==='image'} title="Imagen" />
@@ -1608,6 +1654,99 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                     </motion.div>
                 )}
 
+                {/* COVER */}
+                {activeTool === 'cover' && (
+                    <motion.div initial={{y:300}} animate={{y:0}} exit={{y:300}} className="absolute bottom-0 left-0 right-0 z-[600] bg-black/95 pt-5 pb-20 border-t border-white/10 pointer-events-auto px-5">
+                        <p className="text-[9px] font-black italic uppercase tracking-[0.5em] text-white/30 mb-4 text-center">ELEGIR PORTADA DEL VIDEO</p>
+                        
+                        {/* Horizontal scroll of 12 video frames */}
+                        <div className="flex gap-3 overflow-x-auto no-scrollbar py-2 mb-4">
+                            {thumbnails.length === 0 ? (
+                                <div className="flex items-center justify-center w-full h-20 text-white/20 text-[9px] font-black uppercase tracking-widest animate-pulse">
+                                    Generando fotogramas...
+                                </div>
+                            ) : thumbnails.map((src, i) => {
+                                const frameTime = (i / 12) * videoDuration;
+                                const isSelected = selectedCoverFrameIdx === i;
+                                return (
+                                    <button 
+                                        key={i} 
+                                        type="button"
+                                        onClick={async () => {
+                                            setSelectedCoverFrameIdx(i);
+                                            await captureFrameAsCover(frameTime);
+                                        }} 
+                                        className="flex flex-col items-center gap-1 shrink-0 group focus:outline-none"
+                                    >
+                                        <div className={clsx(
+                                            "w-14 h-20 rounded-xl overflow-hidden border-2 transition-all relative",
+                                            isSelected 
+                                                ? "border-brand-red scale-105 shadow-[0_0_12px_rgba(220,38,38,0.5)]" 
+                                                : "border-white/10 hover:border-white/40"
+                                        )}>
+                                            <img src={src} className="w-full h-full object-cover" alt=""/>
+                                            {isSelected && (
+                                                <div className="absolute inset-0 bg-brand-red/20 flex items-center justify-center">
+                                                    <div className="w-5 h-5 rounded-full bg-brand-red flex items-center justify-center">
+                                                        <span className="text-white text-[10px] font-black">✓</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <span className="text-[8px] font-bold text-white/40">{frameTime.toFixed(1)}s</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+
+                        {/* Custom upload button */}
+                        <div className="flex items-center gap-4 justify-between border-t border-white/5 pt-4">
+                            <div className="flex items-center gap-3">
+                                {coverPreviewUrl ? (
+                                    <div className="w-12 h-16 rounded-xl overflow-hidden border border-white/25 shrink-0 bg-zinc-900">
+                                        <img src={coverPreviewUrl} className="w-full h-full object-cover" alt="Portada seleccionada"/>
+                                    </div>
+                                ) : (
+                                    <div className="w-12 h-16 rounded-xl border border-dashed border-white/15 flex items-center justify-center shrink-0 bg-zinc-950">
+                                        <ImageIcon className="w-5 h-5 text-white/20" />
+                                    </div>
+                                )}
+                                <div className="text-left">
+                                    <p className="text-[10px] font-black text-white uppercase tracking-wider">
+                                        {coverPreviewUrl ? "Portada Seleccionada" : "Sin Portada"}
+                                    </p>
+                                    <p className="text-[8px] text-white/40 font-bold uppercase tracking-widest">
+                                        {coverPreviewUrl ? "Personalizada o frame del video" : "Selecciona un frame o sube una imagen"}
+                                    </p>
+                                </div>
+                            </div>
+
+                            <button 
+                                type="button" 
+                                onClick={() => coverFileRef.current?.click()} 
+                                className="px-4 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[9px] font-black uppercase tracking-widest border border-white/5 transition-all"
+                            >
+                                Cargar Archivo
+                            </button>
+                            <input 
+                                ref={coverFileRef} 
+                                type="file" 
+                                accept="image/*" 
+                                className="hidden" 
+                                onChange={handleCustomCoverUpload} 
+                            />
+                        </div>
+
+                        <button 
+                            type="button" 
+                            onClick={() => setActiveTool('none')} 
+                            className="w-full mt-5 py-4 bg-brand-red text-white font-black text-[10px] uppercase tracking-widest rounded-full border border-brand-red/10 shadow-glow-sm hover:shadow-glow transition-all"
+                        >
+                            LISTO
+                        </button>
+                    </motion.div>
+                )}
+
             </AnimatePresence>
 
             {/* Saving overlay */}
@@ -1670,7 +1809,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
 
 function NavBtn({ icon, onClick, active, title }: { icon: React.ReactNode; onClick: () => void; active: boolean; title?: string }) {
     return (
-        <button onClick={onClick} className={clsx("flex flex-col items-center gap-1.5 transition-all shrink-0", active ? "text-brand-red scale-110" : "text-white/50 hover:text-white/90")}>
+        <button type="button" onClick={onClick} className={clsx("flex flex-col items-center gap-1.5 transition-all shrink-0", active ? "text-brand-red scale-110" : "text-white/50 hover:text-white/90")}>
             {icon}
             {title && <span className="text-[7px] font-black tracking-widest">{title}</span>}
         </button>
@@ -1679,7 +1818,7 @@ function NavBtn({ icon, onClick, active, title }: { icon: React.ReactNode; onCli
 
 function DeleteBtn({ onClick, small }: { onClick: (e: React.MouseEvent) => void; small?: boolean }) {
     return (
-        <button onClick={onClick} className={clsx("absolute -top-3 -right-3 bg-brand-red text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white z-[1100]", small ? "w-6 h-6" : "w-8 h-8")}>
+        <button type="button" onClick={onClick} className={clsx("absolute -top-3 -right-3 bg-brand-red text-white rounded-full flex items-center justify-center shadow-lg border-2 border-white z-[1100]", small ? "w-6 h-6" : "w-8 h-8")}>
             <X size={small ? 11 : 15} strokeWidth={4}/>
         </button>
     )

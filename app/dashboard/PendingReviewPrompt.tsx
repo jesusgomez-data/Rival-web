@@ -5,6 +5,7 @@ import { getPendingClassReviews, saveClassResult } from './gyms/class-actions';
 import { X, Check, Timer, Activity } from 'lucide-react';
 import clsx from 'clsx';
 import Link from 'next/link';
+import WODPostDisplay from '@/components/WODPostDisplay';
 
 export default function PendingReviewPrompt() {
     const [pendingClasses, setPendingClasses] = useState<any[]>([]);
@@ -41,7 +42,7 @@ export default function PendingReviewPrompt() {
     if (!currentClass) return null;
 
     // Parse WOD
-    let wodData: any = {};
+    let wodData: any = null;
     try {
         if (currentClass.wod?.content) {
             try {
@@ -56,6 +57,24 @@ export default function PendingReviewPrompt() {
         setIsLoading(true);
 
         let finalData: any[] = [];
+        
+        // Include WOD data blocks if they exist
+        if (wodData) {
+            if (wodData.blocks && Array.isArray(wodData.blocks)) {
+                finalData = wodData.blocks.map((b: any) => ({
+                    ...b,
+                    // keep fields
+                }));
+            } else if (wodData.workout) {
+                finalData.push({
+                    type: 'custom',
+                    title: wodData.title || 'WOD',
+                    content: wodData.workout,
+                    exercises: []
+                });
+            }
+        }
+
         if (resultValue) {
             finalData.push({
                 type: 'custom',
@@ -116,36 +135,33 @@ export default function PendingReviewPrompt() {
                             ¡Felicidades Rival! 🔥
                         </h2>
                         <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">
-                            Entreno Finalizado • {currentClass.coach?.full_name || 'Coach'}
+                            {currentClass.organizationName || 'Rival Fit Madrid'} • {currentClass.coach?.full_name || 'Coach'}
                         </p>
                     </div>
                     <button onClick={() => setIsMinimized(true)} className="p-2 hover:bg-white/10 rounded-full text-gray-500"><X className="w-5 h-5" /></button>
                 </div>
 
                 <div className="p-6 space-y-6">
-                    {/* WOD Preview */}
-                    <div className="bg-muted rounded-2xl p-4 border border-border space-y-3 relative group">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                                <div className="w-1.5 h-1.5 rounded-full bg-brand-red"></div>
-                                <h3 className="text-xs font-black uppercase text-muted-foreground tracking-widest">WOD del Día</h3>
+                    {/* WOD Display */}
+                    {wodData && (wodData.blocks || wodData.workout) ? (
+                        <div className="border border-border bg-black/40 rounded-2xl p-4 max-h-[300px] overflow-y-auto custom-scrollbar">
+                            <div className="flex items-center gap-2 mb-3 pb-2 border-b border-white/5">
+                                <div className="w-1.5 h-1.5 rounded-full bg-brand-red animate-pulse"></div>
+                                <span className="text-[10px] font-black uppercase tracking-widest text-white/50">WOD COMPLETO</span>
                             </div>
-                            {currentClass.wod && <span className="text-[9px] font-bold text-brand-red uppercase px-2 py-0.5 bg-brand-red/10 rounded">Ver Completo</span>}
-                        </div>
-
-                        <div className="text-sm font-medium text-muted-foreground leading-relaxed whitespace-pre-wrap max-h-32 overflow-y-auto custom-scrollbar">
-                            {wodData?.blocks ? (
-                                wodData.blocks.map((b: any, i: number) => (
-                                    <div key={i} className="mb-2 last:mb-0">
-                                        <span className="text-foreground font-bold">{b.title || b.format || `Bloque ${i + 1}`}</span>
-                                        <p className="opacity-80 text-xs">{b.content?.substring(0, 100) || (b.exercises && b.exercises.map((e: any) => e.name).join(', ').substring(0, 100))}...</p>
-                                    </div>
-                                ))
+                            {wodData.blocks ? (
+                                <WODPostDisplay wod={wodData} compact={false} />
                             ) : (
-                                wodData?.workout || "Sube tus resultados para completar la sesión."
+                                <div className="text-sm font-medium text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                                    {wodData.workout}
+                                </div>
                             )}
                         </div>
-                    </div>
+                    ) : (
+                        <div className="bg-muted rounded-2xl p-4 border border-border text-center text-xs text-muted-foreground italic font-medium">
+                            Sube tus resultados para completar la sesión.
+                        </div>
+                    )}
 
                     {/* Simple Inputs */}
                     <div className="space-y-4">

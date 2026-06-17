@@ -10,6 +10,8 @@ import {
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { getCenterMembers, approveTrialRequest, rejectBookingRequest } from '../../member-actions'
+import { getPendingCancellations } from '../../cancellation-actions'
+import CancellationRequestsPanel from './CancellationRequestsPanel'
 
 const GOALS = [
     { key: 'fat_loss',    label: 'Pérdida de grasa',    icon: '🔥' },
@@ -41,6 +43,7 @@ export default function PTMembersManager({ centerId, initialMembers, plans, orgD
     const maxStudents = plan === 'pt_free' ? 3 : Infinity
 
     const [members,       setMembers]       = useState<any[]>(initialMembers)
+    const [pendingCancellations, setPendingCancellations] = useState<any[]>([])
     const [search,        setSearch]        = useState('')
     const [showModal,     setShowModal]     = useState(false)
     const [viewingMember, setViewingMember] = useState<any>(null)
@@ -75,6 +78,10 @@ export default function PTMembersManager({ centerId, initialMembers, plans, orgD
 
     function showToast(msg: string) { setToast(msg); setTimeout(() => setToast(null), 3000) }
     const setF = (k: string, v: any) => setForm(p => ({ ...p, [k]: v }))
+
+    useEffect(() => {
+        getPendingCancellations(centerId).then(setPendingCancellations)
+    }, [centerId])
 
     // Profile search debounce
     useEffect(() => {
@@ -258,6 +265,15 @@ export default function PTMembersManager({ centerId, initialMembers, plans, orgD
                     {toast}
                 </div>
             )}
+
+            <CancellationRequestsPanel
+                centerId={centerId}
+                requests={pendingCancellations}
+                onUpdate={() => {
+                    getPendingCancellations(centerId).then(setPendingCancellations)
+                    getCenterMembers(centerId).then(data => setMembers(data))
+                }}
+            />
 
             {/* Header */}
             <div className="flex items-center justify-between gap-4">

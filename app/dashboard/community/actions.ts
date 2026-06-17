@@ -415,7 +415,7 @@ export async function createUserPost(formData: FormData) {
 
         const dateStr = formData.get('scheduled_for') as string;
         const createdAt = dateStr ? new Date(`${dateStr}T${new Date().toISOString().split('T')[1]}`).toISOString() : undefined;
-        const thumbnailUrl = formData.get('thumbnail_url') as string || null;
+        const coverUrl = formData.get('thumbnail_url') as string || formData.get('cover_url') as string || null;
 
         const { error: insertError } = await supabase
             .from('posts')
@@ -428,7 +428,7 @@ export async function createUserPost(formData: FormData) {
                 music_url: formData.get('music_url') as string || null,
                 music_title: formData.get('music_title') as string || null,
                 music_artist: formData.get('music_artist') as string || null,
-                thumbnail_url: thumbnailUrl
+                cover_url: coverUrl
             })
 
         if (insertError) {
@@ -655,7 +655,7 @@ export async function deleteComment(commentId: string) {
     return { success: true }
 }
 
-export async function updatePost(postId: string, newCaption: string, mediaUrl?: string, scheduledFor?: string, mediaType?: string, thumbnailUrl?: string) {
+export async function updatePost(postId: string, newCaption: string, mediaUrl?: string, scheduledFor?: string, mediaType?: string, coverUrl?: string) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
@@ -664,7 +664,9 @@ export async function updatePost(postId: string, newCaption: string, mediaUrl?: 
     const isAdmin = profile?.is_official === true;
 
     const updateData: any = { caption: newCaption };
-    if (thumbnailUrl !== undefined) updateData.thumbnail_url = thumbnailUrl || null;
+    if (coverUrl !== undefined) {
+        updateData.cover_url = coverUrl || null;
+    }
     if (mediaUrl) {
         updateData.media_url = mediaUrl;
         if (mediaType) updateData.media_type = mediaType;
@@ -686,10 +688,16 @@ export async function updatePost(postId: string, newCaption: string, mediaUrl?: 
     if (isAdmin) {
         const adminSupabase = createAdminClient();
         const { error: adminError } = await adminSupabase.from('posts').update(updateData).eq('id', postId);
-        if (adminError) return { error: 'Error al actualizar el post.' };
+        if (adminError) {
+            console.error('[updatePost] Admin DB error:', adminError);
+            return { error: 'Error al actualizar el post.' };
+        }
     } else {
         const { error } = await supabase.from('posts').update(updateData).eq('id', postId).eq('user_id', user.id);
-        if (error) return { error: 'Error al actualizar el post.' };
+        if (error) {
+            console.error('[updatePost] DB error:', error);
+            return { error: 'Error al actualizar el post.' };
+        }
     }
 
     // --- NEW: Sync WOD result if it's a WOD post ---
@@ -709,7 +717,7 @@ export async function getUserMedia(userId: string) {
     // Only fetch posts that have media_url not null
     const { data, error } = await supabase
         .from('posts')
-        .select('id, media_url, media_type')
+        .select('id, media_url, media_type, cover_url')
         .eq('user_id', userId)
         .not('media_url', 'is', null)
         .neq('media_type', 'class_result') // Avoid parsing JSON as URL
