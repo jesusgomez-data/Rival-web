@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { UserPlus, UserCheck, MapPin, Globe, CheckCircle2, Grid, Dumbbell, ShoppingBag, X, CreditCard, Check, Lock, Calendar, ArrowRight, ArrowLeft, Trophy, ChevronRight, ChevronLeft, Clock, ChevronDown, Zap, Flame, TrendingUp, Info, Play, Banknote, Instagram, Youtube, Facebook, Hash, Navigation, Image as ImageIcon, Star, Users, Building2, List, LayoutGrid } from "lucide-react";
+import { UserPlus, UserCheck, MapPin, Globe, CheckCircle2, Grid, Dumbbell, ShoppingBag, X, CreditCard, Check, Lock, Calendar, ArrowRight, ArrowLeft, Trophy, ChevronRight, ChevronLeft, Clock, ChevronDown, Zap, Flame, TrendingUp, Info, Play, Banknote, Instagram, Youtube, Facebook, Hash, Navigation, Image as ImageIcon, Star, Users, Building2, List, LayoutGrid, Loader2 } from "lucide-react";
 import { toggleFollow, requestTrial, purchaseProduct, getClassesForDate, getClassesRange, enrollInClass, unenrollFromClass, getClassAttendees, saveClassResult, getDayRankings, requestMemberPayment } from "../../dashboard/gyms/management-actions";
 import { requestMemberLeave } from "../../dashboard/gyms/member-actions";
 import { bookTrialClass } from "../../dashboard/gyms/trial-booking-actions";
@@ -652,7 +652,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                             {isTrainer ? "Reservar" : "Prueba Gratis"}
                                         </button>
                                     )}
-                                    {isMember && !isOwner && (
+                                    {memberStatus?.id && !isOwner && (memberStatus?.status === 'active' || memberStatus?.status === 'trial') && (
                                         <button
                                             onClick={() => setShowLeaveModal(true)}
                                             disabled={leaveRequested}

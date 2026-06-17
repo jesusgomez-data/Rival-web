@@ -65,6 +65,7 @@ export default function TrainerPublicProfile() {
     const [following,   setFollowing]   = useState(false)
     const [isMember,    setIsMember]    = useState(false)
     const [memberId,    setMemberId]    = useState<string | null>(null)
+    const [memberStatus, setMemberStatus] = useState<string | null>(null)
     const [isClient,    setIsClient]    = useState(false)
     const [showLeaveModal, setShowLeaveModal] = useState(false)
     const [leaveReason, setLeaveReason] = useState("")
@@ -135,7 +136,7 @@ export default function TrainerPublicProfile() {
             supabase.from('membership_plans').select('*').eq('organization_id', id).eq('is_active', true).order('price'),
             supabase.from('center_reviews').select('id, rating, review_text, created_at, profiles:user_id(full_name, username, avatar_url)').eq('organization_id', id).order('created_at', { ascending: false }).limit(10),
             user ? supabase.from('center_followers').select('id').eq('organization_id', id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
-            user ? supabase.from('members').select('id, status').eq('center_id', id).eq('user_id', user.id).eq('status', 'active').maybeSingle() : Promise.resolve({ data: null }),
+            user ? supabase.from('members').select('id, status').eq('center_id', id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
             getCenterPosts(id),
             user ? supabase.from('trial_requests').select('*').eq('organization_id', id).eq('user_id', user.id) : Promise.resolve({ data: null }),
             getPublicProfessionalServices(id),
@@ -147,8 +148,9 @@ export default function TrainerPublicProfile() {
         setPlans(plansRes.data || [])
         setReviews(reviewsRes.data || [])
         setFollowing(!!followRes.data)
-        setIsMember(!!memberRes.data)
+        setIsMember((memberRes.data as any)?.status === 'active')
         setMemberId((memberRes.data as any)?.id || null)
+        setMemberStatus((memberRes.data as any)?.status || null)
         setIsClient(!!clientRes.data)
         setPosts(postsRes || [])
         setUserRequests(requestsRes?.data || [])
@@ -495,7 +497,7 @@ export default function TrainerPublicProfile() {
                         <span className="hidden sm:inline">Rival Perfil</span>
                     </Link>
                 )}
-                {isMember && !isOwner && (
+                {memberId && !isOwner && (memberStatus === 'active' || memberStatus === 'trial') && (
                     <button
                         onClick={() => setShowLeaveModal(true)}
                         disabled={leaveRequested}
