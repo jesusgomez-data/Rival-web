@@ -21,6 +21,7 @@ import {
     getProfessionalAvailability, getProfessionalReviews
 } from '@/app/dashboard/gyms/professional-service-actions'
 import { requestMemberLeave } from '@/app/dashboard/gyms/member-actions'
+import { recordProfileVisit } from '@/app/dashboard/gyms/visit-actions'
 import { isProfessional, getTypeLabel, getTypeIcon, SERVICE_MODALITIES } from '@/lib/professional-types'
 import PublicBookingCalendar from './PublicBookingCalendar'
 
@@ -127,6 +128,10 @@ export default function TrainerPublicProfile() {
             .single()
         
         setOwnerUsername(ownerProf?.username || null)
+
+        if (org.owner_id !== user?.id) {
+            recordProfileVisit(id)
+        }
 
         const [plansRes, reviewsRes, followRes, memberRes, requestsRes, servicesRes, availRes, svcReviewsRes] = await Promise.all([
             supabase.from('membership_plans').select('*').eq('organization_id', id).eq('is_active', true).order('price'),

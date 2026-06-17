@@ -43,6 +43,7 @@ import EditAdModal from './EditAdModal';
 import BroadcastModal from './BroadcastModal';
 import TerminalActivity from './TerminalActivity';
 import ManagementIntelligence from './ManagementIntelligence';
+import ViewAnalytics from './ViewAnalytics';
 import { Megaphone, ExternalLink, Eye, MousePointer2, ZapOff, BarChart3, LineChart, Terminal as TerminalIcon } from 'lucide-react';
 import SupportInbox from './SupportInbox';
 import EditCenterModal from './EditCenterModal';
@@ -70,7 +71,7 @@ export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
 
     // UI State
-    const [activeTab, setActiveTab] = useState<'centers' | 'users' | 'plans' | 'reports' | 'ads' | 'system'>('centers');
+    const [activeTab, setActiveTab] = useState<'centers' | 'users' | 'plans' | 'reports' | 'ads' | 'system' | 'analytics'>('centers');
     const [systemSubTab, setSystemSubTab] = useState<'terminal' | 'audit' | 'finance'>('terminal');
     const [reportsSubTab, setReportsSubTab] = useState<'moderation' | 'intelligence'>('moderation');
     const [searchQuery, setSearchQuery] = useState('');
@@ -91,6 +92,7 @@ export default function AdminDashboard() {
         else if (activeTab === 'centers') alert('Para crear un centro, usa el flujo de registro de Sedes.');
         else if (activeTab === 'users') alert('Para crear un usuario, usa el flujo de registro público.');
         else if (activeTab === 'reports') alert('Los reportes son generados automáticamente por la comunidad.');
+        else if (activeTab === 'analytics') alert('Las analíticas se generan automáticamente a partir de la actividad de la app.');
     };
 
     async function refreshData() {
@@ -321,6 +323,15 @@ export default function AdminDashboard() {
                                 >
                                     <TerminalIcon className="w-3 h-3" /> System Hub
                                 </button>
+                                <button
+                                    onClick={() => setActiveTab('analytics')}
+                                    className={cn(
+                                        "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all whitespace-nowrap flex items-center gap-2",
+                                        activeTab === 'analytics' ? "bg-blue-600 text-white shadow-lg" : "text-gray-500 hover:text-black dark:hover:text-white"
+                                    )}
+                                >
+                                    <Eye className="w-3 h-3" /> Analíticas
+                                </button>
                             </div>
 
                             <div className="flex flex-col sm:flex-row gap-2 w-full xl:w-auto">
@@ -415,6 +426,7 @@ export default function AdminDashboard() {
                                                 activeTab === 'ads' ? <Megaphone className="w-5 h-5 text-brand-red" /> :
                                                     activeTab === 'reports' && reportsSubTab === 'moderation' ? <Flag className="w-5 h-5 text-brand-red" /> :
                                                         activeTab === 'system' ? <TerminalIcon className="w-5 h-5 text-blue-500" /> :
+                                                            activeTab === 'analytics' ? <Eye className="w-5 h-5 text-blue-500" /> :
                                                             <LineChart className="w-5 h-5 text-blue-500" />}
                                     {activeTab === 'centers' ? 'Base de Datos de Centros' :
                                         activeTab === 'users' ? 'Directorio de Atletas' :
@@ -422,9 +434,11 @@ export default function AdminDashboard() {
                                                 activeTab === 'ads' ? 'Gestión Publicitaria' :
                                                     activeTab === 'reports' && reportsSubTab === 'moderation' ? 'Reportes de Moderación' :
                                                         activeTab === 'system' ? (systemSubTab === 'terminal' ? 'Sistema en Tiempo Real' : systemSubTab === 'audit' ? 'Registro de Auditoría' : 'Control Financiero') :
+                                                            activeTab === 'analytics' ? 'Visualizaciones y Visitas' :
                                                             'Inteligencia y Retención'}
                                 </h3>
                                 <div className="flex items-center gap-4">
+                                    {activeTab !== 'analytics' && (
                                     <span className="text-xs font-mono text-gray-500">
                                         {activeTab === 'centers' ? filteredCenters.length :
                                             activeTab === 'users' ? filteredUsers.length :
@@ -433,6 +447,7 @@ export default function AdminDashboard() {
                                                         activeTab === 'system' ? (systemSubTab === 'terminal' ? systemActivity.length : systemSubTab === 'audit' ? auditLogs.length : financeData.sales.length) :
                                                             reports.length} REGISTROS
                                     </span>
+                                    )}
                                     {(activeTab === 'plans' || activeTab === 'ads') && (
                                         <button
                                             onClick={handleAdd}
@@ -459,7 +474,13 @@ export default function AdminDashboard() {
                                 </div>
                             )}
 
-                            {((activeTab !== 'reports' || reportsSubTab !== 'intelligence') && (activeTab !== 'system' || systemSubTab !== 'terminal')) && (
+                            {activeTab === 'analytics' && (
+                                <div className="p-6">
+                                    <ViewAnalytics />
+                                </div>
+                            )}
+
+                            {((activeTab !== 'reports' || reportsSubTab !== 'intelligence') && (activeTab !== 'system' || systemSubTab !== 'terminal') && activeTab !== 'analytics') && (
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-sm text-left">
                                         <thead className="text-[10px] text-gray-500 uppercase bg-gray-50 dark:bg-white/5 font-black tracking-widest">

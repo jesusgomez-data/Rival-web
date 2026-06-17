@@ -573,7 +573,7 @@ export default function DashboardHome() {
                 .select(`
                     id, user_id, caption, media_url, media_type, post_type,
                     wod_data, workout_id, music_url, music_title, music_artist,
-                    created_at,
+                    created_at, view_count,
                     profiles:user_id (id, username, full_name, avatar_url, level, is_official),
                     workouts:workout_id (*),
                     likes:likes(user_id),
@@ -1000,6 +1000,7 @@ export default function DashboardHome() {
                                                 post_type={post.post_type}
                                                 wod_data={post.wod_data}
                                                 repostOriginalPost={repostOriginalPost}
+                                                viewCount={post.view_count || 0}
                                             />
                                         </div>
                                     )});

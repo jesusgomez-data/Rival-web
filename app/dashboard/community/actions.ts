@@ -727,6 +727,25 @@ export async function getUserMedia(userId: string) {
     return data
 }
 
+export async function recordPostView(postId: string) {
+    try {
+        const supabase = await createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { error } = await supabase.from('post_views').upsert(
+            { post_id: postId, user_id: user.id },
+            { onConflict: 'post_id,user_id', ignoreDuplicates: true }
+        )
+
+        if (error) {
+            console.error("Error recording post view:", error)
+        }
+    } catch (err) {
+        console.error("Critical error in recordPostView:", err)
+    }
+}
+
 export async function getReelPosts(context: 'following' | 'global') {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()

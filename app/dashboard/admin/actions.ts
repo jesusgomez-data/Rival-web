@@ -4,6 +4,7 @@ import { createClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
 
 import { isUserAdmin } from "@/utils/admin";
+import { isProfessional } from "@/lib/professional-types";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -494,6 +495,74 @@ export async function getFinanceStats() {
         .limit(20);
 
     return { orders: orders || [], sales: sales || [] };
+}
+
+export async function getViewAnalyticsData() {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
+
+    const [orgsRes, visitsRes, postsRes, storiesRes] = await Promise.all([
+        supabaseAdmin.from('organizations').select('id, name, center_type, owner_id'),
+        supabaseAdmin.from('profile_visits').select('organization_id'),
+        supabaseAdmin
+            .from('posts')
+            .select('id, caption, media_type, view_count, user_id, profiles:user_id(username, full_name)')
+            .order('view_count', { ascending: false, nullsFirst: false })
+            .limit(10),
+        supabaseAdmin
+            .from('stories')
+            .select('id, user_id, created_at, profiles:user_id(username, full_name), story_views(count)')
+            .order('created_at', { ascending: false })
+            .limit(200),
+    ]);
+
+    const orgs = orgsRes.data || [];
+    const visits = visitsRes.data || [];
+
+    const visitCountByOrg = visits.reduce((acc: Record<string, number>, v: any) => {
+        acc[v.organization_id] = (acc[v.organization_id] || 0) + 1;
+        return acc;
+    }, {});
+
+    const orgVisitStats = orgs
+        .map((org: any) => ({
+            id: org.id,
+            name: org.name,
+            type: isProfessional(org.center_type) ? 'profesional' : 'centro',
+            visits: visitCountByOrg[org.id] || 0,
+        }))
+        .sort((a: any, b: any) => b.visits - a.visits)
+        .slice(0, 20);
+
+    const totalProfileVisits = visits.length;
+
+    const topPosts = (postsRes.data || []).map((p: any) => ({
+        id: p.id,
+        caption: p.caption,
+        mediaType: p.media_type,
+        viewCount: p.view_count || 0,
+        author: p.profiles?.full_name || p.profiles?.username || 'Atleta',
+    }));
+
+    const totalPostViews = topPosts.reduce((acc: number, p: any) => acc + p.viewCount, 0);
+
+    const storiesWithViews = (storiesRes.data || []).map((s: any) => ({
+        id: s.id,
+        author: s.profiles?.full_name || s.profiles?.username || 'Atleta',
+        createdAt: s.created_at,
+        viewCount: s.story_views?.[0]?.count || 0,
+    }));
+
+    const totalStoryViews = storiesWithViews.reduce((acc: number, s: any) => acc + s.viewCount, 0);
+    const topStories = storiesWithViews.sort((a: any, b: any) => b.viewCount - a.viewCount).slice(0, 10);
+
+    return {
+        orgVisitStats,
+        totalProfileVisits,
+        topPosts,
+        totalPostViews,
+        topStories,
+        totalStoryViews,
+    };
 }
 
 export async function getManagementIntelligenceData() {
