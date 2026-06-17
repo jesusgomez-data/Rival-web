@@ -5,11 +5,11 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink, ZapOff, MapPin } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink, ZapOff, MapPin, Eye } from "lucide-react";
 import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./community/LikeButton";
 import DuelButton from "./community/DuelButton";
-import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike } from "./community/actions";
+import { addComment, getComments, deletePost, updatePost, toggleCommentLike, toggleLike, recordPostView } from "./community/actions";
 import { createRepost } from "./community/repost-actions";
 import { sharePostViaMessage } from "./community/dm-actions";
 import { getFollows } from "./community/follows-actions";
@@ -398,6 +398,7 @@ interface FeedPostProps {
     wod_data?: any;
     repostOriginalPost?: any; // Pre-fetched original post for repost cards (avoids N+1)
     cover_url?: string | null;
+    viewCount?: number;
 }
 
 interface Comment {
@@ -415,7 +416,7 @@ interface Comment {
 }
 
 const FeedPost = memo(function FeedPost({ postId, username, user, action, time, avatar, image, initialLikes, hasLikedInitial, comments: initialCommentsCount, highlight, mediaType, caption, currentUserId, authorId, centerName,
-    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global', isAdminUser, hasActiveDuel, post_type, wod_data, repostOriginalPost, cover_url, thumbnail_url
+    workoutData, music_url, music_title, music_artist, isOfficial, isMember = false, context = 'global', isAdminUser, hasActiveDuel, post_type, wod_data, repostOriginalPost, cover_url, thumbnail_url, viewCount: initialViewCount
 }: FeedPostProps) {
     const { theme } = useTheme();
     const [currentCaption, setCurrentCaption] = useState(caption || "");
@@ -811,6 +812,8 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
 
     const [isVisible, setIsVisible] = useState(false);
     const [isNearViewport, setIsNearViewport] = useState(false);
+    const [viewCount, setViewCount] = useState(initialViewCount || 0);
+    const hasRecordedViewRef = useRef(false);
     const [showMuteHint, setShowMuteHint] = useState(false);
     // Combined state for buffering/loading
     const [isBuffering, setIsBuffering] = useState(true);
@@ -914,6 +917,23 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
         observer.observe(target);
         return () => observer.disconnect();
     }, [music_url]);
+
+    // Record a view once this post becomes visible (counted once per mount, like IG/TikTok)
+    useEffect(() => {
+        const target = postRef.current;
+        if (!target || !postId) return;
+
+        const observer = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting && !hasRecordedViewRef.current) {
+                hasRecordedViewRef.current = true;
+                setViewCount(c => c + 1);
+                recordPostView(postId);
+            }
+        }, { threshold: 0.5 });
+
+        observer.observe(target);
+        return () => observer.disconnect();
+    }, [postId]);
 
     // Handle audio play/pause states reactively
     useEffect(() => {
@@ -1880,6 +1900,12 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             onMessageClick={() => { setShowDMModal(true); loadDMFollows(); }}
                         />
                     </div>
+                    {viewCount > 0 && (
+                        <div className="flex items-center gap-1.5 text-zinc-500" title="Visualizaciones">
+                            <Eye className="w-4 h-4" />
+                            <span className="text-[11px] font-bold">{viewCount.toLocaleString('es-ES')}</span>
+                        </div>
+                    )}
                 </div>
 
                 {music_url && (

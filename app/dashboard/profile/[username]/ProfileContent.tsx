@@ -766,6 +766,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                                     isAdminUser={isAdminUser}
                                                     currentUserId={user?.id}
                                                     authorId={post.user_id}
+                                                    viewCount={post.view_count || 0}
                                                 />
                                             ))}
                                         </div>

@@ -164,6 +164,7 @@ export default function PostPage() {
                     isOfficial={post.profiles?.is_official}
                     post_type={post.post_type || post.media_type}
                     wod_data={post.post_type === 'wod' ? post.media_url : null}
+                    viewCount={post.view_count || 0}
                 />
             </div>
         </div>
