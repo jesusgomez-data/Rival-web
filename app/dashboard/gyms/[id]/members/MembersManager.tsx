@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Search, User, CheckCircle, Trash2, Edit2, X, CreditCard, Phone, Mail, Landmark, Power, Cake, Calendar, Link as LinkIcon, Loader2, ChevronDown, Check, Send, Download, Upload, FileText, AlertCircle, Building2 } from "lucide-react";
-import { addMember, addGuestMember, requestMemberPayment, approveTrialRequest, removeMember, updateMemberDetails, toggleMemberStatus, searchAthletes, linkMemberToUser, bulkImportMembers, getCenterMembers } from "../../member-actions";
+import { addMember, addGuestMember, requestMemberPayment, approveTrialRequest, removeMember, updateMemberDetails, toggleMemberStatus, searchAthletes, linkMemberToUser, bulkImportMembers, getCenterMembers, getLeaveRequests, processLeaveRequest } from "../../member-actions";
 import { sendRegistrationEmail } from "../../email-actions";
 import { getPendingCancellations } from "../../cancellation-actions";
 import CancellationRequestsPanel from "./CancellationRequestsPanel";
@@ -31,6 +31,13 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
     const [showImportModal, setShowImportModal] = useState(false);
     const [importData, setImportData] = useState<any[]>([]);
     const [isImporting, setIsImporting] = useState(false);
+
+    const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
+    const [processingLeaveId, setProcessingLeaveId] = useState<string | null>(null);
+
+    useEffect(() => {
+        getLeaveRequests(centerId).then(setLeaveRequests);
+    }, [centerId]);
 
     // Profile search state
     const [profileSearchQuery, setProfileSearchQuery] = useState("");
@@ -732,6 +739,69 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                     </tbody>
                 </table>
             </div>
+
+            {/* Solicitudes de Baja */}
+            {leaveRequests.length > 0 && (
+                <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-orange-400" />
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-orange-400">Solicitudes de Baja ({leaveRequests.length})</h3>
+                    </div>
+                    <div className="space-y-2">
+                        {leaveRequests.map((req: any) => (
+                            <div key={req.id} className="bg-orange-500/5 border border-orange-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                                <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <div className="w-9 h-9 rounded-full bg-muted overflow-hidden shrink-0 border border-orange-500/20">
+                                        {req.profiles?.avatar_url ? (
+                                            <img src={req.profiles.avatar_url} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <User className="p-1.5 w-full h-full text-muted-foreground" />
+                                        )}
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-sm font-bold text-foreground truncate">{req.profiles?.full_name || 'Miembro'}</p>
+                                        {req.reason && (
+                                            <p className="text-[10px] text-muted-foreground mt-0.5 line-clamp-1">"{req.reason}"</p>
+                                        )}
+                                        <p className="text-[9px] text-orange-400/60 font-bold uppercase tracking-widest mt-0.5">
+                                            {new Date(req.requested_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 shrink-0 w-full sm:w-auto">
+                                    <button
+                                        disabled={processingLeaveId === req.id}
+                                        onClick={async () => {
+                                            setProcessingLeaveId(req.id);
+                                            await processLeaveRequest(req.id, 'reject');
+                                            setLeaveRequests(prev => prev.filter(r => r.id !== req.id));
+                                            setProcessingLeaveId(null);
+                                        }}
+                                        className="flex-1 sm:flex-none bg-muted text-muted-foreground py-2 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:text-foreground border border-border transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                    >
+                                        {processingLeaveId === req.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
+                                        Rechazar
+                                    </button>
+                                    <button
+                                        disabled={processingLeaveId === req.id}
+                                        onClick={async () => {
+                                            setProcessingLeaveId(req.id);
+                                            await processLeaveRequest(req.id, 'approve');
+                                            setLeaveRequests(prev => prev.filter(r => r.id !== req.id));
+                                            setMembers((prev: any[]) => prev.map(m => m.id === req.member_id ? { ...m, status: 'inactive' } : m));
+                                            setProcessingLeaveId(null);
+                                        }}
+                                        className="flex-1 sm:flex-none bg-orange-500 text-white py-2 px-4 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-orange-400 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                                    >
+                                        {processingLeaveId === req.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle className="w-3 h-3" />}
+                                        Aprobar Baja
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Ficha de Miembro (View / Edit) */}
             {viewingMember && (

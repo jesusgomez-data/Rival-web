@@ -56,11 +56,11 @@ export default function SignupPage() {
 
             {/* Form Side */}
             <div className="w-full lg:w-1/2 flex items-center justify-center p-8 pt-24 lg:pt-8 relative order-1 min-h-screen lg:min-h-0">
-                <div className="absolute top-8 right-8 flex items-center gap-4">
+                <div className="absolute right-8 flex items-center gap-4" style={{ top: 'max(2rem, env(safe-area-inset-top))' }}>
                     <ThemeToggle />
                 </div>
 
-                <Link href="/" className="text-muted-foreground hover:text-foreground absolute top-8 left-8 flex items-center gap-2 transition-colors">
+                <Link href="/" className="text-muted-foreground hover:text-foreground absolute left-8 flex items-center gap-2 transition-colors" style={{ top: 'max(2rem, env(safe-area-inset-top))' }}>
                     <ArrowLeft className="w-4 h-4" /> {t.signup.backHome}
                 </Link>
 

@@ -6,7 +6,7 @@ import {
     MapPin, Globe, Instagram, Phone, Star, Award, Monitor,
     Users, Check, ArrowLeft, Calendar, MessageSquare,
     Loader2, UserPlus, UserCheck, Zap, Flame, Lock, Trophy,
-    Clock, List, LayoutGrid
+    Clock, List, LayoutGrid, Grid, X
 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
@@ -20,6 +20,7 @@ import {
     getPublicProfessionalServices, createServiceBooking,
     getProfessionalAvailability, getProfessionalReviews
 } from '@/app/dashboard/gyms/professional-service-actions'
+import { requestMemberLeave } from '@/app/dashboard/gyms/member-actions'
 import { isProfessional, getTypeLabel, getTypeIcon, SERVICE_MODALITIES } from '@/lib/professional-types'
 import PublicBookingCalendar from './PublicBookingCalendar'
 
@@ -61,6 +62,12 @@ export default function TrainerPublicProfile() {
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [following,   setFollowing]   = useState(false)
     const [isMember,    setIsMember]    = useState(false)
+    const [memberId,    setMemberId]    = useState<string | null>(null)
+    const [memberStatus, setMemberStatus] = useState<string | null>(null)
+    const [showLeaveModal, setShowLeaveModal] = useState(false)
+    const [leaveReason, setLeaveReason] = useState("")
+    const [isSubmittingLeave, setIsSubmittingLeave] = useState(false)
+    const [leaveRequested, setLeaveRequested] = useState(false)
     const [loading,     setLoading]     = useState(true)
     const [tab,         setTab]         = useState<'about' | 'services' | 'reviews' | 'schedule'>('about')
     const [preSelectedServiceId, setPreSelectedServiceId] = useState<string | null>(null)
@@ -125,7 +132,7 @@ export default function TrainerPublicProfile() {
             supabase.from('membership_plans').select('*').eq('organization_id', id).eq('is_active', true).order('price'),
             supabase.from('center_reviews').select('id, rating, review_text, created_at, profiles:user_id(full_name, username, avatar_url)').eq('organization_id', id).order('created_at', { ascending: false }).limit(10),
             user ? supabase.from('center_followers').select('id').eq('organization_id', id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
-            user ? supabase.from('members').select('id, status').eq('center_id', id).eq('user_id', user.id).eq('status', 'active').maybeSingle() : Promise.resolve({ data: null }),
+            user ? supabase.from('members').select('id, status').eq('center_id', id).eq('user_id', user.id).maybeSingle() : Promise.resolve({ data: null }),
             user ? supabase.from('trial_requests').select('*').eq('organization_id', id).eq('user_id', user.id) : Promise.resolve({ data: null }),
             getPublicProfessionalServices(id),
             getProfessionalAvailability(id),
@@ -135,7 +142,9 @@ export default function TrainerPublicProfile() {
         setPlans(plansRes.data || [])
         setReviews(reviewsRes.data || [])
         setFollowing(!!followRes.data)
-        setIsMember(!!memberRes.data)
+        setIsMember((memberRes.data as any)?.status === 'active')
+        setMemberId((memberRes.data as any)?.id || null)
+        setMemberStatus((memberRes.data as any)?.status || null)
         setUserRequests(requestsRes?.data || [])
         setProfServices(servicesRes)
         setAvailability(availRes)
@@ -322,6 +331,19 @@ export default function TrainerPublicProfile() {
         setTrainer((t: any) => ({ ...t, followers_count: following ? (t.followers_count || 1) - 1 : (t.followers_count || 0) + 1 }))
     }
 
+    async function handleRequestLeave() {
+        if (!memberId) return
+        setIsSubmittingLeave(true)
+        const res = await requestMemberLeave(id, memberId, leaveReason || undefined)
+        setIsSubmittingLeave(false)
+        if ((res as any).error) {
+            alert((res as any).error)
+        } else {
+            setLeaveRequested(true)
+            setShowLeaveModal(false)
+        }
+    }
+
     const avgRating = reviews.length > 0
         ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length).toFixed(1)
         : null
@@ -465,6 +487,15 @@ export default function TrainerPublicProfile() {
                         <Flame className="w-4 h-4 text-brand-red fill-current" />
                         <span className="hidden sm:inline">Rival Perfil</span>
                     </Link>
+                )}
+                {memberId && !isOwner && (memberStatus === 'active' || memberStatus === 'trial') && (
+                    <button
+                        onClick={() => setShowLeaveModal(true)}
+                        disabled={leaveRequested}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm border transition-colors ${leaveRequested ? 'border-orange-500/30 text-orange-400 bg-orange-500/10' : 'border-white/10 text-gray-400 hover:border-red-500/40 hover:text-red-400 hover:bg-red-500/5'}`}
+                    >
+                        {leaveRequested ? 'Baja Solicitada' : 'Solicitar Baja'}
+                    </button>
                 )}
             </div>
 
@@ -895,6 +926,50 @@ export default function TrainerPublicProfile() {
                     )
                 })()}
             </div>
+
+            {/* Leave Request Modal */}
+            {showLeaveModal && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div className="bg-[#111] border border-white/10 text-white rounded-3xl w-full max-w-md p-6 relative shadow-2xl">
+                        <button onClick={() => setShowLeaveModal(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+                            <X className="w-5 h-5" />
+                        </button>
+                        <div className="mb-6">
+                            <div className="w-12 h-12 bg-red-500/10 rounded-2xl flex items-center justify-center mb-4 border border-red-500/20">
+                                <ArrowLeft className="w-6 h-6 text-red-400" />
+                            </div>
+                            <h3 className="text-xl font-black italic uppercase tracking-tight mb-1">Solicitar Baja</h3>
+                            <p className="text-[11px] text-gray-400 font-medium leading-relaxed">
+                                Tu solicitud será enviada a <strong>{trainer.name}</strong>. Te notificará con la decisión. Hasta que sea aprobada, tu relación permanece activa.
+                            </p>
+                        </div>
+                        <div className="space-y-4">
+                            <div>
+                                <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1 mb-1 block">Motivo (opcional)</label>
+                                <textarea
+                                    value={leaveReason}
+                                    onChange={(e) => setLeaveReason(e.target.value)}
+                                    placeholder="Cuéntanos el motivo de tu baja..."
+                                    rows={3}
+                                    className="w-full rounded-2xl p-4 text-sm resize-none border outline-none focus:border-red-400/50 bg-black/40 border-white/10 text-white placeholder:text-gray-600"
+                                />
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                                <button onClick={() => setShowLeaveModal(false)} className="flex-1 py-3 rounded-2xl border border-white/10 text-gray-400 font-black uppercase text-[10px] tracking-widest hover:bg-white/5 transition-all">
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleRequestLeave}
+                                    disabled={isSubmittingLeave}
+                                    className="flex-[2] py-3 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 font-black uppercase text-[10px] tracking-widest hover:bg-red-500/20 transition-all flex items-center justify-center gap-2"
+                                >
+                                    {isSubmittingLeave ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Enviar Solicitud de Baja'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     </div>
     )

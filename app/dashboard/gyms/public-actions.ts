@@ -47,7 +47,7 @@ export async function getMemberStatus(centerId: string) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return null;
-    const { data } = await supabase.from('members').select('status, plan').eq('center_id', centerId).eq('user_id', user.id).maybeSingle();
+    const { data } = await supabase.from('members').select('id, status, plan').eq('center_id', centerId).eq('user_id', user.id).maybeSingle();
     return data;
 }
 

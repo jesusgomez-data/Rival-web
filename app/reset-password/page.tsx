@@ -58,7 +58,7 @@ export default function ResetPasswordPage() {
 
             {/* Form Side */}
             <div className="w-full lg:w-1/2 flex items-center justify-center p-8 pt-24 lg:pt-8 relative min-h-screen lg:min-h-0">
-                <div className="absolute top-8 right-8 flex items-center gap-4">
+                <div className="absolute right-8 flex items-center gap-4" style={{ top: 'max(2rem, env(safe-area-inset-top))' }}>
                     <ThemeToggle />
                 </div>
 

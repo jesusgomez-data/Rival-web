@@ -97,7 +97,7 @@ export default function CenterOwnerLogin() {
       </div>
 
       <div className="w-full lg:w-1/2 flex items-center justify-center p-8 relative">
-        <Link href="/" className="absolute top-8 left-8 p-2 text-gray-500 hover:text-white transition-colors rounded-full hover:bg-white/5">
+        <Link href="/" className="absolute left-8 p-2 text-gray-500 hover:text-white transition-colors rounded-full hover:bg-white/5" style={{ top: 'max(2rem, env(safe-area-inset-top))' }}>
           <MoveLeft className="w-6 h-6" />
         </Link>
         <div className="max-w-md w-full">
