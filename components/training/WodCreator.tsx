@@ -146,6 +146,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
     });
 
     const [category, setCategory] = useState<WorkoutCategory>(initialData?.category || 'CROSS_TRAINING');
+    const [showCategoryPicker, setShowCategoryPicker] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
 
     const [catalog, setCatalog] = useState<any[]>([]);
@@ -427,7 +428,21 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
         <div className="space-y-6">
             {/* Category Selector */}
             <div className="space-y-3">
-                <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] ml-2">Selecciona Tipo de Entrenamiento</label>
+                <button
+                    type="button"
+                    onClick={() => setShowCategoryPicker(!showCategoryPicker)}
+                    className="w-full flex items-center justify-between gap-2 p-3 rounded-2xl border border-white/10 bg-black/20 hover:border-white/20 transition-all"
+                >
+                    <div className="flex items-center gap-2.5">
+                        <span className="text-lg">{CATEGORIES.find(c => c.id === category)?.icon}</span>
+                        <div className="text-left">
+                            <p className="text-[9px] font-black text-gray-500 uppercase tracking-[0.2em]">Tipo de Entrenamiento</p>
+                            <p className="text-sm font-black text-white uppercase tracking-tight">{CATEGORIES.find(c => c.id === category)?.label}</p>
+                        </div>
+                    </div>
+                    <ChevronDown className={cn("w-4 h-4 text-gray-500 transition-transform", showCategoryPicker && "rotate-180")} />
+                </button>
+                {showCategoryPicker && (
                 <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-2">
                     {CATEGORIES.map((cat) => (
                         <button
@@ -435,6 +450,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                             type="button"
                             onClick={() => {
                                 setCategory(cat.id);
+                                setShowCategoryPicker(false);
                                 let newTitle = title;
                                 let newBlocks = blocks;
                                 
@@ -513,6 +529,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                         </button>
                     ))}
                 </div>
+                )}
             </div>
 
             <div className="relative group">
