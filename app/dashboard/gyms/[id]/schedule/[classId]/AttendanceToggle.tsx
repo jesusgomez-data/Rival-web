@@ -7,19 +7,25 @@ import { markAttendance } from "../../../schedule-actions";
 export default function AttendanceToggle({ enrollmentId, initialAttended, path }: any) {
     const [status, setStatus] = useState<boolean | null>(initialAttended);
     const [loading, setLoading] = useState(false);
+    const [loadingTarget, setLoadingTarget] = useState<boolean | null>(null);
 
     async function handleToggle(value: boolean) {
         if (loading) return;
+        
+        // If clicking the already selected button, toggle back to null (unmarked)
+        const newValue = status === value ? null : value;
+        
         setLoading(true);
-        // Optimistic UI
-        setStatus(value);
+        setLoadingTarget(value);
+        setStatus(newValue);
 
-        const res = await markAttendance(enrollmentId, value, path);
+        const res = await markAttendance(enrollmentId, newValue, path);
         if (res.error) {
             alert("Error updating attendance");
             setStatus(initialAttended); // Revert
         }
         setLoading(false);
+        setLoadingTarget(null);
     }
 
     return (
@@ -29,7 +35,7 @@ export default function AttendanceToggle({ enrollmentId, initialAttended, path }
                 className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] font-black uppercase transition-all ${status === true ? 'bg-green-500 text-black shadow-lg' : 'text-gray-600 hover:text-green-500'}`}
                 title="Mark Present"
             >
-                {loading && status === true ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
+                {loading && loadingTarget === true ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-3 h-3" />}
                 <span className="hidden sm:inline">Present</span>
             </button>
             <button
@@ -37,7 +43,7 @@ export default function AttendanceToggle({ enrollmentId, initialAttended, path }
                 className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] font-black uppercase transition-all ${status === false ? 'bg-red-500 text-white shadow-lg' : 'text-gray-600 hover:text-red-500'}`}
                 title="Mark Absent"
             >
-                {loading && status === false ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
+                {loading && loadingTarget === false ? <Loader2 className="w-3 h-3 animate-spin" /> : <X className="w-3 h-3" />}
                 <span className="hidden sm:inline">Absent</span>
             </button>
         </div>

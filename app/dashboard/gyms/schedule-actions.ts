@@ -364,7 +364,7 @@ export async function getClassResults(classId: string) {
     return data;
 }
 
-export async function markAttendance(enrollmentId: string, attended: boolean, path: string) {
+export async function markAttendance(enrollmentId: string, attended: boolean | null, path: string) {
     const supabase = await createClient();
     const { error } = await supabase
         .from('class_enrollments')
@@ -468,7 +468,7 @@ export async function enrollInClass(centerId: string, classId: string) {
     const { data: existing } = await supabase.from('class_enrollments').select('id').eq('class_id', classId).eq('member_id', member.id).maybeSingle();
     if (existing) return { error: "Ya inscrito." };
 
-    await supabase.from('class_enrollments').insert({ class_id: classId, member_id: member.id, enrollment_date: new Date().toISOString(), attended: false });
+    await supabase.from('class_enrollments').insert({ class_id: classId, member_id: member.id, enrollment_date: new Date().toISOString(), attended: null });
 
     // Notification
     const { data: classInfo } = await supabase.from('classes').select('name, organization:organization_id(name)').eq('id', classId).single();

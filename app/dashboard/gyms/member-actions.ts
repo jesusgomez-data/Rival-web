@@ -412,7 +412,7 @@ export async function approveTrialRequest(centerId: string, requestId: string, u
         await admin.from('class_enrollments').insert({
             class_id: request.class_id,
             member_id: memberId,
-            attended: false,
+            attended: null,
             enrollment_date: new Date().toISOString()
         });
     }

@@ -59,6 +59,9 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
     const [paymentDropdownOpen, setPaymentDropdownOpen] = useState(false);
 
     const [notes, setNotes] = useState("");
+    const [injuries, setInjuries] = useState("");
+    const [otherSports, setOtherSports] = useState("");
+    const [generalNotes, setGeneralNotes] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
 
     // Sync state with props when server refreshes or center changes
@@ -94,6 +97,22 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
             setPlan(member.plan || "unlimited");
             setPaymentMethod(member.payment_method || "cash");
             setNotes(member.notes || "");
+            let inj = "";
+            let sport = "";
+            let genNotes = member.notes || "";
+            try {
+                if (member.notes && member.notes.startsWith('{')) {
+                    const parsed = JSON.parse(member.notes);
+                    inj = parsed.injuries || "";
+                    sport = parsed.otherSports || "";
+                    genNotes = parsed.generalNotes || "";
+                }
+            } catch (e) {
+                console.error("Error parsing member notes:", e);
+            }
+            setInjuries(inj);
+            setOtherSports(sport);
+            setGeneralNotes(genNotes);
 
             // Open in edit mode for trials or incomplete profiles
             if (member.status === 'trial' || member.plan === 'trial' || !member.phone || !member.birth_date) {
@@ -156,6 +175,9 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
         setSearchResults([]);
         setSelectedProfile(null);
         setNotes("");
+        setInjuries("");
+        setOtherSports("");
+        setGeneralNotes("");
     };
 
     const handleProfileSearch = async (query: string) => {
@@ -193,6 +215,12 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
         e.preventDefault();
         setIsSaving(true);
 
+        const combinedNotes = JSON.stringify({
+            injuries: injuries.trim(),
+            otherSports: otherSports.trim(),
+            generalNotes: generalNotes.trim()
+        });
+
         const extraData = {
             email,
             phone,
@@ -207,7 +235,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
         if (plan === 'guest') {
             res = await addGuestMember(centerId, username, email, {
                 ...extraData,
-                notes,
+                notes: combinedNotes,
                 center_id: selectedCenterId
             });
         } else if (paymentMethod === 'payment_request') {
@@ -219,13 +247,13 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
             res = await requestMemberPayment(centerId, plan, selectedProfile.id, {
                 ...extraData,
                 fullName: username,
-                notes,
+                notes: combinedNotes,
                 center_id: selectedCenterId
             });
         } else {
             res = await addMember(centerId, username, plan, {
                 ...extraData,
-                notes,
+                notes: combinedNotes,
                 center_id: selectedCenterId
             }, selectedProfile?.id);
         }
@@ -256,6 +284,12 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
         if (!viewingMember) return;
         setIsSaving(true);
 
+        const combinedNotes = JSON.stringify({
+            injuries: injuries.trim(),
+            otherSports: otherSports.trim(),
+            generalNotes: generalNotes.trim()
+        });
+
         const data: any = {
             full_name: username,
             email,
@@ -263,7 +297,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
             birth_date: birthDate,
             plan,
             payment_method: paymentMethod,
-            notes,
+            notes: combinedNotes,
             auto_billing: paymentMethod === 'card',
             card_last4: paymentMethod === 'card' && cardNumber ? cardNumber.slice(-4) : viewingMember.card_last4
         };
@@ -305,7 +339,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                 email,
                 phone,
                 birth_date: birthDate,
-                notes,
+                notes: combinedNotes,
                 center_id: selectedCenterId
             });
 
@@ -641,6 +675,22 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                         setPlan(m.plan || "unlimited");
                                         setPaymentMethod(m.payment_method || "cash");
                                         setNotes(m.notes || "");
+                                        let inj = "";
+                                        let sport = "";
+                                        let genNotes = m.notes || "";
+                                        try {
+                                            if (m.notes && m.notes.startsWith('{')) {
+                                                const parsed = JSON.parse(m.notes);
+                                                inj = parsed.injuries || "";
+                                                sport = parsed.otherSports || "";
+                                                genNotes = parsed.generalNotes || "";
+                                            }
+                                        } catch (e) {
+                                            console.error("Error parsing member notes:", e);
+                                        }
+                                        setInjuries(inj);
+                                        setOtherSports(sport);
+                                        setGeneralNotes(genNotes);
                                         setIsEditing(false);
                                     }}
                                     className="hover:bg-muted/50 transition-all group cursor-pointer"
@@ -1039,19 +1089,42 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
 
                                         <div>
                                             <label className="block text-[7px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">Nombre Completo</label>
-                                            <input required disabled={!isEditing} value={username} onChange={e => setUsername(e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 sm:p-2.5 text-foreground outline-none focus:border-brand-red text-[11px] disabled:opacity-50" />
+                                            {isEditing ? (
+                                                <input required value={username} onChange={e => setUsername(e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 sm:p-2.5 text-foreground outline-none focus:border-brand-red text-[11px]" />
+                                            ) : (
+                                                <p className="text-xs text-foreground font-semibold">{username || "No especificado"}</p>
+                                            )}
                                         </div>
 
                                         <div>
                                             <label className="block text-[7px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Fecha de Nacimiento</label>
                                             <div className="relative">
-                                                <input type="date" disabled={!isEditing} value={birthDate} onChange={e => setBirthDate(e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 sm:p-2.5 text-foreground outline-none focus:border-brand-red text-[11px] disabled:opacity-50" />
+                                                {isEditing ? (
+                                                    <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 sm:p-2.5 text-foreground outline-none focus:border-brand-red text-[11px]" />
+                                                ) : (
+                                                    <p className="text-xs text-foreground font-semibold">
+                                                        {birthDate ? `${new Date(birthDate).toLocaleDateString('es-ES')} (${calculateAge(birthDate)} años)` : 'No especificada'}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
 
                                         <div>
                                             <label className="block text-[7px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Correo Electrónico</label>
-                                            <input type="email" disabled={!isEditing} value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 sm:p-2.5 text-foreground outline-none focus:border-brand-red text-[11px] disabled:opacity-50" />
+                                            {isEditing ? (
+                                                <input type="email" value={email} onChange={e => setEmail(e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 sm:p-2.5 text-foreground outline-none focus:border-brand-red text-[11px]" />
+                                            ) : (
+                                                <p className="text-xs text-foreground font-semibold truncate">{email || "No especificado"}</p>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-[7px] font-black uppercase tracking-widest text-gray-500 mb-0.5">Teléfono</label>
+                                            {isEditing ? (
+                                                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 sm:p-2.5 text-foreground outline-none focus:border-brand-red text-[11px]" />
+                                            ) : (
+                                                <p className="text-xs text-foreground font-semibold">{phone || "No especificado"}</p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -1139,19 +1212,56 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                     </div>
                                 </div>
 
-                                {/* Section for Notes / Injuries */}
-                                <div className="pt-3 border-t border-border">
-                                    <div className="flex items-center gap-1.5 text-brand-red mb-3">
+                                {/* Section for Injuries, Sports & Notes */}
+                                <div className="pt-3 border-t border-border space-y-3">
+                                    <div className="flex items-center gap-1.5 text-brand-red">
                                         <div className="text-brand-red opacity-60 bg-brand-red/10 p-1 rounded-lg"><FileText className="w-3 h-3" /></div>
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Notas / Observaciones (Molestias, lesiones...)</span>
+                                        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Ficha Médica & Deportiva</span>
                                     </div>
-                                    <textarea
-                                        disabled={!isEditing}
-                                        value={notes}
-                                        onChange={e => setNotes(e.target.value)}
-                                        placeholder="Escribe aquí cualquier observación relevante sobre el atleta..."
-                                        className="w-full bg-background border border-border rounded-xl p-3 text-foreground outline-none focus:border-brand-red text-[11px] min-h-[80px] disabled:opacity-50 resize-none"
-                                    />
+                                    
+                                    <div className="space-y-3 bg-muted/30 p-3 rounded-xl border border-border">
+                                        <div>
+                                            <label className="block text-[7px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">Lesiones / Molestias físicas</label>
+                                            {isEditing ? (
+                                                <input
+                                                    value={injuries}
+                                                    onChange={e => setInjuries(e.target.value)}
+                                                    placeholder="Ej: Ninguna, dolor lumbar..."
+                                                    className="w-full bg-background border border-border rounded-lg p-2 text-foreground outline-none focus:border-brand-red text-[11px]"
+                                                />
+                                            ) : (
+                                                <p className="text-xs text-foreground font-semibold">{injuries || "Ninguna registrada"}</p>
+                                            )}
+                                        </div>
+                                        
+                                        <div>
+                                            <label className="block text-[7px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">Otros deportes</label>
+                                            {isEditing ? (
+                                                <input
+                                                    value={otherSports}
+                                                    onChange={e => setOtherSports(e.target.value)}
+                                                    placeholder="Ej: Running, Ciclismo..."
+                                                    className="w-full bg-background border border-border rounded-lg p-2 text-foreground outline-none focus:border-brand-red text-[11px]"
+                                                />
+                                            ) : (
+                                                <p className="text-xs text-foreground font-semibold">{otherSports || "Ninguno registrado"}</p>
+                                            )}
+                                        </div>
+                                        
+                                        <div>
+                                            <label className="block text-[7px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">Notas / Observaciones generales</label>
+                                            {isEditing ? (
+                                                <textarea
+                                                    value={generalNotes}
+                                                    onChange={e => setGeneralNotes(e.target.value)}
+                                                    placeholder="Cualquier otra observación..."
+                                                    className="w-full bg-background border border-border rounded-lg p-2 text-foreground outline-none focus:border-brand-red text-[11px] min-h-[60px] resize-none"
+                                                />
+                                            ) : (
+                                                <p className="text-xs text-foreground/80 whitespace-pre-wrap">{generalNotes || "Sin observaciones adicionales"}</p>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="flex flex-col-reverse md:flex-row items-center justify-between pt-6 gap-4">
@@ -1363,14 +1473,34 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                 </div>
                                             )}
 
-                                            <div className="pt-2">
-                                                <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1.5 ml-1">Notas / Observaciones Iniciales</label>
-                                                <textarea
-                                                    value={notes}
-                                                    onChange={e => setNotes(e.target.value)}
-                                                    placeholder="Ej: Molestias en rodilla derecha, operado de hombro en 2022..."
-                                                    className="w-full bg-background border border-border rounded-xl p-3 text-foreground outline-none focus:border-brand-red text-xs min-h-[80px] resize-none"
-                                                />
+                                            <div className="pt-2 space-y-3">
+                                                <div>
+                                                    <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1 ml-1">¿Tiene alguna lesión o molestia física?</label>
+                                                    <input
+                                                        value={injuries}
+                                                        onChange={e => setInjuries(e.target.value)}
+                                                        placeholder="Ej: Molestias en rodilla derecha, operado de hombro en 2022..."
+                                                        className="w-full bg-background border border-border rounded-xl p-3 text-foreground outline-none focus:border-brand-red text-xs"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1 ml-1">¿Practica otro deporte? ¿Cuál?</label>
+                                                    <input
+                                                        value={otherSports}
+                                                        onChange={e => setOtherSports(e.target.value)}
+                                                        placeholder="Ej: Running, Fútbol, Natación..."
+                                                        className="w-full bg-background border border-border rounded-xl p-3 text-foreground outline-none focus:border-brand-red text-xs"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1 ml-1">Notas / Observaciones generales</label>
+                                                    <textarea
+                                                        value={generalNotes}
+                                                        onChange={e => setGeneralNotes(e.target.value)}
+                                                        placeholder="Cualquier otra observación relevante sobre el atleta..."
+                                                        className="w-full bg-background border border-border rounded-xl p-3 text-foreground outline-none focus:border-brand-red text-xs min-h-[70px] resize-none"
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     )}
