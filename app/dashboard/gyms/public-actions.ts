@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { PUBLIC_ORG_COLUMNS } from "@/lib/org-columns";
+import { headers } from "next/headers";
 
 export async function getPublicCenter(centerId: string) {
     const supabase = await createClient();
@@ -56,13 +57,67 @@ export async function requestTrial(centerId: string, date?: string, classId?: st
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: "Inicia sesión para solicitar una prueba." };
 
-    const { data: existingMember } = await supabase.from('members').select('id').eq('center_id', centerId).eq('user_id', user.id).maybeSingle();
-    if (existingMember) return { error: "Ya eres miembro." };
+    // Get client IP address and enforce strict trial rules
+    const headersList = await headers();
+    const rawIp = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "127.0.0.1";
+    const ip = rawIp.split(',')[0].trim();
+    const ipPattern = `IP: ${ip}`;
 
-    const { data: existingReq } = await supabase.from('trial_requests').select('id').eq('organization_id', centerId).eq('user_id', user.id).eq('status', 'pending').maybeSingle();
-    if (existingReq) return { error: "Ya tienes una solicitud." };
+    // Validation 1: Only 1 trial request/booking per center per user
+    const { data: existingTrial } = await supabase
+        .from('trial_requests')
+        .select('id')
+        .eq('organization_id', centerId)
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
 
-    const { error } = await supabase.from('trial_requests').insert({ organization_id: centerId, user_id: user.id, status: 'pending', request_date: new Date().toISOString(), scheduled_date: date || null, class_id: classId || null });
+    const { data: existingMember } = await supabase
+        .from('members')
+        .select('id')
+        .eq('center_id', centerId)
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+    if (existingTrial || existingMember) {
+        return { error: "Ya has reservado o solicitado una clase de prueba en este centro." };
+    }
+
+    // Validation 2: Evasion check using client IP (double accounts)
+    const { data: duplicateIpRequest } = await supabase
+        .from('trial_requests')
+        .select('id')
+        .eq('organization_id', centerId)
+        .eq('feedback_text', ipPattern)
+        .limit(1)
+        .maybeSingle();
+
+    if (duplicateIpRequest) {
+        return { error: "Ya se ha registrado una clase de prueba desde este dispositivo o conexión a internet para este centro." };
+    }
+
+    // Validation 3: Maximum of 3 trials per calendar month across all centers
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const { count: trialCount } = await supabase
+        .from('trial_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', startOfMonth);
+
+    if (trialCount !== null && trialCount >= 3) {
+        return { error: "Has alcanzado el límite máximo de 3 clases de prueba por mes." };
+    }
+
+    const { error } = await supabase.from('trial_requests').insert({ 
+        organization_id: centerId, 
+        user_id: user.id, 
+        status: 'pending', 
+        request_date: new Date().toISOString(), 
+        scheduled_date: date || null, 
+        class_id: classId || null,
+        feedback_text: ipPattern
+    });
     if (error) return { error: error.message };
 
     // Trigger Notification for Staff
@@ -87,6 +142,34 @@ export async function requestTrial(centerId: string, date?: string, classId?: st
     revalidatePath(`/dashboard/gyms/${centerId}/members`);
     revalidatePath(`/dashboard/gyms/${centerId}/memberships`);
     return { success: true };
+}
+
+export async function hasUsedTrialStatus(centerId: string): Promise<boolean> {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return false;
+
+    // Check if there's any trial request at this center for this user
+    const { data: trialReq } = await supabase
+        .from('trial_requests')
+        .select('id')
+        .eq('organization_id', centerId)
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+
+    if (trialReq) return true;
+
+    // Also check if there's a member record for this user at this center
+    const { data: member } = await supabase
+        .from('members')
+        .select('id')
+        .eq('center_id', centerId)
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+
+    return !!member;
 }
 
 export async function getClassesForDate(centerId: string, date: string) {

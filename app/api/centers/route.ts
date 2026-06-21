@@ -32,12 +32,12 @@ export async function POST(request: NextRequest) {
     const userId = user.id
 
     const body = await request.json()
-    const { email, centerName, centerType, country, city, plan, fullName, address, logoUrl, coverUrl, latitude, longitude } = body
+    const { email, centerName, centerType, country, city, plan, fullName, address, logoUrl, coverUrl, latitude, longitude, phone, website, bio } = body
 
     // Validate required fields
-    if (!centerName || !centerType || !country || !city) {
+    if (!centerName || !centerType || !country || !city || !phone) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: Center Name, Type, Country, City, and Phone are required.' },
         { status: 400 }
       )
     }
@@ -75,6 +75,9 @@ export async function POST(request: NextRequest) {
         plan: plan || 'free',
         owner_id: userId,
         is_public: true,
+        phone: phone || null,
+        website: website || null,
+        bio: bio || null,
       })
       .select()
       .single()
@@ -98,7 +101,12 @@ export async function POST(request: NextRequest) {
         city: city,
         status: 'active',
         plan: plan || 'free',
-        email: email
+        email: email,
+        phone: phone || null,
+        website: website || null,
+        description: bio || null,
+        address: address || null,
+        logo_url: logoUrl || null
       })
       .select()
       .single()

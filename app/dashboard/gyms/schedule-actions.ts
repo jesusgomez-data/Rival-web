@@ -418,8 +418,52 @@ export async function enrollInClass(centerId: string, classId: string) {
     const { data: member } = await supabase.from('members').select('id, status').eq('center_id', centerId).eq('user_id', user.id).single();
     if (!member || (member.status !== 'active' && member.status !== 'trial')) return { error: "Membresía no válida." };
 
-    const { data: classData } = await supabase.from('classes').select('max_capacity, class_enrollments(count)').eq('id', classId).single();
-    if (!classData || (classData.class_enrollments?.[0]?.count || 0) >= classData.max_capacity) return { error: "Sin cupo." };
+    // 1. Fetch Class Data (including scheduled_time)
+    const { data: classData } = await supabase.from('classes').select('scheduled_time, max_capacity, class_enrollments(count)').eq('id', classId).single();
+    if (!classData) return { error: "Clase no encontrada." };
+
+    // 2. Validate Booking Window: Must be at least 20 minutes before start time
+    const now = new Date();
+    const classTime = new Date(classData.scheduled_time);
+    const diffMs = classTime.getTime() - now.getTime();
+    const diffMins = diffMs / (1000 * 60);
+
+    if (diffMins < 20) {
+        return { error: "Solo se puede reservar hasta 20 minutos antes del inicio de la clase." };
+    }
+
+    // 3. Check for No-Show Penalty (3 consecutive no-shows = 2 days ban)
+    const { data: pastEnrollments } = await supabase
+        .from('class_enrollments')
+        .select(`
+            id,
+            attended,
+            class:classes!inner(scheduled_time)
+        `)
+        .eq('member_id', member.id);
+
+    const nowStr = now.toISOString();
+    const past = (pastEnrollments || [])
+        .filter((e: any) => e.class && e.class.scheduled_time < nowStr)
+        .sort((a: any, b: any) => new Date(b.class.scheduled_time).getTime() - new Date(a.class.scheduled_time).getTime());
+
+    if (past.length >= 3) {
+        const last3NoShows = past.slice(0, 3).every((e: any) => e.attended === false);
+        if (last3NoShows) {
+            // Penalty starts at the scheduled time of the most recent missed class
+            const lastMissedTime = new Date(past[0].class.scheduled_time);
+            const penaltyEndTime = new Date(lastMissedTime.getTime() + 2 * 24 * 60 * 60 * 1000); // 2 days penalty
+
+            if (now < penaltyEndTime) {
+                const diffTime = penaltyEndTime.getTime() - now.getTime();
+                const hoursLeft = Math.ceil(diffTime / (1000 * 60 * 60));
+                return { error: `Reserva no permitida. Tienes una penalización activa de 2 días por acumular 3 inasistencias consecutivas. Podrás reservar en ${hoursLeft} horas.` };
+            }
+        }
+    }
+
+    // 4. Validate capacity
+    if ((classData.class_enrollments?.[0]?.count || 0) >= classData.max_capacity) return { error: "Sin cupo." };
 
     const { data: existing } = await supabase.from('class_enrollments').select('id').eq('class_id', classId).eq('member_id', member.id).maybeSingle();
     if (existing) return { error: "Ya inscrito." };
@@ -451,6 +495,20 @@ export async function unenrollFromClass(centerId: string, classId: string) {
     const { data: member } = await supabase.from('members').select('id').eq('center_id', centerId).eq('user_id', user.id).single();
     if (!member) return { error: "Membresía no encontrada." };
 
+    // 1. Fetch Class Data (including scheduled_time)
+    const { data: classInfo } = await supabase.from('classes').select('name, scheduled_time, organization:organization_id(name)').eq('id', classId).single();
+    if (!classInfo) return { error: "Clase no encontrada." };
+
+    // 2. Validate Cancellation Window: Must be at least 15 minutes before start time
+    const now = new Date();
+    const classTime = new Date(classInfo.scheduled_time);
+    const diffMs = classTime.getTime() - now.getTime();
+    const diffMins = diffMs / (1000 * 60);
+
+    if (diffMins < 15) {
+        return { error: "Solo puedes cancelar la reserva hasta 15 minutos antes del inicio de la clase." };
+    }
+
     const { data: existing } = await supabase.from('class_enrollments').select('id').eq('class_id', classId).eq('member_id', member.id).maybeSingle();
     if (!existing) return { error: "No estás inscrito." };
 
@@ -462,7 +520,6 @@ export async function unenrollFromClass(centerId: string, classId: string) {
     if (error) return { error: error.message };
 
     // Notification for cancellation
-    const { data: classInfo } = await supabase.from('classes').select('name, organization:organization_id(name)').eq('id', classId).single();
     if (classInfo) {
         await createNotification({
             userId: user.id,

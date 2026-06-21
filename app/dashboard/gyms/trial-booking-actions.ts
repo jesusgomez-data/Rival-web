@@ -3,6 +3,7 @@
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 
 /**
  * Book a trial class
@@ -45,14 +46,57 @@ export async function bookTrialClass(classId: string, centerId: string) {
         return { error: "Esta clase está completa. No hay plazas disponibles." };
     }
 
-    // 3. Check if user already has a trial booking OR is a member
-    // Use admin client to check membership status reliably
+    // 3. Get client IP address and enforce strict trial rules
+    const headersList = await headers();
+    const rawIp = headersList.get("x-forwarded-for") || headersList.get("x-real-ip") || "127.0.0.1";
+    const ip = rawIp.split(',')[0].trim();
+    const ipPattern = `IP: ${ip}`;
+
+    // Validation 1: Only 1 trial request/booking per center per user
+    const { data: existingTrial } = await adminSupabase
+        .from('trial_requests')
+        .select('id')
+        .eq('organization_id', centerId)
+        .eq('user_id', user.id)
+        .limit(1)
+        .maybeSingle();
+
     const { data: existingMember } = await adminSupabase
         .from('members')
-        .select('id, status')
+        .select('id, status, plan')
         .eq('user_id', user.id)
         .eq('center_id', centerId)
         .maybeSingle();
+
+    if (existingTrial || existingMember) {
+        return { error: "Ya has reservado o solicitado una clase de prueba en este centro" };
+    }
+
+    // Validation 2: Evasion check using client IP (double accounts)
+    const { data: duplicateIpRequest } = await adminSupabase
+        .from('trial_requests')
+        .select('id')
+        .eq('organization_id', centerId)
+        .eq('feedback_text', ipPattern)
+        .limit(1)
+        .maybeSingle();
+
+    if (duplicateIpRequest) {
+        return { error: "Ya se ha registrado una clase de prueba desde este dispositivo o conexión a internet para este centro" };
+    }
+
+    // Validation 3: Maximum of 3 trials per calendar month across all centers
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const { count: trialCount } = await adminSupabase
+        .from('trial_requests')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', startOfMonth);
+
+    if (trialCount !== null && trialCount >= 3) {
+        return { error: "Has alcanzado el límite máximo de 3 clases de prueba por mes" };
+    }
 
     let memberId = existingMember?.id;
 
@@ -106,7 +150,7 @@ export async function bookTrialClass(classId: string, centerId: string) {
         return { error: "Error al inscribirse en la clase." };
     }
 
-    // 7. Log the trial request as 'approved' (automatic)
+    // 7. Log the trial request as 'approved' (automatic) with IP signature
     await adminSupabase
         .from('trial_requests')
         .insert({
@@ -115,7 +159,8 @@ export async function bookTrialClass(classId: string, centerId: string) {
             center_id: classData.center_id,
             class_id: classId,
             scheduled_date: classData.scheduled_time,
-            status: 'approved'
+            status: 'approved',
+            feedback_text: ipPattern
         });
 
     // 8. Get gym details for notifications

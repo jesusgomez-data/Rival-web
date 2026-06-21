@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { ArrowLeft, ArrowRight, Check, Mail, Building2, MapPin, Lock, User, Camera, Loader2, Navigation } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Mail, Building2, MapPin, Lock, User, Camera, Loader2, Navigation, Phone, Globe, FileText } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
@@ -44,6 +44,9 @@ export default function CenterSignup() {
     coverUrl: '',
     latitude: '',
     longitude: '',
+    phone: '',
+    website: '',
+    bio: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -173,6 +176,9 @@ export default function CenterSignup() {
           longitude: formData.longitude,
           plan: planId,
           fullName: formData.fullName,
+          phone: formData.phone,
+          website: formData.website,
+          bio: formData.bio,
         }),
       })
 
@@ -212,12 +218,12 @@ export default function CenterSignup() {
 
           <div className="mb-8">
             <div className="flex items-center gap-3 mb-6">
-              {[1, 2, 3, 4].map((s) => (
+              {[1, 2, 3, 4, 5].map((s) => (
                 <div key={s} className="flex items-center">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${s < step ? 'bg-brand-red text-white' : s === step ? 'bg-blue-500 text-white' : 'bg-slate-800 text-gray-400'}`}>
                     {s < step ? <Check size={16} /> : s}
                   </div>
-                  {s < 4 && <div className={`h-1 w-8 ml-3 transition-all ${s < step ? 'bg-brand-red' : 'bg-slate-800'}`} />}
+                  {s < 5 && <div className={`h-1 w-8 ml-3 transition-all ${s < step ? 'bg-brand-red' : 'bg-slate-800'}`} />}
                 </div>
               ))}
             </div>
@@ -314,18 +320,99 @@ export default function CenterSignup() {
             </div>
           )}
 
-          {/* STEP 3 — Details, Address & Photos */}
+          {/* STEP 3 — Brand Details & Contact */}
           {step === 3 && (
-            <div className="space-y-5">
-              {/* Center name */}
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Nombre del Centro</label>
-                <div className="relative group">
-                  <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-brand-red transition-colors" />
-                  <input type="text" value={formData.centerName} onChange={(e) => setFormData({ ...formData, centerName: e.target.value })} className="w-full bg-brand-gray border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all placeholder:text-gray-600" placeholder="Rival Box Madrid" />
+            <div className="space-y-6">
+              <div className="bg-white/5 p-6 rounded-xl border border-white/10 mb-6 space-y-4">
+                <h3 className="text-white font-bold mb-2 flex items-center gap-2">
+                  <Building2 size={16} className="text-brand-red" /> Detalles de tu Marca
+                </h3>
+                
+                {/* Center Name */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Nombre del Centro</label>
+                  <div className="relative group">
+                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-brand-red transition-colors" />
+                    <input 
+                      type="text" 
+                      value={formData.centerName} 
+                      onChange={(e) => setFormData({ ...formData, centerName: e.target.value })} 
+                      className="w-full bg-brand-gray border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all placeholder:text-gray-600" 
+                      placeholder="Rival Box Madrid" 
+                    />
+                  </div>
+                </div>
+
+                {/* Contact Phone */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Teléfono de Contacto *</label>
+                  <div className="relative group">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-brand-red transition-colors" />
+                    <input 
+                      type="tel" 
+                      value={formData.phone} 
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
+                      className="w-full bg-brand-gray border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all placeholder:text-gray-600" 
+                      placeholder="+34 600 000 000" 
+                    />
+                  </div>
+                </div>
+
+                {/* Website / Instagram */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Sitio Web / Instagram (Opcional)</label>
+                  <div className="relative group">
+                    <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500 group-focus-within:text-brand-red transition-colors" />
+                    <input 
+                      type="text" 
+                      value={formData.website} 
+                      onChange={(e) => setFormData({ ...formData, website: e.target.value })} 
+                      className="w-full bg-brand-gray border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all placeholder:text-gray-600" 
+                      placeholder="https://rivalfit.app o @rivalfit" 
+                    />
+                  </div>
+                </div>
+
+                {/* Description / Bio */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Descripción o Bio (Opcional)</label>
+                  <div className="relative group">
+                    <FileText className="absolute left-4 top-4 w-5 h-5 text-gray-500 group-focus-within:text-brand-red transition-colors" />
+                    <textarea 
+                      value={formData.bio} 
+                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })} 
+                      rows={3}
+                      className="w-full bg-brand-gray border border-white/10 rounded-xl py-4 pl-12 pr-4 text-white focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all placeholder:text-gray-600 resize-none" 
+                      placeholder="Cuéntanos un poco sobre tu centro..." 
+                    />
+                  </div>
                 </div>
               </div>
 
+              <div className="flex gap-3 pt-1">
+                <button onClick={() => setStep(2)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
+                  <ArrowLeft className="w-5 h-5" /> Atrás
+                </button>
+                <button
+                  onClick={() => {
+                    if (formData.centerName && formData.phone) {
+                      setError('')
+                      setStep(4)
+                    } else {
+                      setError('Por favor, completa el nombre del centro y el teléfono de contacto')
+                    }
+                  }}
+                  className="flex-1 bg-brand-red hover:bg-brand-accent text-white py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 group"
+                >
+                  Continuar <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 4 — Address & Photos */}
+          {step === 4 && (
+            <div className="space-y-5">
               {/* Country + City */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -457,16 +544,16 @@ export default function CenterSignup() {
               </div>
 
               <div className="flex gap-3 pt-1">
-                <button onClick={() => setStep(2)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
+                <button onClick={() => setStep(3)} className="flex-1 bg-slate-800 hover:bg-slate-700 text-white py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2">
                   <ArrowLeft className="w-5 h-5" /> Atrás
                 </button>
                 <button
                   onClick={() => {
-                    if (formData.centerName && formData.country && formData.city) {
+                    if (formData.country && formData.city) {
                       setError('')
-                      setStep(4)
+                      setStep(5)
                     } else {
-                      setError('Completa el nombre, país y ciudad')
+                      setError('Completa el país y la ciudad')
                     }
                   }}
                   className="flex-1 bg-brand-red hover:bg-brand-accent text-white py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 group"
@@ -477,8 +564,8 @@ export default function CenterSignup() {
             </div>
           )}
 
-          {/* STEP 4 — Plan */}
-          {step === 4 && (
+          {/* STEP 5 — Plan */}
+          {step === 5 && (
             <div className="space-y-6">
               <div>
                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Plan</label>
@@ -523,7 +610,7 @@ export default function CenterSignup() {
                 }
               </button>
 
-              <button onClick={() => setStep(3)} disabled={loading} className="w-full bg-slate-800 hover:bg-slate-700 text-white py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+              <button onClick={() => setStep(4)} disabled={loading} className="w-full bg-slate-800 hover:bg-slate-700 text-white py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                 <ArrowLeft className="w-5 h-5" /> Atrás
               </button>
             </div>

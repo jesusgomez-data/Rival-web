@@ -310,6 +310,28 @@ export default function UnifiedLanding() {
         return () => clearInterval(interval);
     }, []);
 
+    // Live Database Stats
+    const [stats, setStats] = useState<{ athletes: number; centers: number; wods: number } | null>(null);
+    useEffect(() => {
+        async function fetchStats() {
+            try {
+                const [{ count: pCount }, { count: oCount }, { count: wCount }] = await Promise.all([
+                    supabase.from('profiles').select('id', { count: 'exact', head: true }),
+                    supabase.from('organizations').select('id', { count: 'exact', head: true }),
+                    supabase.from('wod_completions').select('id', { count: 'exact', head: true })
+                ]);
+                setStats({
+                    athletes: pCount || 0,
+                    centers: oCount || 0,
+                    wods: wCount || 0
+                });
+            } catch (err) {
+                console.error("Error fetching landing stats:", err);
+            }
+        }
+        fetchStats();
+    }, []);
+
     // Interactive mouse positioning for global spotlight
     const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
     const handleGlobalMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -561,23 +583,26 @@ export default function UnifiedLanding() {
                         className="relative w-full max-w-[480px] sm:max-w-md p-[1.5px] rounded-2xl dark:animate-border-glow bg-slate-200 dark:bg-transparent shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_0_50px_rgba(239,68,68,0.15)]"
                     >
                         {/* Inner content container to mask the rotating conic gradient */}
-                        <div className="relative z-10 w-full bg-white dark:bg-[#050505] p-5 xs:p-6 sm:p-8 rounded-[15px] flex flex-col justify-center space-y-5 border border-slate-100/50 dark:border-none">
+                        <div className="relative z-10 w-full bg-white dark:bg-[#050505] p-6 xs:p-8 sm:p-10 rounded-3xl flex flex-col justify-center space-y-7 border border-slate-100/50 dark:border-none shadow-2xl">
                             
                             {/* Live Activity Ticker (Real-time dynamic feed) */}
-                            <div className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 rounded-xl py-3 px-4 flex items-center justify-between overflow-hidden min-h-[42px]">
+                            <div className="w-full bg-slate-50 dark:bg-black/50 border border-slate-100 dark:border-white/5 border-l-2 border-l-brand-red rounded-xl py-3 px-4 flex items-center justify-between overflow-hidden min-h-[44px] shadow-[inset_0_1px_3px_rgba(0,0,0,0.2)]">
                                 <div className="flex items-center gap-2 max-w-[90%]">
-                                    <span className="relative flex h-2.5 w-2.5">
-                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-red opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-red"></span>
+                                    <span className="flex items-center gap-1 bg-brand-red/10 border border-brand-red/20 px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-widest text-brand-red shrink-0">
+                                        <span className="relative flex h-1.5 w-1.5">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-red opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-brand-red"></span>
+                                        </span>
+                                        LIVE
                                     </span>
                                     <AnimatePresence mode="wait">
                                         <motion.p
                                             key={tickerIndex}
-                                            initial={{ opacity: 0, y: 8 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: -8 }}
-                                            transition={{ duration: 0.3 }}
-                                            className="text-[11px] xs:text-[12px] sm:text-xs font-black uppercase tracking-widest text-slate-700 dark:text-white/70 whitespace-nowrap overflow-hidden text-ellipsis"
+                                            initial={{ opacity: 0, x: 10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            exit={{ opacity: 0, x: -10 }}
+                                            transition={{ duration: 0.25 }}
+                                            className="text-[10px] xs:text-[11px] sm:text-xs font-black uppercase tracking-widest text-slate-700 dark:text-white/70 whitespace-nowrap overflow-hidden text-ellipsis"
                                         >
                                             {LIVE_EVENTS[tickerIndex]}
                                         </motion.p>
@@ -586,7 +611,7 @@ export default function UnifiedLanding() {
                                 <Activity className="w-3.5 h-3.5 text-brand-red animate-pulse flex-shrink-0" />
                             </div>
 
-                            <div className="text-center space-y-2 pt-1">
+                            <div className="text-center space-y-3 pt-1">
                                 <div className="inline-flex items-center gap-2 bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 px-4 py-1.5 rounded-full">
                                     <Trophy className="w-4 h-4 text-brand-red" />
                                     <span className="text-[10px] xs:text-[11px] sm:text-xs font-black tracking-[0.25em] uppercase text-slate-600 dark:text-white/80">EL ECOSISTEMA FITNESS DEFINITIVO</span>
@@ -599,13 +624,44 @@ export default function UnifiedLanding() {
                                 </p>
                             </div>
 
+                            {/* Tech Sport Stats Strip */}
+                            <div className="grid grid-cols-3 gap-2.5 py-1 text-center">
+                                <div className="bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl py-2.5 px-1 hover:border-brand-red/20 transition-colors animate-pulse-slow">
+                                    <div className="flex items-center justify-center text-brand-red gap-1 mb-0.5">
+                                        <Flame className="w-3.5 h-3.5" />
+                                        <span className="font-heading font-black italic text-sm tracking-tight text-slate-900 dark:text-white">
+                                            {stats ? stats.athletes : "..."}
+                                        </span>
+                                    </div>
+                                    <div className="text-[7px] font-black uppercase tracking-widest text-slate-400 dark:text-white/30">Atletas Elite</div>
+                                </div>
+                                <div className="bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl py-2.5 px-1 hover:border-brand-orange/20 transition-colors animate-pulse-slow">
+                                    <div className="flex items-center justify-center text-brand-orange gap-1 mb-0.5">
+                                        <Building2 className="w-3.5 h-3.5" />
+                                        <span className="font-heading font-black italic text-sm tracking-tight text-slate-900 dark:text-white">
+                                            {stats ? stats.centers : "..."}
+                                        </span>
+                                    </div>
+                                    <div className="text-[7px] font-black uppercase tracking-widest text-slate-400 dark:text-white/30">Centros</div>
+                                </div>
+                                <div className="bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl py-2.5 px-1 hover:border-yellow-500/20 transition-colors animate-pulse-slow">
+                                    <div className="flex items-center justify-center text-yellow-500 gap-1 mb-0.5">
+                                        <Trophy className="w-3.5 h-3.5" />
+                                        <span className="font-heading font-black italic text-sm tracking-tight text-slate-900 dark:text-white">
+                                            {stats ? stats.wods : "..."}
+                                        </span>
+                                    </div>
+                                    <div className="text-[7px] font-black uppercase tracking-widest text-slate-400 dark:text-white/30">WODs Completados</div>
+                                </div>
+                            </div>
+
                             {/* Primary CTA — Empezar Gratis */}
                             <Link
                                 href="/signup"
-                                className="w-full bg-brand-red hover:bg-brand-accent text-white py-4 sm:py-4.5 rounded-xl font-black uppercase tracking-[0.2em] text-xs xs:text-sm sm:text-xs btn-sport-tech transition-all shadow-glow-red flex items-center justify-center gap-2 group cursor-pointer hover:scale-[1.02] duration-300"
+                                className="w-full bg-gradient-to-r from-brand-red to-red-600 hover:from-brand-accent hover:to-red-500 text-white py-4.5 rounded-xl font-black uppercase tracking-[0.2em] text-xs xs:text-sm sm:text-xs btn-sport-tech transition-all shadow-[0_4px_20px_rgba(239,68,68,0.25)] hover:shadow-[0_4px_30px_rgba(239,68,68,0.5)] flex items-center justify-center gap-2 group cursor-pointer hover:scale-[1.02] active:scale-95 duration-300"
                             >
                                 <span className="skew-x-[10deg] block flex items-center gap-1.5">
-                                    Empezar Gratis <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                                    Empezar Gratis <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                 </span>
                             </Link>
 

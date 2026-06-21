@@ -13,7 +13,7 @@ import { useTheme } from "../../ThemeContext";
 import CancellationRequestModal from "../../dashboard/gyms/CancellationRequestModal";
 
 // Update function signature (line 13)
-export default function PublicCenterProfile({ org, initialPosts, isFollowing, followersCount, products, currentUserId, memberStatus, coaches, membershipPlans }: any) {
+export default function PublicCenterProfile({ org, initialPosts, isFollowing, followersCount, products, currentUserId, memberStatus, coaches, membershipPlans, hasUsedTrial = false }: any) {
     // --- STATE ---
 
     // Theme
@@ -289,6 +289,12 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                 showToast("¡Reserva cancelada con éxito!");
                 loadSchedule(scheduleDate);
             }
+            return;
+        }
+
+        if (!isMember && !isTrial && hasUsedTrial) {
+            showToast("Clase de prueba ya consumida. Suscríbete a un plan o paga un Drop-in en recepción.", false);
+            setActiveTab('memberships');
             return;
         }
 
@@ -640,9 +646,9 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                     {(!hasAccess && !isTrial) && (
                                         <button
                                             onClick={() => setActiveTab('schedule')}
-                                            className={`h-9 px-5 rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-lg bg-white text-black hover:bg-gray-100 border border-gray-200`}
+                                            className={`h-9 px-5 rounded-xl text-[9px] font-black uppercase tracking-widest flex-shrink-0 transition-all shadow-lg bg-white text-black hover:bg-gray-100 border border-gray-200`}
                                         >
-                                            {isTrainer ? "Reservar" : "Prueba Gratis"}
+                                            {isTrainer ? "Reservar" : (hasUsedTrial ? "Drop-in" : "Prueba Gratis")}
                                         </button>
                                     )}
                                     {currentMemberStatus && ['active', 'trial'].includes(currentMemberStatus.status) && !isOwner && (
@@ -923,11 +929,17 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                         Los entrenamientos (WODs) están reservados para los atletas afiliados a {org.name}.
                                     </p>
                                     <button
-                                        onClick={() => setShowTrialModal(true)}
-                                        className="w-full py-4 bg-brand-red text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-red-600 transition-all active:scale-95 shadow-glow relative z-10"
-                                    >
-                                        Solicitar Prueba Gratis
-                                    </button>
+                                         onClick={() => {
+                                             if (hasUsedTrial) {
+                                                 setActiveTab('memberships');
+                                             } else {
+                                                 setShowTrialModal(true);
+                                             }
+                                         }}
+                                         className="w-full py-4 bg-brand-red text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-red-600 transition-all active:scale-95 shadow-glow relative z-10"
+                                     >
+                                         {hasUsedTrial ? "Ver Planes de Membresía" : "Solicitar Prueba Gratis"}
+                                     </button>
                                 </div>
                             </div>
                         ) : (
@@ -1441,7 +1453,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                                             cls.is_enrolled
                                                                 ? (hoveredClassId === cls.id ? 'Cancelar Reserva' : 'Inscrito ✓')
                                                                 : cls.enrolled_count >= cls.max_capacity ? 'Completo' :
-                                                                    isMember ? 'Reservar Plaza' : (isTrainer ? 'Agendar' : 'Prueba Gratis')}
+                                                                    isMember ? 'Reservar Plaza' : (isTrainer ? 'Agendar' : (hasUsedTrial ? 'Drop-in' : 'Prueba Gratis'))}
                                                     </button>
 
                                                     {/* Result/Attendees Actions */}
