@@ -51,6 +51,7 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
         rawPostsRes,
         currentUserProfileRes,
         medalsRes,
+        professionalMembershipRes,
     ] = await Promise.all([
         getCombatStats(profile.id),
         user
@@ -80,6 +81,30 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
                     .eq('user_id', profile.id).not('medal_type', 'is', null).order('created_at', { ascending: false });
             } catch { return { data: [] as any[] }; }
         })(),
+        // Check if current user is an active/trial student of this professional
+        (async () => {
+            if (!user || !profile.id) return { data: null };
+            try {
+                // Find this professional's organization where they are the owner
+                const { data: org } = await adminSupabase
+                    .from('organizations')
+                    .select('id, name')
+                    .eq('owner_id', profile.id)
+                    .limit(1)
+                    .maybeSingle();
+                if (!org) return { data: null };
+                // Check if current user has active/trial membership
+                const { data: member } = await adminSupabase
+                    .from('members')
+                    .select('id, status, center_id')
+                    .eq('center_id', org.id)
+                    .eq('user_id', user.id)
+                    .in('status', ['active', 'trial'])
+                    .maybeSingle();
+                if (!member) return { data: null };
+                return { data: { memberId: member.id, orgId: org.id, orgName: org.name } };
+            } catch { return { data: null }; }
+        })(),
     ]);
 
     const isFollowing = !!followRes.data;
@@ -92,6 +117,7 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
     const posts = rawPostsRes.data || [];
     const currentUserProfile = currentUserProfileRes.data;
     const competitionMedals = (medalsRes as any).data || [];
+    const professionalMembership = professionalMembershipRes.data || null;
 
     const privacy = profile.privacy_setting || 'public';
     const canViewContent = profile.is_official || privacy === 'public' || (user && user.id === profile.id) || isFollowing;
@@ -114,6 +140,7 @@ export default async function PublicProfilePage(props: { params: Promise<{ usern
             isAdminUser={isActuallyAdmin === true || currentUserProfile?.is_official === true}
             hasActiveDuel={!!activeDuel}
             medals={competitionMedals}
+            professionalMembership={professionalMembership}
         />
     );
 }

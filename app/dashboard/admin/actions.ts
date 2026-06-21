@@ -661,3 +661,71 @@ export async function getManagementIntelligenceData() {
             : 'Aún no hay suficientes datos de entrenamiento para generar recomendaciones automáticas. Anima a tus usuarios a registrar sus workouts.',
     };
 }
+
+export async function getApplicationPlans() {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
+    const { data, error } = await supabaseAdmin
+        .from('application_plans')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+    if (error) {
+        console.error("Error fetching application plans:", error);
+        return [];
+    }
+    return data.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        features: p.features.join(', '),
+        type: p.type,
+        planKey: p.plan_key
+    }));
+}
+
+export async function upsertApplicationPlan(plan: any) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
+    const { id, name, price, features, type, planKey } = plan;
+
+    let featuresArray = features;
+    if (typeof features === 'string') {
+        featuresArray = features.split(',').map((f: string) => f.trim()).filter(Boolean);
+    }
+
+    const payload = {
+        name,
+        price,
+        features: featuresArray,
+        type,
+        plan_key: planKey
+    };
+
+    let error;
+    if (id) {
+        const { error: err } = await supabaseAdmin
+            .from('application_plans')
+            .update(payload)
+            .eq('id', id);
+        error = err;
+    } else {
+        const { error: err } = await supabaseAdmin
+            .from('application_plans')
+            .insert(payload);
+        error = err;
+    }
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/dashboard/admin');
+}
+
+export async function deleteApplicationPlan(id: string) {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
+    const { error } = await supabaseAdmin
+        .from('application_plans')
+        .delete()
+        .eq('id', id);
+
+    if (error) throw new Error(error.message);
+    revalidatePath('/dashboard/admin');
+}
+

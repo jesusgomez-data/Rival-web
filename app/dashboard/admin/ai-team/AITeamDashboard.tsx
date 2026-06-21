@@ -1,11 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import AgentWorkspace from './AgentWorkspace';
 import { getAITeamKPIs } from './actions';
-import { seedAITeamContent } from './seed-demo-actions';
 import {
   TrendingUp,
   Megaphone,
@@ -13,10 +11,6 @@ import {
   Settings2,
   DollarSign,
   Brain,
-  Wifi,
-  WifiOff,
-  Sparkles,
-  Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -265,11 +259,8 @@ const AGENTS: Agent[] = [
 // ============================================================
 
 export default function AITeamDashboard() {
-  const router = useRouter();
   const [activeAgent, setActiveAgent] = useState<string>('ceo');
   const [agents, setAgents] = useState<Agent[]>(AGENTS);
-
-  const [isSeeding, setIsSeeding] = useState(false);
 
   useEffect(() => {
     getAITeamKPIs()
@@ -283,26 +274,6 @@ export default function AITeamDashboard() {
       })
       .catch(() => {/* keep static fallback */});
   }, []);
-
-  const handleSeedContent = async () => {
-    if (!confirm('¿Quieres actualizar el contenido ficticio de los agentes? Esto añadirá nuevas historias y posts al feed.')) return;
-    
-    setIsSeeding(true);
-    try {
-      const res = await seedAITeamContent();
-      if (res.success) {
-        alert(res.message);
-        window.dispatchEvent(new CustomEvent('profile-updated'));
-        router.refresh();
-      } else {
-        alert(res.error || 'Error al actualizar contenido');
-      }
-    } catch (e) {
-      alert('Error de conexión');
-    } finally {
-      setIsSeeding(false);
-    }
-  };
 
   const selectedAgent = agents.find((a) => a.id === activeAgent)!;
 
@@ -326,21 +297,8 @@ export default function AITeamDashboard() {
               </div>
             </div>
 
-            {/* Live indicator & Actions */}
+            {/* Live indicator */}
             <div className="flex items-center gap-4">
-              <button
-                onClick={handleSeedContent}
-                disabled={isSeeding}
-                className="hidden md:flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 transition-all text-[10px] font-black uppercase tracking-widest disabled:opacity-50"
-              >
-                {isSeeding ? (
-                  <Loader2 className="w-3 h-3 animate-spin" />
-                ) : (
-                  <Sparkles className="w-3 h-3 text-yellow-400" />
-                )}
-                Actualizar Contenido_
-              </button>
-
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/20">
                 <span className="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse" />
                 <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">

@@ -21,6 +21,7 @@ import MedalShelf from "./MedalShelf";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { createClient } from "@/utils/supabase/client";
 import { createNotification } from "../../notifications-actions";
+import CancellationRequestModal from "../../gyms/CancellationRequestModal";
 
 interface ProfileContentProps {
     profile: any;
@@ -36,11 +37,13 @@ interface ProfileContentProps {
     isAdminUser?: boolean;
     hasActiveDuel?: boolean;
     medals?: any[];
+    professionalMembership?: { memberId: string; orgId: string; orgName: string } | null;
 }
 
-export default function ProfileContent({ profile, combatStats, user, isFollowing: isFollowingProp, posts, canViewContent, privacy, workouts, badges, gear, isAdminUser = false, hasActiveDuel = false, medals = [] }: ProfileContentProps) {
+export default function ProfileContent({ profile, combatStats, user, isFollowing: isFollowingProp, posts, canViewContent, privacy, workouts, badges, gear, isAdminUser = false, hasActiveDuel = false, medals = [], professionalMembership = null }: ProfileContentProps) {
     const router = useRouter();
     const [following, setFollowing] = useState(isFollowingProp);
+    const [showCancellationModal, setShowCancellationModal] = useState(false);
 
     // Sync server-side value on navigation (handles Next.js page cache)
     useEffect(() => { setFollowing(isFollowingProp); }, [isFollowingProp]);
@@ -327,7 +330,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                 <span className="skew-x-[10deg] block">Editar Perfil</span>
                             </Link>
                         ) : !profile.is_official ? (
-                            <div className="flex w-full sm:w-auto gap-2">
+                            <div className="flex flex-wrap w-full sm:w-auto gap-2">
                                 <FollowButton targetId={profile.id} isFollowingInitial={following} onToggle={setFollowing} />
                                 <DuelButton targetId={profile.id} isRival={following} hasActiveDuel={hasActiveDuel} />
                                 {following && (
@@ -337,9 +340,32 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                         <MessageCircle className="w-4 h-4" />
                                     </Link>
                                 )}
+                                {/* Solicitar Baja — only visible if current user is active/trial student */}
+                                {professionalMembership && user?.id !== profile.id && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCancellationModal(true)}
+                                        className="flex items-center gap-1.5 px-3 py-2.5 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 hover:border-red-500/40 text-red-400 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all active:scale-95"
+                                        title="Solicitar baja como alumno"
+                                    >
+                                        <X className="w-3.5 h-3.5" />
+                                        Solicitar Baja
+                                    </button>
+                                )}
                             </div>
                         ) : null}
                     </div>
+
+                    {/* Cancellation Modal */}
+                    {showCancellationModal && professionalMembership && (
+                        <CancellationRequestModal
+                            orgId={professionalMembership.orgId}
+                            orgName={professionalMembership.orgName || profile.full_name}
+                            orgType="professional"
+                            onClose={() => setShowCancellationModal(false)}
+                            onSuccess={() => setShowCancellationModal(false)}
+                        />
+                    )}
 
                     {/* Bio inline — just below buttons */}
                     {!profile.is_official && profile.bio && (

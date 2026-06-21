@@ -33,7 +33,9 @@ import {
     getExportData,
     getAdminAuditLogs,
     getSystemActivity,
-    getFinanceStats
+    getFinanceStats,
+    getApplicationPlans,
+    deleteApplicationPlan
 } from './actions';
 import { getSupportTickets } from './support-actions';
 import { getModerationReports, takeModerationAction, deleteModerationReport } from './report-actions';
@@ -68,6 +70,7 @@ export default function AdminDashboard() {
     const [auditLogs, setAuditLogs] = useState<any[]>([]);
     const [systemActivity, setSystemActivity] = useState<any[]>([]);
     const [financeData, setFinanceData] = useState<any>({ orders: [], sales: [] });
+    const [plans, setPlans] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     // UI State
@@ -96,18 +99,29 @@ export default function AdminDashboard() {
     };
 
     async function refreshData() {
-        const [statsData, centersData, usersData, ticketsData, reportsData, adsData, bizData, auditData, activityData, finData] = await Promise.all([
-            getAdminStats(),
-            getRecentOrganizations(),
-            getAllUsers(),
-            getSupportTickets(),
-            getModerationReports(),
-            getAds(),
-            getBusinessStats(),
-            getAdminAuditLogs(),
-            getSystemActivity(),
-            getFinanceStats()
+        const safeCall = async (fn: () => Promise<any>, fallback: any) => {
+            try {
+                return await fn();
+            } catch (err) {
+                console.error("Dashboard failed loading some data:", err);
+                return fallback;
+            }
+        };
+
+        const [statsData, centersData, usersData, ticketsData, reportsData, adsData, bizData, auditData, activityData, finData, plansData] = await Promise.all([
+            safeCall(getAdminStats, { users: 0, centers: 0, workouts: 0, mrr: 0, visits: 0, recentVisits: 0, churn: 0 }),
+            safeCall(getRecentOrganizations, []),
+            safeCall(getAllUsers, []),
+            safeCall(getSupportTickets, []),
+            safeCall(getModerationReports, []),
+            safeCall(getAds, []),
+            safeCall(getBusinessStats, { visits: [], churn: [], inactiveUsers: [], topPages: [] }),
+            safeCall(getAdminAuditLogs, []),
+            safeCall(getSystemActivity, []),
+            safeCall(getFinanceStats, { orders: [], sales: [] }),
+            safeCall(getApplicationPlans, [])
         ]);
+
         setStats(statsData);
         setCenters(centersData);
         setUsers(usersData || []);
@@ -118,6 +132,7 @@ export default function AdminDashboard() {
         setAuditLogs(auditData);
         setSystemActivity(activityData);
         setFinanceData(finData);
+        setPlans(plansData || []);
     }
 
     useEffect(() => {
@@ -163,13 +178,7 @@ export default function AdminDashboard() {
         return matchesSearch && matchesFilter;
     });
 
-    // Mock Data for new tabs (In real app, fetch from DB)
-    const mockPlans = [
-        { id: 1, name: 'Starter (Centro)', price: '49.99€', features: 'Hasta 50 miembros, 10 clases/sem', type: 'center', planKey: 'starter' },
-        { id: 2, name: 'Pro (Centro)', price: '99.99€', features: 'Ilimitado, WOD Generator', type: 'center', planKey: 'pro' },
-        { id: 3, name: 'Premium (Atleta)', price: '4.99€', features: 'Sin anuncios, Analíticas Pro', type: 'user', planKey: 'premium' },
-        { id: 4, name: 'Elite (Atleta)', price: '9.99€', features: 'Coach 1-a-1, Acceso Global', type: 'user', planKey: 'elite' },
-    ];
+    // Dynamic plans loaded from DB
 
 
 
@@ -442,7 +451,7 @@ export default function AdminDashboard() {
                                     <span className="text-xs font-mono text-gray-500">
                                         {activeTab === 'centers' ? filteredCenters.length :
                                             activeTab === 'users' ? filteredUsers.length :
-                                                activeTab === 'plans' ? mockPlans.length :
+                                                activeTab === 'plans' ? plans.length :
                                                     activeTab === 'ads' ? ads.length :
                                                         activeTab === 'system' ? (systemSubTab === 'terminal' ? systemActivity.length : systemSubTab === 'audit' ? auditLogs.length : financeData.sales.length) :
                                                             reports.length} REGISTROS
@@ -590,7 +599,7 @@ export default function AdminDashboard() {
                                                     </tr>
                                                 ))
                                             ) : activeTab === 'plans' ? (
-                                                mockPlans.map((plan) => (
+                                                plans.map((plan) => (
                                                     <tr key={plan.id} className="hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
                                                         <td className="px-6 py-4 font-medium">
                                                             <div className="flex items-center gap-3">
@@ -612,7 +621,16 @@ export default function AdminDashboard() {
                                                                     <Edit2 className="w-4 h-4" />
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => { if (confirm('¿Seguro que deseas eliminar este plan?')) alert('Plan eliminado (Simulado)'); }}
+                                                                    onClick={async () => {
+                                                                        if (confirm(`¿Seguro que deseas eliminar el plan ${plan.name}?`)) {
+                                                                            try {
+                                                                                await deleteApplicationPlan(plan.id);
+                                                                                await refreshData();
+                                                                            } catch (err: any) {
+                                                                                alert('Error al eliminar plan: ' + err.message);
+                                                                            }
+                                                                        }
+                                                                    }}
                                                                     className="p-1.5 hover:bg-red-500/10 rounded-lg text-gray-500 hover:text-red-500 transition-colors"
                                                                 >
                                                                     <Trash2 className="w-4 h-4" />
@@ -782,7 +800,7 @@ export default function AdminDashboard() {
                                             )}
                                             {(activeTab === 'centers' ? filteredCenters :
                                                 activeTab === 'users' ? filteredUsers :
-                                                    activeTab === 'plans' ? mockPlans :
+                                                    activeTab === 'plans' ? plans :
                                                         activeTab === 'ads' ? ads :
                                                             reports).length === 0 && (
                                                     <tr>
@@ -875,7 +893,7 @@ export default function AdminDashboard() {
                 open={!!editingPlan}
                 onClose={() => setEditingPlan(null)}
                 plan={editingPlan}
-                onUpdate={() => { }} // Simulated update
+                onUpdate={refreshData}
             />
 
             <ReviewReportModal

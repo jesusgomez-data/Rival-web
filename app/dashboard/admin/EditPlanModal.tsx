@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { X, Save, Zap, HelpCircle } from 'lucide-react';
+import { upsertApplicationPlan } from './actions';
 
 interface EditPlanModalProps {
     open: boolean;
@@ -18,13 +19,29 @@ export default function EditPlanModal({ open, onClose, plan, onUpdate }: EditPla
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setLoading(true);
-        // In a real app, this would call a server action to update the plan in the DB
-        setTimeout(() => {
-            setLoading(false);
+        try {
+            const formData = new FormData(e.currentTarget);
+            const name = formData.get('name') as string;
+            const price = formData.get('price') as string;
+            const features = formData.get('features') as string;
+            const type = formData.get('type') as string;
+
+            await upsertApplicationPlan({
+                id: plan.id,
+                name,
+                price,
+                features,
+                type,
+                planKey: plan.planKey || name.toLowerCase().replace(/[^a-z0-9]/g, '_')
+            });
+
             onUpdate();
             onClose();
-            alert('Plan actualizado correctamente (Simulado).');
-        }, 1000);
+        } catch (error: any) {
+            alert('Error al guardar el plan: ' + error.message);
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (
