@@ -26,7 +26,7 @@ const LIVE_EVENTS = [
 ];
 
 // High-fidelity animated SVG logo component with outline draw on load, sheen laser sweeps, 3D parallax layers, HUD rings, and sparks
-function AnimatedLogo() {
+function AnimatedLogo({ className = "w-10 h-10", forceHover = false }: { className?: string; forceHover?: boolean }) {
     const { theme } = useTheme();
     const isLight = theme === 'light';
 
@@ -34,22 +34,22 @@ function AnimatedLogo() {
         <motion.div 
             initial="idle"
             whileHover="hover"
-            animate="animate"
-            className="relative w-10 h-10 group cursor-pointer flex items-center justify-center overflow-visible"
+            animate={forceHover ? "hover" : "animate"}
+            className={`relative group cursor-pointer flex items-center justify-center overflow-visible ${className}`}
         >
             {/* Pulsing Backglow Layers */}
-            <div className="absolute inset-0 bg-brand-red/15 blur-md rounded-lg group-hover:bg-brand-red/35 group-hover:blur-lg transition-all duration-500" />
-            <div className="absolute inset-1 bg-brand-orange/5 blur-sm rounded-lg group-hover:bg-brand-orange/20 transition-all duration-500" />
+            <div className={`absolute inset-0 bg-brand-red/15 blur-md rounded-lg transition-all duration-500 ${forceHover ? 'bg-brand-red/35 blur-lg' : 'group-hover:bg-brand-red/35 group-hover:blur-lg'}`} />
+            <div className={`absolute inset-1 bg-brand-orange/5 blur-sm rounded-lg transition-all duration-500 ${forceHover ? 'bg-brand-orange/20' : 'group-hover:bg-brand-orange/20'}`} />
             
             {/* Rotating Ring 1 (Inner, Clockwise, Dashed HUD) */}
             <motion.div 
-                className="absolute -inset-2 rounded-full border-2 border-dashed border-brand-red/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                className={`absolute -inset-2 rounded-full border-2 border-dashed border-brand-red/20 transition-opacity duration-500 pointer-events-none ${forceHover ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                 animate={{ rotate: 360 }}
                 transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
             />
             {/* Rotating Ring 2 (Outer, Counter-Clockwise, Solid Neon) */}
             <motion.div 
-                className="absolute -inset-3.5 rounded-full border border-brand-orange/25 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"
+                className={`absolute -inset-3.5 rounded-full border border-brand-orange/25 transition-opacity duration-500 pointer-events-none ${forceHover ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}
                 animate={{ rotate: -360, scale: [1, 1.04, 1] }}
                 transition={{ 
                     rotate: { duration: 9, repeat: Infinity, ease: "linear" },
@@ -243,8 +243,61 @@ function AnimatedLogo() {
     );
 }
 
+function SplashScreen({ onComplete }: { onComplete: () => void }) {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            onComplete();
+        }, 2200); // 2.2 seconds splash loading screen
+        return () => clearTimeout(timer);
+    }, [onComplete]);
+
+    return (
+        <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: "easeInOut" }}
+            className="fixed inset-0 z-[9999] bg-[#030303] flex flex-col items-center justify-center select-none"
+        >
+            {/* Ambient background glows */}
+            <div className="absolute w-[280px] h-[280px] rounded-full blur-[110px] bg-brand-red/25 opacity-70" />
+            <div className="absolute w-[200px] h-[200px] rounded-full blur-[90px] bg-brand-orange/15 opacity-50" />
+
+            <div className="relative flex flex-col items-center gap-6">
+                {/* Large animated logo with auto hover glow/rings active */}
+                <AnimatedLogo className="w-24 h-24 sm:w-28 sm:h-28" forceHover={true} />
+                
+                {/* Logo Text under */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4, duration: 0.8 }}
+                    className="flex flex-col items-center mt-3"
+                >
+                    <span className="font-heading font-black text-xl sm:text-2xl italic tracking-[0.25em] uppercase text-white">
+                        RIVAL <span className="text-brand-red">FIT</span>
+                    </span>
+                    {/* Sporty glowing loader bar */}
+                    <div className="w-20 h-[2px] bg-white/10 rounded-full mt-5 overflow-hidden relative">
+                        <motion.div 
+                            initial={{ left: "-100%" }}
+                            animate={{ left: "100%" }}
+                            transition={{ 
+                                repeat: Infinity, 
+                                duration: 1.4, 
+                                ease: "easeInOut" 
+                            }}
+                            className="absolute top-0 bottom-0 w-1/2 bg-brand-red shadow-[0_0_8px_#EF4444]"
+                        />
+                    </div>
+                </motion.div>
+            </div>
+        </motion.div>
+    );
+}
+
 export default function UnifiedLanding() {
     const [activeSheet, setActiveSheet] = useState<'athlete' | 'center' | null>(null);
+    const [showSplash, setShowSplash] = useState(true);
     const supabase = createClient();
     const router = useRouter();
 
@@ -307,336 +360,344 @@ export default function UnifiedLanding() {
     }, []);
 
     return (
-        <main 
-            onMouseMove={handleGlobalMouseMove}
-            className="h-[100svh] w-screen bg-white dark:bg-[#030303] text-slate-900 dark:text-white selection:bg-brand-red selection:text-white font-sans overflow-hidden relative flex flex-col justify-between p-4 sm:p-6 md:p-12"
-        >
-            {/* Global Tech Background */}
-            <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-                <div className="absolute inset-0 bg-noise opacity-[0.03]" />
-                <div className="absolute inset-0 bg-grid-tech opacity-[0.08]" />
-                {/* Dynamic Mouse Spotlight Glow */}
-                <div 
-                    className="absolute inset-0 z-0 transition-opacity duration-500 opacity-80"
-                    style={{
-                        background: `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, rgba(239, 68, 68, 0.08), transparent 80%)`
-                    }}
-                />
-                
-                {/* Floating Particles — pseudo-random determinista por índice para
-                    que servidor y cliente rendericen idéntico (evita hydration mismatch) */}
-                {Array.from({ length: 15 }).map((_, i) => {
-                    const rand = (n: number) => {
-                        const x = Math.sin(i * 127.1 + n * 311.7) * 43758.5453;
-                        return x - Math.floor(x);
-                    };
-                    return (
-                        <motion.div
-                            key={i}
-                            className="absolute w-1 h-1 rounded-full bg-brand-red/25"
-                            style={{
-                                top: `${rand(1) * 100}%`,
-                                left: `${rand(2) * 100}%`,
-                            }}
-                            animate={{
-                                y: [0, -60, 0],
-                                x: [0, rand(3) * 40 - 20, 0],
-                                opacity: [0.1, 0.7, 0.1],
-                                scale: [1, 1.8, 1],
-                            }}
-                            transition={{
-                                duration: 8 + rand(4) * 10,
-                                repeat: Infinity,
-                                ease: "easeInOut",
-                                delay: rand(5) * 5,
-                            }}
-                        />
-                    );
-                })}
+        <>
+            <AnimatePresence mode="wait">
+                {showSplash && (
+                    <SplashScreen key="splash" onComplete={() => setShowSplash(false)} />
+                )}
+            </AnimatePresence>
 
-                {/* Aurora Glows */}
-                <motion.div
-                    animate={{ scale: [1, 1.15, 1], x: [0, 20, 0], y: [0, -10, 0] }}
-                    transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
-                    className="absolute top-[10%] right-[10%] w-[350px] h-[350px] rounded-full blur-[120px] bg-brand-red/15"
-                />
-                <motion.div
-                    animate={{ scale: [1, 1.1, 1], x: [0, -20, 0], y: [0, 15, 0] }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-                    className="absolute bottom-[10%] left-[10%] w-[300px] h-[300px] rounded-full blur-[100px] bg-brand-orange/10"
-                />
-            </div>
-
-            {/* Header */}
-            <header className="relative z-10 w-full flex justify-between items-center">
-                <Link href="/" className="flex items-center gap-3.5 group text-slate-900 dark:text-white">
-                    <AnimatedLogo />
-                    <span className="font-heading font-black text-xl italic tracking-tighter uppercase">
-                        RIVAL <span className="text-brand-red">FIT</span>
-                    </span>
-                </Link>
-                <div className="flex items-center gap-6">
-                    {/* Hidden on mobile to keep clean */}
-                    <div className="hidden sm:flex gap-4">
-                        <button 
-                            onClick={() => setActiveSheet('athlete')}
-                            className="text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:text-white/55 dark:hover:text-white transition-colors cursor-pointer"
-                        >
-                            Para Atletas
-                        </button>
-                        <button
-                            onClick={() => setActiveSheet('center')}
-                            className="text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:text-white/55 dark:hover:text-white transition-colors cursor-pointer"
-                        >
-                            Para Centros
-                        </button>
-                    </div>
-                    <Link
-                        href="/login"
-                        className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-700 dark:text-white/80 hover:text-brand-red transition-colors"
-                    >
-                        <LogIn className="w-3.5 h-3.5" />
-                        Iniciar Sesión
-                    </Link>
-                    <ThemeToggle />
-                </div>
-            </header>
-
-            {/* Split Content: Mockup on left (Desktop), Form on right */}
-            <div className="relative z-10 flex-1 flex items-center justify-center gap-12 lg:max-w-6xl lg:mx-auto lg:w-full my-auto">
-                
-                {/* Desktop Interactive Mockup (Left Side) */}
-                <div className="hidden lg:flex flex-1 flex-col justify-center relative">
-                    <div className="absolute -inset-10 bg-brand-red/5 blur-[100px] rounded-full pointer-events-none" />
-                    <motion.div
-                        onMouseMove={handleMockupMouseMove}
-                        onMouseLeave={handleMockupMouseLeave}
+            <main 
+                onMouseMove={handleGlobalMouseMove}
+                className="h-[100svh] w-screen bg-white dark:bg-[#030303] text-slate-900 dark:text-white selection:bg-brand-red selection:text-white font-sans overflow-hidden relative flex flex-col justify-between p-2.5 xs:p-4 sm:p-6 md:p-12"
+            >
+                {/* Global Tech Background */}
+                <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+                    <div className="absolute inset-0 bg-noise opacity-[0.03]" />
+                    <div className="absolute inset-0 bg-grid-tech opacity-[0.08]" />
+                    {/* Dynamic Mouse Spotlight Glow */}
+                    <div 
+                        className="absolute inset-0 z-0 transition-opacity duration-500 opacity-80"
                         style={{
-                            transform: `perspective(1000px) rotateX(${mockupTilt.rx}deg) rotateY(${mockupTilt.ry}deg)`,
-                            transformStyle: "preserve-3d",
-                            transition: "transform 0.15s ease-out",
+                            background: `radial-gradient(600px circle at ${mousePos.x}px ${mousePos.y}px, rgba(239, 68, 68, 0.08), transparent 80%)`
                         }}
-                        initial={{ opacity: 0, x: -30 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.8 }}
-                        className="w-full max-w-lg bg-[#f8fafc]/90 dark:bg-[#050505]/60 border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_0_80px_rgba(0,0,0,0.8)] backdrop-blur-xl flex min-h-[460px] relative"
-                    >
-                        {/* Scanning Laser Line Overlay */}
-                        <div className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-brand-red to-transparent opacity-40 animate-scan pointer-events-none z-20" />
-                        
-                        {/* Sidebar mini */}
-                        <div className="w-12 border-r border-slate-100 dark:border-white/5 bg-slate-50/80 dark:bg-black/40 flex flex-col items-center py-6 gap-6">
-                            <div className="w-6 h-6 rounded-full bg-brand-red/20 border border-brand-red/40 flex items-center justify-center text-[8px] font-black text-brand-red italic">RF</div>
-                            {[0, 1, 2, 3].map(i => (
-                                <div key={i} className={`w-3 h-3 rounded-sm border ${i === 0 ? 'bg-brand-red border-brand-red shadow-glow-red' : 'border-slate-300 dark:border-white/20'}`} />
-                            ))}
+                    />
+                    
+                    {/* Floating Particles — pseudo-random determinista por índice para
+                        que servidor y cliente rendericen idéntico (evita hydration mismatch) */}
+                    {Array.from({ length: 15 }).map((_, i) => {
+                        const rand = (n: number) => {
+                            const x = Math.sin(i * 127.1 + n * 311.7) * 43758.5453;
+                            return x - Math.floor(x);
+                        };
+                        return (
+                            <motion.div
+                                key={i}
+                                className="absolute w-1 h-1 rounded-full bg-brand-red/25"
+                                style={{
+                                    top: `${rand(1) * 100}%`,
+                                    left: `${rand(2) * 100}%`,
+                                }}
+                                animate={{
+                                    y: [0, -60, 0],
+                                    x: [0, rand(3) * 40 - 20, 0],
+                                    opacity: [0.1, 0.7, 0.1],
+                                    scale: [1, 1.8, 1],
+                                }}
+                                transition={{
+                                    duration: 8 + rand(4) * 10,
+                                    repeat: Infinity,
+                                    ease: "easeInOut",
+                                    delay: rand(5) * 5,
+                                }}
+                            />
+                        );
+                    })}
+
+                    {/* Aurora Glows */}
+                    <motion.div
+                        animate={{ scale: [1, 1.15, 1], x: [0, 20, 0], y: [0, -10, 0] }}
+                        transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+                        className="absolute top-[10%] right-[10%] w-[350px] h-[350px] rounded-full blur-[120px] bg-brand-red/15"
+                    />
+                    <motion.div
+                        animate={{ scale: [1, 1.1, 1], x: [0, -20, 0], y: [0, 15, 0] }}
+                        transition={{ duration: 20, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+                        className="absolute bottom-[10%] left-[10%] w-[300px] h-[300px] rounded-full blur-[100px] bg-brand-orange/10"
+                    />
+                </div>
+
+                {/* Header */}
+                <header className="relative z-10 w-full flex justify-between items-center">
+                    <Link href="/" className="flex items-center gap-3.5 group text-slate-900 dark:text-white">
+                        <AnimatedLogo />
+                        <span className="font-heading font-black text-xl italic tracking-tighter uppercase">
+                            RIVAL <span className="text-brand-red">FIT</span>
+                        </span>
+                    </Link>
+                    <div className="flex items-center gap-6">
+                        {/* Hidden on mobile to keep clean */}
+                        <div className="hidden sm:flex gap-4">
+                            <button 
+                                onClick={() => setActiveSheet('athlete')}
+                                className="text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:text-white/55 dark:hover:text-white transition-colors cursor-pointer"
+                            >
+                                Para Atletas
+                            </button>
+                            <button
+                                onClick={() => setActiveSheet('center')}
+                                className="text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:text-white/55 dark:hover:text-white transition-colors cursor-pointer"
+                            >
+                                Para Centros
+                            </button>
                         </div>
-                        {/* Mock Content */}
-                        <div className="flex-1 p-8 space-y-6">
-                            <div className="flex justify-between items-start">
-                                <div className="space-y-1">
-                                    <div className="text-[8px] text-brand-red font-black tracking-[0.2em] uppercase italic">ESTADÍSTICAS REALES</div>
-                                    <h3 className="text-2xl font-black italic text-slate-900 dark:text-white uppercase tracking-tighter font-heading">TU RENDIMIENTO</h3>
-                                </div>
-                                <div className="w-10 h-10 rounded-full bg-brand-red/20 border border-brand-red/40 flex items-center justify-center text-xs font-black italic text-brand-red shadow-glow-red">JD</div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 p-4 rounded-xl space-y-1">
-                                    <div className="text-[7px] font-black text-slate-400 dark:text-white/30 uppercase tracking-widest">PERSONAL BEST</div>
-                                    <div className="text-xl font-black italic text-slate-900 dark:text-white tracking-tighter">125 KG</div>
-                                </div>
-                                <div className="bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 p-4 rounded-xl space-y-1">
-                                    <div className="text-[7px] font-black text-slate-400 dark:text-white/30 uppercase tracking-widest">RANKING GLOBAL</div>
-                                    <div className="text-xl font-black italic text-brand-red tracking-tighter">TOP 30</div>
-                                </div>
-                            </div>
-                            <div className="bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 p-5 rounded-xl space-y-4">
-                                <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest">
-                                    <span className="text-slate-500 dark:text-white/40">PROGRESO SEMANAL</span>
-                                    <span className="text-brand-red">+12% ESTA SEMANA</span>
-                                </div>
-                                <div className="flex items-end h-20 gap-2">
-                                    {[30, 55, 45, 80, 60, 95, 70].map((h, i) => (
-                                        <div key={i} className="flex-1 relative">
-                                            <div
-                                                style={{ height: `${h}%` }}
-                                                className={`w-full rounded-t-sm ${i === 5 ? 'bg-brand-red shadow-glow-red' : 'bg-slate-200 dark:bg-white/10'}`}
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
+                        <Link
+                            href="/login"
+                            className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-slate-700 dark:text-white/80 hover:text-brand-red transition-colors"
+                        >
+                            <LogIn className="w-3.5 h-3.5" />
+                            Iniciar Sesión
+                        </Link>
+                        <ThemeToggle />
+                    </div>
+                </header>
+
+                {/* Split Content: Mockup on left (Desktop), Form on right */}
+                <div className="relative z-10 flex-1 flex items-center justify-center gap-12 lg:max-w-6xl lg:mx-auto lg:w-full my-auto">
+                    
+                    {/* Desktop Interactive Mockup (Left Side) */}
+                    <div className="hidden lg:flex flex-1 flex-col justify-center relative">
+                        <div className="absolute -inset-10 bg-brand-red/5 blur-[100px] rounded-full pointer-events-none" />
+                        <motion.div
+                            onMouseMove={handleMockupMouseMove}
+                            onMouseLeave={handleMockupMouseLeave}
+                            style={{
+                                transform: `perspective(1000px) rotateX(${mockupTilt.rx}deg) rotateY(${mockupTilt.ry}deg)`,
+                                transformStyle: "preserve-3d",
+                                transition: "transform 0.15s ease-out",
+                            }}
+                            initial={{ opacity: 0, x: -30 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 0.8 }}
+                            className="w-full max-w-lg bg-[#f8fafc]/90 dark:bg-[#050505]/60 border border-slate-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_0_80px_rgba(0,0,0,0.8)] backdrop-blur-xl flex min-h-[460px] relative"
+                        >
+                            {/* Scanning Laser Line Overlay */}
+                            <div className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-brand-red to-transparent opacity-40 animate-scan pointer-events-none z-20" />
                             
-                            {/* Live activity ticker inside mockup */}
-                            <div className="bg-slate-50/50 dark:bg-white/[0.01] border border-slate-100/50 dark:border-white/[0.03] p-4 rounded-xl space-y-2.5">
-                                <div className="text-[7px] font-black text-slate-400 dark:text-white/30 tracking-widest uppercase">ACTIVIDAD RECIENTE</div>
-                                <div className="space-y-2">
-                                    <div className="flex justify-between items-center text-[9px]">
-                                        <span className="text-slate-600 dark:text-white/60 font-medium">Completed "Fran" in 3:45</span>
-                                        <span className="text-brand-red font-bold">🔥 NUEVO PR</span>
+                            {/* Sidebar mini */}
+                            <div className="w-12 border-r border-slate-100 dark:border-white/5 bg-slate-50/80 dark:bg-black/40 flex flex-col items-center py-6 gap-6">
+                                <div className="w-6 h-6 rounded-full bg-brand-red/20 border border-brand-red/40 flex items-center justify-center text-[8px] font-black text-brand-red italic">RF</div>
+                                {[0, 1, 2, 3].map(i => (
+                                    <div key={i} className={`w-3 h-3 rounded-sm border ${i === 0 ? 'bg-brand-red border-brand-red shadow-glow-red' : 'border-slate-300 dark:border-white/20'}`} />
+                                ))}
+                            </div>
+                            {/* Mock Content */}
+                            <div className="flex-1 p-8 space-y-6">
+                                <div className="flex justify-between items-start">
+                                    <div className="space-y-1">
+                                        <div className="text-[8px] text-brand-red font-black tracking-[0.2em] uppercase italic">ESTADÍSTICAS REALES</div>
+                                        <h3 className="text-2xl font-black italic text-slate-900 dark:text-white uppercase tracking-tighter font-heading">TU RENDIMIENTO</h3>
                                     </div>
-                                    <div className="h-[1px] bg-slate-100 dark:bg-white/5" />
-                                    <div className="flex justify-between items-center text-[9px]">
-                                        <span className="text-slate-600 dark:text-white/60 font-medium">Joined "Desafío Sled Push"</span>
-                                        <span className="text-slate-400 dark:text-white/30 font-medium">Hace 2h</span>
+                                    <div className="w-10 h-10 rounded-full bg-brand-red/20 border border-brand-red/40 flex items-center justify-center text-xs font-black italic text-brand-red shadow-glow-red">JD</div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 p-4 rounded-xl space-y-1">
+                                        <div className="text-[7px] font-black text-slate-400 dark:text-white/30 uppercase tracking-widest">PERSONAL BEST</div>
+                                        <div className="text-xl font-black italic text-slate-900 dark:text-white tracking-tighter">125 KG</div>
                                     </div>
+                                    <div className="bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 p-4 rounded-xl space-y-1">
+                                        <div className="text-[7px] font-black text-slate-400 dark:text-white/30 uppercase tracking-widest">RANKING GLOBAL</div>
+                                        <div className="text-xl font-black italic text-brand-red tracking-tighter">TOP 30</div>
+                                    </div>
+                                </div>
+                                <div className="bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 p-5 rounded-xl space-y-4">
+                                    <div className="flex justify-between items-center text-[8px] font-black uppercase tracking-widest">
+                                        <span className="text-slate-500 dark:text-white/40">PROGRESO SEMANAL</span>
+                                        <span className="text-brand-red">+12% ESTA SEMANA</span>
+                                    </div>
+                                    <div className="flex items-end h-20 gap-2">
+                                        {[30, 55, 45, 80, 60, 95, 70].map((h, i) => (
+                                            <div key={i} className="flex-1 relative">
+                                                <div
+                                                    style={{ height: `${h}%` }}
+                                                    className={`w-full rounded-t-sm ${i === 5 ? 'bg-brand-red shadow-glow-red' : 'bg-slate-200 dark:bg-white/10'}`}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                
+                                {/* Live activity ticker inside mockup */}
+                                <div className="bg-slate-50/50 dark:bg-white/[0.01] border border-slate-100/50 dark:border-white/[0.03] p-4 rounded-xl space-y-2.5">
+                                    <div className="text-[7px] font-black text-slate-400 dark:text-white/30 tracking-widest uppercase">ACTIVIDAD RECIENTE</div>
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center text-[9px]">
+                                            <span className="text-slate-600 dark:text-white/60 font-medium">Completed "Fran" in 3:45</span>
+                                            <span className="text-brand-red font-bold">🔥 NUEVO PR</span>
+                                        </div>
+                                        <div className="h-[1px] bg-slate-100 dark:bg-white/5" />
+                                        <div className="flex justify-between items-center text-[9px]">
+                                            <span className="text-slate-600 dark:text-white/60 font-medium">Joined "Desafío Sled Push"</span>
+                                            <span className="text-slate-400 dark:text-white/30 font-medium">Hace 2h</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+
+                    {/* Authentication Card (Form with 3D perspective and moving border glow) */}
+                    <motion.div
+                        onMouseMove={handleCardMouseMove}
+                        onMouseLeave={handleCardMouseLeave}
+                        style={{
+                            transform: `perspective(1000px) rotateX(${cardTilt.rx}deg) rotateY(${cardTilt.ry}deg)`,
+                            transformStyle: "preserve-3d",
+                            transition: "transform 0.1s ease-out",
+                        }}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                        className="relative w-full max-w-[480px] sm:max-w-md p-[1.5px] rounded-2xl dark:animate-border-glow bg-slate-200 dark:bg-transparent shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_0_50px_rgba(239,68,68,0.15)]"
+                    >
+                        {/* Inner content container to mask the rotating conic gradient */}
+                        <div className="relative z-10 w-full bg-white dark:bg-[#050505] p-5 xs:p-6 sm:p-8 rounded-[15px] flex flex-col justify-center space-y-5 border border-slate-100/50 dark:border-none">
+                            
+                            {/* Live Activity Ticker (Real-time dynamic feed) */}
+                            <div className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 rounded-xl py-3 px-4 flex items-center justify-between overflow-hidden min-h-[42px]">
+                                <div className="flex items-center gap-2 max-w-[90%]">
+                                    <span className="relative flex h-2.5 w-2.5">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-red opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-red"></span>
+                                    </span>
+                                    <AnimatePresence mode="wait">
+                                        <motion.p
+                                            key={tickerIndex}
+                                            initial={{ opacity: 0, y: 8 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: -8 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="text-[11px] xs:text-[12px] sm:text-xs font-black uppercase tracking-widest text-slate-700 dark:text-white/70 whitespace-nowrap overflow-hidden text-ellipsis"
+                                        >
+                                            {LIVE_EVENTS[tickerIndex]}
+                                        </motion.p>
+                                    </AnimatePresence>
+                                </div>
+                                <Activity className="w-3.5 h-3.5 text-brand-red animate-pulse flex-shrink-0" />
+                            </div>
+
+                            <div className="text-center space-y-2 pt-1">
+                                <div className="inline-flex items-center gap-2 bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 px-4 py-1.5 rounded-full">
+                                    <Trophy className="w-4 h-4 text-brand-red" />
+                                    <span className="text-[10px] xs:text-[11px] sm:text-xs font-black tracking-[0.25em] uppercase text-slate-600 dark:text-white/80">EL ECOSISTEMA FITNESS DEFINITIVO</span>
+                                </div>
+                                <h1 className="text-4xl xs:text-5xl sm:text-5xl font-heading font-black italic uppercase tracking-tighter leading-none text-gradient-red">
+                                    DOMINA TU TERRENO.
+                                </h1>
+                                <p className="text-xs xs:text-sm sm:text-sm text-slate-500 dark:text-white/45 font-medium leading-normal max-w-xs mx-auto">
+                                    Ingresa al instante y conecta con los mejores atletas y centros de alto rendimiento.
+                                </p>
+                            </div>
+
+                            {/* Primary CTA — Empezar Gratis */}
+                            <Link
+                                href="/signup"
+                                className="w-full bg-brand-red hover:bg-brand-accent text-white py-4 sm:py-4.5 rounded-xl font-black uppercase tracking-[0.2em] text-xs xs:text-sm sm:text-xs btn-sport-tech transition-all shadow-glow-red flex items-center justify-center gap-2 group cursor-pointer hover:scale-[1.02] duration-300"
+                            >
+                                <span className="skew-x-[10deg] block flex items-center gap-1.5">
+                                    Empezar Gratis <ArrowRight className="w-4 h-4 group-hover:translate-x-0.5 transition-transform" />
+                                </span>
+                            </Link>
+
+                            <div className="text-center">
+                                <span className="text-[11px] xs:text-[12px] sm:text-xs font-bold text-slate-500 dark:text-white/40">
+                                    ¿Ya tienes cuenta? <Link href="/login" className="text-slate-900 dark:text-white hover:text-brand-red font-black uppercase tracking-widest ml-1 transition-colors">Inicia sesión</Link>
+                                </span>
+                            </div>
+
+                            {/* Bottom Links & Explores */}
+                            <div className="space-y-4 pt-1">
+                                <div className="relative flex py-1 items-center">
+                                    <div className="flex-grow border-t border-slate-100 dark:border-white/5"></div>
+                                    <span className="flex-shrink mx-3 text-[9px] xs:text-[10px] sm:text-xs font-black tracking-widest uppercase">Cuéntame más</span>
+                                    <div className="flex-grow border-t border-slate-100 dark:border-white/5"></div>
+                                </div>
+
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={() => setActiveSheet('athlete')}
+                                        className="flex-1 py-4 px-3 rounded-xl border border-brand-red/20 hover:border-brand-red/55 hover:bg-brand-red/5 hover:scale-[1.02] active:scale-95 transition-all text-[11px] xs:text-[12px] sm:text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 group cursor-pointer text-slate-800 dark:text-white bg-slate-50/50 dark:bg-transparent"
+                                    >
+                                        <Flame className="w-4 h-4 text-brand-red group-hover:scale-110 transition-transform" /> Soy Atleta
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveSheet('center')}
+                                        className="flex-1 py-4 px-3 rounded-xl border border-brand-orange/20 hover:border-brand-orange/55 hover:bg-brand-orange/5 hover:scale-[1.02] active:scale-95 transition-all text-[11px] xs:text-[12px] sm:text-xs font-black uppercase tracking-widest flex items-center justify-center gap-1.5 group cursor-pointer text-slate-800 dark:text-white bg-slate-50/50 dark:bg-transparent"
+                                    >
+                                        <Building2 className="w-4 h-4 text-brand-orange group-hover:scale-110 transition-transform" /> Soy Centro
+                                    </button>
                                 </div>
                             </div>
                         </div>
                     </motion.div>
                 </div>
 
-                {/* Authentication Card (Form with 3D perspective and moving border glow) */}
-                <motion.div
-                    onMouseMove={handleCardMouseMove}
-                    onMouseLeave={handleCardMouseLeave}
-                    style={{
-                        transform: `perspective(1000px) rotateX(${cardTilt.rx}deg) rotateY(${cardTilt.ry}deg)`,
-                        transformStyle: "preserve-3d",
-                        transition: "transform 0.1s ease-out",
-                    }}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="relative w-full max-w-sm sm:max-w-md p-[1.5px] rounded-2xl dark:animate-border-glow bg-slate-200 dark:bg-transparent shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_0_50px_rgba(239,68,68,0.15)]"
-                >
-                    {/* Inner content container to mask the rotating conic gradient */}
-                    <div className="relative z-10 w-full bg-white dark:bg-[#050505] p-5 sm:p-8 rounded-[15px] flex flex-col justify-center space-y-4 border border-slate-100/50 dark:border-none">
-                        
-                        {/* Live Activity Ticker (Real-time dynamic feed) */}
-                        <div className="w-full bg-slate-50 dark:bg-white/[0.02] border border-slate-100 dark:border-white/5 rounded-xl py-2 px-3 flex items-center justify-between overflow-hidden min-h-[36px]">
-                            <div className="flex items-center gap-2 max-w-[90%]">
-                                <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-red opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-brand-red"></span>
-                                </span>
-                                <AnimatePresence mode="wait">
-                                    <motion.p
-                                        key={tickerIndex}
-                                        initial={{ opacity: 0, y: 8 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -8 }}
-                                        transition={{ duration: 0.3 }}
-                                        className="text-[8px] font-black uppercase tracking-widest text-slate-700 dark:text-white/70 whitespace-nowrap overflow-hidden text-ellipsis"
+                {/* Footer */}
+                <footer className="relative z-10 w-full text-center py-3 mt-auto border-t border-slate-100 dark:border-white/5">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 dark:text-white/10">RIVAL FIT © 2026</span>
+                </footer>
+
+                {/* Slide-up Sheets (Modals) */}
+                <AnimatePresence>
+                    {activeSheet && (
+                        <>
+                            <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => setActiveSheet(null)}
+                                className="fixed inset-0 bg-black/80 backdrop-blur-md z-45 cursor-pointer"
+                            />
+                            <motion.div
+                                initial={{ y: "100%" }}
+                                animate={{ y: 0 }}
+                                exit={{ y: "100%" }}
+                                transition={{ type: "spring", damping: 28, stiffness: 220 }}
+                                className="fixed inset-x-0 bottom-0 h-[92vh] bg-white dark:bg-[#050505] border-t border-slate-200 dark:border-white/10 rounded-t-[2.5rem] z-50 overflow-hidden flex flex-col text-slate-900 dark:text-white"
+                            >
+                                <div className="sticky top-0 z-50 flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/5 bg-white/90 dark:bg-[#050505]/90 backdrop-blur-md">
+                                    <div className="flex items-center gap-3">
+                                        {activeSheet === 'athlete' ? (
+                                            <>
+                                                <Flame className="w-5 h-5 text-brand-red animate-pulse" />
+                                                <span className="font-heading font-black italic text-lg uppercase tracking-tight">INFORMACIÓN PARA ATLETAS</span>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Building2 className="w-5 h-5 text-brand-orange animate-pulse" />
+                                                <span className="font-heading font-black italic text-lg uppercase tracking-tight">SOLUCIONES PARA CENTROS</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={() => setActiveSheet(null)}
+                                        className="p-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
                                     >
-                                        {LIVE_EVENTS[tickerIndex]}
-                                    </motion.p>
-                                </AnimatePresence>
-                            </div>
-                            <Activity className="w-3 h-3 text-brand-red animate-pulse flex-shrink-0" />
-                        </div>
-
-                        <div className="text-center space-y-1.5 pt-1">
-                            <div className="inline-flex items-center gap-2 bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 px-3 py-1 rounded-full">
-                                <Trophy className="w-3.5 h-3.5 text-brand-red" />
-                                <span className="text-[8px] font-black tracking-[0.25em] uppercase text-slate-600 dark:text-white/80">EL ECOSISTEMA FITNESS DEFINITIVO</span>
-                            </div>
-                            <h1 className="text-3xl sm:text-4xl font-heading font-black italic uppercase tracking-tighter leading-none text-gradient-red">
-                                DOMINA TU TERRENO.
-                            </h1>
-                            <p className="text-[10px] sm:text-xs text-slate-500 dark:text-white/45 font-medium leading-normal max-w-xs mx-auto">
-                                Ingresa al instante y conecta con los mejores atletas y centros de alto rendimiento.
-                            </p>
-                        </div>
-
-                        {/* Primary CTA — Empezar Gratis (the conversion action, not a credential form) */}
-                        <Link
-                            href="/signup"
-                            className="w-full bg-brand-red hover:bg-brand-accent text-white py-3.5 rounded-xl font-black uppercase tracking-[0.2em] text-[10px] btn-sport-tech transition-all shadow-glow-red flex items-center justify-center gap-2 group cursor-pointer hover:scale-[1.02] duration-300"
-                        >
-                            <span className="skew-x-[10deg] block flex items-center gap-1.5">
-                                Empezar Gratis <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                            </span>
-                        </Link>
-
-                        <div className="text-center">
-                            <span className="text-[9px] font-bold text-slate-500 dark:text-white/40">
-                                ¿Ya tienes cuenta? <Link href="/login" className="text-slate-900 dark:text-white hover:text-brand-red font-black uppercase tracking-widest ml-1 transition-colors">Inicia sesión</Link>
-                            </span>
-                        </div>
-
-                        {/* Bottom Links & Explores */}
-                        <div className="space-y-4 pt-1">
-                            <div className="relative flex py-1 items-center">
-                                <div className="flex-grow border-t border-slate-100 dark:border-white/5"></div>
-                                <span className="flex-shrink mx-3 text-[7px] text-slate-400 dark:text-white/20 font-black tracking-widest uppercase">Cuéntame más</span>
-                                <div className="flex-grow border-t border-slate-100 dark:border-white/5"></div>
-                            </div>
-
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={() => setActiveSheet('athlete')}
-                                    className="flex-1 py-3 px-2 rounded-xl border border-brand-red/20 hover:border-brand-red/55 hover:bg-brand-red/5 hover:scale-[1.02] active:scale-95 transition-all text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 group cursor-pointer text-slate-800 dark:text-white bg-slate-50/50 dark:bg-transparent"
-                                >
-                                    <Flame className="w-3.5 h-3.5 text-brand-red group-hover:scale-110 transition-transform" /> Soy Atleta
-                                </button>
-                                <button
-                                    onClick={() => setActiveSheet('center')}
-                                    className="flex-1 py-3 px-2 rounded-xl border border-brand-orange/20 hover:border-brand-orange/55 hover:bg-brand-orange/5 hover:scale-[1.02] active:scale-95 transition-all text-[8px] font-black uppercase tracking-widest flex items-center justify-center gap-1.5 group cursor-pointer text-slate-800 dark:text-white bg-slate-50/50 dark:bg-transparent"
-                                >
-                                    <Building2 className="w-3.5 h-3.5 text-brand-orange group-hover:scale-110 transition-transform" /> Soy Centro
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </motion.div>
-            </div>
-
-            {/* Footer */}
-            <footer className="relative z-10 w-full text-center py-3 mt-auto border-t border-slate-100 dark:border-white/5">
-                <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 dark:text-white/10">RIVAL FIT © 2026</span>
-            </footer>
-
-            {/* Slide-up Sheets (Modals) */}
-            <AnimatePresence>
-                {activeSheet && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setActiveSheet(null)}
-                            className="fixed inset-0 bg-black/80 backdrop-blur-md z-45 cursor-pointer"
-                        />
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            transition={{ type: "spring", damping: 28, stiffness: 220 }}
-                            className="fixed inset-x-0 bottom-0 h-[92vh] bg-white dark:bg-[#050505] border-t border-slate-200 dark:border-white/10 rounded-t-[2.5rem] z-50 overflow-hidden flex flex-col text-slate-900 dark:text-white"
-                        >
-                            <div className="sticky top-0 z-50 flex items-center justify-between p-6 border-b border-slate-100 dark:border-white/5 bg-white/90 dark:bg-[#050505]/90 backdrop-blur-md">
-                                <div className="flex items-center gap-3">
+                                        <X className="w-5 h-5" />
+                                    </button>
+                                </div>
+                                <div className="flex-1 overflow-y-auto py-12 no-scrollbar">
                                     {activeSheet === 'athlete' ? (
-                                        <>
-                                            <Flame className="w-5 h-5 text-brand-red animate-pulse" />
-                                            <span className="font-heading font-black italic text-lg uppercase tracking-tight">INFORMACIÓN PARA ATLETAS</span>
-                                        </>
+                                        <AthleteFeatures />
                                     ) : (
-                                        <>
-                                            <Building2 className="w-5 h-5 text-brand-orange animate-pulse" />
-                                            <span className="font-heading font-black italic text-lg uppercase tracking-tight">SOLUCIONES PARA CENTROS</span>
-                                        </>
+                                        <CenterFeatures />
                                     )}
                                 </div>
-                                <button
-                                    onClick={() => setActiveSheet(null)}
-                                    className="p-2 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full text-slate-600 dark:text-white/60 hover:text-slate-900 dark:hover:text-white transition-all cursor-pointer"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                            <div className="flex-1 overflow-y-auto py-12 no-scrollbar">
-                                {activeSheet === 'athlete' ? (
-                                    <AthleteFeatures />
-                                ) : (
-                                    <CenterFeatures />
-                                )}
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
-        </main>
+                            </motion.div>
+                        </>
+                    )}
+                </AnimatePresence>
+            </main>
+        </>
     );
 }
