@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { isUserAdmin } from "@/utils/admin";
 import { isProfessional } from "@/lib/professional-types";
+import { broadcastNotifications } from "@/app/dashboard/notifications-actions";
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -396,14 +397,17 @@ export async function createAnnouncement(title: string, content: string) {
     const { data: users } = await supabaseAdmin.from('profiles').select('id');
     if (users) {
         const notifications = users.map(u => ({
-            recipient_id: u.id,
+            user_id: u.id,
             type: 'announcement',
             title: title,
-            content: content.substring(0, 100)
+            content: content.substring(0, 100),
+            is_read: false
         }));
 
         for (let i = 0; i < notifications.length; i += 100) {
-            await supabaseAdmin.from('notifications').insert(notifications.slice(i, i + 100));
+            const batch = notifications.slice(i, i + 100);
+            await supabaseAdmin.from('notifications').insert(batch);
+            broadcastNotifications(batch).catch(() => {});
         }
     }
 

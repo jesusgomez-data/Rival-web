@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
+import { broadcastNotifications } from "@/app/dashboard/notifications-actions";
 import { Resend } from 'resend';
 
 let resend: any = null;
@@ -84,6 +85,7 @@ export async function sendCenterAnnouncement(
 
     if (notifications.length > 0) {
         await admin.from('notifications').insert(notifications);
+        broadcastNotifications(notifications).catch(() => {});
     }
 
     // Get emails for members with user_id

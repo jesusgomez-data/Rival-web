@@ -49,6 +49,21 @@ export async function markAllAsRead() {
 
 import { sendPushNotification } from "./push-actions";
 
+// Broadcasts already-inserted notification rows for instant delivery (bypasses postgres_changes replication delay)
+export async function broadcastNotifications(rows: { user_id: string }[]) {
+    const broadcastClient = createAdminClient();
+    await Promise.all(
+        rows
+            .filter(r => r.user_id)
+            .map(r =>
+                broadcastClient
+                    .channel(`notifications-live-${r.user_id}`)
+                    .send({ type: 'broadcast', event: 'new_notification', payload: r })
+                    .catch(() => {})
+            )
+    );
+}
+
 export async function createNotification({ userId, type, title, content, link }: {
     userId: string,
     type: string,

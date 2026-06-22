@@ -5,6 +5,7 @@ import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { PUBLIC_ORG_COLUMNS } from "@/lib/org-columns";
 import { headers } from "next/headers";
+import { broadcastNotifications } from "@/app/dashboard/notifications-actions";
 
 export async function getPublicCenter(centerId: string) {
     const supabase = await createClient();
@@ -136,7 +137,10 @@ export async function requestTrial(centerId: string, date?: string, classId?: st
             notifications.push({ user_id: org.head_coach_id, type: 'trial_request', title: 'Solicitud de Prueba', content: message, link, is_read: false });
         }
         // @ts-ignore
-        if (notifications.length > 0) await supabase.from('notifications').insert(notifications);
+        if (notifications.length > 0) {
+            await supabase.from('notifications').insert(notifications);
+            broadcastNotifications(notifications).catch(() => {});
+        }
     }
 
     revalidatePath(`/dashboard/gyms/${centerId}/members`);

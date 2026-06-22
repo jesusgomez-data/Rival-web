@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { broadcastNotifications } from "@/app/dashboard/notifications-actions";
 
 /**
  * Book a trial class
@@ -207,6 +208,7 @@ export async function bookTrialClass(classId: string, centerId: string) {
 
     if (notifications.length > 0) {
         await adminSupabase.from('notifications').insert(notifications);
+        broadcastNotifications(notifications).catch(() => {});
     }
 
     revalidatePath(`/gym/${centerId}`);

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/utils/supabase/server";
 import { revalidatePath } from "next/cache";
+import { broadcastNotifications } from "@/app/dashboard/notifications-actions";
 
 export async function assignWorkoutToStudent(centerId: string, studentId: string, workoutData: any) {
     const supabase = await createClient();
@@ -92,6 +93,7 @@ export async function assignWorkoutToStudent(centerId: string, studentId: string
             link:    `/dashboard`,
             is_read: false
         });
+        broadcastNotifications([{ user_id: studentId }]).catch(() => {});
     } catch { /* ignore notification errors */ }
 
     revalidatePath(`/dashboard/gyms/${centerId}/programming`);
