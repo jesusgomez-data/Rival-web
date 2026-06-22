@@ -44,6 +44,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { playNotificationSound } from "@/app/utils/audio";
 import { VideoProvider } from "./VideoContext";
 import dynamic from "next/dynamic";
+import { getSavedAccounts, saveAccount, switchToAccount, clearActiveSessionLocally, type SavedAccount } from "@/utils/supabase/multi-account";
 
 // ── Non-critical layout components — loaded after paint ──────────────────────
 const PendingReviewPrompt = dynamic(() => import("./PendingReviewPrompt"),       { ssr: false, loading: () => null });
@@ -166,6 +167,25 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     // useMemo ensures we reuse the singleton client, not create a new one on re-render
     const supabase = useMemo(() => createClient(), []);
 
+    const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
+    const [isSwitcherOpen, setIsSwitcherOpen] = useState(false);
+    const [isMobileSwitcherOpen, setIsMobileSwitcherOpen] = useState(false);
+    const switcherRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        setSavedAccounts(getSavedAccounts());
+    }, []);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (switcherRef.current && !switcherRef.current.contains(event.target as Node)) {
+                setIsSwitcherOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
     useEffect(() => {
         pathnameRef.current = pathname;
     }, [pathname]);
@@ -222,6 +242,21 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 setProfile(profileData);
                 setUnreadMessages(unreadCount);
 
+                if (profileData && sessionData?.session && user) {
+                    saveAccount(
+                        profileData.id,
+                        user.email || '',
+                        profileData.username,
+                        profileData.full_name || '',
+                        profileData.avatar_url || '',
+                        profileData.level || '',
+                        sessionData.session
+                    );
+                    if (isMounted) {
+                        setSavedAccounts(getSavedAccounts());
+                    }
+                }
+
                 if (typeof Notification !== 'undefined' && Notification.permission === 'default') {
                     Notification.requestPermission();
                 }
@@ -241,9 +276,44 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             Notification.requestPermission();
         }
 
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: any, session: any) => {
+            if ((event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') && session) {
+                const accounts = getSavedAccounts();
+                const existing = accounts.find(a => a.userId === session.user.id);
+                if (existing) {
+                    saveAccount(
+                        existing.userId,
+                        existing.email,
+                        existing.username,
+                        existing.fullName,
+                        existing.avatarUrl,
+                        existing.level,
+                        session
+                    );
+                    if (isMounted) {
+                        setSavedAccounts(getSavedAccounts());
+                    }
+                } else if (profile && profile.id === session.user.id) {
+                    saveAccount(
+                        profile.id,
+                        session.user.email || '',
+                        profile.username,
+                        profile.full_name || '',
+                        profile.avatar_url || '',
+                        profile.level || '',
+                        session
+                    );
+                    if (isMounted) {
+                        setSavedAccounts(getSavedAccounts());
+                    }
+                }
+            }
+        });
+
         return () => {
             isMounted = false;
             window.removeEventListener('profile-updated', handleProfileUpdate);
+            subscription.unsubscribe();
         };
     }, [supabase]);
 
@@ -362,8 +432,74 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         return () => clearInterval(interval);
     }, []);
 
+    const handleAccountSwitch = async (userId: string, isActive: boolean) => {
+        if (isActive) return;
+        setIsSwitcherOpen(false);
+        setIsMobileSwitcherOpen(false);
+        
+        const success = await switchToAccount(userId);
+        if (success) {
+            window.location.reload();
+        } else {
+            alert("No se pudo iniciar sesión en esta cuenta. Por favor vuelve a acceder.");
+            setSavedAccounts(getSavedAccounts());
+        }
+    };
+
+    const handleAddAccount = async () => {
+        setIsSwitcherOpen(false);
+        setIsMobileSwitcherOpen(false);
+        
+        if (profile) {
+            const { data: sessionData } = await supabase.auth.getSession();
+            if (sessionData?.session) {
+                saveAccount(
+                    profile.id,
+                    userEmail || '',
+                    profile.username,
+                    profile.full_name || '',
+                    profile.avatar_url || '',
+                    profile.level || '',
+                    sessionData.session
+                );
+            }
+        }
+        
+        clearActiveSessionLocally();
+        router.push("/login?add_account=true");
+    };
+
+    const handleLogoutAccount = async (userId: string, isCurrent: boolean) => {
+        setIsSwitcherOpen(false);
+        setIsMobileSwitcherOpen(false);
+        
+        const { removeAccount } = await import('@/utils/supabase/multi-account');
+        if (isCurrent) {
+            await supabase.auth.signOut({ scope: 'local' });
+            removeAccount(userId);
+            window.location.reload();
+        } else {
+            removeAccount(userId);
+            setSavedAccounts(getSavedAccounts());
+        }
+    };
+
     const handleLogout = async () => {
+        if (profile?.id) {
+            const { removeAccount } = await import('@/utils/supabase/multi-account');
+            removeAccount(profile.id);
+        }
         await supabase.auth.signOut();
+        
+        const remaining = getSavedAccounts();
+        if (remaining.length > 0) {
+            const success = await switchToAccount(remaining[0].userId);
+            if (success) {
+                window.location.reload();
+                return;
+            }
+        }
+        
         router.push("/");
     };
 
@@ -459,7 +595,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         })}
                     </nav>
 
-                    <div className="p-4 border-t border-border space-y-4 bg-card/50 backdrop-blur-sm">
+                    <div className="p-4 border-t border-border space-y-4 bg-card/50 backdrop-blur-sm relative">
                         <div className="px-2">
                             <SupportModal />
                         </div>
@@ -473,7 +609,88 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
                         {/* Training button hidden temporarily */}
 
-                        <Link href="/dashboard/profile" className="flex items-center gap-3 px-2 py-2 group bg-foreground/5 rounded-2xl border border-transparent hover:border-brand-red/30 transition-all">
+                        <div 
+                            ref={switcherRef}
+                            onClick={() => setIsSwitcherOpen(!isSwitcherOpen)}
+                            className="flex items-center gap-3 px-2 py-2 group bg-foreground/5 rounded-2xl border border-transparent hover:border-brand-red/30 transition-all cursor-pointer relative"
+                        >
+                            {/* Desktop Switcher Popover */}
+                            {isSwitcherOpen && (
+                                <div 
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="absolute bottom-[90px] left-0 right-0 bg-card border border-border rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] p-2 z-[200] animate-in slide-in-from-bottom-2 fade-in duration-200"
+                                >
+                                    <div className="px-3 py-1.5 text-[10px] font-black text-gray-500 uppercase tracking-widest border-b border-border/50 mb-1">
+                                        Cuentas
+                                    </div>
+                                    
+                                    <div className="space-y-0.5 max-h-48 overflow-y-auto pr-1">
+                                        {savedAccounts.map((account) => {
+                                            const isActive = account.userId === profile?.id;
+                                            return (
+                                                <div
+                                                    key={account.userId}
+                                                    onClick={() => handleAccountSwitch(account.userId, isActive)}
+                                                    className={clsx(
+                                                        "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition-all group/acc cursor-pointer",
+                                                        isActive 
+                                                            ? "bg-brand-red/10 border border-brand-red/20" 
+                                                            : "hover:bg-white/5"
+                                                    )}
+                                                >
+                                                    <div className="w-7 h-7 rounded-full overflow-hidden relative shrink-0">
+                                                        {account.avatarUrl ? (
+                                                            <Image src={account.avatarUrl} alt={account.username} fill className="object-cover" />
+                                                        ) : (
+                                                            <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                                                <User className="w-3.5 h-3.5 text-gray-500" />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-[11px] font-bold text-foreground truncate leading-none mb-0.5">{account.fullName || 'Atleta'}</p>
+                                                        <p className="text-[9px] text-gray-400 truncate leading-none">@{account.username}</p>
+                                                    </div>
+                                                    <div className="flex items-center shrink-0">
+                                                        {isActive ? (
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-brand-red shrink-0" />
+                                                        ) : (
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleLogoutAccount(account.userId, false);
+                                                                }}
+                                                                className="text-[8px] font-bold text-gray-500 hover:text-brand-red uppercase tracking-wider px-1.5 py-0.5 hover:bg-brand-red/10 rounded-md transition-all opacity-0 group-hover/acc:opacity-100"
+                                                            >
+                                                                Quitar
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <div className="border-t border-border/50 my-1" />
+
+                                    <button
+                                        onClick={handleAddAccount}
+                                        className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left hover:bg-white/5 transition-all text-[10px] font-black uppercase tracking-wider text-gray-400 hover:text-foreground"
+                                    >
+                                        <PlusCircle className="w-4 h-4 text-gray-400" />
+                                        <span>Agregar Cuenta</span>
+                                    </button>
+
+                                    <button
+                                        onClick={handleLogout}
+                                        className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left hover:bg-brand-red/10 transition-all text-[10px] font-black uppercase tracking-wider text-gray-400 hover:text-brand-red"
+                                    >
+                                        <LogOut className="w-4 h-4" />
+                                        <span>Cerrar sesión activa</span>
+                                    </button>
+                                </div>
+                            )}
+
                             <div
                                 onClick={(e) => {
                                     const hasStory = userStories.some((us: any) => us.user.id === profile?.id);
@@ -504,8 +721,16 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                                 </div>
                                 <p className="text-[9px] text-gray-400 truncate font-black uppercase tracking-widest leading-none">{profile?.level ? `Soldado Lvl ${profile.level}` : 'Recluta'}</p>
                             </div>
-                            <Settings className="w-4 h-4 text-gray-500 group-hover:text-foreground transition-colors shrink-0" />
-                        </Link>
+                            <span 
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    router.push("/dashboard/profile");
+                                }}
+                                className="p-1 hover:bg-white/10 rounded-lg transition-colors shrink-0"
+                            >
+                                <Settings className="w-4 h-4 text-gray-500 group-hover:text-foreground transition-colors" />
+                            </span>
+                        </div>
                     </div>
                 </aside>
             )}
@@ -544,7 +769,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                                 {isMenuOpen ? <X className="w-6 h-6 text-brand-red" /> : <Menu className="w-6 h-6" />}
                             </button>
 
-                            <Link href="/dashboard/profile" className="ml-2 relative shrink-0">
+                            <button 
+                                onClick={() => setIsMobileSwitcherOpen(true)}
+                                className="ml-2 relative shrink-0"
+                            >
                                 <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-border">
                                     {profile?.avatar_url ? (
                                         <Image src={profile.avatar_url} alt="Profile" fill className="object-cover rounded-full" />
@@ -554,7 +782,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                                         </div>
                                     )}
                                 </div>
-                            </Link>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -703,6 +931,90 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
             <PendingReviewPrompt />
             <OnboardingTour />
+
+            {/* Mobile Bottom Sheet Drawer for Account Switcher */}
+            {isMobileSwitcherOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/70 z-[9999] flex items-end justify-center lg:hidden animate-in fade-in duration-200"
+                    onClick={() => setIsMobileSwitcherOpen(false)}
+                >
+                    <div 
+                        onClick={(e) => e.stopPropagation()} 
+                        className="w-full bg-[#111111] border-t border-border rounded-t-[2.5rem] p-6 pb-10 space-y-6 shadow-2xl animate-in slide-in-from-bottom duration-300"
+                    >
+                        {/* Drag indicator handle */}
+                        <div className="w-12 h-1 bg-white/20 rounded-full mx-auto" />
+                        
+                        <div className="space-y-1">
+                            <h3 className="text-[11px] font-black uppercase tracking-wider text-gray-500">Cambiar de cuenta</h3>
+                            <p className="text-xs text-gray-400">Selecciona el perfil para continuar en Rival Fit.</p>
+                        </div>
+
+                        <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                            {savedAccounts.map((account) => {
+                                const isActive = account.userId === profile?.id;
+                                return (
+                                    <div
+                                        key={account.userId}
+                                        onClick={() => handleAccountSwitch(account.userId, isActive)}
+                                        className={clsx(
+                                            "w-full flex items-center gap-4 p-4 rounded-2xl text-left border transition-all cursor-pointer relative",
+                                            isActive 
+                                                ? "bg-brand-red/10 border-brand-red/30 text-white" 
+                                                : "bg-white/[0.02] border-white/5 text-gray-400 active:bg-white/5"
+                                        )}
+                                    >
+                                        <div className="w-10 h-10 rounded-full overflow-hidden relative shrink-0">
+                                            {account.avatarUrl ? (
+                                                <Image src={account.avatarUrl} alt={account.username} fill className="object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                                    <User className="w-5 h-5 text-gray-500" />
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-bold text-foreground truncate">{account.fullName || 'Atleta'}</p>
+                                            <p className="text-xs text-gray-400 truncate">@{account.username}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                            {isActive ? (
+                                                <span className="w-2.5 h-2.5 rounded-full bg-brand-red shadow-[0_0_8px_rgba(220,38,38,0.6)]" />
+                                            ) : (
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleLogoutAccount(account.userId, false);
+                                                    }}
+                                                    className="text-[9px] font-black text-gray-400 hover:text-brand-red uppercase tracking-widest px-3 py-1.5 bg-white/5 active:bg-white/10 rounded-xl transition-all"
+                                                >
+                                                    Quitar
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 pt-2">
+                            <button
+                                onClick={handleAddAccount}
+                                className="flex items-center justify-center gap-2 py-4 bg-white/[0.02] active:bg-white/5 border border-white/5 rounded-2xl font-black text-[10px] tracking-wider uppercase text-gray-300"
+                            >
+                                <PlusCircle className="w-4 h-4 text-gray-400" /> Agregar Cuenta
+                            </button>
+                            <Link
+                                href="/dashboard/profile"
+                                onClick={() => setIsMobileSwitcherOpen(false)}
+                                className="flex items-center justify-center gap-2 py-4 bg-white/[0.02] active:bg-white/5 border border-white/5 rounded-2xl font-black text-[10px] tracking-wider uppercase text-gray-300"
+                            >
+                                <Settings className="w-4 h-4 text-gray-400" /> Configuración
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 }

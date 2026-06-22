@@ -7,6 +7,7 @@ import { login } from "./actions";
 import { useActionState } from "react";
 import { useLanguage } from "@/app/LanguageContext";
 import { createClient } from "@/utils/supabase/client";
+import { clearActiveSessionLocally } from "@/utils/supabase/multi-account";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -18,11 +19,16 @@ export default function LoginPage() {
     const supabase = createClient();
     const router = useRouter();
 
-    // If user already has an active session, redirect to dashboard immediately
+    // If user already has an active session, redirect to dashboard immediately (unless adding an account)
     useEffect(() => {
         async function checkSession() {
-            const { data } = await supabase.auth.getSession();
-            if (data.session) router.replace('/dashboard');
+            const searchParams = new URLSearchParams(window.location.search);
+            if (searchParams.get('add_account') === 'true') {
+                clearActiveSessionLocally();
+            } else {
+                const { data } = await supabase.auth.getSession();
+                if (data.session) router.replace('/dashboard');
+            }
         }
         checkSession();
     }, []);
