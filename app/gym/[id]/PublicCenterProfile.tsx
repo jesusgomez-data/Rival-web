@@ -1071,7 +1071,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                                                         ? block.exercises
                                                                         : (block.content || '').split('\n').filter((line: string) => line.trim().length > 0);
 
-                                                                    const title = (block.title || (block.format && block.format !== 'free' ? block.format : (block.type === 'wod' ? 'Workout' : block.type))).toUpperCase();
+                                                                    const title = (block.title || (block.format && block.format !== 'free' ? block.format : (block.type === 'wod' ? 'Workout' : block.type)) || 'WOD').toUpperCase();
                                                                     const value = block.duration || block.value || "";
 
                                                                     return (

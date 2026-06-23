@@ -3389,7 +3389,7 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
             block.title = (block.duration || 0) > 0 ? `${typeLabel} (${block.duration} min)` : typeLabel;
         } else if (field === 'duration' && (block.title.includes(' min)') || block.title === 'For Time' || block.title === 'AMRAP' || block.title === 'EMOM' || block.title === 'TABATA')) {
             // Update duration in title if it was automatically set
-            const typeLabel = block.type === 'fortime' ? 'For Time' : block.type.toUpperCase();
+            const typeLabel = block.type === 'fortime' ? 'For Time' : (block.type || '').toUpperCase();
             block.title = value > 0 ? `${typeLabel} (${value} min)` : typeLabel;
         }
 
@@ -3929,7 +3929,7 @@ function HybridView({ time, exercises, setExercises, blocks, setBlocks, workoutT
             block.title.includes(' MIN');
 
         if (isGeneric && (field === 'type' || field === 'duration')) {
-            const typeLabel = block.type === 'fortime' ? 'For Time' : (block.type === 'rft' ? 'RFT' : block.type.toUpperCase());
+            const typeLabel = block.type === 'fortime' ? 'For Time' : (block.type === 'rft' ? 'RFT' : (block.type || '').toUpperCase());
             const duration = block.duration || 0;
             newBlocks[index].title = duration > 0 ? `${typeLabel} ${duration} MIN` : typeLabel;
         }

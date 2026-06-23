@@ -548,7 +548,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
         if (wod.blocks?.length) {
             wod.blocks.forEach((block: WodBlock, idx: number) => {
                 line();
-                const partLabel = `PARTE ${String.fromCharCode(65 + idx)}: ${(PART_NAMES[block.type] || block.type).toUpperCase()}`;
+                const partLabel = `PARTE ${String.fromCharCode(65 + idx)}: ${(PART_NAMES[block.type] || block.type || '').toUpperCase()}`;
                 let formatInfo = '';
                 if (block.format && block.format !== 'FREE') {
                     const cfg = block.config;
@@ -1315,7 +1315,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                                 <h5 className="text-foreground font-heading font-black text-xs uppercase tracking-widest flex items-center gap-2 italic">
                                                                     <span className={`w-2 h-2 rounded-full ${block.type === 'metcon' ? 'bg-brand-red' : block.type === 'weightlifting' ? 'bg-blue-500' : 'bg-muted-foreground'}`}></span>
                                                                     <span className="text-muted-foreground mr-1">Part {String.fromCharCode(65 + idx)}:</span> 
-                                                                    {PART_NAMES[block.type] || block.type.toUpperCase()}
+                                                                    {PART_NAMES[block.type] || (block.type ? block.type.toUpperCase() : 'LIBRE')}
 
                                                                     {/* Display Config Info */}
                                                                     {(block.config?.timecap || block.config?.rounds || block.config?.minutes || block.duration) && (
