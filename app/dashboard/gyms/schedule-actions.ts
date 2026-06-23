@@ -442,16 +442,29 @@ export async function enrollInClass(centerId: string, classId: string) {
         `)
         .eq('member_id', member.id);
 
+    const getScheduledTime = (e: any) => {
+        if (!e.class) return null;
+        if (Array.isArray(e.class)) return e.class[0]?.scheduled_time;
+        return e.class.scheduled_time;
+    };
+
     const nowStr = now.toISOString();
     const past = (pastEnrollments || [])
-        .filter((e: any) => e.class && e.class.scheduled_time < nowStr)
-        .sort((a: any, b: any) => new Date(b.class.scheduled_time).getTime() - new Date(a.class.scheduled_time).getTime());
+        .filter((e: any) => {
+            const t = getScheduledTime(e);
+            return t && t < nowStr;
+        })
+        .sort((a: any, b: any) => {
+            const tA = getScheduledTime(a);
+            const tB = getScheduledTime(b);
+            return new Date(tB || 0).getTime() - new Date(tA || 0).getTime();
+        });
 
     if (past.length >= 3) {
         const last3NoShows = past.slice(0, 3).every((e: any) => e.attended === false);
         if (last3NoShows) {
             // Penalty starts at the scheduled time of the most recent missed class
-            const lastMissedTime = new Date(past[0].class.scheduled_time);
+            const lastMissedTime = new Date(getScheduledTime(past[0]) || 0);
             const penaltyEndTime = new Date(lastMissedTime.getTime() + 2 * 24 * 60 * 60 * 1000); // 2 days penalty
 
             if (now < penaltyEndTime) {

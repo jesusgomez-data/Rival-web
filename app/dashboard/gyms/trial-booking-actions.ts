@@ -99,7 +99,7 @@ export async function bookTrialClass(classId: string, centerId: string) {
         return { error: "Has alcanzado el límite máximo de 3 clases de prueba por mes" };
     }
 
-    let memberId = existingMember?.id;
+    let memberId = (existingMember as any)?.id;
 
     // 4. Get user profile
     const { data: profile } = await supabase

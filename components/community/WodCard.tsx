@@ -318,7 +318,7 @@ export default function WodCard({ data, userName, publishDate, postId, completio
                                                 </div>
                                             </div>
                                             
-                                            {block.exercises.length > 0 && (
+                                            {block.exercises && block.exercises.length > 0 && (
                                                 <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
                                                     {block.exercises.map((ex, eIdx) => (
                                                         <div key={eIdx} className="flex items-center justify-between text-[11px] font-bold text-gray-400 group/ex">
@@ -469,7 +469,7 @@ export default function WodCard({ data, userName, publishDate, postId, completio
                                             {block.config?.rounds && <span className="text-[9px] text-gray-500 font-bold">· {block.config.rounds} RONDAS</span>}
                                         </div>
                                         <div className="space-y-2">
-                                            {block.exercises.map((ex) => (
+                                            {block.exercises && block.exercises.map((ex) => (
                                                 <div key={ex.id} className="flex items-center justify-between">
                                                     <span className="text-xs text-gray-300 font-medium">{ex.name}</span>
                                                     <div className="flex items-center gap-1">
@@ -632,34 +632,36 @@ export default function WodCard({ data, userName, publishDate, postId, completio
                                     </div>
 
                                     {/* Exercises */}
-                                    <div className="space-y-4 border-t border-white/5 pt-4">
-                                        {block.exercises.map((ex: ExerciseEntry) => (
-                                            <div key={ex.id} className="space-y-2">
-                                                <div className="flex items-center justify-between gap-2 group-hover/block:translate-x-1 transition-transform">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-1 h-1 rounded-full bg-brand-red" />
-                                                        <span className="text-xs font-bold text-gray-300 uppercase tracking-tight">{ex.name}</span>
+                                    {block.exercises && block.exercises.length > 0 && (
+                                        <div className="space-y-4 border-t border-white/5 pt-4">
+                                            {block.exercises.map((ex: ExerciseEntry) => (
+                                                <div key={ex.id} className="space-y-2">
+                                                    <div className="flex items-center justify-between gap-2 group-hover/block:translate-x-1 transition-transform">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-1 h-1 rounded-full bg-brand-red" />
+                                                            <span className="text-xs font-bold text-gray-300 uppercase tracking-tight">{ex.name}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            {ex.reps && <span className="text-[10px] font-black text-white uppercase tracking-widest">{ex.reps}</span>}
+                                                            {ex.reps && ex.detail && <span className="text-[10px] font-black text-gray-600">X</span>}
+                                                            {ex.detail && <span className="text-[10px] font-black text-brand-red uppercase tracking-widest">{ex.detail}{ex.unit}</span>}
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-center gap-2">
-                                                        {ex.reps && <span className="text-[10px] font-black text-white uppercase tracking-widest">{ex.reps}</span>}
-                                                        {ex.reps && ex.detail && <span className="text-[10px] font-black text-gray-600">X</span>}
-                                                        {ex.detail && <span className="text-[10px] font-black text-brand-red uppercase tracking-widest">{ex.detail}{ex.unit}</span>}
-                                                    </div>
-                                                </div>
 
-                                                {ex.roundDetails && ex.roundDetails.length > 0 && (
-                                                    <div className="ml-4 grid grid-cols-4 sm:grid-cols-6 gap-1.5 p-2 bg-black/20 rounded-xl border border-white/5">
-                                                        {ex.roundDetails.map((detail: string, rIdx: number) => detail ? (
-                                                            <div key={rIdx} className="flex flex-col gap-0.5">
-                                                                <span className="text-[6px] font-bold text-gray-600 uppercase text-center">R{rIdx + 1}</span>
-                                                                <span className="text-[8px] font-black text-white text-center bg-white/5 rounded py-0.5">{detail}{ex.unit || 'KG'}</span>
-                                                            </div>
-                                                        ) : null)}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+                                                    {ex.roundDetails && ex.roundDetails.length > 0 && (
+                                                        <div className="ml-4 grid grid-cols-4 sm:grid-cols-6 gap-1.5 p-2 bg-black/20 rounded-xl border border-white/5">
+                                                            {ex.roundDetails.map((detail: string, rIdx: number) => detail ? (
+                                                                <div key={rIdx} className="flex flex-col gap-0.5">
+                                                                    <span className="text-[6px] font-bold text-gray-600 uppercase text-center">R{rIdx + 1}</span>
+                                                                    <span className="text-[8px] font-black text-white text-center bg-white/5 rounded py-0.5">{detail}{ex.unit || 'KG'}</span>
+                                                                </div>
+                                                            ) : null)}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         );

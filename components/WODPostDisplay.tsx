@@ -130,7 +130,7 @@ export default function WODPostDisplay({ wod, compact = false }: WODPostDisplayP
                 </div>
 
                 <div className="grid gap-3">
-                    {block.exercises.map((ex, eIdx) => (
+                    {block.exercises && block.exercises.map((ex, eIdx) => (
                     <div key={eIdx} className="bg-white/[0.03] border border-white/5 rounded-[22px] p-8 hover:bg-white/[0.05] transition-all hover:border-white/10 group/row">
                         <div className="flex items-center justify-between gap-4">
                             <div className="space-y-1.5">
