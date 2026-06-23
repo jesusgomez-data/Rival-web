@@ -793,6 +793,8 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                                     currentUserId={user?.id}
                                                     authorId={post.user_id}
                                                     viewCount={post.view_count || 0}
+                                                    post_type={post.post_type}
+                                                    wod_data={post.wod_data}
                                                 />
                                             ))}
                                         </div>

@@ -318,6 +318,8 @@ export default function CommunityPage({
                                         hasActiveDuel={data.activeDuelUserIds.has(post.user_id)}
                                         cover_url={post.cover_url}
                                         viewCount={post.view_count || 0}
+                                        post_type={post.post_type}
+                                        wod_data={post.wod_data}
                                     />
                                     {(index + 1) % 4 === 0 && (
                                         <FeedAd tier={data.profile?.subscription_tier} />

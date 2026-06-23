@@ -38,6 +38,8 @@ export async function publishCoachWorkoutToFeed(workout: {
         caption,
         media_url: JSON.stringify(wodData),
         media_type: 'wod',
+        post_type: 'wod',
+        wod_data: wodData[0],
     });
 
     if (error) return { error: error.message };

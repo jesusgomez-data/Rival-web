@@ -308,7 +308,7 @@ function RepostCard({ image, caption, prefetchedPost }: { image?: string; captio
 
                         {/* Original post caption */}
                         {originalPost.caption && (
-                            <p className="text-xs sm:text-[13px] text-white/80 px-4 py-3 leading-relaxed line-clamp-3">
+                            <p className="text-xs sm:text-[13px] text-white/80 px-4 py-3 leading-relaxed line-clamp-3 whitespace-pre-wrap">
                                 <MentionText text={originalPost.caption} />
                             </p>
                         )}
@@ -997,7 +997,10 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
         if (workoutData) return workoutData;
         if (!image || isImageUrl(image)) return null;
         try {
-            const parsed = JSON.parse(image);
+            let parsed = JSON.parse(image);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+                parsed = parsed[0];
+            }
             // Verify it's actually workout data (has blocks or metrics or title)
             if (parsed && (parsed.blocks || parsed.metrics || parsed.title)) {
                 return parsed;
@@ -1659,20 +1662,20 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             <div className="absolute top-0 right-0 w-24 h-24 bg-brand-red/5 blur-2xl rounded-full pointer-events-none" />
                             
                             <p className={clsx(
-                                "text-base md:text-lg font-bold leading-relaxed italic tracking-wide relative z-10",
+                                "text-base md:text-lg font-bold leading-relaxed italic tracking-wide relative z-10 whitespace-pre-wrap",
                                 theme === 'dark' ? "text-gray-100" : "text-zinc-800"
                             )}>
-                                <MentionText text={currentCaption} />
+                                <MentionText text={currentCaption} className="whitespace-pre-wrap" />
                             </p>
                         </div>
                     ) : (
-                        <div className="text-[13px] leading-relaxed">
+                        <div className="text-[13px] leading-relaxed whitespace-pre-wrap">
                             <span className="font-black uppercase italic tracking-tighter text-brand-red mr-2">{username || user}</span>
                             <div className={clsx(
-                                "inline transition-all duration-300",
+                                "inline whitespace-pre-wrap transition-all duration-300",
                                 theme === 'dark' ? "text-white/90" : "text-zinc-900"
                             )}>
-                                <MentionText text={currentCaption} />
+                                <MentionText text={currentCaption} className="whitespace-pre-wrap" />
                             </div>
                         </div>
                     )}

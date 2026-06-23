@@ -146,6 +146,8 @@ export default function HashtagPage({ params }: { params: Promise<{ tag: string 
                                     isOfficial={post.profiles?.is_official}
                                     highlight={post.workouts?.title}
                                     viewCount={post.view_count || 0}
+                                    post_type={post.post_type}
+                                    wod_data={post.wod_data}
                                 />
                             </motion.div>
                         ))
