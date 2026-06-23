@@ -719,7 +719,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             <main className={clsx("flex-1 min-h-screen relative bg-background w-full overflow-x-hidden transition-all duration-300", showSidebar && "lg:ml-64")}>
                 {/* Mobile Header Bar */}
                 {showMobileNav && (
-                    <div className="lg:hidden flex flex-col sticky top-0 bg-background z-[200]">
+                    <div className="lg:hidden flex flex-col sticky top-0 bg-background z-[1000]">
                         <div style={{ height: 'max(12px, env(safe-area-inset-top))' }} className="w-full bg-background" />
                         <div className="h-20 flex items-center justify-between px-6">
                         <div className="flex items-center gap-4">
@@ -771,14 +771,20 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
                 {/* Mobile Search Overlay */}
                 {showMobileSearch && showMobileNav && (
-                    <div className="lg:hidden px-6 pb-6 pt-2 bg-background/95 backdrop-blur-xl border-b border-border sticky top-20 z-[190] animate-in slide-in-from-top-2 fade-in">
+                    <div 
+                        style={{ top: 'calc(80px + max(12px, env(safe-area-inset-top)))' }}
+                        className="lg:hidden px-6 pb-6 pt-2 bg-background/95 backdrop-blur-xl border-b border-border sticky z-[190] animate-in slide-in-from-top-2 fade-in"
+                    >
                         <GlobalSearch />
                     </div>
                 )}
 
                 {/* Mobile Menu Overlay */}
                 {isMenuOpen && showMobileNav && (
-                    <div className="fixed inset-0 top-20 bg-background z-[999] lg:hidden overflow-y-auto pb-32 animate-in fade-in slide-in-from-right-4 duration-300">
+                    <div 
+                        style={{ top: 'calc(80px + max(12px, env(safe-area-inset-top)))' }}
+                        className="fixed inset-x-0 bottom-0 bg-background z-[999] lg:hidden overflow-y-auto pb-32 animate-in fade-in slide-in-from-right-4 duration-300"
+                    >
                         <div className="p-6 space-y-8">
                             {/* Profile Summary Removed by User Request */}
 
