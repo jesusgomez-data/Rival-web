@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Send, MessageSquare, Loader2, User as UserIcon, Clock, Building2 } from "lucide-react";
+import { Send, MessageSquare, Loader2, User as UserIcon, Clock, Building2, Maximize2, Minimize2 } from "lucide-react";
 import { getTeamMessages, sendTeamMessage, checkStaffRole } from "../team-actions";
 import { createClient } from "@/utils/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
@@ -36,6 +36,16 @@ export default function TeamChat({ centerId, className }: { centerId: string, cl
     const [sending, setSending] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [onlineCount, setOnlineCount] = useState(0);
+    const [isFullScreen, setIsFullScreen] = useState(false);
+
+    useEffect(() => {
+        if (isFullScreen) {
+            // Scroll to bottom after state transition
+            setTimeout(() => {
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }, 300);
+        }
+    }, [isFullScreen]);
 
     const loadMessages = async () => {
         if (isStaff === false) return;
@@ -153,7 +163,12 @@ export default function TeamChat({ centerId, className }: { centerId: string, cl
     if (isStaff === null) return null; // Or a skeleton
 
     return (
-        <div className={clsx("bg-card border border-border rounded-2xl flex flex-col overflow-hidden shadow-xl", className || "h-[700px]")}>
+        <div className={clsx(
+            "bg-card border border-border flex flex-col overflow-hidden shadow-xl transition-all duration-300",
+            isFullScreen
+                ? "fixed inset-0 z-[9999] h-screen h-[100dvh] w-screen rounded-none border-none bg-background"
+                : clsx("rounded-2xl", className || "h-[700px]")
+        )}>
             {/* Header */}
             <div className="p-4 border-b border-border bg-muted/30 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -165,22 +180,38 @@ export default function TeamChat({ centerId, className }: { centerId: string, cl
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Solo Personal Autorizado</p>
                     </div>
                 </div>
-                {onlineCount > 0 ? (
-                    <div className="flex items-center gap-2 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]">
-                        <div className="relative">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse z-10 relative" />
-                            <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75" />
+                <div className="flex items-center gap-3">
+                    {onlineCount > 0 ? (
+                        <div className="flex items-center gap-2 bg-green-500/10 px-3 py-1.5 rounded-full border border-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]">
+                            <div className="relative">
+                                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse z-10 relative" />
+                                <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75" />
+                            </div>
+                            <span className="text-[10px] font-black text-green-500 uppercase tracking-wider">
+                                {onlineCount === 1 ? 'Online' : `${onlineCount} Online`}
+                            </span>
                         </div>
-                        <span className="text-[10px] font-black text-green-500 uppercase tracking-wider">
-                            {onlineCount === 1 ? 'Online' : `${onlineCount} Online`}
-                        </span>
-                    </div>
-                ) : (
-                    <div className="flex items-center gap-2 opacity-50 px-3 py-1.5 grayscale">
-                        <div className="w-2 h-2 bg-gray-500 rounded-full" />
-                        <span className="text-[10px] font-bold text-gray-500 uppercase">Offline</span>
-                    </div>
-                )}
+                    ) : (
+                        <div className="flex items-center gap-2 opacity-50 px-3 py-1.5 grayscale">
+                            <div className="w-2 h-2 bg-gray-500 rounded-full" />
+                            <span className="text-[10px] font-bold text-gray-500 uppercase">Offline</span>
+                        </div>
+                    )}
+                    
+                    {/* Full Screen Toggle Button */}
+                    <button
+                        type="button"
+                        onClick={() => setIsFullScreen(!isFullScreen)}
+                        aria-label={isFullScreen ? "Salir de pantalla completa" : "Pantalla completa"}
+                        className="p-1.5 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-lg transition-colors flex items-center justify-center shrink-0"
+                    >
+                        {isFullScreen ? (
+                            <Minimize2 className="w-4 h-4 text-muted-foreground hover:text-white" />
+                        ) : (
+                            <Maximize2 className="w-4 h-4 text-muted-foreground hover:text-white" />
+                        )}
+                    </button>
+                </div>
             </div>
 
             {/* Messages Area */}
