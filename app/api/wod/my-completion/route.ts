@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
 
     const { data: completion, error } = await supabase
       .from("wod_completions")
-      .select("*")
+      .select("id, user_id, original_wod_post_id, completion_post_id, completion_type, completion_time_seconds, rounds_completed, total_reps, weight_kg, score, rx, completed_at")
       .eq("user_id", user.id)
       .or(`original_wod_post_id.eq.${wodPostId},completion_post_id.eq.${wodPostId}`)
       .maybeSingle();
@@ -31,7 +31,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, completion });
+    const res = NextResponse.json({ success: true, completion });
+    res.headers.set("Cache-Control", "private, max-age=15, stale-while-revalidate=30");
+    return res;
   } catch (error: any) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

@@ -8,6 +8,7 @@ import Link from "next/link";
 import MentionText from "@/components/MentionText";
 import MentionInput from "@/components/MentionInput";
 import WodCard from "@/components/community/WodCard";
+import WODTrackerModal from "@/components/WODTrackerModal";
 
 export default function GymPostCard({ post, centerId, isAdmin = false, currentUserId, isMember = false }: any) {
     const [likes, setLikes] = useState(post.likes_count || 0);
@@ -25,6 +26,26 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
     const [isVisible, setIsVisible] = useState(false);
     const postRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
+
+    const [showWODTracker, setShowWODTracker] = useState(false);
+    const [hasCompletedWod, setHasCompletedWod] = useState(false);
+
+    useEffect(() => {
+        if (post.post_type === 'wod') {
+            const checkCompletion = async () => {
+                try {
+                    const response = await fetch(`/api/wod/my-completion?wodPostId=${post.id}`);
+                    const data = await response.json();
+                    if (response.ok && data.completion) {
+                        setHasCompletedWod(true);
+                    }
+                } catch (e) {
+                    console.error("Error fetching completion status:", e);
+                }
+            };
+            checkCompletion();
+        }
+    }, [post.id, post.post_type]);
 
     // Intersection Observer to detect if post is in view
     useEffect(() => {
@@ -233,12 +254,12 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                                 postId={post.id}
                             />
                             <div className="pt-4">
-                                <Link
-                                    href={`/dashboard#post-${post.id}`}
+                                <button
+                                    onClick={() => setShowWODTracker(true)}
                                     className="flex items-center justify-center gap-2 w-full py-4 bg-brand-red text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-red-600 transition-all shadow-glow-sm hover:shadow-glow group"
                                 >
-                                    <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" /> Registrar Entrenamiento
-                                </Link>
+                                    <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform" /> {hasCompletedWod ? 'Editar mi resultado' : 'Registrar Entrenamiento'}
+                                </button>
                             </div>
                         </div>
                     )
@@ -338,7 +359,7 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                                     )}
                                 </div>
                                 <div className="flex-1">
-                                    <div className="bg-muted rounded-2xl rounded-tl-none p-3 inline-block min-w-[200px]">
+                                    <div className="bg-muted rounded-2xl rounded-tl-none p-3 inline-block min-w-0 sm:min-w-[200px]">
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="text-foreground font-bold text-xs flex items-center gap-1.5">
                                                 {comment.post_as_center && post.organization ? (
@@ -419,7 +440,8 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                 >
                     <button
                         onClick={() => setIsLightboxOpen(false)}
-                        className="absolute top-6 right-6 text-white hover:text-brand-red focus:outline-none transition-colors z-[110] bg-black/20 p-2 rounded-full cursor-pointer shadow-lg"
+                        className="absolute right-6 text-white hover:text-brand-red focus:outline-none transition-colors z-[110] bg-black/20 p-2 rounded-full cursor-pointer shadow-lg"
+                        style={{ top: 'max(1.5rem, env(safe-area-inset-top))' }}
                     >
                         <X className="w-8 h-8 md:w-10 md:h-10" />
                     </button>
@@ -440,6 +462,20 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                         )}
                     </div>
                 </div>
+            )}
+
+            {showWODTracker && (
+                <WODTrackerModal
+                    wodPostId={post.id}
+                    wodTitle={wodData?.title || "WOD"}
+                    wodType={wodData?.summary?.scoreType?.toUpperCase() === 'TIME' ? 'time' : 'rounds'}
+                    isOpen={showWODTracker}
+                    onClose={() => setShowWODTracker(false)}
+                    onSuccess={() => {
+                        setHasCompletedWod(true);
+                        window.location.reload();
+                    }}
+                />
             )}
         </div>
     );

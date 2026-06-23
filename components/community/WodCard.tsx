@@ -12,7 +12,7 @@ import {
     Edit2,
     Activity
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { WodBlock, WodFormat, WodSummary, ExerciseEntry, WorkoutCategory } from "../training/WodCreator";
 import { cn } from "@/lib/utils";
 import WODLeaderboardModal from "@/components/WODLeaderboardModal";
@@ -73,43 +73,41 @@ const CATEGORY_CONFIG: Record<WorkoutCategory, { label: string, color: string, i
     'BOXING': { label: 'BOXING', color: 'bg-red-800', icon: '🥊', gradient: 'from-red-800 to-red-600' }
 };
 
-export default function WodCard({ data, userName, publishDate, postId, completionsCount = 0, hasCompleted: initialHasCompleted = false, isOfficial = false, authorAvatar }: WodCardProps) {
+function WodCard({ data, userName, publishDate, postId, completionsCount = 0, hasCompleted: initialHasCompleted = false, isOfficial = false, authorAvatar }: WodCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showWODLeaderboard, setShowWODLeaderboard] = useState(false);
     const [showWODTracker, setShowWODTracker] = useState(false);
     const [hasCompleted, setHasCompleted] = useState(initialHasCompleted);
     const [, setIsLoadingStatus] = useState(false);
+    const [userCompletion, setUserCompletion] = useState<any>(null);
 
-    useEffect(() => {
-        if (postId || (data as any).original_wod_post_id) {
-            const ctrl = new AbortController();
-            checkCompletionStatus(ctrl.signal);
-            return () => ctrl.abort();
-        }
-    }, [postId, data]);
+    const originalWodPostId = (data as any).original_wod_post_id;
 
-    const checkCompletionStatus = async (signal?: AbortSignal) => {
+    const checkCompletionStatus = useCallback(async (signal?: AbortSignal) => {
+        const targetWodId = originalWodPostId || postId;
+        if (!targetWodId) return;
         setIsLoadingStatus(true);
-        const targetWodId = (data as any).original_wod_post_id || postId;
-        if (!targetWodId) {
-            setIsLoadingStatus(false);
-            return;
-        }
         try {
             const response = await fetch(`/api/wod/my-completion?wodPostId=${targetWodId}`, { signal });
             const resData = await response.json();
             if (resData.success && resData.completion) {
                 setHasCompleted(true);
+                setUserCompletion(resData.completion);
             }
         } catch (error) {
-            // Cancelacion por navegacion (abort o "Failed to fetch"): no critico, ignorar
             const msg = (error as Error)?.message || '';
             if ((error as Error)?.name === 'AbortError' || msg.includes('Failed to fetch')) return;
-            console.warn("Estado de completado no disponible:", msg);
         } finally {
             setIsLoadingStatus(false);
         }
-    };
+    }, [postId, originalWodPostId]);
+
+    useEffect(() => {
+        if (!postId && !originalWodPostId) return;
+        const ctrl = new AbortController();
+        checkCompletionStatus(ctrl.signal);
+        return () => ctrl.abort();
+    }, [checkCompletionStatus]);
 
     if (!data.blocks || data.blocks.length === 0) return null;
 
@@ -678,7 +676,26 @@ export default function WodCard({ data, userName, publishDate, postId, completio
                             <div>
                                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-1">PUNTUACIÓN FINAL</p>
                                 <h4 className="text-xl font-heading font-black italic uppercase tracking-tighter text-white">
-                                    {data.summary.scoreType === 'NONE' ? 'FINALIZADO' : (data.summary.scoreLabel || 'PENDIENTE')}
+                                    {data.summary.scoreType === 'NONE' ? 'FINALIZADO' : (() => {
+                                        if (userCompletion) {
+                                            const type = userCompletion.completion_type;
+                                            if (type === 'time' && userCompletion.completion_time_seconds) {
+                                                const mins = Math.floor(userCompletion.completion_time_seconds / 60);
+                                                const secs = userCompletion.completion_time_seconds % 60;
+                                                return `${mins}:${String(secs).padStart(2, '0')}`;
+                                            } else if (type === 'rounds' && userCompletion.rounds_completed !== null && userCompletion.rounds_completed !== undefined) {
+                                                return `${userCompletion.rounds_completed} Rds`;
+                                            } else if (type === 'reps' && userCompletion.total_reps !== null && userCompletion.total_reps !== undefined) {
+                                                return `${userCompletion.total_reps} Reps`;
+                                            } else if (type === 'weight' && userCompletion.weight_kg !== null && userCompletion.weight_kg !== undefined) {
+                                                return `${userCompletion.weight_kg} kg`;
+                                            } else if (userCompletion.score !== null && userCompletion.score !== undefined) {
+                                                return `${userCompletion.score}`;
+                                            }
+                                        }
+                                        const label = data.summary?.scoreLabel;
+                                        return (label && label !== "Tiempo total o Rondas/Reps completadas") ? label : 'PENDIENTE';
+                                    })()}
                                 </h4>
                             </div>
                         </div>
@@ -806,3 +823,5 @@ function WodMetric({ icon, label, value }: { icon: any, label: string, value: st
         </div>
     );
 }
+
+export default memo(WodCard);

@@ -144,7 +144,10 @@ export default function GymLayoutClient({
                 </header>
 
                 {/* Mobile header */}
-                <div className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-gray-200 dark:border-white/[0.06] pt-[env(safe-area-inset-top,0px)]">
+                <div 
+                    className="lg:hidden sticky top-0 z-30 bg-background/95 backdrop-blur border-b border-gray-200 dark:border-white/[0.06]"
+                    style={{ paddingTop: 'max(12px, env(safe-area-inset-top))' }}
+                >
                     <div className="px-4 py-2.5 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5 min-w-0">
                             {org.logo_url

@@ -191,29 +191,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     }, [pathname]);
 
     // Hide bottom nav on scroll down, show on scroll up
-    // FIX: use useRef for lastScrollY so the effect is stable (no re-registration on each scroll)
+    // Disabled to prevent layout shifts on scroll
     useEffect(() => {
-        const handleScroll = () => {
-            const currentScrollY = window.scrollY;
-
-            // Only hide/show if scrolled more than 50px
-            if (currentScrollY > 50) {
-                if (currentScrollY > lastScrollY.current) {
-                    setShowBottomNav(false);
-                } else {
-                    setShowBottomNav(true);
-                }
-            } else {
-                setShowBottomNav(true);
-            }
-
-            lastScrollY.current = currentScrollY;
-        };
-
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // empty deps: register once, never re-register
+        setShowBottomNav(true);
+    }, []);
 
     useEffect(() => {
         let isMounted = true;
@@ -726,7 +707,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                                     e.stopPropagation();
                                     router.push("/dashboard/profile");
                                 }}
-                                className="p-1 hover:bg-white/10 rounded-lg transition-colors shrink-0"
+                                className="p-2 hover:bg-white/10 rounded-lg transition-colors shrink-0"
                             >
                                 <Settings className="w-4 h-4 text-gray-500 group-hover:text-foreground transition-colors" />
                             </span>
@@ -739,7 +720,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 {/* Mobile Header Bar */}
                 {showMobileNav && (
                     <div className="lg:hidden flex flex-col sticky top-0 bg-background z-[200]">
-                        <div className="h-[env(safe-area-inset-top)] w-full bg-background" />
+                        <div style={{ height: 'max(12px, env(safe-area-inset-top))' }} className="w-full bg-background" />
                         <div className="h-20 flex items-center justify-between px-6">
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2">
