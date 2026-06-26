@@ -2,7 +2,7 @@ import { createClient } from "@/utils/supabase/server";
 import { Trophy, Flame, TrendingUp, Award, Swords } from "lucide-react";
 import Link from "next/link";
 import LeaderboardClient from "./LeaderboardClient";
-import ChallengeCard from "./ChallengeCard";
+import ChallengesSection from "./ChallengesSection";
 import { getActiveChallenges } from "./ranking-actions";
 
 export const dynamic = 'force-dynamic';
@@ -30,7 +30,7 @@ export default async function LeaderboardPage() {
     let myRank = null;
     let myProfile: any = null;
     if (user) {
-        const { data: profile } = await supabase.from('profiles').select('xp_points, full_name, avatar_url, username, level').eq('id', user.id).single();
+        const { data: profile } = await supabase.from('profiles').select('xp_points, full_name, avatar_url, username, level, is_admin').eq('id', user.id).single();
         myProfile = profile;
         if (profile) {
             const { count } = await supabase
@@ -132,21 +132,11 @@ export default async function LeaderboardPage() {
                     )}
 
                     {/* Community Challenges */}
-                    <div className="space-y-6">
-                        <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.4em] px-1 flex items-center gap-2">
-                            <Flame className="w-4 h-4 text-orange-500" /> Retos de la Comunidad
-                        </h3>
-                        {challenges && challenges.length > 0 ? challenges.map((challenge: any) => (
-                            <ChallengeCard
-                                key={challenge.id}
-                                challenge={challenge}
-                                userId={user?.id}
-                                isParticipatingInitial={challenge.participants?.some((p: any) => p.user_id === user?.id)}
-                            />
-                        )) : (
-                            <p className="text-gray-500 text-xs px-4">No hay retos activos en este momento.</p>
-                        )}
-                    </div>
+                    <ChallengesSection 
+                        challenges={challenges}
+                        userId={user?.id}
+                        isAdmin={!!myProfile?.is_admin}
+                    />
 
                     {/* Ad/Promo */}
                     <div className="bg-gradient-to-br from-brand-red to-red-950 p-6 sm:p-8 rounded-[40px] shadow-2xl relative overflow-hidden group">

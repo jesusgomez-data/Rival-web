@@ -2082,8 +2082,8 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             username={username || user}
                             avatar={avatar}
                             content={{
-                                type: (resolvedWorkoutData as any)?.metrics?.type === 'running' ? 'running' : (mediaType === 'pr' ? 'pr' : (resolvedWorkoutData ? 'wod' : (mediaType as any || 'workout'))),
-                                title: (resolvedWorkoutData?.title === 'Entrenamiento Híbrido Libre' || resolvedWorkoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (resolvedWorkoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (resolvedWorkoutData?.title || (mediaType === 'running' ? 'RUNNING' : 'ENTRENAMIENTO'))),
+                                type: (resolvedWorkoutData as any)?.metrics?.type === 'running' ? 'running' : (mediaType === 'pr' ? 'pr' : (mediaType === 'class_result' ? 'class_result' : (resolvedWorkoutData ? 'wod' : 'post'))),
+                                title: (resolvedWorkoutData?.title === 'Entrenamiento Híbrido Libre' || resolvedWorkoutData?.title === 'Entrenamiento Híbrido') ? 'ENTRENAMIENTO HÍBRIDO' : (resolvedWorkoutData?.title === 'Simulación de Carrera Híbrida' ? 'SIMULACIÓN DE CARRERA' : (resolvedWorkoutData?.title || (mediaType === 'running' ? 'RUNNING' : (resolvedWorkoutData ? 'ENTRENAMIENTO' : 'PUBLICACIÓN')))),
                                 highlight: highlight || currentCaption,
                                 stats: (resolvedWorkoutData as any)?.metrics?.type === 'running'
                                     ? [

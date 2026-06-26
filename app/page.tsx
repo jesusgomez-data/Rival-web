@@ -472,6 +472,12 @@ export default function UnifiedLanding() {
                             >
                                 Para Centros
                             </button>
+                            <a
+                                href="/demo.html"
+                                className="text-[9px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 dark:text-white/55 dark:hover:text-white transition-colors cursor-pointer"
+                            >
+                                Demo
+                            </a>
                         </div>
                         <Link
                             href="/login"
@@ -655,15 +661,25 @@ export default function UnifiedLanding() {
                                 </div>
                             </div>
 
-                            {/* Primary CTA — Empezar Gratis */}
-                            <Link
-                                href="/signup"
-                                className="w-full bg-gradient-to-r from-brand-red to-red-600 hover:from-brand-accent hover:to-red-500 text-white py-4.5 rounded-xl font-black uppercase tracking-[0.2em] text-xs xs:text-sm sm:text-xs btn-sport-tech transition-all shadow-[0_4px_20px_rgba(239,68,68,0.25)] hover:shadow-[0_4px_30px_rgba(239,68,68,0.5)] flex items-center justify-center gap-2 group cursor-pointer hover:scale-[1.02] active:scale-95 duration-300"
-                            >
-                                <span className="skew-x-[10deg] block flex items-center gap-1.5">
-                                    Empezar Gratis <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                </span>
-                            </Link>
+                            {/* Primary CTAs — Empezar Gratis & Demo */}
+                            <div className="flex gap-3">
+                                <Link
+                                    href="/signup"
+                                    className="flex-1 bg-gradient-to-r from-brand-red to-red-600 hover:from-brand-accent hover:to-red-500 text-white py-4.5 rounded-xl font-black uppercase tracking-[0.2em] text-xs xs:text-sm sm:text-xs btn-sport-tech transition-all shadow-[0_4px_20px_rgba(239,68,68,0.25)] hover:shadow-[0_4px_30px_rgba(239,68,68,0.5)] flex items-center justify-center gap-2 group cursor-pointer hover:scale-[1.02] active:scale-95 duration-300"
+                                >
+                                    <span className="skew-x-[10deg] block flex items-center gap-1.5">
+                                        Empezar Gratis <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                    </span>
+                                </Link>
+                                <a
+                                    href="/demo.html"
+                                    className="flex-1 bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 hover:border-brand-red/40 hover:bg-brand-red/5 text-slate-800 dark:text-white py-4.5 rounded-xl font-black uppercase tracking-[0.2em] text-xs xs:text-sm sm:text-xs transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-95 duration-300"
+                                >
+                                    <span className="skew-x-[10deg] block">
+                                        Demo ⚡
+                                    </span>
+                                </a>
+                            </div>
 
                             <div className="text-center">
                                 <span className="text-[11px] xs:text-[12px] sm:text-xs font-bold text-slate-500 dark:text-white/40">

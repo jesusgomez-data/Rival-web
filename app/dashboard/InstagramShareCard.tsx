@@ -12,7 +12,7 @@ interface InstagramShareCardProps {
     avatar: string;
     username: string;
     content: {
-        type: 'workout' | 'pr' | 'image' | 'class_result' | 'running' | 'cycling' | 'swimming' | 'challenge' | 'wod';
+        type: 'workout' | 'pr' | 'image' | 'class_result' | 'running' | 'cycling' | 'swimming' | 'challenge' | 'wod' | 'post';
         title?: string;
         highlight?: string;
         stats?: Array<{ label: string, value: string, icon?: string }>;
@@ -29,6 +29,7 @@ export default function InstagramShareCard({ user, avatar, username, content, on
     const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
     const isEndurance = ['running', 'cycling', 'swimming'].includes(content.type);
+    const isStandardPost = content.type === 'post' || content.type === 'image';
 
     useEffect(() => {
         if (avatar) {
@@ -91,7 +92,10 @@ export default function InstagramShareCard({ user, avatar, username, content, on
     };
 
     return (
-        <div className="fixed inset-0 z-[320] bg-black/98 flex flex-col items-center justify-start overflow-y-auto p-4 md:p-8 backdrop-blur-3xl animate-in fade-in duration-500 custom-scrollbar">
+        <div 
+            className="fixed inset-0 z-[320] bg-black/98 flex flex-col items-center justify-start overflow-y-auto px-4 pb-4 md:px-8 md:pb-8 backdrop-blur-3xl animate-in fade-in duration-500 custom-scrollbar"
+            style={{ paddingTop: 'max(1rem, env(safe-area-inset-top))' }}
+        >
             {/* Nav Header */}
             <div className="w-full max-w-sm flex justify-between items-center mb-10 shrink-0">
                 <div className="flex items-center gap-2">
@@ -148,10 +152,12 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                                     <div className="flex flex-col items-center gap-4 text-center">
                                         <div className="flex items-center gap-2">
                                             <div className="w-1.5 h-1.5 rounded-full bg-brand-red shadow-[0_0_8px_rgba(255,46,46,0.8)]" />
-                                            <p className="text-gray-500 text-[9px] font-black uppercase tracking-[0.4em]">PERFORMANCE DATA VERIFIED</p>
+                                            <p className="text-gray-500 text-[9px] font-black uppercase tracking-[0.4em]">
+                                                {isStandardPost ? "ATHLETE UPDATE" : "PERFORMANCE DATA VERIFIED"}
+                                            </p>
                                         </div>
                                         <h1 className="text-white font-black text-4xl md:text-5xl italic uppercase tracking-tighter leading-[0.8] mb-1">
-                                            {content.title || 'ENTRENAMIENTO'}
+                                            {content.title || (isStandardPost ? 'PUBLICACIÓN' : 'ENTRENAMIENTO')}
                                         </h1>
                                         <div className="h-0.5 w-16 bg-brand-red/30 rounded-full" />
                                     </div>
@@ -191,6 +197,20 @@ export default function InstagramShareCard({ user, avatar, username, content, on
                                                         <span className="text-brand-red text-[10px] font-black italic uppercase">MIN</span>
                                                     </div>
                                                     <p className="text-gray-600 text-[8px] font-black uppercase tracking-widest">TIEMPO TOTAL</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ) : isStandardPost ? (
+                                        // Standard Text/Social Post Style
+                                        <div className="w-full bg-white/[0.03] border border-white/10 rounded-[40px] p-8 backdrop-blur-2xl">
+                                            <div className="space-y-4">
+                                                <div className="pb-3 border-b border-white/5">
+                                                    <p className="text-brand-red font-black text-[10px] uppercase tracking-[0.3em] mb-1">MENSAJE</p>
+                                                </div>
+                                                <div className="max-h-[180px] overflow-y-auto custom-scrollbar">
+                                                    <p className="text-white text-[13px] font-medium leading-relaxed text-left whitespace-pre-wrap select-text">
+                                                        {content.highlight || 'Sin contenido'}
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Award, Loader2, CheckCircle2, Clock } from "lucide-react";
+import { Award, Loader2, CheckCircle2, Clock, Edit2 } from "lucide-react";
 import { joinChallenge } from "./ranking-actions";
 import { clsx } from "clsx";
 import Link from "next/link";
@@ -49,7 +49,20 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
                         <div className="w-9 h-9 sm:w-10 sm:h-10 bg-black/40 rounded-xl flex items-center justify-center border border-white/10 text-brand-red">
                             <Award className="w-5 h-5" />
                         </div>
-                        <div className="text-right">
+                        <div className="text-right flex items-center gap-2">
+                            {isAdmin && onEdit && (
+                                <button
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        onEdit(challenge);
+                                    }}
+                                    className="p-1.5 bg-white/5 border border-white/10 hover:bg-brand-red/20 text-gray-400 hover:text-white rounded-lg transition-all active:scale-95 flex items-center justify-center relative z-30"
+                                    title="Editar Reto"
+                                >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                            )}
                             <span className="text-[10px] font-black text-brand-red bg-brand-red/10 px-2 py-0.5 rounded border border-brand-red/20 uppercase tracking-widest">
                                 +{challenge.xp_reward} XP
                             </span>

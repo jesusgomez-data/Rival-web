@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import { Clock, Zap, Trophy, Target, ChevronDown, ChevronUp } from "lucide-react";
-import type { GeneratedWOD } from "@/lib/wod-generator";
+import type { GeneratedWOD } from "@/lib/wod-types";
 import { WorkoutCategory } from "./training/WodCreator";
 import { cn } from "@/lib/utils";
 

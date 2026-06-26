@@ -163,12 +163,15 @@ export default function TeamChat({ centerId, className }: { centerId: string, cl
     if (isStaff === null) return null; // Or a skeleton
 
     return (
-        <div className={clsx(
-            "bg-card border border-border flex flex-col overflow-hidden shadow-xl transition-all duration-300",
-            isFullScreen
-                ? "fixed inset-0 z-[9999] h-screen h-[100dvh] w-screen rounded-none border-none bg-background"
-                : clsx("rounded-2xl", className || "h-[700px]")
-        )}>
+        <div 
+            className={clsx(
+                "bg-card border border-border flex flex-col overflow-hidden shadow-xl transition-all duration-300",
+                isFullScreen
+                    ? "fixed inset-0 z-[9999] h-screen h-[100dvh] w-screen rounded-none border-none bg-background"
+                    : clsx("rounded-2xl", className || "h-[700px]")
+            )}
+            style={isFullScreen ? { paddingTop: 'max(12px, env(safe-area-inset-top))' } : undefined}
+        >
             {/* Header */}
             <div className="p-4 border-b border-border bg-muted/30 flex items-center justify-between">
                 <div className="flex items-center gap-2">

@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import type { GeneratedWOD } from "@/lib/wod-generator";
+import type { GeneratedWOD } from "@/lib/wod-types";
 
 export async function POST(request: NextRequest) {
   try {

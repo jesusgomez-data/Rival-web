@@ -29,7 +29,6 @@ const DailyCheckinWidget = dynamic(() => import("@/components/wellness/DailyChec
 const DuelCountdown      = dynamic(() => import("./community/DuelCountdown"),                   { ssr: false, loading: () => null });
 const VictoryShareCard   = dynamic(() => import("./community/VictoryShareCard"),                { ssr: false, loading: () => null });
 const UserMediaGallery   = dynamic(() => import("./UserMediaGallery"),                          { ssr: false, loading: () => null });
-const WODGeneratorUI     = dynamic(() => import("@/components/WODGeneratorUI"),                 { ssr: false, loading: () => null });
 const VideoReelsViewer   = dynamic(() => import("./VideoReelsViewer"),                          { ssr: false, loading: () => null });
 
 function SuggestedUser({ id, name, username, role, avatar, isFollowing, isOfficial }: { id: string, name: string, username: string, role: string, avatar?: string, isFollowing: boolean, isOfficial?: boolean }) {
@@ -1185,13 +1184,6 @@ export default function DashboardHome() {
                     localStorage.setItem("rival_dashboard_tour_seen", "true");
                 }} />
             )}
-
-            {/* WOD Generator AI - Botón Flotante */}
-            <WODGeneratorUI
-                onWODGenerated={(wod) => {
-                    console.log("✅ WOD generado exitosamente:", wod.title);
-                }}
-            />
 
             {/* ── Fullscreen Reels Viewer ── */}
             <AnimatePresence>
