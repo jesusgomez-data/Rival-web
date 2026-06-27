@@ -326,19 +326,56 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:3rem 2.5
 
 /* ══ RESPONSIVE ══════════════════════════════════════════════ */
 @media(max-width:1100px){
+  .hero{min-height:auto;padding:96px 1.75rem 3.5rem;align-items:flex-start}
   .hero-inner{grid-template-columns:1fr;gap:3rem}
   .hero-right{display:none}
   .dpanel.active{grid-template-columns:1fr}
   .dinfo{order:2}.dscreen{order:1}
   .prob-grid,.plans-grid{grid-template-columns:repeat(2,1fr)}
   .outcomes-grid{grid-template-columns:1fr}
+  .section,.demo-section,.outcomes-section,.pricing-section{padding:4.5rem 1.75rem}
+  .cta-section{padding:5rem 1.75rem}
+  footer{padding:2.5rem 1.75rem 1.5rem}
 }
 @media(max-width:680px){
+  nav{padding:0 1rem}
+  .logo{font-size:1.15rem}
   .nav-links{display:none}
-  h1.hero-h{font-size:2.6rem}
-  .sh{font-size:2rem}
+  .nav-r{gap:.45rem}
+  .btn-ghost{padding:.4rem .75rem;font-size:.7rem;white-space:nowrap}
+  .btn-red{padding:.4rem .85rem;font-size:.7rem;white-space:nowrap}
+  .hero{padding:88px 1.25rem 3rem}
+  .eyebrow{font-size:.66rem;padding:.28rem .85rem .28rem .55rem}
+  h1.hero-h{font-size:2.3rem;margin-bottom:1rem}
+  .hero-sub{font-size:1rem;margin-bottom:1.75rem}
+  .hero-btns{gap:.75rem;margin-bottom:2rem}
+  .btn-primary,.btn-outline{padding:.8rem 1.5rem;font-size:.88rem;width:100%;justify-content:center;text-align:center}
+  .hero-btns{flex-direction:column;align-items:stretch}
+  .hero-proof{flex-wrap:wrap;gap:.6rem;row-gap:.5rem}
+  .sh{font-size:1.9rem}
+  .ss{font-size:.92rem}
+  .section,.demo-section,.outcomes-section,.pricing-section{padding:3.5rem 1.25rem}
   .prob-grid,.plans-grid,.outcomes-grid{grid-template-columns:1fr}
-  .demo-nav{gap:.2rem}.dtab{padding:.45rem .8rem;font-size:.75rem}
+  .demo-nav{gap:.2rem;flex-wrap:wrap;width:100%}
+  .dtab{padding:.45rem .8rem;font-size:.75rem}
+  .dinfo h3{font-size:1.6rem}
+  .ds-top,.mstats{grid-template-columns:repeat(2,1fr)}
+  .ci-top{flex-wrap:wrap}
+  .cal-wrap{overflow-x:auto}
+  .cal-hdr,.cal-r{min-width:560px}
+  .cta-section{padding:4rem 1.25rem}
+  .cta-section h2{font-size:2.4rem}
+  .cta-section p{font-size:.95rem}
+  .cta-btns{flex-direction:column;align-items:stretch}
+  .cta-btns a{text-align:center}
+  footer{padding:2.5rem 1.25rem 1.5rem}
+  .foot-top{gap:2rem}
+}
+@media(max-width:420px){
+  h1.hero-h{font-size:2rem}
+  .sh{font-size:1.65rem}
+  .ds-top,.mstats{grid-template-columns:1fr 1fr}
+  .plan-price{font-size:2.6rem}
 }
 </style>
 </head>
