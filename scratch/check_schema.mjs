@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
+import path from "path";
 
-dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -14,6 +15,17 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 async function inspect() {
+  // Check policies
+  const { data, error } = await supabase
+    .from("pg_policies")
+    .select("*");
+
+  if (error) {
+    console.error("Error fetching policies:", error);
+  } else {
+    console.log("Policies:", data);
+  }
+
   // 1. Get trial_requests column structure
   const { data: requestCols, error: err1 } = await supabase
     .from("trial_requests")
