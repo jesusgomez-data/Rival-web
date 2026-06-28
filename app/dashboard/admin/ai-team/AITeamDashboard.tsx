@@ -264,15 +264,25 @@ export default function AITeamDashboard() {
 
   useEffect(() => {
     getAITeamKPIs()
-      .then((kpis) => {
+      .then((data: any) => {
         setAgents((prev) =>
-          prev.map((agent) => ({
-            ...agent,
-            kpis: (kpis as Record<string, Agent['kpis']>)[agent.id] ?? agent.kpis,
-          }))
+          prev.map((agent) => {
+            const agentData = data[agent.id];
+            if (!agentData) return agent;
+            return {
+              ...agent,
+              kpis: agentData.kpis || agent.kpis,
+              tasks: agentData.tasks || agent.tasks,
+              terminalLines: agentData.terminalLines || agent.terminalLines,
+              recommendations: agentData.recommendations || agent.recommendations,
+              status: agentData.status || agent.status,
+            };
+          })
         );
       })
-      .catch(() => {/* keep static fallback */});
+      .catch((err) => {
+        console.error("Failed loading dynamic AI team data:", err);
+      });
   }, []);
 
   const selectedAgent = agents.find((a) => a.id === activeAgent)!;

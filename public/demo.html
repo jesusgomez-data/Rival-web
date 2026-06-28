@@ -3,10 +3,13 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>RivalFit — Gestiona tu centro deportivo desde una sola plataforma</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,700;1,800;1,900&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/chart.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -41,7 +44,7 @@ nav{
 .btn-red:hover{background:var(--red-deep);box-shadow:0 4px 16px var(--red-glow)}
 
 /* ══ HERO ════════════════════════════════════════════════════ */
-.hero{min-height:100vh;display:flex;align-items:center;padding:80px 2.5rem 3rem;position:relative;overflow:hidden}
+.hero{display:flex;align-items:center;padding:120px 2.5rem 4rem;position:relative;overflow:hidden}
 .hero-grid{
   position:absolute;inset:0;
   background-image:linear-gradient(var(--border2) 1px,transparent 1px),linear-gradient(90deg,var(--border2) 1px,transparent 1px);
@@ -122,7 +125,7 @@ h1.hero-h .accent{color:var(--red)}
 .mact-time{font-size:.52rem;color:var(--gray3)}
 
 /* ══ PROBLEM ═════════════════════════════════════════════════ */
-.section{padding:5.5rem 2.5rem}
+.section{padding:4.5rem 2.5rem}
 .inner{max-width:1240px;margin:0 auto}
 .tag{display:inline-block;padding:.28rem .9rem;background:rgba(239,68,68,.09);
   border:1px solid rgba(239,68,68,.22);border-radius:2rem;font-size:.7rem;
@@ -147,7 +150,7 @@ h1.hero-h .accent{color:var(--red)}
 .prob-pfill{height:100%;background:linear-gradient(90deg,var(--red-deep),var(--red));border-radius:3px;width:0;transition:width 1.4s ease}
 
 /* ══ OUTCOMES (RESULTADOS) ═══════════════════════════════════ */
-.outcomes-section{background:var(--bg);padding:5.5rem 2.5rem}
+.outcomes-section{background:var(--bg);padding:4.5rem 2.5rem}
 .outcomes-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1.25rem;margin-top:3rem}
 .outcome-card{
   background:var(--card);border:1px solid var(--border);border-radius:1.25rem;
@@ -172,7 +175,7 @@ h1.hero-h .accent{color:var(--red)}
   padding:.2rem .6rem;background:var(--border);border-radius:.3rem}
 
 /* ══ DEMO ════════════════════════════════════════════════════ */
-.demo-section{background:var(--bg2);padding:5.5rem 2.5rem}
+.demo-section{background:var(--bg2);padding:4.5rem 2.5rem}
 .demo-nav{
   display:flex;gap:.35rem;margin-top:2.5rem;margin-bottom:2rem;
   background:var(--card);border:1px solid var(--border);border-radius:1rem;
@@ -273,7 +276,7 @@ h1.hero-h .accent{color:var(--red)}
 .ci-send:hover{background:var(--red-deep)}
 
 /* ══ PRICING ══════════════════════════════════════════════════ */
-.pricing-section{background:var(--bg2);padding:5.5rem 2.5rem}
+.pricing-section{background:var(--bg2);padding:4.5rem 2.5rem}
 .plans-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;margin-top:3rem}
 .plan{background:var(--card);border:1px solid var(--border);border-radius:1.5rem;padding:2rem;position:relative;transition:.3s}
 .plan:hover{transform:translateY(-4px)}
@@ -300,7 +303,7 @@ h1.hero-h .accent{color:var(--red)}
 
 
 /* ══ CTA ══════════════════════════════════════════════════════ */
-.cta-section{background:var(--bg);padding:6.5rem 2.5rem;text-align:center;position:relative;overflow:hidden}
+.cta-section{background:var(--bg);padding:5.5rem 2.5rem;text-align:center;position:relative;overflow:hidden}
 .cta-glow{position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,rgba(239,68,68,.12),transparent 65%);pointer-events:none}
 .cta-section h2{font-size:3.8rem;font-weight:900;font-style:italic;letter-spacing:-.03em;margin-bottom:1rem;position:relative;z-index:1}
 .cta-section h2 .acc{color:var(--red)}
@@ -320,11 +323,54 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:3rem 2.5
 .foot-bot{border-top:1px solid var(--border);padding-top:1.5rem;display:flex;justify-content:space-between;font-size:.75rem;color:var(--gray3);flex-wrap:wrap;gap:.5rem}
 
 /* ══ REVEAL ══════════════════════════════════════════════════ */
-.rv{opacity:0;transform:translateY(28px);transition:opacity .6s ease,transform .6s ease}
-.rv.vis{opacity:1;transform:translateY(0)}
+.rv{opacity:1;transition:opacity .6s ease}
 .rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.2s}.rv.d3{transition-delay:.3s}
 
 /* ══ RESPONSIVE ══════════════════════════════════════════════ */
+/* Soporte para scroll horizontal en pestañas */
+.demo-nav {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.demo-nav::-webkit-scrollbar {
+  display: none;
+}
+
+/* Selector de días móvil */
+.mobile-day-selector {
+  display: none;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  padding: 0.35rem;
+  width: 100%;
+  justify-content: space-between;
+}
+.mday-btn {
+  flex: 1;
+  padding: 0.5rem 0.2rem;
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-align: center;
+  background: none;
+  border: none;
+  color: var(--gray3);
+  cursor: pointer;
+  line-height: 1.25;
+  transition: 0.2s;
+}
+.mday-btn:hover {
+  color: var(--white);
+}
+.mday-btn.active {
+  background: var(--red);
+  color: var(--white);
+}
+
 @media(max-width:1100px){
   .hero-inner{grid-template-columns:1fr;gap:3rem}
   .hero-right{display:none}
@@ -334,12 +380,326 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:3rem 2.5
   .outcomes-grid{grid-template-columns:1fr}
 }
 @media(max-width:680px){
+  /* Asegurar visibilidad de elementos con scroll reveal en móvil */
+  .rv {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
   .nav-links{display:none}
-  h1.hero-h{font-size:2.6rem}
-  .sh{font-size:2rem}
-  .prob-grid,.plans-grid,.outcomes-grid{grid-template-columns:1fr}
+  h1.hero-h{font-size:2rem !important; line-height: 1.1 !important}
+  .hero-sub{font-size:0.95rem; line-height:1.6; margin-bottom:1.5rem}
+  .hero-proof {
+    flex-wrap: wrap !important;
+    justify-content: center !important;
+    gap: 0.5rem 1.25rem !important;
+  }
+  .proof-sep {
+    display: none !important;
+  }
+  .sh{font-size:1.75rem !important; line-height: 1.15 !important}
+  .ss{font-size:0.9rem; line-height:1.6}
+  .prob-grid,.plans-grid,.outcomes-grid{grid-template-columns:1fr; gap:0.85rem}
   .demo-nav{gap:.2rem}.dtab{padding:.45rem .8rem;font-size:.75rem}
+  
+  nav {
+    padding: 0 1.25rem;
+  }
+  .nav-r .btn-ghost {
+    display: none;
+  }
+  .hero {
+    padding: 80px 1.25rem 2.5rem;
+  }
+  .section, .demo-section, .outcomes-section, .pricing-section, .cta-section {
+    padding: 2.25rem 1.25rem !important;
+  }
+  .plan, .outcome-card {
+    padding: 1.5rem !important;
+  }
+  .dinfo h3 {
+    font-size: 1.5rem !important;
+  }
+  .dinfo p {
+    font-size: 0.85rem !important;
+    line-height: 1.6 !important;
+    margin-bottom: 1.25rem !important;
+  }
+  .flist li {
+    font-size: 0.8rem !important;
+  }
+  
+  /* Hojas del simulador a escala móvil */
+  .dscreen-bar {
+    padding: 0.85rem 1.25rem !important;
+    background: var(--card2) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+  .dscreen-bar .dot {
+    display: none !important;
+  }
+  .dscreen-bar .url {
+    margin-left: 0 !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
+    color: var(--white) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+  }
+  
+  /* Dashboard móvil optimizado */
+  .dst .l {
+    font-size: 0.72rem !important;
+  }
+  .dst .v {
+    font-size: 1.45rem !important;
+    margin-top: 0.2rem;
+  }
+  .dst .c {
+    font-size: 0.72rem !important;
+  }
+  .ds-act-h {
+    font-size: 0.75rem !important;
+    margin-top: 1rem;
+    margin-bottom: 0.75rem;
+  }
+  .act {
+    padding: 0.6rem 0 !important;
+    gap: 0.75rem !important;
+  }
+  .aav {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.72rem !important;
+  }
+  .at {
+    font-size: 0.78rem !important;
+  }
+  .atm {
+    font-size: 0.72rem !important;
+  }
+  
+  /* Agenda móvil optimizada */
+  .mobile-day-selector {
+    display: flex;
+  }
+  .cal-hdr {
+    grid-template-columns: 44px 1fr !important;
+  }
+  .cal-r {
+    grid-template-columns: 44px 1fr !important;
+    min-height: 68px !important;
+  }
+  .ctime {
+    font-size: 0.75rem !important;
+    padding-top: 0.65rem !important;
+  }
+  .cal-hd, .ccell {
+    display: none !important;
+  }
+  .cal-wrap.sel-day-1 .day-1,
+  .cal-wrap.sel-day-2 .day-2,
+  .cal-wrap.sel-day-3 .day-3,
+  .cal-wrap.sel-day-4 .day-4,
+  .cal-wrap.sel-day-5 .day-5,
+  .cal-wrap.sel-day-6 .day-6,
+  .cal-wrap.sel-day-7 .day-7 {
+    display: block !important;
+  }
+  
+  /* Eventos en agenda móvil (formato fila) */
+  .cev {
+    display: flex !important;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.55rem 0.75rem !important;
+    border-radius: 0.45rem !important;
+  }
+  .cev .cn {
+    width: 70%;
+    font-size: 0.82rem !important;
+    font-weight: 800;
+  }
+  .cev .cc {
+    width: 70%;
+    font-size: 0.7rem !important;
+    opacity: 0.8;
+    margin-top: 0.1rem;
+  }
+  .cev .cq {
+    width: 25%;
+    text-align: right;
+    font-size: 0.78rem !important;
+    font-weight: 800;
+  }
+  
+  /* Check-in móvil optimizado */
+  .ci-label {
+    font-size: 0.75rem !important;
+  }
+  .ci-value {
+    font-size: 2.1rem !important;
+  }
+  .ci-qr-box {
+    gap: 0.5rem !important;
+  }
+  .ci-qr-box svg {
+    width: 60px !important;
+    height: 60px !important;
+  }
+  .ci-qr-label {
+    font-size: 0.72rem !important;
+  }
+  .ci-stream-h {
+    font-size: 0.75rem !important;
+    margin-top: 1rem;
+    margin-bottom: 0.75rem;
+  }
+  .ci-entry {
+    padding: 0.6rem 0 !important;
+    gap: 0.75rem !important;
+  }
+  .ciav {
+    width: 30px !important;
+    height: 30px !important;
+    font-size: 0.75rem !important;
+  }
+  .cin {
+    font-size: 0.8rem !important;
+  }
+  .cit {
+    font-size: 0.72rem !important;
+  }
+  
+  /* Coach IA móvil optimizado */
+  .ai-top {
+    padding: 0.8rem !important;
+    gap: 0.8rem !important;
+    margin-bottom: 0.85rem !important;
+  }
+  .ai-av {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 1rem !important;
+  }
+  .ai-name {
+    font-size: 0.82rem !important;
+  }
+  .ai-status {
+    font-size: 0.72rem !important;
+  }
+  .chat-body {
+    max-height: 290px !important;
+    gap: 0.65rem !important;
+  }
+  .cm {
+    padding: 0.7rem 0.9rem !important;
+    font-size: 0.78rem !important;
+    border-radius: 0.8rem !important;
+  }
+  .cm.ai .ailbl {
+    font-size: 0.72rem !important;
+  }
+  .ci-input {
+    margin-top: 0.85rem !important;
+    padding: 0.55rem 0.7rem !important;
+  }
+  .ci-input input {
+    font-size: 0.78rem !important;
+  }
+  .ci-send {
+    padding: 0.3rem 0.65rem !important;
+    font-size: 0.72rem !important;
+  }
+
+  /* Sección CTA móvil optimizada */
+  .cta-section h2 {
+    font-size: 1.85rem !important;
+    line-height: 1.15 !important;
+  }
+  .cta-section p {
+    font-size: 0.9rem !important;
+    margin-bottom: 1.75rem !important;
+  }
+  .cta-btns {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    max-width: 320px !important;
+    margin: 0 auto 1.25rem !important;
+    gap: 0.75rem !important;
+  }
+  .cta-btns .btn-primary, .cta-btns .btn-outline {
+    text-align: center !important;
+    justify-content: center !important;
+    width: 100% !important;
+    padding: 0.85rem 1.25rem !important;
+    font-size: 0.88rem !important;
+  }
+  .cta-micro {
+    display: inline-block;
+    line-height: 1.6;
+    font-size: 0.75rem !important;
+  }
 }
+
+@media(max-width:480px) {
+  .hero-btns {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .hero-btns .btn-primary, .hero-btns .btn-outline {
+    text-align: center;
+    justify-content: center;
+    width: 100%;
+    padding: 0.85rem 1.25rem;
+  }
+  h1.hero-h {
+    font-size: 1.75rem !important;
+    line-height: 1.1 !important;
+  }
+  .sh {
+    font-size: 1.55rem !important;
+    line-height: 1.15 !important;
+  }
+  .plan-price {
+    font-size: 2.6rem !important;
+  }
+  .cta-micro {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    align-items: center;
+  }
+}
+
+@media(max-width:360px) {
+  h1.hero-h {
+    font-size: 1.55rem !important;
+  }
+  .sh {
+    font-size: 1.4rem !important;
+  }
+  .cta-section h2 {
+    font-size: 1.55rem !important;
+  }
+}
+
+@media(max-width:600px) {
+  .ds-top {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem;
+  }
+  .ci-top {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -504,10 +864,10 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:3rem 2.5
         </div>
         <div class="sc">
           <div class="ds-top">
-            <div class="dst"><div class="l">Ingresos Jun</div><div class="v" style="color:var(--green)">€8,420</div><div class="c up">↑ +14%</div></div>
-            <div class="dst"><div class="l">Miembros</div><div class="v">147</div><div class="c up">↑ +8</div></div>
-            <div class="dst"><div class="l">Asistencia</div><div class="v" style="color:var(--orange)">87%</div><div class="c up">↑ +5%</div></div>
-            <div class="dst"><div class="l">Clases Hoy</div><div class="v" style="color:var(--blue)">12</div><div class="c" style="color:var(--gray2)">6 activas</div></div>
+            <div class="dst"><div class="l">Ingresos Jun</div><div class="v" id="stat-mrr" style="color:var(--green)">€8,420</div><div class="c up">↑ +14%</div></div>
+            <div class="dst"><div class="l">Miembros</div><div class="v" id="stat-members">147</div><div class="c up">↑ +8</div></div>
+            <div class="dst"><div class="l">Asistencia</div><div class="v" id="stat-attendance" style="color:var(--orange)">87%</div><div class="c up">↑ +5%</div></div>
+            <div class="dst"><div class="l">Clases Hoy</div><div class="v" id="stat-classes" style="color:var(--blue)">12</div><div class="c" style="color:var(--gray2)">6 activas</div></div>
           </div>
           <div class="ds-chart"><canvas id="dsChart"></canvas></div>
           <div class="ds-act-h">Actividad reciente</div>
@@ -539,57 +899,68 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:3rem 2.5
           <span class="url">Agenda — Semana 9 Jun</span>
         </div>
         <div class="sc" style="padding:.6rem">
-          <div class="cal-wrap">
+          <div class="cal-wrap sel-day-2">
+            <!-- Mobile Day Selector -->
+            <div class="mobile-day-selector">
+              <button type="button" class="mday-btn" onclick="setCalDay(1)">L<br>9</button>
+              <button type="button" class="mday-btn active" onclick="setCalDay(2)">M<br>10</button>
+              <button type="button" class="mday-btn" onclick="setCalDay(3)">X<br>11</button>
+              <button type="button" class="mday-btn" onclick="setCalDay(4)">J<br>12</button>
+              <button type="button" class="mday-btn" onclick="setCalDay(5)">V<br>13</button>
+              <button type="button" class="mday-btn" onclick="setCalDay(6)">S<br>14</button>
+              <button type="button" class="mday-btn" onclick="setCalDay(7)">D<br>15</button>
+            </div>
+            
             <div class="cal-hdr">
               <div class="cal-hd"></div>
-              <div class="cal-hd">LUN<br>9</div>
-              <div class="cal-hd tod">MAR<br>10</div>
-              <div class="cal-hd">MIÉ<br>11</div>
-              <div class="cal-hd">JUE<br>12</div>
-              <div class="cal-hd">VIE<br>13</div>
-              <div class="cal-hd">SÁB<br>14</div>
-              <div class="cal-hd">DOM<br>15</div>
+              <div class="cal-hd day-1">LUN<br>9</div>
+              <div class="cal-hd tod day-2">MAR<br>10</div>
+              <div class="cal-hd day-3">MIÉ<br>11</div>
+              <div class="cal-hd day-4">JUE<br>12</div>
+              <div class="cal-hd day-5">VIE<br>13</div>
+              <div class="cal-hd day-6">SÁB<br>14</div>
+              <div class="cal-hd day-7">DOM<br>15</div>
             </div>
             <div class="cal-rows">
               <div class="cal-r">
                 <div class="ctime">7h</div>
-                <div class="ccell"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CrossFit WOD</div><div class="cc">Coach David</div><div class="cq">8/20</div></div></div>
-                <div class="ccell"><div class="cev" style="background:rgba(139,92,246,.18);border-left-color:#8B5CF6;color:#8B5CF6"><div class="cn">Gymnastics</div><div class="cc">Coach Ana</div><div class="cq">12/15</div></div></div>
-                <div class="ccell"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CrossFit WOD</div><div class="cc">Coach David</div><div class="cq">15/20</div></div></div>
-                <div class="ccell"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CrossFit</div><div class="cc">Coach Luis</div><div class="cq">10/20</div></div></div>
-                <div class="ccell"><div class="cev" style="background:rgba(245,158,11,.18);border-left-color:#F59E0B;color:#F59E0B"><div class="cn">HYROX</div><div class="cc">Coach Ana</div><div class="cq">13/15</div></div></div>
-                <div class="ccell"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CF WOD</div><div class="cc">Coach Marta</div><div class="cq">16/20</div></div></div>
-                <div class="ccell"></div>
+                <div class="ccell day-1"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CrossFit WOD</div><div class="cc">Coach David</div><div class="cq">8/20</div></div></div>
+                <div class="ccell day-2"><div class="cev" style="background:rgba(139,92,246,.18);border-left-color:#8B5CF6;color:#8B5CF6"><div class="cn">Gymnastics</div><div class="cc">Coach Ana</div><div class="cq">12/15</div></div></div>
+                <div class="ccell day-3"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CrossFit WOD</div><div class="cc">Coach David</div><div class="cq">15/20</div></div></div>
+                <div class="ccell day-4"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CrossFit</div><div class="cc">Coach Luis</div><div class="cq">10/20</div></div></div>
+                <div class="ccell day-5"><div class="cev" style="background:rgba(245,158,11,.18);border-left-color:#F59E0B;color:#F59E0B"><div class="cn">HYROX</div><div class="cc">Coach Ana</div><div class="cq">13/15</div></div></div>
+                <div class="ccell day-6"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CF WOD</div><div class="cc">Coach Marta</div><div class="cq">16/20</div></div></div>
+                <div class="ccell day-7"></div>
               </div>
               <div class="cal-r">
                 <div class="ctime">9h</div>
-                <div class="ccell"><div class="cev" style="background:rgba(34,197,94,.18);border-left-color:#22C55E;color:#22C55E"><div class="cn">Weightlifting</div><div class="cc">Coach Marta</div><div class="cq">10/15</div></div></div>
-                <div class="ccell"></div>
-                <div class="ccell"><div class="cev" style="background:rgba(34,197,94,.18);border-left-color:#22C55E;color:#22C55E"><div class="cn">Weightlifting</div><div class="cc">Coach Marta</div><div class="cq">8/15</div></div></div>
-                <div class="ccell"></div>
-                <div class="ccell"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CrossFit</div><div class="cc">Coach Luis</div><div class="cq">15/20</div></div></div>
-                <div class="ccell"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CF WOD</div><div class="cc">Coach David</div><div class="cq">16/20</div></div></div>
-                <div class="ccell"><div class="cev" style="background:rgba(34,197,94,.18);border-left-color:#22C55E;color:#22C55E"><div class="cn">Weightlifting</div><div class="cc">Coach Marta</div><div class="cq">10/15</div></div></div>
+                <div class="ccell day-1"><div class="cev" style="background:rgba(34,197,94,.18);border-left-color:#22C55E;color:#22C55E"><div class="cn">Weightlifting</div><div class="cc">Coach Marta</div><div class="cq">10/15</div></div></div>
+                <div class="ccell day-2"></div>
+                <div class="ccell day-3"><div class="cev" style="background:rgba(34,197,94,.18);border-left-color:#22C55E;color:#22C55E"><div class="cn">Weightlifting</div><div class="cc">Coach Marta</div><div class="cq">8/15</div></div></div>
+                <div class="ccell day-4"></div>
+                <div class="ccell day-5"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CrossFit</div><div class="cc">Coach Luis</div><div class="cq">15/20</div></div></div>
+                <div class="ccell day-6"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CF WOD</div><div class="cc">Coach David</div><div class="cq">16/20</div></div></div>
+                <div class="ccell day-7"><div class="cev" style="background:rgba(34,197,94,.18);border-left-color:#22C55E;color:#22C55E"><div class="cn">Weightlifting</div><div class="cc">Coach Marta</div><div class="cq">10/15</div></div></div>
               </div>
               <div class="cal-r">
                 <div class="ctime">18h</div>
-                <div class="ccell"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CrossFit WOD</div><div class="cc">Coach Luis</div><div class="cq">20/20 🔴</div></div></div>
-                <div class="ccell"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CrossFit</div><div class="cc">Coach Luis</div><div class="cq">18/20</div></div></div>
-                <div class="ccell"><div class="cev" style="background:rgba(245,158,11,.18);border-left-color:#F59E0B;color:#F59E0B"><div class="cn">HYROX</div><div class="cc">Coach Ana</div><div class="cq">13/20</div></div></div>
-                <div class="ccell"><div class="cev" style="background:rgba(34,197,94,.18);border-left-color:#22C55E;color:#22C55E"><div class="cn">Weightlifting</div><div class="cc">Coach Marta</div><div class="cq">8/13</div></div></div>
-                <div class="ccell"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CrossFit</div><div class="cc">Coach Luis</div><div class="cq">14/20</div></div></div>
-                <div class="ccell"><div class="cev" style="background:rgba(59,130,246,.18);border-left-color:#3B82F6;color:#3B82F6"><div class="cn">Endurance</div><div class="cc">Coach Marta</div><div class="cq">9/15</div></div></div>
-                <div class="ccell"></div>
+                <div class="ccell day-1"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CrossFit WOD</div><div class="cc">Coach Luis</div><div class="cq">20/20 🔴</div></div></div>
+                <div class="ccell day-2"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CrossFit</div><div class="cc">Coach Luis</div><div class="cq">18/20</div></div></div>
+                <div class="ccell day-3"><div class="cev" style="background:rgba(245,158,11,.18);border-left-color:#F59E0B;color:#F59E0B"><div class="cn">HYROX</div><div class="cc">Coach Ana</div><div class="cq">13/20</div></div></div>
+                <div class="ccell day-4"><div class="cev" style="background:rgba(34,197,94,.18);border-left-color:#22C55E;color:#22C55E"><div class="cn">Weightlifting</div><div class="cc">Coach Marta</div><div class="cq">8/13</div></div></div>
+                <div class="ccell day-5"><div class="cev" style="background:rgba(239,68,68,.18);border-left-color:#EF4444;color:#EF4444"><div class="cn">CrossFit</div><div class="cc">Coach Luis</div><div class="cq">14/20</div></div></div>
+                <div class="ccell day-6"><div class="cev" style="background:rgba(59,130,246,.18);border-left-color:#3B82F6;color:#3B82F6"><div class="cn">Endurance</div><div class="cc">Coach Marta</div><div class="cq">9/15</div></div></div>
+                <div class="ccell day-7"></div>
               </div>
               <div class="cal-r">
                 <div class="ctime">20h</div>
-                <div class="ccell"><div class="cev" style="background:rgba(139,92,246,.18);border-left-color:#8B5CF6;color:#8B5CF6"><div class="cn">Mobility</div><div class="cc">Coach Ana</div><div class="cq">6/10</div></div></div>
-                <div class="ccell"></div>
-                <div class="ccell"><div class="cev" style="background:rgba(139,92,246,.18);border-left-color:#8B5CF6;color:#8B5CF6"><div class="cn">Mobility</div><div class="cc">Coach Ana</div><div class="cq">8/10</div></div></div>
-                <div class="ccell"></div>
-                <div class="ccell"><div class="cev" style="background:rgba(139,92,246,.18);border-left-color:#8B5CF6;color:#8B5CF6"><div class="cn">Mobility</div><div class="cc">Coach Ana</div><div class="cq">7/10</div></div></div>
-                <div class="ccell"></div>
-                <div class="ccell"></div>
+                <div class="ccell day-1"><div class="cev" style="background:rgba(139,92,246,.18);border-left-color:#8B5CF6;color:#8B5CF6"><div class="cn">Mobility</div><div class="cc">Coach Ana</div><div class="cq">6/10</div></div></div>
+                <div class="ccell day-2"></div>
+                <div class="ccell day-3"><div class="cev" style="background:rgba(139,92,246,.18);border-left-color:#8B5CF6;color:#8B5CF6"><div class="cn">Mobility</div><div class="cc">Coach Ana</div><div class="cq">8/10</div></div></div>
+                <div class="ccell day-4"></div>
+                <div class="ccell day-5"><div class="cev" style="background:rgba(139,92,246,.18);border-left-color:#8B5CF6;color:#8B5CF6"><div class="cn">Mobility</div><div class="cc">Coach Ana</div><div class="cq">7/10</div></div></div>
+                <div class="ccell day-6"></div>
+                <div class="ccell day-7"></div>
               </div>
             </div>
           </div>
@@ -708,7 +1079,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:3rem 2.5
       <div class="outcome-card rv d1">
         <div class="oc-icon" style="background:rgba(34,197,94,.12);color:var(--green);font-size:1.6rem">📈</div>
         <div>
-          <div class="oc-num" style="color:var(--green)" id="oc1">0%</div>
+          <div class="oc-num" style="color:var(--green)" id="oc1">+18%</div>
           <div class="oc-label">Más retención de atletas</div>
           <div class="oc-desc">Los atletas permanecen más tiempo porque sienten progreso real, reciben atención personalizada y están conectados a una comunidad activa.</div>
           <div class="oc-note">Objetivo estimado en los primeros 3 meses</div>
@@ -717,7 +1088,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:3rem 2.5
       <div class="outcome-card rv d2">
         <div class="oc-icon" style="background:rgba(59,130,246,.12);color:var(--blue);font-size:1.6rem">⏱️</div>
         <div>
-          <div class="oc-num" style="color:var(--blue)" id="oc2">0h</div>
+          <div class="oc-num" style="color:var(--blue)" id="oc2">-10h</div>
           <div class="oc-label">Menos horas de gestión semanal</div>
           <div class="oc-desc">Adiós a WhatsApp, Excel y listas de papel. Los procesos que antes te llevaban horas están completamente automatizados.</div>
           <div class="oc-note">Estimado para un centro con 80-150 atletas</div>
@@ -726,7 +1097,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:3rem 2.5
       <div class="outcome-card rv d1">
         <div class="oc-icon" style="background:rgba(245,158,11,.12);color:var(--orange);font-size:1.6rem">💰</div>
         <div>
-          <div class="oc-num" style="color:var(--orange)" id="oc3">0%</div>
+          <div class="oc-num" style="color:var(--orange)" id="oc3">+22%</div>
           <div class="oc-label">Más renovaciones automáticas</div>
           <div class="oc-desc">Los cobros automáticos eliminan el "se me olvidó pagar" y las membresías vencidas. El dinero llega sin que tengas que perseguirlo.</div>
           <div class="oc-note">Reducción de impagados y bajas por olvido</div>
@@ -863,6 +1234,24 @@ function sw(id, btn) {
 }
 function goTo(id){ document.getElementById(id).scrollIntoView({behavior:'smooth'}) }
 
+// ── Calendar Day switching (Mobile) ──────────────────────────
+function setCalDay(dayNum) {
+  const wrap = document.querySelector('.cal-wrap');
+  if (!wrap) return;
+  for(let i = 1; i <= 7; i++) {
+    wrap.classList.remove('sel-day-' + i);
+  }
+  wrap.classList.add('sel-day-' + dayNum);
+  
+  document.querySelectorAll('.mday-btn').forEach((btn, idx) => {
+    if (idx === (dayNum - 1)) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+}
+
 // ── Hero chart ─────────────────────────────────────────────────
 const hCtx = document.getElementById('hChart').getContext('2d');
 new Chart(hCtx, {
@@ -878,6 +1267,7 @@ new Chart(hCtx, {
 
 // ── Dashboard panel chart ──────────────────────────────────────
 let dsBuilt = false;
+let chartValues = [4200, 5100, 5800, 6400, 7380, 8420];
 function buildDsChart() {
   if (dsBuilt) return; dsBuilt = true;
   const ctx = document.getElementById('dsChart').getContext('2d');
@@ -886,7 +1276,7 @@ function buildDsChart() {
     data:{
       labels:['Ene','Feb','Mar','Abr','May','Jun'],
       datasets:[{
-        data:[4200,5100,5800,6400,7380,8420],
+        data:chartValues,
         backgroundColor:(c)=>c.dataIndex===5?'#EF4444':'rgba(239,68,68,.3)',
         borderRadius:4, borderSkipped:false
       }]
@@ -895,7 +1285,7 @@ function buildDsChart() {
       plugins:{legend:{display:false}},
       scales:{
         x:{ticks:{color:'#4B5563',font:{size:9}},grid:{display:false}},
-        y:{ticks:{color:'#4B5563',font:{size:9},callback:v=>'€'+v.toLocaleString()},grid:{color:'rgba(255,255,255,.04)'}}
+        y:{ticks:{color:'#4B5563',font:{size:9},callback:v=>'€'+Math.round(v).toLocaleString()},grid:{color:'rgba(255,255,255,.04)'}}
       }
     }
   });
@@ -913,7 +1303,81 @@ function counter(id, to, pre, suf, dur=1400) {
   };
   requestAnimationFrame(tick);
 }
-window.addEventListener('load',()=>{ counter('h-rev',8420,'€',''); counter('h-mem',147,'',''); counter('h-att',87,'','%'); buildDsChart(); });
+
+// ── Live check-in simulation pool ──────────────────────────────
+let ciPool = [];
+let ciIdx=0, ciCnt=13;
+
+// ── Fetch and Load Real DB Stats ──────────────────────────────
+async function loadDemoData() {
+  try {
+    const res = await fetch('/api/demo-stats');
+    const data = await res.json();
+    if (data.success) {
+      // Update chart values proportionally
+      chartValues = [data.mrr * 0.50, data.mrr * 0.61, data.mrr * 0.69, data.mrr * 0.76, data.mrr * 0.88, data.mrr];
+      
+      // 1. Animate Hero Counters to real DB stats
+      counter('h-rev', Math.round(data.mrr), '€', '');
+      counter('h-mem', data.athletes, '', '');
+      counter('h-att', Math.round((data.visits / 6000) * 100) || 87, '', '%');
+      
+      // 2. Set Dashboard panel values
+      document.getElementById('stat-mrr').textContent = '€' + data.mrr.toFixed(2);
+      document.getElementById('stat-members').textContent = data.athletes;
+      document.getElementById('stat-classes').textContent = data.classesCount;
+      
+      // 3. Set Check-In panel stats
+      ciCnt = data.athletes;
+      document.getElementById('ci-n').textContent = ciCnt;
+      document.getElementById('ci-f').textContent = Math.max(0, 100 - ciCnt);
+      
+      // 4. Update the live check-in simulation pool
+      if (data.checkins && data.checkins.length > 0) {
+        ciPool = data.checkins.map((c, idx) => ({
+          i: c.i,
+          n: c.n,
+          bg: idx % 4 === 0 ? 'rgba(239,68,68,.2)' : idx % 4 === 1 ? 'rgba(34,197,94,.2)' : idx % 4 === 2 ? 'rgba(59,130,246,.2)' : 'rgba(245,158,11,.2)',
+          c: idx % 4 === 0 ? 'var(--red)' : idx % 4 === 1 ? 'var(--green)' : idx % 4 === 2 ? 'var(--blue)' : 'var(--orange)'
+        }));
+      }
+      
+      // 5. Initialize Check-in stream with first few items
+      const stream = document.getElementById('ci-stream');
+      if (stream && data.checkins) {
+        stream.innerHTML = '';
+        data.checkins.slice(0, 4).forEach((c, idx) => {
+          const row = document.createElement('div');
+          row.className = 'ci-entry';
+          const bg = idx % 4 === 0 ? 'rgba(239,68,68,.2)' : idx % 4 === 1 ? 'rgba(34,197,94,.2)' : idx % 4 === 2 ? 'rgba(59,130,246,.2)' : 'rgba(245,158,11,.2)';
+          const color = idx % 4 === 0 ? 'var(--red)' : idx % 4 === 1 ? 'var(--green)' : idx % 4 === 2 ? 'var(--blue)' : 'var(--orange)';
+          const h = 18;
+          const m = String(idx * 7).padStart(2, '0');
+          row.innerHTML = `<div class="ciav" style="background:${bg};color:${color}">${c.i}</div><div class="cin">${c.n}</div><div class="cit">${h}:${m}</div><div class="ci-dot"></div>`;
+          stream.appendChild(row);
+        });
+      }
+    } else {
+      throw new Error(data.error);
+    }
+  } catch (err) {
+    console.error("Failed loading real stats, falling back:", err);
+    counter('h-rev', 8420, '€', '');
+    counter('h-mem', 147, '', '');
+    counter('h-att', 87, '', '%');
+    
+    ciPool = [
+      {i:'JG',n:'Javier García',bg:'rgba(239,68,68,.2)',c:'var(--red)'},
+      {i:'MP',n:'María Pérez',bg:'rgba(245,158,11,.2)',c:'var(--orange)'},
+      {i:'RS',n:'Rodrigo Sanz',bg:'rgba(34,197,94,.2)',c:'var(--green)'},
+      {i:'EA',n:'Elena Alonso',bg:'rgba(139,92,246,.2)',c:'var(--purple)'},
+      {i:'TC',n:'Tomás Castillo',bg:'rgba(59,130,246,.2)',c:'var(--blue)'},
+    ];
+  }
+  buildDsChart();
+}
+
+window.addEventListener('load', loadDemoData);
 
 // ── Outcome counters on scroll ─────────────────────────────────
 let ocDone = false;
@@ -924,7 +1388,7 @@ const ocObs = new IntersectionObserver(entries => {
     counter('oc2',10,'-','h',1200);
     counter('oc3',22,'+','%',1200);
   }
-}, {threshold:.3});
+}, {threshold:.05});
 const ocSection = document.getElementById('resultados');
 if (ocSection) ocObs.observe(ocSection);
 
@@ -942,25 +1406,19 @@ const revObs = new IntersectionObserver(entries => {
 document.querySelectorAll('.rv').forEach(el => revObs.observe(el));
 
 // ── Live check-in simulation ───────────────────────────────────
-const ciPool = [
-  {i:'JG',n:'Javier García',bg:'rgba(239,68,68,.2)',c:'var(--red)'},
-  {i:'MP',n:'María Pérez',bg:'rgba(245,158,11,.2)',c:'var(--orange)'},
-  {i:'RS',n:'Rodrigo Sanz',bg:'rgba(34,197,94,.2)',c:'var(--green)'},
-  {i:'EA',n:'Elena Alonso',bg:'rgba(139,92,246,.2)',c:'var(--purple)'},
-  {i:'TC',n:'Tomás Castillo',bg:'rgba(59,130,246,.2)',c:'var(--blue)'},
-];
-let ciIdx=0, ciCnt=13;
 setInterval(()=>{
   const panel = document.getElementById('p-checkin');
-  if (!panel.classList.contains('active') || ciIdx>=ciPool.length || ciCnt>=20) return;
-  const p=ciPool[ciIdx++]; ciCnt++;
+  if (!panel.classList.contains('active') || ciPool.length === 0) return;
+  const p=ciPool[ciIdx % ciPool.length];
+  ciIdx++;
+  ciCnt++;
   const now=new Date(); const t=`${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
   const row=document.createElement('div'); row.className='ci-entry new';
   row.innerHTML=`<div class="ciav" style="background:${p.bg};color:${p.c}">${p.i}</div><div class="cin">${p.n}</div><div class="cit">${t}</div><div class="ci-dot"></div>`;
   const stream=document.getElementById('ci-stream');
   stream.insertBefore(row,stream.firstChild);
   document.getElementById('ci-n').textContent=ciCnt;
-  document.getElementById('ci-f').textContent=20-ciCnt;
+  document.getElementById('ci-f').textContent=Math.max(0, 100-ciCnt);
 }, 4500);
 
 // ── AI chat ────────────────────────────────────────────────────
