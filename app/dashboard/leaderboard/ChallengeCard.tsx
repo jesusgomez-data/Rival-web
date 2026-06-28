@@ -70,7 +70,7 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
             const res = await joinChallenge(challenge.id);
             if (res.success) {
                 setIsJoined(true);
-                setLiveCount(prev => prev + 1);
+                setLiveCount((prev: number) => prev + 1);
                 setLiveParticipation({ current_progress: 0 });
             } else {
                 alert(res.error || "Error al unirse al reto");
