@@ -22,6 +22,31 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
     const [participantsData, setParticipantsData] = useState<any[]>([]);
     const [loadingParticipants, setLoadingParticipants] = useState(false);
 
+    const [liveCount, setLiveCount] = useState(challenge.participants?.length || 0);
+    const [liveParticipation, setLiveParticipation] = useState<any>(
+        challenge.participants?.find((p: any) => p.user_id === userId)
+    );
+
+    useEffect(() => {
+        let mounted = true;
+        const fetchLiveStatus = async () => {
+            const res = await getChallengeParticipants(challenge.id);
+            if (res.success && res.participants && mounted) {
+                setLiveCount(res.participants.length);
+                const myPart = res.participants.find((p: any) => p.user_id === userId);
+                if (myPart) {
+                    setIsJoined(true);
+                    setLiveParticipation(myPart);
+                } else {
+                    setIsJoined(false);
+                    setLiveParticipation(undefined);
+                }
+            }
+        };
+        fetchLiveStatus();
+        return () => { mounted = false; };
+    }, [challenge.id, userId]);
+
     const openParticipantsModal = async () => {
         setShowParticipants(true);
         if (participantsData.length === 0) {
@@ -32,7 +57,7 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
         }
     };
 
-    const participation = challenge.participants?.find((p: any) => p.user_id === userId);
+
 
     const daysLeft = challenge.end_date
         ? Math.max(0, Math.ceil((new Date(challenge.end_date).getTime() - Date.now()) / 86400000))
@@ -45,6 +70,8 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
             const res = await joinChallenge(challenge.id);
             if (res.success) {
                 setIsJoined(true);
+                setLiveCount(prev => prev + 1);
+                setLiveParticipation({ current_progress: 0 });
             } else {
                 alert(res.error || "Error al unirse al reto");
             }
@@ -118,7 +145,7 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
                         <div className="flex justify-between items-center mb-3">
                             <span className="text-[9px] sm:text-[10px] font-black text-gray-500 uppercase tracking-widest">Atletas inscritos</span>
                             <div className="flex items-center gap-2">
-                                <span className="text-xs font-black text-white italic">{(challenge.participants?.length || 0)}</span>
+                                <span className="text-xs font-black text-white italic">{liveCount}</span>
                                 <button 
                                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); openParticipantsModal(); }}
                                     className="bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:bg-white/10 px-2 py-1 rounded-md flex items-center gap-1 transition-all active:scale-95 z-30"
@@ -131,13 +158,13 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
                         <div className="flex justify-between items-end">
                             <span className="text-[9px] sm:text-[10px] font-black text-brand-red uppercase tracking-widest">Tu Progreso</span>
                             <span className="text-xs font-black text-white italic">
-                                {(participation?.current_progress || 0)} / {challenge.goal_value || '?'}
+                                {(liveParticipation?.current_progress || 0)} / {challenge.goal_value || '?'}
                             </span>
                         </div>
                         <div className="h-2 bg-black/40 rounded-full overflow-hidden border border-white/5">
                             <div
                                 className="h-full bg-brand-red rounded-full transition-all duration-1000 shadow-glow-sm relative overflow-hidden"
-                                style={{ width: `${Math.min(100, ((participation?.current_progress || 0) / (challenge.goal_value || 1)) * 100)}%` }}
+                                style={{ width: `${Math.min(100, ((liveParticipation?.current_progress || 0) / (challenge.goal_value || 1)) * 100)}%` }}
                             >
                                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-[shimmer_2s_infinite]" />
                             </div>
@@ -152,7 +179,7 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
                             <div className="flex justify-between items-center">
                                 <span className="text-[9px] sm:text-[10px] font-black text-gray-500 uppercase tracking-widest">Atletas inscritos</span>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs font-black text-white italic">{(challenge.participants?.length || 0)}</span>
+                                    <span className="text-xs font-black text-white italic">{liveCount}</span>
                                     <button 
                                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); openParticipantsModal(); }}
                                         className="bg-white/5 border border-white/10 text-gray-300 hover:text-white hover:bg-white/10 px-2 py-1 rounded-md flex items-center gap-1 transition-all active:scale-95 z-30"
@@ -165,7 +192,7 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
                             <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                                 <div
                                     className="h-full bg-brand-red rounded-full transition-all duration-1000 shadow-glow-sm"
-                                    style={{ width: `${Math.min(100, ((challenge.participants?.length || 0) + (isJoined ? 1 : 0)) * 5)}%` }}
+                                    style={{ width: `${Math.min(100, (liveCount + (isJoined ? 1 : 0)) * 5)}%` }}
                                 />
                             </div>
                         </div>
