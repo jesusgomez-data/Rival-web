@@ -15,6 +15,7 @@ export default async function LeaderboardPage() {
     const { data: athletes } = await supabase
         .from('profiles')
         .select('id, username, full_name, avatar_url, xp_points, level, is_official')
+        .neq('is_official', true)
         .order('xp_points', { ascending: false })
         .limit(20);
 
@@ -36,6 +37,7 @@ export default async function LeaderboardPage() {
             const { count } = await supabase
                 .from('profiles')
                 .select('*', { count: 'exact', head: true })
+                .neq('is_official', true)
                 .gt('xp_points', profile.xp_points);
             myRank = (count || 0) + 1;
         }

@@ -9,7 +9,7 @@ export async function getRankings(category: 'xp' | 'combat' | 'social') {
         const { data } = await supabase
             .from('profiles')
             .select('id, username, full_name, avatar_url, xp_points, level, is_official')
-            .eq('is_official', false) // Exclude official account from rankings
+            .neq('is_official', true) // Exclude official account from rankings
             .order('xp_points', { ascending: false })
             .limit(20);
         return data || [];
@@ -45,7 +45,7 @@ export async function getRankings(category: 'xp' | 'combat' | 'social') {
             .from('profiles')
             .select('id, username, full_name, avatar_url, level, is_official')
             .in('id', topWinnerIds)
-            .eq('is_official', false);
+            .neq('is_official', true);
 
         if (profilesError) console.error("Error fetching profiles for combat ranking:", profilesError);
 
@@ -93,7 +93,7 @@ export async function getRankings(category: 'xp' | 'combat' | 'social') {
             .from('profiles')
             .select('id, username, full_name, avatar_url, level, is_official')
             .in('id', topFollowedIds)
-            .eq('is_official', false);
+            .neq('is_official', true);
 
         if (profilesError) console.error("Error fetching profiles for social ranking:", profilesError);
 
