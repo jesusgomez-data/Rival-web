@@ -137,6 +137,11 @@ export async function joinChallenge(challengeId: string) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: "No auth" };
 
+    const { data: profile } = await supabase.from('profiles').select('is_official').eq('id', user.id).single();
+    if (profile?.is_official) {
+        return { error: "Las cuentas oficiales no pueden participar en los retos." };
+    }
+
     const { error } = await supabase
         .from('challenge_participants')
         .insert({
