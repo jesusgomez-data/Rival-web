@@ -22,6 +22,7 @@ import SkillTree from "./SkillTree";
 import HealthHub from "./HealthHub";
 import AthleteCard from "@/components/AthleteCard";
 import { getAthleteCardStats } from "../wellness-actions";
+import { getUserBadges, getUserGear, addGearItem, toggleGearActive, deleteGearItem, checkAndAwardBadges, seedDemoGear } from "./badge-actions";
 
 export default function ProfilePage() {
     const [profile, setProfile] = useState<any>(null);
@@ -71,14 +72,78 @@ export default function ProfilePage() {
     const [upcomingTrial, setUpcomingTrial] = useState<any>(null);
     const [athleteStats, setAthleteStats] = useState<any>(null);
 
+    // Badges & Gear
+    const [userBadges, setUserBadges] = useState<any[]>([]);
+    const [userGear, setUserGear] = useState<any[]>([]);
+    const [gearForm, setGearForm] = useState({ name: "", brand: "", model: "", category: "Calzado" });
+    const [showAddGear, setShowAddGear] = useState(false);
+
     const fileInputRef = useRef<HTMLInputElement>(null);
     const fileInputCoverRef = useRef<HTMLInputElement>(null);
     const supabase = createClient();
     const router = useRouter();
 
+    const handleAddGear = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!gearForm.name || !gearForm.brand) {
+            showToast('error', 'Nombre y Marca son obligatorios');
+            return;
+        }
+        setSaving(true);
+        try {
+            const res = await addGearItem(gearForm);
+            if (res.error) {
+                showToast('error', res.error);
+            } else {
+                showToast('success', 'Equipamiento añadido ✓');
+                setGearForm({ name: "", brand: "", model: "", category: "Calzado" });
+                setShowAddGear(false);
+                if (profile) {
+                    const updated = await getUserGear(profile.id);
+                    setUserGear(updated);
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('error', 'Error al añadir equipamiento');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleToggleGear = async (gearId: string, currentStatus: boolean) => {
+        try {
+            const res = await toggleGearActive(gearId, !currentStatus);
+            if (res.error) {
+                showToast('error', res.error);
+            } else {
+                setUserGear(prev => prev.map(g => g.id === gearId ? { ...g, is_active: !currentStatus } : g));
+                showToast('success', 'Estado de equipamiento actualizado ✓');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('error', 'Error al actualizar estado');
+        }
+    };
+
+    const handleDeleteGear = async (gearId: string) => {
+        if (!confirm('¿Seguro que deseas eliminar este equipamiento?')) return;
+        try {
+            const res = await deleteGearItem(gearId);
+            if (res.error) {
+                showToast('error', res.error);
+            } else {
+                setUserGear(prev => prev.filter(g => g.id !== gearId));
+                showToast('info', 'Equipamiento eliminado');
+            }
+        } catch (err) {
+            console.error(err);
+            showToast('error', 'Error al eliminar equipamiento');
+        }
+    };
+
     useEffect(() => {
         async function loadProfile() {
-            // Fetch profile, trial, and stats in parallel
             const [data, trial] = await Promise.all([
                 getUserProfile(),
                 getUpcomingTrial().catch(() => null)
@@ -88,6 +153,16 @@ export default function ProfilePage() {
 
             if (data) {
                 setProfile(data);
+
+                try {
+                    await Promise.all([
+                        checkAndAwardBadges(data.id),
+                        seedDemoGear(data.id)
+                    ]);
+                } catch (e) {
+                    console.warn("Error seeding accomplishments:", e);
+                }
+
                 setFormData({
                     full_name: data.full_name || "",
                     username: data.username || "",
@@ -102,8 +177,7 @@ export default function ProfilePage() {
                     birth_date_public: data.birth_date_public !== false,
                 });
 
-                // All dependent queries fire in parallel — no sequential awaits
-                const [stats, prSetsRes, workoutsRes, orgs] = await Promise.all([
+                const [stats, prSetsRes, workoutsRes, orgs, badgesRes, gearRes] = await Promise.all([
                     getCombatStats(data.id),
                     supabase
                         .from('workout_sets')
@@ -119,16 +193,19 @@ export default function ProfilePage() {
                         .order('start_time', { ascending: false })
                         .limit(30),
                     getUserOrganizations(),
+                    getUserBadges(data.id),
+                    getUserGear(data.id)
                 ]);
 
                 setCombatStats(stats);
+                setUserBadges(badgesRes);
+                setUserGear(gearRes);
 
                 const prSets = prSetsRes.data;
                 if (prSets && prSets.length > 0) {
                     const best: Record<string, { exercise: string; weight: number; date: string }> = {};
                     prSets.forEach((s: any) => {
                         const name = s.exercise_name;
-                        // workout_sets no tiene fecha propia; la tomamos del workout padre
                         const w = Array.isArray(s.workouts) ? s.workouts[0] : s.workouts;
                         const date = w?.start_time || new Date().toISOString();
                         if (!best[name] || s.weight_kg > best[name].weight) {
@@ -146,14 +223,12 @@ export default function ProfilePage() {
                     setCoverPosition(Number(data.cover_position) || 50);
                 }
 
-
                 if (data.featured_rms) {
                     setFeaturedRms(data.featured_rms);
                 }
             }
             setLoading(false);
         }
-        // Load athlete card stats (non-blocking)
         getAthleteCardStats().then(setAthleteStats);
         loadProfile();
     }, []);
@@ -949,6 +1024,36 @@ export default function ProfilePage() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* ── Badges Section ── */}
+                        <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em]">Logros y Medallas</h3>
+                                <span className="text-[10px] font-black text-brand-red uppercase tracking-widest bg-brand-red/10 px-2 py-0.5 rounded-full border border-brand-red/20">
+                                    {userBadges.length} desbloqueados
+                                </span>
+                            </div>
+                            {userBadges.length > 0 ? (
+                                <div className="grid grid-cols-1 gap-2.5">
+                                    {userBadges.map((ub: any) => (
+                                        <div key={ub.id} className="flex items-center gap-3 bg-black/40 border border-white/5 rounded-2xl p-3 hover:border-brand-red/20 transition-all group">
+                                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-yellow-500/10 to-brand-red/10 border border-yellow-500/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                                <Award className="w-4 h-4 text-yellow-500" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-[11px] font-black text-white uppercase truncate">{ub.badge?.name}</p>
+                                                <p className="text-[8px] text-gray-500 font-bold uppercase tracking-wider line-clamp-1">{ub.badge?.description}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-center py-4 bg-black/20 rounded-2xl border border-dashed border-white/5">
+                                    <Award className="w-8 h-8 text-gray-600 mx-auto mb-2 opacity-50" />
+                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-wider">Sin medallas obtenidas aún</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -1299,6 +1404,136 @@ export default function ProfilePage() {
                                 </button>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Gear Section */}
+                    <div className={clsx("bg-brand-gray/30 border border-white/5 rounded-3xl p-3 md:p-8 backdrop-blur-xl space-y-6", mobileTab !== 'settings' && "hidden lg:block")}>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Dumbbell className="w-4 h-4 text-brand-red" />
+                                <h3 className="text-xs font-black uppercase tracking-[0.3em] text-foreground">Mi Equipamiento</h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowAddGear(!showAddGear)}
+                                className="flex items-center gap-1.5 bg-brand-red/10 border border-brand-red/20 text-brand-red text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-xl hover:bg-brand-red hover:text-white transition-all"
+                            >
+                                <Plus className="w-3.5 h-3.5" /> Añadir
+                            </button>
+                        </div>
+
+                        {showAddGear && (
+                            <form onSubmit={handleAddGear} className="bg-black/30 border border-white/5 rounded-2xl p-4 space-y-4 animate-fade-in">
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <FormInput
+                                        label="Nombre del Equipamiento"
+                                        name="name"
+                                        value={gearForm.name}
+                                        onChange={(e: any) => setGearForm({ ...gearForm, name: e.target.value })}
+                                        placeholder="ej. Metcon 9"
+                                        icon={<Dumbbell className="w-4 h-4" />}
+                                    />
+                                    <FormInput
+                                        label="Marca"
+                                        name="brand"
+                                        value={gearForm.brand}
+                                        onChange={(e: any) => setGearForm({ ...gearForm, brand: e.target.value })}
+                                        placeholder="ej. Nike"
+                                        icon={<Building2 className="w-4 h-4" />}
+                                    />
+                                </div>
+                                <div className="grid md:grid-cols-2 gap-4">
+                                    <FormInput
+                                        label="Modelo (Opcional)"
+                                        name="model"
+                                        value={gearForm.model}
+                                        onChange={(e: any) => setGearForm({ ...gearForm, model: e.target.value })}
+                                        placeholder="ej. Metcon 9 Amp"
+                                        icon={<Hash className="w-4 h-4" />}
+                                    />
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-500 ml-1">Categoría</label>
+                                        <select
+                                            value={gearForm.category}
+                                            onChange={(e: any) => setGearForm({ ...gearForm, category: e.target.value })}
+                                            className="w-full bg-black/40 border border-white/10 rounded-2xl p-3 text-white text-xs font-bold focus:outline-none focus:border-brand-red transition-all appearance-none"
+                                        >
+                                            <option value="Calzado">Calzado</option>
+                                            <option value="Accesorios">Accesorios</option>
+                                            <option value="Ropa">Ropa</option>
+                                            <option value="Otro">Otro</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="flex justify-end gap-2 pt-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowAddGear(false)}
+                                        className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white rounded-lg text-[10px] font-black uppercase"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={saving}
+                                        className="px-4 py-2 bg-brand-red hover:bg-red-600 text-white rounded-lg text-[10px] font-black uppercase flex items-center gap-1"
+                                    >
+                                        {saving && <Loader2 className="w-3 h-3 animate-spin" />} Guardar
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+
+                        {userGear.length > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {userGear.map((g: any) => (
+                                    <div key={g.id} className={clsx(
+                                        "flex items-center gap-3 p-3 rounded-2xl border transition-all relative overflow-hidden group/item",
+                                        g.is_active ? "bg-brand-red/5 border-brand-red/20 shadow-[0_0_15px_rgba(239,68,68,0.05)]" : "bg-black/30 border-white/5"
+                                    )}>
+                                        {g.image_url && (
+                                            <div className="w-12 h-12 rounded-xl overflow-hidden relative bg-black/20 shrink-0 border border-white/5">
+                                                <Image src={g.image_url} alt={g.name} fill className="object-cover" />
+                                            </div>
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-1.5">
+                                                <p className="text-xs font-black text-white uppercase truncate">{g.name}</p>
+                                                <span className="text-[8px] text-gray-500 font-bold uppercase">{g.category}</span>
+                                            </div>
+                                            <p className="text-[9px] text-gray-500 font-bold uppercase tracking-wider">{g.brand} {g.model && `• ${g.model}`}</p>
+                                            
+                                            <button
+                                                type="button"
+                                                onClick={() => handleToggleGear(g.id, g.is_active)}
+                                                className={clsx(
+                                                    "mt-1.5 text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border transition-all",
+                                                    g.is_active 
+                                                        ? "bg-brand-red/10 border-brand-red/20 text-brand-red" 
+                                                        : "bg-white/5 border-white/10 text-gray-500 hover:text-white"
+                                                )}
+                                            >
+                                                {g.is_active ? 'Equipado' : 'Usar'}
+                                            </button>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDeleteGear(g.id)}
+                                            className="p-2 text-gray-600 hover:text-brand-red transition-colors opacity-0 group-hover/item:opacity-100 absolute top-2 right-2"
+                                            title="Eliminar"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6 bg-black/20 rounded-3xl border border-dashed border-white/5">
+                                <Dumbbell className="w-8 h-8 text-gray-600 mx-auto mb-2 opacity-50 animate-pulse" />
+                                <p className="text-xs text-gray-500 font-black uppercase tracking-wider">No tienes equipamiento deportivo guardado</p>
+                                <p className="text-[9px] text-gray-600 font-bold uppercase tracking-wider mt-1">Añade tus zapatillas o cinturón Rogue para lucirlos en tu perfil</p>
+                            </div>
+                        )}
                     </div>
 
                     {/* ── Personal Records — auto-synced — always on desktop, hidden on mobile (moved to left column) ── */}

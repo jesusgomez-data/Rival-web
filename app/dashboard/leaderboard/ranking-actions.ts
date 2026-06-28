@@ -148,6 +148,26 @@ export async function joinChallenge(challengeId: string) {
     return { success: true };
 }
 
+export async function getChallengeParticipants(challengeId: string) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('challenge_participants')
+        .select(`
+            user_id,
+            current_progress,
+            is_completed,
+            profiles (id, username, full_name, avatar_url, level, is_official)
+        `)
+        .eq('challenge_id', challengeId)
+        .order('current_progress', { ascending: false });
+        
+    if (error) {
+        console.error("Error fetching participants:", error);
+        return { success: false, error: error.message };
+    }
+    return { success: true, participants: data };
+}
+
 export async function updateChallengeProgress(challengeId: string, progress: number) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -227,4 +247,31 @@ export async function deleteChallenge(id: string) {
     if (error) return { error: error.message };
     return { success: true };
 }
+
+export async function shareChallengeToFeed(challengeId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "No auth" };
+
+    const { data: challenge, error: fetchError } = await supabase
+        .from('community_challenges')
+        .select('*')
+        .eq('id', challengeId)
+        .single();
+
+    if (fetchError || !challenge) return { error: "Challenge not found" };
+
+    const { error } = await supabase
+        .from('posts')
+        .insert({
+            user_id: user.id,
+            caption: `¡Únete al reto: ${challenge.title}! 🔥\n\n${challenge.description}`,
+            media_type: 'challenge',
+            media_url: JSON.stringify(challenge)
+        });
+
+    if (error) return { error: error.message };
+    return { success: true };
+}
+
 

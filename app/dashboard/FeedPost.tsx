@@ -38,6 +38,7 @@ const ShareableCard      = dynamic(() => import("@/components/ShareableCard"),  
 const RunShareCard       = dynamic(() => import("@/components/training/RunShareCard"),           { ssr: false });
 const WorkoutShareCard   = dynamic(() => import("@/components/training/WorkoutShareCard"),       { ssr: false });
 const RouteMap           = dynamic(() => import("@/components/training/RouteMap"),               { ssr: false });
+const ChallengeCard      = dynamic(() => import("./leaderboard/ChallengeCard"),                  { ssr: false });
 
 
 function ShareButton({ 
@@ -1012,7 +1013,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     }, [workoutData, image]);
 
     // Check if the post only has written text (no photos, videos, or workout/WOD details)
-    const isTextOnly = !hasMedia && !(resolvedWorkoutData || wod_data || post_type === 'wod' || mediaType === 'pr' || mediaType === 'class_result' || mediaType === 'membership_activation' || mediaType === 'repost');
+    const isTextOnly = !hasMedia && !(resolvedWorkoutData || wod_data || post_type === 'wod' || mediaType === 'pr' || mediaType === 'class_result' || mediaType === 'membership_activation' || mediaType === 'repost' || mediaType === 'challenge');
 
     // Extract IDs from workout data if possible
     const workoutWodId = (resolvedWorkoutData as any)?.original_wod_post_id || (resolvedWorkoutData as any)?.postId;
@@ -1683,11 +1684,34 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
             )}
 
             {/* SECONDARY SECTION: WODs, PRs & Supplementary Data */}
-            {(resolvedWorkoutData || wod_data || post_type === 'wod' || mediaType === 'pr' || mediaType === 'class_result' || mediaType === 'membership_activation' || mediaType === 'repost') && (
+            {(resolvedWorkoutData || wod_data || post_type === 'wod' || mediaType === 'pr' || mediaType === 'class_result' || mediaType === 'membership_activation' || mediaType === 'repost' || mediaType === 'challenge') && (
                 <div className={clsx(
                     "p-4 md:p-8 border-t border-white/5",
                     theme === 'dark' ? "bg-zinc-950" : "bg-gray-50"
                 )}>
+                    {/* Challenge Card */}
+                    {mediaType === 'challenge' && (
+                        <div className="animate-in fade-in zoom-in-95 duration-500 max-w-sm">
+                            {(() => {
+                                let challengeData: any = null;
+                                try {
+                                    if (typeof image === 'string' && image.startsWith('{')) challengeData = JSON.parse(image);
+                                } catch (e) { }
+                                if (!challengeData) return null;
+                                
+                                const isParticipating = challengeData.participants?.some((p: any) => p.user_id === currentUserId);
+                                
+                                return (
+                                    <ChallengeCard 
+                                        challenge={challengeData}
+                                        userId={currentUserId}
+                                        isParticipatingInitial={isParticipating}
+                                        isAdmin={false} // Don't show edit in feed
+                                    />
+                                );
+                            })()}
+                        </div>
+                    )}
                     {/* WOD Display (WOD of the Day type) */}
                     {post_type === 'wod' && wod_data && (
                         <div className="space-y-6">

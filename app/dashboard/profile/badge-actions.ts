@@ -110,3 +110,85 @@ export async function seedDemoGear(userId: string) {
         }
     ]);
 }
+
+export async function getUserBadges(userId: string) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('user_badges')
+        .select('*, badge:badge_id (*)')
+        .eq('user_id', userId);
+
+    if (error) {
+        console.error("Error fetching user badges:", error);
+        return [];
+    }
+    return data || [];
+}
+
+export async function getUserGear(userId: string) {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+        .from('user_gear')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error("Error fetching user gear:", error);
+        return [];
+    }
+    return data || [];
+}
+
+export async function addGearItem(gear: { name: string, brand: string, model?: string, category: string, image_url?: string }) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Not authenticated' };
+
+    const { data, error } = await supabase
+        .from('user_gear')
+        .insert({
+            user_id: user.id,
+            name: gear.name,
+            brand: gear.brand,
+            model: gear.model || null,
+            category: gear.category,
+            image_url: gear.image_url || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=400&auto=format&fit=crop',
+            is_active: true
+        })
+        .select()
+        .single();
+
+    if (error) return { error: error.message };
+    return { success: true, data };
+}
+
+export async function toggleGearActive(gearId: string, isActive: boolean) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Not authenticated' };
+
+    const { error } = await supabase
+        .from('user_gear')
+        .update({ is_active: isActive })
+        .eq('id', gearId)
+        .eq('user_id', user.id);
+
+    if (error) return { error: error.message };
+    return { success: true };
+}
+
+export async function deleteGearItem(gearId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: 'Not authenticated' };
+
+    const { error } = await supabase
+        .from('user_gear')
+        .delete()
+        .eq('id', gearId)
+        .eq('user_id', user.id);
+
+    if (error) return { error: error.message };
+    return { success: true };
+}
