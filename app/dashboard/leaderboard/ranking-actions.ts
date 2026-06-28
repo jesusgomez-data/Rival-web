@@ -144,7 +144,12 @@ export async function joinChallenge(challengeId: string) {
             user_id: user.id
         });
 
-    if (error) return { error: error.message };
+    if (error) {
+        if (error.code === '23505') {
+            return { success: true }; // Already joined
+        }
+        return { error: error.message };
+    }
     return { success: true };
 }
 
