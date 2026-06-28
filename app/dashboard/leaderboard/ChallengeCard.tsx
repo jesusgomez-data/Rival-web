@@ -6,7 +6,6 @@ import { joinChallenge, getChallengeParticipants } from "./ranking-actions";
 import { clsx } from "clsx";
 import Link from "next/link";
 import Image from "next/image";
-import { isImageUrl } from "@/lib/utils";
 
 interface ChallengeCardProps {
     challenge: any;
@@ -228,7 +227,7 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
                                         className="flex items-center gap-3 p-3 rounded-2xl hover:bg-white/5 border border-transparent hover:border-white/5 transition-all group"
                                     >
                                         <div className="w-10 h-10 rounded-full bg-zinc-900 border border-white/10 overflow-hidden relative flex-shrink-0">
-                                            {p.profiles?.avatar_url && isImageUrl(p.profiles.avatar_url) ? (
+                                            {p.profiles?.avatar_url && (p.profiles.avatar_url.startsWith('http') || p.profiles.avatar_url.startsWith('/')) ? (
                                                 <Image src={p.profiles.avatar_url} alt={p.profiles.username} fill className="object-cover" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center bg-brand-red/10 text-brand-red font-black uppercase text-xs">
