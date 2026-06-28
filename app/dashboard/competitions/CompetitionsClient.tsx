@@ -316,12 +316,25 @@ export default function CompetitionsClient({ staticCompetitions, dbCompetitions,
     today.setHours(0, 0, 0, 0);
 
     const filteredStatic = useMemo(() => {
-        return staticCompetitions.filter(comp => {
+        // First, roll over past events to next year and sort by upcoming date
+        const upcomingStatic = staticCompetitions.map(comp => {
+            let compDate = new Date(comp.date);
+            // If the event already happened this year, move it to next year
+            while (compDate < today) {
+                compDate.setFullYear(compDate.getFullYear() + 1);
+            }
+            return {
+                ...comp,
+                date: compDate.toISOString().split('T')[0]
+            };
+        }).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+        // Then apply search and type filters
+        return upcomingStatic.filter(comp => {
             const matchesSearch = comp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 comp.location.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesType = selectedType === 'ALL' || comp.type === selectedType;
-            const isFuture = new Date(comp.date) >= today;
-            return matchesSearch && matchesType && isFuture;
+            return matchesSearch && matchesType;
         });
     }, [searchTerm, selectedType, staticCompetitions]);
 
