@@ -155,22 +155,42 @@ export async function joinChallenge(challengeId: string) {
 
 export async function getChallengeParticipants(challengeId: string) {
     const supabase = await createClient();
-    const { data, error } = await supabase
+    const { data: participants, error: partError } = await supabase
         .from('challenge_participants')
         .select(`
             user_id,
             current_progress,
-            is_completed,
-            profiles (id, username, full_name, avatar_url, level, is_official)
+            is_completed
         `)
         .eq('challenge_id', challengeId)
         .order('current_progress', { ascending: false });
         
-    if (error) {
-        console.error("Error fetching participants:", error);
-        return { success: false, error: error.message };
+    if (partError) {
+        console.error("Error fetching participants:", partError);
+        return { success: false, error: partError.message };
     }
-    return { success: true, participants: data };
+
+    if (!participants || participants.length === 0) {
+        return { success: true, participants: [] };
+    }
+
+    const userIds = participants.map((p: any) => p.user_id);
+
+    const { data: profiles, error: profError } = await supabase
+        .from('profiles')
+        .select('id, username, full_name, avatar_url, level, is_official')
+        .in('id', userIds);
+
+    if (profError) {
+        console.error("Error fetching profiles:", profError);
+    }
+
+    const mergedData = participants.map((p: any) => ({
+        ...p,
+        profiles: profiles?.find((prof: any) => prof.id === p.user_id) || null
+    }));
+
+    return { success: true, participants: mergedData };
 }
 
 export async function updateChallengeProgress(challengeId: string, progress: number) {
