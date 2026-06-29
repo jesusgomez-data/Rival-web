@@ -76,7 +76,7 @@ export default function HashtagPage({ params }: { params: Promise<{ tag: string 
                 {/* Header */}
                 <div className="flex flex-col gap-6 mb-12 animate-in fade-in slide-in-from-top-4 duration-700">
                     <Link 
-                        href="/dashboard/community" 
+                        href="/dashboard/explore" 
                         className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors group w-fit"
                     >
                         <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />

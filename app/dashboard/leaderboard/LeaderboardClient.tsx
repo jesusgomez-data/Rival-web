@@ -5,7 +5,7 @@ import { Trophy, Medal, Flame, Users, Award, Swords, Star } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { clsx } from "clsx";
-import FollowButton from "../community/FollowButton";
+import FollowButton from "../explore/FollowButton";
 import { getRankings } from "./ranking-actions";
 
 export default function LeaderboardClient({ initialData, currentUser, followedIds }: any) {

@@ -51,6 +51,18 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
         if (loser.avatar) loadAvatar(loser.avatar, setLoserAvatarBase64);
     }, [winner.avatar, loser.avatar]);
 
+    const dataUrlToBlob = (dataUrl: string) => {
+        const arr = dataUrl.split(',');
+        const mime = arr[0].match(/:(.*?);/)?.[1] || 'image/png';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+    };
+
     const generateShareImage = async () => {
         if (!cardRef.current) return null;
         try {
@@ -73,7 +85,7 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
             const dataUrl = await generateShareImage();
             if (!dataUrl) throw new Error("No image generated");
 
-            const blob = await (await fetch(dataUrl)).blob();
+            const blob = dataUrlToBlob(dataUrl);
             const file = new File([blob], `duel-victory-${Date.now()}.png`, { type: 'image/png' });
 
             const formData = new FormData();
@@ -101,7 +113,7 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
             const dataUrl = await generateShareImage();
             if (!dataUrl) throw new Error("No image generated");
 
-            const blob = await (await fetch(dataUrl)).blob();
+            const blob = dataUrlToBlob(dataUrl);
             const file = new File([blob], `duel-story-${Date.now()}.png`, { type: 'image/png' });
 
             const formData = new FormData();
@@ -154,7 +166,7 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
             const dataUrl = await generateShareImage();
             if (!dataUrl) throw new Error('Failed to generate image');
 
-            const blob = await (await fetch(dataUrl)).blob();
+            const blob = dataUrlToBlob(dataUrl);
             const file = new File([blob], `victoria-rival-${Date.now()}.png`, { type: 'image/png' });
 
             if (navigator.share && navigator.canShare({ files: [file] })) {

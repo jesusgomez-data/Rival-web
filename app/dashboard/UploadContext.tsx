@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
-import { createUserPost, createPRPost, createWodPost } from './community/actions';
+import { createUserPost, createPRPost, createWodPost } from './explore/actions';
 import { Loader2, CheckCircle2, XCircle, Clock, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';

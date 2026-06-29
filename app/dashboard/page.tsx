@@ -8,11 +8,11 @@ import clsx from "clsx";
 import { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "@/app/LanguageContext";
-import LikeButton from "./community/LikeButton";
-import FollowButton from "./community/FollowButton";
+import LikeButton from "./explore/LikeButton";
+import FollowButton from "./explore/FollowButton";
 import FeedPost from "./FeedPost";
 import StoryBar from "./stories/StoryBar";
-import { getMyDuels, acceptDuel } from "./community/duel-actions";
+import { getMyDuels, acceptDuel } from "./explore/duel-actions";
 import { getMissions } from "./training/actions";
 import InfoTooltip from "@/components/InfoTooltip";
 import { getMonday } from "@/utils/date";
@@ -26,8 +26,8 @@ const CreatePost         = dynamic(() => import("./CreatePost"),                
 const DashboardTour      = dynamic(() => import("@/components/onboarding/DashboardTour"),       { ssr: false, loading: () => null });
 const EssentialsHero     = dynamic(() => import("@/components/onboarding/EssentialsHero"),      { ssr: false, loading: () => null });
 const DailyCheckinWidget = dynamic(() => import("@/components/wellness/DailyCheckinWidget"),    { ssr: false, loading: () => null });
-const DuelCountdown      = dynamic(() => import("./community/DuelCountdown"),                   { ssr: false, loading: () => null });
-const VictoryShareCard   = dynamic(() => import("./community/VictoryShareCard"),                { ssr: false, loading: () => null });
+const DuelCountdown      = dynamic(() => import("./explore/DuelCountdown"),                   { ssr: false, loading: () => null });
+const VictoryShareCard   = dynamic(() => import("./explore/VictoryShareCard"),                { ssr: false, loading: () => null });
 const UserMediaGallery   = dynamic(() => import("./UserMediaGallery"),                          { ssr: false, loading: () => null });
 const VideoReelsViewer   = dynamic(() => import("./VideoReelsViewer"),                          { ssr: false, loading: () => null });
 
@@ -369,7 +369,6 @@ export default function DashboardHome() {
         myGyms: [],
         repostMap: {} as Record<string, any>,
     });
-    const [activeTab, setActiveTab] = useState('following');
     const [refreshKey, setRefreshKey] = useState(0);
     const [feedLoading, setFeedLoading] = useState(true);
     // Cache the auth user to avoid repeated auth.getUser() calls across loadData + fetchFeed
@@ -581,24 +580,22 @@ export default function DashboardHome() {
                 .order('created_at', { ascending: false })
                 .limit(20);
 
-            if (activeTab === 'following') {
-                let followedIds = followedIdsRef.current;
-                let officialIds = officialIdsRef.current;
+            let followedIds = followedIdsRef.current;
+            let officialIds = officialIdsRef.current;
 
-                if (followedIds.length === 0) {
-                    const [{ data: myFollows }, { data: officialProfiles }] = await Promise.all([
-                        supabase.from('follows').select('following_id').eq('follower_id', user.id),
-                        supabase.from('profiles').select('id').eq('is_official', true),
-                    ]);
-                    followedIds = myFollows?.map((f: any) => f.following_id) || [];
-                    officialIds = officialProfiles?.map((p: any) => p.id) || [];
-                    followedIdsRef.current = followedIds;
-                    officialIdsRef.current = officialIds;
-                }
-
-                const idsToFetch = Array.from(new Set([user.id, ...followedIds, ...officialIds])).filter(Boolean);
-                query = query.in('user_id', idsToFetch);
+            if (followedIds.length === 0) {
+                const [{ data: myFollows }, { data: officialProfiles }] = await Promise.all([
+                    supabase.from('follows').select('following_id').eq('follower_id', user.id),
+                    supabase.from('profiles').select('id').eq('is_official', true),
+                ]);
+                followedIds = myFollows?.map((f: any) => f.following_id) || [];
+                officialIds = officialProfiles?.map((p: any) => p.id) || [];
+                followedIdsRef.current = followedIds;
+                officialIdsRef.current = officialIds;
             }
+
+            const idsToFetch = Array.from(new Set([user.id, ...followedIds, ...officialIds])).filter(Boolean);
+            query = query.in('user_id', idsToFetch);
 
             const { data: posts, error } = await query;
             if (error) console.error("[fetchFeed] Query error:", error);
@@ -624,7 +621,7 @@ export default function DashboardHome() {
         } finally {
             setFeedLoading(false);
         }
-    }, [supabase, activeTab, data.currentUser?.id]);
+    }, [supabase, data.currentUser?.id]);
 
     // Trigger feed fetch whenever the tab changes, a refresh is requested, or the user is ready
     useEffect(() => {
@@ -843,7 +840,7 @@ export default function DashboardHome() {
                                     loading={statsLoading}
                                 />
                             </Link>
-                            <Link href="/dashboard/community" className="group">
+                            <Link href="/dashboard/explore" className="group">
                                 <StatCard
                                     label={t.dashboard.statsRivales}
                                     value={data.rivalsCount?.toString() || "0"}
@@ -893,29 +890,7 @@ export default function DashboardHome() {
                                 </p>
                             </div>
                         </div>
-                        <div id="activity-feed" className="flex bg-white/5 backdrop-blur-md rounded-2xl p-1 border border-white/10 shadow-2xl shrink-0">
-                            <button
-                                onClick={() => setActiveTab('following')}
-                                className={clsx(
-                                    "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                    activeTab === 'following' ? "bg-brand-red text-white shadow-glow" : "text-gray-500 hover:text-white"
-                                )}
-                            >
-                                {t.dashboard.tabsFollowing}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('global')}
-                                className={clsx(
-                                    "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                                    activeTab === 'global' ? "bg-brand-red text-white shadow-glow" : "text-gray-500 hover:text-white"
-                                )}
-                            >
-                                {t.dashboard.tabsGlobal}
-                            </button>
                         </div>
-                    </div>
-
-                    {/* Social Feed */}
                     <div className="space-y-6">
                         {/* Old StoryBar location removed */}
 
@@ -993,7 +968,7 @@ export default function DashboardHome() {
                                                 cover_url={post.cover_url}
                                                 isOfficial={post.profiles?.is_official}
                                                 isMember={data.activeCenterIds.has(post.user_id) || post.user_id === data.currentUser?.id}
-                                                context={activeTab as 'following' | 'global'}
+                                                context="following"
                                                 isAdminUser={data.profile?.is_official}
                                                 hasActiveDuel={activeDuelUserIds.has(post.user_id)}
                                                 post_type={post.post_type}
@@ -1006,7 +981,7 @@ export default function DashboardHome() {
                                 })()}
                             </div>
                         ) : (
-                            <FeedEmptyGuide onExplore={() => setActiveTab('global')} />
+                            <FeedEmptyGuide onExplore={() => { window.location.href = '/dashboard/explore'; }} />
                         )}
                     </div>
                 </div>
@@ -1136,7 +1111,7 @@ export default function DashboardHome() {
                                 ))
                             )}
                         </div>
-                        <Link href="/dashboard/community" className="group/link mt-12 w-full py-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                        <Link href="/dashboard/explore" className="group/link mt-12 w-full py-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-gray-400 hover:text-white hover:bg-white/10 transition-all">
                             {t.dashboard.enterArena} <ArrowRight className="w-4 h-4 group-hover/link:translate-x-1 transition-transform" />
                         </Link>
                     </div>

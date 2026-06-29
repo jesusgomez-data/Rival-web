@@ -7,7 +7,7 @@ import Image from 'next/image'
 import { createClient } from '@/utils/supabase/client'
 import { createPortal } from 'react-dom'
 import { useVideo } from './VideoContext'
-import { getComments, addComment, toggleCommentLike } from './community/actions'
+import { getComments, addComment, toggleCommentLike } from './explore/actions'
 import { clsx } from 'clsx'
 
 export interface ReelPost {

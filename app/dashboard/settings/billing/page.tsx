@@ -1,8 +1,9 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check, Zap, Users, Trophy, Dumbbell, BarChart2, Brain, Sword, Star, ArrowRight, Instagram, Globe } from "lucide-react";
+import { Check, Zap, Users, Trophy, Dumbbell, BarChart2, Brain, Sword, Star, ArrowRight, Instagram, Globe, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 const benefits = [
     {
@@ -44,8 +45,47 @@ const benefits = [
 ];
 
 export default function BillingPage() {
+    const [loading, setLoading] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('payment') === 'success') {
+                setShowSuccess(true);
+            }
+        }
+    }, []);
+
+    const handleSubscribe = async () => {
+        try {
+            setLoading(true);
+            const res = await fetch('/api/stripe/colaborador-checkout', { method: 'POST' });
+            const data = await res.json();
+            if (data.url) {
+                window.location.href = data.url;
+            } else {
+                alert(data.error || 'Error al iniciar checkout');
+                setLoading(false);
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Error de conexión');
+            setLoading(false);
+        }
+    };
+
     return (
         <div className="max-w-4xl mx-auto space-y-16 pb-20">
+            {showSuccess && (
+                <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-green-500/10 border border-green-500/20 text-green-400 p-4 rounded-2xl flex items-center gap-3 justify-center text-sm font-bold uppercase tracking-widest"
+                >
+                    <Check className="w-5 h-5" /> ¡Gracias por colaborar con Rival Fit!
+                </motion.div>
+            )}
             {/* Hero */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
@@ -54,16 +94,15 @@ export default function BillingPage() {
                 className="text-center space-y-6"
             >
                 <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-xs font-bold uppercase tracking-widest">
-                    <Zap className="w-3 h-3 fill-brand-red" /> Sin planes. Sin límites. 100% Gratis.
+                    <Zap className="w-3 h-3 fill-brand-red" /> 100% Gratis. Hecho por atletas.
                 </div>
 
                 <h1 className="text-4xl lg:text-6xl font-heading font-extrabold italic uppercase tracking-tighter text-white leading-none">
                     Rival es <span className="text-brand-red">Gratis</span><br />para Siempre
                 </h1>
                 <p className="text-gray-400 max-w-2xl mx-auto text-lg leading-relaxed">
-                    No hay membresías, no hay paywalls, no hay versión de pago.
-                    Rival es una red social de atletas donde el único precio que pagas
-                    es el de entrenar más duro que ayer.
+                    No hay membresías restrictivas, no hay paywalls abusivos.
+                    Rival es una red social de atletas gratuita. Todo lo que necesitas para entrenar y competir está disponible desde el día 1.
                 </p>
             </motion.div>
 
@@ -90,7 +129,7 @@ export default function BillingPage() {
                 ))}
             </div>
 
-            {/* Manifesto Card */}
+            {/* Manifesto / Collaborator Card */}
             <motion.div
                 initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -99,28 +138,36 @@ export default function BillingPage() {
             >
                 <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(220,38,38,0.1)_0%,transparent_60%)]" />
                 <div className="relative z-10 flex flex-col md:flex-row items-center gap-8 text-center md:text-left">
-                    <div className="text-7xl shrink-0">🔥</div>
+                    <div className="text-7xl shrink-0">🤝</div>
                     <div className="flex-1">
                         <h2 className="text-2xl font-heading font-black text-white italic uppercase tracking-tighter mb-3">
-                            La filosofía es simple: meritocracia pura.
+                            Apoya a Rival y conviértete en Colaborador
                         </h2>
                         <p className="text-gray-400 leading-relaxed text-sm">
-                            En Rival no existen los atajos de pago. Tu posición en el ranking la deciden
-                            tus repeticiones, tu constancia y tu rendimiento. Estamos construyendo
-                            la comunidad de atletas más auténtica del mundo — y todo el mundo tiene
-                            las mismas armas desde el primer día.
+                            Mantener los servidores y el desarrollo activo cuesta. Por eso, hemos creado la insignia de <strong>Colaborador</strong>. Un pago mensual simbólico y muy accesible para quienes quieren apoyar el proyecto. A cambio: <strong>cero publicidad</strong> y acceso anticipado a nuevas funcionalidades.
                         </p>
                         <div className="flex flex-wrap gap-3 mt-6 justify-center md:justify-start">
                             <div className="flex items-center gap-2 bg-white/5 rounded-full px-4 py-1.5 text-xs font-bold text-gray-300">
-                                <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" /> 100+ Atletas
+                                <Zap className="w-3 h-3 text-yellow-500 fill-yellow-500" /> Sin Anuncios
                             </div>
                             <div className="flex items-center gap-2 bg-white/5 rounded-full px-4 py-1.5 text-xs font-bold text-gray-300">
-                                <Globe className="w-3 h-3 text-blue-400" /> 180+ Países
+                                <Star className="w-3 h-3 text-brand-red fill-brand-red" /> Insignia Colaborador
                             </div>
                             <div className="flex items-center gap-2 bg-white/5 rounded-full px-4 py-1.5 text-xs font-bold text-gray-300">
-                                <Zap className="w-3 h-3 text-brand-red fill-brand-red" /> 45M+ Entrenamientos
+                                <Globe className="w-3 h-3 text-blue-400" /> Funciones Extra
                             </div>
                         </div>
+                    </div>
+                    
+                    <div className="shrink-0 flex flex-col gap-3">
+                        <button 
+                            onClick={handleSubscribe}
+                            disabled={loading}
+                            className="bg-white text-black hover:bg-gray-200 px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_10px_30px_rgba(255,255,255,0.1)] flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apoyar por 2,99€ / mes"}
+                        </button>
+                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest text-center">Cancela cuando quieras</p>
                     </div>
                 </div>
             </motion.div>

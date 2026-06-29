@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Heart, MessageCircle, Share2, Music, User, Trophy, Play, Pause, Volume2, VolumeX } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getReelPosts, toggleLike, getComments, addComment, toggleCommentLike } from './community/actions';
+import { getReelPosts, toggleLike, getComments, addComment, toggleCommentLike } from './explore/actions';
 import Image from 'next/image';
 import Link from 'next/link';
 import { clsx } from 'clsx';

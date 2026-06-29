@@ -6,7 +6,7 @@ import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, T
 import { createStory, createPRStory, toggleStoryLike, recordStoryView, deleteStory, getStoryViewers } from './actions'
 import { getOrCreateConversation, sendMessage } from '../messages/actions'
 import { clsx } from 'clsx'
-import PRCard from '../community/PRCard'
+import PRCard from '../explore/PRCard'
 import { Trophy, Activity } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useStories } from './StoryContext'

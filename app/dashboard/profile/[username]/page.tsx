@@ -1,11 +1,11 @@
 import { createClient } from "@/utils/supabase/server";
 import { createAdminClient } from "@/utils/supabase/admin";
-import { getPublicProfile, getCombatStats, getActiveDuel } from "../../community/duel-actions";
+import { getPublicProfile, getCombatStats, getActiveDuel } from "../../explore/duel-actions";
 import { Trophy, Swords, Zap, Dumbbell, Calendar, MapPin, Hash, User, TrendingUp, Award, Star, Lock, Image as ImageIcon } from "lucide-react";
 import FeedPost from "../../FeedPost";
 import Image from "next/image";
-import DuelButton from "../../community/DuelButton";
-import FollowButton from "../../community/FollowButton";
+import DuelButton from "../../explore/DuelButton";
+import FollowButton from "../../explore/FollowButton";
 import { notFound } from "next/navigation";
 import UserMediaGallery from "../../UserMediaGallery";
 import TrophyCabinet from "./TrophyCabinet";

@@ -9,7 +9,6 @@ import SearchAthletes from "./SearchAthletes";
 import { getMyDuels } from "./duel-actions";
 import { useEffect, useState, Suspense, Fragment } from "react";
 import FeedPost from "../FeedPost";
-import StoryBar from "../stories/StoryBar";
 import { useLanguage } from "@/app/LanguageContext";
 import SidebarAd from "./SidebarAd";
 import FeedAd from "./FeedAd";
@@ -17,14 +16,13 @@ import clsx from "clsx";
 import InfoTooltip from "@/components/InfoTooltip";
 import VerifiedBadge from "@/components/VerifiedBadge";
 
-export default function CommunityPage({
+export default function ExplorePage({
     searchParams
 }: {
     searchParams: any
 }) {
     const { t } = useLanguage();
     const [query, setQuery] = useState("");
-    const [activeTab, setActiveTab] = useState<'following' | 'explore'>('explore');
     const [data, setData] = useState<any>({
         user: null,
         profile: null,
@@ -135,21 +133,6 @@ export default function CommunityPage({
                     `)
                     .order('created_at', { ascending: false });
 
-                if (activeTab === 'following' && !query) {
-                    // Include followed users, official accounts AND the current user themselves
-                    const idsToFetch = [user.id, ...Array.from(followedIds), ...officialIds];
-
-                    if (idsToFetch.length > 0) {
-                        postsQuery = postsQuery.in('user_id', idsToFetch);
-                    } else {
-                        // User follows no one and there are no official accounts (unlikely layout but possible)
-                        // Should technically return nothing or just official if any. 
-                        // If empty list passed to .in(), it might error or return all. 
-                        // Safest is to pass a dummy ID if empty, but here we likely have officials.
-                        postsQuery = postsQuery.in('user_id', ['00000000-0000-0000-0000-000000000000']); // Return nothing
-                    }
-                }
-
                 const { data: posts } = await postsQuery.limit(query ? 100 : 20);
 
                 setData({
@@ -168,7 +151,7 @@ export default function CommunityPage({
             }
         }
         loadContent();
-    }, [query, activeTab]);
+    }, [query]);
 
     const formatTimeAgo = (date: string) => {
         try {
@@ -194,8 +177,8 @@ export default function CommunityPage({
         <div className="max-w-full lg:max-w-7xl mx-auto space-y-8 pb-20 px-0 lg:px-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 lg:px-0">
                 <div>
-                    <h1 className="text-4xl font-heading font-bold text-white uppercase italic tracking-tighter leading-none mb-2">Comunidad <span className="text-brand-red">Rival</span></h1>
-                    <p className="text-gray-400 text-sm font-medium tracking-wide">El campo de batalla donde se forja el carácter.</p>
+                    <h1 className="text-4xl font-heading font-bold text-white uppercase italic tracking-tighter leading-none mb-2">Explorar <span className="text-brand-red">Rival</span></h1>
+                    <p className="text-gray-400 text-sm font-medium tracking-wide">Descubre atletas y publicaciones de todo el mundo.</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <Suspense fallback={<div className="h-10 w-full max-w-md bg-brand-gray animate-pulse rounded-2xl" />}>
@@ -210,41 +193,7 @@ export default function CommunityPage({
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 <div className="lg:col-span-8 space-y-8">
-                    {/* Story Bar */}
-                    <div className="mb-4">
-                        <StoryBar currentUser={data.user} />
-                    </div>
-
-                    {/* Feed Tabs */}
-                    <div className="flex gap-6 border-b border-white/5 px-4 lg:px-2">
-                        <button
-                            onClick={() => setActiveTab('explore')}
-                            className={clsx(
-                                "flex items-center gap-2 pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all relative",
-                                activeTab === 'explore' ? "text-white" : "text-gray-500 hover:text-white"
-                            )}
-                        >
-                            <Compass className={clsx("w-4 h-4", activeTab === 'explore' ? "text-brand-red" : "")} />
-                            Descubrir
-                            {activeTab === 'explore' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red shadow-glow-sm" />}
-                        </button>
-                        <button
-                            onClick={() => setActiveTab('following')}
-                            className={clsx(
-                                "flex items-center gap-2 pb-4 text-xs font-black uppercase tracking-[0.2em] transition-all relative",
-                                activeTab === 'following' ? "text-white" : "text-gray-500 hover:text-white"
-                            )}
-                        >
-                            <Users className={clsx("w-4 h-4", activeTab === 'following' ? "text-brand-red" : "")} />
-                            Siguiendo
-                            {activeTab === 'following' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-red shadow-glow-sm" />}
-                            <InfoTooltip
-                                title="Tu Círculo"
-                                content="Filtra el contenido para ver solo a los atletas que sigues y las cuentas oficiales."
-                                className="ml-1"
-                            />
-                        </button>
-                    </div>
+                    {/* Feed Content */}
 
                     {query && (
                         <div className="space-y-4 pt-4 px-4 lg:px-0 animate-in fade-in slide-in-from-top-2">
@@ -330,7 +279,7 @@ export default function CommunityPage({
                     ) : (
                         <div className="text-center py-32 border border-dashed border-white/5 rounded-[40px] bg-brand-gray/5">
                             <Flame className="w-12 h-12 text-gray-800 mx-auto mb-4 opacity-20" />
-                            <p className="text-gray-500 italic uppercase font-black text-[10px] tracking-[0.3em]">{activeTab === 'following' ? 'Sigue a otros atletas para ver su actividad' : 'No hay actividad reciente'}</p>
+                            <p className="text-gray-500 italic uppercase font-black text-[10px] tracking-[0.3em]">No hay actividad reciente global</p>
                         </div>
                     )}
                 </div>

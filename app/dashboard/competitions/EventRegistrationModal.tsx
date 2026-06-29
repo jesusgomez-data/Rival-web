@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Send, Loader2, X, PlusCircle } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { requestEventRegistration } from './actions';
 
 function Modal({ open, onClose, children }: { open: boolean; onClose: () => void; children: React.ReactNode }) {
     if (!open) return null;
@@ -36,15 +37,18 @@ export default function EventRegistrationModal() {
         setLoading(true);
 
         const formData = new FormData(e.currentTarget);
-        // Simulate API call for now
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        setLoading(false);
-        setSent(true);
-        setTimeout(() => {
-            setOpen(false);
-            setSent(false); // Reset
-        }, 3000);
+        try {
+            await requestEventRegistration(formData);
+            setSent(true);
+            setTimeout(() => {
+                setOpen(false);
+                setSent(false); // Reset
+            }, 3000);
+        } catch (err: any) {
+            alert(err.message || 'Hubo un error al enviar la solicitud.');
+        } finally {
+            setLoading(false);
+        }
     }
 
     return (

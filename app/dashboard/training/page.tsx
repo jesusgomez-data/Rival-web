@@ -275,7 +275,7 @@ export default function TrainingPage() {
                                     Al completar cada entrenamiento ganas +100 XP para subir de nivel en el ranking global. Además, sumas volumen para tus misiones semanales de escuadrón. Puedes descargar tu Tarjeta Elite o compartirla en el Feed de la Arena y en tus Historias para motivar a tus rivales.
                                 </p>
                             </div>
-                            <Link href="/dashboard/community"
+                            <Link href="/dashboard/explore"
                                 className="w-full md:w-auto bg-brand-red/10 border border-brand-red/20 hover:bg-brand-red hover:text-white text-brand-red font-black text-xs uppercase tracking-widest px-6 py-4 rounded-2xl flex items-center justify-center gap-2 transition-all active:scale-95 shrink-0">
                                 <Trophy className="w-4 h-4" /> EXPLORAR RADAR
                             </Link>

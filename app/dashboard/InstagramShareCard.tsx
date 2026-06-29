@@ -5,7 +5,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { toBlob } from 'html-to-image';
 import { Trophy, Flame, MapPin, Zap, Wind, TrendingUp, Heart, X, Instagram, Share2, Activity, ShieldCheck, Map } from 'lucide-react';
 import { clsx } from 'clsx';
-import PRCard from './community/PRCard';
+import PRCard from './explore/PRCard';
 
 interface InstagramShareCardProps {
     user: string;

@@ -7,7 +7,7 @@ import { toggleCenterPostLike, addCenterPostComment, getCenterPostComments, dele
 import Link from "next/link";
 import MentionText from "@/components/MentionText";
 import MentionInput from "@/components/MentionInput";
-import WodCard from "@/components/community/WodCard";
+import WodCard from "@/components/explore/WodCard";
 import WODTrackerModal from "@/components/WODTrackerModal";
 
 export default function GymPostCard({ post, centerId, isAdmin = false, currentUserId, isMember = false }: any) {

@@ -5,7 +5,7 @@ import { Trophy, Share2, Download, Activity, Calendar, Award, ShieldCheck, X } f
 import Image from "next/image";
 import { clsx } from "clsx";
 import { useRef, useState } from "react";
-import PRCard from "../app/dashboard/community/PRCard";
+import PRCard from "../app/dashboard/explore/PRCard";
 
 interface ShareableCardProps {
     user: {

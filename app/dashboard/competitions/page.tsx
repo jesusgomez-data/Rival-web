@@ -27,10 +27,10 @@ export default async function CompetitionsPage() {
     if (user) {
         const { data: profile } = await supabase
             .from('profiles')
-            .select('is_official')
+            .select('is_official, username')
             .eq('id', user.id)
             .single();
-        isAdmin = profile?.is_official === true;
+        isAdmin = profile?.is_official === true || profile?.username?.toLowerCase() === 'rivalfit';
     }
 
     return (

@@ -2,14 +2,15 @@
 
 import { useState, useMemo, useTransition, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Search, MapPin, ExternalLink, Trophy, Filter, Plus, Users, Calendar, Loader2, CheckCircle, XCircle, X } from 'lucide-react';
+import { Search, MapPin, ExternalLink, Trophy, Filter, Plus, Users, Calendar, Loader2, CheckCircle, XCircle, X, Trash2, Pencil } from 'lucide-react';
 import { COMPETITIONS_DATA, Competition } from './data';
 import Image from 'next/image';
 import Link from 'next/link';
 import clsx from 'clsx';
 import { motion, AnimatePresence } from 'framer-motion';
 import EventRegistrationModal from './EventRegistrationModal';
-import { createCompetition } from './actions';
+import EventRequestsModal from './EventRequestsModal';
+import { createCompetition, deleteCompetition, updateCompetition } from './actions';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,7 @@ interface DbCompetition {
     image_url?: string;
     status: string;
     max_participants?: number;
+    registration_deadline?: string;
     organizer?: { full_name: string; username: string; avatar_url?: string };
     _count?: Array<{ count: number }>;
 }
@@ -45,12 +47,19 @@ function StatusBadge({ status }: { status: string }) {
 
 // ─── Create competition modal ─────────────────────────────────────────────────
 
-function CreateCompetitionModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+function CreateCompetitionModal({ onClose, onCreated, initialData }: { onClose: () => void; onCreated: () => void; initialData?: DbCompetition }) {
     const [isPending, startTransition] = useTransition();
     const [error, setError] = useState('');
     const [form, setForm] = useState({
-        title: '', description: '', type: 'OTHER', date: '', location: '',
-        image_url: '', status: 'open', max_participants: '', registration_deadline: '',
+        title: initialData?.title || '', 
+        description: initialData?.description || '', 
+        type: initialData?.type || 'OTHER', 
+        date: initialData?.date ? new Date(initialData.date).toISOString().slice(0, 16) : '', 
+        location: initialData?.location || '',
+        image_url: initialData?.image_url || '', 
+        status: initialData?.status || 'open', 
+        max_participants: initialData?.max_participants?.toString() || '', 
+        registration_deadline: initialData?.registration_deadline ? new Date(initialData.registration_deadline).toISOString().slice(0, 16) : '',
     });
 
     const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
@@ -60,7 +69,7 @@ function CreateCompetitionModal({ onClose, onCreated }: { onClose: () => void; o
         if (!form.title || !form.date) { setError('Título y fecha son obligatorios.'); return; }
         startTransition(async () => {
             try {
-                await createCompetition({
+                const dataToSubmit = {
                     title: form.title,
                     description: form.description,
                     type: form.type,
@@ -70,11 +79,16 @@ function CreateCompetitionModal({ onClose, onCreated }: { onClose: () => void; o
                     status: form.status,
                     max_participants: form.max_participants ? parseInt(form.max_participants) : undefined,
                     registration_deadline: form.registration_deadline || undefined,
-                });
+                };
+                if (initialData) {
+                    await updateCompetition(initialData.id, dataToSubmit);
+                } else {
+                    await createCompetition(dataToSubmit);
+                }
                 onCreated();
                 onClose();
             } catch (err: any) {
-                setError(err.message || 'Error al crear la competición.');
+                setError(err.message || 'Error al guardar la competición.');
             }
         });
     };
@@ -86,7 +100,7 @@ function CreateCompetitionModal({ onClose, onCreated }: { onClose: () => void; o
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
             <div className="bg-[#111] border border-white/10 rounded-[32px] w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
                 <div className="flex items-center justify-between px-8 pt-8 pb-4 border-b border-white/5">
-                    <h2 className="text-lg font-heading font-black text-white italic uppercase">Nueva Competición</h2>
+                    <h2 className="text-lg font-heading font-black text-white italic uppercase">{initialData ? 'Editar Competición' : 'Nueva Competición'}</h2>
                     <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors p-2"><X className="w-5 h-5" /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="p-8 space-y-5">
@@ -138,7 +152,7 @@ function CreateCompetitionModal({ onClose, onCreated }: { onClose: () => void; o
                     {error && <p className="text-xs text-red-400 font-medium">{error}</p>}
                     <button type="submit" disabled={isPending} className="w-full bg-brand-red text-white py-3.5 rounded-xl font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-red-600 transition-all disabled:opacity-50">
                         {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                        {isPending ? 'Creando...' : 'Crear Competición'}
+                        {isPending ? 'Guardando...' : (initialData ? 'Actualizar Competición' : 'Crear Competición')}
                     </button>
                 </form>
             </div>
@@ -148,9 +162,17 @@ function CreateCompetitionModal({ onClose, onCreated }: { onClose: () => void; o
 
 // ─── DB Competition card ──────────────────────────────────────────────────────
 
-function DbCompetitionCard({ competition }: { competition: DbCompetition }) {
+function DbCompetitionCard({ competition, isAdmin, onEdit, onDelete }: { competition: DbCompetition, isAdmin: boolean, onEdit: () => void, onDelete: () => void }) {
     const participantCount = competition._count?.[0]?.count ?? 0;
     const dateObj = new Date(competition.date);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    const handleDelete = () => {
+        if (confirm('¿Seguro que quieres eliminar esta competición?')) {
+            setIsDeleting(true);
+            onDelete();
+        }
+    };
 
     return (
         <motion.div
@@ -218,10 +240,22 @@ function DbCompetitionCard({ competition }: { competition: DbCompetition }) {
 
                     <Link
                         href={`/dashboard/competitions/${competition.id}`}
-                        className="w-full bg-brand-red text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-red-600 transition-all group/btn"
+                        className="w-full bg-brand-red text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-red-600 transition-all group/btn mb-2"
                     >
                         Ver competición <Trophy className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
                     </Link>
+
+                    {isAdmin && (
+                        <div className="flex gap-2">
+                            <button onClick={onEdit} className="flex-1 bg-white/5 border border-white/10 text-white py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-white/10 transition-all flex items-center justify-center gap-1.5">
+                                <Pencil className="w-3 h-3" /> Editar
+                            </button>
+                            <button onClick={handleDelete} disabled={isDeleting} className="flex-1 bg-brand-red/10 border border-brand-red/20 text-brand-red py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-brand-red hover:text-white transition-all flex items-center justify-center gap-1.5 disabled:opacity-50">
+                                {isDeleting ? <Loader2 className="w-3 h-3 animate-spin" /> : <Trash2 className="w-3 h-3" />}
+                                {isDeleting ? 'Borrando...' : 'Borrar'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </motion.div>
@@ -230,7 +264,7 @@ function DbCompetitionCard({ competition }: { competition: DbCompetition }) {
 
 // ─── Static competition card (unchanged) ─────────────────────────────────────
 
-function StaticCompetitionCard({ competition }: { competition: Competition }) {
+function StaticCompetitionCard({ competition, isAdmin, onEdit, onDelete }: { competition: Competition, isAdmin: boolean, onEdit: () => void, onDelete: () => void }) {
     return (
         <motion.div
             layout
@@ -288,10 +322,21 @@ function StaticCompetitionCard({ competition }: { competition: Competition }) {
                     <Link
                         href={competition.registration_url || '#'}
                         target="_blank"
-                        className="w-full bg-white text-black py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-brand-red hover:text-white transition-all group/btn"
+                        className="w-full bg-white text-black py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-brand-red hover:text-white transition-all group/btn mb-2"
                     >
                         Inscribirse <ExternalLink className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
                     </Link>
+
+                    {isAdmin && (
+                        <div className="flex gap-2">
+                            <button onClick={onEdit} className="flex-1 bg-white/5 border border-white/10 text-white py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-white/10 transition-all flex items-center justify-center gap-1.5">
+                                <Pencil className="w-3 h-3" /> Editar
+                            </button>
+                            <button onClick={onDelete} className="flex-1 bg-brand-red/10 border border-brand-red/20 text-brand-red py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] hover:bg-brand-red hover:text-white transition-all flex items-center justify-center gap-1.5">
+                                <Trash2 className="w-3 h-3" /> Borrar
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </motion.div>
@@ -304,8 +349,12 @@ export default function CompetitionsClient({ staticCompetitions, dbCompetitions,
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedType, setSelectedType] = useState<string>('ALL');
     const [showCreate, setShowCreate] = useState(false);
+    const [showRequests, setShowRequests] = useState(false);
+    const [editingComp, setEditingComp] = useState<DbCompetition | null>(null);
+    const [hiddenStaticIds, setHiddenStaticIds] = useState<string[]>([]);
     const [toast, setToast] = useState<string | null>(null);
     const searchParams = useSearchParams();
+    const [isPending, startTransition] = useTransition();
 
     useEffect(() => {
         if (searchParams.get('new') === 'true') setShowCreate(true);
@@ -331,12 +380,13 @@ export default function CompetitionsClient({ staticCompetitions, dbCompetitions,
 
         // Then apply search and type filters
         return upcomingStatic.filter(comp => {
+            if (hiddenStaticIds.includes(comp.id)) return false;
             const matchesSearch = comp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 comp.location.toLowerCase().includes(searchTerm.toLowerCase());
             const matchesType = selectedType === 'ALL' || comp.type === selectedType;
             return matchesSearch && matchesType;
         });
-    }, [searchTerm, selectedType, staticCompetitions]);
+    }, [searchTerm, selectedType, staticCompetitions, hiddenStaticIds]);
 
     const filteredDb = useMemo(() => {
         return dbCompetitions.filter(comp => {
@@ -363,13 +413,17 @@ export default function CompetitionsClient({ staticCompetitions, dbCompetitions,
                 </div>
             )}
 
-            {/* Create modal */}
-            {showCreate && (
+            {/* Create / Edit modal */}
+            {(showCreate || editingComp) && (
                 <CreateCompetitionModal
-                    onClose={() => setShowCreate(false)}
-                    onCreated={() => showToastMsg('Competición creada correctamente.')}
+                    initialData={editingComp || undefined}
+                    onClose={() => { setShowCreate(false); setEditingComp(null); }}
+                    onCreated={() => showToastMsg(editingComp ? 'Competición actualizada.' : 'Competición creada correctamente.')}
                 />
             )}
+
+            {/* Admin Requests modal */}
+            <EventRequestsModal open={showRequests} onClose={() => setShowRequests(false)} />
 
             {/* Header */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 relative z-10">
@@ -383,12 +437,20 @@ export default function CompetitionsClient({ staticCompetitions, dbCompetitions,
                     </p>
                 </div>
                 {isAdmin && (
-                    <button
-                        onClick={() => setShowCreate(true)}
-                        className="flex items-center gap-2 bg-brand-red text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-[0.2em] hover:bg-red-600 transition-all shadow-lg shrink-0"
-                    >
-                        <Plus className="w-4 h-4" /> Crear Competición
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                            onClick={() => setShowRequests(true)}
+                            className="flex items-center gap-2 bg-white/10 text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-[0.2em] hover:bg-white/20 transition-all shadow-lg shrink-0 border border-white/10"
+                        >
+                            Aprobaciones Pendientes
+                        </button>
+                        <button
+                            onClick={() => setShowCreate(true)}
+                            className="flex items-center gap-2 bg-brand-red text-white px-6 py-3 rounded-xl font-black text-xs uppercase tracking-[0.2em] hover:bg-red-600 transition-all shadow-lg shrink-0"
+                        >
+                            <Plus className="w-4 h-4" /> Crear Competición
+                        </button>
+                    </div>
                 )}
             </div>
 
@@ -436,7 +498,22 @@ export default function CompetitionsClient({ staticCompetitions, dbCompetitions,
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         <AnimatePresence>
                             {filteredDb.map(comp => (
-                                <DbCompetitionCard key={comp.id} competition={comp} />
+                                <DbCompetitionCard 
+                                    key={comp.id} 
+                                    competition={comp} 
+                                    isAdmin={isAdmin}
+                                    onEdit={() => setEditingComp(comp)}
+                                    onDelete={() => {
+                                        startTransition(async () => {
+                                            try {
+                                                await deleteCompetition(comp.id);
+                                                showToastMsg('Competición eliminada.');
+                                            } catch (e: any) {
+                                                showToastMsg(e.message || 'Error al eliminar');
+                                            }
+                                        });
+                                    }}
+                                />
                             ))}
                         </AnimatePresence>
                     </div>
@@ -456,7 +533,18 @@ export default function CompetitionsClient({ staticCompetitions, dbCompetitions,
                     <AnimatePresence>
                         {filteredStatic.length > 0 ? (
                             filteredStatic.map((comp) => (
-                                <StaticCompetitionCard key={comp.id} competition={comp} />
+                                <StaticCompetitionCard 
+                                    key={comp.id} 
+                                    competition={comp} 
+                                    isAdmin={isAdmin}
+                                    onEdit={() => showToastMsg('Este es un evento oficial estático. Próximamente se podrá editar.')}
+                                    onDelete={() => {
+                                        if (confirm('¿Ocultar este evento oficial estático?')) {
+                                            setHiddenStaticIds(prev => [...prev, comp.id]);
+                                            showToastMsg('Evento estático ocultado de la vista.');
+                                        }
+                                    }}
+                                />
                             ))
                         ) : filteredDb.length === 0 ? (
                             <div className="col-span-full py-20 flex flex-col items-center justify-center opacity-50">

@@ -7,15 +7,15 @@ import { motion } from "framer-motion";
 import { Trophy, Swords, ShieldCheck, Dumbbell, Calendar, MapPin, Hash, TrendingUp, Award, Star, Lock, Image as ImageIcon, LayoutGrid, List, Activity, MessageCircle, Sunrise, Flame, X, MessageSquare, Edit2, Globe, Users, Plus, ArrowRight, Play, Loader2, CheckCircle, AlertTriangle, ChevronLeft } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import DuelButton from "../../community/DuelButton";
-import FollowButton from "../../community/FollowButton";
+import DuelButton from "../../explore/DuelButton";
+import FollowButton from "../../explore/FollowButton";
 import UserMediaGallery from "../../UserMediaGallery";
 import TrophyCabinet from "./TrophyCabinet";
 import FeedPost from "../../FeedPost";
 import ActivityHeatmap from "@/components/ActivityHeatmap";
 import InfoTooltip from "@/components/InfoTooltip";
 
-import { getFollows } from "../../community/follows-actions";
+import { getFollows } from "../../explore/follows-actions";
 import StoryBar from "../../stories/StoryBar";
 import MedalShelf from "./MedalShelf";
 import VerifiedBadge from "@/components/VerifiedBadge";
@@ -894,7 +894,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                                                 <Link href="/dashboard?newPost=wod" className="flex-1 flex items-center justify-center gap-1.5 bg-brand-red text-white py-2 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-red-600 transition-colors">
                                                     <Plus className="w-3 h-3" /> Publicar WOD
                                                 </Link>
-                                                <Link href="/dashboard/community" className="px-4 py-2 bg-white/5 border border-white/10 text-gray-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1">
+                                                <Link href="/dashboard/explore" className="px-4 py-2 bg-white/5 border border-white/10 text-gray-400 rounded-xl text-[9px] font-black uppercase tracking-widest hover:text-white hover:bg-white/10 transition-colors flex items-center gap-1">
                                                     Ver <ArrowRight className="w-3 h-3" />
                                                 </Link>
                                             </div>

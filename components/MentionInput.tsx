@@ -1,6 +1,6 @@
 "use client"
 import React, { useState, useEffect, useRef } from "react";
-import { getFollows } from "@/app/dashboard/community/follows-actions";
+import { getFollows } from "@/app/dashboard/explore/follows-actions";
 import { createClient } from "@/utils/supabase/client";
 import { clsx } from "clsx";
 

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Send, Image as ImageIcon, Loader2, X, Smile, Sparkles } from "lucide-react";
-import { createUserPost, createPRPost, updatePost, createWodPost } from "./community/actions";
+import { createUserPost, createPRPost, updatePost, createWodPost } from "./explore/actions";
 import MentionInput from "@/components/MentionInput";
 import { createClient } from "@/utils/supabase/client";
 import { Trophy, Activity, AlertCircle, Dumbbell } from "lucide-react";

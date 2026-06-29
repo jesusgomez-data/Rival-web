@@ -154,9 +154,9 @@ export default function SidebarAd({ tier }: { tier: string }) {
                     <div className="absolute inset-0 bg-gradient-to-br from-brand-red/10 via-transparent to-transparent opacity-50 group-hover/card:opacity-100 transition-opacity" />
                     <div className="relative z-10 text-center">
                         <p className="text-[8px] font-black text-gray-500 uppercase tracking-[0.3em] mb-4">¿Cansado de ver esto?</p>
-                        <h3 className="text-sm font-heading font-black italic text-white uppercase mb-4 tracking-tighter leading-tight group-hover/card:text-brand-red transition-colors">Mejora a Premium para eliminar anuncios</h3>
+                        <h3 className="text-sm font-heading font-black italic text-white uppercase mb-4 tracking-tighter leading-tight group-hover/card:text-brand-red transition-colors">Apoya a Rival y elimina los anuncios</h3>
                         <div className="w-full bg-white/5 group-hover/card:bg-brand-red text-white py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border border-white/10 uppercase text-[9px] tracking-widest">
-                            Quitar Publicidad
+                            Apoyar Proyecto
                         </div>
                     </div>
                 </div>

@@ -451,9 +451,9 @@ export default function UnifiedLanding() {
 
                 {/* Header */}
                 <header className="relative z-10 w-full flex justify-between items-center">
-                    <Link href="/" className="flex items-center gap-3.5 group text-slate-900 dark:text-white">
+                    <Link href="/" className="flex items-center gap-3.5 group text-slate-900 dark:text-white shrink-0">
                         <AnimatedLogo />
-                        <span className="font-heading font-black text-xl italic tracking-tighter uppercase">
+                        <span className="font-heading font-black text-xl italic tracking-tighter uppercase whitespace-nowrap">
                             RIVAL <span className="text-brand-red">FIT</span>
                         </span>
                     </Link>

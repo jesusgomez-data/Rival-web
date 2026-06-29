@@ -9,7 +9,7 @@ import { User, Camera, Save, Loader2, Mail, Hash, MapPin, Trophy, Dumbbell, Swor
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getCombatStats } from "../community/duel-actions";
+import { getCombatStats } from "../explore/duel-actions";
 import { getUserOrganizations } from "../gyms/actions";
 import UserMediaGallery from "../UserMediaGallery";
 import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react';

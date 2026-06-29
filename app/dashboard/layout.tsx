@@ -30,7 +30,8 @@ import {
     Zap,
     Activity,
     Instagram,
-    BookOpen
+    BookOpen,
+    Compass
 } from "lucide-react";
 import clsx from "clsx";
 import { useRouter, usePathname } from "next/navigation";
@@ -502,7 +503,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         { name: t.navDashboard.affiliateGym, href: "/dashboard/gyms", icon: Building2 },
         { name: "Profesionales", href: "/dashboard/gyms?type=personal_trainer", icon: User },
         { name: "Mis Reservas", href: "/dashboard/my-bookings", icon: BookOpen },
-        { name: t.navDashboard.community, href: "/dashboard/community", icon: Users },
+        { name: "Explorar", href: "/dashboard/explore", icon: Compass },
         { name: "Competiciones", href: "/dashboard/competitions", icon: Flag },
         { name: t.navDashboard.leaderboard, href: "/dashboard/leaderboard", icon: Trophy },
         { name: t.navDashboard.analytics, href: "/dashboard/analytics", icon: BarChart2 },

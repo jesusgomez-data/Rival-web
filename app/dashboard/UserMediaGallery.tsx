@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import { getUserMedia } from "./community/actions";
+import { getUserMedia } from "./explore/actions";
 import { Play, Volume2, VolumeX, X } from "lucide-react";
 import { isImageUrl } from "@/lib/utils";
 
