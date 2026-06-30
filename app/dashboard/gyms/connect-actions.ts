@@ -50,12 +50,22 @@ export async function initiateStripeConnect(orgId: string) {
         }
 
         // Generate onboarding link
-        const accountLink = await stripe.accountLinks.create({
-            account: accountId,
-            refresh_url: `${APP_URL}/api/stripe/connect/refresh?orgId=${orgId}`,
-            return_url: `${APP_URL}/dashboard/gyms/${orgId}/settings/billing?stripe=connected`,
-            type: 'account_onboarding',
-        });
+        let accountLink;
+        try {
+            accountLink = await stripe.accountLinks.create({
+                account: accountId,
+                refresh_url: `${APP_URL}/api/stripe/connect/refresh?orgId=${orgId}`,
+                return_url: `${APP_URL}/dashboard/gyms/${orgId}/settings/billing?stripe=connected`,
+                type: 'account_onboarding',
+            });
+        } catch (linkErr: any) {
+            if (linkErr?.message?.includes('test mode') || linkErr?.message?.includes('live mode')) {
+                console.warn('[initiateStripeConnect] Environment mismatch. Resetting Stripe account ID.');
+                await admin.from('organizations').update({ stripe_account_id: null, stripe_onboarding_complete: false }).eq('id', orgId);
+                return initiateStripeConnect(orgId);
+            }
+            throw linkErr;
+        }
 
         return { url: accountLink.url };
     } catch (err: any) {
