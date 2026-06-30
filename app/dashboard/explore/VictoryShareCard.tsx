@@ -28,28 +28,11 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
     const cardRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [isPosting, setIsPosting] = useState(false);
-    const [winnerAvatarBase64, setWinnerAvatarBase64] = useState<string | null>(null);
-    const [loserAvatarBase64, setLoserAvatarBase64] = useState<string | null>(null);
-
-    // Effect to pre-load avatars as Base64 to avoid CORS issues with canvas generation
-    useEffect(() => {
-        const loadAvatar = async (url: string, setter: (val: string) => void) => {
-            if (!url) return;
-            try {
-                const response = await fetch(url, { mode: 'cors' });
-                const blob = await response.blob();
-                const reader = new FileReader();
-                reader.onloadend = () => setter(reader.result as string);
-                reader.readAsDataURL(blob);
-            } catch (e) {
-                console.error("Error loading avatar for canvas:", e);
-                setter(url); // Fallback
-            }
-        };
-
-        if (winner.avatar) loadAvatar(winner.avatar, setWinnerAvatarBase64);
-        if (loser.avatar) loadAvatar(loser.avatar, setLoserAvatarBase64);
-    }, [winner.avatar, loser.avatar]);
+    const getProxyUrl = (url: string) => {
+        if (!url) return '';
+        if (url.startsWith('data:') || url.startsWith('/')) return url;
+        return `/_next/image?url=${encodeURIComponent(url)}&w=256&q=75`;
+    };
 
     const dataUrlToBlob = (dataUrl: string) => {
         const arr = dataUrl.split(',');
@@ -234,9 +217,8 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
                                     <div className="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-brand-red p-1 shadow-[0_0_30px_rgba(220,38,38,0.4)] relative">
                                         <div className="w-full h-full rounded-full overflow-hidden relative bg-gray-900">
                                             <img
-                                                src={winnerAvatarBase64 || winner.avatar || `https://ui-avatars.com/api/?name=${winner.name}`}
+                                                src={getProxyUrl(winner.avatar || `https://ui-avatars.com/api/?name=${winner.name}`)}
                                                 alt={winner.name}
-                                                crossOrigin="anonymous"
                                                 className="w-full h-full object-cover"
                                             />
                                         </div>
@@ -263,9 +245,8 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
                                     <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-2 border-white/20 p-1">
                                         <div className="w-full h-full rounded-full overflow-hidden relative bg-gray-900">
                                             <img
-                                                src={loserAvatarBase64 || loser.avatar || `https://ui-avatars.com/api/?name=${loser.name}`}
+                                                src={getProxyUrl(loser.avatar || `https://ui-avatars.com/api/?name=${loser.name}`)}
                                                 alt={loser.name}
-                                                crossOrigin="anonymous"
                                                 className="w-full h-full object-cover"
                                             />
                                         </div>
