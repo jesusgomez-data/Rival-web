@@ -21,7 +21,7 @@ export async function POST(req: Request) {
         .select(`
             id, status, client_id, service_name, service_price, duration_minutes,
             platform_fee_amount, professional_payout_amount,
-            organization:organization_id (
+            organization:professional_id (
                 id, name, stripe_account_id, stripe_onboarding_complete
             )
         `)
