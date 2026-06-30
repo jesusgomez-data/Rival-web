@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense, use } from "react";
 import {
     Check, Shield, Building2, User,
     BanknoteIcon, CheckCircle2, AlertCircle, ExternalLink,
-    Loader2, RefreshCw, Euro
+    Loader2, RefreshCw, Euro, ChevronDown, ChevronUp
 } from "lucide-react";
 import { motion } from "framer-motion";
 import clsx from "clsx";
@@ -93,6 +93,7 @@ function ConnectSection({ organizationId }: { organizationId: string }) {
     const [status, setStatus] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
     const searchParams = useSearchParams();
     const stripeParam = searchParams.get('stripe');
 
@@ -100,6 +101,11 @@ function ConnectSection({ organizationId }: { organizationId: string }) {
         getConnectStatus(organizationId).then((s) => {
             setStatus(s);
             setLoading(false);
+            if (s?.connected && s?.onboarding_complete) {
+                setIsExpanded(false);
+            } else {
+                setIsExpanded(true);
+            }
         });
     }, [organizationId, stripeParam]);
 
@@ -165,21 +171,33 @@ function ConnectSection({ organizationId }: { organizationId: string }) {
                         Rival retiene un <span className="text-white font-bold">{PLATFORM_FEE_PERCENT}%</span> de cada cobro.
                     </p>
                 </div>
-                {/* Status badge */}
+                {/* Status badge and toggle */}
                 {!loading && (
-                    <div className={clsx(
-                        "shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest",
-                        isConnected ? "bg-green-500/15 text-green-400" :
-                            isPending ? "bg-yellow-500/15 text-yellow-400" :
-                                "bg-white/5 text-gray-500"
-                    )}>
-                        {isConnected ? <CheckCircle2 className="w-3.5 h-3.5" /> :
-                            isPending ? <AlertCircle className="w-3.5 h-3.5" /> :
-                                <AlertCircle className="w-3.5 h-3.5" />}
-                        {isConnected ? 'Activo' : isPending ? 'Pendiente' : 'No activado'}
+                    <div className="shrink-0 flex items-center gap-3">
+                        <div className={clsx(
+                            "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest",
+                            isConnected ? "bg-green-500/15 text-green-400" :
+                                isPending ? "bg-yellow-500/15 text-yellow-400" :
+                                    "bg-white/5 text-gray-500"
+                        )}>
+                            {isConnected ? <CheckCircle2 className="w-3.5 h-3.5" /> :
+                                isPending ? <AlertCircle className="w-3.5 h-3.5" /> :
+                                    <AlertCircle className="w-3.5 h-3.5" />}
+                            {isConnected ? 'Activo' : isPending ? 'Pendiente' : 'No activado'}
+                        </div>
+                        <button
+                            onClick={() => setIsExpanded(!isExpanded)}
+                            className="p-1 hover:bg-white/10 rounded-lg transition-colors"
+                        >
+                            {isExpanded ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+                        </button>
                     </div>
                 )}
             </div>
+
+            {isExpanded && (
+                <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+
 
             {loading ? (
                 <div className="flex items-center gap-2 text-gray-500 text-xs">
@@ -288,6 +306,8 @@ function ConnectSection({ organizationId }: { organizationId: string }) {
                         </p>
                     )}
                 </>
+            )}
+            </div>
             )}
         </div>
     );
