@@ -33,6 +33,13 @@ export async function initiateStripeConnect(orgId: string) {
                     card_payments: { requested: true },
                     transfers: { requested: true },
                 },
+                settings: {
+                    payouts: {
+                        schedule: {
+                            interval: 'manual',
+                        },
+                    },
+                },
                 metadata: { organizationId: orgId },
             });
             accountId = account.id;
@@ -89,9 +96,16 @@ export async function getConnectStatus(orgId: string) {
 
     try {
         const account = await stripe.accounts.retrieve(org.stripe_account_id);
+        const isOnboardingComplete = account.details_submitted && (account.payouts_enabled ?? false);
+
+        if (isOnboardingComplete !== org.stripe_onboarding_complete) {
+            const admin = createAdminClient();
+            await admin.from('organizations').update({ stripe_onboarding_complete: isOnboardingComplete }).eq('id', orgId);
+        }
+
         return {
             connected: true,
-            onboarding_complete: account.details_submitted && (account.payouts_enabled ?? false),
+            onboarding_complete: isOnboardingComplete,
             payouts_enabled: account.payouts_enabled ?? false,
             charges_enabled: account.charges_enabled ?? false,
             account_id: org.stripe_account_id,

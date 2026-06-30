@@ -633,7 +633,12 @@ export async function unblockTimeSlot(slotId: string, organizationId: string) {
 
 export async function verifyBookingPayment(bookingId: string) {
     const admin = createAdminClient()
-    const { data: booking } = await admin.from('service_bookings').select('status').eq('id', bookingId).single()
+    const { data: booking } = await admin
+        .from('service_bookings')
+        .select('status, client_id, service_name, organization:organization_id(id, owner_id)')
+        .eq('id', bookingId)
+        .single()
+        
     if (!booking) return { error: 'No encontrado' }
     if (booking.status === 'paid' || booking.status === 'completed') return { success: true, status: booking.status }
 
@@ -645,6 +650,19 @@ export async function verifyBookingPayment(bookingId: string) {
                 status: 'paid', 
                 stripe_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : undefined 
             }).eq('id', bookingId)
+            
+            // Notify professional
+            const org = booking.organization as any
+            if (org?.owner_id) {
+                await createNotification({
+                    userId: org.owner_id,
+                    type: 'booking_paid',
+                    title: 'Pago recibido (Auto-verificado)',
+                    content: `El cliente ha pagado la sesión de ${booking.service_name}. Ya puedes confirmar el servicio cuando lo realices.`,
+                    link: `/dashboard/gyms/${org.id}/bookings`,
+                })
+            }
+            
             return { success: true, status: 'paid' }
         }
     } catch (e) {

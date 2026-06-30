@@ -9,6 +9,7 @@ import {
     AlertCircle, CheckCircle2, Loader2, TrendingUp, Users
 } from 'lucide-react'
 import { acceptServiceBooking, rejectServiceBooking } from '@/app/dashboard/gyms/professional-service-actions'
+import { getProfessionalBalance, requestPayout } from '@/app/dashboard/gyms/payout-actions'
 import { getTypeLabel, getTypeIcon, SERVICE_MODALITIES, BOOKING_STATUS_LABELS } from '@/lib/professional-types'
 
 interface Props {
@@ -32,6 +33,10 @@ export default function ProfessionalDashboard({ id, centerDetails, userRole }: P
     const [rejectModal, setRejectModal] = useState<any | null>(null)
     const [rejectReason, setRejectReason] = useState('')
     const [toast, setToast] = useState<string | null>(null)
+    const [stripeBalance, setStripeBalance] = useState<{available: number, pending: number} | null>(null)
+    const [showPayoutModal, setShowPayoutModal] = useState(false)
+    const [payoutAmount, setPayoutAmount] = useState<string>('')
+    const [payoutLoading, setPayoutLoading] = useState(false)
 
     const typeLabel = getTypeLabel(centerDetails?.center_type)
     const typeIcon  = getTypeIcon(centerDetails?.center_type)
@@ -109,6 +114,13 @@ export default function ProfessionalDashboard({ id, centerDetails, userRole }: P
         setActiveChats(chatsRes.data ?? [])
         setStripeReady(orgRes.data?.stripe_onboarding_complete ?? false)
 
+        if (orgRes.data?.stripe_onboarding_complete) {
+            const balanceRes = await getProfessionalBalance(id)
+            if (!balanceRes.error) {
+                setStripeBalance(balanceRes as any)
+            }
+        }
+
         setLoading(false)
     }
 
@@ -136,6 +148,24 @@ export default function ProfessionalDashboard({ id, centerDetails, userRole }: P
         setProcessing(null)
     }
 
+    async function handlePayout() {
+        const amt = parseFloat(payoutAmount)
+        if (isNaN(amt) || amt <= 0 || !stripeBalance || amt > stripeBalance.available) {
+            return showToast('Cantidad inválida')
+        }
+        setPayoutLoading(true)
+        const res = await requestPayout(id, amt)
+        if (res.error) {
+            showToast(res.error)
+        } else {
+            showToast('Retiro solicitado con éxito')
+            setShowPayoutModal(false)
+            setPayoutAmount('')
+            loadAll() // refresh balance
+        }
+        setPayoutLoading(false)
+    }
+
     function fmtTime(iso: string) {
         try { return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) } catch { return '' }
     }
@@ -146,7 +176,7 @@ export default function ProfessionalDashboard({ id, centerDetails, userRole }: P
     const kpis = [
         { label: 'Solicitudes',  value: loading ? '…' : pending.length,    sub: 'requieren acción', color: 'text-yellow-400', bg: 'bg-yellow-500/10', icon: AlertCircle, warn: pending.length > 0 },
         { label: 'Agenda hoy',   value: loading ? '…' : todayBookings.length, sub: 'sesiones confirmadas', color: 'text-blue-400', bg: 'bg-blue-500/10', icon: Calendar },
-        { label: 'Ingresos mes', value: loading ? '…' : `€${monthRevenue.toFixed(0)}`, sub: 'cobrados este mes', color: 'text-green-400', bg: 'bg-green-500/10', icon: Euro },
+        { label: 'Saldo', value: loading ? '…' : `€${(stripeBalance?.available || 0).toFixed(2)}`, sub: stripeBalance?.pending ? `€${stripeBalance.pending.toFixed(2)} en proceso` : 'disponible para retirar', color: 'text-green-400', bg: 'bg-green-500/10', icon: Euro },
         { label: 'Valoración',   value: loading ? '…' : (avgRating ? avgRating.toFixed(1) : '—'), sub: `${reviewCount} reseña${reviewCount !== 1 ? 's' : ''}`, color: 'text-yellow-400', bg: 'bg-yellow-500/10', icon: Star },
     ]
 
@@ -213,17 +243,26 @@ export default function ProfessionalDashboard({ id, centerDetails, userRole }: P
                 </div>
             </div>
 
-            {/* ── KPI CARDS ──────────────────────────────────────────────────── */}
+            {/* ── KPIs ──────────────────────────────────────────────────────── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {kpis.map(({ label, value, sub, color, bg, icon: Icon, warn }) => (
-                    <div key={label} className={`bg-card border rounded-2xl p-4 relative overflow-hidden ${warn ? 'border-yellow-500/30' : 'border-border'}`}>
-                        <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center mb-3`}>
-                            <Icon className={`w-4 h-4 ${color}`} />
+                    <div key={label} className={`bg-card border rounded-2xl p-4 relative overflow-hidden flex flex-col justify-between ${warn ? 'border-yellow-500/30' : 'border-border'}`}>
+                        {warn && <div className="absolute top-0 right-0 w-12 h-12 bg-yellow-500/10 rounded-bl-full" />}
+                        <div className="flex justify-between items-start mb-4">
+                            <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center`}>
+                                <Icon className={`w-4 h-4 ${color}`} />
+                            </div>
+                            {label === 'Saldo' && stripeBalance && stripeBalance.available > 0 && (
+                                <button onClick={() => setShowPayoutModal(true)} className="text-[10px] uppercase font-bold tracking-widest bg-brand-red text-white px-2 py-1 rounded hover:bg-red-600 transition">
+                                    Retirar
+                                </button>
+                            )}
                         </div>
-                        <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">{label}</p>
-                        <p className="text-2xl font-black mt-0.5 text-white">{value}</p>
-                        <p className={`text-xs mt-0.5 ${warn ? 'text-yellow-400 font-bold' : 'text-gray-600'}`}>{sub}</p>
-                        {warn && <AlertCircle className="absolute top-3 right-3 w-4 h-4 text-yellow-500 animate-pulse" />}
+                        <div>
+                            <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest">{label}</p>
+                            <p className="text-2xl font-black mt-0.5 text-white">{value}</p>
+                            <p className={`text-xs mt-0.5 ${warn ? 'text-yellow-400 font-bold' : 'text-gray-600'}`}>{sub}</p>
+                        </div>
                     </div>
                 ))}
             </div>
