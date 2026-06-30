@@ -219,22 +219,27 @@ export async function getMyDuels() {
                 else if (opponentScore > challengerScore) winnerId = duel.opponent_id;
 
                 // Update DB
-                await supabase.from('duels').update({
+                const adminClient = createAdminClient();
+                const { error: updateError } = await adminClient.from('duels').update({
                     status: 'completed',
                     winner_id: winnerId,
                     challenger_score: challengerScore,
                     opponent_score: opponentScore
                 }).eq('id', duel.id);
 
-                // Notify Winner (if not a draw)
-                if (winnerId) {
-                    await createNotification({
-                        userId: winnerId,
-                        type: 'duel_won',
-                        title: '¡Victoria!',
-                        content: `Has ganado el duelo contra ${winnerId === duel.challenger_id ? duel.opponent.full_name : duel.challenger.full_name}`,
-                        link: '/dashboard#duels-section'
-                    });
+                if (!updateError) {
+                    // Notify Winner (if not a draw)
+                    if (winnerId) {
+                        await createNotification({
+                            userId: winnerId,
+                            type: 'duel_won',
+                            title: '¡Victoria!',
+                            content: `Has ganado el duelo contra ${winnerId === duel.challenger_id ? duel.opponent.full_name : duel.challenger.full_name}`,
+                            link: '/dashboard#duels-section'
+                        });
+                    }
+                } else {
+                    console.error("Failed to auto-close duel:", updateError);
                 }
 
                 return { ...duel, status: 'completed', winner_id: winnerId, challenger_score: challengerScore, opponent_score: opponentScore };
@@ -245,7 +250,8 @@ export async function getMyDuels() {
         // For completed duels with missing scores (legacy data), recalculate and backfill
         if (duel.status === 'completed' && (duel.challenger_score == null || duel.opponent_score == null)) {
             const { challengerScore, opponentScore } = await calculateDuelScores(duel);
-            await supabase.from('duels').update({
+            const adminClient = createAdminClient();
+            await adminClient.from('duels').update({
                 challenger_score: challengerScore,
                 opponent_score: opponentScore
             }).eq('id', duel.id);
