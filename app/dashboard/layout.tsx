@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useMemo, Fragment } from "react";
+import React, { useEffect, useState, useRef, useMemo, Fragment, Suspense } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { getUserProfile } from "./training/actions";
 import { getUnreadMessageCount } from "./messages/actions";
@@ -917,7 +917,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                         })}
 
                         {/* Floating Center Button */}
-                        <div className="absolute left-1/2 -translate-x-1/2 -top-10 flex flex-col items-center">
+                        <div className="absolute left-1/2 -translate-x-1/2 -top-6 flex flex-col items-center">
                             {/* Tooltip hint for new users */}
                             <NewUserHint />
                             <Link
@@ -1032,9 +1032,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <VideoProvider>
                 <StoryProvider>
                     <PresenceProvider>
-                        <DashboardContent>
-                            {children}
-                        </DashboardContent>
+                        <Suspense fallback={null}>
+                            <DashboardContent>
+                                {children}
+                            </DashboardContent>
+                        </Suspense>
                     </PresenceProvider>
                 </StoryProvider>
             </VideoProvider>
