@@ -630,3 +630,25 @@ export async function unblockTimeSlot(slotId: string, organizationId: string) {
     if (error) return { error: error.message }
     return { success: true }
 }
+
+export async function verifyBookingPayment(bookingId: string) {
+    const admin = createAdminClient()
+    const { data: booking } = await admin.from('service_bookings').select('status').eq('id', bookingId).single()
+    if (!booking) return { error: 'No encontrado' }
+    if (booking.status === 'paid' || booking.status === 'completed') return { success: true, status: booking.status }
+
+    try {
+        const sessions = await stripe.checkout.sessions.list({ limit: 50 })
+        const session = sessions.data.find(s => s.metadata?.bookingId === bookingId && s.payment_status === 'paid')
+        if (session) {
+            await admin.from('service_bookings').update({ 
+                status: 'paid', 
+                stripe_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : undefined 
+            }).eq('id', bookingId)
+            return { success: true, status: 'paid' }
+        }
+    } catch (e) {
+        console.error('Error verificando pago manual:', e)
+    }
+    return { success: false }
+}

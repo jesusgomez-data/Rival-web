@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Calendar, Clock, Euro, MessageSquare, Star, Check, Loader2, CreditCard } from 'lucide-react'
-import { confirmServiceCompletedByClient, createServiceReview } from '@/app/dashboard/gyms/professional-service-actions'
+import { confirmServiceCompletedByClient, createServiceReview, verifyBookingPayment } from '@/app/dashboard/gyms/professional-service-actions'
 import { BOOKING_STATUS_LABELS, SERVICE_MODALITIES } from '@/lib/professional-types'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -20,7 +20,18 @@ export default function MyBookingsClient({ initialBookings }: Props) {
 
     useEffect(() => {
         const payment = searchParams.get('payment')
-        if (payment === 'success') showToast('Pago completado — tu reserva está confirmada', 'success')
+        const bookingId = searchParams.get('booking')
+        if (payment === 'success') {
+            showToast('Pago completado — tu reserva está confirmada', 'success')
+            if (bookingId) {
+                // Auto-heal: verify payment on load in case webhook didn't fire (especially locally)
+                verifyBookingPayment(bookingId).then((res) => {
+                    if (res.success && res.status === 'paid') {
+                        setBookings(bs => bs.map(b => b.id === bookingId ? { ...b, status: 'paid' } : b))
+                    }
+                })
+            }
+        }
         if (payment === 'cancelled') showToast('Pago cancelado', 'error')
     }, [searchParams])
 
