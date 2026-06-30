@@ -4,7 +4,7 @@ import { Trophy, Share2, Download, Instagram, X, Swords, Crown, TrendingUp, Load
 import Image from "next/image";
 import { clsx } from "clsx";
 import { useRef, useState, useEffect } from "react";
-import { toBlob, toPng } from "html-to-image";
+import { toBlob, toPng, toJpeg } from "html-to-image";
 import { createUserPost } from "./actions";
 import { createStory } from "../stories/actions";
 
@@ -68,9 +68,9 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
         try {
             // Give time for images to load with crossOrigin
             await new Promise(r => setTimeout(r, 100));
-            return await toPng(cardRef.current, {
-                pixelRatio: 2,
-                quality: 1,
+            return await toJpeg(cardRef.current, {
+                pixelRatio: 1, // Reduced to avoid Next.js 1MB payload limit (Load failed error on iOS)
+                quality: 0.8,
                 cacheBust: true,
             });
         } catch (error) {
@@ -86,7 +86,7 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
             if (!dataUrl) throw new Error("No image generated");
 
             const blob = dataUrlToBlob(dataUrl);
-            const file = new File([blob], `duel-victory-${Date.now()}.png`, { type: 'image/png' });
+            const file = new File([blob], `duel-victory-${Date.now()}.jpg`, { type: 'image/jpeg' });
 
             const formData = new FormData();
             formData.append('media', file);
@@ -114,7 +114,7 @@ export default function VictoryShareCard({ winner, loser, onClose }: VictoryShar
             if (!dataUrl) throw new Error("No image generated");
 
             const blob = dataUrlToBlob(dataUrl);
-            const file = new File([blob], `duel-story-${Date.now()}.png`, { type: 'image/png' });
+            const file = new File([blob], `duel-story-${Date.now()}.jpg`, { type: 'image/jpeg' });
 
             const formData = new FormData();
             formData.append('media', file);

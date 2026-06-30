@@ -21,7 +21,7 @@ export async function POST(req: Request) {
                 price_data: {
                     currency: 'eur',
                     recurring: { interval: 'month' },
-                    unit_amount: 299, // 2.99 EUR
+                    unit_amount: 499, // 4.99 EUR
                     product_data: {
                         name: 'Rival Fit Colaborador',
                         description: 'Apoya el proyecto, elimina la publicidad y obtén tu insignia.',

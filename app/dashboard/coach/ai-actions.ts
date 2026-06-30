@@ -6,11 +6,16 @@ const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "llama-3.3-70b-versatile";
 
 export async function generateCoachResponse(userMessage: string, userProfile: any, chatHistory: any[] = []) {
-    // Daily limit: 1 coach recommendation per user per day
-    const { allowed } = await checkAndRecordDailyUsage('coach');
+    const isColaborador = userProfile?.is_colaborador === true;
+    const limit = isColaborador ? 3 : 1;
+    
+    // Daily limit check
+    const { allowed } = await checkAndRecordDailyUsage('coach', limit);
     if (!allowed) {
         return {
-            replyText: "Soldado, ya recibiste tu programación de hoy. 🔒 Un entreno al día es la clave de la consistencia. Vuelve mañana y diseñaremos tu próxima misión. ¡Descansa, recupera y prepárate!",
+            replyText: isColaborador 
+                ? "Soldado, has alcanzado tu límite de 3 consultas por hoy. ¡Aplica lo aprendido y volvemos mañana!"
+                : "Soldado, ya recibiste tu asesoría de hoy. 🔒 Únete como Colaborador para desbloquear 3 consultas diarias. ¡Descansa, recupera y prepárate!",
             workout: null,
             dailyLimitReached: true
         };
@@ -24,11 +29,12 @@ export async function generateCoachResponse(userMessage: string, userProfile: an
         };
     }
 
-    const { level, main_sport, full_name } = userProfile;
+    const { level, main_sport, full_name, prs_summary, stats_summary } = userProfile;
     const seed = Math.random().toString(36).substring(2, 8);
 
     // Detectar el deporte solicitado en el mensaje del usuario
     const msgLower = userMessage.toLowerCase();
+    const isAdviceOnly = msgLower.includes('dieta') || msgLower.includes('nutricion') || msgLower.includes('descanso') || msgLower.includes('consejo') || msgLower.includes('evalua') || msgLower.includes('progreso');
     const detectedSport =
         msgLower.includes('calistenia') || msgLower.includes('calisthenics') || msgLower.includes('cuerpo') && msgLower.includes('peso') ? 'Calistenia' :
         msgLower.includes('hybrid') || msgLower.includes('híbrido') ? 'Hybrid Training' :
@@ -59,31 +65,27 @@ export async function generateCoachResponse(userMessage: string, userProfile: an
     };
     const sportGuidance = sportContext[detectedSport] || sportContext[main_sport] || sportContext['Cross Training'];
 
-    const systemPrompt = `Eres RIVAL HEAD COACH, un mentor de élite mundial experto en alto rendimiento deportivo.
+    const systemPrompt = `Eres RIVAL HEAD COACH, un mentor de élite mundial experto en alto rendimiento deportivo, nutrición y recuperación. Tu objetivo es evaluar al atleta, aconsejar y programar.
 
 PERFIL DEL ATLETA:
 - Nombre: ${full_name || 'Rival'}
 - Disciplina principal: ${main_sport}
 - Nivel: ${level}
-- Semilla de variedad (OBLIGATORIO usarla para crear un WOD ÚNICO diferente a cualquier anterior): ${seed}
-
-DEPORTE SOLICITADO HOY: ${detectedSport}
-CÓMO PROGRAMAR ESTE DEPORTE: ${sportGuidance}
+- Récords Personales (PRs): ${prs_summary || 'No hay datos recientes'}
+- Fatiga y Volumen Reciente: ${stats_summary || 'Sin datos de estrés'}
+- Semilla de variedad: ${seed}
 
 REGLAS CRÍTICAS:
-1. El WOD DEBE ser específico para "${detectedSport}" — usa ejercicios propios de ese deporte
-2. NUNCA repitas el mismo WOD. La semilla "${seed}" debe inspirar selección DIFERENTE de ejercicios
-3. Formato profesional: EMOM, AMRAP, FOR TIME, TABATA según corresponda al deporte
-4. OBLIGATORIO incluir pesos al final: Escalado/Intermedio/Avanzado (Rx)
-5. Descansos con formato: "4' REST", "2' REST"
-6. Usa saltos de línea (\\n) para separar secciones
-
-ABREVIACIONES ESTÁNDAR:
-STOH=Shoulder to Overhead | TTB=Toes to Bar | C2B=Chest to Bar | HSPU=Handstand Push Up | DU=Double Unders | WBS=Wall Ball | RIR=Reps In Reserve
+1. Eres un coach integral. Si el atleta te pide consejo sobre dieta, descanso o evalúa su progreso, responde de manera amplia, profesional y detallada en "replyText" basándote en sus PRs y Fatiga.
+2. Si el atleta solicita un entreno explícitamente o no especifica, genera el WOD en "workout" usando las reglas del deporte (${detectedSport}).
+3. Si el atleta SOLO pide consejos (dieta, recuperación, análisis) y no pide un entreno, devuelve "workout": null, y extiende tu sabiduría y consejos tácticos en "replyText" (puede ser largo, con saltos de línea).
+4. El WOD (si se pide) DEBE ser específico para "${detectedSport}" — usa ejercicios propios de ese deporte
+5. NUNCA repitas el mismo WOD. Usa la semilla "${seed}" para inspirar variedad.
+6. OBLIGATORIO incluir pesos al final del WOD: Escalado/Intermedio/Avanzado (Rx)
 
 FORMATO JSON OBLIGATORIO (sin texto fuera del JSON):
 {
-  "replyText": "Mensaje motivador breve del coach (máximo 2 líneas)",
+  "replyText": "Tu análisis, consejos de dieta/descanso o motivación. Puede ser tan largo como necesites si te piden consejo, o breve si te piden un WOD rápido.",
   "workout": {
     "title": "NOMBRE CREATIVO DEL WOD EN MAYÚSCULAS",
     "duration": "Tiempo total estimado (ej: 35 min)",
@@ -101,13 +103,10 @@ FORMATO JSON OBLIGATORIO (sin texto fuera del JSON):
       }
     ]
   }
-}
+} // (Si no aplica WOD, pon "workout": null)
 
-REGLAS ADICIONALES:
-- Si no pide entreno: workout: null
-- Descripción con saltos de línea (\\n) para formato limpio
-- Pesos en formato Hombre/Mujer (ej: 43/30kg)
-- Sé específico con tiempos y descansos`;
+ABREVIACIONES ESTÁNDAR PARA WODs:
+STOH=Shoulder to Overhead | TTB=Toes to Bar | C2B=Chest to Bar | HSPU=Handstand Push Up | DU=Double Unders | WBS=Wall Ball | RIR=Reps In Reserve`;
 
     // Convertir historial de chat al formato OpenAI (compatible con Groq)
     // Gemini usa role "model", OpenAI/Groq usa "assistant"

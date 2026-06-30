@@ -165,7 +165,7 @@ export default function BillingPage() {
                             disabled={loading}
                             className="bg-white text-black hover:bg-gray-200 px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all shadow-[0_10px_30px_rgba(255,255,255,0.1)] flex items-center justify-center gap-2 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apoyar por 2,99€ / mes"}
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Apoyar por 4,99€ / mes"}
                         </button>
                         <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest text-center">Cancela cuando quieras</p>
                     </div>

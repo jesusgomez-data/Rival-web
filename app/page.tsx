@@ -391,7 +391,7 @@ export default function UnifiedLanding() {
 
             <main 
                 onMouseMove={handleGlobalMouseMove}
-                className="h-[100svh] w-screen bg-white dark:bg-[#030303] text-slate-900 dark:text-white selection:bg-brand-red selection:text-white font-sans overflow-hidden relative flex flex-col justify-between p-2.5 xs:p-4 sm:p-6 md:p-12"
+                className="h-[100svh] w-screen bg-white dark:bg-[#030303] text-slate-900 dark:text-white selection:bg-brand-red selection:text-white font-sans overflow-hidden relative flex flex-col justify-between p-2.5 pt-14 xs:p-4 xs:pt-16 sm:p-6 md:p-12"
             >
                 {/* Global Tech Background */}
                 <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">

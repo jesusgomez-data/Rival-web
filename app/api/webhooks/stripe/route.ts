@@ -111,6 +111,16 @@ export async function POST(req: Request) {
                     }
 
                     console.log(`Store purchase completed for user ${userId}, product ${productId}`);
+                } else if (session.metadata?.type === 'colaborador_subscription') {
+                    const { userId } = session.metadata;
+                    if (userId) {
+                        const { error: colabError } = await supabase
+                            .from('profiles')
+                            .update({ is_colaborador: true })
+                            .eq('id', userId);
+                        
+                        if (colabError) console.error("Error setting colaborador:", colabError);
+                    }
                 } else if (session.metadata?.type === 'membership_payment') {
                     const { centerId, userId, planId } = session.metadata;
 

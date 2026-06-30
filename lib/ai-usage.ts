@@ -7,7 +7,7 @@ export type AIFeature = 'coach' | 'wod_generator';
  * If not, records the usage and returns allowed: true.
  * If yes, returns allowed: false without recording again.
  */
-export async function checkAndRecordDailyUsage(feature: AIFeature): Promise<{
+export async function checkAndRecordDailyUsage(feature: AIFeature, limit: number = 1): Promise<{
     allowed: boolean;
     userId: string | null;
 }> {
@@ -21,19 +21,32 @@ export async function checkAndRecordDailyUsage(feature: AIFeature): Promise<{
     // Check if already used today
     const { data: existing } = await supabase
         .from('ai_daily_usage')
-        .select('id')
+        .select('id, usage_count')
         .eq('user_id', user.id)
         .eq('feature', feature)
         .eq('usage_date', today)
         .maybeSingle();
 
-    if (existing) return { allowed: false, userId: user.id };
+    if (existing) {
+        const count = existing.usage_count || 1;
+        if (count >= limit) {
+            return { allowed: false, userId: user.id };
+        }
+        
+        // update count
+        await supabase.from('ai_daily_usage')
+            .update({ usage_count: count + 1 })
+            .eq('id', existing.id);
+        
+        return { allowed: true, userId: user.id };
+    }
 
-    // Record usage (upsert is safe in case of race condition)
+    // Record usage 
     await supabase.from('ai_daily_usage').insert({
         user_id: user.id,
         feature,
         usage_date: today,
+        usage_count: 1
     });
 
     return { allowed: true, userId: user.id };

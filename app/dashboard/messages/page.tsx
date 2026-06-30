@@ -9,6 +9,7 @@ import GroupChatModal from './GroupChatModal'
 import {
     getConversations, getMessages, sendMessage, getOrCreateConversation,
     getFriendsToChat, deleteMessage, editMessage, uploadChatImage, uploadChatVideo,
+    uploadChatAudio,
     toggleMessageLike, deleteConversation, markConversationAsRead, createGroupConversation
 } from './actions'
 import { Loader2 } from 'lucide-react'
@@ -198,7 +199,10 @@ function MessagesContent() {
         }
     }
 
-    const handleSendMessage = async (text: string, imageUrl?: string, videoUrl?: string, isViewOnce?: boolean) => {
+    const handleSendMessage = async (
+        text: string, imageUrl?: string, videoUrl?: string, isViewOnce?: boolean,
+        documentUrl?: string, documentName?: string, audioUrl?: string, replyToId?: string, gifUrl?: string
+    ) => {
         if (!activeConversationId) return
 
         const tempId = `temp-${Date.now()}-${Math.random()}`
@@ -207,15 +211,20 @@ function MessagesContent() {
             conversation_id: activeConversationId,
             sender_id: currentUserId,
             text,
-            image_url: imageUrl,
-            video_url: videoUrl,
+            image_url: imageUrl || documentUrl || gifUrl || null,
+            video_url: videoUrl || null,
+            audio_url: audioUrl || null,
+            reply_to_message_id: replyToId || null,
             is_view_once: isViewOnce || false,
-            type: isViewOnce ? (videoUrl ? 'view_once_video' : 'view_once_image') : videoUrl ? 'video' : imageUrl ? 'image' : 'text',
+            type: isViewOnce ? (videoUrl ? 'view_once_video' : 'view_once_image') : audioUrl ? 'audio' : gifUrl ? 'gif' : videoUrl ? 'video' : imageUrl ? 'image' : documentUrl ? 'document' : 'text',
             created_at: new Date().toISOString()
         }
         setMessages(prev => [...prev, tempMsg])
 
-        const result = await sendMessage(activeConversationId, text, imageUrl, videoUrl, isViewOnce)
+        const result = await sendMessage(
+            activeConversationId, text, imageUrl, videoUrl, isViewOnce,
+            documentUrl, documentName, audioUrl, replyToId, gifUrl
+        )
 
         if (result.error) {
             setMessages(prev => prev.filter(m => m.id !== tempId))
@@ -296,7 +305,7 @@ function MessagesContent() {
             <div className="flex-1 flex flex-col overflow-hidden relative">
                 <ChatWindow messages={messages} otherPerson={otherPerson} currentUserId={currentUserId}
                     conversationId={activeConversationId} myProfile={myProfile} onSendMessage={handleSendMessage}
-                    onUploadImage={uploadChatImage} onUploadVideo={uploadChatVideo}
+                    onUploadImage={uploadChatImage} onUploadVideo={uploadChatVideo} onUploadAudio={uploadChatAudio}
                     onDeleteMessage={deleteMessage} onEditMessage={editMessage}
                     onToggleLike={handleToggleLike} onDeleteConversation={handleDeleteConversation}
                     isLoading={isLoadingMessages} otherParticipantLastRead={otherParticipantLastRead}
@@ -335,6 +344,7 @@ function MessagesContent() {
                     onSendMessage={handleSendMessage}
                     onUploadImage={uploadChatImage}
                     onUploadVideo={uploadChatVideo}
+                    onUploadAudio={uploadChatAudio}
                     onDeleteMessage={deleteMessage}
                     onEditMessage={editMessage}
                     onToggleLike={handleToggleLike}

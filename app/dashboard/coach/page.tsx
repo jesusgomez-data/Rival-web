@@ -141,7 +141,10 @@ export default function CoachPage() {
                 main_sport: profile?.main_sport || 'General Fitness',
                 full_name: profile?.full_name,
                 recent_activity_score: recentActivityScore,
-                injuries: profile?.injuries
+                injuries: profile?.injuries,
+                is_colaborador: profile?.is_colaborador,
+                prs_summary: prs ? prs.slice(0, 5).map((pr:any) => `${pr.movement_name}: ${pr.weight_kg}kg`).join(', ') : '',
+                stats_summary: `Fatiga: ${fatigue}%, Ejercicios recientes: ${activityCount}`
             }, history);
 
             if (aiResponse.dailyLimitReached) {

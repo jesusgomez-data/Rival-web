@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef, useMemo, Fragment } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { getUserProfile } from "./training/actions";
 import { getUnreadMessageCount } from "./messages/actions";
@@ -34,7 +34,7 @@ import {
     Compass
 } from "lucide-react";
 import clsx from "clsx";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import NotificationBell from "./NotificationBell";
@@ -148,6 +148,7 @@ function NewUserHint() {
 
 function DashboardContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const router = useRouter();
     const { theme, toggleTheme } = useTheme();
     const { language, setLanguage, t } = useLanguage();
@@ -549,7 +550,14 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                     <nav className="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
                         {navItems.map((item) => {
                             const Icon = item.icon;
-                            const isActive = pathname === item.href;
+                            let isActive = pathname === item.href;
+                            if (item.href.includes('?')) {
+                                const [basePath, query] = item.href.split('?');
+                                const urlParams = new URLSearchParams(query);
+                                isActive = pathname === basePath && searchParams.get('type') === urlParams.get('type');
+                            } else if (pathname === '/dashboard/gyms') {
+                                isActive = pathname === item.href && !searchParams.get('type');
+                            }
                             return (
                                 <Link
                                     key={item.href}
@@ -791,7 +799,14 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                             <div className="grid grid-cols-1 gap-2.5">
                                 {navItems.map((item) => {
                                     const Icon = item.icon;
-                                    const isActive = pathname === item.href;
+                                    let isActive = pathname === item.href;
+                                    if (item.href.includes('?')) {
+                                        const [basePath, query] = item.href.split('?');
+                                        const urlParams = new URLSearchParams(query);
+                                        isActive = pathname === basePath && searchParams.get('type') === urlParams.get('type');
+                                    } else if (pathname === '/dashboard/gyms') {
+                                        isActive = pathname === item.href && !searchParams.get('type');
+                                    }
                                     return (
                                         <Link
                                             key={item.href}
@@ -869,33 +884,35 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                     "lg:hidden fixed bottom-4 left-4 right-4 bg-background/90 backdrop-blur-2xl border border-border py-3 px-6 z-[100] rounded-[2rem] shadow-2xl safe-area-inset-bottom transition-transform duration-300",
                     showBottomNav ? "translate-y-0" : "translate-y-32"
                 )}>
-                    <div className="flex justify-between items-center h-12 relative">
-                        {navItems.filter(i => [t.navDashboard.home, t.navDashboard.messages, t.navDashboard.onlineCoach, t.navDashboard.community].includes(i.name)).map((item, idx) => {
+                    <div className="grid grid-cols-5 items-center justify-items-center h-12 relative">
+                        {navItems.filter(i => [t.navDashboard.home, t.navDashboard.messages, "Explorar", t.navDashboard.profile].includes(i.name)).map((item, idx) => {
                             const Icon = item.icon;
                             const isActive = pathname === item.href;
                             return (
-                                <Link
-                                    key={item.href}
-                                    href={item.href}
-                                    className={clsx(
-                                        "flex flex-col items-center justify-center w-12 h-12 rounded-2xl transition-all relative group",
-                                        isActive ? "text-brand-red" : "text-gray-500 hover:text-white",
-                                        idx === 1 && "mr-10",
-                                        idx === 2 && "ml-10"
+                                <Fragment key={item.href}>
+                                    {idx === 2 && (
+                                        <div className="w-12 h-12" aria-hidden="true" />
                                     )}
-                                >
-                                    <div className="relative">
-                                        <Icon className={clsx("w-6 h-6 transition-transform group-active:scale-90", isActive && "drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]")} />
-                                        {item.href === "/dashboard/messages" && unreadMessages > 0 && !isActive && (
-                                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-red text-white text-[8px] font-black rounded-full flex items-center justify-center border border-background animate-pulse">
-                                                {unreadMessages}
-                                            </span>
+                                    <Link
+                                        href={item.href}
+                                        className={clsx(
+                                            "flex flex-col items-center justify-center w-12 h-12 rounded-2xl transition-all relative group",
+                                            isActive ? "text-brand-red" : "text-gray-500 hover:text-white"
                                         )}
-                                    </div>
-                                    {isActive && (
-                                        <span className="absolute -bottom-1 w-1 h-1 bg-brand-red rounded-full shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
-                                    )}
-                                </Link>
+                                    >
+                                        <div className="relative">
+                                            <Icon className={clsx("w-6 h-6 transition-transform group-active:scale-90", isActive && "drop-shadow-[0_0_8px_rgba(239,68,68,0.5)]")} />
+                                            {item.href === "/dashboard/messages" && unreadMessages > 0 && !isActive && (
+                                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-brand-red text-white text-[8px] font-black rounded-full flex items-center justify-center border border-background animate-pulse">
+                                                    {unreadMessages}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {isActive && (
+                                            <span className="absolute -bottom-1 w-1 h-1 bg-brand-red rounded-full shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
+                                        )}
+                                    </Link>
+                                </Fragment>
                             )
                         })}
 

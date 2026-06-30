@@ -161,7 +161,10 @@ export async function sendMessage(
     videoUrl?: string,
     isViewOnce?: boolean,
     documentUrl?: string,
-    documentName?: string
+    documentName?: string,
+    audioUrl?: string,
+    replyToId?: string,
+    gifUrl?: string
 ) {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -170,6 +173,8 @@ export async function sendMessage(
     let type = 'text'
     if (isViewOnce && imageUrl) type = 'view_once_image'
     else if (isViewOnce && videoUrl) type = 'view_once_video'
+    else if (gifUrl) type = 'gif'
+    else if (audioUrl) type = 'audio'
     else if (imageUrl) type = 'image'
     else if (videoUrl) type = 'video'
     else if (documentUrl) type = 'document'
@@ -179,10 +184,11 @@ export async function sendMessage(
         .insert({
             conversation_id: conversationId,
             sender_id: user.id,
-            // For documents: store URL in image_url, filename in text (if no caption)
             text: documentUrl ? (text.trim() || documentName || 'Archivo') : text.trim(),
-            image_url: imageUrl || documentUrl || null,
+            image_url: imageUrl || documentUrl || gifUrl || null,
             video_url: videoUrl || null,
+            audio_url: audioUrl || null,
+            reply_to_message_id: replyToId || null,
             type,
             is_view_once: isViewOnce || false,
         })
@@ -193,6 +199,8 @@ export async function sendMessage(
 
     let lastMsgPreview = text.trim()
     if (isViewOnce) lastMsgPreview = '👁 Ver una vez'
+    else if (audioUrl) lastMsgPreview = '🎤 Nota de voz'
+    else if (gifUrl) lastMsgPreview = 'GIF'
     else if (videoUrl) lastMsgPreview = '🎬 Video'
     else if (imageUrl) lastMsgPreview = '📷 Imagen'
 
@@ -257,6 +265,23 @@ export async function uploadChatVideo(file: File) {
 
     const { error } = await supabase.storage.from('chat-media').upload(fileName, file, {
         contentType: file.type || 'video/mp4'
+    })
+    if (error) return { error: error.message }
+
+    const { data: { publicUrl } } = supabase.storage.from('chat-media').getPublicUrl(fileName)
+    return { url: publicUrl }
+}
+
+export async function uploadChatAudio(file: File) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'No session' }
+
+    const fileExt = 'webm' // default for media recorder
+    const fileName = `${user.id}/audio_${Date.now()}.${fileExt}`
+
+    const { error } = await supabase.storage.from('chat-media').upload(fileName, file, {
+        contentType: file.type || 'audio/webm'
     })
     if (error) return { error: error.message }
 

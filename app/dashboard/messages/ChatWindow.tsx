@@ -7,10 +7,11 @@ import { es } from 'date-fns/locale'
 import {
     Send, Loader2, MessageSquarePlus, ChevronLeft, Trash2, Edit2,
     X, Check, Heart, Copy, Smile, ChevronDown, Film, Eye, EyeOff,
-    Camera, Video, Mic, Users, ImagePlus, Search
+    Camera, Video, Mic, Users, ImagePlus, Search, Square
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { motion, AnimatePresence } from 'framer-motion'
+import EmojiPicker, { Theme, EmojiClickData } from 'emoji-picker-react'
 import MentionText from '@/components/MentionText'
 import MentionInput from '@/components/MentionInput'
 import { createClient } from '@/utils/supabase/client'
@@ -132,9 +133,10 @@ interface ChatWindowProps {
     currentUserId: string
     conversationId?: string | null
     myProfile?: any
-    onSendMessage: (text: string, imageUrl?: string, videoUrl?: string, isViewOnce?: boolean) => void
+    onSendMessage: (text: string, imageUrl?: string, videoUrl?: string, isViewOnce?: boolean, documentUrl?: string, documentName?: string, audioUrl?: string, replyToId?: string, gifUrl?: string) => void
     onUploadImage?: (file: File) => Promise<{ url?: string; error?: string }>
     onUploadVideo?: (file: File) => Promise<{ url?: string; error?: string }>
+    onUploadAudio?: (file: File) => Promise<{ url?: string; error?: string }>
     onDeleteMessage?: (id: string) => Promise<any> | void
     onEditMessage?: (id: string, text: string) => void
     onToggleLike?: (id: string, currentStatus: boolean) => void
@@ -147,7 +149,7 @@ interface ChatWindowProps {
 
 export default function ChatWindow({
     messages, otherPerson, currentUserId, conversationId, myProfile,
-    onSendMessage, onUploadImage, onUploadVideo,
+    onSendMessage, onUploadImage, onUploadVideo, onUploadAudio,
     onDeleteMessage, onEditMessage, onToggleLike, onDeleteConversation,
     isLoading, onBack, isOnline, otherParticipantLastRead,
 }: ChatWindowProps) {
@@ -180,6 +182,17 @@ export default function ChatWindow({
     const [showMediaPicker, setShowMediaPicker] = useState(false)
     const [pendingMediaPreview, setPendingMediaPreview] = useState<{ url: string; type: 'image' | 'video' } | null>(null)
     const [pendingMediaFile, setPendingMediaFile] = useState<File | null>(null)
+    const [replyingTo, setReplyingTo] = useState<any>(null)
+    
+    // Audio Recording
+    const [isRecording, setIsRecording] = useState(false)
+    const [recordingDuration, setRecordingDuration] = useState(0)
+    const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+    const audioChunksRef = useRef<Blob[]>([])
+    const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+    const shouldSendAudioRef = useRef(false)
+    const [pendingAudioBlob, setPendingAudioBlob] = useState<Blob | null>(null)
+    const [pendingAudioUrl, setPendingAudioUrl] = useState<string | null>(null)
     // ── MSN Search ───────────────────────────────────────────────────────────
     const [showSearch, setShowSearch] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
@@ -333,12 +346,13 @@ export default function ChatWindow({
         let text = inputValue.trim()
         const words = text.split(' ')
         const converted = words.map(w => MSN_SHORTCUTS[w] || w).join(' ')
-        onSendMessage(converted)
+        onSendMessage(converted, undefined, undefined, false, undefined, undefined, undefined, replyingTo?.id)
         setInputValue('')
+        setReplyingTo(null)
         // Sound: emoji-specific if emoji-only, otherwise send swoosh
         if (isEmojiOnly(converted)) playEmojiSound(converted)
         else playSendSound()
-    }, [inputValue, onSendMessage, pendingMediaFile])
+    }, [inputValue, onSendMessage, pendingMediaFile, replyingTo])
 
     const handleSendMedia = useCallback(async () => {
         if (!pendingMediaFile) return
@@ -346,17 +360,105 @@ export default function ChatWindow({
         let result: { url?: string; error?: string } = {}
         if (pendingMediaPreview?.type === 'video') {
             result = await (onUploadVideo?.(pendingMediaFile) || Promise.resolve({ error: 'No video upload' }))
-            if (result.url) onSendMessage(inputValue.trim(), undefined, result.url, isViewOnceMode)
+            if (result.url) onSendMessage(inputValue.trim(), undefined, result.url, isViewOnceMode, undefined, undefined, undefined, replyingTo?.id)
         } else {
             result = await (onUploadImage?.(pendingMediaFile) || Promise.resolve({ error: 'No upload' }))
-            if (result.url) onSendMessage(inputValue.trim(), result.url, undefined, isViewOnceMode)
+            if (result.url) onSendMessage(inputValue.trim(), result.url, undefined, isViewOnceMode, undefined, undefined, undefined, replyingTo?.id)
         }
         setIsUploading(false)
         setPendingMediaPreview(null)
         setPendingMediaFile(null)
         setInputValue('')
         setIsViewOnceMode(false)
-    }, [pendingMediaFile, pendingMediaPreview, inputValue, isViewOnceMode, onUploadImage, onUploadVideo, onSendMessage])
+        setReplyingTo(null)
+    }, [pendingMediaFile, pendingMediaPreview, inputValue, isViewOnceMode, onUploadImage, onUploadVideo, onSendMessage, replyingTo])
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+            const mediaRecorder = new MediaRecorder(stream)
+            mediaRecorderRef.current = mediaRecorder
+            audioChunksRef.current = []
+
+            mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
+            mediaRecorder.onstop = async () => {
+                const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+                setPendingAudioBlob(blob)
+                setPendingAudioUrl(URL.createObjectURL(blob))
+                stream.getTracks().forEach(track => track.stop())
+                
+                if (shouldSendAudioRef.current) {
+                    shouldSendAudioRef.current = false
+                    if (onUploadAudio) {
+                        setIsUploading(true)
+                        const result = await onUploadAudio(new File([blob], 'audio.webm', { type: 'audio/webm' }))
+                        setIsUploading(false)
+                        if (result.url) {
+                            onSendMessage('', undefined, undefined, false, undefined, undefined, result.url, replyingTo?.id)
+                            setPendingAudioBlob(null)
+                            setPendingAudioUrl(null)
+                            setReplyingTo(null)
+                        }
+                    }
+                }
+            }
+
+            mediaRecorder.start()
+            setIsRecording(true)
+            setRecordingDuration(0)
+            shouldSendAudioRef.current = false
+
+            recordingIntervalRef.current = setInterval(() => {
+                setRecordingDuration(prev => prev + 1)
+            }, 1000)
+        } catch (error) {
+            console.error('Error al acceder al micrófono:', error)
+            alert('No se pudo acceder al micrófono. Por favor, verifica los permisos.')
+        }
+    }
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop()
+            setIsRecording(false)
+            if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current)
+        }
+    }
+
+    const stopAndSendRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            shouldSendAudioRef.current = true
+            mediaRecorderRef.current.stop()
+            setIsRecording(false)
+            if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current)
+        } else if (pendingAudioBlob) {
+            handleSendAudio()
+        }
+    }
+
+    const cancelRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop()
+            setIsRecording(false)
+            if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current)
+        }
+        shouldSendAudioRef.current = false
+        setPendingAudioBlob(null)
+        setPendingAudioUrl(null)
+    }
+
+    const handleSendAudio = async () => {
+        if (!pendingAudioBlob || !onUploadAudio) return
+        setIsUploading(true)
+        const result = await onUploadAudio(new File([pendingAudioBlob], 'audio.webm', { type: 'audio/webm' }))
+        setIsUploading(false)
+        if (result.url) {
+            onSendMessage('', undefined, undefined, false, undefined, undefined, result.url, replyingTo?.id)
+            setPendingAudioBlob(null)
+            setPendingAudioUrl(null)
+            setReplyingTo(null)
+        }
+    }
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -743,7 +845,18 @@ export default function ChatWindow({
                                                             <button onClick={handleSaveEdit} className="px-3 py-1.5 rounded-lg bg-brand-red text-white text-[10px] font-black uppercase">Guardar</button>
                                                         </div>
                                                     </div>
-                                                ) : isViewOnce ? (
+                                                ) : (
+                                                    <>
+                                                        {msg.reply_to_message_id && (
+                                                            <div className={clsx("mb-2 p-2 rounded-lg border-l-4 border-brand-red text-xs opacity-90", dk ? "bg-black/20" : "bg-black/5")}>
+                                                                {(() => {
+                                                                    const repliedMsg = messages.find(m => m.id === msg.reply_to_message_id)
+                                                                    if (!repliedMsg) return <span className="opacity-50 italic font-medium">Mensaje original no encontrado</span>
+                                                                    return <span className="truncate block max-w-[200px] font-medium">{repliedMsg.text || (repliedMsg.image_url ? '📷 Imagen' : repliedMsg.video_url ? '🎬 Video' : repliedMsg.audio_url ? '🎤 Nota de voz' : 'Archivo adjunto')}</span>
+                                                                })()}
+                                                            </div>
+                                                        )}
+                                                        {isViewOnce ? (
                                                     // View-once bubble
                                                     isMine ? (
                                                         <div className={clsx("flex items-center gap-4 px-5 py-4 rounded-[22px]", "bg-purple-600/10 border-2 border-dashed border-purple-500/30")}>
@@ -785,6 +898,24 @@ export default function ChatWindow({
                                                             </div>
                                                         </button>
                                                     )
+                                                ) : msg.audio_url ? (
+                                                    // Audio message
+                                                    <div className="relative flex flex-col min-w-[220px]">
+                                                        <div className="flex items-center gap-2 pt-1 pb-4">
+                                                            <div className="w-10 h-10 rounded-full bg-brand-red/20 flex items-center justify-center shrink-0 text-brand-red">
+                                                                <Mic className="w-5 h-5" />
+                                                            </div>
+                                                            <audio src={msg.audio_url} controls className="h-10 w-full" preload="metadata" />
+                                                        </div>
+                                                        <div className={clsx('absolute bottom-0 right-0 flex items-center gap-1 text-[9px] font-bold', isMine ? 'text-white/40' : dk ? 'text-white/20' : 'text-gray-400')}>
+                                                            {msg.is_liked && <Heart className="w-2.5 h-2.5 fill-brand-red text-brand-red" />}
+                                                            <span>{format(new Date(msg.created_at), 'HH:mm')}</span>
+                                                            {isMine && (isRead
+                                                                ? <div className="flex -space-x-1.5"><Check className="w-2.5 h-2.5 text-blue-400 stroke-[3px]" /><Check className="w-2.5 h-2.5 text-blue-400 stroke-[3px]" /></div>
+                                                                : <Check className="w-2.5 h-2.5 opacity-40" />
+                                                            )}
+                                                        </div>
+                                                    </div>
                                                 ) : msg.video_url ? (
                                                     // Video message
                                                     <div className="relative cursor-pointer" onClick={e => { e.stopPropagation(); setLightboxUrl(msg.video_url); setLightboxIsVideo(true) }}>
@@ -833,6 +964,8 @@ export default function ChatWindow({
                                                             )}
                                                         </div>
                                                     </div>
+                                                )}
+                                                </>
                                                 )}
                                             </div>
 
@@ -922,7 +1055,11 @@ export default function ChatWindow({
                                         <span className={clsx("text-sm font-semibold", dk ? "text-white/70" : "text-gray-700")}>Copiar texto</span>
                                     </button>
                                 )}
-                                {actionSheet.isMine && !actionSheet.msg.image_url && !actionSheet.msg.video_url && (
+                                <button onClick={() => { setReplyingTo(actionSheet.msg); setActionSheet(null) }} className={clsx("w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-colors", dk ? "hover:bg-white/5 active:bg-white/10" : "hover:bg-gray-50")}>
+                                    <MessageSquarePlus className={clsx("w-5 h-5 shrink-0", dk ? "text-white/30" : "text-gray-400")} />
+                                    <span className={clsx("text-sm font-semibold", dk ? "text-white/70" : "text-gray-700")}>Responder</span>
+                                </button>
+                                {actionSheet.isMine && !actionSheet.msg.image_url && !actionSheet.msg.video_url && !actionSheet.msg.audio_url && (
                                     <button onClick={() => handleStartEdit(actionSheet.msg)} className={clsx("w-full flex items-center gap-4 px-4 py-3.5 rounded-xl text-left transition-colors", dk ? "hover:bg-white/5 active:bg-white/10" : "hover:bg-gray-50")}>
                                         <Edit2 className={clsx("w-5 h-5 shrink-0", dk ? "text-white/30" : "text-gray-400")} />
                                         <span className={clsx("text-sm font-semibold", dk ? "text-white/70" : "text-gray-700")}>Editar mensaje</span>
@@ -947,16 +1084,12 @@ export default function ChatWindow({
             <AnimatePresence>
                 {showEmoji && (
                     <motion.div data-emoji-picker initial={{ opacity: 0, y: 8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 8 }}
-                        className={clsx("absolute bottom-[80px] left-4 md:left-6 rounded-2xl p-3 shadow-2xl z-40 w-72", dk ? "bg-[#111] border border-white/5" : "bg-white border border-gray-200")}>
-                        <div className="grid grid-cols-8 gap-0.5">
-                            {['😀','😂','🥰','😍','🤣','😊','😎','🥳','🤩','😏','😄','😁','😆','😅','🤔','😮','😱','🙄','😴','🤗',
-                              '❤️','🔥','💪','🏆','⚡','💯','🎯','🙌','👏','🤝','👍','🎉','✨','💥','🌟','💎','🏅','🥇','🎽','⚽'].map(emoji => (
-                                <button key={emoji} onClick={() => { setInputValue(v => v + emoji); setShowEmoji(false) }}
-                                    className="text-xl hover:bg-white/10 active:bg-white/20 rounded-lg p-1 transition-colors aspect-square flex items-center justify-center">
-                                    {emoji}
-                                </button>
-                            ))}
-                        </div>
+                        className={clsx("absolute bottom-[80px] left-4 md:left-6 rounded-2xl p-1 shadow-2xl z-40 overflow-hidden", dk ? "bg-[#111] border border-white/5" : "bg-white border border-gray-200")}>
+                        <EmojiPicker 
+                            theme={dk ? Theme.DARK : Theme.LIGHT} 
+                            onEmojiClick={(e: EmojiClickData) => { setInputValue(v => v + e.emoji); setShowEmoji(false) }}
+                            autoFocusSearch={false}
+                        />
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -1047,8 +1180,26 @@ export default function ChatWindow({
                     </div>
                 )}
 
-                <div className="max-w-3xl mx-auto flex items-end gap-2">
-                    <div className={clsx("flex-1 rounded-[1.5rem] flex items-end px-3 py-2 gap-1.5 shadow-inner focus-within:border-brand-red/30 transition-colors", dk ? "border border-white/[0.06] bg-[#141414]" : "border border-gray-200 bg-gray-100")}>
+                <div className="max-w-3xl mx-auto flex items-end gap-2 relative">
+                    <div className={clsx("flex-1 rounded-[1.5rem] flex items-end px-3 py-2 gap-1.5 shadow-inner transition-colors", dk ? "border border-white/[0.06] bg-[#141414]" : "border border-gray-200 bg-gray-100", (replyingTo || isRecording) ? 'rounded-t-none border-t-0' : '')}>
+                        
+                        <AnimatePresence>
+                            {replyingTo && (
+                                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
+                                    className={clsx("absolute bottom-full left-0 right-[104px] flex flex-col px-4 py-2 border-l-4 rounded-t-xl z-10 shadow-lg border border-b-0", dk ? "bg-[#1A1A1A] border-white/[0.06] border-l-brand-red" : "bg-white border-gray-200 border-l-brand-red")}>
+                                    <div className="flex justify-between items-start gap-2">
+                                        <span className="text-[10px] font-black uppercase text-brand-red tracking-widest">
+                                            {replyingTo.sender_id === currentUserId ? 'Respondiendo a ti mismo' : 'Respondiendo a ' + (otherPerson?.full_name?.split(' ')[0] || 'usuario')}
+                                        </span>
+                                        <button onClick={() => setReplyingTo(null)} className={clsx("hover:text-brand-red", dk ? "text-white/30" : "text-gray-400")}><X className="w-3.5 h-3.5" /></button>
+                                    </div>
+                                    <span className={clsx("text-xs truncate max-w-sm mt-0.5 font-medium", dk ? "text-white/70" : "text-gray-600")}>
+                                        {replyingTo.text || (replyingTo.image_url ? '📷 Imagen' : replyingTo.video_url ? '🎬 Video' : replyingTo.audio_url ? '🎤 Nota de voz' : 'Archivo adjunto')}
+                                    </span>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+
                         {/* Media picker button */}
                         <button onClick={() => setShowMediaPicker(v => !v)} disabled={isUploading}
                             className={clsx("p-1.5 rounded-full transition-colors shrink-0 mb-0.5 hover:text-brand-red", showMediaPicker ? "text-brand-red" : dk ? "text-white/30" : "text-gray-400")}>
@@ -1065,29 +1216,74 @@ export default function ChatWindow({
                             value={inputValue}
                             onChange={(v: string) => { setInputValue(v); sendTypingEvent() }}
                             onKeyDown={handleKeyDown}
-                            placeholder="Mensaje..."
+                            placeholder={isRecording ? "Grabando audio..." : "Mensaje..."}
+                            disabled={isRecording}
                             className={clsx("flex-1 bg-transparent border-none py-2 px-1 text-sm focus:outline-none w-full font-medium", dk ? "text-white placeholder:text-white/15" : "text-gray-800 placeholder:text-gray-400")}
                         />
+
+                        {isRecording && (
+                            <div className="flex items-center gap-2 px-2 pb-2">
+                                <motion.div animate={{ opacity: [1, 0, 1] }} transition={{ repeat: Infinity, duration: 1.5 }} className="w-2 h-2 rounded-full bg-red-500" />
+                                <span className={clsx("text-sm font-bold w-12 text-center tabular-nums", dk ? "text-white" : "text-gray-800")}>
+                                    {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                                </span>
+                            </div>
+                        )}
 
                         <button data-emoji-btn onClick={() => setShowEmoji(v => !v)}
                             className={clsx('p-1.5 rounded-full transition-colors shrink-0 mb-0.5', showEmoji ? 'text-brand-red' : dk ? 'text-white/25 hover:text-brand-red' : 'text-gray-400 hover:text-brand-red')}>
                             <Smile className="w-5 h-5" />
                         </button>
+
+                        {isRecording ? (
+                            <div className="flex items-center gap-1 mb-0.5 shrink-0">
+                                <button onClick={cancelRecording} className="p-1.5 rounded-full text-red-500 hover:bg-red-500/10 transition-colors">
+                                    <Trash2 className="w-5 h-5" />
+                                </button>
+                                <button onClick={stopAndSendRecording} className="p-1.5 rounded-full text-brand-red bg-brand-red/10 hover:bg-brand-red/20 transition-colors shadow-sm">
+                                    <Send className="w-5 h-5" />
+                                </button>
+                            </div>
+                        ) : pendingAudioBlob ? (
+                            <div className="flex items-center gap-1 mb-0.5 shrink-0">
+                                <button onClick={cancelRecording} className="p-1.5 rounded-full text-red-500 hover:bg-red-500/10 transition-colors">
+                                    <Trash2 className="w-5 h-5" />
+                                </button>
+                                <button onClick={handleSendAudio} disabled={isUploading} className="p-1.5 rounded-full text-brand-red bg-brand-red/10 hover:bg-brand-red/20 transition-colors shadow-sm">
+                                    {isUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
+                                </button>
+                            </div>
+                        ) : (
+                            <button onClick={startRecording} className={clsx('p-1.5 rounded-full transition-colors shrink-0 mb-0.5', dk ? 'text-white/25 hover:text-brand-red' : 'text-gray-400 hover:text-brand-red')}>
+                                <Mic className="w-5 h-5" />
+                            </button>
+                        )}
                     </div>
 
                     {/* ── MSN-style ENVIAR + BUSCAR buttons (vertical stack) ── */}
                     <div className="flex flex-col gap-1.5 shrink-0">
-                        <button onClick={handleSend}
-                            disabled={!inputValue.trim() && !pendingMediaFile}
-                            className={clsx(
-                                'w-24 h-9 rounded-lg flex items-center justify-center gap-1.5 transition-all font-black text-[11px] uppercase tracking-widest border',
-                                (inputValue.trim() || pendingMediaFile)
-                                    ? 'bg-brand-red border-red-700 text-white shadow-[0_2px_12px_rgba(220,38,38,0.4)] hover:bg-red-600 active:scale-95'
-                                    : dk ? 'bg-[#111] border-white/[0.07] text-white/20 cursor-not-allowed' : 'bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed'
-                            )}>
-                            <Send className="w-3.5 h-3.5" />
-                            Enviar
-                        </button>
+                        {isRecording ? (
+                            <button onClick={stopRecording}
+                                className={clsx(
+                                    'w-24 h-9 rounded-lg flex items-center justify-center gap-1.5 transition-all font-black text-[11px] uppercase tracking-widest border',
+                                    'bg-brand-red border-red-700 text-white shadow-[0_2px_12px_rgba(220,38,38,0.4)] hover:bg-red-600 active:scale-95'
+                                )}>
+                                <Square className="w-3.5 h-3.5 fill-current" />
+                                STOP
+                            </button>
+                        ) : (
+                            <button onClick={pendingAudioBlob ? handleSendAudio : handleSend}
+                                disabled={(!inputValue.trim() && !pendingMediaFile && !pendingAudioBlob) || isUploading}
+                                className={clsx(
+                                    'w-24 h-9 rounded-lg flex items-center justify-center gap-1.5 transition-all font-black text-[11px] uppercase tracking-widest border',
+                                    (inputValue.trim() || pendingMediaFile || pendingAudioBlob)
+                                        ? 'bg-brand-red border-red-700 text-white shadow-[0_2px_12px_rgba(220,38,38,0.4)] hover:bg-red-600 active:scale-95'
+                                        : dk ? 'bg-[#111] border-white/[0.07] text-white/20 cursor-not-allowed' : 'bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed'
+                                )}>
+                                {isUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                                Enviar
+                            </button>
+                        )}
                         <button onClick={toggleSearch}
                             className={clsx(
                                 'w-24 h-9 rounded-lg flex items-center justify-center gap-1.5 font-black text-[11px] uppercase tracking-widest border transition-all active:scale-95',
