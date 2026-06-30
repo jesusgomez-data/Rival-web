@@ -33,6 +33,18 @@ export async function POST(req: Request) {
     if (booking.status !== 'accepted') return NextResponse.json({ error: 'La reserva debe estar aceptada para pagar' }, { status: 400 })
 
     const org = booking.organization as any
+    if (org?.stripe_account_id && !org?.stripe_onboarding_complete) {
+        try {
+            const account = await stripe.accounts.retrieve(org.stripe_account_id)
+            if (account.details_submitted && account.payouts_enabled) {
+                org.stripe_onboarding_complete = true
+                await admin.from('organizations').update({ stripe_onboarding_complete: true }).eq('id', org.id)
+            }
+        } catch (e) {
+            console.error('Error auto-syncing Stripe account in checkout:', e)
+        }
+    }
+
     if (!org?.stripe_account_id || !org?.stripe_onboarding_complete) {
         return NextResponse.json({ error: 'El profesional aún no tiene configurado su cuenta de pagos' }, { status: 400 })
     }
