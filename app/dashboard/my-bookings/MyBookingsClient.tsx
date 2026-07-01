@@ -50,7 +50,8 @@ export default function MyBookingsClient({ initialBookings }: Props) {
 
     const filtered = bookings.filter(b => {
         if (activeTab === 'all') return true
-        if (activeTab === 'completed') return ['completed', 'paid_out'].includes(b.status)
+        if (activeTab === 'completed') return ['completed', 'paid_out', 'completed_by_pro', 'completed_by_client'].includes(b.status)
+        if (activeTab === 'paid') return ['paid', 'in_progress'].includes(b.status)
         return b.status === activeTab
     })
 
