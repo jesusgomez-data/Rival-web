@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/publish-posts",
       "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/post-session-notifications",
+      "schedule": "0 * * * *"
     }
   ]
 }
