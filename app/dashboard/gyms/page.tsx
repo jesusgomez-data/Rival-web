@@ -810,9 +810,11 @@ function CenterListPageContent() {
                                             <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
                                                 <MapPin className="w-4 h-4" /> {org.city}, {org.country}
                                             </div>
-                                            <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
-                                                <Users className="w-4 h-4" /> {org.member_count || 0} Miembros
-                                            </div>
+                                            {!isProfessional(org.type) && (
+                                                <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
+                                                    <Users className="w-4 h-4" /> {org.member_count || 0} Miembros
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider transition-colors ${theme === 'dark' ? 'text-gray-400 group-hover:text-white' : 'text-gray-500 group-hover:text-black'}`}>
@@ -955,9 +957,11 @@ function CenterListPageContent() {
                                             <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
                                                 <MapPin className="w-4 h-4" /> {org.city}, {org.country}
                                             </div>
-                                            <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
-                                                <Users className="w-4 h-4" /> {org.member_count || 0} Miembros
-                                            </div>
+                                            {!isProfessional(org.type) && (
+                                                <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
+                                                    <Users className="w-4 h-4" /> {org.member_count || 0} Miembros
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider transition-colors text-brand-red`}>

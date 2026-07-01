@@ -503,6 +503,15 @@ export async function sendServiceMessage(conversationId: string, content: string
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'No autenticado' }
 
+    const admin = createAdminClient()
+
+    // Obtener detalles de la conversación para notificar a la otra parte
+    const { data: conv } = await admin
+        .from('service_conversations')
+        .select('*')
+        .eq('id', conversationId)
+        .single()
+
     const { error } = await supabase
         .from('service_messages')
         .insert({ conversation_id: conversationId, sender_id: user.id, content })
@@ -514,6 +523,23 @@ export async function sendServiceMessage(conversationId: string, content: string
         .eq('id', conversationId)
 
     if (error) return { error: error.message }
+
+    // Notificar al otro participante
+    if (conv) {
+        const isClientSender = user.id === conv.client_id
+        const recipientId = isClientSender ? conv.professional_user_id : conv.client_id
+        const title = isClientSender ? 'Nuevo mensaje de tu cliente' : 'Nuevo mensaje de tu profesional'
+        const link = isClientSender ? `/dashboard/gyms/${conv.professional_id}/bookings` : `/dashboard/bookings/${conv.booking_id}`
+
+        await createNotification({
+            userId: recipientId,
+            type: 'new_message',
+            title,
+            content,
+            link,
+        })
+    }
+
     return { success: true }
 }
 
