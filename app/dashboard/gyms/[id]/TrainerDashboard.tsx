@@ -118,7 +118,7 @@ export default function TrainerDashboard({ id, centerDetails, metrics, analytics
                         <div>
                             <div className="flex flex-wrap items-center gap-2 mb-1.5">
                                 <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full ${plan.bg} ${plan.color} ${plan.border} border`}>
-                                    ⚡ Trainer {plan.label}
+                                    ⚡ Profesional {plan.label}
                                 </span>
                                 {centerDetails.verified && (
                                     <span className="text-[10px] font-black px-2.5 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400">
@@ -270,7 +270,7 @@ export default function TrainerDashboard({ id, centerDetails, metrics, analytics
                                     <UpgradeBanner
                                         icon={Lock}
                                         title={`Límite de ${plan.maxStudents} alumnos alcanzado`}
-                                        sub="Actualiza a Trainer Pro para alumnos ilimitados"
+                                        sub="Actualiza a Profesional Pro para alumnos ilimitados"
                                         cta="Actualizar a Pro →"
                                         href={`/dashboard/gyms/${id}/settings/billing`}
                                     />

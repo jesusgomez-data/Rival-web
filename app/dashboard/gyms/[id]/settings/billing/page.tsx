@@ -57,7 +57,7 @@ const plans = [
 const PT_PLANS = [
     {
         id: 'pt_free',
-        name: 'TRAINER BASIC',
+        name: 'PROFESIONAL BASIC',
         price: '€0',
         description: 'Gestiona tus primeros alumnos gratis.',
         features: ['Perfil público', 'Hasta 3 alumnos', 'Programación Manual', 'Agenda Básica', 'Pagos Manuales'],
@@ -66,10 +66,10 @@ const PT_PLANS = [
     },
     {
         id: 'pt_pro',
-        name: 'TRAINER PRO',
+        name: 'PROFESIONAL PRO',
         price: '€29.99',
         period: '/mes',
-        description: 'Para entrenadores en crecimiento.',
+        description: 'Para profesionales en crecimiento.',
         features: ['Alumnos ilimitados', 'Programación con IA', 'Pagos integrados (Stripe)', 'Agenda Avanzada', 'Chat directo'],
         cta: 'Mejorar a Pro',
         highlight: true,
@@ -77,7 +77,7 @@ const PT_PLANS = [
     },
     {
         id: 'pt_elite',
-        name: 'TRAINER ELITE',
+        name: 'PROFESIONAL ELITE',
         price: '€59.99',
         period: '/mes',
         description: 'Automatiza tu negocio al 100%.',
@@ -381,7 +381,7 @@ function BillingContent({ organizationId }: { organizationId: string }) {
                         ? <User className="w-4 h-4 text-brand-red" />
                         : <Building2 className="w-4 h-4 text-brand-red" />}
                     <span className="text-[10px] uppercase tracking-widest font-bold text-gray-400">
-                        {isProfessional(org?.center_type) ? 'Planes para Entrenadores' : 'Planes para Centros'}
+                        {isProfessional(org?.center_type) ? 'Planes para Profesionales' : 'Planes para Centros'}
                     </span>
                 </div>
                 <h1 className="text-4xl lg:text-5xl font-heading font-extrabold italic uppercase tracking-tighter text-white">

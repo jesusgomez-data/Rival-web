@@ -60,7 +60,7 @@ export async function POST(req: Request) {
                         // Notify professional
                         const { data: booking } = await supabase
                             .from('service_bookings')
-                            .select('client_id, service_name, organization:organization_id(owner_id)')
+                            .select('client_id, service_name, organization:professional_id(owner_id)')
                             .eq('id', bookingId)
                             .single()
 

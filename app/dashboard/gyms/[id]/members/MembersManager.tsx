@@ -5,6 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Search, User, CheckCircle, Trash2, Edit2, X, CreditCard, Phone, Mail, Landmark, Power, Cake, Calendar, Link as LinkIcon, Loader2, ChevronDown, Check, Send, Download, Upload, FileText, AlertCircle, Building2 } from "lucide-react";
 import { addMember, addGuestMember, requestMemberPayment, approveTrialRequest, removeMember, updateMemberDetails, toggleMemberStatus, searchAthletes, linkMemberToUser, bulkImportMembers, getCenterMembers, getLeaveRequests, processLeaveRequest } from "../../member-actions";
+import { isProfessional } from "@/lib/professional-types";
 import { sendRegistrationEmail } from "../../email-actions";
 import { getPendingCancellations } from "../../cancellation-actions";
 import CancellationRequestsPanel from "./CancellationRequestsPanel";
@@ -19,6 +20,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
     const [selectedCenterId, setSelectedCenterId] = useState<string | null>(centerIdParam || (centers.length > 0 ? centers[0].id : null));
     const [centerDropdownOpen, setCenterDropdownOpen] = useState(false);
     const isMultiCenter = orgDetails?.is_multi_center;
+    const isPro = isProfessional(orgDetails?.center_type);
     const [pendingCancellations, setPendingCancellations] = useState<any[]>([]);
     useEffect(() => {
         console.log("[MembersManager] initialMembers count:", initialMembers?.length || 0);
@@ -557,7 +559,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
             />
             <div className="flex justify-between items-end mb-2 sm:mb-4">
                 <div className="flex flex-col">
-                    <h2 className="text-xl sm:text-2xl italic font-black text-foreground uppercase tracking-tighter">Gestión de {orgDetails?.center_type === 'personal_trainer' ? 'Alumnos' : 'Atletas'}</h2>
+                    <h2 className="text-xl sm:text-2xl italic font-black text-foreground uppercase tracking-tighter">Gestión de {isPro ? 'Alumnos' : 'Atletas'}</h2>
                     <div className="flex items-center gap-2">
                         <p className="text-[9px] sm:text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
                             Registrados: {members.length} | Filtrados: {filteredMembers.length}
@@ -623,22 +625,26 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                     </div>
                 </div>
                 <div className="flex gap-2 w-full md:w-auto">
-                    <button
-                        onClick={handleExport}
-                        className="flex-1 md:flex-none bg-muted text-muted-foreground py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest hover:text-foreground border border-border transition-all flex items-center justify-center gap-2"
-                        title="Exportar base de datos a CSV"
-                    >
-                        <Download className="w-4 h-4" />
-                        <span className="hidden sm:inline">Exportar</span>
-                    </button>
-                    <button
-                        onClick={() => setShowImportModal(true)}
-                        className="flex-1 md:flex-none bg-muted text-muted-foreground py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest hover:text-foreground border border-border transition-all flex items-center justify-center gap-2"
-                        title="Importar base de datos desde CSV"
-                    >
-                        <Upload className="w-4 h-4" />
-                        <span className="hidden sm:inline">Importar</span>
-                    </button>
+                    {!isPro && (
+                        <>
+                            <button
+                                onClick={handleExport}
+                                className="flex-1 md:flex-none bg-muted text-muted-foreground py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest hover:text-foreground border border-border transition-all flex items-center justify-center gap-2"
+                                title="Exportar base de datos a CSV"
+                            >
+                                <Download className="w-4 h-4" />
+                                <span className="hidden sm:inline">Exportar</span>
+                            </button>
+                            <button
+                                onClick={() => setShowImportModal(true)}
+                                className="flex-1 md:flex-none bg-muted text-muted-foreground py-3 px-4 rounded-xl text-xs font-black uppercase tracking-widest hover:text-foreground border border-border transition-all flex items-center justify-center gap-2"
+                                title="Importar base de datos desde CSV"
+                            >
+                                <Upload className="w-4 h-4" />
+                                <span className="hidden sm:inline">Importar</span>
+                            </button>
+                        </>
+                    )}
                     <button
                         onClick={() => {
                             resetForm();
@@ -646,7 +652,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                         }}
                         className="flex-[2] md:flex-none bg-brand-red text-white py-3 px-6 rounded-xl text-sm font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-600 transition-all shadow-lg hover:shadow-red-900/40 w-full md:w-auto"
                     >
-                        <Plus className="w-5 h-5" /> Nueva Alta
+                        <Plus className="w-5 h-5" /> {isPro ? 'Nuevo Alumno' : 'Nueva Alta'}
                     </button>
                 </div>
             </div>
@@ -655,7 +661,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                 <table className="w-full text-left text-sm min-w-[600px] sm:min-w-0">
                     <thead className="bg-muted text-muted-foreground font-bold uppercase text-[9px] sm:text-[10px] tracking-wider">
                         <tr>
-                            <th className="px-4 sm:px-6 py-3 sm:py-4">{orgDetails?.center_type === 'personal_trainer' ? 'Alumno' : 'Atleta'} / Edad</th>
+                            <th className="px-4 sm:px-6 py-3 sm:py-4">{isPro ? 'Alumno' : 'Atleta'} / Edad</th>
                             <th className="px-4 sm:px-6 py-3 sm:py-4">Tarifa</th>
                             <th className="px-4 sm:px-6 py-3 sm:py-4">Facturación</th>
                             <th className="px-4 sm:px-6 py-3 sm:py-4 text-center">Estado</th>
@@ -871,7 +877,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                     )}
                                 </div>
                                 <div className="min-w-0">
-                                    {viewingMember.user?.full_name || viewingMember.full_name || username || (orgDetails?.center_type === 'personal_trainer' ? 'Ficha de Alumno' : 'Ficha de Atleta')}
+                                    {viewingMember.user?.full_name || viewingMember.full_name || username || (isPro ? 'Ficha de Alumno' : 'Ficha de Atleta')}
                                     <div className="flex items-center gap-2 mt-1">
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             <p className="text-muted-foreground text-[10px] font-bold uppercase tracking-widest truncate">

@@ -148,27 +148,33 @@ function CenterListPageContent() {
     const PT_PLANS = [
         {
             id: 'pt_free',
-            name: 'Trainer Basic',
-            price: '0€',
+            name: 'Profesional Basic',
+            price: '€0',
             description: 'Gestiona tus primeros alumnos gratis.',
-            icon: <Zap className="w-6 h-6 text-yellow-500" />,
-            features: ['Perfil público entrenador', 'Hasta 3 alumnos', 'Programación Manual', 'Agenda Básica']
+            features: ['Perfil público', 'Hasta 3 alumnos', 'Programación Manual', 'Agenda Básica', 'Pagos Manuales'],
+            cta: 'Plan Actual',
+            color: 'gray'
         },
         {
             id: 'pt_pro',
-            name: 'Trainer Pro',
-            price: '29.99€',
-            description: 'Para entrenadores en crecimiento.',
-            icon: <Rocket className="w-6 h-6 text-brand-red" />,
-            features: ['Alumnos ilimitados', 'Programación con IA', 'Pagos integrados (Stripe)', 'Agenda Avanzada', 'Chat directo']
+            name: 'Profesional Pro',
+            price: '€29.99',
+            period: '/mes',
+            description: 'Para profesionales en crecimiento.',
+            features: ['Alumnos ilimitados', 'Programación con IA', 'Pagos integrados (Stripe)', 'Agenda Avanzada', 'Chat directo'],
+            cta: 'Mejorar a Pro',
+            highlight: true,
+            color: 'brand-red'
         },
         {
             id: 'pt_elite',
-            name: 'Trainer Elite',
-            price: '59.99€',
+            name: 'Profesional Elite',
+            price: '€59.99',
+            period: '/mes',
             description: 'Automatiza tu negocio al 100%.',
-            icon: <Shield className="w-6 h-6 text-purple-500" />,
-            features: ['Todo en Pro', 'App personalizada (PWA)', 'Análisis de retención', 'Soporte prioritario 24/7']
+            features: ['Todo en Pro', 'App personalizada (PWA)', 'Análisis de retención', 'Soporte prioritario 24/7', 'Web Personalizada'],
+            cta: 'Obtener Elite',
+            color: 'purple'
         }
     ];
 
@@ -815,6 +821,11 @@ function CenterListPageContent() {
                                                     <Users className="w-4 h-4" /> {org.member_count || 0} Miembros
                                                 </div>
                                             )}
+                                            {isProfessional(org.center_type) && (
+                                                <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
+                                                    <Users className="w-4 h-4" /> {org.member_count || 0} Alumnos
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className={`flex items-center justify-between text-xs font-bold uppercase tracking-wider transition-colors ${theme === 'dark' ? 'text-gray-400 group-hover:text-white' : 'text-gray-500 group-hover:text-black'}`}>
@@ -953,6 +964,11 @@ function CenterListPageContent() {
                                             {!isProfessional(org.center_type) && (
                                                 <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
                                                     <Users className="w-4 h-4" /> {org.member_count || 0} Miembros
+                                                </div>
+                                            )}
+                                            {isProfessional(org.center_type) && (
+                                                <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
+                                                    <Users className="w-4 h-4" /> {org.member_count || 0} Alumnos
                                                 </div>
                                             )}
                                         </div>

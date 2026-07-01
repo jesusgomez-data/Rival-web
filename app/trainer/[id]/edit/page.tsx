@@ -254,7 +254,7 @@ export default function TrainerEditPage() {
                         <p className="text-gray-500 text-xs">{form.name}</p>
                     </div>
                 </div>
-                        <Link href={`/trainer/${id}`} target="_blank" rel="noopener noreferrer"
+                        <Link href={`/trainer/${id}`}
                             className="bg-white/8 border border-white/10 text-white px-4 py-2.5 rounded-xl font-black text-sm hover:bg-white/15 transition-colors flex items-center gap-2">
                             <Globe className="w-4 h-4" /> Ver perfil público
                         </Link>

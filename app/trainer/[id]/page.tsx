@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import {
     MapPin, Globe, Instagram, Phone, Star, Award, Monitor,
     Users, Check, ArrowLeft, Calendar, MessageSquare,
-    Loader2, UserPlus, UserCheck, Zap, Flame, Lock, Trophy,
+    Loader2, UserPlus, UserCheck, Zap, Dumbbell, Lock, Trophy,
     Clock, List, LayoutGrid, Grid, X
 } from 'lucide-react'
 import Link from 'next/link'
@@ -471,8 +471,8 @@ export default function TrainerPublicProfile() {
                 {ownerUsername && (
                     <Link href={`/dashboard/profile/${ownerUsername}`}
                         className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm bg-white/8 border border-white/10 text-white hover:bg-white/15 hover:border-brand-red/30 transition-colors">
-                        <Flame className="w-4 h-4 text-brand-red fill-current" />
-                        <span className="hidden sm:inline">Rival Perfil</span>
+                        <span className="font-black italic text-brand-red text-lg leading-none">R</span>
+                        <span className="hidden sm:inline">Perfil RivalFit</span>
                     </Link>
                 )}
                 {memberRecord && ['active', 'trial'].includes(memberRecord.status) && currentUser?.id !== trainer.owner_id && (

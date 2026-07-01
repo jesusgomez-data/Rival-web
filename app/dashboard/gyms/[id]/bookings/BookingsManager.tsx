@@ -203,6 +203,19 @@ export default function BookingsManager({ organizationId, initialBookings }: Pro
                                             {booking.status === 'paid_out' ? `Cobrado €${Number(booking.professional_payout_amount).toFixed(2)}` : 'Completado · Esperando pago'}
                                         </div>
                                     )}
+                                    {booking.status === 'completed_by_pro' && (
+                                        <div className="flex items-center gap-1.5 text-xs text-indigo-400 font-bold">
+                                            <Clock className="w-3.5 h-3.5" />
+                                            Esperando confirmación del cliente
+                                        </div>
+                                    )}
+                                    {booking.status === 'completed_by_client' && (
+                                        <button onClick={() => handleCompleted(booking)} disabled={isProcessing}
+                                            className="flex items-center gap-1.5 px-4 py-2 bg-green-500/10 border border-green-500/20 text-green-400 rounded-xl text-xs font-bold hover:bg-green-500/20 transition-colors disabled:opacity-50">
+                                            {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+                                            Confirmar servicio
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         )
