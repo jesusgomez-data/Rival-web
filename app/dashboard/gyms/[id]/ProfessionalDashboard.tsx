@@ -252,8 +252,12 @@ export default function ProfessionalDashboard({ id, centerDetails, userRole }: P
                             <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center`}>
                                 <Icon className={`w-4 h-4 ${color}`} />
                             </div>
-                            {label === 'Saldo' && stripeBalance && stripeBalance.available > 0 && (
-                                <button onClick={() => setShowPayoutModal(true)} className="text-[10px] uppercase font-bold tracking-widest bg-brand-red text-white px-2 py-1 rounded hover:bg-red-600 transition">
+                            {label === 'Saldo' && stripeBalance && (
+                                <button 
+                                    onClick={() => setShowPayoutModal(true)} 
+                                    disabled={stripeBalance.available <= 0}
+                                    className={`text-[10px] uppercase font-bold tracking-widest px-2.5 py-1.5 rounded transition ${stripeBalance.available > 0 ? 'bg-brand-red text-white hover:bg-red-600 shadow-[0_0_10px_rgba(220,38,38,0.3)]' : 'bg-white/5 text-gray-500 cursor-not-allowed'}`}
+                                >
                                     Retirar
                                 </button>
                             )}
