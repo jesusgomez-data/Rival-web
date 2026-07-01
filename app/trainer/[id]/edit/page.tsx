@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import dynamic from 'next/dynamic'
+import { PROFESSIONAL_TYPES } from '@/lib/professional-types'
 
 const EmojiPicker = dynamic(() => import('emoji-picker-react'), { ssr: false })
 
@@ -75,6 +76,7 @@ export default function TrainerEditPage() {
         languages:      [] as string[],
         yearsExp:       '',
         certifications: '',
+        centerType:     'personal_trainer',
     })
 
     const showToast = useCallback((msg: string, ok = true) => {
@@ -107,6 +109,7 @@ export default function TrainerEditPage() {
                 languages:      data.languages      || [],
                 yearsExp:       data.years_experience ? String(data.years_experience) : '',
                 certifications: data.certifications || '',
+                centerType:     data.center_type || 'personal_trainer',
             })
             setCoverPos(data.cover_position || 50)
             setLoading(false)
@@ -215,6 +218,7 @@ export default function TrainerEditPage() {
             languages:         form.languages,
             years_experience:  form.yearsExp  ? parseInt(form.yearsExp) : null,
             certifications:    form.certifications,
+            center_type:       form.centerType,
             updated_at:        new Date().toISOString(),
         }).eq('id', id)
 
@@ -343,6 +347,28 @@ export default function TrainerEditPage() {
                         </div>
                         <p className="text-gray-600 text-xs mt-1">{form.bio.length}/500 caracteres</p>
                     </Field>
+                </Section>
+
+                {/* ── PROFESIÓN PRINCIPAL ───────────────────────────── */}
+                <Section title="Profesión Principal" icon={<Award className="w-4 h-4" />}>
+                    <p className="text-gray-500 text-xs mb-3">Selecciona tu perfil principal</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                        {Object.entries(PROFESSIONAL_TYPES).map(([key, p]) => {
+                            const active = form.centerType === key
+                            return (
+                                <button key={key} type="button" onClick={() => set('centerType', key)}
+                                    className={`flex items-center gap-2 p-3 rounded-xl border text-sm font-bold transition-all text-left ${
+                                        active
+                                            ? 'border-brand-red bg-brand-red/10 text-white'
+                                            : 'border-white/8 bg-white/3 text-gray-400 hover:border-white/20 hover:text-white'
+                                    }`}>
+                                    <span className="text-base">{p.icon}</span>
+                                    <span className="flex-1 text-[11px] leading-tight">{p.label}</span>
+                                    {active && <Check className="w-3.5 h-3.5 text-brand-red shrink-0" />}
+                                </button>
+                            )
+                        })}
+                    </div>
                 </Section>
 
                 {/* ── ESPECIALIDADES ────────────────────────────────── */}
