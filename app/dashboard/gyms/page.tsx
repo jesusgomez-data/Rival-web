@@ -810,7 +810,7 @@ function CenterListPageContent() {
                                             <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
                                                 <MapPin className="w-4 h-4" /> {org.city}, {org.country}
                                             </div>
-                                            {!isProfessional(org.type) && (
+                                            {!isProfessional(org.center_type) && (
                                                 <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
                                                     <Users className="w-4 h-4" /> {org.member_count || 0} Miembros
                                                 </div>
@@ -829,15 +829,8 @@ function CenterListPageContent() {
                 </div>
 
                 {/* All Professionals Directory — only on pro tab */}
-                {isProTab && searchTerm.length < 2 && (
+                {isProTab && searchTerm.length < 2 && proTypeFilter && (
                     <div className="space-y-6 pt-4">
-                        <div className="flex items-center gap-2">
-                            <User className={`w-4 h-4 text-brand-red`} />
-                            <h2 className={`text-sm font-black uppercase tracking-widest ${textHeading}`}>
-                                Directorio de Profesionales
-                            </h2>
-                            <span className={`text-[10px] font-bold ${textMuted}`}>({allProfessionals.length})</span>
-                        </div>
 
                         {allProfessionals.length === 0 ? (
                             <div className={`text-center py-12 border-2 border-dashed rounded-3xl ${theme === 'dark' ? 'border-white/5 bg-white/[0.02]' : 'border-gray-200 bg-gray-50'}`}>
@@ -957,7 +950,7 @@ function CenterListPageContent() {
                                             <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
                                                 <MapPin className="w-4 h-4" /> {org.city}, {org.country}
                                             </div>
-                                            {!isProfessional(org.type) && (
+                                            {!isProfessional(org.center_type) && (
                                                 <div className={`flex items-center gap-2 text-xs ${textMuted}`}>
                                                     <Users className="w-4 h-4" /> {org.member_count || 0} Miembros
                                                 </div>
