@@ -1762,7 +1762,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                         <div className="space-y-4 mb-8">
                                             <div>
                                                 <label className={`text-[10px] uppercase font-bold tracking-widest block mb-2 ${textMuted}`}>Descripción</label>
-                                                <p className={`text-sm leading-relaxed ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>{selectedProduct.description || "Sin descripción."}</p>
+                                                <p className={`text-sm leading-relaxed whitespace-pre-wrap ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>{selectedProduct.description || "Sin descripción."}</p>
                                             </div>
 
                                             <div>

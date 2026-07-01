@@ -828,7 +828,7 @@ export default function TrainerPublicProfile() {
                                 <div className="flex items-start justify-between gap-4 mb-4">
                                     <div className="flex-1 min-w-0">
                                         <h4 className="text-white font-black text-lg">{s.name}</h4>
-                                        {s.description && <p className="text-gray-400 text-sm mt-0.5">{s.description}</p>}
+                                        {s.description && <p className="text-gray-400 text-sm mt-0.5 whitespace-pre-wrap">{s.description}</p>}
                                         <div className="flex flex-wrap gap-2 mt-2">
                                             <span className="flex items-center gap-1 text-xs text-gray-500"><Clock className="w-3 h-3" /> {s.duration_minutes} min</span>
                                             {(s.modalities || []).map((m: string) => {
