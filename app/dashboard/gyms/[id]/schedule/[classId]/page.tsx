@@ -134,6 +134,41 @@ export default async function ClassDetailPage({ params }: { params: { id: string
                     </div>
                 )}
             </div>
+
+            {/* Lista de Espera */}
+            {classData.waitlist && classData.waitlist.length > 0 && (
+                <div className="bg-brand-gray/50 border border-amber-500/10 rounded-2xl sm:rounded-3xl p-6 sm:p-8 backdrop-blur-sm">
+                    <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-3">
+                        Lista de Espera
+                        <span className="text-xs bg-amber-500/10 text-amber-500 px-2 py-1 rounded font-normal">{classData.waitlist.length} en espera</span>
+                    </h3>
+                    <div className="space-y-3">
+                        {classData.waitlist.map((entry: any, index: number) => (
+                            <div key={entry.id} className="flex items-center gap-3 sm:gap-4 bg-black/40 border border-white/5 p-3 sm:p-4 rounded-xl">
+                                <span className="w-7 h-7 rounded-full bg-amber-500/10 text-amber-500 text-xs font-black flex items-center justify-center shrink-0">
+                                    {index + 1}
+                                </span>
+                                <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden relative border border-white/10 shrink-0">
+                                    {entry.member?.avatar_url ? (
+                                        <img src={entry.member.avatar_url} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <User className="w-5 h-5 text-gray-500" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="font-bold text-white text-sm sm:text-base truncate">{entry.member?.full_name || 'Desconocido'}</p>
+                                    <p className="text-[10px] sm:text-xs text-gray-500 truncate font-mono">
+                                        En espera desde {new Date(entry.created_at).toLocaleString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-4 italic">Si se libera una plaza, el primero de la lista entra automáticamente y recibe una notificación.</p>
+                </div>
+            )}
         </div>
     );
 }

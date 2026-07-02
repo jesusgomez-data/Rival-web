@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { createNotification } from "../notifications-actions";
 
@@ -186,9 +187,26 @@ export async function getClassDetails(classId: string) {
         `)
         .eq('class_id', classId);
 
+    // Waitlist (ordered by arrival) — visible to staff on the class detail
+    const { data: waitlist } = await supabase
+        .from('class_waitlist')
+        .select(`
+            id,
+            created_at,
+            member:member_id (
+                id,
+                full_name,
+                avatar_url,
+                email
+            )
+        `)
+        .eq('class_id', classId)
+        .order('created_at', { ascending: true });
+
     return {
         ...finalClassData,
-        enrollments: enrollments || []
+        enrollments: enrollments || [],
+        waitlist: waitlist || []
     };
 }
 
@@ -317,6 +335,9 @@ export async function updateClass(centerId: string, classId: string, data: any) 
 
     if (error) return { error: error.message };
 
+    // If capacity was increased, promote people waiting for a spot
+    await promoteFromWaitlist(classId);
+
     revalidatePath(`/dashboard/gyms/${centerId}/schedule`);
     revalidatePath(`/dashboard/gyms/${centerId}/schedule/${classId}`);
     revalidatePath(`/gym/${centerId}`);
@@ -415,8 +436,13 @@ export async function enrollInClass(centerId: string, classId: string) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return { error: "Inicia sesión." };
 
-    const { data: member } = await supabase.from('members').select('id, status').eq('center_id', centerId).eq('user_id', user.id).single();
+    const { data: member } = await supabase.from('members').select('id, status, membership_end_date').eq('center_id', centerId).eq('user_id', user.id).single();
     if (!member || (member.status !== 'active' && member.status !== 'trial')) return { error: "Membresía no válida." };
+
+    // Expired membership → block booking
+    if (member.membership_end_date && new Date(member.membership_end_date) < new Date(new Date().toDateString())) {
+        return { error: "Tu membresía ha vencido. Renuévala para volver a reservar clases." };
+    }
 
     // 1. Fetch Class Data (including scheduled_time)
     const { data: classData } = await supabase.from('classes').select('scheduled_time, max_capacity, class_enrollments(count)').eq('id', classId).single();
@@ -475,8 +501,10 @@ export async function enrollInClass(centerId: string, classId: string) {
         }
     }
 
-    // 4. Validate capacity
-    if ((classData.class_enrollments?.[0]?.count || 0) >= classData.max_capacity) return { error: "Sin cupo." };
+    // 4. Validate capacity → if full, signal the UI so it can offer the waitlist
+    if ((classData.class_enrollments?.[0]?.count || 0) >= classData.max_capacity) {
+        return { error: "Clase completa. Puedes unirte a la lista de espera.", full: true };
+    }
 
     const { data: existing } = await supabase.from('class_enrollments').select('id').eq('class_id', classId).eq('member_id', member.id).maybeSingle();
     if (existing) return { error: "Ya inscrito." };
@@ -532,6 +560,10 @@ export async function unenrollFromClass(centerId: string, classId: string) {
 
     if (error) return { error: error.message };
 
+    // Promote the first person on the waitlist into the freed spot (fire-and-forget safe)
+    await promoteFromWaitlist(classId);
+    revalidatePath('/dashboard/my-bookings');
+
     // Notification for cancellation
     if (classInfo) {
         await createNotification({
@@ -546,5 +578,214 @@ export async function unenrollFromClass(centerId: string, classId: string) {
 
     revalidatePath(`/gym/${centerId}`);
     return { success: true };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LISTA DE ESPERA
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Promotes waitlisted members into free spots of a class.
+ * Runs with the admin client (enrollment is created on behalf of the member).
+ * Safe to call anytime: it checks free capacity and that the class hasn't started.
+ */
+async function promoteFromWaitlist(classId: string) {
+    try {
+        const admin = createAdminClient();
+
+        const { data: classData } = await admin
+            .from('classes')
+            .select('id, name, scheduled_time, max_capacity, organization_id, organization:organization_id(name), enrollments:class_enrollments(count)')
+            .eq('id', classId)
+            .single();
+
+        if (!classData) return;
+        if (new Date(classData.scheduled_time) <= new Date()) return; // Class already started
+
+        let freeSpots = (classData.max_capacity || 0) - (classData.enrollments?.[0]?.count || 0);
+        if (freeSpots <= 0) return;
+
+        const { data: waitlist } = await admin
+            .from('class_waitlist')
+            .select('id, member:member_id (id, user_id, full_name, status)')
+            .eq('class_id', classId)
+            .order('created_at', { ascending: true })
+            .limit(freeSpots);
+
+        if (!waitlist || waitlist.length === 0) return;
+
+        const orgName = Array.isArray(classData.organization)
+            ? (classData.organization[0] as any)?.name
+            : (classData.organization as any)?.name;
+
+        for (const entry of waitlist) {
+            const member: any = Array.isArray(entry.member) ? entry.member[0] : entry.member;
+            if (!member) continue;
+
+            // Skip members whose membership is no longer valid; free their spot on the list
+            if (member.status !== 'active' && member.status !== 'trial') {
+                await admin.from('class_waitlist').delete().eq('id', entry.id);
+                continue;
+            }
+
+            const { error: enrollError } = await admin.from('class_enrollments').insert({
+                class_id: classId,
+                member_id: member.id,
+                enrollment_date: new Date().toISOString(),
+                attended: null
+            });
+            if (enrollError) {
+                console.error('[promoteFromWaitlist] Enroll error:', enrollError);
+                continue;
+            }
+
+            await admin.from('class_waitlist').delete().eq('id', entry.id);
+
+            if (member.user_id) {
+                const timeStr = new Date(classData.scheduled_time).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                await createNotification({
+                    userId: member.user_id,
+                    type: 'waitlist_promoted',
+                    title: '¡Tienes plaza! 🎉',
+                    content: `Se ha liberado una plaza en ${classData.name} (${timeStr}) de ${orgName || 'tu centro'}. Tu reserva se ha confirmado automáticamente.`,
+                    link: `/gym/${classData.organization_id}`
+                });
+            }
+        }
+    } catch (err) {
+        console.error('[promoteFromWaitlist] Unexpected error:', err);
+    }
+}
+
+export async function joinWaitlist(centerId: string, classId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "Inicia sesión." };
+
+    const { data: member } = await supabase.from('members').select('id, status, membership_end_date').eq('center_id', centerId).eq('user_id', user.id).single();
+    if (!member || (member.status !== 'active' && member.status !== 'trial')) return { error: "Membresía no válida." };
+
+    // Expired membership → block waitlist too
+    if (member.membership_end_date && new Date(member.membership_end_date) < new Date(new Date().toDateString())) {
+        return { error: "Tu membresía ha vencido. Renuévala para volver a reservar clases." };
+    }
+
+    const { data: classData } = await supabase
+        .from('classes')
+        .select('name, scheduled_time, max_capacity, class_enrollments(count)')
+        .eq('id', classId)
+        .single();
+    if (!classData) return { error: "Clase no encontrada." };
+
+    if (new Date(classData.scheduled_time) <= new Date()) {
+        return { error: "La clase ya ha comenzado." };
+    }
+
+    // Only makes sense if the class is actually full
+    if ((classData.class_enrollments?.[0]?.count || 0) < classData.max_capacity) {
+        return { error: "Hay plazas libres. Reserva directamente." };
+    }
+
+    const { data: enrolled } = await supabase.from('class_enrollments').select('id').eq('class_id', classId).eq('member_id', member.id).maybeSingle();
+    if (enrolled) return { error: "Ya estás inscrito en esta clase." };
+
+    const { data: existing } = await supabase.from('class_waitlist').select('id').eq('class_id', classId).eq('member_id', member.id).maybeSingle();
+    if (existing) return { error: "Ya estás en la lista de espera." };
+
+    const { error } = await supabase.from('class_waitlist').insert({ class_id: classId, member_id: member.id });
+    if (error) {
+        console.error('[joinWaitlist] Insert error:', error);
+        return { error: "No se pudo apuntar a la lista de espera. Inténtalo de nuevo." };
+    }
+
+    const { count } = await supabase.from('class_waitlist').select('id', { count: 'exact', head: true }).eq('class_id', classId);
+
+    revalidatePath(`/gym/${centerId}`);
+    return {
+        success: true,
+        position: count || 1,
+        message: `Estás en la lista de espera (posición ${count || 1}). Si se libera una plaza, tu reserva se confirmará automáticamente y te avisaremos.`
+    };
+}
+
+export async function leaveWaitlist(centerId: string, classId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "Inicia sesión." };
+
+    const { data: member } = await supabase.from('members').select('id').eq('center_id', centerId).eq('user_id', user.id).single();
+    if (!member) return { error: "Membresía no encontrada." };
+
+    const { error } = await supabase.from('class_waitlist').delete().eq('class_id', classId).eq('member_id', member.id);
+    if (error) return { error: "No se pudo salir de la lista de espera." };
+
+    revalidatePath(`/gym/${centerId}`);
+    revalidatePath('/dashboard/my-bookings');
+    return { success: true };
+}
+
+/**
+ * Próximas clases del usuario en todos sus centros:
+ * reservas confirmadas + entradas en lista de espera.
+ */
+export async function getMyUpcomingClasses() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { enrollments: [], waitlist: [] };
+
+    const { data: memberships } = await supabase
+        .from('members')
+        .select('id, center_id')
+        .eq('user_id', user.id);
+
+    if (!memberships || memberships.length === 0) return { enrollments: [], waitlist: [] };
+    const memberIds = memberships.map(m => m.id);
+
+    const nowIso = new Date().toISOString();
+    const classSelect = `
+        id,
+        created_at,
+        class:class_id (
+            id,
+            name,
+            scheduled_time,
+            duration_minutes,
+            organization_id,
+            coach:profiles!coach_id (full_name),
+            organization:organization_id (name, logo_url)
+        )
+    `;
+
+    const [{ data: enrollRows }, { data: waitlistRows }] = await Promise.all([
+        supabase.from('class_enrollments').select(classSelect).in('member_id', memberIds),
+        supabase.from('class_waitlist').select(classSelect).in('member_id', memberIds)
+    ]);
+
+    const normalize = (rows: any[] | null) =>
+        (rows || [])
+            .map((r: any) => {
+                const cls = Array.isArray(r.class) ? r.class[0] : r.class;
+                if (!cls) return null;
+                const coach = Array.isArray(cls.coach) ? cls.coach[0] : cls.coach;
+                const org = Array.isArray(cls.organization) ? cls.organization[0] : cls.organization;
+                return {
+                    id: r.id,
+                    class_id: cls.id,
+                    name: cls.name,
+                    scheduled_time: cls.scheduled_time,
+                    duration_minutes: cls.duration_minutes,
+                    center_id: cls.organization_id,
+                    center_name: org?.name || 'Centro',
+                    center_logo: org?.logo_url || null,
+                    coach_name: coach?.full_name || null
+                };
+            })
+            .filter((r: any) => r && r.scheduled_time && r.scheduled_time >= nowIso)
+            .sort((a: any, b: any) => a.scheduled_time.localeCompare(b.scheduled_time));
+
+    return {
+        enrollments: normalize(enrollRows),
+        waitlist: normalize(waitlistRows)
+    };
 }
 

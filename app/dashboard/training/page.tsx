@@ -284,6 +284,24 @@ export default function TrainingPage() {
                 </div>
             </div>
 
+            {/* HYROX Race Center Banner */}
+            <Link href="/dashboard/hyrox" className="group block bg-gradient-to-r from-brand-red/15 via-muted/50 to-muted/50 border border-brand-red/20 hover:border-brand-red/50 rounded-3xl p-5 sm:p-6 transition-all">
+                <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-red/10 border border-brand-red/20 text-brand-red text-[9px] font-black uppercase tracking-wider mb-2">
+                            Nuevo · Race Center
+                        </div>
+                        <h3 className="text-lg sm:text-xl font-black uppercase italic text-foreground font-heading">HYROX: Splits por Estación</h3>
+                        <p className="text-xs text-muted-foreground leading-relaxed mt-1">
+                            Registra simulacros completos (8 runs + 8 estaciones), compara cada split con tu mejor marca y sigue tu evolución hacia el día de la carrera.
+                        </p>
+                    </div>
+                    <div className="shrink-0 bg-brand-red text-white font-black text-xs uppercase tracking-widest px-4 sm:px-6 py-3.5 rounded-2xl flex items-center gap-2 group-hover:bg-red-600 transition-all shadow-glow">
+                        <Trophy className="w-4 h-4" /> <span className="hidden sm:inline">Entrar</span>
+                    </div>
+                </div>
+            </Link>
+
             {/* Main Content Grid */}
             <div className="grid lg:grid-cols-12 gap-8">
                 {/* Left Column (Main Focus) */}

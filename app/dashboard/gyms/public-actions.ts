@@ -249,15 +249,38 @@ export async function getClassesForDate(centerId: string, date: string) {
         }
     }
 
+    // Waitlist info: total per class + whether current user is on it
+    // (Fails gracefully if the class_waitlist table doesn't exist yet)
+    const waitlistCounts: Record<string, number> = {};
+    const userWaitlisted = new Set();
+    if (classIds.length > 0) {
+        const { data: waitlistRows } = await supabase
+            .from('class_waitlist')
+            .select('class_id, member:member_id (user_id)')
+            .in('class_id', classIds);
+
+        if (waitlistRows) {
+            waitlistRows.forEach((w: any) => {
+                waitlistCounts[w.class_id] = (waitlistCounts[w.class_id] || 0) + 1;
+                const memberUserId = Array.isArray(w.member) ? w.member[0]?.user_id : w.member?.user_id;
+                if (user && memberUserId === user.id) {
+                    userWaitlisted.add(w.class_id);
+                }
+            });
+        }
+    }
+
     const finalClasses = sorted.map((c: any) => ({
         ...c,
         coach: coaches.find(coach => coach.id === c.coach_id) || { full_name: 'Staff' },
         scheduled_time: c.scheduled_time || `${date}T${c.time || '00:00:00'}`,
-        enrolled_count: (c.scheduled_time && c.scheduled_time.split('T')[0] === date) 
-            ? ((c.enrollments?.[0]?.count || 0) + (pendingRequestCounts[c.id] || 0)) 
+        enrolled_count: (c.scheduled_time && c.scheduled_time.split('T')[0] === date)
+            ? ((c.enrollments?.[0]?.count || 0) + (pendingRequestCounts[c.id] || 0))
             : 0,
         wod: dailyWod,
-        is_enrolled: userEnrollments.has(c.id)
+        is_enrolled: userEnrollments.has(c.id),
+        waitlist_count: waitlistCounts[c.id] || 0,
+        is_waitlisted: userWaitlisted.has(c.id)
     }));
 
     return finalClasses;

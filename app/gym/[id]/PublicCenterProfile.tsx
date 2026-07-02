@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { UserPlus, UserCheck, MapPin, Globe, CheckCircle2, Grid, Dumbbell, ShoppingBag, X, CreditCard, Check, Lock, Calendar, ArrowRight, ArrowLeft, Trophy, ChevronRight, ChevronLeft, Clock, ChevronDown, Zap, Flame, TrendingUp, Info, Play, Banknote, Instagram, Youtube, Facebook, Hash, Navigation, Image as ImageIcon, Star, Users, Building2, List, LayoutGrid, Loader2 } from "lucide-react";
-import { toggleFollow, requestTrial, purchaseProduct, getClassesForDate, getClassesRange, enrollInClass, unenrollFromClass, getClassAttendees, saveClassResult, getDayRankings, requestMemberPayment } from "../../dashboard/gyms/management-actions";
+import { toggleFollow, requestTrial, purchaseProduct, getClassesForDate, getClassesRange, enrollInClass, unenrollFromClass, joinWaitlist, leaveWaitlist, getClassAttendees, saveClassResult, getDayRankings, requestMemberPayment } from "../../dashboard/gyms/management-actions";
 import { recordProfileVisit } from "../../dashboard/gyms/visit-actions";
 import { bookTrialClass } from "../../dashboard/gyms/trial-booking-actions";
 import GymPostCard from "../../dashboard/gyms/GymPostCard";
@@ -308,11 +308,44 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
         setBookingClassId(null);
 
         if (res.error) {
+            // Race condition: class filled up between page load and click → offer waitlist
+            if ((res as any).full && (isMember || isTrial)) {
+                await handleWaitlist({ id: classId, is_waitlisted: false });
+                return;
+            }
             showToast(res.error, false);
         } else {
             showToast((res as any).message || (isMember ? "¡Reserva confirmada!" : "¡Clase de prueba reservada!"));
             loadSchedule(scheduleDate);
         }
+    }
+
+    // Waitlist Flow - Join or leave the waitlist of a full class
+    async function handleWaitlist(cls: { id: string; is_waitlisted: boolean }) {
+        if (cls.is_waitlisted) {
+            if (!confirm("¿Seguro que quieres salir de la lista de espera de esta clase?")) return;
+            setBookingClassId(cls.id);
+            const res = await leaveWaitlist(org.id, cls.id);
+            setBookingClassId(null);
+            if (res.error) {
+                showToast(res.error, false);
+            } else {
+                showToast("Has salido de la lista de espera.");
+                loadSchedule(scheduleDate);
+            }
+            return;
+        }
+
+        if (!confirm("La clase está completa. ¿Quieres apuntarte a la lista de espera? Si se libera una plaza, tu reserva se confirmará automáticamente y te avisaremos.")) return;
+        setBookingClassId(cls.id);
+        const res = await joinWaitlist(org.id, cls.id);
+        setBookingClassId(null);
+        if (res.error) {
+            showToast(res.error, false);
+        } else {
+            showToast((res as any).message || "¡Estás en la lista de espera!");
+        }
+        loadSchedule(scheduleDate);
     }
 
     async function handleViewAttendees(classId: string) {
@@ -1431,19 +1464,35 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                                         {cls.enrolled_count}/{cls.max_capacity}
                                                     </span>
                                                     <span className="text-[8px] uppercase font-black tracking-widest text-gray-500">Plazas</span>
+                                                    {cls.waitlist_count > 0 && (
+                                                        <span className="block text-[8px] uppercase font-black tracking-widest text-amber-500 mt-0.5">
+                                                            +{cls.waitlist_count} en espera
+                                                        </span>
+                                                    )}
                                                 </div>
 
                                                 <div className="flex flex-col gap-2 w-full sm:w-auto">
                                                     {/* Enroll Button */}
                                                     <button
-                                                        onClick={() => handleBook(cls.id, cls.is_enrolled)}
+                                                        onClick={() => {
+                                                            const isFull = cls.enrolled_count >= cls.max_capacity;
+                                                            if (!cls.is_enrolled && isFull && (isMember || isTrial)) {
+                                                                handleWaitlist(cls);
+                                                            } else {
+                                                                handleBook(cls.id, cls.is_enrolled);
+                                                            }
+                                                        }}
                                                         onMouseEnter={() => setHoveredClassId(cls.id)}
                                                         onMouseLeave={() => setHoveredClassId(null)}
-                                                        disabled={bookingClassId === cls.id || (cls.enrolled_count >= cls.max_capacity && !cls.is_enrolled)}
+                                                        disabled={bookingClassId === cls.id || (cls.enrolled_count >= cls.max_capacity && !cls.is_enrolled && !isMember && !isTrial)}
                                                         className={`w-full sm:px-8 py-3.5 sm:py-4 rounded-xl sm:rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${cls.is_enrolled
                                                             ? 'bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/30'
                                                             : cls.enrolled_count >= cls.max_capacity
-                                                                ? 'bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5'
+                                                                ? cls.is_waitlisted
+                                                                    ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20 hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/30'
+                                                                    : (isMember || isTrial)
+                                                                        ? 'bg-transparent text-amber-500 border border-amber-500/40 hover:bg-amber-500/10'
+                                                                        : 'bg-gray-800 text-gray-500 cursor-not-allowed border border-white/5'
                                                                 : isMember
                                                                     ? 'bg-brand-red text-white hover:bg-red-600 shadow-xl'
                                                                     : 'bg-white text-black hover:bg-gray-200'
@@ -1452,8 +1501,11 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                                         {bookingClassId === cls.id ? '...' :
                                                             cls.is_enrolled
                                                                 ? (hoveredClassId === cls.id ? 'Cancelar Reserva' : 'Inscrito ✓')
-                                                                : cls.enrolled_count >= cls.max_capacity ? 'Completo' :
-                                                                    isMember ? 'Reservar Plaza' : (isTrainer ? 'Agendar' : (hasUsedTrial ? 'Drop-in' : 'Prueba Gratis'))}
+                                                                : cls.enrolled_count >= cls.max_capacity
+                                                                    ? cls.is_waitlisted
+                                                                        ? (hoveredClassId === cls.id ? 'Salir de Espera' : 'En Espera ✓')
+                                                                        : (isMember || isTrial) ? 'Lista de Espera' : 'Completo'
+                                                                    : isMember ? 'Reservar Plaza' : (isTrainer ? 'Agendar' : (hasUsedTrial ? 'Drop-in' : 'Prueba Gratis'))}
                                                     </button>
 
                                                     {/* Result/Attendees Actions */}
@@ -1537,18 +1589,28 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                                                 </button>
 
                                                                 <button
-                                                                    onClick={() => handleBook(cls.id, cls.is_enrolled)}
+                                                                    onClick={() => {
+                                                                        if (!cls.is_enrolled && cls.enrolled_count >= cls.max_capacity) {
+                                                                            // Full class → go to day view where the waitlist lives
+                                                                            setScheduleDate(date);
+                                                                            setScheduleViewMode('day');
+                                                                        } else {
+                                                                            handleBook(cls.id, cls.is_enrolled);
+                                                                        }
+                                                                    }}
                                                                     onMouseEnter={() => setHoveredClassId(cls.id)}
                                                                     onMouseLeave={() => setHoveredClassId(null)}
-                                                                    disabled={bookingClassId === cls.id || (cls.enrolled_count >= cls.max_capacity && !cls.is_enrolled)}
+                                                                    disabled={bookingClassId === cls.id}
                                                                     className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cls.is_enrolled
                                                                         ? 'bg-green-500/10 text-green-500 border border-green-500/20 hover:bg-red-500/20 hover:text-red-500 hover:border-red-500/30'
-                                                                        : 'bg-brand-red text-white hover:bg-red-600'
+                                                                        : cls.enrolled_count >= cls.max_capacity
+                                                                            ? 'bg-transparent text-amber-500 border border-amber-500/40 hover:bg-amber-500/10'
+                                                                            : 'bg-brand-red text-white hover:bg-red-600'
                                                                         }`}
                                                                 >
                                                                     {cls.is_enrolled
                                                                         ? (hoveredClassId === cls.id ? 'Cancelar' : '✓')
-                                                                        : 'Book'}
+                                                                        : cls.enrolled_count >= cls.max_capacity ? 'Espera' : 'Book'}
                                                                 </button>
                                                             </div>
                                                         </div>

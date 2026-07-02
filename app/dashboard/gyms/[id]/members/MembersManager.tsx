@@ -56,6 +56,9 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
     const [plan, setPlan] = useState("unlimited");
     const [paymentMethod, setPaymentMethod] = useState("cash");
     const [cardNumber, setCardNumber] = useState("");
+    const [emergencyName, setEmergencyName] = useState("");
+    const [emergencyPhone, setEmergencyPhone] = useState("");
+    const [membershipEndDate, setMembershipEndDate] = useState("");
 
     const [planDropdownOpen, setPlanDropdownOpen] = useState(false);
     const [paymentDropdownOpen, setPaymentDropdownOpen] = useState(false);
@@ -98,6 +101,9 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
             setBirthDate(member.birth_date || member.user?.birth_date || "");
             setPlan(member.plan || "unlimited");
             setPaymentMethod(member.payment_method || "cash");
+            setEmergencyName(member.emergency_contact_name || "");
+            setEmergencyPhone(member.emergency_contact_phone || "");
+            setMembershipEndDate(member.membership_end_date || "");
             setNotes(member.notes || "");
             let inj = "";
             let sport = "";
@@ -155,6 +161,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
         if (statusFilter === 'pending') return matchesSearch && s === 'pending';
         if (statusFilter === 'trial') return matchesSearch && s === 'trial';
         if (statusFilter === 'paused') return matchesSearch && s === 'paused';
+        if (statusFilter === 'expired') return matchesSearch && s === 'active' && isExpired(m);
 
         // "inactive" catches everything else that isn't the above (De Baja)
         if (statusFilter === 'inactive') {
@@ -172,6 +179,9 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
         setPlan("unlimited");
         setPaymentMethod("cash");
         setCardNumber("");
+        setEmergencyName("");
+        setEmergencyPhone("");
+        setMembershipEndDate("");
         setIsEditing(false);
         setProfileSearchQuery("");
         setSearchResults([]);
@@ -213,6 +223,27 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
         return birth.getDate() === now.getDate() && birth.getMonth() === now.getMonth();
     };
 
+    // Estado de pago según vencimiento de membresía (function declarations → hoisted,
+    // se usan en filteredMembers más arriba en el cuerpo del componente)
+    function getPaymentStatus(m: any): { label: string; cls: string; dot: string } | null {
+        if (m.status !== 'active' || !m.membership_end_date) return null;
+        const end = new Date(m.membership_end_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const daysLeft = Math.ceil((end.getTime() - today.getTime()) / 86400000);
+        if (daysLeft < 0) return { label: 'Vencido', cls: 'bg-red-500/10 text-red-500 border border-red-500/20', dot: 'bg-red-500' };
+        if (daysLeft <= 5) return { label: daysLeft === 0 ? 'Vence hoy' : `Vence en ${daysLeft}d`, cls: 'bg-amber-500/10 text-amber-500 border border-amber-500/20', dot: 'bg-amber-500' };
+        return { label: 'Al día', cls: 'bg-green-500/10 text-green-500 border border-green-500/20', dot: 'bg-green-500' };
+    }
+
+    function isExpired(m: any) {
+        if (!m.membership_end_date) return false;
+        const end = new Date(m.membership_end_date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        return end.getTime() < today.getTime();
+    }
+
     async function handleAdd(e: React.FormEvent) {
         e.preventDefault();
         setIsSaving(true);
@@ -230,7 +261,10 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
             payment_method: paymentMethod,
             auto_billing: paymentMethod === 'card',
             card_last4: paymentMethod === 'card' ? cardNumber.slice(-4) : null,
-            full_name: plan === 'guest' ? username : null
+            full_name: plan === 'guest' ? username : null,
+            emergency_contact_name: emergencyName.trim() || null,
+            emergency_contact_phone: emergencyPhone.trim() || null,
+            membership_end_date: membershipEndDate || null
         };
 
         let res;
@@ -301,7 +335,10 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
             payment_method: paymentMethod,
             notes: combinedNotes,
             auto_billing: paymentMethod === 'card',
-            card_last4: paymentMethod === 'card' && cardNumber ? cardNumber.slice(-4) : viewingMember.card_last4
+            card_last4: paymentMethod === 'card' && cardNumber ? cardNumber.slice(-4) : viewingMember.card_last4,
+            emergency_contact_name: emergencyName.trim() || null,
+            emergency_contact_phone: emergencyPhone.trim() || null,
+            membership_end_date: membershipEndDate || null
         };
 
         // If converting from trial to a real plan
@@ -620,6 +657,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                             <option value="pending">Pendientes</option>
                             <option value="trial">En Prueba</option>
                             <option value="paused">Pausados</option>
+                            <option value="expired">Pago Vencido</option>
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                     </div>
@@ -680,6 +718,9 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                         setBirthDate(m.birth_date || m.user?.birth_date || "");
                                         setPlan(m.plan || "unlimited");
                                         setPaymentMethod(m.payment_method || "cash");
+                                        setEmergencyName(m.emergency_contact_name || "");
+                                        setEmergencyPhone(m.emergency_contact_phone || "");
+                                        setMembershipEndDate(m.membership_end_date || "");
                                         setNotes(m.notes || "");
                                         let inj = "";
                                         let sport = "";
@@ -765,6 +806,12 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                     <><Landmark className="w-3.5 h-3.5 text-green-400" /> Efectivo</>
                                                 )}
                                             </span>
+                                            {getPaymentStatus(m) && (
+                                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-wider w-fit ${getPaymentStatus(m)!.cls}`}>
+                                                    <span className={`w-1 h-1 rounded-full ${getPaymentStatus(m)!.dot}`} />
+                                                    {getPaymentStatus(m)!.label}
+                                                </span>
+                                            )}
                                         </div>
                                     </td>
                                     <td className="px-4 sm:px-6 py-3 sm:py-4 text-center">
@@ -1132,6 +1179,29 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                                 <p className="text-xs text-foreground font-semibold">{phone || "No especificado"}</p>
                                             )}
                                         </div>
+
+                                        <div className="grid grid-cols-2 gap-2 bg-red-500/5 border border-red-500/10 rounded-xl p-2">
+                                            <div>
+                                                <label className="block text-[7px] font-black uppercase tracking-widest text-red-400/80 mb-0.5">Contacto de Emergencia</label>
+                                                {isEditing ? (
+                                                    <input value={emergencyName} onChange={e => setEmergencyName(e.target.value)} placeholder="Nombre" className="w-full bg-background border border-border rounded-lg p-2 text-foreground outline-none focus:border-brand-red text-[11px]" />
+                                                ) : (
+                                                    <p className="text-xs text-foreground font-semibold">{emergencyName || "No especificado"}</p>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <label className="block text-[7px] font-black uppercase tracking-widest text-red-400/80 mb-0.5">Tel. Emergencia</label>
+                                                {isEditing ? (
+                                                    <input type="tel" value={emergencyPhone} onChange={e => setEmergencyPhone(e.target.value)} placeholder="Teléfono" className="w-full bg-background border border-border rounded-lg p-2 text-foreground outline-none focus:border-brand-red text-[11px]" />
+                                                ) : (
+                                                    emergencyPhone ? (
+                                                        <a href={`tel:${emergencyPhone}`} className="text-xs text-brand-red font-bold underline">{emergencyPhone}</a>
+                                                    ) : (
+                                                        <p className="text-xs text-foreground font-semibold">No especificado</p>
+                                                    )
+                                                )}
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1188,9 +1258,27 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
 
                                 {/* Billing Section in Ficha */}
                                 <div className="pt-3 border-t border-border">
-                                    <div className="flex items-center gap-1.5 text-brand-red mb-3">
-                                        <div className="text-brand-red opacity-60 bg-brand-red/10 p-1 rounded-lg"><Landmark className="w-3 h-3" /></div>
-                                        <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Datos de Facturación</span>
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="flex items-center gap-1.5 text-brand-red">
+                                            <div className="text-brand-red opacity-60 bg-brand-red/10 p-1 rounded-lg"><Landmark className="w-3 h-3" /></div>
+                                            <span className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">Datos de Facturación</span>
+                                        </div>
+                                        {getPaymentStatus(viewingMember) && (
+                                            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${getPaymentStatus(viewingMember)!.cls}`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${getPaymentStatus(viewingMember)!.dot}`} />
+                                                {getPaymentStatus(viewingMember)!.label}
+                                            </span>
+                                        )}
+                                    </div>
+                                    <div className="mb-3">
+                                        <label className="block text-[7px] font-black uppercase tracking-widest text-muted-foreground mb-0.5">Vencimiento de Membresía</label>
+                                        {isEditing ? (
+                                            <input type="date" value={membershipEndDate ? membershipEndDate.split('T')[0] : ''} onChange={e => setMembershipEndDate(e.target.value)} className="w-full bg-background border border-border rounded-lg p-2 sm:p-2.5 text-foreground outline-none focus:border-brand-red text-[11px]" />
+                                        ) : (
+                                            <p className="text-xs text-foreground font-semibold">
+                                                {membershipEndDate ? new Date(membershipEndDate).toLocaleDateString('es-ES') : 'Sin fecha de vencimiento'}
+                                            </p>
+                                        )}
                                     </div>
                                     <div className="bg-muted/50 p-2 sm:p-3 rounded-xl border border-border">
                                         <div className="flex gap-3 mb-3">
@@ -1599,6 +1687,22 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                             )}
                                         </div>
                                     )}
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                                        <div>
+                                            <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1 sm:mb-2">Contacto de Emergencia</label>
+                                            <input value={emergencyName} onChange={e => setEmergencyName(e.target.value)} placeholder="Nombre" className="w-full bg-background border border-border rounded-xl p-3 sm:p-4 text-foreground outline-none focus:border-brand-red text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1 sm:mb-2">Tel. Emergencia</label>
+                                            <input type="tel" value={emergencyPhone} onChange={e => setEmergencyPhone(e.target.value)} placeholder="Teléfono" className="w-full bg-background border border-border rounded-xl p-3 sm:p-4 text-foreground outline-none focus:border-brand-red text-sm" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1 sm:mb-2">Vencimiento Membresía</label>
+                                            <input type="date" value={membershipEndDate} onChange={e => setMembershipEndDate(e.target.value)} className="w-full bg-background border border-border rounded-xl p-3 sm:p-4 text-foreground outline-none focus:border-brand-red text-sm" />
+                                        </div>
+                                    </div>
+
                                     <div className="flex gap-3 sm:gap-4 pt-4">
                                         <button type="button" onClick={() => setShowModal(false)} className="flex-1 bg-muted text-muted-foreground py-3 sm:py-4 rounded-xl text-xs font-black uppercase tracking-widest">Cancelar</button>
                                         <button type="submit" disabled={isSaving} className="flex-[2] bg-brand-red text-white py-3 sm:py-4 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl">{isSaving ? 'Guardando...' : 'Registrar'}</button>
