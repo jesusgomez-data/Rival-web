@@ -170,7 +170,7 @@ export default async function ChallengeDetailPage({ params }: { params: Promise<
                                         <CheckCircle2 className="w-4 h-4" /> Inscrito
                                     </div>
 
-                                    {myParticipation.is_completed && (
+                                    {myParticipation.is_completed && myParticipation.current_progress >= challenge.goal_value && (
                                         <ChallengeCompletionCard
                                             challenge={challenge}
                                             user={myParticipation.profiles}
