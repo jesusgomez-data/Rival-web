@@ -13,22 +13,51 @@ interface VideoContextType {
 const VideoContext = createContext<VideoContextType | undefined>(undefined);
 
 export function VideoProvider({ children }: { children: React.ReactNode }) {
+  // REGLA DE ORO DEL AUDIO:
+  // La app SIEMPRE arranca en silencio. El sonido solo se activa si el
+  // usuario toca el altavoz en ESTA sesión. No se persiste entre sesiones
+  // (persistirlo hacía que la app abriera reproduciendo música sola).
   const [isMuted, setIsMuted] = useState(true);
   const [lastActiveVideoId, setLastActiveVideoId] = useState<string | null>(null);
 
-  // Load from localStorage if available
+  // Al salir de la app (cambiar de pestaña, bloquear el móvil, ir al home):
+  // pausar TODO el audio y vídeo de la página. Nunca más música fantasma.
   useEffect(() => {
-    const saved = localStorage.getItem('video-muted');
-    if (saved !== null) {
-      setIsMuted(saved === 'true');
-    }
+    const stopAllMedia = () => {
+      document.querySelectorAll('audio, video').forEach((el) => {
+        try {
+          (el as HTMLMediaElement).pause();
+        } catch {
+          /* noop */
+        }
+      });
+    };
+
+    const onVisibilityChange = () => {
+      if (document.hidden) stopAllMedia();
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pagehide', stopAllMedia);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pagehide', stopAllMedia);
+    };
   }, []);
 
   const handleSetMuted = (muted: boolean) => {
     setIsMuted(muted);
-    // Use a custom event to notify all video elements to update immediately if needed
-    // although the context update should handle it in React components
-    localStorage.setItem('video-muted', muted.toString());
+    // Al silenciar manualmente, corta también cualquier audio de música en curso
+    if (muted && typeof document !== 'undefined') {
+      document.querySelectorAll('audio').forEach((el) => {
+        try {
+          (el as HTMLAudioElement).pause();
+        } catch {
+          /* noop */
+        }
+      });
+    }
   };
 
   const toggleMute = () => {
@@ -36,9 +65,9 @@ export function VideoProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <VideoContext.Provider value={{ 
-      isMuted, 
-      setIsMuted: handleSetMuted, 
+    <VideoContext.Provider value={{
+      isMuted,
+      setIsMuted: handleSetMuted,
       toggleMute,
       lastActiveVideoId,
       setLastActiveVideoId
