@@ -741,5 +741,116 @@ body {
   animation: float-emoji 2.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
 }
 
+/* ════════════════════════════════════════════════════════════════
+   RIVAL POLISH LAYER — pulido profesional global
+   ════════════════════════════════════════════════════════════════ */
+
+/* 1. ANIMACIONES DE ENTRADA
+   La app usa clases estilo tailwindcss-animate (animate-in, fade-in,
+   slide-in-from-*) en ~50 archivos, pero el plugin nunca se instaló:
+   eran clases muertas. Estas reglas las activan sin dependencias. */
+@keyframes rival-enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(var(--tw-enter-translate-x, 0), var(--tw-enter-translate-y, 0), 0)
+      scale3d(var(--tw-enter-scale, 1), var(--tw-enter-scale, 1), 1);
+  }
+}
+
+.animate-in {
+  animation: rival-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-in.fade-in { --tw-enter-opacity: 0; }
+.animate-in.zoom-in { --tw-enter-scale: 0.96; }
+.animate-in.zoom-in-95 { --tw-enter-scale: 0.95; }
+.animate-in.slide-in-from-top-2 { --tw-enter-translate-y: -0.5rem; }
+.animate-in.slide-in-from-top-4 { --tw-enter-translate-y: -1rem; }
+.animate-in.slide-in-from-bottom { --tw-enter-translate-y: 1.5rem; }
+.animate-in.slide-in-from-bottom-2 { --tw-enter-translate-y: 0.5rem; }
+.animate-in.slide-in-from-bottom-4 { --tw-enter-translate-y: 1rem; }
+.animate-in.slide-in-from-right-4 { --tw-enter-translate-x: 1rem; }
+.animate-in.slide-in-from-left-4 { --tw-enter-translate-x: -1rem; }
+.animate-in.duration-200 { animation-duration: 0.2s; }
+.animate-in.duration-300 { animation-duration: 0.3s; }
+.animate-in.duration-500 { animation-duration: 0.5s; }
+.animate-in.duration-700 { animation-duration: 0.7s; }
+.animate-in.duration-1000 { animation-duration: 1s; }
+
+/* Fade genérico usado como .animate-fade-in en varias páginas (también estaba muerto) */
+@keyframes rival-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+.animate-fade-in {
+  animation: rival-fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* 2. TIPOGRAFÍA Y RENDER */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3 { text-wrap: balance; }
+
+/* 3. FOCUS PROFESIONAL (accesible y de marca) */
+:focus-visible {
+  outline: 2px solid rgba(239, 68, 68, 0.65);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+input, select, textarea {
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12);
+}
+
+/* 4. MICRO-INTERACCIÓN EN BOTONES
+   (se excluyen los posicionados con translate para no romper su layout) */
+button:not(:disabled):not([class*="translate"]):active {
+  transform: scale(0.97);
+}
+
+/* 5. SCROLLBARS FINOS Y DE MARCA */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 120, 0.3) transparent;
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(120, 120, 120, 0.25);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(239, 68, 68, 0.5); }
+
+.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+
+/* 6. SELECCIÓN DE TEXTO DE MARCA */
+::selection {
+  background: rgba(239, 68, 68, 0.85);
+  color: #ffffff;
+}
+
+/* 7. ACCESIBILIDAD: respetar reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in,
+  .animate-fade-in,
+  .animate-float-emoji,
+  .animate-scan,
+  .animate-logo-glow {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
 
 

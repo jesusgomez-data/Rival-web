@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Plus, Search, User, CheckCircle, Trash2, Edit2, X, CreditCard, Phone, Mail, Landmark, Power, Cake, Calendar, Link as LinkIcon, Loader2, ChevronDown, Check, Send, Download, Upload, FileText, AlertCircle, Building2 } from "lucide-react";
-import { addMember, addGuestMember, requestMemberPayment, approveTrialRequest, removeMember, updateMemberDetails, toggleMemberStatus, searchAthletes, linkMemberToUser, bulkImportMembers, getCenterMembers, getLeaveRequests, processLeaveRequest } from "../../member-actions";
+import { addMember, addGuestMember, requestMemberPayment, approveTrialRequest, removeMember, updateMemberDetails, toggleMemberStatus, searchAthletes, linkMemberToUser, bulkImportMembers, getCenterMembers, getLeaveRequests, processLeaveRequest, cancelMemberSubscription } from "../../member-actions";
+import { getMemberPayments } from "../../payment-history-actions";
 import { isProfessional } from "@/lib/professional-types";
 import { sendRegistrationEmail } from "../../email-actions";
 import { getPendingCancellations } from "../../cancellation-actions";
@@ -26,6 +27,7 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
         console.log("[MembersManager] initialMembers count:", initialMembers?.length || 0);
         getPendingCancellations(centerId).then(setPendingCancellations);
     }, [initialMembers]);
+    const [memberPayments, setMemberPayments] = useState<any[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [viewingMember, setViewingMember] = useState<any>(null);
     const [isEditing, setIsEditing] = useState(false);
@@ -137,6 +139,15 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
             console.warn("Member ID from URL not found in members list:", memberIdParam);
         }
     }, [memberIdParam, members, router, searchParams]);
+
+    // Cargar historial de pagos al abrir la ficha de un miembro
+    useEffect(() => {
+        if (viewingMember?.id && !viewingMember.is_request) {
+            getMemberPayments(centerId, viewingMember.id).then(setMemberPayments).catch(() => setMemberPayments([]));
+        } else {
+            setMemberPayments([]);
+        }
+    }, [viewingMember?.id, centerId]);
 
     const [statusFilter, setStatusFilter] = useState("all");
 
@@ -394,6 +405,20 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
         } else {
             setIsSaving(false);
             setIsEditing(false);
+            window.location.reload();
+        }
+    }
+
+    async function handleCancelSubscription() {
+        if (!viewingMember) return;
+        if (!confirm("¿Cancelar la renovación automática de este alumno? Mantendrá el acceso hasta el final del período ya pagado.")) return;
+        setIsSaving(true);
+        const res = await cancelMemberSubscription(centerId, viewingMember.id);
+        setIsSaving(false);
+        if (res.error) {
+            alert(res.error);
+        } else {
+            alert("Renovación automática cancelada. El alumno mantiene el acceso hasta su vencimiento.");
             window.location.reload();
         }
     }
@@ -1280,6 +1305,23 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                             </p>
                                         )}
                                     </div>
+
+                                    {viewingMember.stripe_subscription_id && (
+                                        <div className="mb-3 flex items-center justify-between gap-3 bg-blue-500/5 border border-blue-500/20 rounded-xl p-3">
+                                            <div className="min-w-0">
+                                                <p className="text-[9px] font-black uppercase tracking-widest text-blue-400">Renovación Automática Activa</p>
+                                                <p className="text-[10px] text-muted-foreground mt-0.5">La cuota se cobra sola vía Stripe y el vencimiento se extiende en cada cobro.</p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={handleCancelSubscription}
+                                                disabled={isSaving}
+                                                className="shrink-0 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-red-500 border border-border hover:border-red-500/30 rounded-lg px-3 py-2 transition-all disabled:opacity-50"
+                                            >
+                                                Cancelar Renovación
+                                            </button>
+                                        </div>
+                                    )}
                                     <div className="bg-muted/50 p-2 sm:p-3 rounded-xl border border-border">
                                         <div className="flex gap-3 mb-3">
                                             <button disabled={!isEditing} type="button" onClick={() => setPaymentMethod('cash')} className={`flex-1 flex items-center justify-center gap-2 py-2 sm:py-2.5 rounded-lg border transition-all ${paymentMethod === 'cash' ? 'bg-brand-red border-brand-red text-white' : 'bg-muted border-border text-muted-foreground hover:text-foreground'} disabled:opacity-50`}>
@@ -1304,6 +1346,38 @@ export default function MembersManager({ centerId, initialMembers, plans = [], c
                                             </div>
                                         )}
                                     </div>
+
+                                    {/* Historial de Pagos del Miembro */}
+                                    {memberPayments.length > 0 && (
+                                        <div className="mt-3">
+                                            <label className="block text-[7px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Historial de Pagos ({memberPayments.length})</label>
+                                            <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                                                {memberPayments.map((p: any) => (
+                                                    <div key={p.id} className="flex items-center justify-between gap-2 bg-background/60 border border-border rounded-lg px-3 py-2">
+                                                        <div className="min-w-0">
+                                                            <p className="text-[11px] font-bold text-foreground truncate">{p.plan_name || 'Cuota'}</p>
+                                                            <p className="text-[9px] text-muted-foreground uppercase tracking-wider">
+                                                                {new Date(p.paid_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                                            </p>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 shrink-0">
+                                                            <span className="text-xs font-black italic text-foreground">{Number(p.amount).toFixed(2)}€</span>
+                                                            {(p.invoice_pdf || p.invoice_url || p.receipt_url) && (
+                                                                <a
+                                                                    href={p.invoice_pdf || p.invoice_url || p.receipt_url}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="text-[8px] font-black uppercase tracking-widest text-brand-red hover:underline"
+                                                                >
+                                                                    {p.invoice_pdf ? 'PDF' : 'Recibo'}
+                                                                </a>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Section for Injuries, Sports & Notes */}

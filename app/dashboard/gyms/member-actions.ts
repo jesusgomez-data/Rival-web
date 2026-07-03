@@ -250,7 +250,21 @@ export async function requestMemberPayment(centerId: string, planId: string, use
         const platformFeeCents = Math.round(amountCents * PLATFORM_FEE_PERCENT / 100);
         const centerHasConnect = !!(centerOrg?.stripe_account_id && centerOrg?.stripe_onboarding_complete);
 
-        // 4. Create Checkout Session
+        // Recurring plans need Stripe Connect so the money can be routed to the center
+        const isRecurring = !!plan.is_recurring;
+        if (isRecurring && !centerHasConnect) {
+            return { error: "Este plan tiene renovación automática y requiere Stripe configurado. Ve a Ajustes → Facturación y completa la conexión con Stripe, o edita el plan como pago único." };
+        }
+
+        const sessionMetadata = {
+            type: 'membership_payment',
+            centerId,
+            planId,
+            userId,
+            extraData: JSON.stringify(extraData)
+        };
+
+        // 4. Create Checkout Session (subscription for recurring plans, one-time otherwise)
         const session = await stripe.checkout.sessions.create({
             customer: customerId,
             payment_method_types: ['card'],
@@ -259,15 +273,23 @@ export async function requestMemberPayment(centerId: string, planId: string, use
                     currency: 'eur',
                     product_data: {
                         name: `Membresía: ${plan.name}`,
-                        description: `Pago de membresía para el centro`,
+                        description: isRecurring
+                            ? `Cuota con renovación automática cada ${plan.duration_months === 1 ? 'mes' : `${plan.duration_months} meses`}`
+                            : `Pago de membresía para el centro`,
                     },
                     unit_amount: amountCents,
+                    ...(isRecurring && {
+                        recurring: {
+                            interval: 'month' as const,
+                            interval_count: plan.duration_months || 1
+                        }
+                    })
                 },
                 quantity: 1,
             }],
-            mode: 'payment',
+            mode: isRecurring ? 'subscription' : 'payment',
             // Destination charge: platform deducts fee, rest goes to center's bank account
-            ...(centerHasConnect && {
+            ...(!isRecurring && centerHasConnect && {
                 payment_intent_data: {
                     application_fee_amount: platformFeeCents,
                     transfer_data: {
@@ -275,15 +297,23 @@ export async function requestMemberPayment(centerId: string, planId: string, use
                     },
                 },
             }),
+            ...(isRecurring && {
+                subscription_data: {
+                    application_fee_percent: PLATFORM_FEE_PERCENT,
+                    transfer_data: {
+                        destination: centerOrg!.stripe_account_id!,
+                    },
+                    metadata: {
+                        type: 'membership_subscription',
+                        centerId,
+                        planId,
+                        userId
+                    }
+                },
+            }),
             success_url: `${process.env.NEXT_PUBLIC_APP_URL}/gym/${centerId}?status=success_payment`,
             cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/gym/${centerId}?status=canceled_payment`,
-            metadata: {
-                type: 'membership_payment',
-                centerId,
-                planId,
-                userId,
-                extraData: JSON.stringify(extraData)
-            }
+            metadata: sessionMetadata
         });
 
 
@@ -800,6 +830,61 @@ export async function processLeaveRequest(requestId: string, action: 'approve' |
     }
 
     revalidatePath(`/dashboard/gyms/${req.center_id}/members`);
+    return { success: true };
+}
+
+/**
+ * Cancela la renovación automática de la cuota de un miembro.
+ * La suscripción sigue activa hasta el final del período ya pagado.
+ */
+export async function cancelMemberSubscription(centerId: string, memberId: string) {
+    const supabase = await createClient();
+    const admin = createAdminClient();
+    const { stripe } = await import("@/utils/stripe/config");
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "No autenticado" };
+
+    // Solo owner / head coach del centro
+    const { data: org } = await admin.from('organizations').select('owner_id, head_coach_id').eq('id', centerId).single();
+    const isOwnerOrHead = org && (org.owner_id === user.id || org.head_coach_id === user.id);
+    if (!isOwnerOrHead) {
+        const { data: roleData } = await admin.from('center_roles').select('role').eq('organization_id', centerId).eq('user_id', user.id).maybeSingle();
+        if (roleData?.role !== 'head_coach') return { error: "Solo el propietario o head coach puede cancelar renovaciones." };
+    }
+
+    const { data: member } = await admin
+        .from('members')
+        .select('id, user_id, full_name, stripe_subscription_id')
+        .eq('id', memberId)
+        .eq('center_id', centerId)
+        .single();
+
+    if (!member) return { error: "Miembro no encontrado." };
+    if (!member.stripe_subscription_id) return { error: "Este miembro no tiene renovación automática activa." };
+
+    try {
+        await stripe.subscriptions.update(member.stripe_subscription_id, {
+            cancel_at_period_end: true
+        });
+    } catch (err: any) {
+        console.error('[cancelMemberSubscription]', err);
+        return { error: "No se pudo cancelar en Stripe: " + (err.message || 'error desconocido') };
+    }
+
+    // La limpieza definitiva de stripe_subscription_id la hace el webhook
+    // (customer.subscription.deleted) cuando el período termina.
+    if (member.user_id) {
+        await createNotification({
+            userId: member.user_id,
+            type: 'subscription_cancelled',
+            title: 'Renovación automática cancelada',
+            content: `Tu cuota ya no se renovará automáticamente. Mantienes el acceso hasta el final del período ya pagado.`,
+            link: `/gym/${centerId}`
+        });
+    }
+
+    revalidatePath(`/dashboard/gyms/${centerId}/members`);
     return { success: true };
 }
 

@@ -17,6 +17,7 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
     const [duration, setDuration] = useState("1");
     const [features, setFeatures] = useState<string[]>([]);
     const [newFeature, setNewFeature] = useState("");
+    const [isRecurring, setIsRecurring] = useState(false);
 
     const resetForm = () => {
         setName("");
@@ -25,6 +26,7 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
         setDuration("1");
         setFeatures([]);
         setNewFeature("");
+        setIsRecurring(false);
         setEditingPlan(null);
     };
 
@@ -35,6 +37,7 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
         setPrice(plan.price.toString());
         setDuration(plan.duration_months.toString());
         setFeatures(plan.features || []);
+        setIsRecurring(!!plan.is_recurring);
         setShowModal(true);
     };
 
@@ -57,7 +60,8 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
             description,
             price: parseFloat(price),
             duration: parseInt(duration),
-            features
+            features,
+            is_recurring: isRecurring
         };
 
         try {
@@ -151,10 +155,19 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
                                 <h3 className="text-xl font-black text-foreground uppercase italic tracking-tighter mb-1">{plan.name}</h3>
                                 <p className="text-xs text-muted-foreground mb-4 line-clamp-2">{plan.description || "Sin descripción proporcionada."}</p>
 
-                                <div className="flex items-baseline gap-1 mb-6">
+                                <div className="flex items-baseline gap-1 mb-2">
                                     <span className="text-3xl font-black text-foreground italic">{plan.price}€</span>
                                     <span className="text-xs text-muted-foreground font-bold uppercase tracking-widest">/ {plan.duration_months === 1 ? "mes" : `${plan.duration_months} meses`}</span>
                                 </div>
+                                {plan.is_recurring ? (
+                                    <span className="inline-flex items-center gap-1.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full mb-4">
+                                        <Clock className="w-3 h-3" /> Renovación Automática
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1.5 bg-muted text-muted-foreground border border-border text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full mb-4">
+                                        Pago Único
+                                    </span>
+                                )}
 
                                 <div className="space-y-2 mb-6 border-t border-border pt-4">
                                     {plan.features?.length > 0 ? (
@@ -280,6 +293,24 @@ export default function MembershipManager({ centerId, initialPlans }: any) {
                                                 <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
                                             </div>
                                         </div>
+                                    </div>
+
+                                    <div className={`rounded-xl border p-4 transition-all ${isRecurring ? 'bg-blue-500/5 border-blue-500/30' : 'bg-background border-border'}`}>
+                                        <label className="flex items-center justify-between cursor-pointer gap-3">
+                                            <div>
+                                                <p className="text-[11px] font-black uppercase tracking-widest text-foreground">Renovación Automática</p>
+                                                <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">
+                                                    La cuota se cobra sola cada {duration === '1' ? 'mes' : `${duration} meses`} vía Stripe hasta que se cancele. Requiere tener Stripe configurado en Ajustes → Facturación.
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsRecurring(!isRecurring)}
+                                                className={`relative w-11 h-6 rounded-full transition-colors shrink-0 ${isRecurring ? 'bg-blue-500' : 'bg-muted border border-border'}`}
+                                            >
+                                                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${isRecurring ? 'left-[22px]' : 'left-0.5'}`} />
+                                            </button>
+                                        </label>
                                     </div>
 
                                     <div>

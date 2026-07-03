@@ -30,6 +30,7 @@ export async function createMembershipPlan(centerId: string, data: any) {
             price: parseFloat(data.price) || 0,
             duration_months: parseInt(data.duration) || 1,
             features: data.features || [],
+            is_recurring: !!data.is_recurring,
             is_active: true
         });
 
@@ -50,6 +51,7 @@ export async function updateMembershipPlan(centerId: string, planId: string, dat
             price: parseFloat(data.price),
             duration_months: parseInt(data.duration),
             features: data.features,
+            is_recurring: !!data.is_recurring,
             is_active: data.is_active ?? true,
             updated_at: new Date().toISOString()
         })

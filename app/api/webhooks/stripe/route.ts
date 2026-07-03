@@ -124,13 +124,30 @@ export async function POST(req: Request) {
                 } else if (session.metadata?.type === 'membership_payment') {
                     const { centerId, userId, planId } = session.metadata;
 
-                    // 1. Update Member status to 'active'
+                    // 1. Update Member status to 'active' + set expiry from plan duration
+                    const { data: planData } = await supabase
+                        .from('membership_plans')
+                        .select('duration_months')
+                        .eq('id', planId)
+                        .single();
+
+                    const endDate = new Date();
+                    endDate.setMonth(endDate.getMonth() + (planData?.duration_months || 1));
+
+                    const memberUpdate: Record<string, any> = {
+                        status: 'active',
+                        membership_start_date: new Date().toISOString(),
+                        membership_end_date: endDate.toISOString().split('T')[0]
+                    };
+
+                    // Recurring plan → keep the subscription id to renew on each invoice
+                    if (session.mode === 'subscription' && session.subscription) {
+                        memberUpdate.stripe_subscription_id = session.subscription as string;
+                    }
+
                     const { error: memberError } = await supabase
                         .from('members')
-                        .update({
-                            status: 'active',
-                            membership_start_date: new Date().toISOString()
-                        })
+                        .update(memberUpdate)
                         .eq('center_id', centerId)
                         .eq('user_id', userId);
 
@@ -148,6 +165,46 @@ export async function POST(req: Request) {
                         const athleteName = userProfile?.full_name || 'Atleta';
                         const gymName = org?.name || 'Tu Centro';
                         const planName = plan?.name || 'Membresía';
+
+                        // Registrar el pago con su recibo descargable (solo pagos únicos;
+                        // las suscripciones se registran vía invoice.payment_succeeded)
+                        if (session.mode !== 'subscription') {
+                            let receiptUrl: string | null = null;
+                            try {
+                                if (session.payment_intent) {
+                                    const pi = await stripe.paymentIntents.retrieve(
+                                        session.payment_intent as string,
+                                        { expand: ['latest_charge'] }
+                                    );
+                                    receiptUrl = (pi.latest_charge as any)?.receipt_url || null;
+                                }
+                            } catch (e) {
+                                console.error('Error fetching receipt url:', e);
+                            }
+
+                            const { data: memberRow } = await supabase
+                                .from('members')
+                                .select('id')
+                                .eq('center_id', centerId)
+                                .eq('user_id', userId)
+                                .single();
+
+                            const { error: payLogError } = await supabase
+                                .from('membership_payments')
+                                .upsert({
+                                    center_id: centerId,
+                                    member_id: memberRow?.id || null,
+                                    user_id: userId,
+                                    plan_name: planName,
+                                    amount: session.amount_total ? session.amount_total / 100 : 0,
+                                    currency: session.currency || 'eur',
+                                    stripe_ref: session.id,
+                                    receipt_url: receiptUrl,
+                                    paid_at: new Date().toISOString()
+                                }, { onConflict: 'stripe_ref', ignoreDuplicates: true });
+
+                            if (payLogError) console.error('Error logging membership payment:', payLogError);
+                        }
 
                         // Notification in-app
                         await createNotification({
@@ -211,6 +268,43 @@ export async function POST(req: Request) {
 
         case "customer.subscription.deleted": {
             const subscription = event.data.object as Stripe.Subscription;
+
+            // Cuota de miembro de centro → limpiar y avisar, NO tocar el tier del perfil
+            if (subscription.metadata?.type === 'membership_subscription') {
+                const { data: member } = await supabase
+                    .from('members')
+                    .select('id, center_id, user_id, full_name')
+                    .eq('stripe_subscription_id', subscription.id)
+                    .single();
+
+                if (member) {
+                    await supabase
+                        .from('members')
+                        .update({ stripe_subscription_id: null })
+                        .eq('id', member.id);
+
+                    // Avisar al dueño del centro
+                    const { data: org } = await supabase
+                        .from('organizations')
+                        .select('owner_id, name')
+                        .eq('id', member.center_id)
+                        .single();
+
+                    if (org?.owner_id) {
+                        await createNotification({
+                            userId: org.owner_id,
+                            type: 'subscription_cancelled',
+                            title: 'Renovación automática finalizada',
+                            content: `La cuota recurrente de ${member.full_name || 'un alumno'} ha finalizado. Mantiene el acceso hasta su fecha de vencimiento.`,
+                            link: `/dashboard/gyms/${member.center_id}/members`
+                        });
+                    }
+                    console.log(`Member subscription ${subscription.id} cleaned for member ${member.id}`);
+                }
+                break;
+            }
+
+            // Suscripciones de la plataforma (tier de atleta)
             const { data: profile } = await supabase
                 .from("profiles")
                 .select("id")
@@ -251,6 +345,48 @@ export async function POST(req: Request) {
 
         case "invoice.payment_failed": {
             const invoice = event.data.object as Stripe.Invoice;
+            const failedSubId = (invoice as any).subscription as string | null;
+
+            // ¿Es la cuota recurrente de un miembro? → avisar a alumno y dueño
+            if (failedSubId) {
+                const { data: failedMember } = await supabase
+                    .from('members')
+                    .select('id, center_id, user_id, full_name')
+                    .eq('stripe_subscription_id', failedSubId)
+                    .single();
+
+                if (failedMember) {
+                    if (failedMember.user_id) {
+                        await createNotification({
+                            userId: failedMember.user_id,
+                            type: 'payment_failed',
+                            title: 'No pudimos cobrar tu cuota',
+                            content: 'El cobro automático de tu membresía ha fallado. Revisa tu tarjeta; Stripe lo reintentará en los próximos días.',
+                            link: `/gym/${failedMember.center_id}`
+                        });
+                    }
+
+                    const { data: failedOrg } = await supabase
+                        .from('organizations')
+                        .select('owner_id')
+                        .eq('id', failedMember.center_id)
+                        .single();
+
+                    if (failedOrg?.owner_id) {
+                        await createNotification({
+                            userId: failedOrg.owner_id,
+                            type: 'payment_failed',
+                            title: 'Cobro de cuota fallido',
+                            content: `El cobro automático de ${failedMember.full_name || 'un alumno'} ha fallado. Stripe lo reintentará automáticamente.`,
+                            link: `/dashboard/gyms/${failedMember.center_id}/members`
+                        });
+                    }
+
+                    console.warn(`Membership payment failed for member ${failedMember.id}, invoice ${invoice.id}`);
+                    break;
+                }
+            }
+
             const { data: profile } = await supabase
                 .from("profiles")
                 .select("id")
@@ -288,16 +424,44 @@ export async function POST(req: Request) {
             if (subscriptionId) {
                 const { data: member } = await supabase
                     .from('members')
-                    .select('id, center_id')
+                    .select('id, center_id, user_id, full_name')
                     .eq('stripe_subscription_id', subscriptionId)
                     .single();
 
                 if (member) {
+                    // The paid period end IS the new expiry date
+                    const periodEndEpoch = invoice.lines?.data?.[0]?.period?.end;
+                    const newEndDate = periodEndEpoch
+                        ? new Date(periodEndEpoch * 1000).toISOString().split('T')[0]
+                        : null;
+
                     await supabase
                         .from('members')
-                        .update({ status: 'active' })
+                        .update({
+                            status: 'active',
+                            ...(newEndDate && { membership_end_date: newEndDate })
+                        })
                         .eq('id', member.id);
-                    console.log(`Membership renewed for member ${member.id}`);
+
+                    // Registrar el cobro con la factura descargable de Stripe
+                    const { error: invLogError } = await supabase
+                        .from('membership_payments')
+                        .upsert({
+                            center_id: member.center_id,
+                            member_id: member.id,
+                            user_id: member.user_id || null,
+                            plan_name: invoice.lines?.data?.[0]?.description || 'Cuota de membresía',
+                            amount: invoice.amount_paid ? invoice.amount_paid / 100 : 0,
+                            currency: invoice.currency || 'eur',
+                            stripe_ref: invoice.id,
+                            invoice_url: (invoice as any).hosted_invoice_url || null,
+                            invoice_pdf: (invoice as any).invoice_pdf || null,
+                            paid_at: new Date().toISOString()
+                        }, { onConflict: 'stripe_ref', ignoreDuplicates: true });
+
+                    if (invLogError) console.error('Error logging subscription payment:', invLogError);
+
+                    console.log(`Membership renewed for member ${member.id} until ${newEndDate}`);
                 }
             }
             break;

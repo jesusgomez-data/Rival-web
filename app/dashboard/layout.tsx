@@ -540,7 +540,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
             {/* Sidebar Navigation (Desktop) */}
             {showSidebar && (
-                <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-card h-screen fixed left-0 top-0 z-50">
+                <aside className="hidden lg:flex flex-col w-64 border-r border-border bg-card/95 backdrop-blur-xl h-screen fixed left-0 top-0 z-50 shadow-[4px_0_30px_rgba(0,0,0,0.15)]">
                     <div className="p-6 flex items-center justify-between border-b border-border">
                         <div className="flex items-center gap-3">
                             <Image src="/logo.svg" alt="Rival Logo" width={32} height={32} className="w-8 h-8" />
@@ -564,12 +564,15 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                                     key={item.href}
                                     href={item.href}
                                     className={clsx(
-                                        "flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all group relative",
+                                        "flex items-center gap-3 px-4 py-2.5 rounded-xl font-medium transition-all duration-200 group relative overflow-hidden",
                                         isActive
-                                            ? "bg-brand-red text-white shadow-[0_0_15px_rgba(220,38,38,0.3)]"
-                                            : "text-gray-400 hover:bg-foreground/5 hover:text-foreground"
+                                            ? "bg-gradient-to-r from-brand-red to-red-700 text-white shadow-[0_4px_20px_rgba(220,38,38,0.35)] scale-[1.02]"
+                                            : "text-gray-400 hover:bg-foreground/5 hover:text-foreground hover:translate-x-1"
                                     )}
                                 >
+                                    {isActive && (
+                                        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-white/90 rounded-r-full shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
+                                    )}
                                     <div className="relative">
                                         <Icon className={clsx("w-5 h-5", isActive ? "text-white" : "group-hover:text-foreground")} />
                                         {item.href === "/dashboard/messages" && unreadMessages > 0 && (
