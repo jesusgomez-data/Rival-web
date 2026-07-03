@@ -776,6 +776,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const postRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const videoContainerRef = useRef<HTMLDivElement>(null);
+    const videoRetryRef = useRef(0);
     const { isMuted, toggleMute, setLastActiveVideoId, setIsMuted } = useVideo();
 
     const isMusicPlaying = isPlaying && !isMuted;
@@ -1516,10 +1517,11 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 <h4 className="text-lg font-black uppercase italic text-white mb-2 tracking-tighter">VIDEO_NO_DISPONIBLE</h4>
                                 <p className="text-xs text-white/40 uppercase font-bold tracking-widest leading-relaxed mb-8 max-w-[200px]">EL FORMATO NO ES COMPATIBLE O EL ARCHIVO ESTÁ DAÑADO.</p>
                                 <button 
-                                    onClick={(e) => { 
-                                        e.stopPropagation(); 
-                                        setLoadError(false); 
-                                        setIsBuffering(true); 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        setLoadError(false);
+                                        setIsBuffering(true);
+                                        videoRetryRef.current = 0;
                                         if (videoRef.current) {
                                             videoRef.current.load();
                                             videoRef.current.play().catch(() => {});
@@ -1541,6 +1543,15 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             </div>
                         )}
 
+                        {/* Placeholder: evita tarjetas 100% negras en vídeos sin miniatura */}
+                        {isVideo && !currentCoverUrl && !isActuallyPlaying && !loadError && (
+                            <div className="absolute inset-0 z-[1] bg-gradient-to-br from-zinc-900 via-black to-zinc-950 flex items-center justify-center pointer-events-none">
+                                <div className="w-16 h-16 rounded-full bg-white/[0.04] border border-white/10 flex items-center justify-center">
+                                    <Play className="w-7 h-7 text-white/30 ml-0.5" />
+                                </div>
+                            </div>
+                        )}
+
                         {isVideo ? (
                             <video
                                 ref={videoRef}
@@ -1555,19 +1566,35 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 onCanPlay={() => {
                                     if (isVisible && videoRef.current) {
                                         videoRef.current.play().catch((err) => {
-                                            console.warn("[FeedPost] Video play failed:", err);
-                                            setLoadError(true);
+                                            // Autoplay bloqueado por el navegador ≠ vídeo roto.
+                                            // Nunca mostramos el error fatal por esto: probamos en silencio.
+                                            console.warn("[FeedPost] Video play blocked:", err?.name || err);
+                                            if (videoRef.current && err?.name === 'NotAllowedError') {
+                                                videoRef.current.muted = true;
+                                                videoRef.current.play().catch(() => {});
+                                            }
                                             setIsBuffering(false);
                                         });
                                     }
                                 }}
                                 onWaiting={() => setIsBuffering(true)}
-                                onPlaying={() => { setIsBuffering(false); setIsActuallyPlaying(true); setLoadError(false); }}
+                                onPlaying={() => { setIsBuffering(false); setIsActuallyPlaying(true); setLoadError(false); videoRetryRef.current = 0; }}
                                 onPause={() => setIsActuallyPlaying(false)}
                                 onEnded={() => setIsActuallyPlaying(false)}
-                                onError={(e) => {
+                                onError={() => {
                                     if (!isNearViewport) return;
-                                    console.error("[FeedPost] Video load error:", e);
+                                    const mediaError = videoRef.current?.error;
+                                    const code = mediaError?.code;
+                                    console.error("[FeedPost] Video load error. Code:", code, mediaError?.message);
+                                    // 1 = ABORTED: carga cancelada por scroll/navegación → ignorar
+                                    if (code === 1) return;
+                                    // 2 = NETWORK: reintento automático silencioso (hasta 2 veces)
+                                    if (code === 2 && videoRetryRef.current < 2) {
+                                        videoRetryRef.current++;
+                                        setTimeout(() => { videoRef.current?.load(); }, 1200 * videoRetryRef.current);
+                                        return;
+                                    }
+                                    // 3 = DECODE / 4 = SRC_NOT_SUPPORTED: error real
                                     setLoadError(true);
                                     setIsBuffering(false);
                                 }}

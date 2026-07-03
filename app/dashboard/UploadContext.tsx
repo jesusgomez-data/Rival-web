@@ -27,6 +27,27 @@ interface UploadContextType {
 
 const UploadContext = createContext<UploadContextType | undefined>(undefined);
 
+// ── Robustez de subidas ─────────────────────────────────────────
+const MAX_FILE_MB = 200;
+const UPLOAD_TIMEOUT_MS = 180_000; // 3 min por intento: nunca dejar el spinner colgado
+
+function withTimeout<T>(promise: Promise<T> | PromiseLike<T>, ms: number, label: string): Promise<T> {
+    return Promise.race([
+        Promise.resolve(promise),
+        new Promise<T>((_, reject) =>
+            setTimeout(() => reject(new Error(`${label} tardó demasiado. Comprueba tu conexión e inténtalo de nuevo.`)), ms)
+        )
+    ]);
+}
+
+function fileTooBigError(file: File): string | null {
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+        const sizeMb = Math.round(file.size / (1024 * 1024));
+        return `El archivo pesa ${sizeMb} MB (máx. ${MAX_FILE_MB} MB). Recorta el vídeo o bájale la calidad e inténtalo de nuevo.`;
+    }
+    return null;
+}
+
 export function UploadProvider({ children }: { children: React.ReactNode }) {
     const [uploads, setUploads] = useState<UploadTask[]>([]);
     const [celebrationPRs, setCelebrationPRs] = useState<any[]>([]);
@@ -62,6 +83,15 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
 
         setUploads(prev => [newTask, ...prev]);
 
+        // Guardia de tamaño: error claro inmediato en vez de subida eterna
+        if (data.file) {
+            const sizeError = fileTooBigError(data.file);
+            if (sizeError) {
+                setUploads(prev => prev.map(u => u.id === id ? { ...u, status: 'error', error: sizeError } : u));
+                return;
+            }
+        }
+
         try {
             let mediaUrl = null;
             let mediaType = null;
@@ -81,14 +111,18 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                 while (attempts < maxAttempts && !uploadData) {
                     attempts++;
                     try {
-                        const result = await supabase.storage
-                            .from('posts')
-                            .upload(fileName, data.file, {
-                                cacheControl: '3600',
-                                upsert: true,
-                                contentType: mimeType,
-                                duplex: 'half'
-                            } as any);
+                        const result = await withTimeout(
+                            supabase.storage
+                                .from('posts')
+                                .upload(fileName, data.file, {
+                                    cacheControl: '3600',
+                                    upsert: true,
+                                    contentType: mimeType,
+                                    duplex: 'half'
+                                } as any),
+                            UPLOAD_TIMEOUT_MS,
+                            'La subida del archivo'
+                        );
 
                         if (result.error) throw result.error;
                         uploadData = result.data;
@@ -215,11 +249,18 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
 
             if (!finalFile) throw new Error("No se pudo procesar el archivo multimedia.");
 
+            const storySizeError = fileTooBigError(finalFile);
+            if (storySizeError) throw new Error(storySizeError);
+
             const fileExt = finalFile.name?.split('.').pop()?.toLowerCase() || 'mp4';
             const userId = data.currentUser?.id || 'anonymous';
             const fileName = `${userId}/story_${Date.now()}.${fileExt}`;
 
-            const { error: uploadError } = await supabase.storage.from('posts').upload(fileName, finalFile);
+            const { error: uploadError } = await withTimeout(
+                supabase.storage.from('posts').upload(fileName, finalFile),
+                UPLOAD_TIMEOUT_MS,
+                'La subida de la historia'
+            );
             if (uploadError) throw uploadError;
 
             const { data: { publicUrl } } = supabase.storage.from('posts').getPublicUrl(fileName);
