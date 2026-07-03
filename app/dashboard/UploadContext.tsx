@@ -31,13 +31,16 @@ const UploadContext = createContext<UploadContextType | undefined>(undefined);
 const MAX_FILE_MB = 200;
 const UPLOAD_TIMEOUT_MS = 180_000; // 3 min por intento: nunca dejar el spinner colgado
 
-function withTimeout<T>(promise: Promise<T> | PromiseLike<T>, ms: number, label: string): Promise<T> {
-    return Promise.race([
-        Promise.resolve(promise),
-        new Promise<T>((_, reject) =>
-            setTimeout(() => reject(new Error(`${label} tardó demasiado. Comprueba tu conexión e inténtalo de nuevo.`)), ms)
-        )
-    ]);
+async function withTimeout<T>(promise: PromiseLike<T>, ms: number, label: string): Promise<T> {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} tardó demasiado. Comprueba tu conexión e inténtalo de nuevo.`)), ms);
+    });
+    try {
+        return await Promise.race([promise, timeout]);
+    } finally {
+        if (timer) clearTimeout(timer);
+    }
 }
 
 function fileTooBigError(file: File): string | null {
@@ -111,7 +114,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                 while (attempts < maxAttempts && !uploadData) {
                     attempts++;
                     try {
-                        const result = await withTimeout(
+                        const result = await withTimeout<{ data: any; error: any }>(
                             supabase.storage
                                 .from('posts')
                                 .upload(fileName, data.file, {
@@ -256,7 +259,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
             const userId = data.currentUser?.id || 'anonymous';
             const fileName = `${userId}/story_${Date.now()}.${fileExt}`;
 
-            const { error: uploadError } = await withTimeout(
+            const { error: uploadError } = await withTimeout<{ data: any; error: any }>(
                 supabase.storage.from('posts').upload(fileName, finalFile),
                 UPLOAD_TIMEOUT_MS,
                 'La subida de la historia'

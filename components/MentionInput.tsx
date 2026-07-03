@@ -14,6 +14,7 @@ interface MentionInputProps {
     autoFocus?: boolean;
     id?: string;
     as?: 'input' | 'textarea';
+    disabled?: boolean;
 }
 
 interface UserProfile {
@@ -32,7 +33,8 @@ export default function MentionInput({
     containerClassName,
     autoFocus = false,
     id,
-    as = 'input'
+    as = 'input',
+    disabled = false
 }: MentionInputProps) {
     const [suggestions, setSuggestions] = useState<UserProfile[]>([]);
     const [filteredSuggestions, setFilteredSuggestions] = useState<UserProfile[]>([]);
@@ -123,6 +125,7 @@ export default function MentionInput({
                 placeholder={placeholder}
                 className={className}
                 autoFocus={autoFocus}
+                disabled={disabled}
             />
 
             {showSuggestions && (

@@ -635,7 +635,7 @@ function CenterListPageContent() {
                                                                 <Check className="w-4 h-4" />
                                                             </div>
                                                         )}
-                                                        <div className="mb-4">{p.icon}</div>
+                                                        {(p as any).icon && <div className="mb-4">{(p as any).icon}</div>}
                                                         <h4 className="font-heading font-black italic uppercase text-lg mb-1">{p.name}</h4>
                                                         <p className="text-2xl font-black mb-2">{p.price}<span className="text-[10px] text-gray-500 uppercase">/mes</span></p>
                                                         <ul className="space-y-2">
