@@ -14,6 +14,35 @@ import MusicPicker, { MusicTrack } from "@/app/dashboard/MusicPicker"
 interface TextOverlay {
     id: string; text: string; x: number; y: number; fontSize: number;
     color: string; fontFamily: string; style: string; animation: string;
+    bg: 'none' | 'dark' | 'solid';
+}
+
+// ¿El color es claro? (para elegir texto negro sobre fondos claros)
+function isLightColor(hex: string): boolean {
+    const h = hex.replace('#', '')
+    if (h.length < 6) return false
+    const r = parseInt(h.slice(0, 2), 16)
+    const g = parseInt(h.slice(2, 4), 16)
+    const b = parseInt(h.slice(4, 6), 16)
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62
+}
+
+// Estilos del texto según su fondo — misma lógica en preview y export
+function getTextRenderStyle(to: { color: string; style: string; bg: 'none' | 'dark' | 'solid' }) {
+    if (to.bg === 'dark') {
+        return { textColor: to.color, bgColor: 'rgba(0,0,0,0.70)', shadow: 'none' as const }
+    }
+    if (to.bg === 'solid') {
+        return { textColor: isLightColor(to.color) ? '#000000' : '#FFFFFF', bgColor: to.color, shadow: 'none' as const }
+    }
+    // Sin fondo: sombra fuerte + halo para que se lea sobre cualquier vídeo
+    return {
+        textColor: to.color,
+        bgColor: null,
+        shadow: to.style === 'neon'
+            ? `0 0 30px ${to.color}, 0 0 10px ${to.color}`
+            : '0 2px 4px rgba(0,0,0,0.9), 0 4px 24px rgba(0,0,0,0.8)'
+    }
 }
 interface StickerOverlay { id: string; emoji: string; x: number; y: number; size: number; }
 interface ImageOverlay { id: string; src: string; x: number; y: number; width: number; height: number; }
@@ -151,6 +180,8 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const [filterFrame, setFilterFrame]     = useState<string | null>(null)
     const [pendingText, setPendingText]     = useState('')
     const [pendingTextAnim, setPendingTextAnim] = useState('none')
+    const [pendingTextBg, setPendingTextBg] = useState<'none' | 'dark' | 'solid'>('dark')
+    const [showDragHint, setShowDragHint]   = useState(false)
     const [activeFont, setActiveFont]       = useState(FONTS[0])
     const [isMuted, setIsMuted]             = useState(true)   // start muted so iOS autoplay works
     const [selectedTrack, setSelectedTrack] = useState<typeof TRACKS[0] | null>(null)
@@ -412,11 +443,14 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
     const addText = () => {
         if (!pendingText.trim()) return
         setTextOverlays(prev => [...prev, {
-            id: Date.now().toString(), text: pendingText, x: 50, y: 40,
+            id: Date.now().toString(), text: pendingText.trim(), x: 50, y: 40,
             fontSize: pendingFontSize, color: activeTextColor, fontFamily: activeFont.family,
-            style: activeFont.style, animation: pendingTextAnim
+            style: activeFont.style, animation: pendingTextAnim, bg: pendingTextBg
         }])
         setPendingText(''); setPendingTextAnim('none'); setActiveTool('none')
+        // Hint efímero: enseñar que el texto se puede arrastrar
+        setShowDragHint(true)
+        setTimeout(() => setShowDragHint(false), 2600)
     }
 
     const addStatOverlay = (stat: typeof FITNESS_STATS[0]) => {
@@ -701,17 +735,66 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
 
                     if (textOverlays.length > 0) {
                         const textScale = canvas.height / 800;
-                        textOverlays.forEach(to => {
-                            ctx.save();
-                            ctx.translate((to.x/100)*canvas.width, (to.y/100)*canvas.height)
-                            if (to.style === 'neon') { 
-                                ctx.shadowColor = to.color; 
-                                ctx.shadowBlur = 25 * textScale; // Slightly reduced blur for performance
+                        const drawPill = (x: number, y: number, w: number, h: number, r: number) => {
+                            ctx.beginPath()
+                            if (ctx.roundRect) {
+                                ctx.roundRect(x, y, w, h, r)
+                            } else {
+                                ctx.moveTo(x + r, y)
+                                ctx.lineTo(x + w - r, y)
+                                ctx.quadraticCurveTo(x + w, y, x + w, y + r)
+                                ctx.lineTo(x + w, y + h - r)
+                                ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
+                                ctx.lineTo(x + r, y + h)
+                                ctx.quadraticCurveTo(x, y + h, x, y + h - r)
+                                ctx.lineTo(x, y + r)
+                                ctx.quadraticCurveTo(x, y, x + r, y)
                             }
-                            ctx.font = `${to.style === 'script' ? 'normal' : 'italic'} 950 ${to.fontSize * textScale}px ${to.fontFamily}`
-                            ctx.textAlign = 'center'; 
-                            ctx.fillStyle = to.color
-                            ctx.fillText(to.style === 'script' ? to.text : to.text.toUpperCase(), 0, 0); 
+                            ctx.fill()
+                        }
+
+                        textOverlays.forEach(to => {
+                            const fs = to.fontSize * textScale
+                            const lineH = fs * 1.15
+                            const raw = to.style === 'script' ? to.text : to.text.toUpperCase()
+                            const lines = raw.split('\n').filter(l => l.length > 0)
+                            if (lines.length === 0) return
+
+                            const rs = getTextRenderStyle(to)
+
+                            ctx.save()
+                            ctx.translate((to.x/100)*canvas.width, (to.y/100)*canvas.height)
+                            ctx.font = `${to.style === 'script' ? 'normal' : 'italic'} 950 ${fs}px ${to.fontFamily}`
+                            ctx.textAlign = 'center'
+
+                            // Bloque centrado verticalmente en el punto de anclaje
+                            const firstBaseline = -((lines.length - 1) / 2) * lineH + fs * 0.35
+
+                            // 1. Fondos tipo pill por línea (estilo Instagram)
+                            if (rs.bgColor) {
+                                ctx.fillStyle = rs.bgColor
+                                const padX = fs * 0.32
+                                const padY = fs * 0.16
+                                lines.forEach((line, i) => {
+                                    const w = ctx.measureText(line).width
+                                    const y = firstBaseline + i * lineH
+                                    drawPill(-w/2 - padX, y - fs * 0.82 - padY, w + padX * 2, fs + padY * 2, fs * 0.28)
+                                })
+                            } else if (to.style === 'neon') {
+                                ctx.shadowColor = to.color
+                                ctx.shadowBlur = 25 * textScale
+                            } else {
+                                // Sin fondo: sombra fuerte, igual que la vista previa
+                                ctx.shadowColor = 'rgba(0,0,0,0.85)'
+                                ctx.shadowBlur = 14 * textScale
+                                ctx.shadowOffsetY = 3 * textScale
+                            }
+
+                            // 2. Texto línea a línea
+                            ctx.fillStyle = rs.textColor
+                            lines.forEach((line, i) => {
+                                ctx.fillText(line, 0, firstBaseline + i * lineH)
+                            })
                             ctx.restore()
                         })
                     }
@@ -984,19 +1067,38 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                                 </motion.div>
                             ))}
 
-                            {textOverlays.map(to => (
+                            {textOverlays.map(to => {
+                                const rs = getTextRenderStyle(to)
+                                return (
                                 <motion.div key={to.id} drag dragMomentum={false} dragElastic={0}
                                     dragConstraints={{ left:0, right:0, top:0, bottom:0 }}
                                     onDragStart={(_, info) => onOverlayDragStart(to.id, to.x, to.y, info)}
                                     onDrag={(_, info) => onOverlayDrag(to.id, info, 'text')}
                                     onClick={() => setSelectedId(to.id)}
-                                    className={clsx("absolute pointer-events-auto p-4 cursor-grab active:cursor-grabbing overflow-visible", selectedId===to.id && "ring-2 ring-brand-red ring-offset-2 ring-offset-black/50 rounded-lg", to.animation !== 'none' && `ve-anim-${to.animation}`)}
-                                    style={{ left:`${to.x}%`, top:`${to.y}%`, translateX:'-50%', translateY:'-50%', color:to.color, fontSize:`${to.fontSize}px`, fontFamily:to.fontFamily, fontWeight:950, fontStyle:to.style==='script'?'normal':'italic', textTransform:to.style==='script'?'none':'uppercase', textShadow:to.style==='neon'?`0 0 30px ${to.color}, 0 0 10px ${to.color}`:'0 4px 20px rgba(0,0,0,0.85)', whiteSpace:'nowrap' }}
+                                    className={clsx("absolute pointer-events-auto cursor-grab active:cursor-grabbing overflow-visible", selectedId===to.id && "ring-2 ring-brand-red ring-offset-2 ring-offset-black/50 rounded-xl", to.animation !== 'none' && `ve-anim-${to.animation}`)}
+                                    style={{
+                                        left:`${to.x}%`, top:`${to.y}%`, translateX:'-50%', translateY:'-50%',
+                                        color: rs.textColor,
+                                        fontSize:`${to.fontSize}px`, fontFamily:to.fontFamily, fontWeight:950,
+                                        fontStyle:to.style==='script'?'normal':'italic',
+                                        textTransform:to.style==='script'?'none':'uppercase',
+                                        textShadow: rs.shadow,
+                                        whiteSpace:'pre-wrap',
+                                        maxWidth:'85%',
+                                        textAlign:'center',
+                                        lineHeight:1.15,
+                                        padding: rs.bgColor ? '0.35em 0.6em' : '1rem',
+                                        borderRadius: rs.bgColor ? '0.35em' : undefined,
+                                        background: rs.bgColor || 'transparent',
+                                        boxDecorationBreak: 'clone' as any,
+                                        WebkitBoxDecorationBreak: 'clone' as any
+                                    }}
                                 >
                                     {to.text}
                                     {selectedId===to.id && <DeleteBtn small onClick={e => { e.stopPropagation(); setTextOverlays(p=>p.filter(t=>t.id!==to.id)); setSelectedId(null) }} />}
                                 </motion.div>
-                            ))}
+                                )
+                            })}
 
                             {stickerOverlays.map(so => (
                                 <motion.div key={so.id} drag dragMomentum={false} dragElastic={0}
@@ -1074,6 +1176,19 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                     {/* Fade overlays */}
                     {fadeIn && <div className="absolute inset-0 pointer-events-none z-10" style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 35%)' }}/>}
                     {fadeOut && <div className="absolute inset-0 pointer-events-none z-10" style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 35%)' }}/>}
+
+                    {/* Hint: arrastra para colocar */}
+                    <AnimatePresence>
+                        {showDragHint && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                                className="absolute bottom-24 left-1/2 -translate-x-1/2 z-40 pointer-events-none bg-black/75 backdrop-blur-md border border-white/15 rounded-full px-4 py-2.5 flex items-center gap-2"
+                            >
+                                <span className="text-base leading-none">👆</span>
+                                <span className="text-[11px] font-black uppercase tracking-widest text-white">Arrastra el texto para colocarlo</span>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
                 {/* Top bar */}
@@ -1470,51 +1585,98 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
                 )}
 
                 {/* TEXT */}
-                {activeTool === 'text' && (
-                    <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-3xl flex flex-col items-center justify-center p-8 pointer-events-auto">
-                        <textarea autoFocus value={pendingText} onChange={e => setPendingText(e.target.value)}
-                            className="bg-transparent text-white text-5xl font-black italic uppercase text-center focus:outline-none w-full max-w-4xl min-h-[100px] resize-none"
-                            placeholder="ESCRIBE..."
-                            style={{ fontFamily: activeFont.family, color: activeTextColor, textShadow: activeFont.style==='neon' ? `0 0 30px ${activeTextColor}` : 'none' }}
-                        />
-                        <div className="flex gap-3 mt-8 overflow-x-auto no-scrollbar max-w-full px-4 py-1">
-                            {COLORS.map(c => <button key={c} onClick={() => setActiveTextColor(c)} className={clsx("w-9 h-9 rounded-full border-2 transition-all shrink-0", activeTextColor===c ? "border-white scale-125" : "border-white/20")} style={{ backgroundColor: c }}/>)}
+                {activeTool === 'text' && (() => {
+                    const previewStyle = getTextRenderStyle({ color: activeTextColor, style: activeFont.style, bg: pendingTextBg })
+                    return (
+                    <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[1000] bg-black/90 backdrop-blur-3xl flex flex-col items-center justify-center p-6 pointer-events-auto overflow-y-auto">
+                        {/* Vista previa fiel: el texto se ve aquí EXACTAMENTE como quedará */}
+                        <div className="w-full max-w-4xl flex items-center justify-center min-h-[120px] py-2">
+                            <textarea autoFocus value={pendingText} onChange={e => setPendingText(e.target.value)}
+                                rows={Math.max(1, pendingText.split('\n').length)}
+                                className="bg-transparent text-4xl sm:text-5xl font-black italic uppercase text-center focus:outline-none max-w-full resize-none placeholder:text-white/25 overflow-hidden"
+                                placeholder="ESCRIBE AQUÍ..."
+                                style={{
+                                    fontFamily: activeFont.family,
+                                    color: previewStyle.textColor,
+                                    textShadow: previewStyle.shadow,
+                                    background: previewStyle.bgColor || 'transparent',
+                                    padding: previewStyle.bgColor ? '0.35em 0.5em' : undefined,
+                                    borderRadius: previewStyle.bgColor ? '0.35em' : undefined,
+                                    fontStyle: activeFont.style === 'script' ? 'normal' : 'italic',
+                                    textTransform: activeFont.style === 'script' ? 'none' : 'uppercase',
+                                    width: `${Math.min(24, Math.max(9, ...pendingText.split('\n').map(l => l.length), 9)) * 0.72}em`,
+                                    lineHeight: 1.15
+                                }}
+                            />
                         </div>
-                        <div className="flex gap-2 mt-4 overflow-x-auto no-scrollbar max-w-full px-4">
-                            {FONTS.map(f => <button key={f.name} onClick={() => setActiveFont(f)} className={clsx("px-4 py-2 rounded-full border transition-all shrink-0 font-black italic uppercase text-[8px] tracking-widest", activeFont.name===f.name ? "bg-white text-black border-white" : "border-white/10 text-white/40")}>{f.name}</button>)}
-                        </div>
-                        <div className="mt-4 w-full max-w-sm">
-                            <p className="text-[8px] font-black uppercase text-white/25 tracking-widest mb-2 text-center">ANIMACIÓN</p>
-                            <div className="flex gap-2 overflow-x-auto no-scrollbar px-2">
-                                {TEXT_ANIMATIONS.map(a => (
-                                    <button key={a.id} onClick={() => setPendingTextAnim(a.id)} className={clsx("px-3 py-2 rounded-full border text-[8px] font-black uppercase tracking-widest shrink-0 transition-all", pendingTextAnim===a.id ? "bg-brand-red border-brand-red text-white" : "border-white/10 text-white/30")}>{a.name}</button>
+
+                        {/* FONDO: el control clave de legibilidad */}
+                        <div className="mt-5 w-full max-w-sm">
+                            <p className="text-[10px] font-black uppercase text-white/50 tracking-widest mb-2 text-center">Fondo del texto</p>
+                            <div className="grid grid-cols-3 gap-2 px-2">
+                                {([
+                                    { id: 'none' as const, label: 'Sin fondo' },
+                                    { id: 'dark' as const, label: 'Oscuro' },
+                                    { id: 'solid' as const, label: 'De color' },
+                                ]).map(b => (
+                                    <button key={b.id} onClick={() => setPendingTextBg(b.id)}
+                                        className={clsx("py-2.5 rounded-xl border text-[10px] font-black uppercase tracking-widest transition-all",
+                                            pendingTextBg === b.id ? "bg-white text-black border-white" : "border-white/15 text-white/50 hover:text-white")}
+                                    >{b.label}</button>
                                 ))}
                             </div>
                         </div>
+
+                        <div className="mt-4 w-full max-w-sm">
+                            <p className="text-[10px] font-black uppercase text-white/50 tracking-widest mb-2 text-center">Color</p>
+                            <div className="flex gap-3 overflow-x-auto no-scrollbar max-w-full px-4 py-1 justify-start sm:justify-center">
+                                {COLORS.map(c => <button key={c} onClick={() => setActiveTextColor(c)} className={clsx("w-9 h-9 rounded-full border-2 transition-all shrink-0", activeTextColor===c ? "border-white scale-125" : "border-white/20")} style={{ backgroundColor: c }}/>)}
+                            </div>
+                        </div>
+
+                        <div className="mt-4 w-full max-w-sm">
+                            <p className="text-[10px] font-black uppercase text-white/50 tracking-widest mb-2 text-center">Fuente</p>
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar max-w-full px-2">
+                                {FONTS.map(f => <button key={f.name} onClick={() => setActiveFont(f)} className={clsx("px-4 py-2 rounded-full border transition-all shrink-0 font-black italic uppercase text-[9px] tracking-widest", activeFont.name===f.name ? "bg-white text-black border-white" : "border-white/10 text-white/50")}>{f.name}</button>)}
+                            </div>
+                        </div>
+
+                        <div className="mt-4 w-full max-w-sm">
+                            <p className="text-[10px] font-black uppercase text-white/50 tracking-widest mb-2 text-center">Animación</p>
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar px-2">
+                                {TEXT_ANIMATIONS.map(a => (
+                                    <button key={a.id} onClick={() => setPendingTextAnim(a.id)} className={clsx("px-3 py-2 rounded-full border text-[9px] font-black uppercase tracking-widest shrink-0 transition-all", pendingTextAnim===a.id ? "bg-brand-red border-brand-red text-white" : "border-white/10 text-white/50")}>{a.name}</button>
+                                ))}
+                            </div>
+                        </div>
+
                         <div className="mt-4 w-full max-w-sm flex items-center gap-3 px-2">
-                            <span className="text-[8px] font-black uppercase text-white/25 tracking-widest shrink-0">TAMAÑO</span>
+                            <span className="text-[10px] font-black uppercase text-white/50 tracking-widest shrink-0">Tamaño</span>
                             <input type="range" min={20} max={120} step={2} value={pendingFontSize}
                                 onChange={e => setPendingFontSize(parseInt(e.target.value))}
                                 className="flex-1 accent-brand-red h-1 cursor-pointer"
                             />
-                            <span className="text-[10px] font-black text-white/40 w-8 shrink-0">{pendingFontSize}</span>
+                            <span className="text-[11px] font-black text-white/60 w-8 shrink-0">{pendingFontSize}</span>
                         </div>
+
                         <div className="mt-4 w-full max-w-sm">
-                            <p className="text-[8px] font-black uppercase text-white/25 tracking-widest mb-2 text-center px-2">PLANTILLAS FITNESS</p>
+                            <p className="text-[10px] font-black uppercase text-white/50 tracking-widest mb-2 text-center px-2">Plantillas rápidas</p>
                             <div className="flex gap-2 overflow-x-auto no-scrollbar px-2">
                                 {['PR NUEVO 🏆', 'DÍA DE PECHO 💪', 'MODO BESTIA 🔥', 'WOD COMPLETO ⚡', 'DEADLIFT DAY 🏋️', 'NO PAIN NO GAIN'].map(tmpl => (
                                     <button key={tmpl} onClick={() => setPendingText(tmpl)}
-                                        className="px-3 py-2 rounded-full border border-white/10 text-[8px] font-black uppercase tracking-widest shrink-0 text-white/40 hover:text-white hover:border-white/30 transition-all whitespace-nowrap"
+                                        className="px-3 py-2 rounded-full border border-white/10 text-[9px] font-black uppercase tracking-widest shrink-0 text-white/50 hover:text-white hover:border-white/30 transition-all whitespace-nowrap"
                                     >{tmpl}</button>
                                 ))}
                             </div>
                         </div>
-                        <div className="flex gap-8 mt-8">
-                            <button onClick={() => { setPendingText(''); setActiveTool('none') }} className="text-white/30 font-black text-[10px] uppercase tracking-widest">ATRÁS</button>
-                            <button onClick={addText} className="bg-white text-black px-10 py-4 rounded-full font-black text-[10px] uppercase shadow-2xl">AÑADIR</button>
+
+                        <div className="flex gap-4 mt-8 w-full max-w-sm px-2">
+                            <button onClick={() => { setPendingText(''); setActiveTool('none') }} className="flex-1 py-4 rounded-full border border-white/15 text-white/50 font-black text-[11px] uppercase tracking-widest hover:text-white transition-colors">Cancelar</button>
+                            <button onClick={addText} disabled={!pendingText.trim()} className="flex-[2] bg-white text-black py-4 rounded-full font-black text-[11px] uppercase shadow-2xl disabled:opacity-30 transition-opacity">Añadir al vídeo</button>
                         </div>
                     </motion.div>
-                )}
+                    )
+                })()}
 
                 {/* TAG PEOPLE */}
                 {activeTool === 'tag' && (
