@@ -91,19 +91,6 @@ export default function RootLayout({
                     document.documentElement.classList.remove('dark');
                   }
                 } catch (e) {}
-                
-                // DevTools Deterrence Hook
-                try {
-                  window.addEventListener('keydown', function(e) {
-                    if (
-                      e.key === 'F12' ||
-                      (e.ctrlKey && e.shiftKey && (e.key === 'I' || e.key === 'i' || e.key === 'J' || e.key === 'j')) ||
-                      (e.ctrlKey && (e.key === 'U' || e.key === 'u'))
-                    ) {
-                      e.preventDefault();
-                    }
-                  });
-                } catch (err) {}
               })();
             `
           }}
