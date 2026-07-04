@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import * as Sentry from '@sentry/nextjs';
 import { Outfit } from 'next/font/google';
 import './globals.css';
 
@@ -15,6 +16,7 @@ export default function GlobalError({
 }) {
     useEffect(() => {
         console.error('Global Error detected:', error);
+        Sentry.captureException(error);
     }, [error]);
 
     return (

@@ -94,9 +94,6 @@ export default function RootLayout({
                 
                 // DevTools Deterrence Hook
                 try {
-                  window.addEventListener('contextmenu', function(e) {
-                    e.preventDefault();
-                  });
                   window.addEventListener('keydown', function(e) {
                     if (
                       e.key === 'F12' ||
