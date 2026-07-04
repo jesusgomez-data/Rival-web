@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { getUserMedia } from "./explore/actions";
-import { Play, Volume2, VolumeX, X } from "lucide-react";
+import { Play, Volume2, VolumeX, X, Copy } from "lucide-react";
 import { isImageUrl } from "@/lib/utils";
 
 const VIDEO_EXTS = ['mp4', 'webm', 'ogg', 'mov', 'm4v'];
@@ -12,6 +12,46 @@ const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic'];
 function isVideoItem(item: any) {
     const ext = item.media_url?.split('.').pop()?.toLowerCase() || '';
     return (VIDEO_EXTS.includes(ext) || item.media_type === 'video') && !IMAGE_EXTS.includes(ext);
+}
+
+// Fotos de un carrusel en horizontal (swipe estilo Instagram) dentro del visor
+function CarouselStrip({ urls }: { urls: string[] }) {
+    const [idx, setIdx] = useState(0);
+    const stripRef = useRef<HTMLDivElement>(null);
+
+    return (
+        <>
+            <div
+                ref={stripRef}
+                onScroll={() => {
+                    const el = stripRef.current;
+                    if (el && el.clientWidth > 0) setIdx(Math.round(el.scrollLeft / el.clientWidth));
+                }}
+                className="absolute inset-0 flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+            >
+                {urls.map((u, i) => (
+                    <div key={i} className="relative min-w-full h-full flex-shrink-0 snap-center">
+                        <img src={u} alt={`Foto ${i + 1} de ${urls.length}`} className="w-full h-full object-contain" />
+                    </div>
+                ))}
+            </div>
+
+            {/* Contador estilo IG */}
+            <div
+                className="absolute right-4 text-white text-[11px] font-bold bg-black/50 backdrop-blur-sm rounded-full px-2.5 py-1 z-20 pointer-events-none"
+                style={{ top: 'max(4rem, calc(env(safe-area-inset-top) + 3rem))' }}
+            >
+                {idx + 1}/{urls.length}
+            </div>
+
+            {/* Puntos de posición */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 pointer-events-none">
+                {urls.map((_, i) => (
+                    <span key={i} className={`w-1.5 h-1.5 rounded-full transition-all duration-200 ${i === idx ? 'bg-white scale-110' : 'bg-white/30'}`} />
+                ))}
+            </div>
+        </>
+    );
 }
 
 function MediaCard({ item, isActive, globalMuted, onMuteChange }: {
@@ -90,6 +130,11 @@ function MediaCard({ item, isActive, globalMuted, onMuteChange }: {
                         {globalMuted ? <VolumeX className="w-7 h-7 text-white" /> : <Volume2 className="w-7 h-7 text-white" />}
                     </button>
                 </>
+            ) : item.carouselUrls && item.carouselUrls.length > 1 ? (
+                <>
+                    <CarouselStrip urls={item.carouselUrls} />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/30 pointer-events-none" />
+                </>
             ) : (
                 <>
                     <img
@@ -130,16 +175,18 @@ export default function UserMediaGallery({ userId, limit }: { userId: string; li
                     try {
                         const parsed = JSON.parse(url.trim());
                         if (Array.isArray(parsed)) {
+                            // Carrusel: UNA miniatura por publicación (como Instagram),
+                            // no una por foto. Todas las fotos viajan en carouselUrls.
                             if (item.media_type !== 'class_result') {
-                                parsed.forEach((subUrl: string, idx: number) => {
-                                    if (typeof subUrl === 'string') {
-                                        flattened.push({
-                                            ...item,
-                                            uniqueId: `${item.id}-${idx}`,
-                                            media_url: subUrl
-                                        });
-                                    }
-                                });
+                                const urls = parsed.filter((u: any) => typeof u === 'string');
+                                if (urls.length > 0) {
+                                    flattened.push({
+                                        ...item,
+                                        uniqueId: item.id,
+                                        media_url: urls[0],
+                                        carouselUrls: urls.length > 1 ? urls : undefined
+                                    });
+                                }
                             }
                         } else {
                             const resolvedUrl = parsed.image || parsed.backgroundImage || parsed.media_url || parsed.mediaUrl || parsed.url;
@@ -260,6 +307,12 @@ export default function UserMediaGallery({ userId, limit }: { userId: string; li
                                     </>
                                 ) : (
                                     <Image src={item.media_url} alt="User media" fill className="object-cover" sizes="(max-width: 768px) 33vw, 200px" />
+                                )}
+                                {/* Indicador de carrusel (estilo Instagram) */}
+                                {item.carouselUrls && (
+                                    <div className="absolute top-1.5 right-1.5 z-10 bg-black/60 backdrop-blur-sm rounded-md p-1">
+                                        <Copy className="w-3.5 h-3.5 text-white" />
+                                    </div>
                                 )}
                             </div>
                         );
