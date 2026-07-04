@@ -437,18 +437,34 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                 video.play();
 
                 const recDuration = range.end - range.start;
-                const interval = setInterval(() => {
+                let stopped = false;
+                let lastProgressUpdate = 0;
+
+                const finish = () => {
+                    if (stopped) return;
+                    stopped = true;
+                    try { recorder.stop(); } catch { /* noop */ }
+                    video.pause();
+                    onProgress(100);
+                };
+
+                // Dibujo por fotograma real (rAF ≈ 60fps). El anterior setInterval
+                // de 100ms producía vídeos a ~10fps: el efecto "cámara lenta".
+                const drawFrame = () => {
+                    if (stopped) return;
                     if (video.currentTime >= range.end || video.ended) {
-                        clearInterval(interval);
-                        recorder.stop();
-                        video.pause();
-                        onProgress(100);
-                    } else {
-                        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        const progress = ((video.currentTime - range.start) / recDuration) * 100;
-                        onProgress(progress);
+                        finish();
+                        return;
                     }
-                }, 100);
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    const now = performance.now();
+                    if (now - lastProgressUpdate > 250) {
+                        lastProgressUpdate = now;
+                        onProgress(((video.currentTime - range.start) / recDuration) * 100);
+                    }
+                    requestAnimationFrame(drawFrame);
+                };
+                requestAnimationFrame(drawFrame);
 
             } catch (err) {
                 reject(err);

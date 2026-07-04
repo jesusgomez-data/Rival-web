@@ -7,7 +7,8 @@ import Image from 'next/image'
 import { createClient } from '@/utils/supabase/client'
 import { createPortal } from 'react-dom'
 import { useVideo } from './VideoContext'
-import { getComments, addComment, toggleCommentLike } from './explore/actions'
+import { getComments, addComment, toggleCommentLike, toggleLike } from './explore/actions'
+import { rememberLikeState } from './explore/LikeButton'
 import { clsx } from 'clsx'
 
 export interface ReelPost {
@@ -243,11 +244,19 @@ function ReelItem({ post, isActive, isNear, onCommentOpen, onShare }: {
         const dt = now - lastTapRef.current
         lastTapRef.current = now
         if (dt < 280) {
-            // double-tap → like
+            // double-tap → like (persistido con la MISMA acción que el resto de la app;
+            // el rpc 'toggle_post_like' anterior no existía: los likes se perdían)
             if (!liked) {
-                setLiked(true); setLikes(l => l + 1)
+                const newLikes = likes + 1
+                setLiked(true); setLikes(newLikes)
+                rememberLikeState(post.postId, newLikes, true)
                 setHeartAnim(true); setTimeout(() => setHeartAnim(false), 900)
-                supabase.rpc('toggle_post_like', { p_post_id: post.postId }).catch(() => {})
+                toggleLike(post.postId).then(res => {
+                    if ((res as any)?.error) {
+                        setLiked(false); setLikes(likes)
+                        rememberLikeState(post.postId, likes, false)
+                    }
+                }).catch(() => {})
             }
         } else {
             // single tap → play/pause (delayed to distinguish from double-tap)
@@ -259,14 +268,21 @@ function ReelItem({ post, isActive, isNear, onCommentOpen, onShare }: {
                 else { v.pause(); setVideoPaused(true) }
             }, 300)
         }
-    }, [liked, post.postId])
+    }, [liked, likes, post.postId])
 
     const handleLike = useCallback(async () => {
         const next = !liked
-        setLiked(next); setLikes(l => next ? l + 1 : Math.max(0, l - 1))
+        const newLikes = next ? likes + 1 : Math.max(0, likes - 1)
+        setLiked(next); setLikes(newLikes)
+        rememberLikeState(post.postId, newLikes, next)
         if (next) { setHeartAnim(true); setTimeout(() => setHeartAnim(false), 900) }
-        await supabase.rpc('toggle_post_like', { p_post_id: post.postId }).catch(() => {})
-    }, [liked, post.postId])
+        const res = await toggleLike(post.postId).catch(() => ({ error: 'network' }))
+        if ((res as any)?.error) {
+            // Rollback si el servidor rechaza
+            setLiked(liked); setLikes(likes)
+            rememberLikeState(post.postId, likes, liked)
+        }
+    }, [liked, likes, post.postId])
 
     return (
         <div className="relative w-full h-full bg-black overflow-hidden">

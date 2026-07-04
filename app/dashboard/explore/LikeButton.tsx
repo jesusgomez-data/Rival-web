@@ -11,9 +11,20 @@ interface LikeButtonProps {
     hasLikedInitial: boolean;
 }
 
+// Memoria de likes de la sesión: sobrevive a la navegación entre secciones.
+// Sin esto, el caché de rutas de Next (staleTimes: 30s) re-sirve la página
+// vieja al volver y el like "desaparece" visualmente aunque esté en la BD.
+const sessionLikeState = new Map<string, { likes: number; hasLiked: boolean }>();
+
+// Para que otros componentes (visor de reels) sincronicen con esta memoria
+export function rememberLikeState(postId: string, likes: number, hasLiked: boolean) {
+    sessionLikeState.set(postId, { likes, hasLiked });
+}
+
 export default function LikeButton({ postId, initialLikes, hasLikedInitial }: LikeButtonProps) {
-    const [likes, setLikes] = useState(initialLikes);
-    const [hasLiked, setHasLiked] = useState(hasLikedInitial);
+    const cached = sessionLikeState.get(postId);
+    const [likes, setLikes] = useState(cached?.likes ?? initialLikes);
+    const [hasLiked, setHasLiked] = useState(cached?.hasLiked ?? hasLikedInitial);
     const [isPending, setIsPending] = useState(false);
     const [bounce, setBounce] = useState(false);
 
@@ -48,6 +59,7 @@ export default function LikeButton({ postId, initialLikes, hasLikedInitial }: Li
 
         setLikes(newLikes);
         setHasLiked(newHasLiked);
+        sessionLikeState.set(postId, { likes: newLikes, hasLiked: newHasLiked });
 
         const result = await toggleLike(postId);
 
@@ -55,6 +67,7 @@ export default function LikeButton({ postId, initialLikes, hasLikedInitial }: Li
             // Rollback on error
             setLikes(likes);
             setHasLiked(hasLiked);
+            sessionLikeState.set(postId, { likes, hasLiked });
         }
 
         setIsPending(false);
