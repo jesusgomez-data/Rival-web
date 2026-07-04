@@ -777,6 +777,8 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const videoRef = useRef<HTMLVideoElement>(null);
     const videoContainerRef = useRef<HTMLDivElement>(null);
     const videoRetryRef = useRef(0);
+    const tapTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const [showHeartBurst, setShowHeartBurst] = useState(false);
     const { isMuted, toggleMute, setLastActiveVideoId, setIsMuted } = useVideo();
 
     const isMusicPlaying = isPlaying && !isMuted;
@@ -1459,28 +1461,49 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     <div 
                         className="relative w-full h-full cursor-pointer overflow-hidden"
                         onClick={() => {
-                            if (isVideo) {
-                                // Open fullscreen reels viewer
-                                window.dispatchEvent(new CustomEvent('open-reels', {
-                                    detail: {
-                                        postId,
-                                        src: image,
-                                        username: username || user,
-                                        userFullName: user,
-                                        avatar,
-                                        caption: currentCaption,
-                                        initialLikes,
-                                        hasLikedInitial,
-                                        commentsCount: initialCommentsCount,
-                                        currentUserId,
-                                        authorId,
-                                    }
-                                }))
-                            } else {
-                                setIsLightboxOpen(true);
+                            // Doble-tap = like (estilo Instagram) · Tap simple = abrir contenido
+                            if (tapTimerRef.current) {
+                                clearTimeout(tapTimerRef.current);
+                                tapTimerRef.current = null;
+                                setShowHeartBurst(true);
+                                setTimeout(() => setShowHeartBurst(false), 750);
+                                window.dispatchEvent(new CustomEvent('rival-external-like', { detail: { postId } }));
+                                return;
                             }
+                            tapTimerRef.current = setTimeout(() => {
+                                tapTimerRef.current = null;
+                                if (isVideo) {
+                                    // Open fullscreen reels viewer
+                                    window.dispatchEvent(new CustomEvent('open-reels', {
+                                        detail: {
+                                            postId,
+                                            src: image,
+                                            username: username || user,
+                                            userFullName: user,
+                                            avatar,
+                                            caption: currentCaption,
+                                            initialLikes,
+                                            hasLikedInitial,
+                                            commentsCount: initialCommentsCount,
+                                            currentUserId,
+                                            authorId,
+                                        }
+                                    }))
+                                } else {
+                                    setIsLightboxOpen(true);
+                                }
+                            }, 280);
                         }}
                     >
+                        {/* Corazón del doble-tap */}
+                        {showHeartBurst && (
+                            <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none">
+                                <Heart
+                                    className="w-28 h-28 text-brand-red fill-brand-red drop-shadow-[0_0_30px_rgba(220,38,38,0.8)]"
+                                    style={{ animation: 'rival-heart-burst 0.75s cubic-bezier(0.16,1,0.3,1) both' }}
+                                />
+                            </div>
+                        )}
                         {isVideo && (
                             <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-30">
                                 <motion.div

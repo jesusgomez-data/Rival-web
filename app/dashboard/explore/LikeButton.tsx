@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Heart } from "lucide-react";
 import { toggleLike } from "./actions";
 import clsx from "clsx";
@@ -16,6 +16,23 @@ export default function LikeButton({ postId, initialLikes, hasLikedInitial }: Li
     const [hasLiked, setHasLiked] = useState(hasLikedInitial);
     const [isPending, setIsPending] = useState(false);
     const [bounce, setBounce] = useState(false);
+
+    // Doble-tap sobre el contenido del post → like (nunca quita el like, como IG)
+    useEffect(() => {
+        const onExternalLike = (e: Event) => {
+            const detail = (e as CustomEvent).detail;
+            if (detail?.postId !== postId) return;
+            if (!hasLiked && !isPending) handleToggle();
+            else if (hasLiked) {
+                // Ya con like: solo el rebote visual como feedback
+                setBounce(true);
+                setTimeout(() => setBounce(false), 400);
+            }
+        };
+        window.addEventListener('rival-external-like', onExternalLike);
+        return () => window.removeEventListener('rival-external-like', onExternalLike);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [postId, hasLiked, isPending, likes]);
 
     const handleToggle = async () => {
         if (isPending) return;

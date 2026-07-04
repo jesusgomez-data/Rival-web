@@ -840,6 +840,14 @@ button:not(:disabled):not([class*="translate"]):active {
   color: #ffffff;
 }
 
+/* Corazón del doble-tap (like estilo Instagram) */
+@keyframes rival-heart-burst {
+  0% { transform: scale(0); opacity: 0; }
+  25% { transform: scale(1.15); opacity: 1; }
+  60% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(0.85); opacity: 0; }
+}
+
 /* 7. ACCESIBILIDAD: respetar reduced motion */
 @media (prefers-reduced-motion: reduce) {
   .animate-in,
