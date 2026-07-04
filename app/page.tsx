@@ -404,7 +404,7 @@ export default function UnifiedLanding() {
 
             <main 
                 onMouseMove={handleGlobalMouseMove}
-                className="h-[100svh] w-screen bg-white dark:bg-[#030303] text-slate-900 dark:text-white selection:bg-brand-red selection:text-white font-sans overflow-hidden relative flex flex-col justify-between p-2.5 pt-14 xs:p-4 xs:pt-16 sm:p-6 md:p-12"
+                className="h-[100svh] w-screen bg-white dark:bg-[#030303] text-slate-900 dark:text-white selection:bg-brand-red selection:text-white font-sans overflow-hidden relative flex flex-col justify-between p-2.5 pt-[max(0.875rem,env(safe-area-inset-top))] xs:p-4 xs:pt-[max(1rem,env(safe-area-inset-top))] sm:p-6 md:p-12"
             >
                 {/* Global Tech Background */}
                 <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
@@ -677,7 +677,7 @@ export default function UnifiedLanding() {
                             <div className="flex gap-3">
                                 <Link
                                     href="/signup"
-                                    className="flex-1 bg-gradient-to-r from-brand-red to-red-600 hover:from-brand-accent hover:to-red-500 text-white py-4.5 rounded-xl font-black uppercase tracking-[0.2em] text-xs xs:text-sm sm:text-xs btn-sport-tech transition-all shadow-[0_4px_20px_rgba(239,68,68,0.25)] hover:shadow-[0_4px_30px_rgba(239,68,68,0.5)] flex items-center justify-center gap-2 group cursor-pointer hover:scale-[1.02] active:scale-95 duration-300"
+                                    className="flex-1 bg-gradient-to-r from-brand-red to-red-600 hover:from-brand-accent hover:to-red-500 text-white py-3.5 sm:py-4 rounded-xl font-black uppercase tracking-[0.2em] text-xs xs:text-sm sm:text-xs btn-sport-tech transition-all shadow-[0_4px_20px_rgba(239,68,68,0.25)] hover:shadow-[0_4px_30px_rgba(239,68,68,0.5)] flex items-center justify-center gap-2 group cursor-pointer hover:scale-[1.02] active:scale-95 duration-300"
                                 >
                                     <span className="skew-x-[10deg] block flex items-center gap-1.5">
                                         Empezar Gratis <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -685,7 +685,7 @@ export default function UnifiedLanding() {
                                 </Link>
                                 <a
                                     href="/demo.html"
-                                    className="flex-1 bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 hover:border-brand-red/40 hover:bg-brand-red/5 text-slate-800 dark:text-white py-4.5 rounded-xl font-black uppercase tracking-[0.2em] text-xs xs:text-sm sm:text-xs transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-95 duration-300"
+                                    className="flex-1 bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 hover:border-brand-red/40 hover:bg-brand-red/5 text-slate-800 dark:text-white py-3.5 sm:py-4 rounded-xl font-black uppercase tracking-[0.2em] text-xs xs:text-sm sm:text-xs transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-95 duration-300"
                                 >
                                     <span className="skew-x-[10deg] block">
                                         Demo ⚡
