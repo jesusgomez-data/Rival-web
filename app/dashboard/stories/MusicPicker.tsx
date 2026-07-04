@@ -171,6 +171,19 @@ export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicP
         };
     }, []);
 
+    // Al salir de la app / cambiar de pestaña: silencio inmediato
+    // (los new Audio() no están en el DOM y el apagado global no los ve)
+    useEffect(() => {
+        const onHide = () => {
+            if (document.hidden) {
+                audioRef.current?.pause();
+                setPlayingId(null);
+            }
+        };
+        document.addEventListener('visibilitychange', onHide);
+        return () => document.removeEventListener('visibilitychange', onHide);
+    }, []);
+
     const handleSelect = (track: Track) => {
         if (playingId === track.id) {
             audioRef.current?.pause();

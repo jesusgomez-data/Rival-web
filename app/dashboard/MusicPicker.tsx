@@ -197,14 +197,21 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
             };
             audio.src = track.url;
 
+            // CRÍTICO: registrar el audio ANTES de esperar a que arranque.
+            // Si se hacía después (await), un segundo tap durante la carga
+            // creaba OTRO audio huérfano imposible de pausar (sonido doble
+            // que seguía sonando incluso al salir de la app).
+            audioRef.current = audio;
+            setPreviewingId(track.id);
+
             const playPromise = audio.play();
             if (playPromise !== undefined) {
                 await playPromise;
-                audioRef.current = audio;
-                setPreviewingId(track.id);
             }
         } catch (error) {
-            console.error("Playback Failure:", error);
+            console.warn("Playback Failure:", error);
+            // Solo limpiar si este audio sigue siendo el activo
+            if (audioRef.current?.src) audioRef.current.pause();
             setPreviewingId(null);
         }
     };
