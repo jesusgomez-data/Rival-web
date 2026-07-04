@@ -463,6 +463,15 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                 </button>
             </div>
 
+            {/* Qué hace cada tipo de publicación */}
+            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mb-5 -mt-3 px-1">
+                {postType === 'standard'
+                    ? (language === 'es' ? 'Comparte texto, fotos o vídeo con la comunidad' : 'Share text, photos or video with the community')
+                    : postType === 'pr'
+                        ? (language === 'es' ? 'Registra una marca personal y compártela con tu récord' : 'Log a personal record and show it off')
+                        : (language === 'es' ? 'Publica un entrenamiento completo, bloque a bloque' : 'Post a full workout, block by block')}
+            </p>
+
             <div className="flex gap-4 items-start">
                 {/* Avatar - Hidden on mobile if post type is WOD to maximize screen width */}
                 <div className={clsx("shrink-0 pt-1", postType === 'wod' && "hidden md:block")}>
@@ -800,10 +809,11 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                 <button
                                     type="button"
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="p-2.5 text-gray-400 hover:text-brand-red hover:bg-white/5 rounded-full transition-all border border-transparent group flex items-center justify-center"
-                                    title="Añadir Multimedia"
+                                    className="px-3 py-2.5 text-gray-400 hover:text-brand-red hover:bg-white/5 rounded-full transition-all border border-transparent group flex items-center justify-center gap-1.5"
+                                    title="Añadir foto o vídeo"
                                 >
                                     <ImageIcon className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                    <span className="hidden sm:inline text-[9px] font-black uppercase tracking-widest">Foto / Vídeo</span>
                                 </button>
                                 <input
                                     ref={fileInputRef}
@@ -819,10 +829,11 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                     <button
                                         type="button"
                                         onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                                        className={`p-2.5 rounded-full transition-all border border-transparent flex items-center justify-center group ${showEmojiPicker ? 'text-yellow-400 bg-white/5' : 'text-gray-400 hover:text-yellow-400 hover:bg-white/5'}`}
-                                        title="Añadir Emoji"
+                                        className={`px-3 py-2.5 rounded-full transition-all border border-transparent flex items-center justify-center gap-1.5 group ${showEmojiPicker ? 'text-yellow-400 bg-white/5' : 'text-gray-400 hover:text-yellow-400 hover:bg-white/5'}`}
+                                        title="Añadir emoji"
                                     >
                                         <Smile className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                                        <span className="hidden sm:inline text-[9px] font-black uppercase tracking-widest">Emoji</span>
                                     </button>
                                     {showEmojiPicker && (
                                         isMobile && mounted && typeof document !== 'undefined' ? (

@@ -1894,16 +1894,36 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     )}
 
                     {/* Membership Activation */}
-                    {mediaType === 'membership_activation' && (
+                    {mediaType === 'membership_activation' && (() => {
+                        // El caption tiene el formato "¡Me he unido a {box} con el plan {plan}! ⚔️"
+                        const membershipMatch = (currentCaption || '').match(/me he unido a (.+?) con el plan ([^!]+)/i);
+                        const gymName = membershipMatch?.[1]?.trim();
+                        const planName = membershipMatch?.[2]?.trim();
+                        return (
                         <div className="rounded-[40px] p-10 bg-brand-red/5 border border-brand-red/20 text-center space-y-6 relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-40 h-40 bg-brand-red/10 blur-3xl animate-pulse" />
                             <div className="w-24 h-24 rounded-full bg-brand-red/10 flex items-center justify-center mx-auto border border-brand-red/30 shadow-glow">
                                 <CheckCircle2 className="w-12 h-12 text-brand-red" />
                             </div>
-                            <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">¡MEMBRESÍA ACTIVA!</h3>
-                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{currentCaption || 'Iniciando una nueva etapa de alto rendimiento.'}</p>
+                            {gymName ? (
+                                <>
+                                    <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter leading-tight">
+                                        AHORA SOY MIEMBRO DE<br />
+                                        <span className="text-brand-red">{gymName}</span>
+                                    </h3>
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
+                                        {planName ? `Plan ${planName} · ` : ''}Empieza una nueva etapa ⚔️
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter">¡NUEVA MEMBRESÍA!</h3>
+                                    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{currentCaption || 'Iniciando una nueva etapa de alto rendimiento.'}</p>
+                                </>
+                            )}
                         </div>
-                    )}
+                        )
+                    })()}
 
                     {/* Normalized Workout Card (Endurance or Lift) */}
                     {resolvedWorkoutData && !['pr', 'class_result', 'membership_activation'].includes(mediaType ?? '') && (
