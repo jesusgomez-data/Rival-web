@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Orbitron:wght@400..900&family=Oswald:wght@200..700&family=Outfit:wght@100..900&family=Syne:wght@400..800&display=swap');
+/* Las fuentes de Google se cargan desde app/layout.tsx con <link> + preconnect
+   (el @import aquí bloqueaba el primer render ~780ms según Lighthouse) */
 
 @import "tailwindcss";
 

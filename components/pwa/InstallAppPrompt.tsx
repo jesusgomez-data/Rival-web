@@ -96,6 +96,7 @@ export default function InstallAppPrompt() {
             )}>
                 <button
                     onClick={handleDismiss}
+                    aria-label="Cerrar aviso de instalación"
                     className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
                 >
                     <X className="w-5 h-5" />

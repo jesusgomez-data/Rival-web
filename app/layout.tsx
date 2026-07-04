@@ -23,8 +23,9 @@ const outfit = Outfit({
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  // Zoom permitido: bloquearlo penaliza accesibilidad (usuarios con visión reducida)
+  maximumScale: 5,
+  userScalable: true,
   viewportFit: "cover",
   themeColor: "#000000",
 };
@@ -78,6 +79,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Fuentes en paralelo (antes iban por @import en CSS: +780ms de bloqueo) */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Orbitron:wght@400..900&family=Oswald:wght@200..700&family=Outfit:wght@100..900&family=Syne:wght@400..800&display=swap"
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `

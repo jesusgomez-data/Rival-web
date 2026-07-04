@@ -245,9 +245,10 @@ function AnimatedLogo({ className = "w-10 h-10", forceHover = false }: { classNa
 
 function SplashScreen({ onComplete }: { onComplete: () => void }) {
     useEffect(() => {
+        // 1s: momento de marca sin castigar la carga (antes 2.2s → LCP 3.5s)
         const timer = setTimeout(() => {
             onComplete();
-        }, 2200); // 2.2 seconds splash loading screen
+        }, 1000);
         return () => clearTimeout(timer);
     }, [onComplete]);
 
@@ -300,6 +301,17 @@ export default function UnifiedLanding() {
     const [showSplash, setShowSplash] = useState(true);
     const supabase = createClient();
     const router = useRouter();
+
+    // Splash solo la primera vez por sesión (volver a la landing = entrada directa)
+    useEffect(() => {
+        try {
+            if (sessionStorage.getItem('rival-splash-seen')) {
+                setShowSplash(false);
+            } else {
+                sessionStorage.setItem('rival-splash-seen', '1');
+            }
+        } catch { /* modo privado sin storage: splash normal */ }
+    }, []);
 
     // Live Ticker State
     const [tickerIndex, setTickerIndex] = useState(0);
