@@ -245,10 +245,11 @@ function AnimatedLogo({ className = "w-10 h-10", forceHover = false }: { classNa
 
 function SplashScreen({ onComplete }: { onComplete: () => void }) {
     useEffect(() => {
-        // 1s: momento de marca sin castigar la carga (antes 2.2s → LCP 3.5s)
+        // 1.6s: la animación completa del logo + texto (termina ~0.8s) con un
+        // instante de presencia, sin volver a los 2.2s que castigaban la carga
         const timer = setTimeout(() => {
             onComplete();
-        }, 1000);
+        }, 1600);
         return () => clearTimeout(timer);
     }, [onComplete]);
 
@@ -268,10 +269,10 @@ function SplashScreen({ onComplete }: { onComplete: () => void }) {
                 <AnimatedLogo className="w-24 h-24 sm:w-28 sm:h-28" forceHover={true} />
                 
                 {/* Logo Text under */}
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4, duration: 0.8 }}
+                    transition={{ delay: 0.25, duration: 0.5 }}
                     className="flex flex-col items-center mt-3"
                 >
                     <span className="font-heading font-black text-xl sm:text-2xl italic tracking-[0.25em] uppercase text-white">
