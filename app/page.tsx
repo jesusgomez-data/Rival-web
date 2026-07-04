@@ -545,13 +545,21 @@ export default function UnifiedLanding() {
                                     </div>
                                     <div className="flex items-end h-20 gap-2">
                                         {[30, 55, 45, 80, 60, 95, 70].map((h, i) => (
-                                            <div key={i} className="flex-1 relative">
-                                                <div
-                                                    style={{ height: `${h}%` }}
-                                                    className={`w-full rounded-t-sm ${i === 5 ? 'bg-brand-red shadow-glow-red' : 'bg-slate-200 dark:bg-white/10'}`}
+                                            <div key={i} className="flex-1 relative h-full flex items-end">
+                                                <motion.div
+                                                    initial={{ height: 0 }}
+                                                    whileInView={{ height: `${h}%` }}
+                                                    viewport={{ once: true }}
+                                                    transition={{ duration: 0.6, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                                                    className={`w-full rounded-t-sm ${i === 5
+                                                        ? 'bg-brand-red shadow-glow-red'
+                                                        : 'bg-gradient-to-t from-brand-red/25 to-brand-red/50 dark:from-white/15 dark:to-brand-red/40'}`}
                                                 />
                                             </div>
                                         ))}
+                                    </div>
+                                    <div className="flex justify-between text-[7px] font-black uppercase tracking-widest text-slate-400 dark:text-white/25">
+                                        {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map(d => <span key={d} className="flex-1 text-center">{d}</span>)}
                                     </div>
                                 </div>
                                 
@@ -630,34 +638,25 @@ export default function UnifiedLanding() {
                                 </p>
                             </div>
 
-                            {/* Tech Sport Stats Strip */}
+                            {/* Propuesta de valor (sin cifras: venden capacidades, no tamaño) */}
                             <div className="grid grid-cols-3 gap-2.5 py-1 text-center">
-                                <div className="bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl py-2.5 px-1 hover:border-brand-red/20 transition-colors animate-pulse-slow">
-                                    <div className="flex items-center justify-center text-brand-red gap-1 mb-0.5">
-                                        <Flame className="w-3.5 h-3.5" />
-                                        <span className="font-heading font-black italic text-sm tracking-tight text-slate-900 dark:text-white">
-                                            {stats ? stats.athletes : "..."}
-                                        </span>
+                                <div className="bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl py-3 px-1 hover:border-brand-red/20 transition-colors">
+                                    <div className="flex items-center justify-center text-brand-red mb-1">
+                                        <Flame className="w-4 h-4" />
                                     </div>
-                                    <div className="text-[7px] font-black uppercase tracking-widest text-slate-400 dark:text-white/30">Atletas Elite</div>
+                                    <div className="text-[8px] font-black uppercase tracking-widest text-slate-600 dark:text-white/70 leading-tight">WODs con IA</div>
                                 </div>
-                                <div className="bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl py-2.5 px-1 hover:border-brand-orange/20 transition-colors animate-pulse-slow">
-                                    <div className="flex items-center justify-center text-brand-orange gap-1 mb-0.5">
-                                        <Building2 className="w-3.5 h-3.5" />
-                                        <span className="font-heading font-black italic text-sm tracking-tight text-slate-900 dark:text-white">
-                                            {stats ? stats.centers : "..."}
-                                        </span>
+                                <div className="bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl py-3 px-1 hover:border-brand-orange/20 transition-colors">
+                                    <div className="flex items-center justify-center text-brand-orange mb-1">
+                                        <Building2 className="w-4 h-4" />
                                     </div>
-                                    <div className="text-[7px] font-black uppercase tracking-widest text-slate-400 dark:text-white/30">Centros</div>
+                                    <div className="text-[8px] font-black uppercase tracking-widest text-slate-600 dark:text-white/70 leading-tight">Gestión de Boxes</div>
                                 </div>
-                                <div className="bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl py-2.5 px-1 hover:border-yellow-500/20 transition-colors animate-pulse-slow">
-                                    <div className="flex items-center justify-center text-yellow-500 gap-1 mb-0.5">
-                                        <Trophy className="w-3.5 h-3.5" />
-                                        <span className="font-heading font-black italic text-sm tracking-tight text-slate-900 dark:text-white">
-                                            {stats ? stats.wods : "..."}
-                                        </span>
+                                <div className="bg-slate-50 dark:bg-white/[0.01] border border-slate-100 dark:border-white/5 rounded-xl py-3 px-1 hover:border-yellow-500/20 transition-colors">
+                                    <div className="flex items-center justify-center text-yellow-500 mb-1">
+                                        <Trophy className="w-4 h-4" />
                                     </div>
-                                    <div className="text-[7px] font-black uppercase tracking-widest text-slate-400 dark:text-white/30">WODs Completados</div>
+                                    <div className="text-[8px] font-black uppercase tracking-widest text-slate-600 dark:text-white/70 leading-tight">HYROX Race Center</div>
                                 </div>
                             </div>
 

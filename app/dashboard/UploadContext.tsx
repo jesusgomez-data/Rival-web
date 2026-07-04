@@ -51,6 +51,32 @@ function fileTooBigError(file: File): string | null {
     return null;
 }
 
+// ¿Formato de vídeo que Android/Chrome no pueden reproducir? (.MOV/HEVC de iPhone)
+function needsTranscode(file: File): boolean {
+    const name = (file.name || '').toLowerCase();
+    const type = (file.type || '').toLowerCase();
+    const isVideoFile = type.startsWith('video/') || /\.(mov|m4v|hevc|3gp)$/.test(name);
+    if (!isVideoFile) return false;
+    return type.includes('quicktime') || /\.(mov|m4v|hevc|3gp)$/.test(name);
+}
+
+// Máx. duración que re-codificamos en el dispositivo (más allá, subimos el original)
+const MAX_TRANSCODE_SECONDS = 300;
+
+function getVideoDuration(file: File): Promise<number> {
+    return new Promise((resolve) => {
+        const v = document.createElement('video');
+        v.preload = 'metadata';
+        v.onloadedmetadata = () => {
+            const d = v.duration;
+            URL.revokeObjectURL(v.src);
+            resolve(isFinite(d) && d > 0 ? d : 0);
+        };
+        v.onerror = () => resolve(0);
+        v.src = URL.createObjectURL(file);
+    });
+}
+
 export function UploadProvider({ children }: { children: React.ReactNode }) {
     const [uploads, setUploads] = useState<UploadTask[]>([]);
     const [celebrationPRs, setCelebrationPRs] = useState<any[]>([]);
@@ -99,12 +125,33 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
             let mediaUrl = null;
             let mediaType = null;
 
-            if (data.file) {
-                const fileExt = data.file.name.split('.').pop() || (data.file.type.startsWith('video/') ? 'mp4' : 'jpg');
-                const cleanFileName = data.file.name.replace(/[^a-zA-Z0-9]/g, '_');
+            // Compatibilidad universal: los .MOV/HEVC de iPhone no se ven en
+            // Android/Chrome. El dispositivo que grabó el vídeo SÍ sabe leerlo,
+            // así que lo re-codificamos aquí antes de subir. Si algo falla,
+            // subimos el original: nunca bloqueamos la publicación.
+            let fileToUpload = data.file;
+            if (data.file && needsTranscode(data.file)) {
+                try {
+                    setUploads(prev => prev.map(u => u.id === id ? { ...u, status: 'processing', caption: 'Optimizando vídeo para todos los dispositivos...' } : u));
+                    const duration = await getVideoDuration(data.file);
+                    if (duration > 0 && duration <= MAX_TRANSCODE_SECONDS) {
+                        fileToUpload = await trimVideoInBackground(data.file, { start: 0, end: duration }, (p) => {
+                            setUploads(prev => prev.map(u => u.id === id ? { ...u, progress: Math.min(45, Math.round(p * 0.45)) } : u));
+                        });
+                    }
+                } catch (transcodeErr) {
+                    console.warn('[startUpload] Transcode falló; se sube el original:', transcodeErr);
+                    fileToUpload = data.file;
+                }
+                setUploads(prev => prev.map(u => u.id === id ? { ...u, status: 'uploading', caption: data.content || `${data.exercise}: ${data.weight}kg` } : u));
+            }
+
+            if (fileToUpload) {
+                const fileExt = fileToUpload.name.split('.').pop() || (fileToUpload.type.startsWith('video/') ? 'mp4' : 'jpg');
+                const cleanFileName = fileToUpload.name.replace(/[^a-zA-Z0-9]/g, '_');
                 const userId = data.currentUser?.id || 'anon';
                 const fileName = `${userId}/${Date.now()}_${cleanFileName}.${fileExt}`;
-                const mimeType = data.file.type || (fileExt === 'mp4' ? 'video/mp4' : 'image/jpeg');
+                const mimeType = fileToUpload.type || (fileExt === 'mp4' ? 'video/mp4' : 'image/jpeg');
 
                 let uploadData = null;
                 let uploadError = null;
@@ -117,7 +164,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                         const result = await withTimeout<{ data: any; error: any }>(
                             supabase.storage
                                 .from('posts')
-                                .upload(fileName, data.file, {
+                                .upload(fileName, fileToUpload, {
                                     cacheControl: '3600',
                                     upsert: true,
                                     contentType: mimeType,
@@ -182,7 +229,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                 formData.append("weight", data.weight || '');
                 formData.append("sport", data.sport || '');
                 if (mediaUrl) formData.append("media_url", mediaUrl);
-                else if (data.file) formData.append("media", data.file);
+                else if (fileToUpload) formData.append("media", fileToUpload);
                 res = await createPRPost(formData);
             } else if (data.postType === 'wod') {
                 formData.append("content", data.content);
@@ -195,8 +242,8 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                 if (mediaUrl) {
                     formData.append("media_url", mediaUrl);
                     formData.append("media_type", mediaType!);
-                } else if (data.file) {
-                    formData.append("media", data.file);
+                } else if (fileToUpload) {
+                    formData.append("media", fileToUpload);
                 }
                 if (thumbnailUrl) formData.append("thumbnail_url", thumbnailUrl);
                 res = await createUserPost(formData);
@@ -251,6 +298,22 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
             setUploads(prev => prev.map(u => u.id === id ? { ...u, progress: 50, status: 'uploading', caption: 'Subiendo historia...' } : u));
 
             if (!finalFile) throw new Error("No se pudo procesar el archivo multimedia.");
+
+            // .MOV/HEVC sin recorte previo → re-codificar para que se vea en Android
+            // (el recorte ya re-codifica, así que solo aplica si no hubo trim)
+            if (needsTranscode(finalFile) && !data.trimRange) {
+                try {
+                    setUploads(prev => prev.map(u => u.id === id ? { ...u, status: 'processing', caption: 'Optimizando vídeo...' } : u));
+                    const duration = await getVideoDuration(finalFile);
+                    if (duration > 0 && duration <= MAX_TRANSCODE_SECONDS) {
+                        finalFile = await trimVideoInBackground(finalFile, { start: 0, end: duration }, (p) => {
+                            setUploads(prev => prev.map(u => u.id === id ? { ...u, progress: Math.min(45, Math.round(p * 0.45)) } : u));
+                        });
+                    }
+                } catch (e) {
+                    console.warn('[startStoryUpload] Transcode falló; se sube el original:', e);
+                }
+            }
 
             const storySizeError = fileTooBigError(finalFile);
             if (storySizeError) throw new Error(storySizeError);
