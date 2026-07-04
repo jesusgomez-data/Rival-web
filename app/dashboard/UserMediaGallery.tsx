@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { getUserMedia } from "./explore/actions";
 import { Play, Volume2, VolumeX, X, Copy } from "lucide-react";
@@ -43,6 +44,34 @@ function CarouselStrip({ urls }: { urls: string[] }) {
             >
                 {idx + 1}/{urls.length}
             </div>
+
+            {/* Flechas para escritorio (en móvil se desliza con el dedo) */}
+            {idx > 0 && (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        const el = stripRef.current;
+                        if (el) el.scrollTo({ left: (idx - 1) * el.clientWidth, behavior: 'smooth' });
+                    }}
+                    aria-label="Foto anterior"
+                    className="hidden md:flex absolute left-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm border border-white/15 text-white hover:bg-black/70 transition-all active:scale-90"
+                >
+                    <span className="text-xl leading-none">‹</span>
+                </button>
+            )}
+            {idx < urls.length - 1 && (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        const el = stripRef.current;
+                        if (el) el.scrollTo({ left: (idx + 1) * el.clientWidth, behavior: 'smooth' });
+                    }}
+                    aria-label="Foto siguiente"
+                    className="hidden md:flex absolute right-4 top-1/2 -translate-y-1/2 z-20 w-11 h-11 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm border border-white/15 text-white hover:bg-black/70 transition-all active:scale-90"
+                >
+                    <span className="text-xl leading-none">›</span>
+                </button>
+            )}
 
             {/* Puntos de posición */}
             <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-1.5 z-20 pointer-events-none">
@@ -224,7 +253,8 @@ export default function UserMediaGallery({ userId, limit }: { userId: string; li
             setActiveIndex(lightboxIndex);
             // Use requestAnimationFrame to ensure DOM is ready
             requestAnimationFrame(() => {
-                scrollContainerRef.current?.scrollTo({ top: lightboxIndex * window.innerHeight });
+                const el = scrollContainerRef.current;
+                if (el) el.scrollTo({ top: lightboxIndex * el.clientHeight });
             });
         }
     }, [lightboxIndex]);
@@ -234,7 +264,7 @@ export default function UserMediaGallery({ userId, limit }: { userId: string; li
         const container = scrollContainerRef.current;
         if (!container) return;
         const handleScroll = () => {
-            const idx = Math.round(container.scrollTop / window.innerHeight);
+            const idx = Math.round(container.scrollTop / container.clientHeight);
             if (idx !== activeIndex && idx >= 0 && idx < mediaItems.length) {
                 setActiveIndex(idx);
             }
@@ -253,7 +283,8 @@ export default function UserMediaGallery({ userId, limit }: { userId: string; li
             if (!dir) return;
             const next = activeIndex + dir;
             if (next >= 0 && next < mediaItems.length) {
-                scrollContainerRef.current?.scrollTo({ top: next * window.innerHeight, behavior: 'smooth' });
+                const el = scrollContainerRef.current;
+                if (el) el.scrollTo({ top: next * el.clientHeight, behavior: 'smooth' });
             }
         };
         window.addEventListener('keydown', onKey);
@@ -326,9 +357,10 @@ export default function UserMediaGallery({ userId, limit }: { userId: string; li
                 )}
             </div>
 
-            {/* VideoFeed-style fullscreen viewer */}
-            {lightboxIndex !== null && (
-                <div className="fixed inset-0 bg-black" style={{ zIndex: 200 }}>
+            {/* VideoFeed-style fullscreen viewer — en portal para que ningún
+                ancestro con transform "atrape" el position:fixed */}
+            {lightboxIndex !== null && typeof document !== 'undefined' && createPortal(
+                <div className="fixed inset-0 bg-black" style={{ zIndex: 9999 }}>
                     {/* Close */}
                     <button
                         onClick={() => setLightboxIndex(null)}
@@ -361,7 +393,8 @@ export default function UserMediaGallery({ userId, limit }: { userId: string; li
                             />
                         ))}
                     </div>
-                </div>
+                </div>,
+                document.body
             )}
         </>
     );
