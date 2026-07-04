@@ -228,16 +228,21 @@ export async function requestMemberPayment(centerId: string, planId: string, use
 
         console.log('[requestMemberPayment] Perfil encontrado:', profile.full_name);
 
-        let customerId = profile.stripe_customer_id;
-        if (!customerId) {
-            const stripeCustomer = await stripe.customers.create({
+        // Auto-reparación: valida el customer guardado (o crea uno nuevo si es
+        // de otro modo test/live o fue borrado)
+        const { ensureStripeCustomer } = await import("@/utils/stripe/customer");
+        const customerId = await ensureStripeCustomer(
+            stripe,
+            profile.stripe_customer_id,
+            {
                 email: extraData.email || profile.email,
                 name: profile.full_name || extraData.fullName,
                 metadata: { userId }
-            });
-            customerId = stripeCustomer.id;
-            await admin.from('profiles').update({ stripe_customer_id: customerId }).eq('id', userId);
-        }
+            },
+            async (id) => {
+                await admin.from('profiles').update({ stripe_customer_id: id }).eq('id', userId);
+            }
+        );
 
         // 3. Check if center has Stripe Connect configured to receive funds
         const { data: centerOrg } = await admin

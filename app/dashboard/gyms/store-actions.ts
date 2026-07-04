@@ -167,20 +167,20 @@ export async function purchaseProduct(centerId: string, productId: string, payme
         return { success: true, message: 'cash_registered' };
     }
 
-    // 3. Card Flow (Stripe)
-    let customerId = profile?.stripe_customer_id;
-    if (!customerId) {
-        try {
-            const customer = await stripe.customers.create({
-                email: user.email!,
-                name: profile?.full_name || user.email!,
-                metadata: { userId: user.id }
-            });
-            customerId = customer.id;
-            await supabase.from('profiles').update({ stripe_customer_id: customerId }).eq('id', user.id);
-        } catch (e: any) {
-            return { error: `Stripe Error: ${e.message}` };
-        }
+    // 3. Card Flow (Stripe) — auto-repara customers de otro modo (test/live)
+    let customerId: string;
+    try {
+        const { ensureStripeCustomer } = await import("@/utils/stripe/customer");
+        customerId = await ensureStripeCustomer(
+            stripe,
+            profile?.stripe_customer_id,
+            { email: user.email!, name: profile?.full_name || user.email!, metadata: { userId: user.id } },
+            async (id) => {
+                await supabase.from('profiles').update({ stripe_customer_id: id }).eq('id', user.id);
+            }
+        );
+    } catch (e: any) {
+        return { error: `Stripe Error: ${e.message}` };
     }
 
     // Check for saved cards

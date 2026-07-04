@@ -20,25 +20,23 @@ export async function createCheckoutSession(priceId: string) {
             .eq('id', user.id)
             .single();
 
-        let customerId = profile?.stripe_customer_id;
-
-        // 2. Create Stripe Customer if doesn't exist
-        if (!customerId) {
-            const customer = await stripe.customers.create({
+        // 2. Customer válido para el modo actual (auto-repara test/live)
+        const { ensureStripeCustomer } = await import("@/utils/stripe/customer");
+        const customerId = await ensureStripeCustomer(
+            stripe,
+            profile?.stripe_customer_id,
+            {
                 email: user.email || undefined,
                 name: profile?.full_name || user.email || 'Atleta Rival',
-                metadata: {
-                    userId: user.id
-                }
-            });
-            customerId = customer.id;
-
-            // Save to DB
-            await supabase
-                .from('profiles')
-                .update({ stripe_customer_id: customerId })
-                .eq('id', user.id);
-        }
+                metadata: { userId: user.id }
+            },
+            async (id) => {
+                await supabase
+                    .from('profiles')
+                    .update({ stripe_customer_id: id })
+                    .eq('id', user.id);
+            }
+        );
 
         const appUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://rivalfit.app').replace(/\/$/, '');
 
