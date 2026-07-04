@@ -54,6 +54,18 @@ http-diag-result*.txt
 wod_debug.json
 build_output.txt
 _buildcheck.txt
+*_output.txt
+error.txt
+centers_out.json
+schema_dump.sql
+models-list.txt
+lint-results.json
+lint_errors.txt
+lint_new.txt
+current_lint_errors.txt
+feedpost-lint*.txt
+final_verify.txt
+scratch/
 
 # QA / PDF temp render artifacts
 scripts/_shots/
