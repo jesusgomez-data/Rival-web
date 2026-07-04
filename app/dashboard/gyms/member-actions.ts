@@ -333,15 +333,16 @@ export async function requestMemberPayment(centerId: string, planId: string, use
         let memberError;
 
         if (existingMember) {
-            if (existingMember.status === 'active') {
-                return { error: "El usuario ya es un miembro activo de este centro." };
-            }
+            // Miembro activo = RENOVACIÓN: se le envía la solicitud sin tocar su
+            // estado (no pierde acceso mientras paga). Miembro no activo = alta:
+            // pasa a 'pending' hasta completar el pago.
+            const isRenewal = existingMember.status === 'active';
 
             const { error: updateError } = await admin
                 .from('members')
                 .update({
                     plan: plan.name,
-                    status: 'pending',
+                    ...(isRenewal ? {} : { status: 'pending' }),
                     payment_method: 'payment_request',
                     notes: extraData.notes,
                     full_name: extraData.fullName || profile.full_name,
