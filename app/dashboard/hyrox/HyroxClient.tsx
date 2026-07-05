@@ -42,6 +42,7 @@ export default function HyroxClient({ initialResults, competitions, isAdmin }: {
         { label: '', type: 'station' },
         { label: '', type: 'station' },
     ]);
+    const [newCompCategories, setNewCompCategories] = useState('');
     const [isCreatingComp, setIsCreatingComp] = useState(false);
 
     // ── Form state ──────────────────────────────────────────────
@@ -53,6 +54,11 @@ export default function HyroxClient({ initialResults, competitions, isAdmin }: {
 
     const activeComp = competitions.find(c => c.slug === activeSlug) || competitions[0];
     const segments: HyroxSegment[] = activeComp?.segments || HYROX_SEGMENTS;
+    const compCategories = (activeComp?.categories && activeComp.categories.length > 0)
+        ? activeComp.categories
+        : HYROX_CATEGORIES;
+    const categoryLabel = (val: string) =>
+        compCategories.find(c => c.value === val)?.label || val;
     const compResults = useMemo(
         () => results.filter(r => (r.competition_slug || 'hyrox') === activeSlug),
         [results, activeSlug]
@@ -128,6 +134,10 @@ export default function HyroxClient({ initialResults, competitions, isAdmin }: {
         setSplitInputs({});
         setShowForm(false);
         setExpandedId(null);
+        // Cada competencia tiene sus categorías: arrancar en la primera
+        const comp = competitions.find(c => c.slug === slug);
+        const cats = (comp?.categories && comp.categories.length > 0) ? comp.categories : HYROX_CATEGORIES;
+        setCategory(cats[0].value);
     }
 
     async function handleSave() {
@@ -188,6 +198,7 @@ export default function HyroxClient({ initialResults, competitions, isAdmin }: {
             name: newCompName,
             description: newCompDesc,
             segments: newSegments,
+            categories: newCompCategories.split(',').map(c => c.trim()).filter(Boolean),
         });
         setIsCreatingComp(false);
 
@@ -289,7 +300,7 @@ export default function HyroxClient({ initialResults, competitions, isAdmin }: {
                         <div>
                             <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1">Categoría</label>
                             <select value={category} onChange={e => setCategory(e.target.value)} className={inputCls}>
-                                {HYROX_CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                                {compCategories.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
                             </select>
                         </div>
                         <div className="col-span-2">
@@ -419,7 +430,7 @@ export default function HyroxClient({ initialResults, competitions, isAdmin }: {
                                             <div className="flex items-center gap-2 flex-wrap">
                                                 <p className="text-xl font-black italic text-foreground">{secondsToClock(r.total_seconds)}</p>
                                                 {isPR && <span className="bg-amber-500/10 text-amber-500 border border-amber-500/20 text-[8px] font-black uppercase px-2 py-0.5 rounded-full">PR</span>}
-                                                <span className="bg-background border border-border text-muted-foreground text-[8px] font-black uppercase px-2 py-0.5 rounded-full">{r.category}</span>
+                                                <span className="bg-background border border-border text-muted-foreground text-[8px] font-black uppercase px-2 py-0.5 rounded-full">{categoryLabel(r.category)}</span>
                                                 {r.is_official && <span className="bg-amber-500/10 text-amber-500 text-[8px] font-black uppercase px-2 py-0.5 rounded-full">Oficial</span>}
                                             </div>
                                             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">
@@ -502,6 +513,11 @@ export default function HyroxClient({ initialResults, competitions, isAdmin }: {
                             <div>
                                 <label className="block text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Descripción (opcional)</label>
                                 <input value={newCompDesc} onChange={e => setNewCompDesc(e.target.value)} placeholder="Ej: 10 zonas + 10 runs de 500m" className={inputCls} />
+                            </div>
+                            <div>
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Categorías (separadas por coma)</label>
+                                <input value={newCompCategories} onChange={e => setNewCompCategories(e.target.value)} placeholder="Ej: Elite, Open, Parejas, Age Group" className={inputCls} />
+                                <p className="text-[9px] text-muted-foreground mt-1">Si lo dejas vacío se usarán las de HYROX (Open, Pro, Doubles, Relay).</p>
                             </div>
 
                             <div>

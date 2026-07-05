@@ -15,7 +15,7 @@ export async function getCompetitions(): Promise<CompetitionTemplate[]> {
     try {
         const { data, error } = await supabase
             .from('competitions_catalog')
-            .select('slug, name, description, segments, is_active')
+            .select('slug, name, description, segments, categories, is_active')
             .eq('is_active', true)
             .order('created_at', { ascending: true });
 
@@ -32,6 +32,7 @@ export async function adminCreateCompetition(input: {
     name: string;
     description?: string;
     segments: { label: string; type: 'run' | 'station' }[];
+    categories?: string[];
 }) {
     if (!(await isUserAdmin())) return { error: "Solo el administrador puede crear competencias." };
 
@@ -60,12 +61,23 @@ export async function adminCreateCompetition(input: {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
+    // Categorías propias (opcional): "Elite, Open, Parejas" → [{value,label}]
+    const categories = (input.categories || [])
+        .map(c => c.trim())
+        .filter(c => c.length > 0)
+        .slice(0, 12)
+        .map(label => ({
+            value: label.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''),
+            label
+        }));
+
     const admin = createAdminClient();
     const { error } = await admin.from('competitions_catalog').insert({
         slug,
         name,
         description: (input.description || '').trim() || null,
         segments,
+        categories: categories.length > 0 ? categories : null,
         is_active: true,
         created_by: user?.id || null,
     });
@@ -133,8 +145,13 @@ export async function saveRaceResult(input: RaceResultInput) {
     const totalSeconds = Object.values(splits).reduce((a, b) => a + b, 0);
     if (totalSeconds <= 0) return { error: "El tiempo total no es válido." };
 
-    const validCategories = ['open', 'pro', 'doubles', 'relay'];
-    const category = validCategories.includes(input.category) ? input.category : 'open';
+    // Categorías propias de cada competencia (fallback: las de HYROX)
+    const templateCategories = (template.categories && template.categories.length > 0)
+        ? template.categories.map(c => c.value)
+        : ['open', 'pro', 'doubles', 'relay'];
+    const category = templateCategories.includes(input.category)
+        ? input.category
+        : templateCategories[0];
 
     const baseRow = {
         user_id: user.id,
