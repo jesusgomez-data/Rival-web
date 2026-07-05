@@ -129,8 +129,13 @@ export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicP
             return;
         }
 
-        // Stop previous
+        // Stop previous — desconectando sus eventos para que el 'error' que
+        // dispara src='' no borre el estado de la canción nueva
         if (audioRef.current) {
+            audioRef.current.onerror = null;
+            audioRef.current.onended = null;
+            audioRef.current.ontimeupdate = null;
+            audioRef.current.onloadedmetadata = null;
             audioRef.current.pause();
             audioRef.current.src = '';
         }
@@ -138,12 +143,20 @@ export default function MusicPicker({ onSelect, onClose, selectedTrack }: MusicP
         const audio = new Audio();
         audio.volume = 0.9;
         audio.preload = 'auto';
-        audio.ontimeupdate = () => setCurrentTime(Math.floor(audio.currentTime));
-        audio.onloadedmetadata = () => setDuration(Math.floor(audio.duration));
-        audio.onended = () => setPlayingId(null);
+        audio.ontimeupdate = () => {
+            if (audioRef.current === audio) setCurrentTime(Math.floor(audio.currentTime));
+        };
+        audio.onloadedmetadata = () => {
+            if (audioRef.current === audio) setDuration(Math.floor(audio.duration));
+        };
+        audio.onended = () => {
+            if (audioRef.current === audio) setPlayingId(null);
+        };
         audio.onerror = () => {
-            console.warn('[MusicPicker] Audio error:', track.url);
-            setPlayingId(null);
+            if (audioRef.current === audio) {
+                console.warn('[MusicPicker] Audio error:', track.url);
+                setPlayingId(null);
+            }
         };
 
         audio.src = track.url;

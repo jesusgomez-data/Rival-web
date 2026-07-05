@@ -182,7 +182,13 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
         }
 
         try {
+            // Desechar el audio anterior SIN que sus eventos contaminen al nuevo:
+            // poner src="" dispara 'error' en el audio viejo, y su onerror
+            // borraba el previewingId de la canción nueva (por eso "pausa"
+            // parecía no funcionar: el estado siempre volvía a null).
             if (audioRef.current) {
+                audioRef.current.onerror = null;
+                audioRef.current.onended = null;
                 audioRef.current.pause();
                 audioRef.current.src = "";
             }
@@ -190,17 +196,19 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
             const audio = new Audio();
             audio.volume = 0.9;
             audio.preload = 'auto';
-            audio.onended = () => setPreviewingId(null);
+            // Guardas: cada manejador solo actúa si SU audio sigue siendo el vigente
+            audio.onended = () => {
+                if (audioRef.current === audio) setPreviewingId(null);
+            };
             audio.onerror = () => {
-                console.warn('[MusicPicker] Preview error for:', track.title);
-                setPreviewingId(null);
+                if (audioRef.current === audio) {
+                    console.warn('[MusicPicker] Preview error for:', track.title);
+                    setPreviewingId(null);
+                }
             };
             audio.src = track.url;
 
-            // CRÍTICO: registrar el audio ANTES de esperar a que arranque.
-            // Si se hacía después (await), un segundo tap durante la carga
-            // creaba OTRO audio huérfano imposible de pausar (sonido doble
-            // que seguía sonando incluso al salir de la app).
+            // Registrar ANTES de esperar a que arranque (evita audios huérfanos)
             audioRef.current = audio;
             setPreviewingId(track.id);
 
@@ -210,9 +218,10 @@ export default function MusicPicker({ onSelect, selectedTrackId, variant = 'butt
             }
         } catch (error) {
             console.warn("Playback Failure:", error);
-            // Solo limpiar si este audio sigue siendo el activo
-            if (audioRef.current?.src) audioRef.current.pause();
-            setPreviewingId(null);
+            if (audioRef.current) {
+                audioRef.current.pause();
+                setPreviewingId(null);
+            }
         }
     };
 
