@@ -2,30 +2,47 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, X, Trash2, Trophy, Timer, Flag, ChevronDown, ChevronUp, Loader2, TrendingDown, ArrowLeft, Medal } from "lucide-react";
+import { Plus, X, Trash2, Trophy, Timer, Flag, ChevronDown, ChevronUp, Loader2, TrendingDown, ArrowLeft, Medal, Settings2 } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
-import { HYROX_SEGMENTS, HYROX_CATEGORIES, secondsToClock, parseClock, formatDelta } from "@/lib/hyrox";
-import { saveHyroxResult, deleteHyroxResult } from "./actions";
+import { HYROX_SEGMENTS, HYROX_CATEGORIES, secondsToClock, parseClock, formatDelta, type CompetitionTemplate, type HyroxSegment } from "@/lib/hyrox";
+import { saveRaceResult, deleteRaceResult, adminCreateCompetition } from "./actions";
 
-interface HyroxResult {
+interface RaceResult {
     id: string;
+    competition_slug: string;
     performed_at: string;
     category: string;
     is_official: boolean;
     total_seconds: number;
     splits: Record<string, number>;
+    segments_snapshot?: HyroxSegment[] | null;
     notes: string | null;
     created_at: string;
 }
 
-export default function HyroxClient({ initialResults }: { initialResults: HyroxResult[] }) {
-    const [results, setResults] = useState<HyroxResult[]>(initialResults);
+export default function HyroxClient({ initialResults, competitions, isAdmin }: {
+    initialResults: RaceResult[];
+    competitions: CompetitionTemplate[];
+    isAdmin: boolean;
+}) {
+    const [results, setResults] = useState<RaceResult[]>(initialResults);
+    const [activeSlug, setActiveSlug] = useState(competitions[0]?.slug || 'hyrox');
     const [showForm, setShowForm] = useState(false);
     const [expandedId, setExpandedId] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [errorMsg, setErrorMsg] = useState<string | null>(null);
     const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+    // ── Admin: crear competencia ────────────────────────────────
+    const [showAdminModal, setShowAdminModal] = useState(false);
+    const [newCompName, setNewCompName] = useState('');
+    const [newCompDesc, setNewCompDesc] = useState('');
+    const [newSegments, setNewSegments] = useState<{ label: string; type: 'run' | 'station' }[]>([
+        { label: '', type: 'station' },
+        { label: '', type: 'station' },
+    ]);
+    const [isCreatingComp, setIsCreatingComp] = useState(false);
 
     // ── Form state ──────────────────────────────────────────────
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -34,11 +51,23 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
     const [notes, setNotes] = useState('');
     const [splitInputs, setSplitInputs] = useState<Record<string, string>>({});
 
+    const activeComp = competitions.find(c => c.slug === activeSlug) || competitions[0];
+    const segments: HyroxSegment[] = activeComp?.segments || HYROX_SEGMENTS;
+    const compResults = useMemo(
+        () => results.filter(r => (r.competition_slug || 'hyrox') === activeSlug),
+        [results, activeSlug]
+    );
+
+    const segmentsForResult = (r: RaceResult): HyroxSegment[] =>
+        (r.segments_snapshot && r.segments_snapshot.length > 0)
+            ? r.segments_snapshot
+            : ((r.competition_slug || 'hyrox') === 'hyrox' ? HYROX_SEGMENTS : segments);
+
     const parsedSplits = useMemo(() => {
         const out: Record<string, number | null> = {};
-        HYROX_SEGMENTS.forEach(seg => { out[seg.key] = parseClock(splitInputs[seg.key] || ''); });
+        segments.forEach(seg => { out[seg.key] = parseClock(splitInputs[seg.key] || ''); });
         return out;
-    }, [splitInputs]);
+    }, [splitInputs, segments]);
 
     const liveTotal = useMemo(() => {
         const vals = Object.values(parsedSplits);
@@ -46,17 +75,16 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
         return (vals as number[]).reduce((a, b) => a + b, 0);
     }, [parsedSplits]);
 
-    // ── Bests ───────────────────────────────────────────────────
+    // ── Bests (de la competencia activa) ────────────────────────
     const bestTotal = useMemo(() => {
-        if (results.length === 0) return null;
-        return results.reduce((best, r) => (r.total_seconds < best.total_seconds ? r : best), results[0]);
-    }, [results]);
+        if (compResults.length === 0) return null;
+        return compResults.reduce((best, r) => (r.total_seconds < best.total_seconds ? r : best), compResults[0]);
+    }, [compResults]);
 
-    // Mejor tiempo por segmento entre todos los resultados
     const segmentBests = useMemo(() => {
         const bests: Record<string, number> = {};
-        results.forEach(r => {
-            HYROX_SEGMENTS.forEach(seg => {
+        compResults.forEach(r => {
+            segments.forEach(seg => {
                 const v = r.splits?.[seg.key];
                 if (typeof v === 'number' && v > 0 && (bests[seg.key] == null || v < bests[seg.key])) {
                     bests[seg.key] = v;
@@ -64,13 +92,12 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
             });
         });
         return bests;
-    }, [results]);
+    }, [compResults, segments]);
 
-    // Mejor por segmento EXCLUYENDO un resultado (para comparar ese resultado contra el resto)
     function segmentBestsExcluding(excludeId: string): Record<string, number> {
         const bests: Record<string, number> = {};
-        results.filter(r => r.id !== excludeId).forEach(r => {
-            HYROX_SEGMENTS.forEach(seg => {
+        compResults.filter(r => r.id !== excludeId).forEach(r => {
+            segmentsForResult(r).forEach(seg => {
                 const v = r.splits?.[seg.key];
                 if (typeof v === 'number' && v > 0 && (bests[seg.key] == null || v < bests[seg.key])) {
                     bests[seg.key] = v;
@@ -81,14 +108,13 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
     }
 
     const chartData = useMemo(() => {
-        return [...results]
+        return [...compResults]
             .sort((a, b) => a.performed_at.localeCompare(b.performed_at))
             .map(r => ({
                 date: new Date(r.performed_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }),
                 minutos: Math.round(r.total_seconds / 6) / 10,
-                oficial: r.is_official
             }));
-    }, [results]);
+    }, [compResults]);
 
     // ── Handlers ────────────────────────────────────────────────
     function flash(msg: string, isError = false) {
@@ -97,8 +123,15 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
         setTimeout(() => { setErrorMsg(null); setSuccessMsg(null); }, 5000);
     }
 
+    function switchCompetition(slug: string) {
+        setActiveSlug(slug);
+        setSplitInputs({});
+        setShowForm(false);
+        setExpandedId(null);
+    }
+
     async function handleSave() {
-        const invalid = HYROX_SEGMENTS.filter(seg => parsedSplits[seg.key] == null);
+        const invalid = segments.filter(seg => parsedSplits[seg.key] == null);
         if (invalid.length > 0) {
             flash(`Revisa el formato de tiempo (mm:ss) en: ${invalid.slice(0, 3).map(s => s.shortLabel).join(', ')}${invalid.length > 3 ? '…' : ''}`, true);
             return;
@@ -106,9 +139,10 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
 
         setIsSaving(true);
         const splits: Record<string, number> = {};
-        HYROX_SEGMENTS.forEach(seg => { splits[seg.key] = parsedSplits[seg.key] as number; });
+        segments.forEach(seg => { splits[seg.key] = parsedSplits[seg.key] as number; });
 
-        const res = await saveHyroxResult({
+        const res = await saveRaceResult({
+            competition_slug: activeSlug,
             performed_at: date,
             category,
             is_official: isOfficial,
@@ -123,22 +157,22 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
         }
 
         if (res.result) {
-            setResults(prev => [res.result as HyroxResult, ...prev]);
-            setExpandedId((res.result as HyroxResult).id);
+            setResults(prev => [{ ...(res.result as RaceResult), competition_slug: activeSlug }, ...prev]);
+            setExpandedId((res.result as RaceResult).id);
         }
         setShowForm(false);
         setSplitInputs({});
         setNotes('');
         setIsOfficial(false);
-        flash(bestTotal && res.result && (res.result as HyroxResult).total_seconds < bestTotal.total_seconds
-            ? '¡NUEVO RÉCORD PERSONAL! 🏆 Simulacro guardado.'
-            : '¡Simulacro guardado! Revisa tus splits abajo.');
+        flash(bestTotal && res.result && (res.result as RaceResult).total_seconds < bestTotal.total_seconds
+            ? '¡NUEVO RÉCORD PERSONAL! 🏆 Marca guardada.'
+            : '¡Marca guardada! Revisa tus splits abajo.');
     }
 
     async function handleDelete(id: string) {
         if (!confirm('¿Eliminar este resultado? Esta acción no se puede deshacer.')) return;
         setDeletingId(id);
-        const res = await deleteHyroxResult(id);
+        const res = await deleteRaceResult(id);
         setDeletingId(null);
         if (res.error) {
             flash(res.error, true);
@@ -146,6 +180,24 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
             setResults(prev => prev.filter(r => r.id !== id));
             flash('Resultado eliminado.');
         }
+    }
+
+    async function handleCreateCompetition() {
+        setIsCreatingComp(true);
+        const res = await adminCreateCompetition({
+            name: newCompName,
+            description: newCompDesc,
+            segments: newSegments,
+        });
+        setIsCreatingComp(false);
+
+        if (res.error) {
+            flash(res.error, true);
+            return;
+        }
+        setShowAdminModal(false);
+        flash(`Competencia "${newCompName}" creada. Recargando...`);
+        setTimeout(() => window.location.reload(), 800);
     }
 
     const inputCls = "w-full bg-background border border-border rounded-xl p-3 text-foreground outline-none focus:border-brand-red text-sm";
@@ -159,18 +211,42 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
                         <ArrowLeft className="w-4 h-4" /> Inicio
                     </Link>
                     <h1 className="text-3xl sm:text-4xl font-black italic uppercase tracking-tighter text-foreground">
-                        HYROX <span className="text-brand-red">Race Center</span>
+                        MIS <span className="text-brand-red">MARCAS</span>
                     </h1>
                     <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
-                        8 Runs · 8 Estaciones · Splits y PRs por segmento
+                        {activeComp?.description || 'Splits y PRs por segmento en cada competencia'}
                     </p>
                 </div>
                 <button
                     onClick={() => { setShowForm(!showForm); setErrorMsg(null); }}
                     className={`${showForm ? 'bg-muted text-muted-foreground border border-border' : 'bg-brand-red text-white shadow-lg hover:bg-red-600'} py-3 px-6 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95`}
                 >
-                    {showForm ? (<><X className="w-4 h-4" /> Cerrar</>) : (<><Plus className="w-4 h-4" /> Nuevo Simulacro</>)}
+                    {showForm ? (<><X className="w-4 h-4" /> Cerrar</>) : (<><Plus className="w-4 h-4" /> Nueva Marca</>)}
                 </button>
+            </div>
+
+            {/* Selector de competencia */}
+            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+                {competitions.map(c => (
+                    <button
+                        key={c.slug}
+                        onClick={() => switchCompetition(c.slug)}
+                        className={`shrink-0 px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest border transition-all ${activeSlug === c.slug
+                            ? 'bg-brand-red border-brand-red text-white shadow-[0_4px_15px_rgba(220,38,38,0.35)]'
+                            : 'bg-muted/50 border-border text-muted-foreground hover:text-foreground'}`}
+                    >
+                        {c.name}
+                    </button>
+                ))}
+                {isAdmin && (
+                    <button
+                        onClick={() => setShowAdminModal(true)}
+                        className="shrink-0 px-4 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest border border-dashed border-brand-red/40 text-brand-red hover:bg-brand-red/10 transition-all flex items-center gap-1.5"
+                        title="Crear competencia (solo admin)"
+                    >
+                        <Settings2 className="w-3.5 h-3.5" /> Nueva Competencia
+                    </button>
+                )}
             </div>
 
             {/* Feedback */}
@@ -190,20 +266,20 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
                 </div>
                 <div className="bg-muted/50 border border-border rounded-2xl p-4 text-center">
                     <Flag className="w-4 h-4 text-brand-red mx-auto mb-1" />
-                    <p className="text-xl sm:text-2xl font-black italic text-foreground">{results.length}</p>
-                    <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-muted-foreground">Simulacros</p>
+                    <p className="text-xl sm:text-2xl font-black italic text-foreground">{compResults.length}</p>
+                    <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-muted-foreground">Registros</p>
                 </div>
                 <div className="bg-muted/50 border border-border rounded-2xl p-4 text-center">
                     <Timer className="w-4 h-4 text-brand-red mx-auto mb-1" />
-                    <p className="text-xl sm:text-2xl font-black italic text-foreground">{results[0] ? secondsToClock(results[0].total_seconds) : '—'}</p>
+                    <p className="text-xl sm:text-2xl font-black italic text-foreground">{compResults[0] ? secondsToClock(compResults[0].total_seconds) : '—'}</p>
                     <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-muted-foreground">Último</p>
                 </div>
             </div>
 
-            {/* New Simulation Form */}
+            {/* Formulario de nueva marca */}
             {showForm && (
                 <div className="bg-muted/50 border border-border rounded-3xl p-5 sm:p-8 space-y-6 animate-in fade-in slide-in-from-top-4">
-                    <h2 className="text-lg font-black italic uppercase text-foreground">Registrar Simulacro / Carrera</h2>
+                    <h2 className="text-lg font-black italic uppercase text-foreground">Registrar Marca · {activeComp?.name}</h2>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                         <div>
@@ -225,7 +301,7 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
                         </div>
                     </div>
 
-                    {/* 16 Splits */}
+                    {/* Splits dinámicos según competencia */}
                     <div>
                         <div className="flex items-center justify-between mb-3">
                             <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Splits — formato mm:ss (ej: 4:35)</p>
@@ -234,7 +310,7 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
                             </p>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                            {HYROX_SEGMENTS.map((seg, i) => {
+                            {segments.map((seg, i) => {
                                 const val = splitInputs[seg.key] || '';
                                 const invalid = val.trim() !== '' && parseClock(val) == null;
                                 const best = segmentBests[seg.key];
@@ -261,7 +337,7 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
 
                     <div>
                         <label className="block text-[8px] font-black uppercase tracking-widest text-muted-foreground mb-1">Notas (pesos, sensaciones, estrategia...)</label>
-                        <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Ej: Sled a 152kg, wall balls sin pausas hasta 60..." className={inputCls} />
+                        <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Ej: Sled a 152kg, sin pausas hasta el final..." className={inputCls} />
                     </div>
 
                     <button
@@ -269,12 +345,12 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
                         disabled={isSaving}
                         className="w-full bg-brand-red hover:bg-red-600 disabled:opacity-60 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-xl"
                     >
-                        {isSaving ? (<><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</>) : 'Guardar Resultado'}
+                        {isSaving ? (<><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</>) : 'Guardar Marca'}
                     </button>
                 </div>
             )}
 
-            {/* Evolution Chart */}
+            {/* Evolución */}
             {chartData.length >= 2 && (
                 <div className="bg-muted/50 border border-border rounded-3xl p-5 sm:p-6">
                     <h3 className="text-sm font-black italic uppercase text-foreground mb-4 flex items-center gap-2">
@@ -297,14 +373,14 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
                 </div>
             )}
 
-            {/* Station PRs */}
-            {results.length > 0 && (
+            {/* PRs por estación */}
+            {compResults.length > 0 && (
                 <div className="bg-muted/50 border border-border rounded-3xl p-5 sm:p-6">
                     <h3 className="text-sm font-black italic uppercase text-foreground mb-4 flex items-center gap-2">
                         <Medal className="w-4 h-4 text-brand-red" /> PRs por Estación
                     </h3>
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-                        {HYROX_SEGMENTS.filter(s => s.type === 'station').map(seg => (
+                        {segments.filter(s => s.type === 'station').map(seg => (
                             <div key={seg.key} className="bg-background/60 border border-border rounded-xl p-3 text-center">
                                 <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground truncate" title={seg.label}>{seg.shortLabel}</p>
                                 <p className="text-lg font-black italic text-foreground mt-1">{secondsToClock(segmentBests[seg.key])}</p>
@@ -314,19 +390,20 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
                 </div>
             )}
 
-            {/* History */}
+            {/* Historial */}
             <div className="space-y-3">
-                <h3 className="text-sm font-black italic uppercase text-foreground">Historial</h3>
-                {results.length === 0 ? (
+                <h3 className="text-sm font-black italic uppercase text-foreground">Historial · {activeComp?.name}</h3>
+                {compResults.length === 0 ? (
                     <div className="text-center py-16 rounded-3xl border border-dashed border-border">
                         <Flag className="w-10 h-10 text-muted-foreground mx-auto mb-3 opacity-30" />
-                        <p className="text-sm font-bold text-muted-foreground">Aún no tienes simulacros registrados.</p>
-                        <p className="text-xs text-muted-foreground/70 mt-1">Registra tu primer simulacro para empezar a comparar splits.</p>
+                        <p className="text-sm font-bold text-muted-foreground">Aún no tienes marcas de {activeComp?.name}.</p>
+                        <p className="text-xs text-muted-foreground/70 mt-1">Registra tu primera marca para empezar a comparar splits.</p>
                     </div>
                 ) : (
-                    results.map(r => {
+                    compResults.map(r => {
                         const isExpanded = expandedId === r.id;
                         const isPR = bestTotal?.id === r.id;
+                        const rSegments = segmentsForResult(r);
                         const bests = isExpanded ? segmentBestsExcluding(r.id) : {};
                         return (
                             <div key={r.id} className={`bg-muted/50 border rounded-2xl overflow-hidden transition-all ${isPR ? 'border-amber-500/40' : 'border-border'}`}>
@@ -355,9 +432,8 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
 
                                 {isExpanded && (
                                     <div className="px-4 sm:px-5 pb-5 space-y-4 animate-in fade-in">
-                                        {/* Splits table with delta vs best-of-others */}
                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                                            {HYROX_SEGMENTS.map((seg, i) => {
+                                            {rSegments.map((seg, i) => {
                                                 const v = r.splits?.[seg.key];
                                                 const best = bests[seg.key];
                                                 const delta = (typeof v === 'number' && best != null) ? v - best : null;
@@ -379,7 +455,7 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
                                                 );
                                             })}
                                         </div>
-                                        <p className="text-[9px] text-muted-foreground italic">Δ comparado con tu mejor split en el resto de simulacros. Verde = mejoras tu marca.</p>
+                                        <p className="text-[9px] text-muted-foreground italic">Δ comparado con tu mejor split en el resto de registros. Verde = mejoras tu marca.</p>
 
                                         {r.notes && (
                                             <div className="bg-background/50 border border-border rounded-xl p-3">
@@ -405,6 +481,77 @@ export default function HyroxClient({ initialResults }: { initialResults: HyroxR
                     })
                 )}
             </div>
+
+            {/* Modal admin: crear competencia */}
+            {showAdminModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[500] flex items-center justify-center p-4 overflow-y-auto">
+                    <div className="bg-card border border-border rounded-3xl p-6 sm:p-8 w-full max-w-lg my-8 animate-in fade-in zoom-in-95">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 className="text-xl font-black italic uppercase text-foreground">Nueva Competencia</h3>
+                                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mt-1">Solo administrador · visible para todos los atletas</p>
+                            </div>
+                            <button onClick={() => setShowAdminModal(false)} className="bg-muted p-2 rounded-full text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Nombre</label>
+                                <input value={newCompName} onChange={e => setNewCompName(e.target.value)} placeholder="Ej: DEKA FIT, ATHX Games..." className={inputCls} />
+                            </div>
+                            <div>
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Descripción (opcional)</label>
+                                <input value={newCompDesc} onChange={e => setNewCompDesc(e.target.value)} placeholder="Ej: 10 zonas + 10 runs de 500m" className={inputCls} />
+                            </div>
+
+                            <div>
+                                <label className="block text-[9px] font-black uppercase tracking-widest text-muted-foreground mb-1.5">Segmentos (en orden de carrera)</label>
+                                <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar pr-1">
+                                    {newSegments.map((seg, i) => (
+                                        <div key={i} className="flex gap-2 items-center">
+                                            <span className="text-[10px] font-black text-brand-red w-5 shrink-0">{i + 1}.</span>
+                                            <input
+                                                value={seg.label}
+                                                onChange={e => setNewSegments(prev => prev.map((s, j) => j === i ? { ...s, label: e.target.value } : s))}
+                                                placeholder="Ej: 500m Row"
+                                                className="flex-1 bg-background border border-border rounded-lg p-2.5 text-foreground outline-none focus:border-brand-red text-xs"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setNewSegments(prev => prev.map((s, j) => j === i ? { ...s, type: s.type === 'run' ? 'station' : 'run' } : s))}
+                                                className={`shrink-0 px-3 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-widest border transition-all ${seg.type === 'run' ? 'bg-background border-border text-muted-foreground' : 'bg-brand-red/10 border-brand-red/30 text-brand-red'}`}
+                                                title="Alternar entre carrera y estación"
+                                            >
+                                                {seg.type === 'run' ? 'Run' : 'Estación'}
+                                            </button>
+                                            {newSegments.length > 2 && (
+                                                <button type="button" onClick={() => setNewSegments(prev => prev.filter((_, j) => j !== i))} className="shrink-0 text-muted-foreground hover:text-red-500 p-1">
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setNewSegments(prev => [...prev, { label: '', type: 'station' }])}
+                                    className="mt-2 w-full py-2.5 rounded-xl border border-dashed border-border text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground hover:border-brand-red/40 transition-all flex items-center justify-center gap-1.5"
+                                >
+                                    <Plus className="w-3.5 h-3.5" /> Añadir segmento
+                                </button>
+                            </div>
+
+                            <button
+                                onClick={handleCreateCompetition}
+                                disabled={isCreatingComp}
+                                className="w-full bg-brand-red hover:bg-red-600 disabled:opacity-60 text-white py-4 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-xl"
+                            >
+                                {isCreatingComp ? (<><Loader2 className="w-4 h-4 animate-spin" /> Creando...</>) : 'Crear Competencia'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

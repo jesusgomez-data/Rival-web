@@ -32,6 +32,26 @@ export const HYROX_SEGMENTS: HyroxSegment[] = [
 
 export const HYROX_SEGMENT_KEYS = HYROX_SEGMENTS.map(s => s.key);
 
+// ── Multi-competición (Mis Marcas) ─────────────────────────────
+export interface CompetitionTemplate {
+    slug: string;
+    name: string;
+    description?: string | null;
+    segments: HyroxSegment[];
+    is_active?: boolean;
+}
+
+/** Plantilla por defecto si el catálogo aún no existe en la BD */
+export const DEFAULT_COMPETITIONS: CompetitionTemplate[] = [
+    {
+        slug: 'hyrox',
+        name: 'HYROX',
+        description: '8 runs de 1 km + 8 estaciones en orden oficial',
+        segments: HYROX_SEGMENTS,
+        is_active: true,
+    },
+];
+
 export const HYROX_CATEGORIES: { value: string; label: string }[] = [
     { value: 'open', label: 'Open' },
     { value: 'pro', label: 'Pro' },

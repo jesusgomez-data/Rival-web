@@ -499,7 +499,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         { name: t.navDashboard.messages, href: "/dashboard/messages", icon: MessageSquarePlus },
         { name: t.navDashboard.onlineCoach, href: "/dashboard/coach", icon: MessageCircle },
         // { name: t.navDashboard.training, href: "/dashboard/training", icon: Dumbbell }, // hidden temporarily
-        { name: "HYROX", href: "/dashboard/hyrox", icon: Dumbbell },
+        { name: "Mis Marcas", href: "/dashboard/hyrox", icon: Dumbbell },
         { name: "Nutrición", href: "/dashboard/nutrition", icon: Zap },
         { name: "Body Stats", href: "/dashboard/body-stats", icon: Activity },
         { name: t.navDashboard.affiliateGym, href: "/dashboard/gyms", icon: Building2 },
