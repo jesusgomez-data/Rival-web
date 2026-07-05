@@ -163,19 +163,16 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     </button>
 
                     {profile.is_official ? (
-                        /* Official branded cover */
+                        /* Official branded cover — HUD-style scanline, no repeated badges */
                         <>
-                            {/* Diagonal stripe pattern */}
-                            <div className="absolute inset-0 opacity-[0.04]" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #dc2626 0, #dc2626 1px, transparent 0, transparent 24px)', backgroundSize: '34px 34px' }} />
-                            {/* Red glow at bottom */}
-                            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-brand-red/15 to-transparent" />
-                            {/* Large faint R symbol */}
-                            <div className="absolute right-8 top-1/2 -translate-y-1/2 text-[160px] font-black text-white/[0.03] italic tracking-tighter select-none pointer-events-none leading-none">R</div>
-                            {/* Official ribbon */}
-                            <div className="absolute top-5 left-[70px] flex items-center gap-2 bg-black/60 border border-blue-500/30 backdrop-blur-md px-4 py-1.5 rounded-full shadow-[0_0_20px_rgba(59,130,246,0.2)] z-30">
-                                <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-                                <span className="text-[9px] font-black text-blue-400 uppercase tracking-[0.3em]">Cuenta Oficial · RivalFit</span>
-                            </div>
+                            <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
+                            {/* Waveform / telemetry line, echoes the live-pulse icon in the top bar */}
+                            <svg className="absolute inset-x-0 bottom-0 w-full h-16 text-brand-red/[0.12]" preserveAspectRatio="none" viewBox="0 0 400 40" fill="none">
+                                <path d="M0 20 L60 20 L72 6 L84 34 L96 12 L108 28 L120 20 L400 20" stroke="currentColor" strokeWidth="1.5" />
+                            </svg>
+                            {/* Corner tick marks — technical, not decorative-blob */}
+                            <div className="absolute top-5 right-5 w-8 h-8 border-t border-r border-white/10" />
+                            <div className="absolute bottom-5 left-5 w-8 h-8 border-b border-l border-white/10" />
                         </>
                     ) : profile.cover_url ? (
                         <>
@@ -240,9 +237,12 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                     <div className="space-y-2">
                         <div className="flex flex-col items-center md:items-start gap-2">
                             {profile.is_official && (
-                                <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/10 border border-blue-500/30 rounded-full">
-                                    <ShieldCheck className="w-3 h-3 text-blue-400" />
-                                    <span className="text-[9px] font-black text-blue-400 uppercase tracking-[0.25em]">Plataforma Oficial · App Administrator</span>
+                                <div className="flex items-center gap-2 font-mono">
+                                    <span className="relative flex w-1.5 h-1.5">
+                                        <span className="absolute inline-flex h-full w-full rounded-full bg-blue-400 animate-ping opacity-75" />
+                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-blue-400" />
+                                    </span>
+                                    <span className="text-[9px] font-bold text-blue-400/80 uppercase tracking-[0.2em]">root@rivalfit</span>
                                 </div>
                             )}
                             <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-2 md:gap-3">
@@ -258,11 +258,15 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                         </div>
                         <div className="flex items-center justify-center md:justify-start gap-2 text-brand-red font-black tracking-[0.2em] text-[9px] md:text-[10px] uppercase flex-wrap">
                             @{profile.username}
-                            <span className="text-gray-600">•</span>
-                            <span className="text-white/70 flex items-center gap-1 border border-white/10 bg-white/5 px-2 py-0.5 rounded-md">
-                                <Activity className="w-3 h-3 text-brand-red" />
-                                {profile.is_official ? 'PLATAFORMA OFICIAL' : (profile.main_sport || 'CROSS TRAINING')}
-                            </span>
+                            {!profile.is_official && (
+                                <>
+                                    <span className="text-gray-600">•</span>
+                                    <span className="text-white/70 flex items-center gap-1 border border-white/10 bg-white/5 px-2 py-0.5 rounded-md">
+                                        <Activity className="w-3 h-3 text-brand-red" />
+                                        {profile.main_sport || 'CROSS TRAINING'}
+                                    </span>
+                                </>
+                            )}
                             {profile.location && (
                                 <>
                                     <span className="text-gray-600">•</span>
@@ -379,38 +383,30 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
 
             {/* Bio / Manifiesto — OFFICIAL ONLY */}
             {profile.is_official ? (
-                <div className="relative rounded-[32px] overflow-hidden border border-blue-500/20 shadow-[0_0_40px_rgba(59,130,246,0.08)]"
-                    style={{ background: 'linear-gradient(135deg, #000 0%, #050510 50%, #020008 100%)' }}>
-                    {/* Background pattern */}
-                    <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'repeating-linear-gradient(-45deg, #3b82f6 0, #3b82f6 1px, transparent 0, transparent 20px)', backgroundSize: '28px 28px' }} />
-                    {/* Blue glow top right */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 blur-[80px] rounded-full -mr-20 -mt-20 pointer-events-none" />
-                    {/* Red glow bottom left */}
-                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-brand-red/10 blur-[60px] rounded-full -ml-16 -mb-16 pointer-events-none" />
-
-                    <div className="relative z-10 p-6 md:p-12 space-y-6">
-                        {/* Header */}
-                        <div className="flex items-center gap-3">
-                            <div className="p-2.5 bg-blue-500/10 border border-blue-500/30 rounded-xl">
-                                <ShieldCheck className="w-5 h-5 text-blue-400" />
-                            </div>
-                            <div>
-                                <p className="text-[9px] font-black text-blue-400 uppercase tracking-[0.4em]">Canal Oficial</p>
-                                <p className="text-[11px] font-bold text-white/60">Administrador de la Plataforma</p>
-                            </div>
-                            <div className="ml-auto px-3 py-1 bg-blue-500/10 border border-blue-500/20 rounded-full">
-                                <span className="text-[8px] font-black text-blue-400 uppercase tracking-widest">Verificado ✓</span>
-                            </div>
+                <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-[#050608] font-mono">
+                    {/* Terminal title bar */}
+                    <div className="flex items-center gap-2 px-5 py-3 border-b border-white/10 bg-white/[0.02]">
+                        <div className="flex gap-1.5">
+                            <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-white/10" />
+                            <div className="w-2.5 h-2.5 rounded-full bg-brand-red/60" />
                         </div>
+                        <span className="ml-2 text-[10px] text-white/30 tracking-wide">rivalfit://broadcast</span>
+                    </div>
 
-                        {/* Message */}
-                        <p className="text-base md:text-xl font-bold text-gray-200 leading-relaxed italic tracking-tight whitespace-pre-wrap border-l-2 border-blue-500/40 pl-5">
+                    <div className="p-6 md:p-10 space-y-5">
+                        <p className="text-sm md:text-base text-gray-300 leading-relaxed whitespace-pre-wrap">
+                            <span className="text-blue-400/70 select-none">$ </span>
                             {profile.bio || "Bienvenidos a la plataforma oficial de RivalFit. Aquí encontrarás entrenamientos, retos y toda la información para llevar tu rendimiento al siguiente nivel."}
+                            <span className="inline-block w-[7px] h-[15px] bg-blue-400/60 align-middle ml-1 animate-pulse" />
                         </p>
 
-                        <div className="flex items-center gap-3 pt-2 border-t border-white/5">
-                            <div className="h-1 w-8 bg-brand-red rounded-full" />
-                            <span className="text-[9px] font-black text-white/20 uppercase tracking-widest">RivalFit Official · Todos los derechos reservados</span>
+                        <div className="flex items-center gap-2 pt-4 border-t border-white/5 text-[9px] text-white/25 tracking-widest">
+                            <span className="relative flex w-1 h-1">
+                                <span className="absolute inline-flex h-full w-full rounded-full bg-brand-red/70 animate-ping" />
+                                <span className="relative inline-flex rounded-full h-1 w-1 bg-brand-red/70" />
+                            </span>
+                            broadcasting · rivalfit official
                         </div>
                     </div>
                 </div>

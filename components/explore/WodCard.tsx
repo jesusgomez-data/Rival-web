@@ -12,6 +12,7 @@ import {
     Edit2,
     Activity
 } from "lucide-react";
+import { fetchWodCompletion } from "@/lib/wod-completion-cache";
 import { useState, useEffect, useCallback, memo } from "react";
 import { WodBlock, WodFormat, WodSummary, ExerciseEntry, WorkoutCategory } from "../training/WodCreator";
 import { cn } from "@/lib/utils";
@@ -83,20 +84,20 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
 
     const originalWodPostId = (data as any).original_wod_post_id;
 
-    const checkCompletionStatus = useCallback(async (signal?: AbortSignal) => {
+    const checkCompletionStatus = useCallback(async () => {
         const targetWodId = originalWodPostId || postId;
         if (!targetWodId) return;
         setIsLoadingStatus(true);
         try {
-            const response = await fetch(`/api/wod/my-completion?wodPostId=${targetWodId}`, { signal });
-            const resData = await response.json();
-            if (resData.success && resData.completion) {
+            // Caché de sesión compartida: una sola llamada por WOD,
+            // aunque la tarjeta se monte 20 veces (fix del N+1 de Sentry)
+            const { completion } = await fetchWodCompletion(targetWodId);
+            if (completion) {
                 setHasCompleted(true);
-                setUserCompletion(resData.completion);
+                setUserCompletion(completion);
             }
-        } catch (error) {
-            const msg = (error as Error)?.message || '';
-            if ((error as Error)?.name === 'AbortError' || msg.includes('Failed to fetch')) return;
+        } catch {
+            /* silencioso: sin red no hay estado de completado */
         } finally {
             setIsLoadingStatus(false);
         }
@@ -104,9 +105,7 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
 
     useEffect(() => {
         if (!postId && !originalWodPostId) return;
-        const ctrl = new AbortController();
-        checkCompletionStatus(ctrl.signal);
-        return () => ctrl.abort();
+        checkCompletionStatus();
     }, [checkCompletionStatus]);
 
     if (!data.blocks || data.blocks.length === 0) return null;

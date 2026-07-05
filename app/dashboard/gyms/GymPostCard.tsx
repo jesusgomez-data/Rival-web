@@ -9,6 +9,7 @@ import MentionText from "@/components/MentionText";
 import MentionInput from "@/components/MentionInput";
 import WodCard from "@/components/explore/WodCard";
 import WODTrackerModal from "@/components/WODTrackerModal";
+import { fetchWodCompletion } from "@/lib/wod-completion-cache";
 
 export default function GymPostCard({ post, centerId, isAdmin = false, currentUserId, isMember = false }: any) {
     const [likes, setLikes] = useState(post.likes_count || 0);
@@ -29,23 +30,20 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
 
     const [showWODTracker, setShowWODTracker] = useState(false);
     const [hasCompletedWod, setHasCompletedWod] = useState(false);
+    const completionCheckedRef = useRef(false);
 
+    // Consultar el estado de completado SOLO cuando la tarjeta entra en
+    // pantalla (antes: N llamadas al cargar la página — N+1 según Sentry),
+    // y con caché de sesión compartida (cero llamadas repetidas).
     useEffect(() => {
-        if (post.post_type === 'wod') {
-            const checkCompletion = async () => {
-                try {
-                    const response = await fetch(`/api/wod/my-completion?wodPostId=${post.id}`);
-                    const data = await response.json();
-                    if (response.ok && data.completion) {
-                        setHasCompletedWod(true);
-                    }
-                } catch (e) {
-                    console.error("Error fetching completion status:", e);
-                }
-            };
-            checkCompletion();
+        if (post.post_type === 'wod' && isVisible && !completionCheckedRef.current) {
+            completionCheckedRef.current = true;
+            fetchWodCompletion(post.id)
+                .then(({ completion }) => { if (completion) setHasCompletedWod(true); })
+                .catch(() => {});
         }
-    }, [post.id, post.post_type]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isVisible, post.id, post.post_type]);
 
     // Intersection Observer to detect if post is in view
     useEffect(() => {
