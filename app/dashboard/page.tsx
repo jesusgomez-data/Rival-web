@@ -565,7 +565,8 @@ export default function DashboardHome() {
         try {
             setFeedLoading(true);
 
-            // Optimized select: skip workout_sets (heavy), explicit field list for main posts
+            // Optimized select: likes como COUNT (antes bajaba TODAS las filas
+            // de likes de cada post — cientos de filas muertas por página)
             let query = supabase
                 .from('posts')
                 .select(`
@@ -574,11 +575,11 @@ export default function DashboardHome() {
                     created_at, view_count,
                     profiles:user_id (id, username, full_name, avatar_url, level, is_official),
                     workouts:workout_id (*),
-                    likes:likes(user_id),
+                    likes:likes(count),
                     comments:comments(count)
                 `)
                 .order('created_at', { ascending: false })
-                .limit(20);
+                .limit(15);
 
             let followedIds = followedIdsRef.current;
             let officialIds = officialIdsRef.current;
@@ -600,6 +601,22 @@ export default function DashboardHome() {
             const { data: posts, error } = await query;
             if (error) console.error("[fetchFeed] Query error:", error);
 
+            // Mis likes de estos posts: una sola consulta ligera
+            let myLikedIds = new Set<string>();
+            if (posts && posts.length > 0) {
+                const { data: myLikes } = await supabase
+                    .from('likes')
+                    .select('post_id')
+                    .eq('user_id', user.id)
+                    .in('post_id', posts.map((p: any) => p.id));
+                myLikedIds = new Set((myLikes || []).map((l: any) => l.post_id));
+            }
+            const postsWithLikes = (posts || []).map((p: any) => ({
+                ...p,
+                likes_count: p.likes?.[0]?.count || 0,
+                has_liked: myLikedIds.has(p.id),
+            }));
+
             // Batch-fetch original posts for reposts — single query, avoids N+1
             const repostIds = (posts || [])
                 .filter((p: any) => p.media_type === 'repost')
@@ -615,7 +632,7 @@ export default function DashboardHome() {
                 for (const orig of (originals || [])) repostMap[orig.id] = orig;
             }
 
-            setData((prev: any) => ({ ...prev, feedPosts: posts || [], repostMap }));
+            setData((prev: any) => ({ ...prev, feedPosts: postsWithLikes, repostMap }));
         } catch (e) {
             console.error("[fetchFeed] Catch error:", e);
         } finally {
@@ -952,8 +969,8 @@ export default function DashboardHome() {
                                                 time={formatTimeAgo(post.created_at)}
                                                 avatar={post.profiles?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(post.profiles?.full_name || 'User')}&background=random`}
                                                 image={post.media_url}
-                                                initialLikes={post.likes ? post.likes.length : 0}
-                                                hasLikedInitial={post.likes && post.likes.some((l: any) => l.user_id === data.currentUser?.id)}
+                                                initialLikes={post.likes_count ?? (Array.isArray(post.likes) ? post.likes.length : 0)}
+                                                hasLikedInitial={post.has_liked ?? (Array.isArray(post.likes) && post.likes.some((l: any) => l.user_id === data.currentUser?.id))}
                                                 comments={post.comments?.[0]?.count || 0}
                                                 highlight={post.workouts?.title}
                                                 mediaType={post.media_type}
