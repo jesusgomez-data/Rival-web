@@ -377,9 +377,21 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
 
                 await new Promise(r => video.onloadedmetadata = r);
 
+                // Limitar la resolución de recodificación: dibujar+codificar 4K en
+                // tiempo real vía canvas satura la CPU en gama media/baja y el
+                // MediaRecorder acaba escribiendo timestamps erróneos → cámara lenta.
+                // Bajando a máx. 1080px en el lado largo el dispositivo puede seguir
+                // el ritmo real y evita ese desfase.
+                const MAX_DIMENSION = 1080;
+                const srcW = video.videoWidth;
+                const srcH = video.videoHeight;
+                const scale = Math.min(1, MAX_DIMENSION / Math.max(srcW, srcH));
+                const outW = Math.round(srcW * scale / 2) * 2; // par, requerido por muchos codecs
+                const outH = Math.round(srcH * scale / 2) * 2;
+
                 const canvas = document.createElement('canvas');
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                canvas.width = outW;
+                canvas.height = outH;
                 const ctx = canvas.getContext('2d')!;
 
                 // Capturar el stream del canvas
@@ -418,9 +430,14 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
 
                 if (!mimeType) throw new Error("No se encontró un formato de video soportado para grabar.");
 
+                // Bitrate proporcional a la resolución final (antes era fijo en 2.5 Mbps
+                // incluso para 1080p+, de ahí la baja calidad reportada).
+                const pixelCount = outW * outH;
+                const videoBitsPerSecond = Math.round(Math.min(8_000_000, Math.max(2_500_000, pixelCount * 6)));
+
                 const recorder = new MediaRecorder(finalStream, {
                     mimeType,
-                    videoBitsPerSecond: 2500000 // 2.5 Mbps para buena calidad
+                    videoBitsPerSecond
                 });
                 const chunks: Blob[] = [];
 
