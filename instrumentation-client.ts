@@ -4,7 +4,9 @@ Sentry.init({
     dsn: process.env.NEXT_PUBLIC_SENTRY_DSN,
     enabled: !!process.env.NEXT_PUBLIC_SENTRY_DSN,
     environment: process.env.NEXT_PUBLIC_VERCEL_ENV || process.env.NODE_ENV,
-    tracesSampleRate: 0.1,
+    // Solo errores: cero trazado en el cliente (recorta el costo de runtime
+    // en móviles; la vigilancia de errores queda intacta)
+    tracesSampleRate: 0,
     sendDefaultPii: false,
     // Ruido conocido que no aporta nada
     ignoreErrors: [

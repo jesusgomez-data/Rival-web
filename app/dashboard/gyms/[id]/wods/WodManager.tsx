@@ -1223,7 +1223,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                     onClick={() => togglePost(post.id)}
                                     className="w-full text-left p-5 sm:p-6 flex items-center justify-between hover:bg-muted/30 transition-colors group"
                                 >
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-4 min-w-0 flex-1">
                                         <div className="w-10 h-10 rounded-full bg-muted border border-border overflow-hidden shrink-0">
                                             {post.post_as_center ? (
                                                 center?.logo_url ? <img src={center.logo_url} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-brand-red/20" />
@@ -1231,10 +1231,10 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                 post.author?.avatar_url ? <img src={post.author.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full bg-brand-red/20" />
                                             )}
                                         </div>
-                                        <div>
-                                            <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                                                <h4 className="text-foreground font-black italic uppercase text-sm sm:text-base tracking-tighter shrink-0">
-                                                    ENTRENAMIENTO - {new Date(post.scheduled_for || post.created_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-2 mb-0.5 flex-wrap min-w-0">
+                                                <h4 className="text-foreground font-black italic uppercase text-sm sm:text-base tracking-tighter truncate min-w-0">
+                                                    <span className="hidden sm:inline">ENTRENAMIENTO - </span>{new Date(post.scheduled_for || post.created_at).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
                                                 </h4>
                                                 {isFuture && (
                                                     <span className="flex items-center gap-1.5 bg-brand-red text-white text-[8px] font-black italic px-2.5 py-1 rounded-lg shadow-lg shadow-brand-red/20 border border-white/10">
@@ -1249,7 +1249,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                             </p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 shrink-0">
                                         <div className="flex items-center gap-2 transition-opacity">
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); downloadWod(post); }}
