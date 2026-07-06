@@ -64,8 +64,16 @@ function WorkoutLogsContent() {
         setDeletingId(null);
     };
 
+    const toLocalDateKey = (value: string) => {
+        const d = new Date(value);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
     const filteredWorkouts = dateFilter
-        ? workouts.filter(w => new Date(w.display_date).toISOString().split('T')[0] === dateFilter)
+        ? workouts.filter(w => toLocalDateKey(w.display_date) === dateFilter)
         : workouts;
 
     return (

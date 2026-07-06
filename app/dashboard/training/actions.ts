@@ -1280,7 +1280,7 @@ export async function getWorkoutHistory(limit = 10, userId?: string) {
     const unifiedWorkouts = [
         ...(workouts || []).map(w => ({
             ...w,
-            display_date: w.created_at,
+            display_date: w.start_time || w.created_at,
             type: 'independent',
             title: w.title || 'Sesión de Entrenamiento'
         })),
