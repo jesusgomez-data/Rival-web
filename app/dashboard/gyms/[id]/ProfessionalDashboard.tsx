@@ -114,14 +114,19 @@ export default function ProfessionalDashboard({ id, centerDetails, userRole }: P
         setActiveChats(chatsRes.data ?? [])
         setStripeReady(orgRes.data?.stripe_onboarding_complete ?? false)
 
-        if (orgRes.data?.stripe_onboarding_complete) {
-            const balanceRes = await getProfessionalBalance(id)
-            if (!balanceRes.error) {
-                setStripeBalance(balanceRes as any)
-            }
-        }
-
+        // El resto del panel ya está listo para pintarse: no bloquear el
+        // spinner principal esperando a Stripe (llamada externa, mucho más
+        // lenta que las consultas a Supabase de arriba). El saldo aparece
+        // en cuanto llega, por separado.
         setLoading(false)
+
+        if (orgRes.data?.stripe_onboarding_complete) {
+            getProfessionalBalance(id).then((balanceRes) => {
+                if (!balanceRes.error) {
+                    setStripeBalance(balanceRes as any)
+                }
+            })
+        }
     }
 
     async function handleAccept(booking: any) {

@@ -450,9 +450,22 @@ export default function DashboardHome() {
             // Release full screen spinner immediately once layout can draw user info
             setLoading(false);
 
-            // Fetch secondary data (gyms, counts, trending, official, missions, duels) in the background
+            // "Tus Gimnasios" solo depende de esta query — se resuelve y pinta
+            // aparte para no esperar a misiones/duelos (que son mucho más lentos:
+            // pasan por Server Action + su propio auth.getUser() + writes de sync).
+            const membershipsPromise = supabase.from('members').select('*, organization:center_id(id, name, logo_url, city, center_type)').eq('user_id', user.id).in('status', ['active', 'trial']);
+            membershipsPromise.then(({ data: memberships }: any) => {
+                setData((prev: any) => ({
+                    ...prev,
+                    myGyms: memberships?.map((m: any) => m.organization) || [],
+                    activeCenterIds: new Set(memberships?.filter((m: any) => m.status === 'active').map((m: any) => m.center_id) || []),
+                }));
+                setGymsLoading(false);
+            }).catch(() => setGymsLoading(false));
+
+            // Fetch secondary data (counts, trending, official, missions, duels) in the background
             Promise.all([
-                supabase.from('members').select('*, organization:center_id(id, name, logo_url, city, center_type)').eq('user_id', user.id).in('status', ['active', 'trial']),
+                membershipsPromise,
                 supabase.from('workouts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
                 supabase.from('class_results').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
                 supabase.from('follows').select('following_id').eq('follower_id', user.id),

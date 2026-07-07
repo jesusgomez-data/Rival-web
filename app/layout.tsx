@@ -79,6 +79,11 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Evita el flash blanco al abrir la app (PWA/cold start): el fondo
+            negro por defecto vive en globals.css, pero ese CSS tarda en
+            llegar por red. Este estilo inline se aplica en el primer
+            pintado, sin esperar ninguna descarga. */}
+        <style dangerouslySetInnerHTML={{ __html: `html,body{background:#000}` }} />
         {/* Fuentes SIN bloquear el primer render: preconnect + inyección por JS
             (un stylesheet inyectado por script nunca bloquea el pintado) */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />

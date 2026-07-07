@@ -93,19 +93,29 @@ export async function getDashboardMetrics(centerId: string) {
     const monthISO = startOfMonth.toISOString();
 
     // members.center_id = orgId in our schema
-    const { count: nMW } = await admin.from('members').select('id', { count: 'exact', head: true }).eq('center_id', centerId).gte('created_at', weekISO);
-    const { count: nMM } = await admin.from('members').select('id', { count: 'exact', head: true }).eq('center_id', centerId).gte('created_at', monthISO);
-    const { count: totalActive } = await admin.from('members').select('id', { count: 'exact', head: true }).eq('center_id', centerId).eq('status', 'active');
-    const { count: cW } = await admin.from('members').select('id', { count: 'exact', head: true }).eq('center_id', centerId).in('status', ['inactive', 'cancelled', 'banned']).gte('updated_at', weekISO);
-    const { count: cM } = await admin.from('members').select('id', { count: 'exact', head: true }).eq('center_id', centerId).in('status', ['inactive', 'cancelled', 'banned']).gte('updated_at', monthISO);
-
-    // Class attendance this week (via class_enrollments linked to this org's classes)
-    const { data: attendanceData } = await admin
-        .from('class_enrollments')
-        .select('member_id, class:classes!inner(organization_id, scheduled_time)')
-        .eq('attended', true)
-        .eq('class.organization_id', centerId)
-        .gte('class.scheduled_time', weekISO);
+    // 6 consultas independientes: antes iban en serie (un await tras otro),
+    // sumando su latencia; en paralelo el tiempo total es el de la más lenta.
+    const [
+        { count: nMW },
+        { count: nMM },
+        { count: totalActive },
+        { count: cW },
+        { count: cM },
+        { data: attendanceData }
+    ] = await Promise.all([
+        admin.from('members').select('id', { count: 'exact', head: true }).eq('center_id', centerId).gte('created_at', weekISO),
+        admin.from('members').select('id', { count: 'exact', head: true }).eq('center_id', centerId).gte('created_at', monthISO),
+        admin.from('members').select('id', { count: 'exact', head: true }).eq('center_id', centerId).eq('status', 'active'),
+        admin.from('members').select('id', { count: 'exact', head: true }).eq('center_id', centerId).in('status', ['inactive', 'cancelled', 'banned']).gte('updated_at', weekISO),
+        admin.from('members').select('id', { count: 'exact', head: true }).eq('center_id', centerId).in('status', ['inactive', 'cancelled', 'banned']).gte('updated_at', monthISO),
+        // Class attendance this week (via class_enrollments linked to this org's classes)
+        admin
+            .from('class_enrollments')
+            .select('member_id, class:classes!inner(organization_id, scheduled_time)')
+            .eq('attended', true)
+            .eq('class.organization_id', centerId)
+            .gte('class.scheduled_time', weekISO)
+    ]);
 
     const weeklyAttendance = new Set(attendanceData?.map((a: any) => a.member_id)).size;
 
