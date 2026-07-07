@@ -1453,8 +1453,8 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                 <div
                     ref={videoContainerRef}
                     className={clsx(
-                        "relative w-full overflow-hidden bg-black",
-                        isVideo ? "aspect-[9/16]" : "aspect-[3/4]"
+                        "relative w-full overflow-hidden bg-black mx-auto",
+                        isVideo ? "aspect-[9/16] max-w-[300px]" : "aspect-[4/5] max-w-[380px]"
                     )}
                 >
                     {/* Media rendering */}
