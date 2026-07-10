@@ -47,6 +47,13 @@ export interface CompetitionTemplate {
     is_active?: boolean;
 }
 
+export const HYROX_CATEGORIES: { value: string; label: string }[] = [
+    { value: 'open', label: 'Open' },
+    { value: 'pro', label: 'Pro' },
+    { value: 'doubles', label: 'Doubles' },
+    { value: 'relay', label: 'Relay' },
+];
+
 /** Plantilla por defecto si el catálogo aún no existe en la BD */
 export const DEFAULT_COMPETITIONS: CompetitionTemplate[] = [
     {
@@ -57,13 +64,6 @@ export const DEFAULT_COMPETITIONS: CompetitionTemplate[] = [
         categories: HYROX_CATEGORIES,
         is_active: true,
     },
-];
-
-export const HYROX_CATEGORIES: { value: string; label: string }[] = [
-    { value: 'open', label: 'Open' },
-    { value: 'pro', label: 'Pro' },
-    { value: 'doubles', label: 'Doubles' },
-    { value: 'relay', label: 'Relay' },
 ];
 
 /** 275 → "4:35" · 3921 → "1:05:21" */

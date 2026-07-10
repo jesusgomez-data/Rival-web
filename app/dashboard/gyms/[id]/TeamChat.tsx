@@ -26,7 +26,7 @@ interface TeamMessage {
     } | null;
 }
 
-export default function TeamChat({ centerId, className }: { centerId: string, className?: string }) {
+export default function TeamChat({ centerId, className, standalone = false }: { centerId: string, className?: string, standalone?: boolean }) {
     const [messages, setMessages] = useState<TeamMessage[]>([]);
     const [input, setInput] = useState("");
     const [loading, setLoading] = useState(true);
@@ -58,71 +58,80 @@ export default function TeamChat({ centerId, className }: { centerId: string, cl
 
     useEffect(() => {
         let channel: any;
+        let mounted = true;
 
         async function verifyRoleAndConnect() {
             const { isStaff } = await checkStaffRole(centerId);
+            if (!mounted) return;
             setIsStaff(isStaff);
 
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
 
-            if (user) {
-                // Check Owner Logic
-                const { data: org } = await supabase
-                    .from('organizations')
-                    .select('owner_id')
-                    .eq('id', centerId)
-                    .single();
-                if (org?.owner_id === user.id) {
-                    setIsOwner(true);
-                }
-
-                // CONNECT TO PRESENCE
-                if (isStaff) {
-                    channel = supabase.channel(`team-chat:${centerId}`, {
-                        config: {
-                            presence: {
-                                key: user.id,
-                            },
-                        },
-                    });
-
-                    channel
-                        .on('presence', { event: 'sync' }, () => {
-                            const newState = channel.presenceState();
-                            const count = Object.keys(newState).length;
-                            setOnlineCount(count);
-                        })
-                        .subscribe(async (status: string) => {
-                            if (status === 'SUBSCRIBED') {
-                                await channel.track({
-                                    online_at: new Date().toISOString(),
-                                    user_id: user.id,
-                                });
-                            }
-                        });
-                }
+            if (!user || !isStaff) {
+                setLoading(false);
+                return;
             }
 
-            if (!isStaff) setLoading(false);
+            const { data: org } = await supabase
+                .from('organizations')
+                .select('owner_id')
+                .eq('id', centerId)
+                .single();
+            setIsOwner(org?.owner_id === user.id);
+
+            await loadMessages();
+
+            channel = supabase.channel(`team-chat:${centerId}`, {
+                config: {
+                    presence: {
+                        key: user.id,
+                    },
+                },
+            });
+
+            channel
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'team_messages',
+                    filter: `organization_id=eq.${centerId}`
+                }, () => {
+                    loadMessages();
+                })
+                .on('presence', { event: 'sync' }, () => {
+                    const newState = channel.presenceState();
+                    const count = Object.keys(newState).length;
+                    setOnlineCount(count);
+                })
+                .subscribe(async (status: string) => {
+                    if (status === 'SUBSCRIBED') {
+                        await channel.track({
+                            online_at: new Date().toISOString(),
+                            user_id: user.id,
+                        });
+                    }
+                });
         }
+
         verifyRoleAndConnect();
 
+        const handleFocus = () => {
+            if (!document.hidden) loadMessages();
+        };
+        window.addEventListener('focus', handleFocus);
+        document.addEventListener('visibilitychange', handleFocus);
+
         return () => {
+            mounted = false;
+            window.removeEventListener('focus', handleFocus);
+            document.removeEventListener('visibilitychange', handleFocus);
             if (channel) {
                 const supabase = createClient();
                 supabase.removeChannel(channel);
             }
         };
     }, [centerId]);
-
-    useEffect(() => {
-        if (isStaff) {
-            loadMessages();
-            const interval = setInterval(loadMessages, 5000);
-            return () => clearInterval(interval);
-        }
-    }, [centerId, isStaff]);
 
     const [lastMessageCount, setLastMessageCount] = useState(0);
 
@@ -179,8 +188,8 @@ export default function TeamChat({ centerId, className }: { centerId: string, cl
                         <MessageSquare className="w-5 h-5 text-brand-red" />
                     </div>
                     <div>
-                        <h3 className="font-bold text-foreground">Notas del Equipo</h3>
-                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">Solo Personal Autorizado</p>
+                        <h3 className="font-bold text-foreground">{standalone ? 'Chat de Empresa' : 'Notas del Equipo'}</h3>
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">{standalone ? 'Canal operativo del centro' : 'Solo Personal Autorizado'}</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">

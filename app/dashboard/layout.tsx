@@ -15,6 +15,7 @@ import {
     LogOut,
     MessageCircle,
     MessageSquarePlus,
+    MessageSquareText,
     PlusCircle,
     BarChart2,
     Building2,
@@ -497,6 +498,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const navItems = useMemo(() => [
         { name: t.navDashboard.home, href: "/dashboard", icon: Home },
         { name: t.navDashboard.messages, href: "/dashboard/messages", icon: MessageSquarePlus },
+        { name: "Centro Chat", href: "/dashboard/center-chat", icon: MessageSquareText },
         { name: t.navDashboard.onlineCoach, href: "/dashboard/coach", icon: MessageCircle },
         // { name: t.navDashboard.training, href: "/dashboard/training", icon: Dumbbell }, // hidden temporarily
         { name: "Mis Marcas", href: "/dashboard/hyrox", icon: Dumbbell },

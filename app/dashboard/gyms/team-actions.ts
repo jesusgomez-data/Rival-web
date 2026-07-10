@@ -30,6 +30,57 @@ export async function getTeamMessages(centerId: string) {
     return { messages: data || [] };
 }
 
+export async function getUserTeamCenters() {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) return { error: "No autorizado", centers: [] };
+
+    const [ownedRes, rolesRes] = await Promise.all([
+        supabase
+            .from('organizations')
+            .select('id, name, logo_url, city, center_type, owner_id, head_coach_id')
+            .or(`owner_id.eq.${user.id},head_coach_id.eq.${user.id}`)
+            .order('name', { ascending: true }),
+        supabase
+            .from('center_roles')
+            .select(`
+                role,
+                organization:organization_id (
+                    id,
+                    name,
+                    logo_url,
+                    city,
+                    center_type,
+                    owner_id,
+                    head_coach_id
+                )
+            `)
+            .eq('user_id', user.id)
+            .in('role', ['owner', 'admin', 'head_coach', 'coach'])
+    ]);
+
+    if (ownedRes.error) return { error: ownedRes.error.message, centers: [] };
+    if (rolesRes.error) return { error: rolesRes.error.message, centers: [] };
+
+    const byId = new Map<string, any>();
+
+    for (const org of ownedRes.data || []) {
+        const role = org.owner_id === user.id ? 'owner' : 'head_coach';
+        byId.set(org.id, { ...org, role });
+    }
+
+    for (const item of rolesRes.data || []) {
+        const org = Array.isArray(item.organization) ? item.organization[0] : item.organization;
+        if (!org?.id) continue;
+        byId.set(org.id, { ...org, role: item.role });
+    }
+
+    return {
+        centers: Array.from(byId.values()).sort((a, b) => (a.name || '').localeCompare(b.name || '')),
+    };
+}
+
 export async function sendTeamMessage(centerId: string, content: string, asOrg: boolean = false) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -96,7 +147,15 @@ export async function sendTeamMessage(centerId: string, content: string, asOrg: 
     // Add active coaches
     activeShifts?.forEach(s => recipients.add(s.user_id));
 
-    // Remove sender from recipients
+    const { data: staffRoles } = await supabase
+        .from('center_roles')
+        .select('user_id')
+        .eq('organization_id', centerId)
+        .in('role', ['owner', 'admin', 'head_coach', 'coach']);
+
+    staffRoles?.forEach(s => recipients.add(s.user_id));
+
+    // Remove sender from recipients after every recipient source is merged.
     recipients.delete(user.id);
 
     // 3. Send notifications
@@ -106,7 +165,7 @@ export async function sendTeamMessage(centerId: string, content: string, asOrg: 
             type: 'team_message',
             title: `Mensaje de Equipo - ${org?.name || 'Rival'}`,
             content: `${asOrg ? org?.name : 'Un miembro del equipo'} ha publicado en Notas del Equipo: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`,
-            link: `/dashboard/gyms/${centerId}`
+            link: `/dashboard/center-chat?center=${centerId}`
         })
     );
 
@@ -186,7 +245,7 @@ export async function checkStaffRole(centerId: string) {
         .maybeSingle();
 
     const role = roleData?.role || (org?.owner_id === user.id ? 'owner' : null);
-    const isStaff = ['owner', 'head_coach', 'coach'].includes(role);
+    const isStaff = ['owner', 'admin', 'head_coach', 'coach'].includes(role);
 
     return { isStaff, role };
 }
@@ -212,6 +271,7 @@ export async function getUserPermissionLevel(centerId: string) {
         .eq('user_id', user.id)
         .single();
 
+    if (roleData?.role === 'admin') return { level: 'admin' };
     if (roleData?.role === 'head_coach') return { level: 'head_coach' };
     if (roleData?.role === 'coach') return { level: 'coach' };
 

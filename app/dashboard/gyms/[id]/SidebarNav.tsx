@@ -6,7 +6,7 @@ import {
     LayoutDashboard, Calendar, Users, Shield, Dumbbell,
     Zap, ShoppingBag, Edit, CreditCard, BarChart2,
     ScanLine, Megaphone, Star, HelpCircle, ChevronRight,
-    Briefcase, BookOpen
+    Briefcase, BookOpen, MessageSquareText
 } from "lucide-react";
 import SupportModal from "../SupportModal";
 import clsx from "clsx";
@@ -46,6 +46,7 @@ export default function SidebarNav({
             label: 'Profesional',
             items: [
                 { name: 'Resumen',       href: `/dashboard/gyms/${id}`,                icon: LayoutDashboard },
+                { name: 'Chat Staff',     href: `/dashboard/center-chat?center=${id}`, icon: MessageSquareText },
                 { name: 'Agenda',        href: `/dashboard/gyms/${id}/schedule`,        icon: Calendar },
                 { name: 'Clientes',      href: `/dashboard/gyms/${id}/members`,         icon: Users, badge: pendingTrials || null },
                 { name: 'Mis Servicios', href: `/dashboard/gyms/${id}/services`,        icon: Briefcase,  adminOnly: true },
@@ -65,6 +66,7 @@ export default function SidebarNav({
             label: 'Principal',
             items: [
                 { name: 'Resumen',       href: `/dashboard/gyms/${id}${sedeId ? `/sedes/${sedeId}` : ''}`, icon: LayoutDashboard },
+                { name: 'Chat Staff',     href: `/dashboard/center-chat?center=${id}`,             icon: MessageSquareText },
                 { name: 'Horario',       href: `/dashboard/gyms/${id}/schedule${query}`,       icon: Calendar },
                 { name: 'Miembros',      href: `/dashboard/gyms/${id}/members${query}`,        icon: Users, badge: pendingTrials || null },
                 { name: 'Check-in',      href: `/dashboard/gyms/${id}/checkin${query}`,        icon: ScanLine },
