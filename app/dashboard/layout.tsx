@@ -108,7 +108,6 @@ function useBlackScreenFix() {
     }, []);
 }
 
-
 // ── New-user hint above the "+" button ────────────────────────────────────────
 function NewUserHint() {
     const [show, setShow] = useState(false);
@@ -159,6 +158,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
     const [profile, setProfile] = useState<any>(null);
     const [userEmail, setUserEmail] = useState<string | null>(null);
+    const [isBusinessUser, setIsBusinessUser] = useState(false);
     const [showMobileSearch, setShowMobileSearch] = useState(false);
     const [unreadMessages, setUnreadMessages] = useState(0);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -225,6 +225,25 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
                 setProfile(profileData);
                 setUnreadMessages(unreadCount);
+
+                if (user) {
+                    const [ownedRes, rolesRes] = await Promise.all([
+                        supabase
+                            .from('organizations')
+                            .select('id', { count: 'exact', head: true })
+                            .or(`owner_id.eq.${user.id},head_coach_id.eq.${user.id}`),
+                        supabase
+                            .from('center_roles')
+                            .select('id', { count: 'exact', head: true })
+                            .eq('user_id', user.id)
+                            .in('role', ['owner', 'admin', 'head_coach', 'coach'])
+                    ]);
+                    const hasOwned = ownedRes.count !== null && ownedRes.count > 0;
+                    const hasRoles = rolesRes.count !== null && rolesRes.count > 0;
+                    if (isMounted) {
+                        setIsBusinessUser(hasOwned || hasRoles);
+                    }
+                }
 
                 if (profileData && sessionData?.session && user) {
                     saveAccount(
@@ -498,7 +517,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const navItems = useMemo(() => [
         { name: t.navDashboard.home, href: "/dashboard", icon: Home },
         { name: t.navDashboard.messages, href: "/dashboard/messages", icon: MessageSquarePlus },
-        { name: "Centro Chat", href: "/dashboard/center-chat", icon: MessageSquareText },
+        ...(isBusinessUser ? [
+            { name: "Centro Chat", href: "/dashboard/center-chat", icon: MessageSquareText },
+        ] : []),
         { name: t.navDashboard.onlineCoach, href: "/dashboard/coach", icon: MessageCircle },
         // { name: t.navDashboard.training, href: "/dashboard/training", icon: Dumbbell }, // hidden temporarily
         { name: "Mis Marcas", href: "/dashboard/hyrox", icon: Dumbbell },
@@ -516,7 +537,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             { name: "RIVAL COMMAND", href: "/dashboard/admin", icon: Shield },
         ] : []),
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    ], [isAdmin, t]);
+    ], [isAdmin, isBusinessUser, t]);
 
     const isBusinessCenterRoute = pathname?.startsWith('/dashboard/gyms/') && pathname.split('/').length > 3;
     const hideSidebarDefault = pathname === '/dashboard/admin'; // Give admin its toggle, but not business centers
@@ -887,7 +908,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             {/* Mobile Bottom Navigation - Placed outside the flex container to ensure standard viewport fixed layout */}
             {showMobileNav && (
                 <nav className={clsx(
-                    "lg:hidden fixed bottom-4 left-4 right-4 bg-background/90 backdrop-blur-2xl border border-border py-3 px-6 z-[100] rounded-[2rem] shadow-2xl safe-area-inset-bottom transition-transform duration-300",
+                    "lg:hidden fixed bottom-4 left-4 right-4 bg-background/90 backdrop-blur-2xl border border-border py-3 px-6 z-[100] rounded-[2rem] shadow-2xl transition-transform duration-300 pb-[calc(12px+env(safe-area-inset-bottom,0px))]",
                     showBottomNav ? "translate-y-0" : "translate-y-32"
                 )}>
                     <div className="grid grid-cols-5 items-center justify-items-center h-12 relative">

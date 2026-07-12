@@ -126,6 +126,8 @@ export default function MentionInput({
                 className={className}
                 autoFocus={autoFocus}
                 disabled={disabled}
+                // Prevent iOS auto-zoom: font-size must be >= 16px on mobile inputs
+                style={{ fontSize: '16px', touchAction: 'manipulation' }}
             />
 
             {showSuggestions && (

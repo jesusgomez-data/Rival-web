@@ -519,42 +519,60 @@ export default function WorkoutShareCard({
 
     return (
         /* ── Modal overlay ─────────────────────────────────────────────────── */
-        <div style={{
-            position: 'fixed', inset: 0, zIndex: 9999,
-            background: 'rgba(0,0,0,0.85)',
-            display: 'flex', flexDirection: 'column',
-            alignItems: 'center', justifyContent: 'center',
-            padding: 16,
-            overflowY: 'auto',
-        }}>
-            {/* Close button */}
-            <button
-                onClick={onClose}
-                style={{
-                    position: 'fixed', top: 16, right: 16,
-                    background: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.2)',
-                    borderRadius: '50%',
-                    width: 36, height: 36,
-                    cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: '#fff',
-                    zIndex: 10000,
-                }}
-            >
-                <X size={18} />
-            </button>
+        <div
+            style={{
+                position: 'fixed', inset: 0, zIndex: 9999,
+                background: 'rgba(0,0,0,0.92)',
+                display: 'flex', flexDirection: 'column',
+                alignItems: 'center',
+                overflowY: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                paddingTop: 16,
+                paddingBottom: 32,
+                paddingLeft: 12,
+                paddingRight: 12,
+            }}
+        >
+            {/* Top bar: close button */}
+            <div style={{
+                width: '100%',
+                maxWidth: 420,
+                display: 'flex',
+                justifyContent: 'flex-end',
+                marginBottom: 12,
+                flexShrink: 0,
+            }}>
+                <button
+                    onClick={onClose}
+                    style={{
+                        background: 'rgba(255,255,255,0.12)',
+                        border: '1px solid rgba(255,255,255,0.25)',
+                        borderRadius: '50%',
+                        width: 44, height: 44,
+                        cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        color: '#fff',
+                        WebkitTapHighlightColor: 'transparent',
+                        touchAction: 'manipulation',
+                        flexShrink: 0,
+                    }}
+                >
+                    <X size={20} />
+                </button>
+            </div>
 
             {/* ── The shareable card ──────────────────────────────────────────── */}
             <div
                 ref={cardRef}
                 style={{
-                    width: 390,
+                    width: '100%',
+                    maxWidth: 420,
                     background: '#0a0a0a',
                     border: `2px solid ${cfg.color}50`,
                     borderRadius: 20,
                     overflow: 'hidden',
                     position: 'relative',
+                    flexShrink: 0,
                     ...patternStyle(cfg.patternType, cfg.color),
                 }}
             >
@@ -586,11 +604,16 @@ export default function WorkoutShareCard({
                 />
             </div>
 
-
-
             {/* ── Action buttons ──────────────────────────────────────────────── */}
             <div style={{
-                display: 'flex', gap: 10, marginTop: 20, flexWrap: 'wrap', justifyContent: 'center',
+                display: 'flex',
+                gap: 10,
+                marginTop: 20,
+                flexWrap: 'wrap',
+                justifyContent: 'center',
+                width: '100%',
+                maxWidth: 420,
+                flexShrink: 0,
             }}>
                 {/* Download */}
                 <button
@@ -602,12 +625,15 @@ export default function WorkoutShareCard({
                         color: '#000',
                         border: 'none',
                         borderRadius: 10,
-                        padding: '10px 20px',
+                        padding: '12px 20px',
                         fontSize: 13,
                         fontWeight: 700,
                         cursor: loading ? 'not-allowed' : 'pointer',
                         opacity: loading ? 0.7 : 1,
                         letterSpacing: 0.5,
+                        WebkitTapHighlightColor: 'transparent',
+                        touchAction: 'manipulation',
+                        minHeight: 48,
                     }}
                 >
                     {loading ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
@@ -624,12 +650,15 @@ export default function WorkoutShareCard({
                         color: '#fff',
                         border: `1px solid ${cfg.color}50`,
                         borderRadius: 10,
-                        padding: '10px 20px',
+                        padding: '12px 20px',
                         fontSize: 13,
                         fontWeight: 700,
                         cursor: loading ? 'not-allowed' : 'pointer',
                         opacity: loading ? 0.7 : 1,
                         letterSpacing: 0.5,
+                        WebkitTapHighlightColor: 'transparent',
+                        touchAction: 'manipulation',
+                        minHeight: 48,
                     }}
                 >
                     {loading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
@@ -646,12 +675,15 @@ export default function WorkoutShareCard({
                         color: cfg.color,
                         border: `1px solid ${cfg.color}40`,
                         borderRadius: 10,
-                        padding: '10px 20px',
+                        padding: '12px 20px',
                         fontSize: 13,
                         fontWeight: 700,
                         cursor: storyLoading ? 'not-allowed' : 'pointer',
                         opacity: storyLoading ? 0.7 : 1,
                         letterSpacing: 0.5,
+                        WebkitTapHighlightColor: 'transparent',
+                        touchAction: 'manipulation',
+                        minHeight: 48,
                     }}
                 >
                     {storyLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}

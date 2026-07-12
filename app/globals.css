@@ -861,5 +861,16 @@ button:not(:disabled):not([class*="translate"]):active {
   }
 }
 
+/* 8. PREVENCIÓN DE ZOOM EN DISPOSITIVOS MÓVILES (iOS / Android) */
+@media screen and (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]), 
+  select, 
+  textarea, 
+  [contenteditable] {
+    font-size: 16px !important;
+  }
+}
+
+
 
 

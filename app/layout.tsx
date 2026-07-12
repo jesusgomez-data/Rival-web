@@ -23,9 +23,8 @@ const outfit = Outfit({
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  // Zoom permitido: bloquearlo penaliza accesibilidad (usuarios con visión reducida)
-  maximumScale: 5,
-  userScalable: true,
+  maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
   themeColor: "#000000",
 };
