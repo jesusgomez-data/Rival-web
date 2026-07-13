@@ -498,30 +498,30 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
             {children}
 
             {/* Global Task Indicator - Premium Redesign */}
-            <div className="fixed bottom-24 lg:bottom-8 right-4 lg:right-8 z-[1000] flex flex-col gap-4 w-[300px] sm:w-[340px]">
+            <div className="fixed left-3 right-3 bottom-[calc(6.25rem+env(safe-area-inset-bottom,0px))] md:left-auto md:right-6 md:bottom-6 md:w-[360px] z-[120] flex flex-col gap-2 pointer-events-none">
                 <AnimatePresence>
                     {uploads.map(task => (
                         <motion.div
                             key={task.id}
-                            initial={{ opacity: 0, x: 50, scale: 0.9 }}
-                            animate={{ opacity: 1, x: 0, scale: 1 }}
-                            exit={{ opacity: 0, x: 20, scale: 0.95 }}
-                            className="group relative overflow-hidden"
+                            initial={{ opacity: 0, y: 18, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 12, scale: 0.98 }}
+                            className="group relative overflow-hidden pointer-events-auto"
                         >
                             {/* Background with Glassmorphism */}
-                            <div className="absolute inset-0 bg-black/60 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] transition-all group-hover:border-brand-red/30" />
+                            <div className="absolute inset-0 bg-[#0b0b0b]/92 backdrop-blur-2xl rounded-2xl border border-white/10 shadow-[0_16px_38px_rgba(0,0,0,0.45)] transition-all group-hover:border-brand-red/30" />
 
                             {/* Decorative Glow */}
-                            <div className="absolute -top-10 -right-10 w-24 h-24 bg-brand-red/10 blur-[40px] rounded-full pointer-events-none" />
+                            <div className="absolute -top-10 -right-10 w-20 h-20 bg-brand-red/10 blur-[34px] rounded-full pointer-events-none" />
 
-                            <div className="relative p-4 sm:p-5 flex gap-4 items-center">
+                            <div className="relative p-3 flex gap-3 items-center">
                                 {/* Preview Thumbnail */}
-                                <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 overflow-hidden shrink-0 relative shadow-inner group-hover:scale-105 transition-transform">
+                                <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 overflow-hidden shrink-0 relative shadow-inner">
                                     {task.preview ? (
                                         <Image src={task.preview} alt="Preview" fill className="object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-red/20 to-transparent">
-                                            <Clock className="w-6 h-6 text-brand-red animate-pulse" />
+                                            <Clock className="w-5 h-5 text-brand-red animate-pulse" />
                                         </div>
                                     )}
                                     {/* Small Overlay Icon based on State */}
@@ -537,7 +537,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                                 {/* Content Area */}
                                 <div className="flex-1 min-w-0 flex flex-col gap-1.5">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-red italic drop-shadow-sm">
+                                        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-brand-red italic drop-shadow-sm">
                                             {task.status === 'uploading' ? 'Subiendo' :
                                                 task.status === 'completed' ? 'Listo' :
                                                     task.status === 'error' ? 'Error' : 'Procesando'}
@@ -556,13 +556,13 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                                         )}
                                     </div>
 
-                                    <h4 className="text-[11px] font-black text-white truncate italic uppercase tracking-tight">
+                                    <h4 className="text-sm font-extrabold text-white truncate tracking-tight">
                                         {task.caption || 'Publicando historia...'}
                                     </h4>
 
                                     {/* Progress Bar Container */}
                                     <div className="relative mt-1">
-                                        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden w-full backdrop-blur-sm shadow-inner">
+                                        <div className="h-1 bg-white/10 rounded-full overflow-hidden w-full backdrop-blur-sm shadow-inner">
                                             <motion.div
                                                 initial={{ width: 0 }}
                                                 animate={{ width: `${task.progress}%` }}
@@ -576,7 +576,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                                         </div>
 
                                         {/* Status Detail Text */}
-                                        <p className="text-[8px] font-bold text-gray-500 uppercase tracking-widest mt-2 flex items-center gap-2">
+                                        <p className="text-[9px] font-bold text-white/45 uppercase tracking-widest mt-1.5 truncate">
                                             {task.status === 'processing' && task.progress < 50 ? 'Recortando y preparando...' :
                                                 task.status === 'uploading' ? 'Sincronizando con la arena...' :
                                                     task.status === 'completed' ? '¡Publicado con éxito!' :

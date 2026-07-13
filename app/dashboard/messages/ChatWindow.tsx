@@ -1147,7 +1147,7 @@ export default function ChatWindow({
             </div>
 
             {/* ── Input bar ── */}
-            <div className={clsx("px-4 pb-4 pt-2 backdrop-blur-md relative z-20 shrink-0", dk ? "bg-[#0C0C0C]/90 border-t border-white/[0.04]" : "bg-white/95 border-t border-gray-200")}>
+            <div className={clsx("px-3 sm:px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] sm:pb-4 pt-2 backdrop-blur-md relative z-20 shrink-0", dk ? "bg-[#0C0C0C]/90 border-t border-white/[0.04]" : "bg-white/95 border-t border-gray-200")}>
                 {/* Pending media preview */}
                 <AnimatePresence>
                     {pendingMediaPreview && (
@@ -1180,8 +1180,8 @@ export default function ChatWindow({
                     </div>
                 )}
 
-                <div className="max-w-3xl mx-auto flex items-end gap-2 relative">
-                    <div className={clsx("flex-1 rounded-[1.5rem] flex items-end px-3 py-2 gap-1.5 shadow-inner transition-colors", dk ? "border border-white/[0.06] bg-[#141414]" : "border border-gray-200 bg-gray-100", (replyingTo || isRecording) ? 'rounded-t-none border-t-0' : '')}>
+                <div className="max-w-3xl mx-auto flex items-end gap-2 relative min-w-0">
+                    <div className={clsx("min-w-0 flex-1 rounded-[1.5rem] flex items-end px-3 py-2 gap-1.5 shadow-inner transition-colors", dk ? "border border-white/[0.06] bg-[#141414]" : "border border-gray-200 bg-gray-100", (replyingTo || isRecording) ? 'rounded-t-none border-t-0' : '')}>
                         
                         <AnimatePresence>
                             {replyingTo && (
@@ -1218,7 +1218,7 @@ export default function ChatWindow({
                             onKeyDown={handleKeyDown}
                             placeholder={isRecording ? "Grabando audio..." : "Mensaje..."}
                             disabled={isRecording}
-                            className={clsx("flex-1 bg-transparent border-none py-2 px-1 text-sm focus:outline-none w-full font-medium", dk ? "text-white placeholder:text-white/15" : "text-gray-800 placeholder:text-gray-400")}
+                            className={clsx("min-w-0 flex-1 bg-transparent border-none py-2 px-1 text-[16px] leading-6 min-h-[44px] focus:outline-none w-full font-medium", dk ? "text-white placeholder:text-white/15" : "text-gray-800 placeholder:text-gray-400")}
                         />
 
                         {isRecording && (
@@ -1265,34 +1265,34 @@ export default function ChatWindow({
                         {isRecording ? (
                             <button onClick={stopRecording}
                                 className={clsx(
-                                    'w-24 h-9 rounded-lg flex items-center justify-center gap-1.5 transition-all font-black text-[11px] uppercase tracking-widest border',
+                                    'w-11 sm:w-24 h-11 sm:h-9 rounded-xl sm:rounded-lg flex items-center justify-center gap-1.5 transition-all font-black text-[11px] uppercase tracking-widest border',
                                     'bg-brand-red border-red-700 text-white shadow-[0_2px_12px_rgba(220,38,38,0.4)] hover:bg-red-600 active:scale-95'
                                 )}>
                                 <Square className="w-3.5 h-3.5 fill-current" />
-                                STOP
+                                <span className="hidden sm:inline">STOP</span>
                             </button>
                         ) : (
                             <button onClick={pendingAudioBlob ? handleSendAudio : handleSend}
                                 disabled={(!inputValue.trim() && !pendingMediaFile && !pendingAudioBlob) || isUploading}
                                 className={clsx(
-                                    'w-24 h-9 rounded-lg flex items-center justify-center gap-1.5 transition-all font-black text-[11px] uppercase tracking-widest border',
+                                    'w-11 sm:w-24 h-11 sm:h-9 rounded-xl sm:rounded-lg flex items-center justify-center gap-1.5 transition-all font-black text-[11px] uppercase tracking-widest border',
                                     (inputValue.trim() || pendingMediaFile || pendingAudioBlob)
                                         ? 'bg-brand-red border-red-700 text-white shadow-[0_2px_12px_rgba(220,38,38,0.4)] hover:bg-red-600 active:scale-95'
                                         : dk ? 'bg-[#111] border-white/[0.07] text-white/20 cursor-not-allowed' : 'bg-gray-100 border-gray-200 text-gray-300 cursor-not-allowed'
                                 )}>
                                 {isUploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                                Enviar
+                                <span className="hidden sm:inline">Enviar</span>
                             </button>
                         )}
                         <button onClick={toggleSearch}
                             className={clsx(
-                                'w-24 h-9 rounded-lg flex items-center justify-center gap-1.5 font-black text-[11px] uppercase tracking-widest border transition-all active:scale-95',
+                                'w-11 sm:w-24 h-11 sm:h-9 rounded-xl sm:rounded-lg flex items-center justify-center gap-1.5 font-black text-[11px] uppercase tracking-widest border transition-all active:scale-95',
                                 showSearch
                                     ? 'bg-brand-red/15 border-brand-red/30 text-brand-red'
                                     : dk ? 'bg-[#111] border-white/[0.07] text-white/40 hover:text-white hover:border-white/20' : 'bg-gray-100 border-gray-200 text-gray-500 hover:text-gray-700 hover:border-gray-300'
                             )}>
                             <Search className="w-3.5 h-3.5" />
-                            Buscar
+                            <span className="hidden sm:inline">Buscar</span>
                         </button>
                     </div>
                 </div>

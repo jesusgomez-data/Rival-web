@@ -1,7 +1,7 @@
 
 "use client";
 
-import { Trophy, Share2, Download, Activity, Calendar, Award, ShieldCheck, X } from "lucide-react";
+import { Trophy, Share2, Download, Activity, Calendar, Award, ShieldCheck, X, Send } from "lucide-react";
 import Image from "next/image";
 import { clsx } from "clsx";
 import { useRef, useState } from "react";
@@ -28,15 +28,54 @@ export default function ShareableCard({ user, data, onClose }: ShareableCardProp
     const cardRef = useRef<HTMLDivElement>(null);
     const [isDownloading, setIsDownloading] = useState(false);
 
+    const exportImage = async () => {
+        if (!cardRef.current) return null;
+        const { toPng } = await import('html-to-image');
+        const dataUrl = await toPng(cardRef.current, {
+            cacheBust: true,
+            pixelRatio: 3,
+            quality: 1.0,
+            backgroundColor: '#050505',
+        });
+        const blob = await (await fetch(dataUrl)).blob();
+        return {
+            dataUrl,
+            file: new File([blob], `rival-fit-${user.username}-${Date.now()}.png`, { type: 'image/png' }),
+        };
+    };
+
+    const downloadImage = (dataUrl: string) => {
+        const link = document.createElement('a');
+        link.download = `rival-fit-${user.username}-${Date.now()}.png`;
+        link.href = dataUrl;
+        link.click();
+    };
+
     const handleShare = async () => {
-        if (navigator.share) {
-            try {
+        if (!cardRef.current) return;
+        setIsDownloading(true);
+        try {
+            const exported = await exportImage();
+            if (!exported) return;
+            if (navigator.share && navigator.canShare?.({ files: [exported.file] })) {
                 await navigator.share({
-                    title: `Rival Fit Achievement`,
+                    files: [exported.file],
+                    title: 'Rival Fit Achievement',
                     text: `¡Mira mi logro en Rival Fit! @${user.username} ha completado: ${data.title}`,
-                    url: window.location.origin
                 });
-            } catch (e) { console.error(e); }
+            } else if (navigator.share) {
+                await navigator.share({
+                    title: 'Rival Fit Achievement',
+                    text: `¡Mira mi logro en Rival Fit! @${user.username} ha completado: ${data.title}`,
+                    url: window.location.origin,
+                });
+            } else {
+                downloadImage(exported.dataUrl);
+            }
+        } catch (e: any) {
+            if (e?.name !== 'AbortError') console.error(e);
+        } finally {
+            setIsDownloading(false);
         }
     };
 
@@ -44,25 +83,33 @@ export default function ShareableCard({ user, data, onClose }: ShareableCardProp
         if (!cardRef.current) return;
         setIsDownloading(true);
         try {
-            const { toPng } = await import('html-to-image');
-
-            // Generate PNG
-            const dataUrl = await toPng(cardRef.current, {
-                cacheBust: true,
-                pixelRatio: 2,
-                quality: 1.0,
-                backgroundColor: '#050505',
-            });
-
-            // Create download link
-            const link = document.createElement('a');
-            link.download = `rival-fit-${user.username}-${Date.now()}.png`;
-            link.href = dataUrl;
-            link.click();
-
+            const exported = await exportImage();
+            if (exported) downloadImage(exported.dataUrl);
         } catch (err) {
             console.error('Download failed:', err);
             alert('Error al descargar la tarjeta. Intenta nuevamente.');
+        } finally {
+            setIsDownloading(false);
+        }
+    };
+
+    const handleStory = async () => {
+        if (!cardRef.current) return;
+        setIsDownloading(true);
+        try {
+            const exported = await exportImage();
+            if (!exported) return;
+            if (navigator.share && navigator.canShare?.({ files: [exported.file] })) {
+                await navigator.share({
+                    files: [exported.file],
+                    title: 'Historia Rival Fit',
+                    text: 'Mi historia en Rival Fit',
+                });
+            } else {
+                downloadImage(exported.dataUrl);
+            }
+        } catch (err: any) {
+            if (err?.name !== 'AbortError') console.error('Story share failed:', err);
         } finally {
             setIsDownloading(false);
         }
@@ -195,19 +242,28 @@ export default function ShareableCard({ user, data, onClose }: ShareableCardProp
             </div>
 
             {/* Action Buttons (Outside of the captured area for better UI) */}
-            <div className="flex items-center justify-center gap-4 mt-8">
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-6">
                 <button
                     onClick={handleShare}
-                    className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white rounded-3xl border border-white/10 transition-all active:scale-95 flex items-center justify-center gap-3 font-black uppercase tracking-widest text-[10px]"
+                    disabled={isDownloading}
+                    className="py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl border border-white/10 transition-all active:scale-95 flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[9px] sm:text-[10px] disabled:opacity-60"
                 >
                     <Share2 className="w-4 h-4 text-brand-red" />
-                    COMPARTIR ENLACE
+                    COMPARTIR
+                </button>
+                <button
+                    onClick={handleStory}
+                    disabled={isDownloading}
+                    className="py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl border border-white/10 transition-all active:scale-95 flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[9px] sm:text-[10px] disabled:opacity-60"
+                >
+                    <Send className="w-4 h-4 text-brand-red -rotate-12" />
+                    HISTORIA
                 </button>
                 <button
                     onClick={handleDownload}
                     disabled={isDownloading}
                     className={clsx(
-                        "flex-1 py-4 bg-brand-red text-white rounded-3xl shadow-glow transition-all active:scale-95 flex items-center justify-center gap-3 font-black uppercase tracking-widest text-[10px]",
+                        "py-4 bg-brand-red text-white rounded-2xl shadow-glow transition-all active:scale-95 flex items-center justify-center gap-2 font-black uppercase tracking-widest text-[9px] sm:text-[10px]",
                         isDownloading && "opacity-70 cursor-wait"
                     )}
                 >
@@ -216,7 +272,7 @@ export default function ShareableCard({ user, data, onClose }: ShareableCardProp
                     ) : (
                         <Download className="w-4 h-4" />
                     )}
-                    GUARDAR IMAGEN
+                    GUARDAR
                 </button>
             </div>
         </div>

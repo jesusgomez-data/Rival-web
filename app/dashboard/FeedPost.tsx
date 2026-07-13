@@ -2279,11 +2279,14 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     }
 
                     return (
-                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300">
-                            <div className="relative w-full max-w-lg animate-in zoom-in-95 duration-500">
+                        <div
+                            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm animate-in fade-in duration-300 overscroll-contain"
+                            onClick={() => setShowShareCard(false)}
+                        >
+                            <div className="relative w-full max-w-lg animate-in zoom-in-95 duration-500" onClick={(e) => e.stopPropagation()}>
                                 <button
                                     onClick={() => setShowShareCard(false)}
-                                    className="fixed right-6 z-[110] bg-black/50 backdrop-blur-md p-3 rounded-full text-white hover:text-brand-red transition-all active:scale-95 flex items-center gap-2 border border-white/10"
+                                    className="fixed right-5 z-[10010] bg-black/60 backdrop-blur-md p-3 rounded-full text-white hover:text-brand-red transition-all active:scale-95 flex items-center gap-2 border border-white/15 shadow-2xl"
                                     style={{ top: 'max(1.5rem, env(safe-area-inset-top))' }}
                                 >
                                     <X className="w-5 h-5" />

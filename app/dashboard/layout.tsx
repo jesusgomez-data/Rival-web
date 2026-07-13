@@ -908,7 +908,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             {/* Mobile Bottom Navigation - Placed outside the flex container to ensure standard viewport fixed layout */}
             {showMobileNav && (
                 <nav className={clsx(
-                    "lg:hidden fixed bottom-4 left-4 right-4 bg-background/90 backdrop-blur-2xl border border-border py-3 px-6 z-[100] rounded-[2rem] shadow-2xl transition-transform duration-300 pb-[calc(12px+env(safe-area-inset-bottom,0px))]",
+                    "lg:hidden fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] bg-background/90 backdrop-blur-2xl border border-border py-3 px-6 z-[90] rounded-[2rem] shadow-2xl transition-transform duration-300 transform-gpu will-change-transform pb-3",
                     showBottomNav ? "translate-y-0" : "translate-y-32"
                 )}>
                     <div className="grid grid-cols-5 items-center justify-items-center h-12 relative">

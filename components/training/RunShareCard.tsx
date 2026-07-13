@@ -86,7 +86,7 @@ export default function RunShareCard({ imageUrl, distance, time, pace, elevation
     };
 
     return (
-        <div className="fixed inset-0 z-[300] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-xl animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-xl animate-in fade-in duration-300 overscroll-contain">
             <div className="w-full max-w-[360px] flex flex-col gap-3 animate-in zoom-in-95 duration-300">
                 <div className="flex justify-between items-center text-white px-2">
                     <h3 className="font-heading font-black italic uppercase tracking-tighter text-lg">Tu Resumen de Carrera</h3>
