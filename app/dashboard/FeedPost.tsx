@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo, memo } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -78,11 +79,18 @@ function ShareButton({
     photoUrl?: string
 }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const portalRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => { setMounted(true); }, []);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            const insideMenu = menuRef.current?.contains(target);
+            const insidePortal = portalRef.current?.contains(target);
+            if (!insideMenu && !insidePortal) {
                 setIsOpen(false);
             }
         }
@@ -179,44 +187,87 @@ function ShareButton({
                     <span className="text-[10px] font-black sr-only">Compartir</span>
                 )}
             </button>
+            {/* Desktop dropdown — rendered inside menuRef so overflow/stacking context is local */}
             {isOpen && (
+                <div className="hidden md:block absolute right-0 bottom-full mb-2 w-56 bg-black border border-white/10 rounded-2xl shadow-2xl z-[50] overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <button onClick={handleShareLink} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3">
+                        <Share2 className="w-4 h-4" /> Compartir enlace
+                    </button>
+                    <button onClick={handleShareToStory} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5">
+                        <Plus className="w-4 h-4" /> Enviar a Mis Historias
+                    </button>
+                    <button onClick={() => { setIsOpen(false); onRepostClick?.(); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5">
+                        <Repeat className="w-4 h-4" /> Repostear
+                    </button>
+                    <button onClick={() => { setIsOpen(false); onMessageClick?.(); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5">
+                        <MessageSquare className="w-4 h-4" /> Enviar Mensaje
+                    </button>
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onInstagramShare?.(); setIsOpen(false); }}
+                        className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5"
+                    >
+                        <Instagram className="w-4 h-4" /> Instagram Story
+                    </button>
+                    {onOpenShareCard && (
+                        <button onClick={() => { onOpenShareCard(); setIsOpen(false); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red bg-brand-red/5 hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5">
+                            <Trophy className="w-4 h-4" /> Tarjeta Elite
+                        </button>
+                    )}
+                    {isVideo && onDownloadMedia && (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onDownloadMedia(); setIsOpen(false); }}
+                            disabled={isDownloadingVideo}
+                            className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-white bg-brand-red hover:bg-brand-red/90 disabled:bg-gray-800 disabled:text-gray-500 flex items-center justify-between border-t border-white/5 transition-all"
+                        >
+                            <div className="flex items-center gap-3">
+                                {isDownloadingVideo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                                {isDownloadingVideo ? 'PROCESANDO...' : 'DESCARGAR VIDEO'}
+                            </div>
+                            {isDownloadingVideo && <span className="font-black">{downloadProgress}%</span>}
+                        </button>
+                    )}
+                </div>
+            )}
+            {/* Mobile bottom sheet — rendered via portal at document.body to escape overflow:hidden ancestors (iOS Safari fix) */}
+            {mounted && isOpen && createPortal(
                 <>
-                    {/* Mobile overlay backdrop */}
                     <div className="fixed inset-0 bg-black/60 z-[109] md:hidden" onClick={() => setIsOpen(false)} />
-                    {/* Share menu - fixed bottom sheet on mobile, absolute dropdown on desktop */}
-                    <div className="fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-auto md:right-0 md:top-auto md:bottom-full md:mb-2 w-full md:w-56 bg-[#111] md:bg-black border-t md:border border-white/10 rounded-t-3xl md:rounded-2xl shadow-2xl z-[110] overflow-hidden backdrop-blur-xl animate-in slide-in-from-bottom-4 md:fade-in md:zoom-in-95 duration-200">
-                        {/* Mobile drag handle */}
-                        <div className="flex justify-center pt-3 pb-1 md:hidden">
+                    <div
+                        ref={portalRef}
+                        className="fixed bottom-0 left-0 right-0 bg-[#111] border-t border-white/10 rounded-t-3xl shadow-2xl z-[110] overflow-hidden backdrop-blur-xl animate-in slide-in-from-bottom-4 duration-200 md:hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="flex justify-center pt-3 pb-1">
                             <div className="w-10 h-1 rounded-full bg-white/20" />
                         </div>
-                        <button onClick={handleShareLink} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3">
+                        <button onClick={handleShareLink} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 flex items-center gap-3">
                             <Share2 className="w-4 h-4" /> Compartir enlace
                         </button>
-                        <button onClick={handleShareToStory} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5">
+                        <button onClick={handleShareToStory} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 flex items-center gap-3 border-t border-white/5">
                             <Plus className="w-4 h-4" /> Enviar a Mis Historias
                         </button>
-                        <button onClick={() => { setIsOpen(false); onRepostClick?.(); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5">
+                        <button onClick={() => { setIsOpen(false); onRepostClick?.(); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red flex items-center gap-3 border-t border-white/5">
                             <Repeat className="w-4 h-4" /> Repostear
                         </button>
-                        <button onClick={() => { setIsOpen(false); onMessageClick?.(); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5">
+                        <button onClick={() => { setIsOpen(false); onMessageClick?.(); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 flex items-center gap-3 border-t border-white/5">
                             <MessageSquare className="w-4 h-4" /> Enviar Mensaje
                         </button>
                         <button
-                            onClick={(e) => { e.stopPropagation(); onInstagramShare?.(); setIsOpen(false); }}
-                            className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5"
+                            onClick={() => { onInstagramShare?.(); setIsOpen(false); }}
+                            className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 flex items-center gap-3 border-t border-white/5"
                         >
                             <Instagram className="w-4 h-4" /> Instagram Story
                         </button>
                         {onOpenShareCard && (
-                            <button onClick={() => { onOpenShareCard(); setIsOpen(false); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red bg-brand-red/5 hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5">
+                            <button onClick={() => { onOpenShareCard(); setIsOpen(false); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red bg-brand-red/5 flex items-center gap-3 border-t border-white/5">
                                 <Trophy className="w-4 h-4" /> Tarjeta Elite
                             </button>
                         )}
                         {isVideo && onDownloadMedia && (
                             <button
-                                onClick={(e) => { e.stopPropagation(); onDownloadMedia(); setIsOpen(false); }}
+                                onClick={() => { onDownloadMedia!(); setIsOpen(false); }}
                                 disabled={isDownloadingVideo}
-                                className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-white bg-brand-red hover:bg-brand-red/90 disabled:bg-gray-800 disabled:text-gray-500 flex items-center justify-between border-t border-white/5 transition-all"
+                                className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-white bg-brand-red disabled:bg-gray-800 disabled:text-gray-500 flex items-center justify-between border-t border-white/5"
                             >
                                 <div className="flex items-center gap-3">
                                     {isDownloadingVideo ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
@@ -225,10 +276,10 @@ function ShareButton({
                                 {isDownloadingVideo && <span className="font-black">{downloadProgress}%</span>}
                             </button>
                         )}
-                        {/* Safe area padding for mobile */}
-                        <div className="h-4 md:hidden" />
+                        <div className="h-8" />
                     </div>
-                </>
+                </>,
+                document.body
             )}
         </div>
     );
