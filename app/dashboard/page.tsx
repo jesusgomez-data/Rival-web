@@ -454,7 +454,7 @@ export default function DashboardHome() {
             // "Tus Gimnasios" solo depende de esta query — se resuelve y pinta
             // aparte para no esperar a misiones/duelos (que son mucho más lentos:
             // pasan por Server Action + su propio auth.getUser() + writes de sync).
-            const membershipsPromise = supabase.from('members').select('*, organization:center_id(id, name, logo_url, city, center_type)').eq('user_id', user.id).in('status', ['active', 'trial']);
+            const membershipsPromise = supabase.from('members').select('*, organization:center_id(id, name, logo_url, city, center_type, owner_id, head_coach_id)').eq('user_id', user.id).in('status', ['active', 'trial']);
             membershipsPromise.then(({ data: memberships }: any) => {
                 setData((prev: any) => ({
                     ...prev,
@@ -811,8 +811,13 @@ export default function DashboardHome() {
                                 />
                             </h2>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                {data.myGyms.map((gym: any) => (
-                                    <Link key={gym.id} href={gym.center_type === 'personal_trainer' ? `/trainer/${gym.id}` : `/gym/${gym.id}`} className="group relative overflow-hidden rounded-2xl bg-brand-gray/40 border border-border/10 hover:border-brand-red/50 transition-all p-4 flex items-center gap-4">
+                                {data.myGyms.map((gym: any) => {
+                                    const isOwnerOrHeadCoach = gym.owner_id === data.currentUser?.id || gym.head_coach_id === data.currentUser?.id;
+                                    const gymHref = isOwnerOrHeadCoach
+                                        ? `/dashboard/gyms/${gym.id}`
+                                        : (gym.center_type === 'personal_trainer' ? `/trainer/${gym.id}` : `/gym/${gym.id}`);
+                                    return (
+                                    <Link key={gym.id} href={gymHref} className="group relative overflow-hidden rounded-2xl bg-brand-gray/40 border border-border/10 hover:border-brand-red/50 transition-all p-4 flex items-center gap-4">
                                         <div className="w-12 h-12 rounded-xl bg-gray-800 border border-white/10 overflow-hidden relative shrink-0">
                                             {gym.logo_url ? (
                                                 <Image src={gym.logo_url} alt={gym.name} fill className="object-cover" />
@@ -828,7 +833,8 @@ export default function DashboardHome() {
                                         </div>
                                         <ArrowRight className="w-5 h-5 text-gray-600 group-hover:text-brand-red group-hover:translate-x-1 transition-all ml-auto" />
                                     </Link>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     ) : null}

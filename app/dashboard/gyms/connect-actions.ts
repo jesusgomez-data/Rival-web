@@ -131,8 +131,16 @@ export async function getConnectDashboardLink(orgId: string) {
     if (!org || org.owner_id !== user.id) return { error: 'No autorizado' };
     if (!org.stripe_account_id) return { error: 'Cuenta de cobros no configurada' };
 
-    const loginLink = await stripe.accounts.createLoginLink(org.stripe_account_id);
-    return { url: loginLink.url };
+    try {
+        const loginLink = await stripe.accounts.createLoginLink(org.stripe_account_id);
+        return { url: loginLink.url };
+    } catch (err: any) {
+        // Most common cause: the connected account is live-mode but the server's
+        // STRIPE_SECRET_KEY is a test key (or vice versa) — Stripe rejects the
+        // login link in that case. Surface a clear message instead of an
+        // unhandled server-action crash.
+        return { error: err?.message || 'No se pudo abrir el panel de Stripe.' };
+    }
 }
 
 export async function refreshOnboardingLink(orgId: string) {

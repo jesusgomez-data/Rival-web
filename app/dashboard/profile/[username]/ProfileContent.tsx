@@ -953,7 +953,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
             )}
 
             {modalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setModalOpen(null)}>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" onClick={() => setModalOpen(null)}>
                     <div className="bg-[#0A0A0A] border border-white/10 rounded-3xl w-full max-w-md max-h-[80vh] flex flex-col shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
                         <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/5">
                             <h3 className="text-white font-heading font-black italic uppercase tracking-wider text-lg flex items-center gap-2">

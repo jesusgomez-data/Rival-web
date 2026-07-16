@@ -182,10 +182,12 @@ function ShareButton({
             </button>
             {isOpen && (
                 <>
-                    {/* Mobile overlay backdrop */}
-                    <div className="fixed inset-0 bg-black/60 z-[49] md:hidden" onClick={() => setIsOpen(false)} />
+                    {/* Mobile overlay backdrop. z-[100]+ because the mobile bottom nav bar
+                        sits at z-[90] (see app/dashboard/layout.tsx) — anything below that
+                        gets visually covered AND has its taps swallowed by the nav bar. */}
+                    <div className="fixed inset-0 bg-black/60 z-[100] md:hidden" onClick={() => setIsOpen(false)} />
                     {/* Share menu - fixed bottom sheet on mobile, absolute dropdown on desktop */}
-                    <div className="fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-auto md:right-0 md:top-auto md:bottom-full md:mb-2 w-full md:w-56 bg-[#111] md:bg-black border-t md:border border-white/10 rounded-t-3xl md:rounded-2xl shadow-2xl z-[50] overflow-hidden backdrop-blur-xl animate-in slide-in-from-bottom-4 md:fade-in md:zoom-in-95 duration-200 pb-[env(safe-area-inset-bottom)] md:pb-0">
+                    <div className="fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-auto md:right-0 md:top-auto md:bottom-full md:mb-2 w-full md:w-56 bg-[#111] md:bg-black border-t md:border border-white/10 rounded-t-3xl md:rounded-2xl shadow-2xl z-[101] overflow-hidden backdrop-blur-xl animate-in slide-in-from-bottom-4 md:fade-in md:zoom-in-95 duration-200 pb-[env(safe-area-inset-bottom)] md:pb-0">
                         {/* Mobile drag handle */}
                         <div className="flex justify-center pt-3 pb-1 md:hidden">
                             <div className="w-10 h-1 rounded-full bg-white/20" />
@@ -1422,7 +1424,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                         <MoreHorizontal className="w-5 h-5" />
                     </button>
                     {showMenu && (
-                        <div className="absolute right-0 top-full mt-2 w-52 bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in zoom-in-95">
+                        <div className="absolute right-0 top-full mt-2 w-52 bg-zinc-950 border border-white/10 rounded-2xl shadow-2xl z-[101] overflow-hidden animate-in zoom-in-95">
                             <button onClick={handleEditClick} className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-brand-red flex items-center gap-3 border-b border-white/5">
                                 <Edit2 className="w-4 h-4" /> EDITAR
                             </button>
