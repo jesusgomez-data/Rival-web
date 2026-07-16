@@ -2623,7 +2623,11 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     <WODTrackerModal
                         wodPostId={targetWodId || ""}
                         wodTitle={wod_data?.title || resolvedWorkoutData?.title || "WOD"}
-                        wodType={(wod_data?.summary?.scoreType || resolvedWorkoutData?.summary?.scoreType)?.toUpperCase() === 'TIME' ? 'time' : 'rounds'}
+                        scoreType={wod_data?.summary?.scoreType || resolvedWorkoutData?.summary?.scoreType}
+                        hasTimecap={(() => {
+                            const blocks = wod_data?.blocks || (resolvedWorkoutData as any)?.blocks;
+                            return Array.isArray(blocks) && blocks.some((b: any) => !!b?.config?.timecap);
+                        })()}
                         isOpen={showWODTracker}
                         onClose={() => setShowWODTracker(false)}
                         onSuccess={() => window.location.reload()}

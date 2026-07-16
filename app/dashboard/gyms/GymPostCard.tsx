@@ -466,7 +466,8 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                 <WODTrackerModal
                     wodPostId={post.id}
                     wodTitle={wodData?.title || "WOD"}
-                    wodType={wodData?.summary?.scoreType?.toUpperCase() === 'TIME' ? 'time' : 'rounds'}
+                    scoreType={wodData?.summary?.scoreType}
+                    hasTimecap={Array.isArray(wodData?.blocks) && wodData.blocks.some((b: any) => !!b?.config?.timecap)}
                     isOpen={showWODTracker}
                     onClose={() => setShowWODTracker(false)}
                     onSuccess={() => {

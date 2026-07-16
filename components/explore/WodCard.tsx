@@ -378,7 +378,8 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                             <WODTrackerModal
                                 wodPostId={(data as any).original_wod_post_id || postId || ""}
                                 wodTitle={data.title || "WOD"}
-                                wodType={data.summary?.scoreType?.toUpperCase() === 'TIME' ? 'time' : 'rounds'}
+                                scoreType={data.summary?.scoreType}
+                                hasTimecap={Array.isArray(data.blocks) && data.blocks.some((b: any) => !!b?.config?.timecap)}
                                 isOpen={showWODTracker}
                                 onClose={() => setShowWODTracker(false)}
                                 onSuccess={() => window.location.reload()}
@@ -504,7 +505,8 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                                 <WODTrackerModal
                                     wodPostId={(data as any).original_wod_post_id || postId}
                                     wodTitle={data.title || "WOD"}
-                                    wodType={data.summary?.scoreType?.toUpperCase() === 'TIME' ? 'time' : 'rounds'}
+                                    scoreType={data.summary?.scoreType}
+                                    hasTimecap={Array.isArray(data.blocks) && data.blocks.some((b: any) => !!b?.config?.timecap)}
                                     isOpen={showWODTracker}
                                     onClose={() => setShowWODTracker(false)}
                                     onSuccess={() => window.location.reload()}
@@ -794,7 +796,8 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                     <WODTrackerModal
                         wodPostId={(data as any).original_wod_post_id || postId || ""}
                         wodTitle={data.title || "WOD"}
-                        wodType={data.summary?.scoreType?.toUpperCase() === 'TIME' ? 'time' : 'rounds'}
+                        scoreType={data.summary?.scoreType}
+                        hasTimecap={Array.isArray(data.blocks) && data.blocks.some((b: any) => !!b?.config?.timecap)}
                         isOpen={showWODTracker}
                         onClose={() => setShowWODTracker(false)}
                         onSuccess={() => window.location.reload()}
