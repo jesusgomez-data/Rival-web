@@ -182,9 +182,9 @@ function ShareButton({
             {isOpen && (
                 <>
                     {/* Mobile overlay backdrop */}
-                    <div className="fixed inset-0 bg-black/60 z-[49] md:hidden" onClick={() => setIsOpen(false)} />
+                    <div className="fixed inset-0 bg-black/60 z-[109] md:hidden" onClick={() => setIsOpen(false)} />
                     {/* Share menu - fixed bottom sheet on mobile, absolute dropdown on desktop */}
-                    <div className="fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-auto md:right-0 md:top-auto md:bottom-full md:mb-2 w-full md:w-56 bg-[#111] md:bg-black border-t md:border border-white/10 rounded-t-3xl md:rounded-2xl shadow-2xl z-[50] overflow-hidden backdrop-blur-xl animate-in slide-in-from-bottom-4 md:fade-in md:zoom-in-95 duration-200">
+                    <div className="fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-auto md:right-0 md:top-auto md:bottom-full md:mb-2 w-full md:w-56 bg-[#111] md:bg-black border-t md:border border-white/10 rounded-t-3xl md:rounded-2xl shadow-2xl z-[110] overflow-hidden backdrop-blur-xl animate-in slide-in-from-bottom-4 md:fade-in md:zoom-in-95 duration-200">
                         {/* Mobile drag handle */}
                         <div className="flex justify-center pt-3 pb-1 md:hidden">
                             <div className="w-10 h-1 rounded-full bg-white/20" />

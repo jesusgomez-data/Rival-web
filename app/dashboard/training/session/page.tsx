@@ -3330,18 +3330,23 @@ function CrossTrainingView({ blocks, setBlocks, distance, setDistance, isOCR, is
         return catalog.filter(ex => ex.name.toLowerCase().includes(searchQuery.toLowerCase()));
     }, [catalog, searchQuery]);
 
-    // Initial State Check (Moved here to avoid Hook Violation)
-    if (blocks.length === 0) {
-        return <FreeTrainingWizard onComplete={(block: any) => {
-            setBlocks([block]);
+    // Auto-init first block on mount instead of asking the user for workout type
+    useEffect(() => {
+        if (blocks.length === 0) {
+            setBlocks([{
+                id: Math.random().toString(36).substr(2, 9),
+                type: 'fortime',
+                title: 'BLOCK 1',
+                duration: 0,
+                exercises: [],
+                result: { rounds: 0, time: '' }
+            }]);
             setActiveBlockIndex(0);
-            // Si el bloque es de tipo 'other', es probable que quieran añadir ejercicios inmediatamente
-            if (block.type === 'other') {
-                setTimeout(() => setShowAddModal(true), 300);
-            }
-        }} />;
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
-        // If OCR/CrossTraining and no blocks (e.g. loading or error), show loader
+    if (blocks.length === 0) {
         return (
             <div className="flex items-center justify-center min-h-[40vh]">
                 <Loader2 className="w-8 h-8 animate-spin text-brand-red shimmer" />
