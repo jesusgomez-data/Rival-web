@@ -429,9 +429,10 @@ export default function TrainingPage() {
                                                 {/* Action Buttons */}
                                                 <div className="grid grid-cols-2 gap-3">
                                                     <Link
-                                                        href={`/dashboard/training/session?mode=scheduled&workout=${encodeURIComponent(JSON.stringify({
+                                                        href={`/dashboard/training/session?mode=scheduled&scheduledId=${workout.id}&workout=${encodeURIComponent(JSON.stringify({
                                                             title: workout.title,
-                                                            exercises: workout.exercises
+                                                            exercises: workout.exercises,
+                                                            sportType: workout.sport_type
                                                         }))}`}
                                                         className="flex items-center justify-center gap-2 bg-brand-red text-white py-2.5 rounded-lg text-xs font-black uppercase transition-all hover:bg-red-600 hover:shadow-[0_0_15px_rgba(220,38,38,0.3)]"
                                                     >

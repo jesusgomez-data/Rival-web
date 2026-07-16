@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS public.competitions (
     date TIMESTAMPTZ NOT NULL,
     location TEXT,
     image_url TEXT,
+    registration_url TEXT,
     status TEXT NOT NULL DEFAULT 'open', -- 'open', 'closed', 'finished'
     organizer_id UUID REFERENCES public.profiles(id),
     max_participants INTEGER,

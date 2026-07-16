@@ -31,6 +31,9 @@ export default function FollowButton({ targetId, isFollowingInitial, variant = '
             setIsFollowing(previousState);
             onToggle?.(previousState);
             alert("Error: " + result.error);
+        } else if (typeof result.following === 'boolean') {
+            setIsFollowing(result.following);
+            onToggle?.(result.following);
         }
 
         setIsPending(false);

@@ -17,10 +17,7 @@ export async function toggleFollow(followingId: string) {
     // Official account cannot follow others
     const { data: currentProfile } = await adminSupabase.from('profiles').select('is_official').eq('id', user.id).single()
     if (currentProfile?.is_official) return { success: true }
-
-    // Nobody can follow the official account — it broadcasts to everyone automatically
-    const { data: targetProfile } = await adminSupabase.from('profiles').select('is_official').eq('id', followingId).single()
-    if (targetProfile?.is_official) return { success: true }
+    if (followingId === user.id) return { error: 'No puedes seguirte a ti mismo' }
 
     // Check if relationship exists using ADMIN client
     const { data: existingFollow } = await adminSupabase
@@ -28,7 +25,7 @@ export async function toggleFollow(followingId: string) {
         .select('*')
         .eq('following_id', followingId)
         .eq('follower_id', user.id)
-        .single() // Use single() to get one record or error if none/multiple
+        .maybeSingle()
 
     // If exists, delete. If not, insert.
     if (existingFollow) {
@@ -67,12 +64,13 @@ export async function toggleFollow(followingId: string) {
 
     revalidatePath('/dashboard/community')
     revalidatePath('/dashboard')
+    revalidatePath('/dashboard/explore')
     revalidatePath('/dashboard/profile/[username]', 'page')
-    return { success: true }
+    return { success: true, following: !existingFollow }
 }
 
 export async function getFollows(userId: string, type: 'followers' | 'following', limit = 20) {
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     let data
     let error

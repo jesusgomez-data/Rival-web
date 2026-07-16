@@ -25,6 +25,7 @@ interface DbCompetition {
     status: string;
     max_participants?: number;
     registration_deadline?: string;
+    registration_url?: string;
     organizer?: { full_name: string; username: string; avatar_url?: string };
     _count?: Array<{ count: number }>;
 }
@@ -60,6 +61,7 @@ function CreateCompetitionModal({ onClose, onCreated, initialData }: { onClose: 
         status: initialData?.status || 'open', 
         max_participants: initialData?.max_participants?.toString() || '', 
         registration_deadline: initialData?.registration_deadline ? new Date(initialData.registration_deadline).toISOString().slice(0, 16) : '',
+        registration_url: initialData?.registration_url || '',
     });
 
     const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
@@ -79,6 +81,7 @@ function CreateCompetitionModal({ onClose, onCreated, initialData }: { onClose: 
                     status: form.status,
                     max_participants: form.max_participants ? parseInt(form.max_participants) : undefined,
                     registration_deadline: form.registration_deadline || undefined,
+                    registration_url: form.registration_url || undefined,
                 };
                 if (initialData) {
                     await updateCompetition(initialData.id, dataToSubmit);
@@ -134,6 +137,10 @@ function CreateCompetitionModal({ onClose, onCreated, initialData }: { onClose: 
                     <div>
                         <label className={labelCls}>URL de imagen</label>
                         <input className={inputCls} placeholder="https://..." value={form.image_url} onChange={e => set('image_url', e.target.value)} />
+                    </div>
+                    <div>
+                        <label className={labelCls}>Link original de inscripcion externa</label>
+                        <input className={inputCls} placeholder="https://..." value={form.registration_url} onChange={e => set('registration_url', e.target.value)} />
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
@@ -237,6 +244,18 @@ function DbCompetitionCard({ competition, isAdmin, onEdit, onDelete }: { competi
                             </p>
                         )}
                     </div>
+
+                    {competition.registration_url && (
+                        <a
+                            href={competition.registration_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-300 transition-all hover:border-brand-red/40 hover:text-white"
+                        >
+                            Link oficial <ExternalLink className="h-3 w-3" />
+                        </a>
+                    )}
+
 
                     <Link
                         href={`/dashboard/competitions/${competition.id}`}

@@ -24,7 +24,7 @@ export async function getCompetition(id: string) {
 export async function createCompetition(formData: {
     title: string; description: string; type: string; date: string;
     location: string; image_url?: string; max_participants?: number;
-    registration_deadline?: string; status: string;
+    registration_deadline?: string; status: string; registration_url?: string;
 }) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();

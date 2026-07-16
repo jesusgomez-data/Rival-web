@@ -265,7 +265,7 @@ export async function getMyDuels() {
 }
 
 export async function getPublicProfile(username: string) {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const target = decodeURIComponent(username).trim().toLowerCase();
 

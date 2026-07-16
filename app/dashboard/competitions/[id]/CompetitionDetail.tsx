@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {
     MapPin, Calendar, Users, Trophy, ArrowLeft, CheckCircle,
-    XCircle, Crown, ShieldAlert, Loader2, Upload, ChevronDown, ChevronUp
+    XCircle, Crown, ShieldAlert, Loader2, Upload, ChevronDown, ChevronUp, ExternalLink
 } from 'lucide-react';
 import {
     registerForCompetition,
@@ -27,6 +27,7 @@ interface Competition {
     status: string;
     max_participants?: number;
     registration_deadline?: string;
+    registration_url?: string;
     organizer?: { full_name: string; username: string; avatar_url?: string };
 }
 
@@ -327,6 +328,19 @@ export default function CompetitionDetail({ competition, registrations, results,
                     <p className="text-gray-300 font-medium leading-relaxed text-sm">{competition.description}</p>
                 </div>
             )}
+
+            {competition.registration_url && (
+                <div className="bg-brand-gray border border-white/5 rounded-2xl p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em]">Link original de inscripcion</p>
+                        <p className="text-sm text-gray-400 font-medium mt-1">Esta competicion tiene una pagina externa oficial.</p>
+                    </div>
+                    <a href={competition.registration_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 rounded-xl bg-white text-black px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] hover:bg-brand-red hover:text-white transition-all">
+                        Abrir inscripcion <ExternalLink className="h-4 w-4" />
+                    </a>
+                </div>
+            )}
+
 
             {/* ── Registration actions (only for non-finished) ── */}
             {currentUser && !isFinished && (

@@ -1017,6 +1017,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
 
     // Check if the post only has written text (no photos, videos, or workout/WOD details)
     const isTextOnly = !hasMedia && !(resolvedWorkoutData || wod_data || post_type === 'wod' || mediaType === 'pr' || mediaType === 'class_result' || mediaType === 'membership_activation' || mediaType === 'repost' || mediaType === 'challenge');
+    const displayCaption = post_type === 'wod' && currentCaption.length > 220 ? '' : currentCaption;
 
     // Extract IDs from workout data if possible
     const workoutWodId = (resolvedWorkoutData as any)?.original_wod_post_id || (resolvedWorkoutData as any)?.postId;
@@ -1700,7 +1701,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
 
 
             {/* CAPTION: Sleek text container */}
-            {currentCaption && (
+            {displayCaption && (
                 <div className={clsx(
                     "px-6 pb-4",
                     isTextOnly ? "pt-4" : ""
@@ -1716,7 +1717,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 "text-base md:text-lg font-bold leading-relaxed italic tracking-wide relative z-10 whitespace-pre-wrap",
                                 theme === 'dark' ? "text-gray-100" : "text-zinc-800"
                             )}>
-                                <MentionText text={currentCaption} className="whitespace-pre-wrap" />
+                                <MentionText text={displayCaption} className="whitespace-pre-wrap" />
                             </p>
                         </div>
                     ) : (
@@ -1726,7 +1727,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 "inline whitespace-pre-wrap transition-all duration-300",
                                 theme === 'dark' ? "text-white/90" : "text-zinc-900"
                             )}>
-                                <MentionText text={currentCaption} className="whitespace-pre-wrap" />
+                                <MentionText text={displayCaption} className="whitespace-pre-wrap" />
                             </div>
                         </div>
                     )}
@@ -1765,7 +1766,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     {/* WOD Display (WOD of the Day type) */}
                     {post_type === 'wod' && wod_data && (
                         <div className="space-y-6">
-                            <WODPostDisplay wod={wod_data} compact={false} />
+                            <WODPostDisplay wod={wod_data} compact={true} />
                             <div className="flex flex-col sm:flex-row gap-4">
                                 <button
                                     className="flex-1 bg-gradient-to-r from-brand-red to-orange-600 text-white font-black uppercase tracking-widest text-xs py-4 rounded-2xl flex items-center justify-center gap-2 shadow-glow active:scale-95 transition-all"

@@ -63,8 +63,26 @@ export async function toggleLike(postId: string) {
     revalidatePath('/dashboard')
     return { success: true }
 }
+export async function getPostLikes(postId: string, limit = 50) {
+    const adminSupabase = createAdminClient()
 
+    const { data, error } = await adminSupabase
+        .from('likes')
+        .select(`
+            created_at,
+            profile:user_id (id, full_name, username, avatar_url, level, main_sport)
+        `)
+        .eq('post_id', postId)
+        .order('created_at', { ascending: false })
+        .limit(limit)
 
+    if (error) {
+        console.error('[getPostLikes] Error:', error)
+        return []
+    }
+
+    return data?.map((item: any) => item.profile).filter(Boolean) || []
+}
 export async function createPRPost(formData: FormData) {
     try {
         const supabase = await createClient()
