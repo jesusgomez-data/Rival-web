@@ -99,29 +99,18 @@ export async function switchToAccount(userId: string): Promise<boolean> {
     }
 }
 
-export function clearActiveSessionLocally() {
+// scope: 'local' clears cookies/localStorage without revoking the refresh
+// token server-side, so a saved account can still be restored later via
+// switchToAccount(). Going through the SDK (instead of wiping cookies by
+// hand) also resets the browser singleton's in-memory session and its
+// scheduled auto-refresh timer — the manual wipe left that timer alive,
+// so it kept firing against cookies that had just been deleted and threw
+// "Invalid Refresh Token: Refresh Token Not Found".
+export async function clearActiveSessionLocally() {
     if (typeof window === 'undefined') return;
     try {
-        // 1. Clear localStorage keys starting with sb- and ending with -auth-token
-        const keysToRemove: string[] = [];
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
-                keysToRemove.push(key);
-            }
-        }
-        keysToRemove.forEach(key => localStorage.removeItem(key));
-        
-        // 2. Clear cookies starting with sb-
-        const cookies = document.cookie.split(';');
-        for (let cookie of cookies) {
-            const eqPos = cookie.indexOf('=');
-            const name = eqPos > -1 ? cookie.substring(0, eqPos).trim() : cookie.trim();
-            if (name.startsWith('sb-')) {
-                document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-                document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`;
-            }
-        }
+        const supabase = createClient();
+        await supabase.auth.signOut({ scope: 'local' });
     } catch (e) {
         console.error('Error clearing active session locally:', e);
     }

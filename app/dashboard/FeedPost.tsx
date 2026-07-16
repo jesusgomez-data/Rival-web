@@ -1949,8 +1949,11 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                         )
                     })()}
 
-                    {/* Normalized Workout Card (Endurance or Lift) */}
-                    {resolvedWorkoutData && !['pr', 'class_result', 'membership_activation'].includes(mediaType ?? '') && (
+                    {/* Normalized Workout Card (Endurance or Lift).
+                        Skip when post_type === 'wod': WODPostDisplay above already renders
+                        this same data (resolvedWorkoutData is parsed from the same JSON as
+                        wod_data), so showing both duplicated the whole workout on screen. */}
+                    {resolvedWorkoutData && post_type !== 'wod' && !['pr', 'class_result', 'membership_activation'].includes(mediaType ?? '') && (
                         <WodCard
                             completionsCount={completionsCountWod}
                             hasCompleted={hasCompletedWod}

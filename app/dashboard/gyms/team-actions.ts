@@ -165,7 +165,7 @@ export async function sendTeamMessage(centerId: string, content: string, asOrg: 
             type: 'team_message',
             title: `Mensaje de Equipo - ${org?.name || 'Rival'}`,
             content: `${asOrg ? org?.name : 'Un miembro del equipo'} ha publicado en Notas del Equipo: "${content.substring(0, 50)}${content.length > 50 ? '...' : ''}"`,
-            link: `/dashboard/center-chat?center=${centerId}`
+            link: `/dashboard/gyms/${centerId}/chat`
         })
     );
 

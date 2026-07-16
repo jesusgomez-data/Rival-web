@@ -24,7 +24,7 @@ export default function LoginPage() {
         async function checkSession() {
             const searchParams = new URLSearchParams(window.location.search);
             if (searchParams.get('add_account') === 'true') {
-                clearActiveSessionLocally();
+                await clearActiveSessionLocally();
             } else {
                 const { data } = await supabase.auth.getSession();
                 if (data.session) router.replace('/dashboard');

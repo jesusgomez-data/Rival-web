@@ -1,4 +1,5 @@
 import { createClient } from "@/utils/supabase/server";
+import { createAdminClient } from "@/utils/supabase/admin";
 import { Trophy, Flame, TrendingUp, Award, Swords } from "lucide-react";
 import Link from "next/link";
 import LeaderboardClient from "./LeaderboardClient";
@@ -19,7 +20,7 @@ export default async function LeaderboardPage() {
         .order('xp_points', { ascending: false })
         .limit(20);
 
-    const { data: myFollows } = await supabase
+    const { data: myFollows } = await createAdminClient()
         .from('follows')
         .select('following_id')
         .eq('follower_id', user?.id || '');

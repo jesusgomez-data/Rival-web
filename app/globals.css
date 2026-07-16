@@ -758,8 +758,16 @@ body {
   }
 }
 
+/* fill-mode: backwards (not "both") — the animated "transform" must NOT
+   persist after the animation ends. Any element with a non-"none" computed
+   transform becomes the containing block for its `position: fixed`
+   descendants, so a page wrapper using this class would trap fixed-position
+   modals inside itself instead of the viewport once the animation held its
+   final transform forever. The "to" state here is identical to the
+   element's un-animated style anyway, so dropping "forwards" changes
+   nothing visually. */
 .animate-in {
-  animation: rival-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: rival-enter 0.35s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 .animate-in.fade-in { --tw-enter-opacity: 0; }
@@ -784,8 +792,11 @@ body {
   to { opacity: 1; transform: none; }
 }
 
+/* Same fix as .animate-in above: "backwards" instead of "both" so the
+   animated transform doesn't linger and trap position:fixed descendants
+   (e.g. modals) inside this element once the entrance animation finishes. */
 .animate-fade-in {
-  animation: rival-fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: rival-fade-in 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 }
 
 /* 2. TIPOGRAFÍA Y RENDER */

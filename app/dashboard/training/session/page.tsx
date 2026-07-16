@@ -2450,7 +2450,7 @@ function SportSelector({ onSelect, onPlanSelect, guidedCount, userTier }: { onSe
     return (
         <div className="flex flex-col p-6 min-h-full">
             <div className="flex items-center gap-4 mb-2">
-                <Link href="/dashboard/training" className={clsx("p-3 rounded-full transition-all", theme === 'dark' ? "bg-white/5 text-white hover:bg-white/10" : "bg-gray-100 text-black hover:bg-gray-200 shadow-sm")}><ArrowLeft className="w-6 h-6" /></Link>
+                <button onClick={() => router.back()} className={clsx("p-3 rounded-full transition-all", theme === 'dark' ? "bg-white/5 text-white hover:bg-white/10" : "bg-gray-100 text-black hover:bg-gray-200 shadow-sm")}><ArrowLeft className="w-6 h-6" /></button>
                 <div>
                     <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Nueva Sesión</p>
                     <h1 className={clsx("text-2xl md:text-3xl font-heading font-black italic uppercase tracking-tighter", theme === 'dark' ? "text-white" : "text-black")}>

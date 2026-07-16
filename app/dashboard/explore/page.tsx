@@ -7,6 +7,7 @@ import { Trophy, UserSearch, Flame, Compass, Users, TrendingUp, Swords } from "l
 import DuelButton from "./DuelButton";
 import SearchAthletes from "./SearchAthletes";
 import { getMyDuels } from "./duel-actions";
+import { getMyFollowIds } from "./follows-actions";
 import { useEffect, useState, Suspense, Fragment } from "react";
 import FeedPost from "../FeedPost";
 import { useLanguage } from "@/app/LanguageContext";
@@ -72,7 +73,7 @@ export default function ExplorePage({
                     { data: officialAccounts },
                     duelsData
                 ] = await Promise.all([
-                    supabase.from('follows').select('following_id').eq('follower_id', user.id),
+                    getMyFollowIds().then(r => ({ data: r.followedIds.map(id => ({ following_id: id })) })),
                     supabase.from('profiles').select('*').eq('id', user.id).single(),
                     supabase.from('members').select('id, center_id').eq('user_id', user.id).in('status', ['active', 'trial']).limit(1),
                     supabase.from('profiles').select('id').eq('is_official', true),

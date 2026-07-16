@@ -13,6 +13,7 @@ import FollowButton from "./explore/FollowButton";
 import FeedPost from "./FeedPost";
 import StoryBar from "./stories/StoryBar";
 import { getMyDuels, acceptDuel } from "./explore/duel-actions";
+import { getMyFollowIds } from "./explore/follows-actions";
 import { getMissions } from "./training/actions";
 import InfoTooltip from "@/components/InfoTooltip";
 import { getMonday } from "@/utils/date";
@@ -468,7 +469,7 @@ export default function DashboardHome() {
                 membershipsPromise,
                 supabase.from('workouts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
                 supabase.from('class_results').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
-                supabase.from('follows').select('following_id').eq('follower_id', user.id),
+                getMyFollowIds().then(r => ({ data: r.followedIds.map(id => ({ following_id: id })) })),
                 supabase.from('profiles')
                     .select('id, username, full_name, avatar_url, level, is_official')
                     .neq('id', user.id)
@@ -598,11 +599,11 @@ export default function DashboardHome() {
             let officialIds = officialIdsRef.current;
 
             if (followedIds.length === 0) {
-                const [{ data: myFollows }, { data: officialProfiles }] = await Promise.all([
-                    supabase.from('follows').select('following_id').eq('follower_id', user.id),
+                const [{ followedIds: myFollowIds }, { data: officialProfiles }] = await Promise.all([
+                    getMyFollowIds(),
                     supabase.from('profiles').select('id').eq('is_official', true),
                 ]);
-                followedIds = myFollows?.map((f: any) => f.following_id) || [];
+                followedIds = myFollowIds;
                 officialIds = officialProfiles?.map((p: any) => p.id) || [];
                 followedIdsRef.current = followedIds;
                 officialIdsRef.current = officialIds;

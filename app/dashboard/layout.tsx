@@ -351,7 +351,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                             if (!pathnameRef.current?.startsWith('/dashboard/messages')) {
                                 getUnreadMessageCount().then(count => {
                                     if (isMounted) setUnreadMessages(count);
-                                });
+                                }).catch(() => {});
 
                                 if (typeof Notification !== 'undefined' && Notification.permission === "granted") {
                                     new Notification("Rival Fit", {
@@ -382,7 +382,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                             } else {
                                 setUnreadMessages(count);
                             }
-                        });
+                        }).catch(() => {});
                     }
                 )
                 .on(
@@ -420,15 +420,18 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         } else {
             getUnreadMessageCount().then(unread => {
                 setUnreadMessages(unread);
-            });
+            }).catch(() => {});
         }
     }, [pathname]);
 
-    // Polling fallback — runs every 20s when Realtime drops
+    // Polling fallback — runs every 20s when Realtime drops. Skipped while the
+    // tab is hidden so it doesn't stack extra session-refresh attempts against
+    // the middleware's own refresh while the user is away from the tab.
     useEffect(() => {
         const interval = setInterval(() => {
+            if (document.hidden) return;
             if (!pathnameRef.current?.startsWith('/dashboard/messages')) {
-                getUnreadMessageCount().then(count => setUnreadMessages(count));
+                getUnreadMessageCount().then(count => setUnreadMessages(count)).catch(() => {});
             }
         }, 20000);
         return () => clearInterval(interval);
@@ -467,7 +470,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             }
         }
         
-        clearActiveSessionLocally();
+        await clearActiveSessionLocally();
         router.push("/login?add_account=true");
     };
 

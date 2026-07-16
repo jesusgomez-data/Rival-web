@@ -105,35 +105,15 @@ export async function POST(request: NextRequest) {
 /**
  * Formatea el WOD para display en el feed
  */
+// Short caption only — the full breakdown (blocks, exercises, tip) is already
+// rendered by the WODPostDisplay card in the feed. Dumping the whole WOD here
+// too made every AI-generated post show the same content twice.
 function formatWODForPost(wod: GeneratedWOD): string {
-  let content = `💪 ${wod.title}\n`;
+  let content = `💪 ${wod.title}`;
   if (wod.subtitle) {
-    content += `${wod.subtitle}\n`;
+    content += `\n${wod.subtitle}`;
   }
-  content += `\n`;
-  content += `⏱️ ${wod.estimatedDuration} min | `;
-  content += `🔥 ${wod.caloriesBurn} kcal | `;
-  content += `📊 ${wod.difficulty.toUpperCase()}\n\n`;
-
-  // Agregar bloques principales (saltear warmup/cooldown para el preview)
-  const mainBlocks = wod.blocks.filter(
-    (b) => b.type === "metcon" || b.type === "strength" || b.type === "conditioning"
-  );
-
-  mainBlocks.forEach((block) => {
-    content += `🎯 ${block.title.toUpperCase()}\n`;
-    block.exercises.forEach((ex) => {
-      content += `• ${ex.reps || ""} ${ex.name}\n`;
-    });
-    content += `\n`;
-  });
-
-  // Agregar un tip destacado
-  if (wod.tips && wod.tips.length > 0) {
-    content += `💡 TIP: ${wod.tips[0]}\n`;
-  }
-
-  content += `\n#WOD #Fitness #RivalFit #AIGenerated`;
+  content += `\n\n#WOD #Fitness #RivalFit #AIGenerated`;
 
   return content;
 }

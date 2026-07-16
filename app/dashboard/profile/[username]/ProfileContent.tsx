@@ -99,7 +99,7 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                 type: "workout_reminder",
                 title,
                 content,
-                link: "/dashboard/training"
+                link: "/dashboard/profile"
             });
             if (result.success) {
                 alert("¡Recordatorio enviado con éxito al atleta! 🚀");
@@ -965,15 +965,15 @@ export default function ProfileContent({ profile, combatStats, user, isFollowing
                         <div className="overflow-y-auto p-4 space-y-2 flex-1 scrollbar-hide">
                             {loadingModal ? (
                                 <div className="flex justify-center py-8"><Activity className="w-8 h-8 text-brand-red animate-spin" /></div>
-                            ) : modalData.length > 0 ? (
-                                modalData.map((person) => (
-                                    <Link key={person.id} href={`/dashboard/profile/${person.username}`} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors group" onClick={() => setModalOpen(null)}>
+                            ) : modalData.filter((person) => person && person.id).length > 0 ? (
+                                modalData.filter((person) => person && person.id).map((person) => (
+                                    <Link key={person.id} href={`/dashboard/profile/${person.username || ''}`} className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors group" onClick={() => setModalOpen(null)}>
                                         <div className="w-10 h-10 rounded-full bg-brand-gray overflow-hidden relative border border-white/10">
-                                            <Image src={person.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(person.full_name || 'User')}&background=random`} alt={person.full_name} fill className="object-cover" />
+                                            <Image src={person.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(person.full_name || person.username || 'User')}&background=random`} alt={person.full_name || person.username || 'Usuario'} fill className="object-cover" />
                                         </div>
                                         <div>
-                                            <p className="text-white font-bold text-sm group-hover:text-brand-red transition-colors">{person.full_name}</p>
-                                            <p className="text-gray-500 text-xs">@{person.username}</p>
+                                            <p className="text-white font-bold text-sm group-hover:text-brand-red transition-colors">{person.full_name || person.username || 'Usuario'}</p>
+                                            <p className="text-gray-500 text-xs">@{person.username || '—'}</p>
                                         </div>
                                     </Link>
                                 ))

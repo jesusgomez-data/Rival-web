@@ -69,6 +69,25 @@ export async function toggleFollow(followingId: string) {
     return { success: true, following: !existingFollow }
 }
 
+// Returns the IDs the current user follows. Uses the admin client because the
+// 'follows' table RLS SELECT policy is unreliable on the browser client, which
+// caused follow state to appear reset after a refresh (client query silently
+// returned zero rows even though the row existed).
+export async function getMyFollowIds() {
+    const supabase = await createClient()
+    const adminSupabase = createAdminClient()
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { followedIds: [] as string[] }
+
+    const { data: myFollows } = await adminSupabase
+        .from('follows')
+        .select('following_id')
+        .eq('follower_id', user.id)
+
+    return { followedIds: (myFollows?.map((f: any) => f.following_id) || []) as string[] }
+}
+
 export async function getFollows(userId: string, type: 'followers' | 'following', limit = 20) {
     const supabase = createAdminClient()
 
