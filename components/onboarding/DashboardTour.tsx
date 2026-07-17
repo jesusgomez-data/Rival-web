@@ -118,7 +118,7 @@ export default function DashboardTour({ onComplete }: { onComplete: () => void }
 
                         <button
                             onClick={handleComplete}
-                            className="absolute top-6 right-6 p-2 rounded-full hover:bg-white/5 text-gray-400 transition-colors"
+                            className="absolute top-6 right-6 z-20 p-2 rounded-full hover:bg-white/5 text-gray-400 transition-colors"
                         >
                             <X className="w-5 h-5" />
                         </button>
