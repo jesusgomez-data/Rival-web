@@ -82,13 +82,17 @@ function ShareButton({
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        // "click" (not "mousedown") on purpose: mousedown fires before the tap's
+        // own click handler on touch devices, so closing on mousedown could race
+        // ahead and unmount the menu button a beat before its own onClick runs —
+        // on iOS that reliably eats the tap with zero error, zero visible effect.
         function handleClickOutside(event: MouseEvent) {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
             }
         }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        document.addEventListener("click", handleClickOutside);
+        return () => document.removeEventListener("click", handleClickOutside);
     }, []);
 
     const handleShareLink = () => {
@@ -187,7 +191,7 @@ function ShareButton({
                         gets visually covered AND has its taps swallowed by the nav bar. */}
                     <div className="fixed inset-0 bg-black/60 z-[100] md:hidden" onClick={() => setIsOpen(false)} />
                     {/* Share menu - fixed bottom sheet on mobile, absolute dropdown on desktop */}
-                    <div className="fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-auto md:right-0 md:top-auto md:bottom-full md:mb-2 w-full md:w-56 bg-[#111] md:bg-black border-t md:border border-white/10 rounded-t-3xl md:rounded-2xl shadow-2xl z-[101] overflow-hidden backdrop-blur-xl animate-in slide-in-from-bottom-4 md:fade-in md:zoom-in-95 duration-200 pb-[env(safe-area-inset-bottom)] md:pb-0">
+                    <div className="fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-auto md:right-0 md:top-auto md:bottom-full md:mb-2 w-full md:w-56 bg-[#111] md:bg-black border-t md:border border-white/10 rounded-t-3xl md:rounded-2xl shadow-2xl z-[101] overflow-hidden animate-in slide-in-from-bottom-4 md:fade-in md:zoom-in-95 duration-200 pb-[env(safe-area-inset-bottom)] md:pb-0">
                         {/* Mobile drag handle */}
                         <div className="flex justify-center pt-3 pb-1 md:hidden">
                             <div className="w-10 h-1 rounded-full bg-white/20" />
