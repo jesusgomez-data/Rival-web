@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Download, X, Loader2, Send } from 'lucide-react';
 import { toPng } from 'html-to-image';
 import type { WorkoutBlock } from '@/app/dashboard/training/types';
@@ -454,16 +455,26 @@ export default function WorkoutShareCard({
         return duration > 0 ? duration : 0;
     })();
 
+    // Some browsers (notably iOS Safari) silently drop a download triggered by
+    // an <a download> click when the element was never attached to the DOM —
+    // appending it first (and removing it after) makes the download reliable
+    // everywhere instead of only on browsers that tolerate the detached case.
+    const triggerDownload = (dataUrl: string, filename: string) => {
+        const link = document.createElement('a');
+        link.download = filename;
+        link.href = dataUrl;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     // ── Download PNG ──────────────────────────────────────────────────────────
     const handleDownload = async () => {
         if (!cardRef.current) return;
         setLoading(true);
         try {
             const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
-            const link = document.createElement('a');
-            link.download = `rival-workout-${Date.now()}.png`;
-            link.href = dataUrl;
-            link.click();
+            triggerDownload(dataUrl, `rival-workout-${Date.now()}.png`);
         } catch (e) {
             console.error('Download error', e);
         } finally {
@@ -471,7 +482,7 @@ export default function WorkoutShareCard({
         }
     };
 
-    // ── Share via Web Share API ────────────────────────────────────────────────
+    // ── Share via Web Share API (WhatsApp, Instagram, etc. via the OS sheet) ──
     const handleShare = async () => {
         if (!cardRef.current) return;
         setLoading(true);
@@ -479,37 +490,28 @@ export default function WorkoutShareCard({
             const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
             const blob = await (await fetch(dataUrl)).blob();
             const file = new File([blob], 'rival-workout.png', { type: 'image/png' });
-            if (navigator.share && navigator.canShare({ files: [file] })) {
+            if (navigator.share && navigator.canShare?.({ files: [file] })) {
                 await navigator.share({ files: [file], title: workoutTitle || 'Mi entrenamiento', text: '¡Mira mi entrenamiento en Rival Fit! 🔥' });
             } else {
-                const link = document.createElement('a');
-                link.download = 'rival-workout.png';
-                link.href = dataUrl;
-                link.click();
+                triggerDownload(dataUrl, 'rival-workout.png');
             }
-        } catch (e) {
-            console.error('Share error', e);
+        } catch (e: any) {
+            if (e?.name !== 'AbortError') console.error('Share error', e);
         } finally {
             setLoading(false);
         }
     };
 
-    // ── Share to Story (9:16 Instagram) ──────────────────────────────────────
+    // ── Share to Story: opens the app's own Historia composer with this
+    // image pre-loaded as the background, same event FeedPost's share menu
+    // uses for "Enviar a Mis Historias" — NOT the OS share sheet.
     const handleShareToStory = async () => {
         if (!cardRef.current) return;
         setStoryLoading(true);
         try {
             const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
-            const blob = await (await fetch(dataUrl)).blob();
-            const file = new File([blob], 'rival-story.png', { type: 'image/png' });
-            if (navigator.share && navigator.canShare({ files: [file] })) {
-                await navigator.share({ files: [file], title: 'Historia Rival Fit' });
-            } else {
-                const link = document.createElement('a');
-                link.download = 'rival-story.png';
-                link.href = dataUrl;
-                link.click();
-            }
+            window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'image', url: dataUrl } }));
+            onClose();
         } catch (e) {
             console.error('Story share error', e);
         } finally {
@@ -517,7 +519,12 @@ export default function WorkoutShareCard({
         }
     };
 
-    return (
+    // Portaled straight into <body>: this component is mounted inline inside a
+    // post card, which can contain its own stacking-context-creating elements
+    // (video overlays, animated badges). Rendering here instead of in-place
+    // guarantees this modal — and its buttons — are never trapped under, or
+    // have taps swallowed by, something elsewhere in the card.
+    return createPortal(
         /* ── Modal overlay ─────────────────────────────────────────────────── */
         <div
             style={{
@@ -690,6 +697,7 @@ export default function WorkoutShareCard({
                     HISTORIA
                 </button>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

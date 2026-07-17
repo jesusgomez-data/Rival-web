@@ -45,10 +45,14 @@ export default function ShareableCard({ user, data, onClose }: ShareableCardProp
     };
 
     const downloadImage = (dataUrl: string) => {
+        // Appended to the DOM before clicking — some browsers (notably iOS
+        // Safari) silently drop a detached <a download> click.
         const link = document.createElement('a');
         link.download = `rival-fit-${user.username}-${Date.now()}.png`;
         link.href = dataUrl;
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
     };
 
     const handleShare = async () => {
