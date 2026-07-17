@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo, memo } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -79,7 +80,13 @@ function ShareButton({
     photoUrl?: string
 }) {
     const [isOpen, setIsOpen] = useState(false);
+    const [desktopPos, setDesktopPos] = useState<{ top: number; right: number } | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+    // The menu panel itself is rendered via a portal into <body> (see below), so it's
+    // no longer a DOM descendant of menuRef — it needs its own ref for the
+    // outside-click check below, or every tap inside the portaled menu would look
+    // like a tap "outside" and close the menu before its own onClick runs.
+    const panelRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         // "click" (not "mousedown") on purpose: mousedown fires before the tap's
@@ -87,7 +94,10 @@ function ShareButton({
         // ahead and unmount the menu button a beat before its own onClick runs —
         // on iOS that reliably eats the tap with zero error, zero visible effect.
         function handleClickOutside(event: MouseEvent) {
-            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+            const target = event.target as Node;
+            const insideTrigger = menuRef.current?.contains(target);
+            const insidePanel = panelRef.current?.contains(target);
+            if (!insideTrigger && !insidePanel) {
                 setIsOpen(false);
             }
         }
@@ -174,7 +184,12 @@ function ShareButton({
     return (
         <div className="relative" ref={menuRef}>
             <button
-                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setDesktopPos({ top: rect.bottom + 8, right: window.innerWidth - rect.right });
+                    setIsOpen(!isOpen);
+                }}
                 aria-label="Compartir"
                 className={className}
             >
@@ -184,14 +199,25 @@ function ShareButton({
                     <span className="text-[10px] font-black sr-only">Compartir</span>
                 )}
             </button>
-            {isOpen && (
+            {isOpen && createPortal(
                 <>
+                    {/* Rendered via portal straight into <body> — this menu lives inside
+                        a post card that can contain its own stacking-context-creating
+                        elements (video overlays, animated badges, etc). Any of those can
+                        end up painting ABOVE a same-subtree z-index no matter how high,
+                        because z-index only competes within its own stacking context.
+                        Escaping to <body> guarantees this menu is never trapped under —
+                        or have its taps swallowed by — something elsewhere in the card. */}
                     {/* Mobile overlay backdrop. z-[100]+ because the mobile bottom nav bar
                         sits at z-[90] (see app/dashboard/layout.tsx) — anything below that
                         gets visually covered AND has its taps swallowed by the nav bar. */}
                     <div className="fixed inset-0 bg-black/60 z-[100] md:hidden" onClick={() => setIsOpen(false)} />
                     {/* Share menu - fixed bottom sheet on mobile, absolute dropdown on desktop */}
-                    <div className="fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-auto md:right-0 md:top-auto md:bottom-full md:mb-2 w-full md:w-56 bg-[#111] md:bg-black border-t md:border border-white/10 rounded-t-3xl md:rounded-2xl shadow-2xl z-[101] overflow-hidden animate-in slide-in-from-bottom-4 md:fade-in md:zoom-in-95 duration-200 pb-[env(safe-area-inset-bottom)] md:pb-0">
+                    <div
+                        ref={panelRef}
+                        style={desktopPos ? ({ '--menu-top': `${desktopPos.top}px`, '--menu-right': `${desktopPos.right}px` } as React.CSSProperties) : undefined}
+                        className="fixed bottom-0 left-0 right-0 md:top-[var(--menu-top)] md:right-[var(--menu-right)] md:bottom-auto md:left-auto w-full md:w-56 bg-[#111] md:bg-black border-t md:border border-white/10 rounded-t-3xl md:rounded-2xl shadow-2xl z-[101] overflow-hidden animate-in slide-in-from-bottom-4 md:fade-in md:zoom-in-95 duration-200 pb-[env(safe-area-inset-bottom)] md:pb-0"
+                    >
                         {/* Mobile drag handle */}
                         <div className="flex justify-center pt-3 pb-1 md:hidden">
                             <div className="w-10 h-1 rounded-full bg-white/20" />
@@ -235,7 +261,8 @@ function ShareButton({
                         {/* Safe area padding for mobile */}
                         <div className="h-4 md:hidden" />
                     </div>
-                </>
+                </>,
+                document.body
             )}
         </div>
     );
