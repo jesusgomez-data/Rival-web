@@ -505,7 +505,10 @@ export default function WorkoutShareCard({
 
             triggerDownload(dataUrl, filename);
         } catch (e) {
+            // Was failing silently — a failed download looked identical to a
+            // slow one, with no way to tell the difference. Now it says so.
             console.error('Download error', e);
+            alert('No se pudo descargar la imagen. Intenta de nuevo.');
         } finally {
             setLoading(false);
         }
@@ -563,7 +566,12 @@ export default function WorkoutShareCard({
                 alignItems: 'center',
                 overflowY: 'auto',
                 WebkitOverflowScrolling: 'touch',
-                paddingTop: 16,
+                // env(safe-area-inset-top) pushes the close button below the
+                // notch/status bar — without it, the "X" sat right under the
+                // iPhone's status bar / swipe-down zone, where taps get
+                // grabbed by the OS (Control Center, notification shade)
+                // before they ever reach the page.
+                paddingTop: 'max(16px, env(safe-area-inset-top))',
                 paddingBottom: 32,
                 paddingLeft: 12,
                 paddingRight: 12,
