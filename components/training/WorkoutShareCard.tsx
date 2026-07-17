@@ -469,12 +469,41 @@ export default function WorkoutShareCard({
     };
 
     // ── Download PNG ──────────────────────────────────────────────────────────
+    // pixelRatio 2 (not 3): still sharp for a phone screen / social post, but
+    // meaningfully faster to render and encode — the earlier 3x was the main
+    // source of the "tarda mucho" complaint.
+    //
+    // On iOS, an <a download> click does NOT save to the Photos app — it just
+    // opens the image in a new tab (there's no JS API that writes straight to
+    // the camera roll). The only route that reliably lands in Photos is the
+    // native share sheet's "Guardar en Fotos" option, which is what
+    // navigator.share({ files }) triggers. So on any device that supports it
+    // (effectively all modern mobile browsers), prefer that path for the
+    // "Descargar" button too — not just as a share action but as the de facto
+    // save-to-gallery flow. Desktop (no navigator.share) keeps the plain
+    // anchor download, which already saves straight to the Downloads folder.
     const handleDownload = async () => {
         if (!cardRef.current) return;
         setLoading(true);
         try {
-            const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
-            triggerDownload(dataUrl, `rival-workout-${Date.now()}.png`);
+            const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 });
+            const filename = `rival-workout-${Date.now()}.png`;
+
+            if (navigator.share) {
+                const blob = await (await fetch(dataUrl)).blob();
+                const file = new File([blob], filename, { type: 'image/png' });
+                if (navigator.canShare?.({ files: [file] })) {
+                    try {
+                        await navigator.share({ files: [file] });
+                        return;
+                    } catch (shareErr: any) {
+                        if (shareErr?.name === 'AbortError') return; // user cancelled, not an error
+                        // fall through to plain download below
+                    }
+                }
+            }
+
+            triggerDownload(dataUrl, filename);
         } catch (e) {
             console.error('Download error', e);
         } finally {
@@ -487,7 +516,7 @@ export default function WorkoutShareCard({
         if (!cardRef.current) return;
         setLoading(true);
         try {
-            const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
+            const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 });
             const blob = await (await fetch(dataUrl)).blob();
             const file = new File([blob], 'rival-workout.png', { type: 'image/png' });
             if (navigator.share && navigator.canShare?.({ files: [file] })) {
@@ -509,7 +538,7 @@ export default function WorkoutShareCard({
         if (!cardRef.current) return;
         setStoryLoading(true);
         try {
-            const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 3 });
+            const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 });
             window.dispatchEvent(new CustomEvent('share-to-story', { detail: { type: 'image', url: dataUrl } }));
             onClose();
         } catch (e) {
