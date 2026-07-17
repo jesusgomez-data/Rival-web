@@ -170,7 +170,7 @@ function ShareButton({
     return (
         <div className="relative" ref={menuRef}>
             <button
-                onClick={(e) => { console.log('[ShareButton] toggle tapped, isOpen was', isOpen); e.stopPropagation(); setIsOpen(!isOpen); }}
+                onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
                 aria-label="Compartir"
                 className={className}
             >
@@ -185,7 +185,7 @@ function ShareButton({
                     {/* Mobile overlay backdrop. z-[100]+ because the mobile bottom nav bar
                         sits at z-[90] (see app/dashboard/layout.tsx) — anything below that
                         gets visually covered AND has its taps swallowed by the nav bar. */}
-                    <div className="fixed inset-0 bg-black/60 z-[100] md:hidden" onClick={() => { console.log('[ShareButton] backdrop tapped'); setIsOpen(false); }} />
+                    <div className="fixed inset-0 bg-black/60 z-[100] md:hidden" onClick={() => setIsOpen(false)} />
                     {/* Share menu - fixed bottom sheet on mobile, absolute dropdown on desktop */}
                     <div className="fixed bottom-0 left-0 right-0 md:absolute md:bottom-auto md:left-auto md:right-0 md:top-auto md:bottom-full md:mb-2 w-full md:w-56 bg-[#111] md:bg-black border-t md:border border-white/10 rounded-t-3xl md:rounded-2xl shadow-2xl z-[101] overflow-hidden backdrop-blur-xl animate-in slide-in-from-bottom-4 md:fade-in md:zoom-in-95 duration-200 pb-[env(safe-area-inset-bottom)] md:pb-0">
                         {/* Mobile drag handle */}
@@ -198,7 +198,7 @@ function ShareButton({
                         <button onClick={handleShareToStory} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5">
                             <Plus className="w-4 h-4" /> Enviar a Mis Historias
                         </button>
-                        <button onClick={() => { console.log('[ShareButton] Repostear tapped'); setIsOpen(false); onRepostClick?.(); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5">
+                        <button onClick={() => { setIsOpen(false); onRepostClick?.(); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-brand-red hover:bg-brand-red/10 flex items-center gap-3 border-t border-white/5">
                             <Repeat className="w-4 h-4" /> Repostear
                         </button>
                         <button onClick={() => { setIsOpen(false); onMessageClick?.(); }} className="w-full text-left px-5 py-4 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:bg-white/10 hover:text-white flex items-center gap-3 border-t border-white/5">
