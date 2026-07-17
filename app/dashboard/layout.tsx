@@ -51,6 +51,7 @@ import { getSavedAccounts, saveAccount, switchToAccount, clearActiveSessionLocal
 const PendingReviewPrompt = dynamic(() => import("./PendingReviewPrompt"),       { ssr: false, loading: () => null });
 const SupportModal        = dynamic(() => import("./gyms/SupportModal"),          { ssr: false, loading: () => null });
 const AnalyticsTracker    = dynamic(() => import("./admin/AnalyticsTracker"),     { ssr: false, loading: () => null });
+const DebugConsole        = dynamic(() => import("@/components/DebugConsole"),    { ssr: false, loading: () => null });
 const LiveActivityTicker  = dynamic(() => import("@/components/LiveActivityTicker"), { ssr: false, loading: () => null });
 
 // ── Black Screen Fix for Capacitor/PWA ───────────────────────────────────────
@@ -958,6 +959,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
 
             <PendingReviewPrompt />
+            <DebugConsole />
 
             {/* Mobile Bottom Sheet Drawer for Account Switcher */}
             {isMobileSwitcherOpen && (
