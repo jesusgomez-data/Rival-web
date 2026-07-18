@@ -748,7 +748,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                     <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
                                         {staff.map((member: any) => {
                                             const roleLabel: Record<string, string> = {
-                                                owner: 'Dueño',
+                                                owner: 'CEO',
                                                 head_coach: 'Head Coach',
                                                 coach: 'Coach',
                                                 admin: 'Staff',
