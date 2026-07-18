@@ -180,6 +180,14 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
     const shouldOpenCreate = searchParams.get('create') === 'true';
     const newPostType = searchParams.get('newPost') as 'wod' | 'pr' | null;
 
+    const openEditor = (detail: { postId: string; content: string; wodData: any; mediaUrl: any; mediaType: any; cover_url: any }) => {
+        const { postId, content, wodData, mediaUrl, mediaType, cover_url } = detail;
+        setRepostData({ ...wodData, caption: content, media_url: mediaUrl, media_type: mediaType, cover_url: cover_url ?? null });
+        setEditMode({ id: postId });
+        setIsOpen(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     useEffect(() => {
         if (shouldOpenCreate || newPostType) {
             setIsOpen(true);
@@ -189,6 +197,20 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
         }
     }, [shouldOpenCreate, newPostType]);
 
+    // Recoge una edición de WOD/PR iniciada desde otra página (Explorar, perfil,
+    // post individual...) donde no hay ningún listener de 'edit-post' montado.
+    // Ver FeedPost.tsx handleEditClick: guarda esto en sessionStorage y navega aquí.
+    useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem('rival_pending_wod_edit');
+            if (raw) {
+                sessionStorage.removeItem('rival_pending_wod_edit');
+                openEditor(JSON.parse(raw));
+            }
+        } catch {}
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     useEffect(() => {
         const handleRepost = (e: any) => {
             setRepostData(e.detail);
@@ -196,13 +218,7 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
             setIsOpen(true);
             window.scrollTo({ top: 0, behavior: 'smooth' });
         };
-        const handleEdit = (e: any) => {
-            const { postId, content, wodData, mediaUrl, mediaType, cover_url } = e.detail;
-            setRepostData({ ...wodData, caption: content, media_url: mediaUrl, media_type: mediaType, cover_url: cover_url ?? null });
-            setEditMode({ id: postId });
-            setIsOpen(true);
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        };
+        const handleEdit = (e: any) => openEditor(e.detail);
         window.addEventListener('repost-wod', handleRepost as any);
         window.addEventListener('edit-wod', handleEdit as any);
         window.addEventListener('edit-post', handleEdit as any);

@@ -1911,20 +1911,33 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
 
             </AnimatePresence>
 
-            {/* Saving overlay */}
+            {/* Saving overlay — discreto: no bloquea la vista completa ni usa
+                copy tipo debug ("RENDER MASTER"), solo confirma que algo real
+                está pasando mientras se procesa el video. */}
             <AnimatePresence>
                 {isSaving && (
-                    <motion.div initial={{opacity:0}} animate={{opacity:1}} className="fixed inset-0 bg-black z-[2000000] flex flex-col items-center justify-center gap-12">
-                        <div className="relative w-64 h-64">
-                            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-                                <circle className="text-white/5 stroke-current" strokeWidth="2" fill="transparent" r="48" cx="50" cy="50"/>
-                                <circle className="text-white stroke-current transition-all duration-200" strokeWidth="3" strokeLinecap="round" fill="transparent" r="48" cx="50" cy="50" style={{ strokeDasharray:301, strokeDashoffset: 301-(301*saveProgress/100) }}/>
-                            </svg>
-                            <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                <span className="font-black italic text-white text-7xl tracking-tighter">{Math.round(saveProgress)}%</span>
-                                <span className="text-[10px] font-black text-brand-red uppercase tracking-[0.8em] mt-4 animate-pulse">RENDER MASTER</span>
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/70 backdrop-blur-md z-[2000000] flex items-center justify-center"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="flex flex-col items-center gap-5 bg-[#111]/90 border border-white/10 rounded-3xl px-10 py-8 shadow-2xl"
+                        >
+                            <div className="relative w-16 h-16">
+                                <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
+                                    <circle className="text-white/10 stroke-current" strokeWidth="6" fill="transparent" r="44" cx="50" cy="50"/>
+                                    <circle className="text-brand-red stroke-current transition-all duration-200" strokeWidth="6" strokeLinecap="round" fill="transparent" r="44" cx="50" cy="50" style={{ strokeDasharray: 276, strokeDashoffset: 276 - (276 * saveProgress / 100) }}/>
+                                </svg>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                    <span className="font-black text-white text-sm">{Math.round(saveProgress)}%</span>
+                                </div>
                             </div>
-                        </div>
+                            <span className="text-xs font-bold text-gray-300 tracking-wide">Publicando tu historia...</span>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>

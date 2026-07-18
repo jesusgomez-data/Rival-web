@@ -277,11 +277,15 @@ export async function uploadChatAudio(file: File) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'No session' }
 
-    const fileExt = 'webm' // default for media recorder
+    // La extensión real viene del nombre que ya arma el cliente (audio.m4a /
+    // audio.webm / audio.ogg según lo que el navegador soportó al grabar) —
+    // ya no se asume webm a ciegas, evita el mismatch que rompía la
+    // reproducción en Safari/iOS.
+    const fileExt = file.name?.split('.').pop() || 'webm'
     const fileName = `${user.id}/audio_${Date.now()}.${fileExt}`
 
     const { error } = await supabase.storage.from('chat-media').upload(fileName, file, {
-        contentType: file.type || 'audio/webm'
+        contentType: file.type || 'audio/mp4'
     })
     if (error) return { error: error.message }
 

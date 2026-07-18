@@ -471,7 +471,18 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const handleEditClick = () => {
         setShowMenu(false);
         if (mediaType === 'wod' || mediaType === 'pr') {
-            window.dispatchEvent(new CustomEvent('edit-post', { detail: { postId, content: currentCaption || '', mediaType, mediaUrl: image, cover_url: currentCoverUrl || null, wodData: parsedWodData } }));
+            const editPayload = { postId, content: currentCaption || '', mediaType, mediaUrl: image, cover_url: currentCoverUrl || null, wodData: parsedWodData };
+            if (window.location.pathname === '/dashboard') {
+                // Ya estamos en el dashboard: el editor está montado ahí mismo, el evento basta.
+                window.dispatchEvent(new CustomEvent('edit-post', { detail: editPayload }));
+            } else {
+                // Editar/Explorar/perfil/post individual: no hay nada escuchando 'edit-post'
+                // en estas páginas (los listeners solo viven en /dashboard), así que el evento
+                // se perdía en el aire y el botón no hacía nada. Guardamos los datos y navegamos;
+                // el dashboard los recoge al montar y abre el editor ya relleno.
+                try { sessionStorage.setItem('rival_pending_wod_edit', JSON.stringify(editPayload)); } catch {}
+                window.location.href = '/dashboard';
+            }
         } else {
             setIsEditingLocal(true);
         }

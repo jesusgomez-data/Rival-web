@@ -7,7 +7,7 @@ import { es } from 'date-fns/locale'
 import {
     Send, Loader2, MessageSquarePlus, ChevronLeft, Trash2, Edit2,
     X, Check, Heart, Copy, Smile, ChevronDown, Film, Eye, EyeOff,
-    Camera, Video, Mic, Users, ImagePlus, Search, Square
+    Camera, Video, Mic, Users, ImagePlus, Search, Square, Play, Pause, RefreshCw
 } from 'lucide-react'
 import { clsx } from 'clsx'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -20,6 +20,13 @@ import { playEmojiSound, playSendSound, playReceiveSound, playNudgeSound } from 
 import { useTheme } from '../../ThemeContext'
 
 const QUICK_EMOJIS = ['❤️', '🔥', '💪', '😂', '😮', '👏', '🏆', '⚡']
+
+function audioExtFromMime(mime: string): string {
+    const m = (mime || '').toLowerCase()
+    if (m.includes('mp4') || m.includes('aac') || m.includes('m4a')) return 'm4a'
+    if (m.includes('ogg')) return 'ogg'
+    return 'webm'
+}
 
 // MSN-style emoji shortcuts → big flying emoji
 const MSN_SHORTCUTS: Record<string, string> = {
@@ -48,6 +55,103 @@ function DateSeparator({ date, dk }: { date: Date; dk?: boolean }) {
                 {label}
             </span>
             <div className={clsx("flex-1 h-px", dk ? "bg-white/[0.05]" : "bg-gray-200")} />
+        </div>
+    )
+}
+
+function formatAudioTime(seconds: number): string {
+    if (!isFinite(seconds) || seconds < 0) return '0:00'
+    const m = Math.floor(seconds / 60)
+    const s = Math.floor(seconds % 60)
+    return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+// Reproductor de notas de voz con diseño propio: reemplaza el <audio controls>
+// nativo, que en Safari/iOS se ve como un simple botón sin estilo (o el texto
+// "Error" reemplazándolo por completo cuando el formato falla al cargar).
+function VoiceMessagePlayer({ src, isMine, dk }: { src: string; isMine: boolean; dk?: boolean }) {
+    const audioRef = useRef<HTMLAudioElement | null>(null)
+    const [isPlaying, setIsPlaying] = useState(false)
+    const [duration, setDuration] = useState(0)
+    const [currentTime, setCurrentTime] = useState(0)
+    const [hasError, setHasError] = useState(false)
+    const [isLoading, setIsLoading] = useState(false)
+
+    const togglePlay = () => {
+        const audio = audioRef.current
+        if (!audio) return
+        if (hasError) {
+            // Reintento manual: recarga el <audio> desde cero antes de reproducir.
+            setHasError(false)
+            setIsLoading(true)
+            audio.load()
+            audio.play().catch(() => setHasError(true))
+            return
+        }
+        if (isPlaying) {
+            audio.pause()
+        } else {
+            audio.play().catch(() => setHasError(true))
+        }
+    }
+
+    const progressPct = duration > 0 ? Math.min(100, (currentTime / duration) * 100) : 0
+    const accent = isMine ? 'text-white' : 'text-brand-red'
+    const trackBg = isMine ? 'bg-white/25' : dk ? 'bg-white/15' : 'bg-gray-300'
+    const trackFill = isMine ? 'bg-white' : 'bg-brand-red'
+
+    return (
+        <div className="flex items-center gap-2.5 min-w-[200px]">
+            <audio
+                ref={audioRef}
+                src={src}
+                preload="metadata"
+                onLoadedMetadata={(e) => { const d = e.currentTarget.duration; if (isFinite(d)) setDuration(d); setIsLoading(false) }}
+                onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+                onPlay={() => setIsPlaying(true)}
+                onPause={() => setIsPlaying(false)}
+                onEnded={() => { setIsPlaying(false); setCurrentTime(0) }}
+                onWaiting={() => setIsLoading(true)}
+                onCanPlay={() => setIsLoading(false)}
+                onError={() => { setIsLoading(false); setIsPlaying(false); setHasError(true) }}
+                className="hidden"
+            />
+            <button
+                type="button"
+                onClick={togglePlay}
+                className={clsx(
+                    'w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90',
+                    hasError
+                        ? 'bg-red-500/15 text-red-400'
+                        : isMine ? 'bg-white/20 hover:bg-white/30' : 'bg-brand-red/15 hover:bg-brand-red/25'
+                )}
+                aria-label={hasError ? 'Reintentar' : isPlaying ? 'Pausar' : 'Reproducir'}
+            >
+                {isLoading ? (
+                    <Loader2 className={clsx('w-4 h-4 animate-spin', accent)} />
+                ) : hasError ? (
+                    <RefreshCw className="w-4 h-4" />
+                ) : isPlaying ? (
+                    <Pause className={clsx('w-4 h-4 fill-current', accent)} />
+                ) : (
+                    <Play className={clsx('w-4 h-4 fill-current ml-0.5', accent)} />
+                )}
+            </button>
+
+            <div className="flex-1 min-w-0">
+                {hasError ? (
+                    <span className="text-[11px] font-bold text-red-400">Audio no disponible · toca para reintentar</span>
+                ) : (
+                    <>
+                        <div className={clsx('h-1 rounded-full w-full overflow-hidden', trackBg)}>
+                            <div className={clsx('h-full rounded-full transition-all', trackFill)} style={{ width: `${progressPct}%` }} />
+                        </div>
+                        <span className={clsx('text-[10px] font-bold mt-1 block', isMine ? 'text-white/60' : dk ? 'text-white/40' : 'text-gray-500')}>
+                            {formatAudioTime(isPlaying || currentTime > 0 ? currentTime : duration)}
+                        </span>
+                    </>
+                )}
+            </div>
         </div>
     )
 }
@@ -189,6 +293,11 @@ export default function ChatWindow({
     const [recordingDuration, setRecordingDuration] = useState(0)
     const mediaRecorderRef = useRef<MediaRecorder | null>(null)
     const audioChunksRef = useRef<Blob[]>([])
+    // Formato realmente negociado con el navegador — nunca asumir 'audio/webm'.
+    // Safari/iOS no soporta grabar NI reproducir webm; si se fuerza esa
+    // etiqueta sobre un blob que en realidad es mp4/aac, el audio queda
+    // "roto" (Safari muestra "Error" en el reproductor nativo).
+    const recordedMimeTypeRef = useRef<string>('audio/webm')
     const recordingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const shouldSendAudioRef = useRef(false)
     const [pendingAudioBlob, setPendingAudioBlob] = useState<Blob | null>(null)
@@ -373,25 +482,43 @@ export default function ChatWindow({
         setReplyingTo(null)
     }, [pendingMediaFile, pendingMediaPreview, inputValue, isViewOnceMode, onUploadImage, onUploadVideo, onSendMessage, replyingTo])
 
+    // Prioriza formatos reproducibles en TODOS los navegadores objetivo. mp4/aac
+    // reproduce nativamente en Safari/iOS, Chrome y Firefox; webm/opus solo en
+    // Chrome/Firefox (Safari lo rechaza). Si nada de la lista está soportado,
+    // se deja que el navegador use su default y esa cadena real se usa en el
+    // blob final — nunca se asume 'audio/webm' a ciegas.
+    const pickAudioMimeType = () => {
+        const candidates = ['audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg']
+        for (const type of candidates) {
+            if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported?.(type)) return type
+        }
+        return ''
+    }
+
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-            const mediaRecorder = new MediaRecorder(stream)
+            const preferredType = pickAudioMimeType()
+            const mediaRecorder = preferredType ? new MediaRecorder(stream, { mimeType: preferredType }) : new MediaRecorder(stream)
+            // mediaRecorder.mimeType es la fuente de verdad: si el navegador no
+            // soportó exactamente `preferredType`, ajustó a lo que sí soporta.
+            recordedMimeTypeRef.current = mediaRecorder.mimeType || preferredType || 'audio/webm'
             mediaRecorderRef.current = mediaRecorder
             audioChunksRef.current = []
 
             mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
             mediaRecorder.onstop = async () => {
-                const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+                const actualType = recordedMimeTypeRef.current
+                const blob = new Blob(audioChunksRef.current, { type: actualType })
                 setPendingAudioBlob(blob)
                 setPendingAudioUrl(URL.createObjectURL(blob))
                 stream.getTracks().forEach(track => track.stop())
-                
+
                 if (shouldSendAudioRef.current) {
                     shouldSendAudioRef.current = false
                     if (onUploadAudio) {
                         setIsUploading(true)
-                        const result = await onUploadAudio(new File([blob], 'audio.webm', { type: 'audio/webm' }))
+                        const result = await onUploadAudio(new File([blob], `audio.${audioExtFromMime(actualType)}`, { type: actualType }))
                         setIsUploading(false)
                         if (result.url) {
                             onSendMessage('', undefined, undefined, false, undefined, undefined, result.url, replyingTo?.id)
@@ -450,7 +577,8 @@ export default function ChatWindow({
     const handleSendAudio = async () => {
         if (!pendingAudioBlob || !onUploadAudio) return
         setIsUploading(true)
-        const result = await onUploadAudio(new File([pendingAudioBlob], 'audio.webm', { type: 'audio/webm' }))
+        const actualType = pendingAudioBlob.type || recordedMimeTypeRef.current
+        const result = await onUploadAudio(new File([pendingAudioBlob], `audio.${audioExtFromMime(actualType)}`, { type: actualType }))
         setIsUploading(false)
         if (result.url) {
             onSendMessage('', undefined, undefined, false, undefined, undefined, result.url, replyingTo?.id)
@@ -901,11 +1029,8 @@ export default function ChatWindow({
                                                 ) : msg.audio_url ? (
                                                     // Audio message
                                                     <div className="relative flex flex-col min-w-[220px]">
-                                                        <div className="flex items-center gap-2 pt-1 pb-4">
-                                                            <div className="w-10 h-10 rounded-full bg-brand-red/20 flex items-center justify-center shrink-0 text-brand-red">
-                                                                <Mic className="w-5 h-5" />
-                                                            </div>
-                                                            <audio src={msg.audio_url} controls className="h-10 w-full" preload="metadata" />
+                                                        <div className="pt-1 pb-4">
+                                                            <VoiceMessagePlayer src={msg.audio_url} isMine={isMine} dk={dk} />
                                                         </div>
                                                         <div className={clsx('absolute bottom-0 right-0 flex items-center gap-1 text-[9px] font-bold', isMine ? 'text-white/40' : dk ? 'text-white/20' : 'text-gray-400')}>
                                                             {msg.is_liked && <Heart className="w-2.5 h-2.5 fill-brand-red text-brand-red" />}
