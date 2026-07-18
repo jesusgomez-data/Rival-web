@@ -6,7 +6,7 @@ import { format, isToday, isYesterday, isSameDay } from 'date-fns'
 import { es } from 'date-fns/locale'
 import {
     Send, Loader2, MessageSquarePlus, ChevronLeft, Trash2, Edit2,
-    X, Check, Heart, Copy, Smile, ChevronDown, Film, Eye, EyeOff,
+    X, Check, HandFist, Copy, Smile, ChevronDown, Film, Eye, EyeOff,
     Camera, Video, Mic, Users, ImagePlus, Search, Square, Play, Pause, RefreshCw
 } from 'lucide-react'
 import { clsx } from 'clsx'
@@ -900,7 +900,7 @@ export default function ChatWindow({
                                             )}>
                                                 <button onClick={() => { onToggleLike?.(msg.id, !!msg.is_liked); if (!msg.is_liked) { setLikedAnimId(msg.id); setTimeout(() => setLikedAnimId(null), 900) } }}
                                                     className={clsx('p-1.5 rounded-xl transition-colors border', dk ? 'bg-white/5 border-white/5' : 'bg-white border-gray-200 shadow-sm', msg.is_liked ? 'text-brand-red' : dk ? 'text-white/30 hover:text-white' : 'text-gray-400 hover:text-gray-700')}>
-                                                    <Heart className={clsx('w-3.5 h-3.5', msg.is_liked && 'fill-current')} />
+                                                    <HandFist className={clsx('w-3.5 h-3.5', msg.is_liked && 'fill-current')} />
                                                 </button>
                                                 {msg.text && (
                                                     <button onClick={() => handleCopy(msg.text)} className={clsx("p-1.5 rounded-xl border transition-colors", dk ? "bg-white/5 border-white/5 text-white/30 hover:text-white" : "bg-white border-gray-200 shadow-sm text-gray-400 hover:text-gray-700")}>
@@ -959,7 +959,7 @@ export default function ChatWindow({
                                                     <motion.div initial={{ scale: 0, opacity: 0 }} animate={{ scale: [1, 1.8, 0], opacity: [1, 1, 0] }}
                                                         transition={{ duration: 0.8 }}
                                                         className="absolute inset-0 flex items-center justify-center z-50 pointer-events-none">
-                                                        <Heart className="w-14 h-14 text-white fill-white drop-shadow-2xl" />
+                                                        <HandFist className="w-14 h-14 text-white fill-white drop-shadow-2xl" />
                                                     </motion.div>
                                                 )}
 
@@ -1033,7 +1033,7 @@ export default function ChatWindow({
                                                             <VoiceMessagePlayer src={msg.audio_url} isMine={isMine} dk={dk} />
                                                         </div>
                                                         <div className={clsx('absolute bottom-0 right-0 flex items-center gap-1 text-[9px] font-bold', isMine ? 'text-white/40' : dk ? 'text-white/20' : 'text-gray-400')}>
-                                                            {msg.is_liked && <Heart className="w-2.5 h-2.5 fill-brand-red text-brand-red" />}
+                                                            {msg.is_liked && <HandFist className="w-2.5 h-2.5 fill-brand-red text-brand-red" />}
                                                             <span>{format(new Date(msg.created_at), 'HH:mm')}</span>
                                                             {isMine && (isRead
                                                                 ? <div className="flex -space-x-1.5"><Check className="w-2.5 h-2.5 text-blue-400 stroke-[3px]" /><Check className="w-2.5 h-2.5 text-blue-400 stroke-[3px]" /></div>
@@ -1053,7 +1053,7 @@ export default function ChatWindow({
                                                             </div>
                                                         </div>
                                                         <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur px-1.5 py-0.5 rounded-full">
-                                                            {msg.is_liked && <Heart className="w-2.5 h-2.5 fill-brand-red text-brand-red" />}
+                                                            {msg.is_liked && <HandFist className="w-2.5 h-2.5 fill-brand-red text-brand-red" />}
                                                             <span className="text-[9px] font-bold text-white/80">{format(new Date(msg.created_at), 'HH:mm')}</span>
                                                         </div>
                                                     </div>
@@ -1069,7 +1069,7 @@ export default function ChatWindow({
                                                             </div>
                                                         )}
                                                         <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur px-1.5 py-0.5 rounded-full">
-                                                            {msg.is_liked && <Heart className="w-2.5 h-2.5 fill-brand-red text-brand-red" />}
+                                                            {msg.is_liked && <HandFist className="w-2.5 h-2.5 fill-brand-red text-brand-red" />}
                                                             <span className="text-[9px] font-bold text-white/80">{format(new Date(msg.created_at), 'HH:mm')}</span>
                                                             {isMine && (isRead ? <div className="flex -space-x-1"><Check className="w-2.5 h-2.5 text-blue-400 stroke-[3px]" /><Check className="w-2.5 h-2.5 text-blue-400 stroke-[3px]" /></div> : <Check className="w-2.5 h-2.5 text-white/40" />)}
                                                         </div>
@@ -1080,7 +1080,7 @@ export default function ChatWindow({
                                                         <MentionText text={msg.text || ''} className="text-sm font-medium leading-[1.45] pr-[4.5rem]"
                                                             mentionClassName={clsx('underline', isMine ? 'text-white/70' : 'text-brand-red')} />
                                                         <div className={clsx('absolute bottom-0 right-0 flex items-center gap-1 text-[9px] font-bold', isMine ? 'text-white/40' : dk ? 'text-white/20' : 'text-gray-400')}>
-                                                            {msg.is_liked && <Heart className="w-2.5 h-2.5 fill-brand-red text-brand-red" />}
+                                                            {msg.is_liked && <HandFist className="w-2.5 h-2.5 fill-brand-red text-brand-red" />}
                                                             {msg.updated_at && msg.updated_at !== msg.created_at && <span className="text-[8px] opacity-60">editado</span>}
                                                             <span>{format(new Date(msg.created_at), 'HH:mm')}</span>
                                                             {isMine && (isRead
@@ -1099,7 +1099,7 @@ export default function ChatWindow({
                                                 {msg.is_liked && !isEditing && !isViewOnce && (
                                                     <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
                                                         className={clsx('mt-0.5 px-1.5 py-0.5 rounded-full flex items-center gap-0.5 border', dk ? 'bg-[#1A1A1A] border-white/[0.05]' : 'bg-gray-100 border-gray-200', isMine ? 'self-end' : 'self-start')}>
-                                                        <Heart className="w-2.5 h-2.5 fill-brand-red text-brand-red" />
+                                                        <HandFist className="w-2.5 h-2.5 fill-brand-red text-brand-red" />
                                                     </motion.div>
                                                 )}
                                             </AnimatePresence>

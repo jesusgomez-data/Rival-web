@@ -107,6 +107,34 @@ function useBlackScreenFix() {
     }, []);
 }
 
+// ── Compensa el salto de la barra inferior fija en iOS Safari/WKWebView ────────
+// `position: fixed` + `bottom: env(safe-area-inset-bottom)` puede saltar
+// visualmente en páginas largas con scroll (Explorar, perfil) porque la
+// barra de herramientas de Safari se anima (se oculta/muestra) al hacer
+// scroll, y eso cambia el "visual viewport" sin que el layout viewport (del
+// que depende `fixed`) se entere hasta que termina la animación. El
+// visualViewport API sí se actualiza en tiempo real durante esa animación,
+// así que lo usamos para mantener la barra pegada al borde REALMENTE visible.
+function useVisualViewportBottomOffset() {
+    const [offset, setOffset] = useState(0);
+    useEffect(() => {
+        const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+        if (!vv) return;
+        const update = () => {
+            const gap = window.innerHeight - (vv.height + vv.offsetTop);
+            setOffset(Math.max(0, Math.round(gap)));
+        };
+        update();
+        vv.addEventListener('resize', update);
+        vv.addEventListener('scroll', update);
+        return () => {
+            vv.removeEventListener('resize', update);
+            vv.removeEventListener('scroll', update);
+        };
+    }, []);
+    return offset;
+}
+
 // ── New-user hint above the "+" button ────────────────────────────────────────
 function NewUserHint() {
     const [show, setShow] = useState(false);
@@ -154,6 +182,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
     // ── Apply the black screen fix for Capacitor/PWA ──────────────────────────
     useBlackScreenFix();
+    const viewportBottomOffset = useVisualViewportBottomOffset();
 
     const [profile, setProfile] = useState<any>(null);
     const [userEmail, setUserEmail] = useState<string | null>(null);
@@ -906,10 +935,17 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
             {/* Mobile Bottom Navigation - Placed outside the flex container to ensure standard viewport fixed layout */}
             {showMobileNav && (
-                <nav className={clsx(
-                    "lg:hidden fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] bg-background/90 backdrop-blur-2xl border border-border py-3 px-6 z-[90] rounded-[2rem] shadow-2xl transition-transform duration-300 transform-gpu will-change-transform pb-3",
-                    showBottomNav ? "translate-y-0" : "translate-y-32"
-                )}>
+                <nav
+                    className={clsx(
+                        "lg:hidden fixed inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] bg-background/90 backdrop-blur-2xl border border-border py-3 px-6 z-[90] rounded-[2rem] shadow-2xl transition-transform duration-300 transform-gpu will-change-transform pb-3",
+                        showBottomNav ? "translate-y-0" : "translate-y-32"
+                    )}
+                    // Ver useVisualViewportBottomOffset arriba: compensa el salto de
+                    // la barra al hacer scroll en páginas largas por la animación
+                    // del toolbar de Safari. marginBottom (no transform) para no
+                    // pisar las clases translate-y-0/32 de arriba.
+                    style={viewportBottomOffset > 0 ? { marginBottom: viewportBottomOffset } : undefined}
+                >
                     <div className="grid grid-cols-5 items-center justify-items-center h-12 relative">
                         {navItems.filter(i => [t.navDashboard.home, t.navDashboard.messages, "Explorar", t.navDashboard.profile].includes(i.name)).map((item, idx) => {
                             const Icon = item.icon;

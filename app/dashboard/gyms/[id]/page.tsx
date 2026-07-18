@@ -87,6 +87,20 @@ export default function CenterDashboardHome() {
             setCenters(centerList);
 
             setLoading(false);
+
+            // WKWebView (Safari/Capacitor) a veces no repinta tras esta tanda de
+            // setState — el contenido queda listo en el DOM pero la pantalla
+            // sigue mostrando el spinner hasta que el usuario toca algo. Mismo
+            // truco que useBlackScreenFix en dashboard/layout.tsx: forzar un
+            // reflow con un cambio de opacidad de un frame.
+            if (typeof document !== 'undefined') {
+                document.body.style.opacity = '0.99';
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        document.body.style.opacity = '';
+                    });
+                });
+            }
         }
         load();
     }, [id]);

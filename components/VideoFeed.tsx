@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Heart, MessageCircle, Share2, MoreVertical, Volume2, VolumeX, Play, Pause } from "lucide-react";
+import { HandFist, MessageCircle, Share2, MoreVertical, Volume2, VolumeX, Play, Pause } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -199,7 +199,7 @@ function VideoCard({ video, isActive, isNear }: { video: VideoPost; isActive: bo
                 : "bg-black/20 text-white hover:bg-black/40"
             }`}
           >
-            <Heart
+            <HandFist
               className={`w-7 h-7 ${video.hasLiked ? "fill-current" : ""}`}
             />
           </motion.div>

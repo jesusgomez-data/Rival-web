@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, Heart, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown } from 'lucide-react'
+import { Plus, X, ChevronLeft, ChevronRight, Loader2, Play, HandFist, Eye, Users, Trash2, Music, Send, Type, Smile, Move, Zap, Clock, MapPin, Dumbbell, ChevronUp, ChevronDown } from 'lucide-react'
 import { createStory, createPRStory, toggleStoryLike, recordStoryView, deleteStory, getStoryViewers } from './actions'
 import { getOrCreateConversation, sendMessage } from '../messages/actions'
 import { clsx } from 'clsx'
@@ -2732,7 +2732,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                                 : "bg-white/10 border-white/10 text-white hover:bg-white/20"
                                         )}
                                     >
-                                        <Heart className={clsx("w-6 h-6", (currentStory as any).has_liked && "fill-current animate-heart-pop")} />
+                                        <HandFist className={clsx("w-6 h-6", (currentStory as any).has_liked && "fill-current animate-heart-pop")} />
                                         {(currentStory as any).likes_count! > 0 && (
                                             <span className="absolute -top-1 -right-1 bg-brand-red text-white text-[8px] font-black px-1.5 py-0.5 rounded-full border border-black">
                                                 {(currentStory as any).likes_count}

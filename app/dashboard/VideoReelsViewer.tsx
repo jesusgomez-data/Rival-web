@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { X, Heart, MessageCircle, Share2, Volume2, VolumeX, ChevronDown, Send, Loader2, Play } from 'lucide-react'
+import { X, HandFist, MessageCircle, Share2, Volume2, VolumeX, ChevronDown, Send, Loader2, Play } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import { createClient } from '@/utils/supabase/client'
@@ -149,7 +149,7 @@ function CommentSheet({ postId, onClose }: { postId: string; onClose: () => void
 
                                             {/* Like button */}
                                             <button onClick={() => handleCommentLike(c.id)} className="flex flex-col items-center gap-0.5 pt-1 pr-1 shrink-0 text-white/40 hover:text-brand-red transition-colors">
-                                                <Heart className={clsx("w-3.5 h-3.5", c.has_liked ? "fill-brand-red text-brand-red" : "text-white/40")} />
+                                                <HandFist className={clsx("w-3.5 h-3.5", c.has_liked ? "fill-brand-red text-brand-red" : "text-white/40")} />
                                                 {c.likes_count > 0 && <span className="text-[8px] font-black text-white/40">{c.likes_count}</span>}
                                             </button>
                                         </div>
@@ -185,7 +185,7 @@ function CommentSheet({ postId, onClose }: { postId: string; onClose: () => void
 
                                                             {/* Like button */}
                                                             <button onClick={() => handleCommentLike(reply.id)} className="flex flex-col items-center gap-0.5 pt-0.5 pr-1 shrink-0 text-white/40 hover:text-brand-red transition-colors">
-                                                                <Heart className={clsx("w-3 h-3", reply.has_liked ? "fill-brand-red text-brand-red" : "text-white/40")} />
+                                                                <HandFist className={clsx("w-3 h-3", reply.has_liked ? "fill-brand-red text-brand-red" : "text-white/40")} />
                                                                 {reply.likes_count > 0 && <span className="text-[8px] font-black text-white/40">{reply.likes_count}</span>}
                                                             </button>
                                                         </div>
@@ -332,7 +332,7 @@ function ReelItem({ post, isActive, isNear, onCommentOpen, onShare }: {
                     <motion.div initial={{ scale: 0, opacity: 1 }} animate={{ scale: [1, 1.6, 0], opacity: [1, 1, 0] }}
                         transition={{ duration: 0.8 }}
                         className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none">
-                        <Heart className="w-28 h-28 text-white fill-white drop-shadow-2xl" />
+                        <HandFist className="w-28 h-28 text-white fill-white drop-shadow-2xl" />
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -348,7 +348,7 @@ function ReelItem({ post, isActive, isNear, onCommentOpen, onShare }: {
                 </div>
                 <button onClick={e => { e.stopPropagation(); handleLike() }} className="flex flex-col items-center gap-1">
                     <div className={`w-11 h-11 rounded-full backdrop-blur-md flex items-center justify-center active:scale-90 transition-transform ${liked ? 'bg-brand-red/30' : 'bg-black/30'}`}>
-                        <Heart className={`w-6 h-6 transition-all ${liked ? 'fill-brand-red text-brand-red' : 'text-white'}`} />
+                        <HandFist className={`w-6 h-6 transition-all ${liked ? 'fill-brand-red text-brand-red' : 'text-white'}`} />
                     </div>
                     <span className="text-white text-[11px] font-black drop-shadow">{likes}</span>
                 </button>

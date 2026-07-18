@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Heart, Loader2, Users, X } from "lucide-react";
+import { HandFist, Loader2, Users, X } from "lucide-react";
 import { getPostLikes, toggleLike } from "./actions";
 import clsx from "clsx";
 
@@ -90,7 +90,7 @@ export default function LikeButton({ postId, initialLikes, hasLikedInitial }: Li
                 aria-label={hasLiked ? "Quitar like" : "Dar like"}
                 className="transition-all active:scale-90 hover:text-brand-red"
             >
-                <Heart
+                <HandFist
                     className={clsx(
                         "w-7 h-7 transition-all duration-200",
                         hasLiked && "fill-current drop-shadow-[0_0_8px_rgba(220,38,38,0.6)]",
