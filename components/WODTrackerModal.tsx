@@ -7,9 +7,17 @@
  * peso, u otro tipo genérico como calorías/distancia/ritmo/vatios).
  */
 
-import { useState, useEffect } from "react";
-import { X, Dumbbell, Clock, Zap, Loader2, Repeat, Weight, Hash } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { X, Dumbbell, Clock, Zap, Loader2, Repeat, Weight, Hash, Users, UserPlus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { searchProfilesForTag } from "@/app/dashboard/explore/actions";
+
+interface TaggedProfile {
+  id: string;
+  username: string;
+  full_name: string;
+  avatar_url?: string | null;
+}
 
 export type WodScoreType =
   | "TIME" | "ROUNDS" | "REPS" | "WEIGHT"
@@ -64,12 +72,47 @@ export default function WODTrackerModal({
   const [notes, setNotes] = useState("");
   const [isEditing, setIsEditing] = useState(false);
 
+  // ── Compañero (WOD en pareja) ─────────────────────────────────────────
+  const [partner, setPartner] = useState<TaggedProfile | null>(null);
+  const [partnerQuery, setPartnerQuery] = useState("");
+  const [partnerResults, setPartnerResults] = useState<TaggedProfile[]>([]);
+  const [searchingPartner, setSearchingPartner] = useState(false);
+  const [showPartnerDropdown, setShowPartnerDropdown] = useState(false);
+  const partnerSearchTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     if (isOpen) {
       fetchExistingCompletion();
+    } else {
+      // Reset partner search state al cerrar, no al reabrir con datos existentes
+      setPartnerQuery("");
+      setPartnerResults([]);
+      setShowPartnerDropdown(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
+
+  useEffect(() => {
+    if (partnerSearchTimeout.current) clearTimeout(partnerSearchTimeout.current);
+    if (partnerQuery.trim().length < 2) {
+      setPartnerResults([]);
+      return;
+    }
+    setSearchingPartner(true);
+    partnerSearchTimeout.current = setTimeout(async () => {
+      try {
+        const results = await searchProfilesForTag(partnerQuery);
+        setPartnerResults(results as TaggedProfile[]);
+      } catch (e) {
+        console.error("Error buscando compañero:", e);
+      } finally {
+        setSearchingPartner(false);
+      }
+    }, 300);
+    return () => {
+      if (partnerSearchTimeout.current) clearTimeout(partnerSearchTimeout.current);
+    };
+  }, [partnerQuery]);
 
   const fetchExistingCompletion = async () => {
     setIsLoading(true);
@@ -82,6 +125,7 @@ export default function WODTrackerModal({
         setIsEditing(true);
         setRx(c.rx);
         setNotes(c.notes || "");
+        setPartner(c.partner || null);
 
         if (c.completion_type === "time" && c.completion_time_seconds) {
           const mins = Math.floor(c.completion_time_seconds / 60);
@@ -153,6 +197,7 @@ export default function WODTrackerModal({
           score: scoreNumeric,
           rx,
           notes,
+          partnerId: partner?.id || null,
         }),
       });
 
@@ -396,6 +441,91 @@ export default function WODTrackerModal({
                     🔥 Scaled
                   </button>
                 </div>
+              </div>
+
+              {/* Compañero (WOD en pareja) */}
+              <div>
+                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  Compañero (Opcional)
+                </label>
+                {partner ? (
+                  <div className="flex items-center gap-3 bg-black/30 border border-brand-red/30 rounded-lg p-3">
+                    <div className="w-9 h-9 rounded-full overflow-hidden bg-zinc-800 border border-white/10 shrink-0 relative">
+                      {partner.avatar_url ? (
+                        <img src={partner.avatar_url} alt={partner.full_name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center text-white text-[10px] font-black uppercase">
+                          {(partner.full_name || partner.username || "U").substring(0, 2)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-bold text-sm truncate">{partner.full_name}</p>
+                      <p className="text-gray-500 text-xs truncate">@{partner.username}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setPartner(null); setPartnerQuery(""); }}
+                      className="p-2 rounded-full text-gray-500 hover:text-brand-red hover:bg-brand-red/10 transition-colors shrink-0"
+                      aria-label="Quitar compañero"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="relative">
+                      <UserPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <input
+                        type="text"
+                        value={partnerQuery}
+                        onChange={(e) => { setPartnerQuery(e.target.value); setShowPartnerDropdown(true); }}
+                        onFocus={() => setShowPartnerDropdown(true)}
+                        onBlur={() => setTimeout(() => setShowPartnerDropdown(false), 150)}
+                        placeholder="Buscar por nombre o @usuario..."
+                        className="w-full bg-black/30 border border-white/10 rounded-lg p-3 pl-10 text-white focus:outline-none focus:border-brand-red/50"
+                      />
+                      {searchingPartner && (
+                        <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 animate-spin" />
+                      )}
+                    </div>
+                    {showPartnerDropdown && partnerQuery.trim().length >= 2 && (
+                      <div className="absolute z-10 mt-1 w-full bg-[#161616] border border-white/10 rounded-lg overflow-hidden shadow-2xl max-h-56 overflow-y-auto">
+                        {partnerResults.length > 0 ? (
+                          partnerResults.map((p) => (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => {
+                                setPartner(p);
+                                setPartnerQuery("");
+                                setShowPartnerDropdown(false);
+                              }}
+                              className="w-full flex items-center gap-3 p-3 hover:bg-white/5 transition-colors text-left"
+                            >
+                              <div className="w-8 h-8 rounded-full overflow-hidden bg-zinc-800 border border-white/10 shrink-0 relative">
+                                {p.avatar_url ? (
+                                  <img src={p.avatar_url} alt={p.full_name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center text-white text-[9px] font-black uppercase">
+                                    {(p.full_name || p.username || "U").substring(0, 2)}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-white text-sm font-bold truncate">{p.full_name}</p>
+                                <p className="text-gray-500 text-xs truncate">@{p.username}</p>
+                              </div>
+                            </button>
+                          ))
+                        ) : !searchingPartner ? (
+                          <p className="p-3 text-xs text-gray-500 font-medium">Sin resultados</p>
+                        ) : null}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Notas */}

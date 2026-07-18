@@ -17,6 +17,10 @@ interface LeaderboardEntry {
   username: string;
   fullName: string;
   avatarUrl?: string;
+  partnerId?: string | null;
+  partnerUsername?: string | null;
+  partnerFullName?: string | null;
+  partnerAvatarUrl?: string | null;
   completionTimeSeconds?: number;
   roundsCompleted?: number;
   totalReps?: number;
@@ -155,24 +159,48 @@ export default function WODLeaderboardModal({
                       #{entry.rank}
                     </div>
 
-                    {/* Avatar */}
-                    <div className={clsx(
-                      "w-12 h-12 rounded-full p-0.5 transition-all flex-shrink-0 bg-gradient-to-tr",
-                      entry.rank === 1 ? "from-yellow-400 to-orange-500" : "from-gray-300 to-gray-500"
-                    )}>
-                      <div className="w-full h-full rounded-full overflow-hidden bg-black relative">
-                        {entry.avatarUrl ? (
-                          <img
-                            src={entry.avatarUrl}
-                            alt={entry.username}
-                            className="w-full h-full rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-white text-[10px] font-black uppercase">
-                            {entry.username.substring(0, 2)}
-                          </div>
-                        )}
+                    {/* Avatar(es) — dos círculos juntos cuando el WOD se hizo en pareja */}
+                    <div className={clsx("flex items-center flex-shrink-0", entry.partnerId && "-space-x-3")}>
+                      <div className={clsx(
+                        "w-12 h-12 rounded-full p-0.5 transition-all flex-shrink-0 bg-gradient-to-tr relative",
+                        entry.partnerId && "z-10",
+                        entry.rank === 1 ? "from-yellow-400 to-orange-500" : "from-gray-300 to-gray-500"
+                      )}>
+                        <div className="w-full h-full rounded-full overflow-hidden bg-black relative">
+                          {entry.avatarUrl ? (
+                            <img
+                              src={entry.avatarUrl}
+                              alt={entry.username}
+                              className="w-full h-full rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-white text-[10px] font-black uppercase">
+                              {entry.username.substring(0, 2)}
+                            </div>
+                          )}
+                        </div>
                       </div>
+                      {entry.partnerId && (
+                        <div className={clsx(
+                          "w-12 h-12 rounded-full p-0.5 transition-all flex-shrink-0 bg-gradient-to-tr border-2",
+                          theme === 'dark' ? "border-[#111111]" : "border-[#f8f9fa]",
+                          "from-gray-300 to-gray-500"
+                        )}>
+                          <div className="w-full h-full rounded-full overflow-hidden bg-black relative">
+                            {entry.partnerAvatarUrl ? (
+                              <img
+                                src={entry.partnerAvatarUrl}
+                                alt={entry.partnerUsername || 'Compañero'}
+                                className="w-full h-full rounded-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-white text-[10px] font-black uppercase">
+                                {(entry.partnerUsername || 'U').substring(0, 2)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Info */}
@@ -181,10 +209,10 @@ export default function WODLeaderboardModal({
                         "text-[14px] font-black uppercase tracking-tight leading-none mb-1",
                         theme === 'dark' ? "text-white" : "text-gray-900"
                       )}>
-                        {entry.fullName}
+                        {entry.partnerId ? `${entry.fullName} & ${entry.partnerFullName || entry.partnerUsername}` : entry.fullName}
                       </span>
                       <span className="text-[9px] text-brand-red font-black uppercase tracking-widest opacity-70">
-                        @{entry.username}
+                        {entry.partnerId ? `@${entry.username} & @${entry.partnerUsername}` : `@${entry.username}`}
                       </span>
                     </div>
                   </div>

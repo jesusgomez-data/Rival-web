@@ -893,3 +893,31 @@ function parseTimeToSeconds(timeStr: string): number {
     }
     return parseFloat(timeStr) || 999999;
 }
+
+// Búsqueda ligera de perfiles para etiquetar (ej. compañero de WOD en pareja).
+// Usa el admin client como el resto de lecturas de este archivo: la lectura
+// vía cliente de navegador quedó descartada esta sesión por depender de
+// políticas RLS poco fiables en tablas con múltiples FKs relacionadas.
+export async function searchProfilesForTag(query: string, excludeUserId?: string) {
+    const q = (query || '').trim();
+    if (q.length < 2) return [];
+
+    const adminSupabase = createAdminClient();
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    let dbQuery = adminSupabase
+        .from('profiles')
+        .select('id, username, full_name, avatar_url')
+        .or(`username.ilike.%${q}%,full_name.ilike.%${q}%`)
+        .neq('id', excludeUserId || user.id)
+        .limit(8);
+
+    const { data, error } = await dbQuery;
+    if (error) {
+        console.error('[searchProfilesForTag] Error:', error);
+        return [];
+    }
+    return data || [];
+}

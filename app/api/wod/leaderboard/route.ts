@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     // 1. Obtener completions
     let query = supabaseAdmin
       .from("wod_completions")
-      .select("id, user_id, completion_type, completion_time_seconds, rounds_completed, total_reps, weight_kg, score, rx, notes, completed_at")
+      .select("id, user_id, partner_id, completion_type, completion_time_seconds, rounds_completed, total_reps, weight_kg, score, rx, notes, completed_at")
       .or(`original_wod_post_id.eq.${targetWodId},completion_post_id.eq.${targetWodId}`)
       .limit(limit);
 
@@ -126,6 +126,7 @@ export async function GET(request: NextRequest) {
                  completionsList.push({
                    id: `creator-${wodPostId}`,
                    user_id: creatorId,
+                   partner_id: null,
                    completion_type: completionType as any,
                    completion_time_seconds: completionTimeSeconds,
                    rounds_completed: roundsCompleted,
@@ -149,6 +150,7 @@ export async function GET(request: NextRequest) {
            completionsList.push({
              id: `creator-fallback-${wodPostId}`,
              user_id: creatorId,
+             partner_id: null,
              completion_type: 'score',
              completion_time_seconds: null,
              rounds_completed: null,
@@ -167,8 +169,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, leaderboard: [], stats: null, total: 0, creator });
     }
 
-    // 2. Obtener perfiles de los usuarios
-    const userIds = [...new Set(completionsList.map((c) => c.user_id))];
+    // 2. Obtener perfiles de los usuarios (y de los compañeros etiquetados, si los hay)
+    const userIds = [...new Set([
+      ...completionsList.map((c) => c.user_id),
+      ...completionsList.filter((c) => c.partner_id).map((c) => c.partner_id),
+    ])];
     const { data: profiles } = await supabaseAdmin
       .from("profiles")
       .select("id, username, full_name, avatar_url")
@@ -192,12 +197,17 @@ export async function GET(request: NextRequest) {
     // 4. Mapear
     const leaderboard = sorted.map((entry, index) => {
       const profile = profileMap.get(entry.user_id);
+      const partnerProfile = entry.partner_id ? profileMap.get(entry.partner_id) : null;
       return {
         id: entry.id,
         userId: entry.user_id,
         username: profile?.username || "Unknown",
         fullName: profile?.full_name || "Unknown User",
         avatarUrl: profile?.avatar_url || null,
+        partnerId: entry.partner_id || null,
+        partnerUsername: partnerProfile?.username || null,
+        partnerFullName: partnerProfile?.full_name || null,
+        partnerAvatarUrl: partnerProfile?.avatar_url || null,
         rank: index + 1,
         completionTimeSeconds: entry.completion_time_seconds,
         roundsCompleted: entry.rounds_completed,

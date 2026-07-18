@@ -120,6 +120,7 @@ export async function POST(request: NextRequest) {
       notes,
       rx,
       startedAt,
+      partnerId,
     } = body;
 
     // 3. Validar datos requeridos
@@ -141,7 +142,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "WOD no encontrado" }, { status: 404 });
     }
 
-    // 5. Verificar si ya completó este WOD
+    // 5. No te puedes etiquetar a ti mismo como compañero
+    if (partnerId && partnerId === user.id) {
+      return NextResponse.json(
+        { error: "No puedes etiquetarte a ti mismo como compañero" },
+        { status: 400 }
+      );
+    }
+
+    // 6. Verificar si ya completó este WOD
     const { data: existing } = await supabase
       .from("wod_completions")
       .select("id")
@@ -162,6 +171,7 @@ export async function POST(request: NextRequest) {
           score: score ?? null,
           notes: notes ?? null,
           rx: rx ?? true,
+          partner_id: partnerId ?? null,
           completed_at: new Date().toISOString(),
         })
         .eq("id", existing.id)
@@ -202,6 +212,7 @@ export async function POST(request: NextRequest) {
         score: score ?? null,
         notes: notes ?? null,
         rx: rx ?? true,
+        partner_id: partnerId ?? null,
         started_at: startedAt ? new Date(startedAt).toISOString() : null,
         completed_at: new Date().toISOString(),
       })
