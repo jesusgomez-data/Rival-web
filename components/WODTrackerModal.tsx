@@ -32,6 +32,39 @@ const GENERIC_SCORE_LABELS: Record<string, string> = {
   NONE: "Resultado",
 };
 
+// Tipos de resultado que el atleta puede elegir libremente al registrar su
+// marca. No se limita al scoreType que configuró el coach al crear el WOD:
+// un mismo WOD (ej. "20min AMRAP") puede terminar en tiempo (si lo completas
+// antes del cap) o en rondas (si te quedas capado), y formatos como EMOM no
+// tienen un único tipo de resultado "correcto". Se ofrecen los 4 tipos
+// principales siempre, preseleccionando el que sugiere el coach.
+const SELECTABLE_TYPES: { key: "TIME" | "ROUNDS" | "REPS" | "WEIGHT" | "OTHER"; label: string; icon: typeof Clock }[] = [
+  { key: "TIME", label: "Tiempo", icon: Clock },
+  { key: "ROUNDS", label: "Rondas", icon: Repeat },
+  { key: "REPS", label: "Reps", icon: Hash },
+  { key: "WEIGHT", label: "Peso", icon: Weight },
+  { key: "OTHER", label: "Otro", icon: Zap },
+];
+
+function normalizeScoreType(raw?: string | null): "TIME" | "ROUNDS" | "REPS" | "WEIGHT" | "OTHER" {
+  const v = (raw || "").toUpperCase();
+  if (v === "TIME") return "TIME";
+  if (v === "ROUNDS" || v === "AMRAP") return "ROUNDS";
+  if (v === "REPS") return "REPS";
+  if (v === "WEIGHT") return "WEIGHT";
+  return "OTHER";
+}
+
+function completionTypeToSelectable(completionType?: string | null): "TIME" | "ROUNDS" | "REPS" | "WEIGHT" | "OTHER" {
+  switch (completionType) {
+    case "time": return "TIME";
+    case "rounds": return "ROUNDS";
+    case "reps": return "REPS";
+    case "weight": return "WEIGHT";
+    default: return "OTHER";
+  }
+}
+
 interface WODTrackerModalProps {
   wodPostId: string;
   wodTitle: string;
@@ -51,12 +84,13 @@ export default function WODTrackerModal({
   onClose,
   onSuccess,
 }: WODTrackerModalProps) {
-  const ST = (scoreType || "ROUNDS").toUpperCase();
-  const isTimeScored = ST === "TIME";
-  const isRepsScored = ST === "REPS";
-  const isWeightScored = ST === "WEIGHT";
-  const isRoundsScored = ST === "ROUNDS";
-  const isGenericScored = !isTimeScored && !isRepsScored && !isWeightScored && !isRoundsScored;
+  const suggestedType = normalizeScoreType(scoreType);
+  const [selectedType, setSelectedType] = useState<"TIME" | "ROUNDS" | "REPS" | "WEIGHT" | "OTHER">(suggestedType);
+  const isTimeScored = selectedType === "TIME";
+  const isRepsScored = selectedType === "REPS";
+  const isWeightScored = selectedType === "WEIGHT";
+  const isRoundsScored = selectedType === "ROUNDS";
+  const isGenericScored = selectedType === "OTHER";
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -66,8 +100,6 @@ export default function WODTrackerModal({
   const [totalReps, setTotalReps] = useState("");
   const [weightKg, setWeightKg] = useState("");
   const [scoreValue, setScoreValue] = useState("");
-  // Solo aplica cuando isTimeScored && hasTimecap: ¿terminó dentro del tiempo o quedó capado?
-  const [finishedInTime, setFinishedInTime] = useState(true);
   const [rx, setRx] = useState(true);
   const [notes, setNotes] = useState("");
   const [isEditing, setIsEditing] = useState(false);
@@ -127,15 +159,15 @@ export default function WODTrackerModal({
         setNotes(c.notes || "");
         setPartner(c.partner || null);
 
+        setSelectedType(completionTypeToSelectable(c.completion_type));
+
         if (c.completion_type === "time" && c.completion_time_seconds) {
           const mins = Math.floor(c.completion_time_seconds / 60);
           const secs = c.completion_time_seconds % 60;
           setTimeMinutes(mins.toString());
           setTimeSeconds(secs.toString());
-          setFinishedInTime(true);
         } else if (c.completion_type === "rounds" && c.rounds_completed != null) {
           setRounds(c.rounds_completed.toString());
-          if (isTimeScored) setFinishedInTime(false);
         } else if (c.completion_type === "reps" && c.total_reps != null) {
           setTotalReps(c.total_reps.toString());
         } else if (c.completion_type === "weight" && c.weight_kg != null) {
@@ -143,6 +175,13 @@ export default function WODTrackerModal({
         } else if (c.completion_type === "score" && c.score != null) {
           setScoreValue(c.score.toString());
         }
+      } else {
+        // Sin resultado previo: formulario limpio, tipo sugerido por el coach
+        setIsEditing(false);
+        setSelectedType(suggestedType);
+        setTimeMinutes(""); setTimeSeconds(""); setRounds("");
+        setTotalReps(""); setWeightKg(""); setScoreValue("");
+        setRx(true); setNotes(""); setPartner(null);
       }
     } catch (error) {
       console.error("Error fetching completion:", error);
@@ -163,11 +202,7 @@ export default function WODTrackerModal({
       let weightValue: number | undefined;
       let scoreNumeric: number | undefined;
 
-      if (isTimeScored && hasTimecap && !finishedInTime) {
-        // No terminó dentro del cap: se registra por rondas alcanzadas, no por tiempo.
-        completionType = "rounds";
-        roundsCompleted = parseFloat(rounds || "0");
-      } else if (isTimeScored) {
+      if (isTimeScored) {
         completionType = "time";
         completionTimeSeconds = parseInt(timeMinutes || "0") * 60 + parseInt(timeSeconds || "0");
       } else if (isRepsScored) {
@@ -263,40 +298,34 @@ export default function WODTrackerModal({
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Toggle: solo si es "For Time" con tope de tiempo */}
-              {isTimeScored && hasTimecap && (
-                <div>
-                  <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
-                    ¿Terminaste dentro del tiempo?
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
+              {/* Selector de tipo de resultado: libre, no depende de lo que configuró
+                  el coach. Un mismo WOD (AMRAP con cap, EMOM, etc.) puede terminar
+                  registrándose por tiempo, rondas, reps o peso según cómo lo hizo
+                  cada atleta. */}
+              <div>
+                <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider">
+                  ¿Cómo quieres registrar tu resultado?
+                </label>
+                <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                  {SELECTABLE_TYPES.map(({ key, label, icon: Icon }) => (
                     <button
+                      key={key}
                       type="button"
-                      onClick={() => setFinishedInTime(true)}
-                      className={`p-3 rounded-xl border-2 transition-all font-bold text-xs uppercase tracking-wide ${
-                        finishedInTime
-                          ? "border-green-500 bg-green-500/10 text-green-400"
-                          : "border-white/10 text-gray-400"
+                      onClick={() => setSelectedType(key)}
+                      className={`flex flex-col items-center gap-1 p-2.5 rounded-xl border-2 transition-all font-bold text-[10px] uppercase tracking-wide ${
+                        selectedType === key
+                          ? "border-brand-red bg-brand-red/10 text-brand-red"
+                          : "border-white/10 text-gray-400 hover:border-white/20"
                       }`}
                     >
-                      Sí, terminé
+                      <Icon className="w-4 h-4" />
+                      {label}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setFinishedInTime(false)}
-                      className={`p-3 rounded-xl border-2 transition-all font-bold text-xs uppercase tracking-wide ${
-                        !finishedInTime
-                          ? "border-orange-500 bg-orange-500/10 text-orange-400"
-                          : "border-white/10 text-gray-400"
-                      }`}
-                    >
-                      No, quedé capado
-                    </button>
-                  </div>
+                  ))}
                 </div>
-              )}
+              </div>
 
-              {isTimeScored && (finishedInTime || !hasTimecap) ? (
+              {isTimeScored ? (
                 <div>
                   <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
                     <Clock className="w-4 h-4" />
@@ -334,11 +363,11 @@ export default function WODTrackerModal({
                 </div>
               ) : null}
 
-              {(isRoundsScored || (isTimeScored && hasTimecap && !finishedInTime)) && (
+              {isRoundsScored && (
                 <div>
                   <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
                     <Repeat className="w-4 h-4" />
-                    {isTimeScored ? "Rondas Alcanzadas" : "Rounds Completados"}
+                    Rounds Completados
                   </label>
                   <input
                     type="number"
@@ -397,7 +426,7 @@ export default function WODTrackerModal({
                 <div>
                   <label className="block text-sm font-bold text-gray-300 mb-2 uppercase tracking-wider flex items-center gap-2">
                     <Zap className="w-4 h-4" />
-                    {GENERIC_SCORE_LABELS[ST] || "Resultado"}
+                    {GENERIC_SCORE_LABELS[(scoreType || "").toUpperCase()] || "Resultado"}
                   </label>
                   <input
                     type="number"
