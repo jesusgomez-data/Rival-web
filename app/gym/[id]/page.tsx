@@ -41,14 +41,27 @@ export default async function PublicCenterPage({
         .select('id', { count: 'exact', head: true })
         .eq('organization_id', id);
 
-    // Get Coaches
-    const { data: coachesData } = await supabase
-        .from('center_roles')
-        .select('*, profiles:user_id(id, full_name, username, avatar_url, bio)')
-        .eq('organization_id', id)
-        .eq('role', 'coach');
+    // Get staff (todo el equipo del centro: owner, head coach, coaches, admins),
+    // para mostrar sus fotos en el perfil público como "destacados".
+    const [{ data: rolesData }, { data: ownerProfile }] = await Promise.all([
+        supabase
+            .from('center_roles')
+            .select('role, profiles:user_id(id, full_name, username, avatar_url, bio)')
+            .eq('organization_id', id),
+        org.owner_id
+            ? supabase.from('profiles').select('id, full_name, username, avatar_url, bio').eq('id', org.owner_id).single()
+            : Promise.resolve({ data: null }),
+    ]);
 
-    const coaches = coachesData?.map((c: any) => c.profiles).filter(Boolean) || [];
+    const staffMap = new Map<string, any>();
+    if (ownerProfile) staffMap.set(ownerProfile.id, { ...ownerProfile, role: 'owner' });
+    (rolesData || []).forEach((r: any) => {
+        if (r.profiles && !staffMap.has(r.profiles.id)) {
+            staffMap.set(r.profiles.id, { ...r.profiles, role: r.role });
+        }
+    });
+    const staff = Array.from(staffMap.values());
+    const coaches = staff; // compat: algunos componentes aún esperan este nombre
 
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -62,6 +75,7 @@ export default async function PublicCenterPage({
             currentUserId={user?.id}
             memberStatus={memberStatus}
             coaches={coaches}
+            staff={staff}
             membershipPlans={membershipPlans}
             hasUsedTrial={hasUsedTrial}
         />

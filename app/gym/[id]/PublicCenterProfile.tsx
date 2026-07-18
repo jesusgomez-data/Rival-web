@@ -13,7 +13,7 @@ import { useTheme } from "../../ThemeContext";
 import CancellationRequestModal from "../../dashboard/gyms/CancellationRequestModal";
 
 // Update function signature (line 13)
-export default function PublicCenterProfile({ org, initialPosts, isFollowing, followersCount, products, currentUserId, memberStatus, coaches, membershipPlans, hasUsedTrial = false }: any) {
+export default function PublicCenterProfile({ org, initialPosts, isFollowing, followersCount, products, currentUserId, memberStatus, coaches, staff, membershipPlans, hasUsedTrial = false }: any) {
     // --- STATE ---
 
     // Theme
@@ -741,6 +741,47 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                     {org.bio || org.description || (isTrainer ? "Entrenador dedicado a maximizar tu rendimiento." : "Centro de entrenamiento de élite.")}.
                                 </p>
                             </div>
+
+                            {/* Staff — círculos tipo "destacados" con el equipo del centro */}
+                            {Array.isArray(staff) && staff.length > 0 && (
+                                <div className="pt-1">
+                                    <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
+                                        {staff.map((member: any) => {
+                                            const roleLabel: Record<string, string> = {
+                                                owner: 'Dueño',
+                                                head_coach: 'Head Coach',
+                                                coach: 'Coach',
+                                                admin: 'Staff',
+                                            };
+                                            return (
+                                                <Link
+                                                    key={member.id}
+                                                    href={`/dashboard/profile/${member.username}`}
+                                                    className="flex flex-col items-center gap-1.5 shrink-0 w-16 group"
+                                                >
+                                                    <div className="w-14 h-14 rounded-full p-[2px] bg-gradient-to-tr from-brand-red to-orange-500 group-hover:scale-105 transition-transform">
+                                                        <div className={`w-full h-full rounded-full overflow-hidden border-2 ${theme === 'dark' ? 'border-black' : 'border-white'}`}>
+                                                            {member.avatar_url ? (
+                                                                <img src={member.avatar_url} alt={member.full_name} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <div className="w-full h-full bg-gray-800 flex items-center justify-center text-white text-xs font-black uppercase">
+                                                                    {(member.full_name || member.username || 'U').substring(0, 2)}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <span className={`text-[9px] font-bold uppercase tracking-wide truncate w-full text-center ${textMuted}`}>
+                                                        {(member.full_name || member.username || '').split(' ')[0]}
+                                                    </span>
+                                                    <span className="text-[7px] font-black uppercase tracking-widest text-brand-red opacity-80">
+                                                        {roleLabel[member.role] || 'Staff'}
+                                                    </span>
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
