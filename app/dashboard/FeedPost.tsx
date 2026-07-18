@@ -6,7 +6,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, HandFist, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink, ZapOff, MapPin, Eye } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink, ZapOff, MapPin, Eye } from "lucide-react";
+import LikeFist from "@/components/LikeFist";
 import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./explore/LikeButton";
 import DuelButton from "./explore/DuelButton";
@@ -1329,7 +1330,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             onClick={() => handleCommentLike(comment.id)}
                             className={clsx("flex items-center gap-1 text-[10px] font-bold transition-colors", comment.has_liked ? "text-brand-red" : "text-gray-500 hover:text-brand-red")}
                         >
-                            <HandFist className={clsx("w-3 h-3", comment.has_liked && "fill-current")} />
+                            <LikeFist active={comment.has_liked} size={12} />
                             {comment.likes_count > 0 && comment.likes_count}
                         </button>
                     </div>
@@ -1543,8 +1544,10 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                         {/* Puñito del doble-tap */}
                         {showHeartBurst && (
                             <div className="absolute inset-0 z-[60] flex items-center justify-center pointer-events-none">
-                                <HandFist
-                                    className="w-28 h-28 text-brand-red fill-brand-red drop-shadow-[0_0_30px_rgba(220,38,38,0.8)]"
+                                <LikeFist
+                                    active
+                                    size={112}
+                                    className="drop-shadow-[0_0_30px_rgba(220,38,38,0.8)]"
                                     style={{ animation: 'rival-heart-burst 0.75s cubic-bezier(0.16,1,0.3,1) both' }}
                                 />
                             </div>

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, HandFist, MessageCircle, Share2, Music, User, Trophy, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { X, MessageCircle, Share2, Music, User, Trophy, Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import LikeFist from "@/components/LikeFist";
 import { motion, AnimatePresence } from 'framer-motion';
 import { getReelPosts, toggleLike, getComments, addComment, toggleCommentLike } from './explore/actions';
 import Image from 'next/image';
@@ -194,7 +195,7 @@ function CommentsDrawer({ postId, onClose }: { postId: string, onClose: () => vo
 
                                         {/* Like button */}
                                         <button onClick={() => handleCommentLike(c.id)} className="flex flex-col items-center gap-0.5 pt-1 pr-1 shrink-0 text-white/40 hover:text-brand-red transition-colors">
-                                            <HandFist className={clsx("w-3.5 h-3.5", c.has_liked ? "fill-brand-red text-brand-red" : "text-white/40")} />
+                                            <LikeFist active={c.has_liked} size={14} />
                                             {c.likes_count > 0 && <span className="text-[8px] font-black text-white/40">{c.likes_count}</span>}
                                         </button>
                                     </div>
@@ -253,7 +254,7 @@ function CommentsDrawer({ postId, onClose }: { postId: string, onClose: () => vo
 
                                                         {/* Like button */}
                                                         <button onClick={() => handleCommentLike(reply.id)} className="flex flex-col items-center gap-0.5 pt-0.5 pr-1 shrink-0 text-white/40 hover:text-brand-red transition-colors">
-                                                            <HandFist className={clsx("w-3 h-3", reply.has_liked ? "fill-brand-red text-brand-red" : "text-white/40")} />
+                                                            <LikeFist active={reply.has_liked} size={12} />
                                                             {reply.likes_count > 0 && <span className="text-[8px] font-black text-white/40">{reply.likes_count}</span>}
                                                         </button>
                                                     </div>
@@ -466,7 +467,7 @@ function Reel({ post, isActive, onOpenComments, isGlobalMuted, onToggleMute }: {
                         exit={{ scale: 0, opacity: 0 }}
                         className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
                     >
-                        <HandFist className="w-24 h-24 text-brand-red fill-current drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]" />
+                        <LikeFist active size={96} className="drop-shadow-[0_0_15px_rgba(239,68,68,0.8)]" />
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -494,7 +495,7 @@ function Reel({ post, isActive, onOpenComments, isGlobalMuted, onToggleMute }: {
                             liked ? "bg-brand-red text-white" : "bg-white/10 text-white"
                         )}
                     >
-                        <HandFist className={clsx("w-6 h-6", liked && "fill-current")} />
+                        <LikeFist active={liked} size={24} />
                     </button>
                     <span className="text-white text-xs font-bold shadow-sm">{likes}</span>
                 </div>

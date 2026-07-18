@@ -6,7 +6,8 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { HandFist, MessageCircle, Share2, MoreVertical, Volume2, VolumeX, Play, Pause } from "lucide-react";
+import { MessageCircle, Share2, MoreVertical, Volume2, VolumeX, Play, Pause } from "lucide-react";
+import LikeFist from "@/components/LikeFist";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -199,9 +200,7 @@ function VideoCard({ video, isActive, isNear }: { video: VideoPost; isActive: bo
                 : "bg-black/20 text-white hover:bg-black/40"
             }`}
           >
-            <HandFist
-              className={`w-7 h-7 ${video.hasLiked ? "fill-current" : ""}`}
-            />
+            <LikeFist active={video.hasLiked} size={28} />
           </motion.div>
           <span className="text-white text-xs font-bold drop-shadow-lg">
             {video.likes > 999 ? `${(video.likes / 1000).toFixed(1)}k` : video.likes}

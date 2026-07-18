@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
-import { Bell, CheckCheck, Swords, UserPlus, Zap, MessageSquare, HandFist, Trophy, Star, BookmarkCheck, ExternalLink, Loader2 } from 'lucide-react';
+import { Bell, CheckCheck, Swords, UserPlus, Zap, MessageSquare, Trophy, Star, BookmarkCheck, ExternalLink, Loader2 } from 'lucide-react';
+import LikeFist from '@/components/LikeFist';
 import { getNotifications, markAsRead, markAllAsRead } from '../notifications-actions';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -23,7 +24,7 @@ function getNotifIcon(type: string) {
     switch (type) {
         case 'duel':         return <Swords className="w-5 h-5 text-brand-red" />;
         case 'follow':       return <UserPlus className="w-5 h-5 text-blue-400" />;
-        case 'like':         return <HandFist className="w-5 h-5 text-pink-400" />;
+        case 'like':         return <LikeFist active size={20} />;
         case 'comment':      return <MessageSquare className="w-5 h-5 text-green-400" />;
         case 'achievement':  return <Star className="w-5 h-5 text-yellow-400" />;
         case 'competition':  return <Trophy className="w-5 h-5 text-yellow-400" />;

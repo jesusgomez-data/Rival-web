@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import clsx from "clsx";
-import { MessageCircle, HandFist, Share2, MoreHorizontal, Send, Trash2, X, Building2, Dumbbell, Zap, Flame, TrendingUp, ChevronDown, Plus, Play, Clock, ArrowRight } from "lucide-react";
+import { MessageCircle, Share2, MoreHorizontal, Send, Trash2, X, Building2, Dumbbell, Zap, Flame, TrendingUp, ChevronDown, Plus, Play, Clock, ArrowRight } from "lucide-react";
+import LikeFist from "@/components/LikeFist";
 import { toggleCenterPostLike, addCenterPostComment, getCenterPostComments, deletePost, deleteCenterPostComment } from "./feed-actions";
 import Link from "next/link";
 import MentionText from "@/components/MentionText";
@@ -305,7 +306,7 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
             <div className="px-4 py-3 bg-muted/20 border-t border-border">
                 <div className="flex items-center gap-6 text-muted-foreground text-xs mb-3 font-bold uppercase tracking-widest">
                     <div className="flex items-center gap-1.5 transition-colors hover:text-brand-red cursor-default">
-                        <HandFist className="w-3.5 h-3.5 fill-brand-red text-brand-red" />
+                        <LikeFist active size={14} />
                         <span>{likes} {likes === 1 ? 'Me gusta' : 'Me gustas'}</span>
                     </div>
                     <div className="flex items-center gap-1.5 cursor-pointer hover:text-brand-red transition-colors" onClick={toggleComments}>
@@ -319,7 +320,7 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                         onClick={handleLike}
                         className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-lg transition-colors font-bold text-sm ${isLiked ? 'text-brand-red bg-brand-red/10' : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
                     >
-                        <HandFist className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+                        <LikeFist active={isLiked} size={20} />
                         Like
                     </button>
                     <button

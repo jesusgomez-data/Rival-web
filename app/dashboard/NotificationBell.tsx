@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Bell, X, CheckCircle2, Swords, UserPlus, Zap, MessageSquare, HandFist, BookmarkCheck } from "lucide-react";
+import { Bell, X, CheckCircle2, Swords, UserPlus, Zap, MessageSquare, BookmarkCheck } from "lucide-react";
+import LikeFist from "@/components/LikeFist";
 import { getNotifications, markAsRead, markAllAsRead } from "./notifications-actions";
 import { playReceiveSound, playContactOnlineSound, playEmojiSound } from "./messages/emojiSounds";
 import { createClient } from "@/utils/supabase/client";
@@ -145,7 +146,7 @@ export default function NotificationBell() {
             case 'class_reservation': return <BookmarkCheck className="w-4 h-4 text-purple-400" />;
             case 'like':
             case 'post_like':
-            case 'comment_like': return <HandFist className="w-4 h-4 text-rose-400 fill-current" />;
+            case 'comment_like': return <LikeFist active size={16} />;
             case 'comment':
             case 'message':
             case 'post_comment': return <MessageSquare className="w-4 h-4 text-sky-400" />;
