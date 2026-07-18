@@ -27,7 +27,14 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     const { language } = useLanguage();
     const [content, setContent] = useState(initialData?.caption || initialData?.content || "");
     const [isPosting, setIsPosting] = useState(false);
-    const [previews, setPreviews] = useState<string[]>(initialData?.media_url ? (initialData.media_url.startsWith('[') ? JSON.parse(initialData.media_url) : [initialData.media_url]) : []);
+    // Para WODs/PRs, media_url guarda el JSON del entrenamiento, no una foto —
+    // nunca debe acabar en `previews` (eso renderiza <img src="{...json...}">,
+    // una imagen rota).
+    const [previews, setPreviews] = useState<string[]>(
+        initialData?.media_url && initialPostType !== 'wod' && initialPostType !== 'pr'
+            ? (initialData.media_url.startsWith('[') ? JSON.parse(initialData.media_url) : [initialData.media_url])
+            : []
+    );
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [postType, setPostType] = useState<'standard' | 'pr' | 'wod'>(initialPostType || 'standard');
     const [wodData, setWodData] = useState<{ title: string, blocks: WodBlock[], summary: WodSummary, category?: WorkoutCategory, originalWodPostId?: string } | null>(
@@ -80,7 +87,8 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
         if (initialData) {
             setContent(initialData.caption || initialData.content || "");
             const initialMedia = initialData.media_url;
-            if (initialMedia) {
+            const isWorkoutPost = initialPostType === 'wod' || initialPostType === 'pr';
+            if (initialMedia && !isWorkoutPost) {
                 try {
                     const parsed = JSON.parse(initialMedia);
                     setPreviews(Array.isArray(parsed) ? parsed : [initialMedia]);
