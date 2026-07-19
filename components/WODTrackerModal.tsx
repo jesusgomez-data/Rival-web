@@ -86,6 +86,21 @@ export default function WODTrackerModal({
 }: WODTrackerModalProps) {
   const suggestedType = normalizeScoreType(scoreType);
   const [selectedType, setSelectedType] = useState<"TIME" | "ROUNDS" | "REPS" | "WEIGHT" | "OTHER">(suggestedType);
+
+  // WODTrackerModal no se desmonta al cerrar (el padre solo deja de pasar
+  // isOpen=true), así que el useState de arriba solo capta `scoreType` en el
+  // PRIMER render de esta instancia. Si en ese primer render el dato del WOD
+  // todavía no había llegado (scoreType undefined), selectedType se quedaba
+  // clavado en "OTHER" para siempre, aunque el WOD real fuera de tipo PESO,
+  // TIEMPO, etc. Este efecto lo mantiene sincronizado con el prop real cada
+  // vez que el modal se abre sin un resultado ya guardado.
+  useEffect(() => {
+    if (isOpen && !isEditing) {
+      setSelectedType(normalizeScoreType(scoreType));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, scoreType]);
+
   const isTimeScored = selectedType === "TIME";
   const isRepsScored = selectedType === "REPS";
   const isWeightScored = selectedType === "WEIGHT";
