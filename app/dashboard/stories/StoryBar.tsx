@@ -933,7 +933,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                 if (currentStory.music_url && audioRef.current && !isMuted) audioRef.current.play().catch(() => {})
                 
                 const notice = document.createElement('div')
-                notice.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 z-[999] bg-brand-green/90 backdrop-blur-md text-white text-xs font-black px-4 py-2.5 rounded-full shadow-lg'
+                notice.className = 'fixed bottom-24 left-1/2 -translate-x-1/2 z-[1300] bg-brand-green/90 backdrop-blur-md text-white text-xs font-black px-4 py-2.5 rounded-full shadow-lg'
                 notice.innerText = '¡Respuesta enviada!'
                 document.body.appendChild(notice)
                 setTimeout(() => notice.remove(), 2500)
@@ -1596,7 +1596,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
 
             {/* Video Trimmer Modal */}
             {isVideoTrimming && trimmerVideoUrl && (
-                <div className="fixed inset-0 z-[400] bg-black/98 flex items-center justify-center p-4 backdrop-blur-xl">
+                <div className="fixed inset-0 z-[1200] bg-black/98 flex items-center justify-center p-4 backdrop-blur-xl">
                     <div className="bg-brand-gray border border-white/10 w-full max-w-md rounded-[40px] p-8 shadow-2xl relative">
                         <button
                             onClick={() => { setIsVideoTrimming(false); setTrimmerVideoUrl(null); }}
@@ -1664,7 +1664,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
 
             {/* Editor Modal */}
             {previewUrl && (
-                <div className="fixed inset-0 z-[250] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm">
+                <div className="fixed inset-0 z-[1150] bg-black/95 flex items-center justify-center p-4 backdrop-blur-sm">
                     <div
                         className="relative w-full max-w-[400px] h-[90vh] bg-black rounded-[32px] overflow-hidden shadow-2xl border border-white/10 flex flex-col"
                         onMouseMove={handleDragMove}
@@ -1686,7 +1686,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                         <Music className="w-5 h-5" />
                                     </button>
                                     {isMusicPickerOpen && (
-                                        <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+                                        <div className="fixed inset-0 z-[1250] flex items-center justify-center p-4">
                                             {/* Backdrop */}
                                             <div
                                                 className="absolute inset-0 bg-black/80 backdrop-blur-md"
@@ -2012,7 +2012,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[200] bg-black/95 flex items-center justify-center p-4 dark-section keep-all"
+                        className="fixed inset-0 z-[1100] bg-black/95 flex items-center justify-center p-4 dark-section keep-all"
                     >
                         {/* Background Blur Backdrop */}
                         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-40 select-none transition-all duration-500 blur-3xl scale-110">
@@ -2809,7 +2809,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
             )}
             </AnimatePresence>
             {showPRCreator && (
-                <div className="fixed inset-0 z-[250] bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
+                <div className="fixed inset-0 z-[1150] bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
                     <div className="bg-brand-gray border border-white/10 w-full max-w-md rounded-[32px] p-8 shadow-2xl relative">
                         <button onClick={() => setShowPRCreator(false)} className="absolute top-6 right-6 text-gray-400 hover:text-white">
                             <X className="w-6 h-6" />
@@ -2969,7 +2969,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
             )}
             {/* Error Toast — reemplaza alert() para no freezar el móvil */}
             {storyError && (
-                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[999] flex items-center gap-2 bg-red-600/90 backdrop-blur-md text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-xl max-w-xs text-center pointer-events-none">
+                <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[1300] flex items-center gap-2 bg-red-600/90 backdrop-blur-md text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-xl max-w-xs text-center pointer-events-none">
                     <X className="w-3.5 h-3.5 shrink-0" />
                     {storyError}
                 </div>
