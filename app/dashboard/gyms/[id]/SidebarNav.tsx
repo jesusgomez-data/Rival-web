@@ -46,7 +46,6 @@ export default function SidebarNav({
             label: 'Profesional',
             items: [
                 { name: 'Resumen',       href: `/dashboard/gyms/${id}`,                icon: LayoutDashboard },
-                { name: 'Chat Staff',     href: `/dashboard/gyms/${id}/chat`,          icon: MessageSquareText },
                 { name: 'Agenda',        href: `/dashboard/gyms/${id}/schedule`,        icon: Calendar },
                 { name: 'Clientes',      href: `/dashboard/gyms/${id}/members`,         icon: Users, badge: pendingTrials || null },
                 { name: 'Mis Servicios', href: `/dashboard/gyms/${id}/services`,        icon: Briefcase,  adminOnly: true },
