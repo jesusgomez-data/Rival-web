@@ -380,6 +380,7 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                                 wodTitle={data.title || "WOD"}
                                 scoreType={data.summary?.scoreType}
                                 hasTimecap={Array.isArray(data.blocks) && data.blocks.some((b: any) => !!b?.config?.timecap)}
+                                defaultPartner={(data as any).partner || null}
                                 isOpen={showWODTracker}
                                 onClose={() => setShowWODTracker(false)}
                                 onSuccess={() => window.location.reload()}
@@ -507,6 +508,7 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                                     wodTitle={data.title || "WOD"}
                                     scoreType={data.summary?.scoreType}
                                     hasTimecap={Array.isArray(data.blocks) && data.blocks.some((b: any) => !!b?.config?.timecap)}
+                                    defaultPartner={(data as any).partner || null}
                                     isOpen={showWODTracker}
                                     onClose={() => setShowWODTracker(false)}
                                     onSuccess={() => window.location.reload()}
@@ -798,6 +800,7 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                         wodTitle={data.title || "WOD"}
                         scoreType={data.summary?.scoreType}
                         hasTimecap={Array.isArray(data.blocks) && data.blocks.some((b: any) => !!b?.config?.timecap)}
+                        defaultPartner={(data as any).partner || null}
                         isOpen={showWODTracker}
                         onClose={() => setShowWODTracker(false)}
                         onSuccess={() => window.location.reload()}

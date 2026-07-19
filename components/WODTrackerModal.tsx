@@ -63,6 +63,10 @@ interface WODTrackerModalProps {
   wodTitle: string;
   scoreType?: string; // "TIME" | "ROUNDS" | "REPS" | "WEIGHT" | "CALORIES" | "DISTANCE" | "PACE" | "WATTS" | "OTHER" | "NONE"
   hasTimecap?: boolean; // true cuando algún bloque tiene tope de tiempo (ej. "20 rondas, cap 15min")
+  // Compañero ya etiquetado al CREAR el WOD (wod_data.partner). Se usa como
+  // valor inicial al registrar un resultado NUEVO, para no obligar a
+  // etiquetar dos veces a la misma persona.
+  defaultPartner?: TaggedProfile | null;
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
@@ -73,6 +77,7 @@ export default function WODTrackerModal({
   wodTitle,
   scoreType,
   hasTimecap = false,
+  defaultPartner = null,
   isOpen,
   onClose,
   onSuccess,
@@ -157,7 +162,7 @@ export default function WODTrackerModal({
         setSelectedType(suggestedType);
         setTimeMinutes(""); setTimeSeconds(""); setRounds("");
         setTotalReps(""); setWeightKg(""); setScoreValue("");
-        setRx(true); setNotes(""); setPartner(null);
+        setRx(true); setNotes(""); setPartner(defaultPartner || null);
       }
     } catch (error) {
       console.error("Error fetching completion:", error);

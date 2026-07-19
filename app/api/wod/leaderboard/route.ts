@@ -63,9 +63,28 @@ export async function GET(request: NextRequest) {
     // 1.5. Obtener creador del WOD original
     const { data: creatorData } = await supabaseAdmin
       .from("posts")
-      .select("user_id, media_url, profiles:user_id(username, full_name, avatar_url)")
+      .select("user_id, media_url, wod_data, profiles:user_id(username, full_name, avatar_url)")
       .eq("id", targetWodId)
       .single();
+
+    // Compañero etiquetado al CREAR el WOD (wod_data.partner, o su fallback en
+    // media_url cuando wod_data quedó null). Solo aplica como fallback para la
+    // marca del propio creador del post: si otra persona registra resultado
+    // del mismo WOD público, no hereda el compañero ajeno.
+    let postCreatorPartnerId: string | null = null;
+    if (creatorData) {
+      const creatorRecordAny = creatorData as any;
+      let wodObjForPartner = creatorRecordAny.wod_data;
+      if (!wodObjForPartner?.partner && creatorRecordAny.media_url) {
+        try {
+          const parsed = JSON.parse(creatorRecordAny.media_url);
+          wodObjForPartner = Array.isArray(parsed) ? parsed[0] : parsed;
+        } catch {
+          // media_url no era JSON (ej. url de imagen/video normal), se ignora
+        }
+      }
+      postCreatorPartnerId = wodObjForPartner?.partner?.id || null;
+    }
 
     const creatorRecord = creatorData as any;
     const creator = creatorData ? {
@@ -170,9 +189,12 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Obtener perfiles de los usuarios (y de los compañeros etiquetados, si los hay)
+    const effectivePartnerId = (c: any) =>
+      c.partner_id || (c.user_id === creatorData?.user_id ? postCreatorPartnerId : null);
+
     const userIds = [...new Set([
       ...completionsList.map((c) => c.user_id),
-      ...completionsList.filter((c) => c.partner_id).map((c) => c.partner_id),
+      ...completionsList.filter((c) => effectivePartnerId(c)).map((c) => effectivePartnerId(c)),
     ])];
     const { data: profiles } = await supabaseAdmin
       .from("profiles")
@@ -197,14 +219,15 @@ export async function GET(request: NextRequest) {
     // 4. Mapear
     const leaderboard = sorted.map((entry, index) => {
       const profile = profileMap.get(entry.user_id);
-      const partnerProfile = entry.partner_id ? profileMap.get(entry.partner_id) : null;
+      const resolvedPartnerId = effectivePartnerId(entry);
+      const partnerProfile = resolvedPartnerId ? profileMap.get(resolvedPartnerId) : null;
       return {
         id: entry.id,
         userId: entry.user_id,
         username: profile?.username || "Unknown",
         fullName: profile?.full_name || "Unknown User",
         avatarUrl: profile?.avatar_url || null,
-        partnerId: entry.partner_id || null,
+        partnerId: resolvedPartnerId || null,
         partnerUsername: partnerProfile?.username || null,
         partnerFullName: partnerProfile?.full_name || null,
         partnerAvatarUrl: partnerProfile?.avatar_url || null,

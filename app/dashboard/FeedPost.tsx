@@ -2678,6 +2678,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             const blocks = wod_data?.blocks || (resolvedWorkoutData as any)?.blocks;
                             return Array.isArray(blocks) && blocks.some((b: any) => !!b?.config?.timecap);
                         })()}
+                        defaultPartner={wod_data?.partner || (resolvedWorkoutData as any)?.partner || null}
                         isOpen={showWODTracker}
                         onClose={() => setShowWODTracker(false)}
                         onSuccess={() => window.location.reload()}
