@@ -484,6 +484,7 @@ export default function DashboardHome() {
                 membershipsPromise,
                 supabase.from('workouts').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
                 supabase.from('class_results').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+                supabase.from('posts').select('*', { count: 'exact', head: true }).eq('user_id', user.id).in('media_type', ['wod', 'pr', 'class_result']),
                 supabase.from('follows').select('following_id').eq('follower_id', user.id),
                 supabase.from('profiles')
                     .select('id, username, full_name, avatar_url, level, is_official')
@@ -499,6 +500,7 @@ export default function DashboardHome() {
                 membershipsResult,
                 workoutsResult,
                 classesResult,
+                wodPostsResult,
                 followsResult,
                 trendingResult,
                 officialResult,
@@ -509,6 +511,7 @@ export default function DashboardHome() {
                 const memberships = membershipsResult.data;
                 const workouts = workoutsResult.count;
                 const classes = classesResult.count;
+                const wodPosts = wodPostsResult.count;
                 const myFollows = followsResult.data;
                 const trending = trendingResult.data;
                 const officialProfiles = officialResult.data;
@@ -527,7 +530,7 @@ export default function DashboardHome() {
 
                 const freshStats = {
                     profile: profileData,
-                    workoutCount: (workouts || 0) + (classes || 0),
+                    workoutCount: (workouts || 0) + (classes || 0) + (wodPosts || 0),
                     trendingAthletes: trending?.map((athlete: any) => ({ ...athlete, isFollowing: followedIds.has(athlete.id) })) || [],
                     rivalsCount: followingCount || 0,
                     myGyms: memberships?.map((m: any) => m.organization) || [],
