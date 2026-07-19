@@ -13,7 +13,7 @@ import FollowButton from "./explore/FollowButton";
 import FeedPost from "./FeedPost";
 import StoryBar from "./stories/StoryBar";
 import { getMyDuels, acceptDuel } from "./explore/duel-actions";
-import { getMissions } from "./training/actions";
+import { getMissions, getWorkoutStreak } from "./training/actions";
 import InfoTooltip from "@/components/InfoTooltip";
 import { getMonday } from "@/utils/date";
 import { getTodayCheckin } from "./wellness-actions";
@@ -493,7 +493,8 @@ export default function DashboardHome() {
                     .limit(4),
                 supabase.from('profiles').select('id').eq('is_official', true),
                 getMissions(),
-                getMyDuels()
+                getMyDuels(),
+                getWorkoutStreak()
             ]).then(([
                 membershipsResult,
                 workoutsResult,
@@ -502,7 +503,8 @@ export default function DashboardHome() {
                 trendingResult,
                 officialResult,
                 missionsData,
-                duelsData
+                duelsData,
+                realStreak
             ]) => {
                 const memberships = membershipsResult.data;
                 const workouts = workoutsResult.count;
@@ -529,7 +531,7 @@ export default function DashboardHome() {
                     trendingAthletes: trending?.map((athlete: any) => ({ ...athlete, isFollowing: followedIds.has(athlete.id) })) || [],
                     rivalsCount: followingCount || 0,
                     myGyms: memberships?.map((m: any) => m.organization) || [],
-                    workoutStreak: missionsData?.find((m: any) => m.goal_type === 'streak')?.current_value || 0,
+                    workoutStreak: realStreak || 0,
                 };
                 
                 writeDashCache(freshStats);

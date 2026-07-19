@@ -62,6 +62,18 @@ async function calculateWorkoutStreak(supabase: any, userId: string) {
 
 import { getMonday } from '@/utils/date'
 
+// Racha real del usuario, independiente del catálogo de misiones. Antes el
+// dashboard la sacaba de missionsData.find(m => m.goal_type === 'streak'),
+// pero esa misión no existe en la tabla `missions` (solo hay volume_kg,
+// sessions_count, social_interactions) — así que la racha se mostraba
+// siempre en 0 sin importar cuánto entrenara el usuario.
+export async function getWorkoutStreak() {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return 0
+    return calculateWorkoutStreak(supabase, user.id)
+}
+
 export async function getMissions() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
