@@ -472,7 +472,12 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const handleEditClick = () => {
         setShowMenu(false);
         if (mediaType === 'wod' || mediaType === 'pr') {
-            const editPayload = { postId, content: currentCaption || '', mediaType, mediaUrl: image, cover_url: currentCoverUrl || null, wodData: parsedWodData };
+            // Algunos posts tienen los bloques del WOD guardados solo en media_url
+            // (columna wod_data vacía) — resolvedWorkoutData ya sabe leer de ahí,
+            // por eso la tarjeta se ve completa al VER el post. Editar usaba
+            // solo parsedWodData (wod_data a secas) y mandaba un WOD vacío al
+            // editor para esos posts. Mismo fallback que usa el render.
+            const editPayload = { postId, content: currentCaption || '', mediaType, mediaUrl: image, cover_url: currentCoverUrl || null, wodData: parsedWodData || resolvedWorkoutData };
             if (window.location.pathname === '/dashboard') {
                 // Ya estamos en el dashboard: el editor está montado ahí mismo, el evento basta.
                 window.dispatchEvent(new CustomEvent('edit-post', { detail: editPayload }));
