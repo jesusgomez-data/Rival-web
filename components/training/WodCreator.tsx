@@ -22,6 +22,7 @@ import {
 import { motion, Reorder, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { getExercises, addNewExercise, parseWodFromImage } from "@/app/dashboard/training/actions";
+import PartnerTagField, { type TaggedProfile } from "@/components/PartnerTagField";
 
 export type WodFormat = 'AMRAP' | 'FOR TIME' | 'EMOM' | 'TABATA' | 'INTERVALS' | 'DEATH BY' | 'ROUNDS FOR TIME' | '21-15-9' | 'FUERZA' | 'LIBRE'
     // Endurance formats
@@ -67,8 +68,8 @@ export interface WodSummary {
 }
 
 interface WodCreatorProps {
-    onUpdate: (wodData: { title: string, date: string, blocks: WodBlock[], summary: WodSummary, category?: WorkoutCategory }) => void;
-    initialData?: { title: string, date: string, blocks: WodBlock[], summary: WodSummary, category?: WorkoutCategory };
+    onUpdate: (wodData: { title: string, date: string, blocks: WodBlock[], summary: WodSummary, category?: WorkoutCategory, partner?: TaggedProfile | null }) => void;
+    initialData?: { title: string, date: string, blocks: WodBlock[], summary: WodSummary, category?: WorkoutCategory, partner?: TaggedProfile | null };
 }
 
 const FORMAT_ICONS: Record<WodFormat, React.ReactNode> = {
@@ -146,6 +147,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
     });
 
     const [category, setCategory] = useState<WorkoutCategory>(initialData?.category || 'CROSS_TRAINING');
+    const [partner, setPartner] = useState<TaggedProfile | null>(initialData?.partner || null);
     const [showCategoryPicker, setShowCategoryPicker] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
 
@@ -181,9 +183,17 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const updateWod = (newTitle: string, newBlocks: WodBlock[], newSummary: WodSummary = summary, newDate: string = date, newCategory: WorkoutCategory = category) => {
-        onUpdate({ title: newTitle, date: newDate, blocks: newBlocks, summary: newSummary, category: newCategory });
+    const updateWod = (newTitle: string, newBlocks: WodBlock[], newSummary: WodSummary = summary, newDate: string = date, newCategory: WorkoutCategory = category, newPartner: TaggedProfile | null = partner) => {
+        onUpdate({ title: newTitle, date: newDate, blocks: newBlocks, summary: newSummary, category: newCategory, partner: newPartner });
     };
+
+    // El resto de cambios (título, bloques, resumen...) llaman a updateWod()
+    // explícitamente en cada handler; el compañero se selecciona en su propio
+    // widget async, así que se re-emite aquí en vez de tocar cada handler.
+    useEffect(() => {
+        updateWod(title, blocks, summary, date, category, partner);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [partner]);
 
     const handleScanImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -1168,6 +1178,10 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                             <span className="text-white">INFO:</span> Al publicar, los atletas deberán registrar su puntuación basándose en <span className="text-brand-red">{summary.scoreLabel}</span>.
                         </p>
                     </div>
+                </div>
+
+                <div className="mt-4">
+                    <PartnerTagField value={partner} onChange={setPartner} label="¿Con quién entrenaste? (Opcional)" />
                 </div>
             </div>
         </div>

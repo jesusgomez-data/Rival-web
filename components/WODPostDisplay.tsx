@@ -6,13 +6,15 @@
  */
 
 import { useState } from "react";
-import { Clock, Zap, Trophy, Target, ChevronDown, ChevronUp } from "lucide-react";
+import { Clock, Zap, Trophy, Target, ChevronDown, ChevronUp, Users } from "lucide-react";
 import type { GeneratedWOD } from "@/lib/wod-types";
 import { WorkoutCategory } from "./training/WodCreator";
+import type { TaggedProfile } from "./PartnerTagField";
 import { cn } from "@/lib/utils";
 
 interface ExtendedWOD extends GeneratedWOD {
   category?: WorkoutCategory;
+  partner?: TaggedProfile | null;
 }
 
 interface WODPostDisplayProps {
@@ -194,6 +196,11 @@ export default function WODPostDisplay({ wod, compact = false }: WODPostDisplayP
             </h3>
             {wod.subtitle && (
               <p className="text-gray-300 text-sm">{wod.subtitle}</p>
+            )}
+            {wod.partner && (
+              <p className="text-xs text-brand-red font-bold flex items-center gap-1 mt-1">
+                <Users className="w-3 h-3" /> Con @{wod.partner.username}
+              </p>
             )}
           </div>
         </div>
