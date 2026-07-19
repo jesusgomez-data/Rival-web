@@ -11,21 +11,30 @@ const aiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 
 async function calculateWorkoutStreak(supabase: any, userId: string) {
-    // Fetch unified history (independent and classes)
+    // Fetch unified history (independent, classes, WOD posts and WOD results —
+    // ver dashboard/page.tsx: para la mayoría de usuarios la actividad real
+    // vive en posts/wod_completions, no en workouts/class_results/checkins,
+    // así que ignorarlas dejaba la racha en 0 aunque hubiera actividad ayer).
     const [
         { data: workouts },
         { data: classResults },
-        { data: checkins }
+        { data: checkins },
+        { data: wodPosts },
+        { data: wodCompletions }
     ] = await Promise.all([
         supabase.from('workouts').select('created_at').eq('user_id', userId).order('created_at', { ascending: false }).limit(100),
         supabase.from('class_results').select('date_performed').eq('user_id', userId).order('date_performed', { ascending: false }).limit(100),
-        supabase.from('daily_checkins').select('checkin_date').eq('user_id', userId).order('checkin_date', { ascending: false }).limit(100)
+        supabase.from('daily_checkins').select('checkin_date').eq('user_id', userId).order('checkin_date', { ascending: false }).limit(100),
+        supabase.from('posts').select('created_at').eq('user_id', userId).in('media_type', ['wod', 'pr', 'class_result']).order('created_at', { ascending: false }).limit(100),
+        supabase.from('wod_completions').select('completed_at').eq('user_id', userId).order('completed_at', { ascending: false }).limit(100)
     ]);
 
     const allDates = [
         ...(workouts || []).map((w: any) => new Date(w.created_at).toISOString().split('T')[0]),
         ...(classResults || []).map((c: any) => new Date(c.date_performed).toISOString().split('T')[0]),
-        ...(checkins || []).map((ch: any) => ch.checkin_date)
+        ...(checkins || []).map((ch: any) => ch.checkin_date),
+        ...(wodPosts || []).map((p: any) => new Date(p.created_at).toISOString().split('T')[0]),
+        ...(wodCompletions || []).map((c: any) => new Date(c.completed_at).toISOString().split('T')[0])
     ];
 
     // Unique dates and sort descending
