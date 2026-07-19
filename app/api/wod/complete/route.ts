@@ -131,15 +131,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 4. Verificar que el post existe
-    const { data: originalPost, error: postError } = await supabase
+    // 4. Verificar que el WOD existe — puede ser un post personal (posts) o
+    // un WOD publicado por un centro (center_posts); son dos tablas distintas.
+    const { data: originalPost } = await supabase
       .from("posts")
       .select("id")
       .eq("id", originalWodPostId)
-      .single();
+      .maybeSingle();
 
-    if (postError || !originalPost) {
-      return NextResponse.json({ error: "WOD no encontrado" }, { status: 404 });
+    let isCenterPost = false;
+    if (!originalPost) {
+      const { data: centerPost } = await supabase
+        .from("center_posts")
+        .select("id")
+        .eq("id", originalWodPostId)
+        .maybeSingle();
+      if (!centerPost) {
+        return NextResponse.json({ error: "WOD no encontrado" }, { status: 404 });
+      }
+      isCenterPost = true;
     }
 
     // 5. No te puedes etiquetar a ti mismo como compañero
@@ -150,12 +160,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 6. Verificar si ya completó este WOD
+    // 6. Verificar si ya completó este WOD (por la columna que corresponda)
+    const sourceColumn = isCenterPost ? "original_center_post_id" : "original_wod_post_id";
     const { data: existing } = await supabase
       .from("wod_completions")
       .select("id")
       .eq("user_id", user.id)
-      .eq("original_wod_post_id", originalWodPostId)
+      .eq(sourceColumn, originalWodPostId)
       .maybeSingle();
 
     if (existing) {
@@ -186,10 +197,12 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Sync updated score to matching posts
-      await syncPostsForCompletion(supabase, user.id, originalWodPostId, {
-        completionType, completionTimeSeconds, roundsCompleted, totalReps, weightKg, score,
-      });
+      // Sync updated score to matching posts (solo aplica a posts personales)
+      if (!isCenterPost) {
+        await syncPostsForCompletion(supabase, user.id, originalWodPostId, {
+          completionType, completionTimeSeconds, roundsCompleted, totalReps, weightKg, score,
+        });
+      }
 
       return NextResponse.json({
         success: true,
@@ -203,7 +216,8 @@ export async function POST(request: NextRequest) {
       .from("wod_completions")
       .insert({
         user_id: user.id,
-        original_wod_post_id: originalWodPostId,
+        original_wod_post_id: isCenterPost ? null : originalWodPostId,
+        original_center_post_id: isCenterPost ? originalWodPostId : null,
         completion_type: completionType,
         completion_time_seconds: completionTimeSeconds ?? null,
         rounds_completed: roundsCompleted ?? null,
@@ -227,10 +241,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Sync newly inserted score to matching posts
-    await syncPostsForCompletion(supabase, user.id, originalWodPostId, {
-      completionType, completionTimeSeconds, roundsCompleted, totalReps, weightKg, score,
-    });
+    // Sync newly inserted score to matching posts (solo aplica a posts personales)
+    if (!isCenterPost) {
+      await syncPostsForCompletion(supabase, user.id, originalWodPostId, {
+        completionType, completionTimeSeconds, roundsCompleted, totalReps, weightKg, score,
+      });
+    }
 
     return NextResponse.json({
       success: true,

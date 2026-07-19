@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     let query = supabaseAdmin
       .from("wod_completions")
       .select("id, user_id, partner_id, completion_type, completion_time_seconds, rounds_completed, total_reps, weight_kg, score, rx, notes, completed_at")
-      .or(`original_wod_post_id.eq.${targetWodId},completion_post_id.eq.${targetWodId}`)
+      .or(`original_wod_post_id.eq.${targetWodId},original_center_post_id.eq.${targetWodId},completion_post_id.eq.${targetWodId}`)
       .limit(limit);
 
     if (rxOnly) query = query.eq("rx", true);

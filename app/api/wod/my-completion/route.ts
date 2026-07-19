@@ -22,9 +22,9 @@ export async function GET(request: NextRequest) {
 
     const { data: completion, error } = await supabase
       .from("wod_completions")
-      .select("id, user_id, original_wod_post_id, completion_post_id, completion_type, completion_time_seconds, rounds_completed, total_reps, weight_kg, score, rx, notes, partner_id, partner:partner_id(id, username, full_name, avatar_url), completed_at")
+      .select("id, user_id, original_wod_post_id, original_center_post_id, completion_post_id, completion_type, completion_time_seconds, rounds_completed, total_reps, weight_kg, score, rx, notes, partner_id, partner:partner_id(id, username, full_name, avatar_url), completed_at")
       .eq("user_id", user.id)
-      .or(`original_wod_post_id.eq.${wodPostId},completion_post_id.eq.${wodPostId}`)
+      .or(`original_wod_post_id.eq.${wodPostId},original_center_post_id.eq.${wodPostId},completion_post_id.eq.${wodPostId}`)
       .maybeSingle();
 
     if (error) {
