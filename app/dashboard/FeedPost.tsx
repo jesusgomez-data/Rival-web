@@ -1818,7 +1818,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     {/* WOD Display (WOD of the Day type) */}
                     {post_type === 'wod' && wod_data && (
                         <div className="space-y-6">
-                            <WODPostDisplay wod={wod_data} compact={true} />
+                            <WODPostDisplay wod={wod_data} compact={true} collapsible={true} />
                             <div className="flex flex-col sm:flex-row gap-4">
                                 <button
                                     className="flex-1 bg-gradient-to-r from-brand-red to-orange-600 text-white font-black uppercase tracking-widest text-xs py-4 rounded-2xl flex items-center justify-center gap-2 shadow-glow active:scale-95 transition-all"

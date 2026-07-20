@@ -20,11 +20,16 @@ interface ExtendedWOD extends GeneratedWOD {
 interface WODPostDisplayProps {
   wod: ExtendedWOD;
   compact?: boolean;
+  // compact ya fuerza los bloques siempre visibles sin botón de
+  // expandir/colapsar (pensado para vistas de resumen). En el feed
+  // queremos SEGUIR filtrando warmup/cooldown (lo que da `compact`) pero
+  // que la tarjeta arranque colapsada y el usuario pueda abrirla/cerrarla.
+  collapsible?: boolean;
 }
 
-export default function WODPostDisplay({ wod, compact = false }: WODPostDisplayProps) {
+export default function WODPostDisplay({ wod, compact = false, collapsible = false }: WODPostDisplayProps) {
   // Estado para expandir/colapsar
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(!collapsible);
 
   // Validación: si no hay WOD o no tiene blocks, no renderizar
   if (!wod || !wod.blocks || !Array.isArray(wod.blocks)) {
@@ -205,27 +210,36 @@ export default function WODPostDisplay({ wod, compact = false }: WODPostDisplayP
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Stats — WODs antiguos (o generados antes de que el coach guardase
+            estos campos) pueden no tener estimatedDuration/caloriesBurn/
+            difficulty. Antes se mostraba la unidad igualmente ("min", "kcal")
+            con el número en blanco; ahora esa píldora se oculta si no hay dato. */}
         <div className="flex flex-wrap items-center gap-4 text-sm">
-          <div className="flex items-center gap-2 bg-black/30 px-3 py-2 rounded-lg">
-            <Clock className="w-4 h-4 text-purple-400" />
-            <span className="text-white font-bold">{wod.estimatedDuration} min</span>
-          </div>
-          <div className="flex items-center gap-2 bg-black/30 px-3 py-2 rounded-lg">
-            <Zap className="w-4 h-4 text-orange-400" />
-            <span className="text-white font-bold">{wod.caloriesBurn} kcal</span>
-          </div>
+          {wod.estimatedDuration != null && (
+            <div className="flex items-center gap-2 bg-black/30 px-3 py-2 rounded-lg">
+              <Clock className="w-4 h-4 text-purple-400" />
+              <span className="text-white font-bold">{wod.estimatedDuration} min</span>
+            </div>
+          )}
+          {wod.caloriesBurn != null && (
+            <div className="flex items-center gap-2 bg-black/30 px-3 py-2 rounded-lg">
+              <Zap className="w-4 h-4 text-orange-400" />
+              <span className="text-white font-bold">{wod.caloriesBurn} kcal</span>
+            </div>
+          )}
+          {wod.difficulty && (
           <div className="flex items-center gap-2 bg-black/30 px-3 py-2 rounded-lg">
             <span className="text-xl">{difficultyEmoji[wod.difficulty] || "📊"}</span>
             <span className="text-white font-bold uppercase">{wod.difficulty}</span>
           </div>
+          )}
         </div>
       </div>
 
       {/* Blocks */}
       <div className="p-6 space-y-4">
-        {/* Si no está expandido o es compact, mostrar bloques */}
-        {(isExpanded || compact) && wod.blocks.map((block, idx) => {
+        {/* Si no está expandido o es compact (y no colapsable), mostrar bloques */}
+        {(isExpanded || (compact && !collapsible)) && wod.blocks.map((block, idx) => {
           // Filtrar warmup/cooldown si es compact
           if (compact && (block.type === "warmup" || block.type === "cooldown")) {
             return null;
@@ -268,7 +282,7 @@ export default function WODPostDisplay({ wod, compact = false }: WODPostDisplayP
         })}
 
         {/* Tips */}
-        {wod.tips && wod.tips.length > 0 && !compact && isExpanded && (
+        {wod.tips && wod.tips.length > 0 && (!compact || collapsible) && isExpanded && (
           <div className="bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border border-yellow-500/30 rounded-xl p-4">
             <div className="flex items-start gap-2">
               <span className="text-xl">💡</span>
@@ -281,7 +295,7 @@ export default function WODPostDisplay({ wod, compact = false }: WODPostDisplayP
         )}
 
         {/* Botón Expandir/Colapsar */}
-        {!compact && (
+        {(!compact || collapsible) && (
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="w-full mt-4 py-2 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg flex items-center justify-center gap-2 text-sm font-bold text-gray-300 transition-colors"
