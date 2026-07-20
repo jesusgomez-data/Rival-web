@@ -202,42 +202,59 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
         setIsScanning(true);
         try {
             const reader = new FileReader();
+            // El try/catch de fuera solo cubre readAsDataURL (síncrono). Todo lo
+            // de aquí dentro corre en un callback async aparte: si parseWodFromImage
+            // lanzaba una excepción (en vez de devolver { error }) — timeout,
+            // fallo de red, error 500 del servidor — se quedaba como promise
+            // rejection sin capturar y setIsScanning(false) nunca se ejecutaba,
+            // dejando el botón en "Escaneando..." para siempre sin avisar nada.
             reader.onloadend = async () => {
-                const base64 = reader.result as string;
-                const res = await parseWodFromImage(base64);
-                if (res.success && res.data) {
-                    const data = res.data;
-                    const newTitle = data.title || title;
-                    const newCat = data.category || category;
-                    const newDate = date;
-                    const newSummary = data.summary || summary;
-                    
-                    if (data.title) setTitle(data.title.toUpperCase());
-                    if (data.category) setCategory(data.category);
-                    
-                    if (data.blocks && Array.isArray(data.blocks)) {
-                        const normalizedBlocks = data.blocks.map((b: any) => ({
-                            ...b,
-                            format: b.format || 'LIBRE',
-                            config: b.config || {},
-                            id: Math.random().toString(36).substring(7),
-                            exercises: Array.isArray(b.exercises) ? b.exercises.map((ex: any) => ({
+                try {
+                    const base64 = reader.result as string;
+                    const res = await parseWodFromImage(base64);
+                    if (res.success && res.data) {
+                        const data = res.data;
+                        const newTitle = data.title || title;
+                        const newCat = data.category || category;
+                        const newDate = date;
+                        const newSummary = data.summary || summary;
+
+                        if (data.title) setTitle(data.title.toUpperCase());
+                        if (data.category) setCategory(data.category);
+
+                        if (data.blocks && Array.isArray(data.blocks)) {
+                            const normalizedBlocks = data.blocks.map((b: any) => ({
+                                ...b,
+                                format: b.format || 'LIBRE',
+                                config: b.config || {},
                                 id: Math.random().toString(36).substring(7),
-                                name: ex.name || '',
-                                reps: ex.reps || '',
-                                detail: ex.detail || '',
-                                type: ex.type || 'exercise'
-                            })) : []
-                        }));
-                        setBlocks(normalizedBlocks);
-                        if (data.summary) setSummary(data.summary);
-                        updateWod(newTitle, normalizedBlocks, newSummary, newDate, newCat);
+                                exercises: Array.isArray(b.exercises) ? b.exercises.map((ex: any) => ({
+                                    id: Math.random().toString(36).substring(7),
+                                    name: ex.name || '',
+                                    reps: ex.reps || '',
+                                    detail: ex.detail || '',
+                                    type: ex.type || 'exercise'
+                                })) : []
+                            }));
+                            setBlocks(normalizedBlocks);
+                            if (data.summary) setSummary(data.summary);
+                            updateWod(newTitle, normalizedBlocks, newSummary, newDate, newCat);
+                        } else {
+                            alert('La pizarra se analizó correctamente pero no se encontró un formato estructurado de bloques compatible.');
+                        }
                     } else {
-                        alert('La pizarra se analizó correctamente pero no se encontró un formato estructurado de bloques compatible.');
+                        alert(res.error || 'No se pudo analizar la imagen. Intenta con una foto más clara.');
                     }
-                } else {
-                    alert(res.error || 'No se pudo analizar la imagen. Intenta con una foto más clara.');
+                } catch (err: any) {
+                    console.error('Scan error (onloadend):', err);
+                    alert(`No se pudo escanear la pizarra: ${err?.message || 'error desconocido'}. Inténtalo de nuevo.`);
+                } finally {
+                    setIsScanning(false);
                 }
+            };
+            reader.onerror = () => {
+                console.error('FileReader error while scanning WOD image');
+                alert('No se pudo leer la imagen. Inténtalo de nuevo.');
                 setIsScanning(false);
             };
             reader.readAsDataURL(file);
