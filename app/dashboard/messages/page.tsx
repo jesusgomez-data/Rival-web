@@ -91,11 +91,15 @@ function MessagesContent() {
                 const user = authData?.user
                 if (user) {
                     setCurrentUserId(user.id)
-                    // Fetch own profile for MSN-style header
-                    const { data: prof } = await supabase.from('profiles').select('full_name, username, avatar_url').eq('id', user.id).single()
+                    // Perfil, conversaciones y amigos no dependen entre sí — se piden en
+                    // paralelo en vez de en cadena (esto era lo que hacía que entrar a
+                    // Mensajes tardase varios segundos: 4 round-trips secuenciales).
+                    const [{ data: prof }, , friendsData] = await Promise.all([
+                        supabase.from('profiles').select('full_name, username, avatar_url').eq('id', user.id).single(),
+                        loadConversations(),
+                        getFriendsToChat()
+                    ])
                     setMyProfile(prof)
-                    await loadConversations()
-                    const friendsData = await getFriendsToChat()
                     setFriends(friendsData)
 
                     if (targetUserId) {

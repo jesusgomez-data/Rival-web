@@ -4,7 +4,6 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { createUserPost, createPRPost, createWodPost } from './explore/actions';
 import { Loader2, CheckCircle2, XCircle, Clock, Trash2 } from 'lucide-react';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import PRCelebrationModal from './training/session/PRCelebrationModal';
 
@@ -15,6 +14,7 @@ interface UploadTask {
     error?: string;
     caption: string;
     preview?: string;
+    previewIsVideo?: boolean;
     type: 'standard' | 'pr' | 'wod';
 }
 
@@ -83,6 +83,22 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
     const [celebrationUser, setCelebrationUser] = useState<string>("");
     const supabase = createClient();
 
+    // La subida vive solo en memoria de esta pestaña: si el usuario cierra o
+    // recarga la app mientras hay una tarea en curso, se pierde sin avisar
+    // (por eso "si salgo de la app no se carga nada"). No podemos sobrevivir
+    // a que la app se cierre del todo, pero sí podemos avisar antes de que
+    // ocurra en el navegador.
+    React.useEffect(() => {
+        const hasActiveUpload = uploads.some(u => u.status === 'uploading' || u.status === 'processing');
+        if (!hasActiveUpload) return;
+        const handler = (e: BeforeUnloadEvent) => {
+            e.preventDefault();
+            e.returnValue = '';
+        };
+        window.addEventListener('beforeunload', handler);
+        return () => window.removeEventListener('beforeunload', handler);
+    }, [uploads]);
+
     const startUpload = useCallback(async (data: {
         content: string;
         file: File | null;
@@ -107,6 +123,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
             status: 'uploading',
             caption: data.content || `${data.exercise}: ${data.weight}kg`,
             preview: data.preview,
+            previewIsVideo: data.file?.type?.startsWith('video/') || false,
             type: data.postType
         };
 
@@ -278,6 +295,7 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
             status: 'processing',
             caption: 'Publicando Historia...',
             preview: data.previewUrl,
+            previewIsVideo: data.file?.type?.startsWith('video/') || false,
             type: 'standard'
         };
 
@@ -517,8 +535,14 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
                             <div className="relative p-3 flex gap-3 items-center">
                                 {/* Preview Thumbnail */}
                                 <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 overflow-hidden shrink-0 relative shadow-inner">
-                                    {task.preview ? (
-                                        <Image src={task.preview} alt="Preview" fill className="object-cover" />
+                                    {task.preview && task.previewIsVideo ? (
+                                        // blob: URLs (archivo local aún sin subir) no pueden pasar por
+                                        // next/image: no son fetcheables desde el servidor de Next para
+                                        // optimizarlas, y un blob de vídeo tampoco es decodificable como
+                                        // imagen — de ahí el icono roto. Un <video> sí puede leer el blob.
+                                        <video src={task.preview} muted playsInline className="w-full h-full object-cover" />
+                                    ) : task.preview ? (
+                                        <img src={task.preview} alt="Preview" className="w-full h-full object-cover" />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-brand-red/20 to-transparent">
                                             <Clock className="w-5 h-5 text-brand-red animate-pulse" />
