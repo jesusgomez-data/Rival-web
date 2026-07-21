@@ -838,17 +838,21 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                 {!!block.config?.minutes && (
                                                     (() => {
                                                         const minutes = block.config.minutes!;
-                                                        // "3 MIN" → 3. Con frecuencia 1 (EMOM clasico) cada ronda dura 1
-                                                        // minuto y se reparte 1 ejercicio de la lista por minuto; con
-                                                        // frecuencia >1 (E2MOM/E3MOM...) cada ronda dura N minutos y se
-                                                        // completa la lista entera de ejercicios una vez por ronda.
+                                                        const exCount = Math.max(1, block.exercises?.length || 1);
+                                                        // "3 MIN" → 3. Cada ejercicio de la lista ocupa un slot de
+                                                        // `freq` minutos antes de pasar al siguiente (con freq=1 eso
+                                                        // es el EMOM clasico: 1 ejercicio por minuto). Una "ronda" es
+                                                        // una vuelta completa a la lista, así que dura freq * exCount
+                                                        // minutos — con 2 ejercicios a 1 min c/u son rondas de 2 min;
+                                                        // con "E3MOM x5" (freq 3, 1 slot por ronda) son rondas de 3 min.
                                                         const freq = parseInt(block.config?.frequency || '1 MIN') || 1;
-                                                        const rounds = Math.floor(minutes / freq);
-                                                        const remainder = minutes % freq;
+                                                        const minutesPerRound = freq * exCount;
+                                                        const rounds = Math.floor(minutes / minutesPerRound);
+                                                        const remainder = minutes - rounds * minutesPerRound;
                                                         return (
                                                             <div className={clsx("px-2 py-1.5 rounded-xl border animate-in fade-in duration-500 flex flex-col justify-center", remainder === 0 ? "bg-brand-red/10 border-brand-red/20" : "bg-yellow-500/10 border-yellow-500/30")}>
                                                                 <p className={clsx("text-[10px] font-black uppercase italic leading-none", remainder === 0 ? "text-brand-red" : "text-yellow-500")}>
-                                                                    {rounds} RONDAS {freq > 1 ? `DE ${freq}'` : ''}
+                                                                    {rounds} RONDAS {freq > 1 ? `(SLOTS DE ${freq}')` : ''}
                                                                 </p>
                                                                 {remainder > 0 && (
                                                                     <p className="text-[8px] font-bold text-yellow-500/70 leading-none mt-0.5">+{remainder} MIN EXTRA</p>
