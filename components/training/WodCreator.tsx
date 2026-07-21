@@ -195,71 +195,79 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [partner]);
 
+    // Las fotos de cámara de un móvil actual pesan 3-8MB en JPEG; en base64
+    // (+33%) eso puede superar el límite de 5MB de los Server Actions, que
+    // responden con una página de error HTML en vez de JSON — de ahí el
+    // "unexpected response from the server" en vez de un mensaje claro.
+    // Redimensionar aquí antes de mandarlo evita el límite y además acelera
+    // la respuesta de Gemini (menos píxeles que analizar).
+    const MAX_SCAN_DIMENSION = 1600;
+    const resizeImageForScan = (file: File): Promise<string> => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const scale = Math.min(1, MAX_SCAN_DIMENSION / Math.max(img.width, img.height));
+                const w = Math.round(img.width * scale);
+                const h = Math.round(img.height * scale);
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                const ctx = canvas.getContext('2d');
+                if (!ctx) { reject(new Error('No se pudo procesar la imagen.')); return; }
+                ctx.drawImage(img, 0, 0, w, h);
+                URL.revokeObjectURL(img.src);
+                resolve(canvas.toDataURL('image/jpeg', 0.85));
+            };
+            img.onerror = () => reject(new Error('No se pudo leer la imagen.'));
+            img.src = URL.createObjectURL(file);
+        });
+    };
+
     const handleScanImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         setIsScanning(true);
         try {
-            const reader = new FileReader();
-            // El try/catch de fuera solo cubre readAsDataURL (síncrono). Todo lo
-            // de aquí dentro corre en un callback async aparte: si parseWodFromImage
-            // lanzaba una excepción (en vez de devolver { error }) — timeout,
-            // fallo de red, error 500 del servidor — se quedaba como promise
-            // rejection sin capturar y setIsScanning(false) nunca se ejecutaba,
-            // dejando el botón en "Escaneando..." para siempre sin avisar nada.
-            reader.onloadend = async () => {
-                try {
-                    const base64 = reader.result as string;
-                    const res = await parseWodFromImage(base64);
-                    if (res.success && res.data) {
-                        const data = res.data;
-                        const newTitle = data.title || title;
-                        const newCat = data.category || category;
-                        const newDate = date;
-                        const newSummary = data.summary || summary;
+            const base64 = await resizeImageForScan(file);
+            const res = await parseWodFromImage(base64);
+            if (res.success && res.data) {
+                const data = res.data;
+                const newTitle = data.title || title;
+                const newCat = data.category || category;
+                const newDate = date;
+                const newSummary = data.summary || summary;
 
-                        if (data.title) setTitle(data.title.toUpperCase());
-                        if (data.category) setCategory(data.category);
+                if (data.title) setTitle(data.title.toUpperCase());
+                if (data.category) setCategory(data.category);
 
-                        if (data.blocks && Array.isArray(data.blocks)) {
-                            const normalizedBlocks = data.blocks.map((b: any) => ({
-                                ...b,
-                                format: b.format || 'LIBRE',
-                                config: b.config || {},
-                                id: Math.random().toString(36).substring(7),
-                                exercises: Array.isArray(b.exercises) ? b.exercises.map((ex: any) => ({
-                                    id: Math.random().toString(36).substring(7),
-                                    name: ex.name || '',
-                                    reps: ex.reps || '',
-                                    detail: ex.detail || '',
-                                    type: ex.type || 'exercise'
-                                })) : []
-                            }));
-                            setBlocks(normalizedBlocks);
-                            if (data.summary) setSummary(data.summary);
-                            updateWod(newTitle, normalizedBlocks, newSummary, newDate, newCat);
-                        } else {
-                            alert('La pizarra se analizó correctamente pero no se encontró un formato estructurado de bloques compatible.');
-                        }
-                    } else {
-                        alert(res.error || 'No se pudo analizar la imagen. Intenta con una foto más clara.');
-                    }
-                } catch (err: any) {
-                    console.error('Scan error (onloadend):', err);
-                    alert(`No se pudo escanear la pizarra: ${err?.message || 'error desconocido'}. Inténtalo de nuevo.`);
-                } finally {
-                    setIsScanning(false);
+                if (data.blocks && Array.isArray(data.blocks)) {
+                    const normalizedBlocks = data.blocks.map((b: any) => ({
+                        ...b,
+                        format: b.format || 'LIBRE',
+                        config: b.config || {},
+                        id: Math.random().toString(36).substring(7),
+                        exercises: Array.isArray(b.exercises) ? b.exercises.map((ex: any) => ({
+                            id: Math.random().toString(36).substring(7),
+                            name: ex.name || '',
+                            reps: ex.reps || '',
+                            detail: ex.detail || '',
+                            type: ex.type || 'exercise'
+                        })) : []
+                    }));
+                    setBlocks(normalizedBlocks);
+                    if (data.summary) setSummary(data.summary);
+                    updateWod(newTitle, normalizedBlocks, newSummary, newDate, newCat);
+                } else {
+                    alert('La pizarra se analizó correctamente pero no se encontró un formato estructurado de bloques compatible.');
                 }
-            };
-            reader.onerror = () => {
-                console.error('FileReader error while scanning WOD image');
-                alert('No se pudo leer la imagen. Inténtalo de nuevo.');
-                setIsScanning(false);
-            };
-            reader.readAsDataURL(file);
-        } catch (err) {
+            } else {
+                alert(res.error || 'No se pudo analizar la imagen. Intenta con una foto más clara.');
+            }
+        } catch (err: any) {
             console.error('Scan error:', err);
+            alert(`No se pudo escanear la pizarra: ${err?.message || 'error desconocido'}. Inténtalo de nuevo.`);
+        } finally {
             setIsScanning(false);
         }
     };
