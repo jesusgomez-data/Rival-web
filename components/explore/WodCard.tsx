@@ -468,15 +468,26 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                                             {block.config?.rounds && <span className="text-[9px] text-gray-500 font-bold">· {block.config.rounds} RONDAS</span>}
                                         </div>
                                         <div className="space-y-2">
-                                            {block.exercises && block.exercises.map((ex) => (
-                                                <div key={ex.id} className="flex items-center justify-between">
-                                                    <span className="text-xs text-gray-300 font-medium">{ex.name}</span>
-                                                    <div className="flex items-center gap-1">
-                                                        {ex.reps && <span className="text-xs font-black text-white">{ex.reps}</span>}
-                                                        {ex.detail && <span className="text-xs font-black text-brand-red">{ex.detail}{ex.unit}</span>}
+                                            {block.exercises && block.exercises.map((ex: any) => {
+                                                // Dos herramientas de creación de WOD guardan el peso/objetivo con
+                                                // nombres de campo distintos (detail/unit vs value/weightUnit) —
+                                                // se aceptan los dos para que no se pierda el dato según cuál se
+                                                // haya usado para publicar este WOD.
+                                                const weightText = ex.detail || ex.value;
+                                                const weightUnit = ex.unit || ex.weightUnit || '';
+                                                return (
+                                                    <div key={ex.id} className="space-y-0.5">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-xs text-gray-300 font-medium">{ex.name}</span>
+                                                            <div className="flex items-center gap-1">
+                                                                {ex.reps && <span className="text-xs font-black text-white">{ex.reps}</span>}
+                                                                {weightText && <span className="text-xs font-black text-brand-red">{weightText}{weightUnit}</span>}
+                                                            </div>
+                                                        </div>
+                                                        {ex.note && <p className="text-[10px] text-gray-500 italic">{ex.note}</p>}
                                                     </div>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     </div>
                                 );

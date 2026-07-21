@@ -1413,18 +1413,32 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                                         return (
                                                                             <div className="space-y-2">
                                                                                 {lines.map((item: any, i: number) => {
-                                                                                    let text;
                                                                                     if (typeof item === 'string') {
-                                                                                        text = item;
-                                                                                    } else {
-                                                                                        const prefix = [item.sets, item.reps].filter(Boolean).join('x');
-                                                                                        const suffix = item.value ? `@ ${item.value}` : '';
-                                                                                        text = `${prefix ? prefix + ' ' : ''}${item.name} ${suffix}`.trim();
+                                                                                        return (
+                                                                                            <div key={i} className="flex items-center gap-2 text-foreground/70 text-sm font-medium pl-2 border-l border-border">
+                                                                                                <div className="w-1 h-1 rounded-full bg-brand-red" />
+                                                                                                {item}
+                                                                                            </div>
+                                                                                        );
                                                                                     }
+                                                                                    // Estos campos existian en el dato guardado pero nunca se
+                                                                                    // mostraban aqui: unidad de la rep (ej. "cal", "m"), peso/
+                                                                                    // objetivo con su unidad, y la nota del ejercicio (ej. "RIR 2",
+                                                                                    // "unbroken"). El WOD publicado se veia incompleto frente a lo
+                                                                                    // que el coach realmente cargo.
+                                                                                    const prefix = [item.sets, item.reps].filter(Boolean).join('x');
+                                                                                    const repUnitSuffix = item.repUnit && item.repUnit !== 'reps' ? ` ${item.repUnit}` : '';
+                                                                                    const valueSuffix = item.value ? ` @ ${item.value}${item.weightUnit || 'kg'}` : '';
+                                                                                    const text = `${prefix ? prefix + repUnitSuffix + ' ' : ''}${item.name}${valueSuffix}`.trim();
                                                                                     return (
-                                                                                        <div key={i} className="flex items-center gap-2 text-foreground/70 text-sm font-medium pl-2 border-l border-border">
-                                                                                            <div className="w-1 h-1 rounded-full bg-brand-red" />
-                                                                                            {text}
+                                                                                        <div key={i} className="flex flex-col gap-0.5 pl-2 border-l border-border">
+                                                                                            <div className="flex items-center gap-2 text-foreground/70 text-sm font-medium">
+                                                                                                <div className="w-1 h-1 rounded-full bg-brand-red shrink-0" />
+                                                                                                {text}
+                                                                                            </div>
+                                                                                            {item.note && (
+                                                                                                <p className="text-muted-foreground text-xs italic pl-3">{item.note}</p>
+                                                                                            )}
                                                                                         </div>
                                                                                     );
                                                                                 })}

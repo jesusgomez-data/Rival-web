@@ -137,21 +137,36 @@ export default function WODPostDisplay({ wod, compact = false, collapsible = fal
                 </div>
 
                 <div className="grid gap-3">
-                    {block.exercises && block.exercises.map((ex, eIdx) => (
+                    {block.exercises && block.exercises.map((ex: any, eIdx) => {
+                    // Distintas herramientas de creación de WOD guardan estos dos
+                    // datos con nombres de campo diferentes — se aceptan ambos
+                    // para no perder el peso/objetivo ni la nota del ejercicio.
+                    const noteText = ex.notes || ex.note;
+                    const weightText = ex.detail || ex.value;
+                    const weightUnit = ex.unit || ex.weightUnit || '';
+                    return (
                     <div key={eIdx} className="bg-white/[0.03] border border-white/5 rounded-[22px] p-8 hover:bg-white/[0.05] transition-all hover:border-white/10 group/row">
                         <div className="flex items-center justify-between gap-4">
                             <div className="space-y-1.5">
                                 <p className="text-lg font-black text-white group-hover/row:text-brand-red transition-colors uppercase italic tracking-tight">{ex.name}</p>
-                                {ex.notes && <p className="text-sm text-gray-500 font-medium leading-relaxed max-w-md">{ex.notes}</p>}
+                                {noteText && <p className="text-sm text-gray-500 font-medium leading-relaxed max-w-md">{noteText}</p>}
                             </div>
-                            {ex.reps && (
-                                <div className="bg-black border border-white/10 px-4 py-2 rounded-xl">
-                                    <span className="text-xs font-black text-white/50 uppercase italic">{ex.reps}</span>
-                                </div>
-                            )}
+                            <div className="flex items-center gap-2 shrink-0">
+                                {weightText && (
+                                    <div className="bg-brand-red/10 border border-brand-red/20 px-4 py-2 rounded-xl">
+                                        <span className="text-xs font-black text-brand-red uppercase italic">{weightText}{weightUnit}</span>
+                                    </div>
+                                )}
+                                {ex.reps && (
+                                    <div className="bg-black border border-white/10 px-4 py-2 rounded-xl">
+                                        <span className="text-xs font-black text-white/50 uppercase italic">{ex.reps}</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
-                    ))}
+                    );
+                    })}
                 </div>
               </div>
             ))}
@@ -262,20 +277,26 @@ export default function WODPostDisplay({ wod, compact = false, collapsible = fal
 
               {/* Exercises */}
               <div className="space-y-2">
-                {block.exercises && Array.isArray(block.exercises) && block.exercises.map((ex, i) => (
+                {block.exercises && Array.isArray(block.exercises) && block.exercises.map((ex: any, i) => {
+                  const noteText = ex.notes || ex.note;
+                  const weightText = ex.detail || ex.value;
+                  const weightUnit = ex.unit || ex.weightUnit || '';
+                  return (
                   <div key={`ex-${idx}-${i}-${ex.name}`} className="flex items-start gap-2 text-gray-200">
                     <span className="text-brand-red font-bold">•</span>
                     <div className="flex-1">
                       <div className="flex items-baseline gap-2">
                         {ex.reps && <span className="text-white font-bold shrink-0">{ex.reps}</span>}
                         <span className="font-medium">{ex.name}</span>
+                        {weightText && <span className="text-brand-red font-bold text-xs">{weightText}{weightUnit}</span>}
                       </div>
-                      {ex.notes && (
-                        <p className="text-xs text-gray-500 mt-0.5">{ex.notes}</p>
+                      {noteText && (
+                        <p className="text-xs text-gray-500 mt-0.5">{noteText}</p>
                       )}
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
