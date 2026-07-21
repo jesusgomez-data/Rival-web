@@ -171,6 +171,22 @@ export async function addExerciseToCatalog(name: string) {
         .select()
         .single();
 
-    if (error) return { error: error.message };
-    return { success: true, exercise: data };
+    if (!error) return { success: true, exercise: data };
+
+    // El catálogo cargado en el navegador puede estar desactualizado (otro
+    // coach ya lo agregó, o la lista inicial no traía el ejercicio) — en vez
+    // de mostrar el error crudo de la base de datos, se busca la fila que ya
+    // existe con ese nombre y se usa esa, que es lo que el usuario quería
+    // de todos modos.
+    if (error.code === '23505') {
+        const { data: existing, error: fetchError } = await supabase
+            .from('exercises_catalog')
+            .select()
+            .eq('name', name)
+            .single();
+
+        if (!fetchError && existing) return { success: true, exercise: existing };
+    }
+
+    return { error: error.message };
 }
