@@ -9,7 +9,7 @@ import clsx from "clsx";
 import { useTheme } from "../../../../ThemeContext";
 
 type BlockType = 'weightlifting' | 'metcon' | 'gymnastics' | 'endurance' | 'mobility' | 'other';
-type BlockFormat = 'EMOM' | 'AMRAP' | 'FOR TIME' | 'INTERVALS' | 'TABATA' | 'QUALITY' | 'REST' | 'DEATH BY' | 'FREE' | 'ROUNDS FOR TIME';
+type BlockFormat = 'EMOM' | 'AMRAP' | 'FOR TIME' | 'INTERVALS' | 'TABATA' | 'QUALITY' | 'REST' | 'DEATH BY' | 'FREE' | 'ROUNDS FOR TIME' | 'CHIPPER' | 'STRENGTH';
 
 const PART_NAMES: Record<BlockType, string> = {
     weightlifting: 'Fuerza / Weightlifting',
@@ -32,8 +32,10 @@ interface WodBlock {
         rounds?: number;
         work?: string;
         rest?: string;
-        frequency?: string;
+        frequency?: string; // EMOM: "1 MIN" | "2 MIN" | "3 MIN"... — cada cuántos minutos arranca una ronda nueva
         minutes?: number;
+        sets?: number;      // STRENGTH
+        reps?: string;      // STRENGTH
     };
     title?: string;
     duration?: string;
@@ -552,11 +554,13 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                 let formatInfo = '';
                 if (block.format && block.format !== 'FREE') {
                     const cfg = block.config;
-                    if (block.format === 'EMOM')              formatInfo = ` · ${cfg?.minutes || '?'} MINS EMOM`;
+                    if (block.format === 'EMOM')              formatInfo = ` · E${(cfg?.frequency || '1 MIN').replace(' MIN', '')}MOM ${cfg?.minutes || '?'} MINS`;
                     else if (block.format === 'AMRAP')        formatInfo = ` · AMRAP ${cfg?.timecap || ''}`;
                     else if (block.format === 'FOR TIME')     formatInfo = ` · FOR TIME ${cfg?.timecap ? `(CAP: ${cfg.timecap})` : ''}`;
+                    else if (block.format === 'CHIPPER')      formatInfo = ` · CHIPPER ${cfg?.timecap ? `(CAP: ${cfg.timecap})` : ''}`;
                     else if (block.format === 'ROUNDS FOR TIME') formatInfo = ` · ${cfg?.rounds || '?'} RDS FOR TIME ${cfg?.timecap ? `(CAP: ${cfg.timecap})` : ''}`;
                     else if (block.format === 'TABATA')       formatInfo = ` · TABATA ${cfg?.rounds || 8} RDS (${cfg?.work || '20S'}/${cfg?.rest || '10S'})`;
+                    else if (block.format === 'STRENGTH')     formatInfo = ` · ${cfg?.sets || '?'}x${cfg?.reps || '?'} (DESCANSO ${cfg?.rest || '90S'})`;
                     else formatInfo = ` · ${block.format}`;
                 }
                 line(`── ${partLabel}${formatInfo} ${'─'.repeat(Math.max(0, 57 - partLabel.length - formatInfo.length))}`);
@@ -708,9 +712,10 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                     let newConfig = { ...block.config };
                                                     if (newFormat === 'EMOM') newConfig = { frequency: '1 MIN', minutes: 12 };
                                                     else if (newFormat === 'AMRAP') newConfig = { timecap: '20:00' };
-                                                    else if (newFormat === 'FOR TIME') newConfig = { timecap: '' };
+                                                    else if (newFormat === 'FOR TIME' || newFormat === 'CHIPPER') newConfig = { timecap: '' };
                                                     else if (newFormat === 'ROUNDS FOR TIME') newConfig = { rounds: 5, timecap: '20:00' };
                                                     else if (newFormat === 'TABATA') newConfig = { rounds: 8, work: '20S', rest: '10S' };
+                                                    else if (newFormat === 'STRENGTH') newConfig = { sets: 5, reps: '5', rest: '90S' };
 
                                                     updateBlock(index, { format: newFormat, config: newConfig });
                                                 }}
@@ -720,17 +725,19 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                 <option value="EMOM">EMOM</option>
                                                 <option value="FOR TIME">For Time</option>
                                                 <option value="ROUNDS FOR TIME">Rounds for Time</option>
+                                                <option value="CHIPPER">Chipper</option>
                                                 <option value="AMRAP">AMRAP</option>
                                                 <option value="INTERVALS">Intervals</option>
                                                 <option value="TABATA">Tabata</option>
                                                 <option value="DEATH BY">Death By</option>
+                                                <option value="STRENGTH">Fuerza (Sets x Reps)</option>
                                                 <option value="QUALITY">Quality</option>
                                                 <option value="REST">Rest</option>
                                             </select>
                                             <ChevronDown className="w-3 h-3 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                                         </div>
 
-                                        {(block.format === 'AMRAP' || block.format === 'FOR TIME' || block.format === 'ROUNDS FOR TIME' || block.format === 'TABATA') && (
+                                        {(block.format === 'AMRAP' || block.format === 'FOR TIME' || block.format === 'ROUNDS FOR TIME' || block.format === 'TABATA' || block.format === 'CHIPPER') && (
                                             <div className="flex items-end gap-2">
                                                 {(block.format === 'ROUNDS FOR TIME' || block.format === 'TABATA') && (
                                                     <div className="flex flex-col items-center gap-0.5">
@@ -757,42 +764,91 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                     </>
                                                 )}
 
-                                                {(block.format === 'AMRAP' || block.format === 'FOR TIME' || block.format === 'ROUNDS FOR TIME') && (
+                                                {(block.format === 'AMRAP' || block.format === 'FOR TIME' || block.format === 'ROUNDS FOR TIME' || block.format === 'CHIPPER') && (
                                                     <div className="flex flex-col items-center gap-0.5">
-                                                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Time Cap</span>
-                                                        <input 
-                                                            type="text" 
-                                                            value={block.config?.timecap || ''} 
+                                                        <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">{block.format === 'CHIPPER' ? 'Time Cap (opcional)' : 'Time Cap'}</span>
+                                                        <input
+                                                            type="text"
+                                                            value={block.config?.timecap || ''}
                                                             placeholder="20:00"
-                                                            onChange={e => updateBlock(index, { config: { ...block.config, timecap: e.target.value } })} 
-                                                            className="w-16 h-9 bg-background border border-brand-red/30 rounded-xl text-center text-sm font-black text-brand-red focus:border-brand-red outline-none" 
+                                                            onChange={e => updateBlock(index, { config: { ...block.config, timecap: e.target.value } })}
+                                                            className="w-16 h-9 bg-background border border-brand-red/30 rounded-xl text-center text-sm font-black text-brand-red focus:border-brand-red outline-none"
                                                         />
                                                     </div>
                                                 )}
                                             </div>
                                         )}
 
+                                        {block.format === 'STRENGTH' && (
+                                            <div className="flex items-end gap-2">
+                                                <div className="flex flex-col items-center gap-0.5">
+                                                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Sets</span>
+                                                    <input
+                                                        type="number"
+                                                        value={block.config?.sets || 5}
+                                                        onChange={e => updateBlock(index, { config: { ...block.config, sets: Math.max(1, parseInt(e.target.value) || 1) } })}
+                                                        className="w-14 h-9 bg-background border border-border rounded-xl text-center text-sm font-black text-foreground focus:border-brand-red outline-none"
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col items-center gap-0.5">
+                                                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Reps</span>
+                                                    <input
+                                                        type="text"
+                                                        value={block.config?.reps || '5'}
+                                                        placeholder="5 o 3-5"
+                                                        onChange={e => updateBlock(index, { config: { ...block.config, reps: e.target.value } })}
+                                                        className="w-16 h-9 bg-background border border-border rounded-xl text-center text-sm font-black text-foreground focus:border-brand-red outline-none"
+                                                    />
+                                                </div>
+                                                <div className="flex flex-col items-center gap-0.5">
+                                                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Descanso</span>
+                                                    <input
+                                                        type="text"
+                                                        value={block.config?.rest || '90S'}
+                                                        onChange={e => updateBlock(index, { config: { ...block.config, rest: e.target.value.toUpperCase() } })}
+                                                        className="w-16 h-9 bg-background border border-border rounded-xl text-center text-sm font-black text-foreground focus:border-brand-red outline-none"
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+
                                         {block.format === 'EMOM' && (
                                             <div className="flex items-end gap-2">
                                                 <div className="flex flex-col items-center gap-0.5">
-                                                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Minutos</span>
-                                                    <input 
-                                                        type="number" 
-                                                        value={block.config?.minutes || 12} 
-                                                        onChange={e => updateBlock(index, { config: { ...block.config, minutes: Math.max(1, parseInt(e.target.value) || 12) } })} 
-                                                        className="w-16 h-9 bg-background border border-brand-red/30 rounded-xl text-center text-sm font-black text-brand-red focus:border-brand-red outline-none" 
+                                                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Cada</span>
+                                                    <select
+                                                        value={block.config?.frequency || '1 MIN'}
+                                                        onChange={e => updateBlock(index, { config: { ...block.config, frequency: e.target.value } })}
+                                                        className="h-9 bg-background border border-border rounded-xl px-2 text-center text-sm font-black text-foreground focus:border-brand-red outline-none appearance-none cursor-pointer"
+                                                    >
+                                                        {[1, 2, 3, 4, 5, 6].map(n => (
+                                                            <option key={n} value={`${n} MIN`}>{n}'</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                                <div className="flex flex-col items-center gap-0.5">
+                                                    <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Minutos totales</span>
+                                                    <input
+                                                        type="number"
+                                                        value={block.config?.minutes || 12}
+                                                        onChange={e => updateBlock(index, { config: { ...block.config, minutes: Math.max(1, parseInt(e.target.value) || 12) } })}
+                                                        className="w-16 h-9 bg-background border border-brand-red/30 rounded-xl text-center text-sm font-black text-brand-red focus:border-brand-red outline-none"
                                                     />
                                                 </div>
-                                                {block.config?.minutes && (block.exercises?.length || 0) > 0 && (
+                                                {!!block.config?.minutes && (
                                                     (() => {
-                                                        const minutes = block.config.minutes;
-                                                        const exCount = block.exercises!.length;
-                                                        const rounds = Math.floor(minutes / exCount);
-                                                        const remainder = minutes % exCount;
+                                                        const minutes = block.config.minutes!;
+                                                        // "3 MIN" → 3. Con frecuencia 1 (EMOM clasico) cada ronda dura 1
+                                                        // minuto y se reparte 1 ejercicio de la lista por minuto; con
+                                                        // frecuencia >1 (E2MOM/E3MOM...) cada ronda dura N minutos y se
+                                                        // completa la lista entera de ejercicios una vez por ronda.
+                                                        const freq = parseInt(block.config?.frequency || '1 MIN') || 1;
+                                                        const rounds = Math.floor(minutes / freq);
+                                                        const remainder = minutes % freq;
                                                         return (
                                                             <div className={clsx("px-2 py-1.5 rounded-xl border animate-in fade-in duration-500 flex flex-col justify-center", remainder === 0 ? "bg-brand-red/10 border-brand-red/20" : "bg-yellow-500/10 border-yellow-500/30")}>
                                                                 <p className={clsx("text-[10px] font-black uppercase italic leading-none", remainder === 0 ? "text-brand-red" : "text-yellow-500")}>
-                                                                    {rounds} RONDAS
+                                                                    {rounds} RONDAS {freq > 1 ? `DE ${freq}'` : ''}
                                                                 </p>
                                                                 {remainder > 0 && (
                                                                     <p className="text-[8px] font-bold text-yellow-500/70 leading-none mt-0.5">+{remainder} MIN EXTRA</p>
@@ -840,7 +896,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                 ) : (
                                     <div className="space-y-2">
                                         {block.exercises?.map((ex, exIndex) => {
-                                            const hideSets = ['AMRAP', 'FOR TIME', 'EMOM', 'TABATA'].includes(block.format || '');
+                                            const hideSets = ['AMRAP', 'FOR TIME', 'EMOM', 'TABATA', 'CHIPPER'].includes(block.format || '');
                                             return (
                                             <div key={ex.id} className="bg-background border border-border rounded-xl p-3 sm:px-4 sm:py-3 animate-in slide-in-from-left-2 duration-200 hover:border-brand-red/30 transition-all flex flex-col gap-2 group relative">
                                                 
@@ -1318,7 +1374,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                                     {PART_NAMES[block.type] || (block.type ? block.type.toUpperCase() : 'LIBRE')}
 
                                                                     {/* Display Config Info */}
-                                                                    {(block.config?.timecap || block.config?.rounds || block.config?.minutes || block.duration) && (
+                                                                    {(block.config?.timecap || block.config?.rounds || block.config?.minutes || block.config?.sets || block.duration) && (
                                                                         <span className="ml-1 text-brand-red text-[10px] font-black uppercase tracking-widest opacity-80 italic">
                                                                             {block.format === 'ROUNDS FOR TIME' ? (
                                                                                 `${block.config?.rounds || '?'} RDS ${block.config?.timecap ? `(CAP: ${block.config.timecap})` : ''}`
@@ -1326,6 +1382,8 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                                                 `${block.config?.minutes || '?'} MINS (${block.config?.frequency || '1 MIN'})`
                                                                             ) : block.format === 'TABATA' || block.format === 'INTERVALS' ? (
                                                                                 `${block.config?.rounds || '?'} RDS (${block.config?.work || '20S'}/${block.config?.rest || '10S'})`
+                                                                            ) : block.format === 'STRENGTH' ? (
+                                                                                `${block.config?.sets || '?'}x${block.config?.reps || '?'} (DESCANSO ${block.config?.rest || '90S'})`
                                                                             ) : (block.config?.timecap || block.duration) ? (
                                                                                 `CAP: ${block.config?.timecap || block.duration}`
                                                                             ) : null}
