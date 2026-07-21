@@ -1387,7 +1387,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                                             ) : block.format === 'EMOM' || block.format === 'DEATH BY' ? (
                                                                                 `${block.config?.minutes || '?'} MINS (${block.config?.frequency || '1 MIN'})`
                                                                             ) : block.format === 'TABATA' || block.format === 'INTERVALS' ? (
-                                                                                `${block.config?.rounds || '?'} RDS (${block.config?.work || '20S'}/${block.config?.rest || '10S'})`
+                                                                                `${block.config?.rounds || '?'} RDS (${block.config?.work || (block.format === 'INTERVALS' ? '3:00' : '20S')}/${block.config?.rest || (block.format === 'INTERVALS' ? '1:00' : '10S')})`
                                                                             ) : block.format === 'STRENGTH' ? (
                                                                                 `${block.config?.sets || '?'}x${block.config?.reps || '?'} (DESCANSO ${block.config?.rest || '90S'})`
                                                                             ) : (block.config?.timecap || block.duration) ? (
