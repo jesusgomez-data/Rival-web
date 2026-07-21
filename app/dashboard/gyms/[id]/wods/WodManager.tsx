@@ -560,6 +560,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                     else if (block.format === 'CHIPPER')      formatInfo = ` · CHIPPER ${cfg?.timecap ? `(CAP: ${cfg.timecap})` : ''}`;
                     else if (block.format === 'ROUNDS FOR TIME') formatInfo = ` · ${cfg?.rounds || '?'} RDS FOR TIME ${cfg?.timecap ? `(CAP: ${cfg.timecap})` : ''}`;
                     else if (block.format === 'TABATA')       formatInfo = ` · TABATA ${cfg?.rounds || 8} RDS (${cfg?.work || '20S'}/${cfg?.rest || '10S'})`;
+                    else if (block.format === 'INTERVALS')    formatInfo = ` · INTERVALOS ${cfg?.rounds || '?'} RDS (${cfg?.work || '?'} TRABAJO / ${cfg?.rest || '?'} DESCANSO)`;
                     else if (block.format === 'STRENGTH')     formatInfo = ` · ${cfg?.sets || '?'}x${cfg?.reps || '?'} (DESCANSO ${cfg?.rest || '90S'})`;
                     else formatInfo = ` · ${block.format}`;
                 }
@@ -715,6 +716,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                                     else if (newFormat === 'FOR TIME' || newFormat === 'CHIPPER') newConfig = { timecap: '' };
                                                     else if (newFormat === 'ROUNDS FOR TIME') newConfig = { rounds: 5, timecap: '20:00' };
                                                     else if (newFormat === 'TABATA') newConfig = { rounds: 8, work: '20S', rest: '10S' };
+                                                    else if (newFormat === 'INTERVALS') newConfig = { rounds: 5, work: '3:00', rest: '1:00' };
                                                     else if (newFormat === 'STRENGTH') newConfig = { sets: 5, reps: '5', rest: '90S' };
 
                                                     updateBlock(index, { format: newFormat, config: newConfig });
@@ -737,29 +739,29 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                             <ChevronDown className="w-3 h-3 text-muted-foreground absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
                                         </div>
 
-                                        {(block.format === 'AMRAP' || block.format === 'FOR TIME' || block.format === 'ROUNDS FOR TIME' || block.format === 'TABATA' || block.format === 'CHIPPER') && (
+                                        {(block.format === 'AMRAP' || block.format === 'FOR TIME' || block.format === 'ROUNDS FOR TIME' || block.format === 'TABATA' || block.format === 'CHIPPER' || block.format === 'INTERVALS') && (
                                             <div className="flex items-end gap-2">
-                                                {(block.format === 'ROUNDS FOR TIME' || block.format === 'TABATA') && (
+                                                {(block.format === 'ROUNDS FOR TIME' || block.format === 'TABATA' || block.format === 'INTERVALS') && (
                                                     <div className="flex flex-col items-center gap-0.5">
                                                         <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Rounds</span>
-                                                        <input 
-                                                            type="number" 
-                                                            value={block.config?.rounds || 1} 
-                                                            onChange={e => updateBlock(index, { config: { ...block.config, rounds: Math.max(1, parseInt(e.target.value) || 1) } })} 
-                                                            className="w-16 h-9 bg-background border border-border rounded-xl text-center text-sm font-black text-foreground focus:border-brand-red outline-none" 
+                                                        <input
+                                                            type="number"
+                                                            value={block.config?.rounds || 1}
+                                                            onChange={e => updateBlock(index, { config: { ...block.config, rounds: Math.max(1, parseInt(e.target.value) || 1) } })}
+                                                            className="w-16 h-9 bg-background border border-border rounded-xl text-center text-sm font-black text-foreground focus:border-brand-red outline-none"
                                                         />
                                                     </div>
                                                 )}
-                                                
-                                                {block.format === 'TABATA' && (
+
+                                                {(block.format === 'TABATA' || block.format === 'INTERVALS') && (
                                                     <>
                                                         <div className="flex flex-col items-center gap-0.5">
                                                             <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Work</span>
-                                                            <input type="text" value={block.config?.work || '20S'} onChange={e => updateBlock(index, { config: { ...block.config, work: e.target.value.toUpperCase() }})} className="w-16 h-9 bg-background border border-border rounded-xl text-center text-sm font-black text-foreground focus:border-brand-red outline-none" />
+                                                            <input type="text" value={block.config?.work || (block.format === 'INTERVALS' ? '3:00' : '20S')} onChange={e => updateBlock(index, { config: { ...block.config, work: e.target.value.toUpperCase() }})} className="w-16 h-9 bg-background border border-border rounded-xl text-center text-sm font-black text-foreground focus:border-brand-red outline-none" />
                                                         </div>
                                                         <div className="flex flex-col items-center gap-0.5">
                                                             <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest">Rest</span>
-                                                            <input type="text" value={block.config?.rest || '10S'} onChange={e => updateBlock(index, { config: { ...block.config, rest: e.target.value.toUpperCase() }})} className="w-16 h-9 bg-background border border-border rounded-xl text-center text-sm font-black text-foreground focus:border-brand-red outline-none" />
+                                                            <input type="text" value={block.config?.rest || (block.format === 'INTERVALS' ? '1:00' : '10S')} onChange={e => updateBlock(index, { config: { ...block.config, rest: e.target.value.toUpperCase() }})} className="w-16 h-9 bg-background border border-border rounded-xl text-center text-sm font-black text-foreground focus:border-brand-red outline-none" />
                                                         </div>
                                                     </>
                                                 )}
@@ -900,7 +902,7 @@ export default function WodManager({ centerId, initialPosts, center, userRole }:
                                 ) : (
                                     <div className="space-y-2">
                                         {block.exercises?.map((ex, exIndex) => {
-                                            const hideSets = ['AMRAP', 'FOR TIME', 'EMOM', 'TABATA', 'CHIPPER'].includes(block.format || '');
+                                            const hideSets = ['AMRAP', 'FOR TIME', 'EMOM', 'TABATA', 'CHIPPER', 'INTERVALS'].includes(block.format || '');
                                             return (
                                             <div key={ex.id} className="bg-background border border-border rounded-xl p-3 sm:px-4 sm:py-3 animate-in slide-in-from-left-2 duration-200 hover:border-brand-red/30 transition-all flex flex-col gap-2 group relative">
                                                 
