@@ -216,10 +216,13 @@ export async function POST(req: Request) {
                         });
 
                         // Post to Activity Feed
+                        // media_url guarda el centerId (no lo llevaba antes) para que la
+                        // tarjeta del feed pueda enlazar al perfil público del centro.
                         await supabase.from('posts').insert({
                             user_id: userId,
                             media_type: 'membership_activation',
-                            caption: `¡Me he unido a ${gymName} con el plan ${planName}! ⚔️`
+                            caption: `¡Me he unido a ${gymName} con el plan ${planName}! ⚔️`,
+                            media_url: JSON.stringify({ centerId })
                         });
 
                         // Welcome Email via Resend

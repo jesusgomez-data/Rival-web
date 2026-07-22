@@ -2023,7 +2023,12 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                         // El caption tiene el formato "¡Me he unido a {box} con el plan {plan}! ⚔️"
                         const membershipMatch = (currentCaption || '').match(/me he unido a (.+?) con el plan ([^!]+)/i);
                         const gymName = membershipMatch?.[1]?.trim();
-                        const planName = membershipMatch?.[2]?.trim();
+                        // centerId viaja en media_url (posts antiguos, previos a este fix,
+                        // no lo tendrán — el nombre entonces no será clicable).
+                        let centerId: string | null = null;
+                        try {
+                            if (image) centerId = JSON.parse(image)?.centerId || null;
+                        } catch (e) { }
                         return (
                         <div className="rounded-[40px] p-10 bg-brand-red/5 border border-brand-red/20 text-center space-y-6 relative overflow-hidden">
                             <div className="absolute top-0 right-0 w-40 h-40 bg-brand-red/10 blur-3xl animate-pulse" />
@@ -2034,10 +2039,16 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                 <>
                                     <h3 className="text-2xl font-black italic uppercase text-white tracking-tighter leading-tight">
                                         AHORA SOY MIEMBRO DE<br />
-                                        <span className="text-brand-red">{gymName}</span>
+                                        {centerId ? (
+                                            <Link href={`/gym/${centerId}`} className="text-brand-red hover:underline underline-offset-4">
+                                                {gymName}
+                                            </Link>
+                                        ) : (
+                                            <span className="text-brand-red">{gymName}</span>
+                                        )}
                                     </h3>
                                     <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
-                                        {planName ? `Plan ${planName} · ` : ''}Empieza una nueva etapa ⚔️
+                                        Empieza una nueva etapa ⚔️
                                     </p>
                                 </>
                             ) : (
