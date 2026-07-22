@@ -8,12 +8,15 @@ export const dynamic = 'force-dynamic';
 export default async function CompetitionsPage() {
     const supabase = await createClient();
 
-    // Fetch DB competitions
+    // Fetch DB competitions — solo las que aún no han pasado. Un evento que
+    // ya ocurrió no le sirve a nadie en "Próximas Batallas", así que se
+    // filtra en la query en vez de mostrarlo marcado como "Finalizado".
     let dbCompetitions: any[] = [];
     try {
         const { data } = await supabase
             .from('competitions')
             .select('*, organizer:organizer_id(full_name, username, avatar_url)')
+            .gte('date', new Date().toISOString())
             .order('date', { ascending: true });
         dbCompetitions = data || [];
     } catch {
