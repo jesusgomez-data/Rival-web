@@ -11,6 +11,7 @@ import { Plus } from "lucide-react";
 import clsx from "clsx";
 import { useTheme } from "../../ThemeContext";
 import CancellationRequestModal from "../../dashboard/gyms/CancellationRequestModal";
+import WODTrackerModal from "@/components/WODTrackerModal";
 
 // Update function signature (line 13)
 export default function PublicCenterProfile({ org, initialPosts, isFollowing, followersCount, products, currentUserId, memberStatus, coaches, staff, membershipPlans, hasUsedTrial = false }: any) {
@@ -109,6 +110,7 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
     // WOD Expansion State
     const [expandedWods, setExpandedWods] = useState<Set<string>>(new Set());
     const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set());
+    const [trackingWod, setTrackingWod] = useState<{ id: string; title: string; scoreType?: string; hasTimecap: boolean } | null>(null);
 
     // Exercise Media Lightbox State
     const [exerciseMedia, setExerciseMedia] = useState<{ url: string, type: 'video' | 'image' } | null>(null);
@@ -1207,12 +1209,16 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
                                                                                             {lines.map((lineItem: any, i: number) => {
                                                                                                 let text;
+                                                                                                let note: string | null = null;
                                                                                                 if (typeof lineItem === 'string') {
                                                                                                     text = lineItem;
                                                                                                 } else {
                                                                                                     const prefix = [lineItem.sets, lineItem.reps].filter(Boolean).join('x');
-                                                                                                    const suffix = lineItem.value ? `@ ${lineItem.value}` : '';
+                                                                                                    const weightValue = lineItem.value || lineItem.detail;
+                                                                                                    const weightUnit = lineItem.weightUnit || lineItem.unit || 'kg';
+                                                                                                    const suffix = weightValue ? `@ ${weightValue}${weightUnit}` : '';
                                                                                                     text = `${prefix ? prefix + ' ' : ''}${lineItem.name} ${suffix}`.trim();
+                                                                                                    note = lineItem.note || lineItem.notes || null;
                                                                                                 }
                                                                                                 const mediaUrl = typeof lineItem === 'object' ? lineItem.media_url : null;
                                                                                                 const isClickable = !!mediaUrl;
@@ -1230,18 +1236,23 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                                                                                                             }
                                                                                                         }}
                                                                                                         className={clsx(
-                                                                                                            "px-3 py-2 rounded-xl border flex items-center justify-between group/ex",
+                                                                                                            "px-3 py-2 rounded-xl border flex flex-col gap-0.5 group/ex",
                                                                                                             theme === 'dark' ? "bg-white/5 border-white/5 text-gray-200" : "bg-gray-50 border-gray-100 text-gray-800",
                                                                                                             isClickable ? "cursor-pointer hover:border-brand-red/50 hover:bg-white/10" : ""
                                                                                                         )}
                                                                                                     >
-                                                                                                        <p className="text-xs md:text-sm font-black uppercase tracking-wide truncate w-full">
-                                                                                                            {text}
-                                                                                                        </p>
-                                                                                                        {isClickable && (
-                                                                                                            <div className="bg-brand-red/10 p-1.5 rounded-lg text-brand-red opacity-0 group-hover/ex:opacity-100 transition-opacity">
-                                                                                                                <Play className="w-3 h-3 fill-current" />
-                                                                                                            </div>
+                                                                                                        <div className="flex items-center justify-between w-full">
+                                                                                                            <p className="text-xs md:text-sm font-black uppercase tracking-wide truncate w-full">
+                                                                                                                {text}
+                                                                                                            </p>
+                                                                                                            {isClickable && (
+                                                                                                                <div className="bg-brand-red/10 p-1.5 rounded-lg text-brand-red opacity-0 group-hover/ex:opacity-100 transition-opacity shrink-0">
+                                                                                                                    <Play className="w-3 h-3 fill-current" />
+                                                                                                                </div>
+                                                                                                            )}
+                                                                                                        </div>
+                                                                                                        {note && (
+                                                                                                            <p className="text-[10px] text-gray-500 italic normal-case">{note}</p>
                                                                                                         )}
                                                                                                     </div>
                                                                                                 );
@@ -1271,12 +1282,17 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
 
                                                                 {/* Log this WOD Button */}
                                                                 <div className="pt-6 border-t border-white/5">
-                                                                    <Link
-                                                                        href={`/dashboard/training/session?wodId=${wod.id}`}
+                                                                    <button
+                                                                        onClick={() => setTrackingWod({
+                                                                            id: wod.id,
+                                                                            title: wod.title || `WOD ${new Date(wod.scheduled_for || wod.created_at).toLocaleDateString('es-ES')}`,
+                                                                            scoreType: wodData.summary?.scoreType,
+                                                                            hasTimecap: Array.isArray(wodData.blocks) && wodData.blocks.some((b: any) => !!b?.config?.timecap),
+                                                                        })}
                                                                         className="flex items-center justify-center gap-2 w-full py-3 bg-white text-black rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all shadow-xl group"
                                                                     >
-                                                                        <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" /> Log This Session
-                                                                    </Link>
+                                                                        <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform" /> Registrar Sesión
+                                                                    </button>
                                                                 </div>
                                                             </>
                                                         );
@@ -2368,6 +2384,19 @@ export default function PublicCenterProfile({ org, initialPosts, isFollowing, fo
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* WOD Tracker Modal (log a published WOD's result) */}
+            {trackingWod && (
+                <WODTrackerModal
+                    wodPostId={trackingWod.id}
+                    wodTitle={trackingWod.title}
+                    scoreType={trackingWod.scoreType}
+                    hasTimecap={trackingWod.hasTimecap}
+                    isOpen={!!trackingWod}
+                    onClose={() => setTrackingWod(null)}
+                    onSuccess={() => window.location.reload()}
+                />
             )}
 
             {/* Exercise Media Lightbox */}
