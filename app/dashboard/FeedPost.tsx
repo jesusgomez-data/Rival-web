@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Dumbbell, Activity, ChevronDown, ChevronUp, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink, ZapOff, MapPin, Eye } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Activity, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink, ZapOff, Eye } from "lucide-react";
 import LikeFist from "@/components/LikeFist";
 import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./explore/LikeButton";
@@ -792,7 +792,6 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const [isLoadingComments, setIsLoadingComments] = useState(false);
     const [isPostingComment, setIsPostingComment] = useState(false);
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-    const [isExpanded, setIsExpanded] = useState(false);
 
     const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
     const [expandedInnerBlocks, setExpandedInnerBlocks] = useState<number[]>([]);
@@ -1847,152 +1846,62 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     )}
 
                     {/* Class Result / Multi-exercise workout */}
-                    {mediaType === 'class_result' && (
-                        <div className="space-y-4">
-                            {(() => {
-                                let blocks: any[] = [];
-                                let resultEntries: any[] = [];
-                                let resolvedCenterName = "";
-                                try {
-                                    const parsed = JSON.parse(image);
-                                    if (Array.isArray(parsed)) {
-                                        // "custom" no es un bloque de ejercicios — es el resultado final
-                                        // (ej. "RESULTADO: 8"). Renderizarlo por el mismo loop de bloques
-                                        // hacía que mostrase el placeholder "sin ejercicios específicos"
-                                        // porque nunca tiene .exercises. Se muestra aparte, como stat.
-                                        blocks = parsed.filter(b => b.type !== 'metadata' && b.type !== 'custom');
-                                        resultEntries = parsed.filter(b => b.type === 'custom');
-                                        const metadata = parsed.find(b => b.type === 'metadata');
-                                        resolvedCenterName = metadata?.centerName || centerName || "";
-                                    }
-                                } catch (e) { }
+                    {/* Class Result — misma tarjeta WodCard que el resto de la app,
+                        para que un entrenamiento explique sus ejercicios exactamente
+                        igual venga de un WOD publicado o de una clase completada.
+                        Se le añade el centro donde se entrenó (dato propio de este
+                        tipo de post, no de un WOD normal). */}
+                    {mediaType === 'class_result' && (() => {
+                        let blocks: any[] = [];
+                        let resultEntries: any[] = [];
+                        let resolvedCenterName = "";
+                        try {
+                            const parsed = JSON.parse(image);
+                            if (Array.isArray(parsed)) {
+                                // "custom" no es un bloque de ejercicios — es el resultado final
+                                // (ej. "RESULTADO: 8"), se usa como resumen/puntuación en vez de
+                                // intentar mostrarlo como bloque de ejercicios.
+                                blocks = parsed.filter(b => b.type !== 'metadata' && b.type !== 'custom');
+                                resultEntries = parsed.filter(b => b.type === 'custom');
+                                const metadata = parsed.find(b => b.type === 'metadata');
+                                resolvedCenterName = metadata?.centerName || centerName || "";
+                            }
+                        } catch (e) { }
 
-                                return (
-                                    <div className="border border-white/10 rounded-3xl p-5 bg-white/[0.02] shadow-2xl relative overflow-hidden backdrop-blur-xl">
-                                        {/* Premium subtle background glow */}
-                                        <div className="absolute -top-12 -right-12 w-36 h-36 bg-brand-red/10 rounded-full blur-3xl pointer-events-none" />
-                                        
-                                        {/* Box / Gym Location Info */}
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-white/5">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20 shrink-0">
-                                                    <Dumbbell className="w-5 h-5" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-sm font-black italic uppercase text-white tracking-wider leading-none">ENTRENAMIENTO COMPLETADO</h4>
-                                                    <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Resultado de Clase Oficial</p>
-                                                </div>
-                                            </div>
-                                            {resolvedCenterName && (
-                                                <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-brand-red/10 border border-brand-red/20 rounded-full text-brand-red text-[10px] font-black uppercase tracking-widest self-start sm:self-center">
-                                                    <MapPin className="w-3.5 h-3.5 animate-pulse" />
-                                                    {resolvedCenterName}
-                                                </div>
-                                            )}
-                                        </div>
+                        // Los bloques "weight" guardan el peso en ex.value sin unidad propia
+                        // (a diferencia de un WOD publicado, que ya trae weightUnit) — se
+                        // completa aquí para que WodCard lo muestre igual que cualquier otro.
+                        const normalizedBlocks = (blocks.length > 0 ? blocks : [{ format: 'FREE', title: 'Resultado', exercises: [] }]).map((b: any) => ({
+                            ...b,
+                            exercises: (b.exercises || []).map((ex: any) => (
+                                b.type === 'weight' && ex.value != null && !ex.weightUnit && !ex.unit
+                                    ? { ...ex, weightUnit: 'kg' }
+                                    : ex
+                            )),
+                        }));
 
-                                        {/* Resultado final (ej. "RESULTADO: 8") */}
-                                        {resultEntries.length > 0 && (
-                                            <div className="flex flex-wrap gap-2 mb-5">
-                                                {resultEntries.map((r: any, i: number) => (
-                                                    <div key={i} className="flex items-center gap-2 bg-brand-red/10 border border-brand-red/20 rounded-xl px-3 py-2">
-                                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{r.title || 'Resultado'}</span>
-                                                        <span className="text-sm font-black text-brand-red uppercase italic">{r.value}{r.wod_weight ? ` (${r.wod_weight}KG)` : ''}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
+                        const summary = resultEntries.length > 0 ? {
+                            scoreType: 'OTHER',
+                            scoreLabel: resultEntries.map((r: any) => `${r.title || 'Resultado'}: ${r.value}${r.wod_weight ? ` (${r.wod_weight}KG)` : ''}`).join(' · '),
+                            totalTime: '',
+                        } : undefined;
 
-                                        {/* Blocks & Exercises List — consistente con las demás tarjetas de
-                                            WOD del feed: arranca colapsada y se puede expandir/esconder. */}
-                                        <div className="space-y-5">
-                                            {blocks.length === 0 ? (
-                                                <p className="text-xs text-gray-500 italic uppercase font-bold tracking-wider py-4 text-center">No se encontraron detalles del entrenamiento.</p>
-                                            ) : !isExpanded ? null : (
-                                                blocks.map((block: any, idx: number) => {
-                                                    const exercises = block.exercises || [];
-                                                    const blockScore = block.value ? `${block.value}${block.wod_weight ? ` (${block.wod_weight}KG)` : ''}` : '';
-                                                    // Detalle del formato (EMOM, AMRAP, FOR TIME...) — el mismo dato que
-                                                    // muestra WodCard, para que todas las tarjetas de WOD del feed
-                                                    // expliquen el bloque de forma consistente.
-                                                    const cfg = block.config || {};
-                                                    const configParts = [
-                                                        cfg.timecap ? `CAP ${cfg.timecap}` : null,
-                                                        cfg.rounds ? `${cfg.rounds} RONDAS` : null,
-                                                        cfg.frequency && cfg.minutes ? `${cfg.frequency} × ${cfg.minutes} MIN` : null,
-                                                    ].filter(Boolean);
-                                                    return (
-                                                        <div key={idx} className="border border-white/5 bg-white/[0.01] rounded-2xl overflow-hidden shadow-inner">
-                                                            {/* Block Header */}
-                                                            <div className="px-4 py-3 bg-white/[0.03] border-b border-white/5 flex flex-col gap-2">
-                                                                <div className="flex justify-between items-center gap-3 flex-wrap">
-                                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                                        <span className="text-[11px] font-black text-brand-red uppercase tracking-[0.2em]">{block.title || `BLOQUE ${idx + 1}`}</span>
-                                                                        {block.format && (
-                                                                            <span className="bg-white/5 border border-white/10 text-gray-300 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">
-                                                                                {block.format}
-                                                                            </span>
-                                                                        )}
-                                                                    </div>
-                                                                    {blockScore && (
-                                                                        <span className="bg-brand-red/10 border border-brand-red/20 text-brand-red px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider italic">
-                                                                            {blockScore}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                {configParts.length > 0 && (
-                                                                    <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">{configParts.join(' · ')}</span>
-                                                                )}
-                                                            </div>
-
-                                                            {/* Block Exercises */}
-                                                            <div className="px-4 py-2 divide-y divide-white/[0.03]">
-                                                                {exercises.length === 0 ? (
-                                                                    <div className="py-2.5 text-xs text-gray-600 italic">Entrenamiento sin ejercicios específicos</div>
-                                                                ) : (
-                                                                    exercises.map((ex: any, exIdx: number) => {
-                                                                        const name = (ex.name || ex.exercise || ex.movement || "").toUpperCase();
-                                                                        if (!name) return null;
-                                                                        
-                                                                        // Calculate exercise details (reps, sets, load)
-                                                                        const parts = [];
-                                                                        if (ex.sets && ex.reps) parts.push(`${ex.sets}x${ex.reps}`);
-                                                                        else if (ex.reps) parts.push(ex.reps);
-                                                                        if (ex.value) parts.push(`${ex.value}${block.type === 'weight' ? 'KG' : ''}`);
-                                                                        const detail = parts.join(" · ");
-
-                                                                        return (
-                                                                            <div key={exIdx} className="flex justify-between items-center py-2.5 gap-4">
-                                                                                <span className="text-xs sm:text-sm font-semibold text-white/95 uppercase tracking-wide leading-tight">{name}</span>
-                                                                                {detail && (
-                                                                                    <span className="text-xs sm:text-sm font-black text-brand-red uppercase tracking-wider shrink-0 italic">
-                                                                                        {detail}
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
-                                                                        );
-                                                                    })
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })
-                                            )}
-                                        </div>
-
-                                        {blocks.length > 0 && (
-                                            <button
-                                                onClick={() => setIsExpanded(!isExpanded)}
-                                                className="w-full mt-4 py-2 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg flex items-center justify-center gap-2 text-sm font-bold text-gray-300 transition-colors"
-                                            >
-                                                {isExpanded ? (<><ChevronUp className="w-4 h-4" /> Ver menos</>) : (<><ChevronDown className="w-4 h-4" /> Ver WOD completo</>)}
-                                            </button>
-                                        )}
-                                    </div>
-                                );
-                            })()}
-                        </div>
-                    )}
+                        return (
+                            <WodCard
+                                data={{
+                                    title: 'Entrenamiento Completado',
+                                    blocks: normalizedBlocks,
+                                    summary: summary as any,
+                                }}
+                                userName={username || user}
+                                publishDate={time}
+                                postId={postId}
+                                isOfficial={isOfficial}
+                                authorAvatar={avatar}
+                                centerName={resolvedCenterName}
+                            />
+                        );
+                    })()}
 
                     {/* Repost Card */}
                     {mediaType === 'repost' && (

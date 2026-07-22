@@ -10,7 +10,8 @@ import {
     ChevronDown,
     ChevronUp,
     Edit2,
-    Activity
+    Activity,
+    MapPin
 } from "lucide-react";
 import { fetchWodCompletion } from "@/lib/wod-completion-cache";
 import { useState, useEffect, useCallback, memo } from "react";
@@ -39,6 +40,10 @@ interface WodCardProps {
     hasCompleted?: boolean;
     isOfficial?: boolean;
     authorAvatar?: string;
+    // Box/gimnasio donde se hizo el entrenamiento (ej. resultado de una clase
+    // oficial). No todos los WODs tienen uno — un WOD subido sin centro
+    // asociado simplemente no muestra esta insignia.
+    centerName?: string;
 }
 
 const FORMAT_CONFIG: Partial<Record<WodFormat, { label: string, color: string, icon: any }>> = {
@@ -75,7 +80,7 @@ const CATEGORY_CONFIG: Record<WorkoutCategory, { label: string, color: string, i
     'BOXING': { label: 'BOXING', color: 'bg-red-800', icon: '🥊', gradient: 'from-red-800 to-red-600' }
 };
 
-function WodCard({ data, userName, publishDate, postId, completionsCount = 0, hasCompleted: initialHasCompleted = false, isOfficial = false, authorAvatar }: WodCardProps) {
+function WodCard({ data, userName, publishDate, postId, completionsCount = 0, hasCompleted: initialHasCompleted = false, isOfficial = false, authorAvatar, centerName }: WodCardProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const [showWODLeaderboard, setShowWODLeaderboard] = useState(false);
     const [showWODTracker, setShowWODTracker] = useState(false);
@@ -554,11 +559,17 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
 
-                <div className="absolute top-4 left-6 flex items-center gap-2 z-10">
+                <div className="absolute top-4 left-6 right-6 flex items-center justify-between gap-2 z-10">
                     <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-full px-3 py-1 flex items-center gap-2">
                         <Activity className="w-3 h-3 text-brand-red" />
                         <span className="text-[9px] font-black text-white uppercase tracking-widest">{completionsCount} ATLETAS</span>
                     </div>
+                    {centerName && (
+                        <div className="bg-brand-red/20 backdrop-blur-md border border-brand-red/30 rounded-full px-3 py-1 flex items-center gap-1.5 shrink-0">
+                            <MapPin className="w-3 h-3 text-brand-red" />
+                            <span className="text-[9px] font-black text-white uppercase tracking-widest truncate max-w-[140px]">{centerName}</span>
+                        </div>
+                    )}
                 </div>
 
                 <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
