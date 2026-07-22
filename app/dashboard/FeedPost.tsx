@@ -1870,11 +1870,17 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                         <div className="space-y-4">
                             {(() => {
                                 let blocks: any[] = [];
+                                let resultEntries: any[] = [];
                                 let resolvedCenterName = "";
                                 try {
                                     const parsed = JSON.parse(image);
                                     if (Array.isArray(parsed)) {
-                                        blocks = parsed.filter(b => b.type !== 'metadata');
+                                        // "custom" no es un bloque de ejercicios — es el resultado final
+                                        // (ej. "RESULTADO: 8"). Renderizarlo por el mismo loop de bloques
+                                        // hacía que mostrase el placeholder "sin ejercicios específicos"
+                                        // porque nunca tiene .exercises. Se muestra aparte, como stat.
+                                        blocks = parsed.filter(b => b.type !== 'metadata' && b.type !== 'custom');
+                                        resultEntries = parsed.filter(b => b.type === 'custom');
                                         const metadata = parsed.find(b => b.type === 'metadata');
                                         resolvedCenterName = metadata?.centerName || centerName || "";
                                     }
@@ -1904,11 +1910,24 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                             )}
                                         </div>
 
-                                        {/* Blocks & Exercises List */}
+                                        {/* Resultado final (ej. "RESULTADO: 8") */}
+                                        {resultEntries.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mb-5">
+                                                {resultEntries.map((r: any, i: number) => (
+                                                    <div key={i} className="flex items-center gap-2 bg-brand-red/10 border border-brand-red/20 rounded-xl px-3 py-2">
+                                                        <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{r.title || 'Resultado'}</span>
+                                                        <span className="text-sm font-black text-brand-red uppercase italic">{r.value}{r.wod_weight ? ` (${r.wod_weight}KG)` : ''}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* Blocks & Exercises List — consistente con las demás tarjetas de
+                                            WOD del feed: arranca colapsada y se puede expandir/esconder. */}
                                         <div className="space-y-5">
                                             {blocks.length === 0 ? (
                                                 <p className="text-xs text-gray-500 italic uppercase font-bold tracking-wider py-4 text-center">No se encontraron detalles del entrenamiento.</p>
-                                            ) : (
+                                            ) : !isExpanded ? null : (
                                                 blocks.map((block: any, idx: number) => {
                                                     const exercises = block.exercises || [];
                                                     const blockScore = block.value ? `${block.value}${block.wod_weight ? ` (${block.wod_weight}KG)` : ''}` : '';
@@ -1958,6 +1977,15 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                                 })
                                             )}
                                         </div>
+
+                                        {blocks.length > 0 && (
+                                            <button
+                                                onClick={() => setIsExpanded(!isExpanded)}
+                                                className="w-full mt-4 py-2 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg flex items-center justify-center gap-2 text-sm font-bold text-gray-300 transition-colors"
+                                            >
+                                                {isExpanded ? (<><ChevronUp className="w-4 h-4" /> Ver menos</>) : (<><ChevronDown className="w-4 h-4" /> Ver WOD completo</>)}
+                                            </button>
+                                        )}
                                     </div>
                                 );
                             })()}

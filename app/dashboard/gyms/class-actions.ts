@@ -91,44 +91,12 @@ export async function saveClassResult(classId: string, resultData: any, notes: s
 
     // 5. Share to Feed
     if (shareToFeed) {
-        let caption = `🔥 ¡WOD FINALIZADO!\n\n`;
-
-        if (resultData && Array.isArray(resultData)) {
-            resultData.forEach((block: any) => {
-                const title = (block.title || 'RESULTADOS').toUpperCase();
-                caption += `\n ${title}\n`;
-                caption += ` ----------------------------\n`;
-
-                if (block.type === 'weight') {
-                    if (block.exercises) {
-                        block.exercises.forEach((ex: any) => {
-                            if (ex.name) {
-                                let line = ` • ${ex.name.trim().toUpperCase()}`;
-                                if (ex.sets && ex.reps) line += ` (${ex.sets} X ${ex.reps})`;
-                                if (ex.value) line += `: ${ex.value}KG`;
-                                caption += line + '\n';
-                            }
-                        });
-                    }
-                } else {
-                    if (block.value) {
-                        caption += ` RESULTADO: ${block.value.trim().toUpperCase()}`;
-                        if (block.wod_weight) caption += ` (${block.wod_weight}KG)`;
-                        caption += '\n';
-                    }
-                    if (block.content) {
-                        caption += ` ${block.content.trim()}\n`;
-                    }
-                    if (block.exercises && block.exercises.length > 0) {
-                        block.exercises.forEach((ex: any) => {
-                            if (ex.name) caption += ` - ${ex.name.trim().toUpperCase()}\n`;
-                        });
-                    }
-                }
-            });
-        }
-
-        if (notes) caption += `\n📝 COMENTARIO: ${notes}`;
+        // Caption corta: el desglose completo de bloques/ejercicios ya lo
+        // renderiza la tarjeta "ENTRENAMIENTO COMPLETADO" en el feed a partir
+        // de media_url — duplicarlo aquí como texto plano solo lo hacía ver
+        // feo y redundante encima de la propia tarjeta.
+        let caption = `🔥 ¡WOD FINALIZADO!`;
+        if (notes) caption += `\n\n📝 ${notes}`;
 
         // Inject Metadata for FeedPost
         const feedData = Array.isArray(resultData) ? [...resultData] : [];
