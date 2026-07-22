@@ -853,7 +853,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                                         onClick={() => setShowEmojiPicker(false)}
                                                     />
                                                     {/* Sheet */}
-                                                    <div className="relative z-10 w-full bg-[#141414] rounded-t-[32px] border-t border-white/10 p-4 pb-8 shadow-[0_-8px_30px_rgba(0,0,0,0.6)] animate-in slide-in-from-bottom-8 duration-300">
+                                                    <div className="relative z-10 w-full bg-[#151515] rounded-t-[32px] border-t border-white/10 p-4 pb-8 shadow-[0_-8px_30px_rgba(0,0,0,0.6)] animate-in slide-in-from-bottom-8 duration-300">
                                                         <div className="relative flex flex-col items-center">
                                                             {/* Pull tab on mobile */}
                                                             <div className="w-12 h-1.5 bg-white/20 rounded-full mb-4 mt-1 cursor-pointer" onClick={() => setShowEmojiPicker(false)} />
@@ -872,9 +872,9 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                                                 document.body
                                             )
                                         ) : (
-                                            <div className="absolute top-14 left-0 z-50 rounded-2xl border border-white/10 bg-[#141414] p-0 pb-0 shadow-2xl animate-in slide-in-from-bottom-0 zoom-in-95 duration-300">
+                                            <div className="absolute top-14 left-0 z-50 rounded-2xl border border-white/10 bg-[#151515] p-0 pb-0 shadow-2xl animate-in slide-in-from-bottom-0 zoom-in-95 duration-300">
                                                 <div className="relative flex flex-col items-center">
-                                                    <div className="absolute -top-2 left-4 w-4 h-4 bg-[#141414] rotate-45 border-l border-t border-white/10" />
+                                                    <div className="absolute -top-2 left-4 w-4 h-4 bg-[#151515] rotate-45 border-l border-t border-white/10" />
                                                     <div className="w-full overflow-hidden rounded-2xl">
                                                         <EmojiPicker
                                                             theme={"dark" as any}

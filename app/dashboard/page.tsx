@@ -126,7 +126,7 @@ function FeedEmptyGuide({ onExplore }: { onExplore: () => void }) {
             </div>
 
             {/* Content type quick guide */}
-            <div className="bg-[#0E0E0E] border border-white/[0.06] rounded-3xl p-4">
+            <div className="bg-[#0e0e0e] border border-white/[0.06] rounded-3xl p-4">
                 <p className="text-[10px] font-black uppercase tracking-[0.25em] text-white/25 mb-3 flex items-center gap-2">
                     <Plus className="w-3.5 h-3.5" /> ¿Qué puedes publicar con el botón ➕?
                 </p>
@@ -239,7 +239,7 @@ function CollapsibleCreatePost({ currentUser, language, refresh }: { currentUser
     return (
         <div ref={containerRef} className="mb-6 scroll-mt-4">
             {!isOpen ? (
-                <div className="bg-[#0E0E0E] border border-white/[0.07] rounded-3xl overflow-hidden shadow-2xl">
+                <div className="bg-[#0e0e0e] border border-white/[0.07] rounded-3xl overflow-hidden shadow-2xl">
                     {/* Top row: avatar + placeholder */}
                     <button
                         onClick={() => setIsOpen(true)}

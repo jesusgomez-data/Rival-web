@@ -174,7 +174,7 @@ export default function NotificationBell() {
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-[200]" onClick={() => setIsOpen(false)} />
-                    <div className="absolute -left-16 md:left-auto md:right-0 top-full mt-2 w-[300px] sm:w-[340px] bg-[#0E0E0E] border border-white/[0.07] rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.7)] z-[210] overflow-hidden">
+                    <div className="absolute -left-16 md:left-auto md:right-0 top-full mt-2 w-[300px] sm:w-[340px] bg-[#0e0e0e] border border-white/[0.07] rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.7)] z-[210] overflow-hidden">
                         {/* Header */}
                         <div className="px-4 py-3 border-b border-white/[0.05] bg-white/[0.02] flex items-center justify-between">
                             <div className="flex items-center gap-2">

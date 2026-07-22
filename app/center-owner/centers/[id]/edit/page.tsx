@@ -259,7 +259,7 @@ export default function EditCenter({ params }: { params: Promise<{ id: string }>
     if (loading) return <div className="flex items-center justify-center min-h-screen bg-black"><Loader2 className="w-8 h-8 text-brand-red animate-spin" /></div>
 
     return (
-        <div className="min-h-screen bg-[#050505] text-white pb-20 font-sans">
+        <div className="min-h-screen bg-[#0a0a0a] text-white pb-20 font-sans">
 
             {/* Toast */}
             {toast && (

@@ -199,7 +199,7 @@ export default function EssentialsHero() {
                 transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                 className="mb-8 relative"
             >
-                <div className="bg-[#0E0E0E] border border-white/[0.07] rounded-3xl overflow-hidden shadow-2xl">
+                <div className="bg-[#0e0e0e] border border-white/[0.07] rounded-3xl overflow-hidden shadow-2xl">
 
                     {/* Header */}
                     <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.05]">
@@ -329,7 +329,7 @@ function FullGuideModal({ cards, onClose }: { cards: ContentCard[]; onClose: () 
                 initial={{ scale: 0.92, y: 30 }}
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.92, y: 30 }}
-                className="w-full max-w-lg bg-[#0C0C0C] border border-white/[0.08] rounded-[40px] overflow-hidden shadow-2xl"
+                className="w-full max-w-lg bg-[#0d0d0d] border border-white/[0.08] rounded-[40px] overflow-hidden shadow-2xl"
             >
                 {/* Progress bar */}
                 <div className="flex gap-1 p-4 pb-0">

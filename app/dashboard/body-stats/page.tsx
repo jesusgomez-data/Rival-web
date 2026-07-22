@@ -208,7 +208,7 @@ export default function BodyStatsPage() {
                     >
                         <motion.div
                             initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }}
-                            className="bg-[#0A0A0A] border border-white/10 rounded-3xl p-6 w-full max-w-sm space-y-4"
+                            className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-6 w-full max-w-sm space-y-4"
                             onClick={e => e.stopPropagation()}
                         >
                             <div className="flex items-center justify-between">

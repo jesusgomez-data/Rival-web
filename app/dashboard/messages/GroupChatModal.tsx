@@ -52,7 +52,7 @@ export default function GroupChatModal({ friends, onClose, onCreate }: GroupChat
                 animate={{ y: 0, opacity: 1 }}
                 exit={{ y: '100%', opacity: 0 }}
                 transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-                className="relative w-full sm:max-w-md bg-[#0E0E0E] border border-white/[0.07] rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl flex flex-col max-h-[90vh]"
+                className="relative w-full sm:max-w-md bg-[#0e0e0e] border border-white/[0.07] rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl flex flex-col max-h-[90vh]"
             >
                 {/* Header */}
                 <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/[0.05]">
