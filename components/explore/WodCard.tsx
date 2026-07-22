@@ -25,6 +25,7 @@ interface WodData {
     summary: WodSummary;
     media_url?: string | null;
     category?: WorkoutCategory;
+    warmup?: string | null;
     // Session metrics as fallback for endurance cards (distance in meters, pace as string)
     metrics?: { distance?: number; pace?: string; elevation?: number; time?: string; duration?: number; splits?: { km: number; paceSecondsPerKm: number }[] } | null;
 }
@@ -592,6 +593,17 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                 "p-4 md:p-6 transition-all duration-500 overflow-hidden",
                 isExpanded ? "max-h-[3000px] opacity-100 py-4 md:py-6" : "max-h-0 opacity-0 py-0"
             )}>
+                {data.warmup && (
+                    <div className="mb-4 rounded-2xl border border-white/5 bg-white/[0.03] overflow-hidden">
+                        <div className="px-4 py-3 flex items-center gap-2 border-b border-white/5">
+                            <Zap className="w-3.5 h-3.5 text-orange-500" />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-white">Calentamiento</span>
+                        </div>
+                        <div className="p-4 whitespace-pre-wrap text-sm text-gray-300 font-medium leading-relaxed">
+                            {data.warmup}
+                        </div>
+                    </div>
+                )}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {data.blocks.map((block: WodBlock) => {
                         const config = FORMAT_CONFIG[block.format] || DEFAULT_CONFIG;
@@ -646,7 +658,14 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                                     {/* Exercises */}
                                     {block.exercises && block.exercises.length > 0 && (
                                         <div className="space-y-4 border-t border-white/5 pt-4">
-                                            {block.exercises.map((ex: ExerciseEntry) => (
+                                            {block.exercises.map((ex: any) => {
+                                                // Dos herramientas de creación de WOD guardan el peso/objetivo con
+                                                // nombres de campo distintos (detail/unit vs value/weightUnit) —
+                                                // se aceptan los dos para que no se pierda el dato según cuál se
+                                                // haya usado para publicar este WOD.
+                                                const weightText = ex.detail || ex.value;
+                                                const weightUnit = ex.unit || ex.weightUnit || '';
+                                                return (
                                                 <div key={ex.id} className="space-y-2">
                                                     <div className="flex items-center justify-between gap-2 group-hover/block:translate-x-1 transition-transform">
                                                         <div className="flex items-center gap-3">
@@ -655,10 +674,11 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                                                         </div>
                                                         <div className="flex items-center gap-2">
                                                             {ex.reps && <span className="text-[10px] font-black text-white uppercase tracking-widest">{ex.reps}</span>}
-                                                            {ex.reps && ex.detail && <span className="text-[10px] font-black text-gray-600">X</span>}
-                                                            {ex.detail && <span className="text-[10px] font-black text-brand-red uppercase tracking-widest">{ex.detail}{ex.unit}</span>}
+                                                            {ex.reps && weightText && <span className="text-[10px] font-black text-gray-600">X</span>}
+                                                            {weightText && <span className="text-[10px] font-black text-brand-red uppercase tracking-widest">{weightText}{weightUnit}</span>}
                                                         </div>
                                                     </div>
+                                                    {ex.note && <p className="text-[10px] text-gray-500 italic pl-3">{ex.note}</p>}
 
                                                     {ex.roundDetails && ex.roundDetails.length > 0 && (
                                                         <div className="ml-4 grid grid-cols-4 sm:grid-cols-6 gap-1.5 p-2 bg-black/20 rounded-xl border border-white/5">
@@ -671,7 +691,8 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                                                         </div>
                                                     )}
                                                 </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>

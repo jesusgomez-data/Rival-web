@@ -32,9 +32,6 @@ const EmojiPicker        = dynamic(() => import('emoji-picker-react'),          
 const InstagramShareCard = dynamic(() => import("./InstagramShareCard"),                         { ssr: false });
 const PRCard             = dynamic(() => import("./explore/PRCard"),                           { ssr: false });
 const WodCard            = dynamic(() => import("@/components/explore/WodCard"),               { ssr: false });
-const WODPostDisplay     = dynamic(() => import("@/components/WODPostDisplay"),                  { ssr: false });
-const WODTrackerModal    = dynamic(() => import("@/components/WODTrackerModal"),                  { ssr: false });
-const WODLeaderboardModal= dynamic(() => import("@/components/WODLeaderboardModal"),             { ssr: false });
 const VideoReelsModal    = dynamic(() => import("./VideoReelsModal"),                            { ssr: false });
 const ShareableCard      = dynamic(() => import("@/components/ShareableCard"),                   { ssr: false });
 const RunShareCard       = dynamic(() => import("@/components/training/RunShareCard"),           { ssr: false });
@@ -820,9 +817,6 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
     const [isMusicVisible, setIsMusicVisible] = useState(false);
     const [isManuallyPaused, setIsManuallyPaused] = useState(false);
 
-    // Estados para modales de WOD
-    const [showWODTracker, setShowWODTracker] = useState(false);
-    const [showWODLeaderboard, setShowWODLeaderboard] = useState(false);
     const postRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const videoContainerRef = useRef<HTMLDivElement>(null);
@@ -1815,33 +1809,20 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             })()}
                         </div>
                     )}
-                    {/* WOD Display (WOD of the Day type) */}
-                    {post_type === 'wod' && wod_data && (
-                        <div className="space-y-6">
-                            <WODPostDisplay wod={wod_data} compact={true} collapsible={true} />
-                            <div className="flex flex-col sm:flex-row gap-4">
-                                <button
-                                    className="flex-1 bg-gradient-to-r from-brand-red to-orange-600 text-white font-black uppercase tracking-widest text-xs py-4 rounded-2xl flex items-center justify-center gap-2 shadow-glow active:scale-95 transition-all"
-                                    onClick={() => setShowWODTracker(true)}
-                                >
-                                    <Trophy className="w-5 h-5" /> {hasCompletedWod ? 'EDITAR MI RESULTADO' : 'REGISTRAR RESULTADO'}
-                                </button>
-                                <div className="flex gap-4 flex-1">
-                                    <button
-                                        className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black uppercase tracking-widest text-xs py-4 rounded-2xl flex items-center justify-center gap-2 transition-all"
-                                        onClick={() => setShowWODLeaderboard(true)}
-                                    >
-                                        <Trophy className="w-5 h-5 text-brand-yellow" /> RANKING
-                                    </button>
-                                    <button
-                                        className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 text-white font-black uppercase tracking-widest text-xs py-4 rounded-2xl flex items-center justify-center gap-2 transition-all group"
-                                        onClick={handleRepost}
-                                    >
-                                        <Repeat className="w-5 h-5 text-brand-red group-hover:rotate-180 transition-transform duration-500" /> REPOST
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                    {/* WOD Display (WOD of the Day type) — misma tarjeta que se usa en
+                        el resto de la app (explorador, perfil de gimnasio, etc.), para
+                        que un WOD publicado se vea y funcione igual venga de donde venga. */}
+                    {post_type === 'wod' && parsedWodData && (
+                        <WodCard
+                            completionsCount={completionsCountWod}
+                            hasCompleted={hasCompletedWod}
+                            data={parsedWodData}
+                            userName={username || user}
+                            publishDate={time}
+                            postId={postId}
+                            isOfficial={isOfficial}
+                            authorAvatar={avatar}
+                        />
                     )}
 
                     {/* PR Card */}
@@ -1932,8 +1913,8 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                                     const exercises = block.exercises || [];
                                                     const blockScore = block.value ? `${block.value}${block.wod_weight ? ` (${block.wod_weight}KG)` : ''}` : '';
                                                     // Detalle del formato (EMOM, AMRAP, FOR TIME...) — el mismo dato que
-                                                    // muestran WodCard/WODPostDisplay, para que todas las tarjetas de WOD
-                                                    // del feed expliquen el bloque de forma consistente.
+                                                    // muestra WodCard, para que todas las tarjetas de WOD del feed
+                                                    // expliquen el bloque de forma consistente.
                                                     const cfg = block.config || {};
                                                     const configParts = [
                                                         cfg.timecap ? `CAP ${cfg.timecap}` : null,
@@ -2062,7 +2043,7 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     })()}
 
                     {/* Normalized Workout Card (Endurance or Lift).
-                        Skip when post_type === 'wod': WODPostDisplay above already renders
+                        Skip when post_type === 'wod': the WodCard above already renders
                         this same data (resolvedWorkoutData is parsed from the same JSON as
                         wod_data), so showing both duplicated the whole workout on screen. */}
                     {resolvedWorkoutData && post_type !== 'wod' && !['pr', 'class_result', 'membership_activation'].includes(mediaType ?? '') && (
@@ -2728,29 +2709,6 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                 </div>
             )}
 
-            {postId && (
-                <>
-                    <WODTrackerModal
-                        wodPostId={targetWodId || ""}
-                        wodTitle={wod_data?.title || resolvedWorkoutData?.title || "WOD"}
-                        scoreType={wod_data?.summary?.scoreType || resolvedWorkoutData?.summary?.scoreType}
-                        hasTimecap={(() => {
-                            const blocks = wod_data?.blocks || (resolvedWorkoutData as any)?.blocks;
-                            return Array.isArray(blocks) && blocks.some((b: any) => !!b?.config?.timecap);
-                        })()}
-                        defaultPartner={wod_data?.partner || (resolvedWorkoutData as any)?.partner || null}
-                        isOpen={showWODTracker}
-                        onClose={() => setShowWODTracker(false)}
-                        onSuccess={() => window.location.reload()}
-                    />
-                    <WODLeaderboardModal
-                        wodPostId={targetWodId || ""}
-                        wodTitle={wod_data?.title || resolvedWorkoutData?.title || "WOD"}
-                        isOpen={showWODLeaderboard}
-                        onClose={() => setShowWODLeaderboard(false)}
-                    />
-                </>
-            )}
         </div>
     );
 });
