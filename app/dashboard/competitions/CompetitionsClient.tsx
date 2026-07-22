@@ -245,24 +245,26 @@ function DbCompetitionCard({ competition, isAdmin, onEdit, onDelete }: { competi
                         )}
                     </div>
 
-                    {competition.registration_url && (
+                    {/* Competición externa (tiene link de inscripción oficial) → lleva
+                        directo a esa página. Solo las competiciones organizadas dentro
+                        de Rival (sin registration_url) usan la ficha/inscripción interna. */}
+                    {competition.registration_url ? (
                         <a
                             href={competition.registration_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-2.5 text-[9px] font-black uppercase tracking-[0.2em] text-gray-300 transition-all hover:border-brand-red/40 hover:text-white"
+                            className="w-full bg-brand-red text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-red-600 transition-all group/btn mb-2"
                         >
-                            Link oficial <ExternalLink className="h-3 w-3" />
+                            Ver competición <ExternalLink className="w-3 h-3 group-hover/btn:translate-x-1 transition-transform" />
                         </a>
+                    ) : (
+                        <Link
+                            href={`/dashboard/competitions/${competition.id}`}
+                            className="w-full bg-brand-red text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-red-600 transition-all group/btn mb-2"
+                        >
+                            Ver competición <Trophy className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
+                        </Link>
                     )}
-
-
-                    <Link
-                        href={`/dashboard/competitions/${competition.id}`}
-                        className="w-full bg-brand-red text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:bg-red-600 transition-all group/btn mb-2"
-                    >
-                        Ver competición <Trophy className="w-3 h-3 group-hover/btn:scale-110 transition-transform" />
-                    </Link>
 
                     {isAdmin && (
                         <div className="flex gap-2">
