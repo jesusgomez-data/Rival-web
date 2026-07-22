@@ -45,7 +45,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { playNotificationSound } from "@/app/utils/audio";
 import { VideoProvider } from "./VideoContext";
 import dynamic from "next/dynamic";
-import { getSavedAccounts, saveAccount, switchToAccount, clearActiveSessionLocally, type SavedAccount } from "@/utils/supabase/multi-account";
+import { getSavedAccounts, saveAccount, switchToAccount, clearActiveSessionLocally, broadcastActiveAccount, ACTIVE_ACCOUNT_KEY, type SavedAccount } from "@/utils/supabase/multi-account";
 
 // ── Non-critical layout components — loaded after paint ──────────────────────
 const PendingReviewPrompt = dynamic(() => import("./PendingReviewPrompt"),       { ssr: false, loading: () => null });
@@ -465,6 +465,22 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         }, 20000);
         return () => clearInterval(interval);
     }, []);
+
+    // If another tab switches the active account, the browser-wide session
+    // cookie now belongs to that account. This tab's already-rendered pages
+    // (e.g. a profile's follow button) would silently start acting on behalf
+    // of the wrong account on any further server round-trip. Reload so this
+    // tab re-renders under whichever account is now actually live.
+    useEffect(() => {
+        const handleStorage = (e: StorageEvent) => {
+            if (e.key !== ACTIVE_ACCOUNT_KEY || !e.newValue) return;
+            if (profile?.id && e.newValue !== profile.id) {
+                window.location.reload();
+            }
+        };
+        window.addEventListener('storage', handleStorage);
+        return () => window.removeEventListener('storage', handleStorage);
+    }, [profile?.id]);
 
     const handleAccountSwitch = async (userId: string, isActive: boolean) => {
         if (isActive) return;

@@ -12,6 +12,21 @@ export interface SavedAccount {
 }
 
 const STORAGE_KEY = 'rival_saved_accounts';
+// Written every time a tab switches the active session. Since localStorage
+// writes fire a 'storage' event in every OTHER open tab (but not the tab that
+// wrote it), this is how background tabs learn the shared browser cookie now
+// belongs to a different account and reload before showing/acting on stale
+// data (e.g. a follow button reflecting the wrong account's relationship).
+export const ACTIVE_ACCOUNT_KEY = 'rival_active_account_id';
+
+export function broadcastActiveAccount(userId: string) {
+    if (typeof window === 'undefined') return;
+    try {
+        localStorage.setItem(ACTIVE_ACCOUNT_KEY, userId);
+    } catch (e) {
+        console.error('Error broadcasting active account:', e);
+    }
+}
 
 export function getSavedAccounts(): SavedAccount[] {
     if (typeof window === 'undefined') return [];
@@ -92,6 +107,7 @@ export async function switchToAccount(userId: string): Promise<boolean> {
             return false;
         }
 
+        broadcastActiveAccount(userId);
         return true;
     } catch (e) {
         console.error('Error switching account:', e);
