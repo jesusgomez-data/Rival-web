@@ -1931,15 +1931,36 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                                                 blocks.map((block: any, idx: number) => {
                                                     const exercises = block.exercises || [];
                                                     const blockScore = block.value ? `${block.value}${block.wod_weight ? ` (${block.wod_weight}KG)` : ''}` : '';
+                                                    // Detalle del formato (EMOM, AMRAP, FOR TIME...) — el mismo dato que
+                                                    // muestran WodCard/WODPostDisplay, para que todas las tarjetas de WOD
+                                                    // del feed expliquen el bloque de forma consistente.
+                                                    const cfg = block.config || {};
+                                                    const configParts = [
+                                                        cfg.timecap ? `CAP ${cfg.timecap}` : null,
+                                                        cfg.rounds ? `${cfg.rounds} RONDAS` : null,
+                                                        cfg.frequency && cfg.minutes ? `${cfg.frequency} × ${cfg.minutes} MIN` : null,
+                                                    ].filter(Boolean);
                                                     return (
                                                         <div key={idx} className="border border-white/5 bg-white/[0.01] rounded-2xl overflow-hidden shadow-inner">
                                                             {/* Block Header */}
-                                                            <div className="px-4 py-3 bg-white/[0.03] border-b border-white/5 flex justify-between items-center gap-3 flex-wrap">
-                                                                <span className="text-[11px] font-black text-brand-red uppercase tracking-[0.2em]">{block.title || `BLOQUE ${idx + 1}`}</span>
-                                                                {blockScore && (
-                                                                    <span className="bg-brand-red/10 border border-brand-red/20 text-brand-red px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider italic">
-                                                                        {blockScore}
-                                                                    </span>
+                                                            <div className="px-4 py-3 bg-white/[0.03] border-b border-white/5 flex flex-col gap-2">
+                                                                <div className="flex justify-between items-center gap-3 flex-wrap">
+                                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                                        <span className="text-[11px] font-black text-brand-red uppercase tracking-[0.2em]">{block.title || `BLOQUE ${idx + 1}`}</span>
+                                                                        {block.format && (
+                                                                            <span className="bg-white/5 border border-white/10 text-gray-300 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider">
+                                                                                {block.format}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                    {blockScore && (
+                                                                        <span className="bg-brand-red/10 border border-brand-red/20 text-brand-red px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider italic">
+                                                                            {blockScore}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                {configParts.length > 0 && (
+                                                                    <span className="text-[9px] text-gray-500 font-bold uppercase tracking-widest">{configParts.join(' · ')}</span>
                                                                 )}
                                                             </div>
 
