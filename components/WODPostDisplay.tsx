@@ -70,7 +70,7 @@ export default function WODPostDisplay({ wod, compact = false, collapsible = fal
   // --- RENDERIZADO ESTILO RUNNING / STRAVA ---
   if (wod.category === 'RUNNING') {
     return (
-      <div className="w-full bg-[#0a0a0a] border border-white/5 rounded-[32px] overflow-hidden shadow-2xl keep-all dark-section font-sans relative group">
+      <div className="w-full bg-[#0a0a0a] border border-white/5 rounded-[32px] overflow-hidden shadow-2xl font-sans relative group">
         {/* Grid Background Mockup */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" 
              style={{ backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '40px 40px' }} />
@@ -205,7 +205,7 @@ export default function WODPostDisplay({ wod, compact = false, collapsible = fal
 
   // --- RENDERIZADO ESTÁNDAR (CROSSFIT, HYROX, ETC) ---
   return (
-    <div className="w-full bg-gradient-to-br from-gray-900 to-black border border-white/10 rounded-2xl overflow-hidden keep-all dark-section">
+    <div className="w-full bg-[#111111] border border-white/10 rounded-2xl overflow-hidden">
       {/* Header */}
       <div className={cn("border-b p-6", currentStyle.gradient, currentStyle.color)}>
         <div className="flex items-start gap-3 mb-4">

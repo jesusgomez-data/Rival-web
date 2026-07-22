@@ -160,7 +160,7 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
 
         return (
             <div className={cn(
-                "w-full bg-[#0a0a0a] border border-white/5 rounded-[32px] overflow-hidden group hover:border-brand-red/30 transition-all shadow-2xl relative keep-all dark-section font-sans",
+                "w-full bg-[#0a0a0a] border border-white/5 rounded-[32px] overflow-hidden group hover:border-brand-red/30 transition-all shadow-2xl relative font-sans",
                 isExpanded ? "ring-2 ring-brand-red/20" : ""
             )}>
                 {/* Grid Background */}
@@ -413,7 +413,7 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
         const exercisePreview = firstBlock?.exercises?.slice(0, 4) ?? [];
 
         return (
-            <div className="w-full bg-[#0d0d0d] border border-white/8 rounded-3xl overflow-hidden shadow-2xl keep-all dark-section">
+            <div className="w-full bg-[#0d0d0d] border border-white/8 rounded-3xl overflow-hidden shadow-2xl">
                 <div className="p-4 flex gap-4 items-stretch">
                     {/* Left: cover / avatar */}
                     <div className="relative w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-brand-red/30 to-black border border-white/10">
@@ -545,7 +545,7 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
     }
 
     return (
-        <div className="w-full bg-[#111111] border border-white/5 rounded-[32px] overflow-hidden group hover:border-brand-red/30 transition-all shadow-2xl relative keep-all dark-section">
+        <div className="w-full bg-[#111111] border border-white/5 rounded-[32px] overflow-hidden group hover:border-brand-red/30 transition-all shadow-2xl relative">
             {/* Header / Backdrop Image */}
             <div className={cn("relative h-32 md:h-40 overflow-hidden bg-gradient-to-br", CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].gradient)}>
                 {data.media_url ? (
