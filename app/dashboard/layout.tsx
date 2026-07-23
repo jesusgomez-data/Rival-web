@@ -581,7 +581,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
         // siempre, mas un acceso rapido al panel de su centro.
         if (isBusinessOnly) {
             const orgUrl = businessOrgId ? `/dashboard/gyms/${businessOrgId}` : "/dashboard/gyms";
-            items.push({ name: "Dashboard del Centro", href: orgUrl, icon: Building2 });
+            items.push(
+                { name: "Dashboard del Centro", href: orgUrl, icon: Building2 },
+                { name: t.navDashboard.profile, href: "/dashboard/profile", icon: Settings }
+            );
         } else {
             items.push(
                 { name: t.navDashboard.onlineCoach, href: "/dashboard/coach", icon: MessageCircle },
