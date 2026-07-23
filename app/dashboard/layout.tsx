@@ -187,6 +187,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const [profile, setProfile] = useState<any>(null);
     const [userEmail, setUserEmail] = useState<string | null>(null);
     const [isBusinessUser, setIsBusinessUser] = useState(false);
+    const [businessOrgId, setBusinessOrgId] = useState<string | null>(null);
     const [showMobileSearch, setShowMobileSearch] = useState(false);
     const [unreadMessages, setUnreadMessages] = useState(0);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -258,18 +259,20 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                     const [ownedRes, rolesRes] = await Promise.all([
                         supabase
                             .from('organizations')
-                            .select('id', { count: 'exact', head: true })
-                            .or(`owner_id.eq.${user.id},head_coach_id.eq.${user.id}`),
+                            .select('id')
+                            .eq('owner_id', user.id)
+                            .limit(1),
                         supabase
                             .from('center_roles')
-                            .select('id', { count: 'exact', head: true })
+                            .select('organization_id')
                             .eq('user_id', user.id)
                             .in('role', ['owner', 'admin', 'head_coach', 'coach'])
+                            .limit(1)
                     ]);
-                    const hasOwned = ownedRes.count !== null && ownedRes.count > 0;
-                    const hasRoles = rolesRes.count !== null && rolesRes.count > 0;
+                    const orgId = ownedRes.data?.[0]?.id || rolesRes.data?.[0]?.organization_id || null;
                     if (isMounted) {
-                        setIsBusinessUser(hasOwned || hasRoles);
+                        setIsBusinessUser(!!orgId);
+                        setBusinessOrgId(orgId);
                     }
                 }
 
@@ -561,27 +564,39 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const ADMIN_EMAILS = useMemo(() => ['rival.app.official@gmail.com', 'jesusgomez.s@hotmail.com'], []);
     const isAdmin = userEmail && typeof userEmail === 'string' && ADMIN_EMAILS.includes(userEmail.toLowerCase().trim());
 
-    const navItems = useMemo(() => [
-        { name: t.navDashboard.home, href: "/dashboard", icon: Home },
-        { name: t.navDashboard.messages, href: "/dashboard/messages", icon: MessageSquarePlus },
-        { name: t.navDashboard.onlineCoach, href: "/dashboard/coach", icon: MessageCircle },
-        // { name: t.navDashboard.training, href: "/dashboard/training", icon: Dumbbell }, // hidden temporarily
-        { name: "Mis Marcas", href: "/dashboard/hyrox", icon: Dumbbell },
-        { name: "Nutrición", href: "/dashboard/nutrition", icon: Zap },
-        { name: "Body Stats", href: "/dashboard/body-stats", icon: Activity },
-        { name: t.navDashboard.affiliateGym, href: "/dashboard/gyms", icon: Building2 },
-        { name: "Profesionales", href: "/dashboard/gyms?type=personal_trainer", icon: User },
-        { name: "Mis Reservas", href: "/dashboard/my-bookings", icon: BookOpen },
-        { name: "Explorar", href: "/dashboard/explore", icon: Compass },
-        { name: "Competiciones", href: "/dashboard/competitions", icon: Flag },
-        { name: t.navDashboard.leaderboard, href: "/dashboard/leaderboard", icon: Trophy },
-        { name: t.navDashboard.analytics, href: "/dashboard/analytics", icon: BarChart2 },
-        { name: t.navDashboard.profile, href: "/dashboard/profile", icon: Settings },
-        ...(isAdmin === true ? [
-            { name: "RIVAL COMMAND", href: "/dashboard/admin", icon: Shield },
-        ] : []),
+    const navItems = useMemo(() => {
+        const items = [
+            { name: t.navDashboard.home, href: "/dashboard", icon: Home },
+            { name: t.navDashboard.messages, href: "/dashboard/messages", icon: MessageSquarePlus },
+        ];
+
+        if (isBusinessUser) {
+            const orgUrl = businessOrgId ? `/dashboard/gyms/${businessOrgId}` : "/dashboard/gyms";
+            items.push({ name: "Dashboard", href: orgUrl, icon: Building2 });
+        } else {
+            items.push(
+                { name: t.navDashboard.onlineCoach, href: "/dashboard/coach", icon: MessageCircle },
+                { name: "Mis Marcas", href: "/dashboard/hyrox", icon: Dumbbell },
+                { name: "Nutrición", href: "/dashboard/nutrition", icon: Zap },
+                { name: "Body Stats", href: "/dashboard/body-stats", icon: Activity },
+                { name: t.navDashboard.affiliateGym, href: "/dashboard/gyms", icon: Building2 },
+                { name: "Profesionales", href: "/dashboard/gyms?type=personal_trainer", icon: User },
+                { name: "Mis Reservas", href: "/dashboard/my-bookings", icon: BookOpen },
+                { name: "Explorar", href: "/dashboard/explore", icon: Compass },
+                { name: "Competiciones", href: "/dashboard/competitions", icon: Flag },
+                { name: t.navDashboard.leaderboard, href: "/dashboard/leaderboard", icon: Trophy },
+                { name: t.navDashboard.analytics, href: "/dashboard/analytics", icon: BarChart2 },
+                { name: t.navDashboard.profile, href: "/dashboard/profile", icon: Settings }
+            );
+        }
+
+        if (isAdmin === true) {
+            items.push({ name: "RIVAL COMMAND", href: "/dashboard/admin", icon: Shield });
+        }
+
+        return items;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    ], [isAdmin, t]);
+    }, [isAdmin, t, isBusinessUser, businessOrgId]);
 
     const isBusinessCenterRoute = pathname?.startsWith('/dashboard/gyms/') && pathname.split('/').length > 3;
     const hideSidebarDefault = pathname === '/dashboard/admin'; // Give admin its toggle, but not business centers
@@ -780,15 +795,17 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                                 </div>
                                 <p className="text-[9px] text-gray-400 truncate font-black uppercase tracking-widest leading-none">{profile?.level ? `Soldado Lvl ${profile.level}` : 'Recluta'}</p>
                             </div>
-                            <span 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    router.push("/dashboard/profile");
-                                }}
-                                className="p-2 hover:bg-white/10 rounded-lg transition-colors shrink-0"
-                            >
-                                <Settings className="w-4 h-4 text-gray-500 group-hover:text-foreground transition-colors" />
-                            </span>
+                            {!isBusinessUser && (
+                                <span 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        router.push("/dashboard/profile");
+                                    }}
+                                    className="p-2 hover:bg-white/10 rounded-lg transition-colors shrink-0"
+                                >
+                                    <Settings className="w-4 h-4 text-gray-500 group-hover:text-foreground transition-colors" />
+                                </span>
+                            )}
                         </div>
                     </div>
                 </aside>

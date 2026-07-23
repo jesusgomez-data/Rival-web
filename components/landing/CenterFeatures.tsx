@@ -65,69 +65,102 @@ export default function CenterFeatures() {
           <p className="text-white/40 max-w-xl mx-auto text-sm tracking-widest uppercase font-bold">Escala tu negocio con herramientas de nivel élite.</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-          {/* Starter Plan */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-stretch">
+          {/* 2 Meses Gratis Plan */}
           <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0 }}>
-            <div className="glass p-8 rounded-[2rem] border border-white/5 space-y-8 hover:border-white/15 transition-all duration-300">
-              <div>
-                <h3 className="text-xl font-black uppercase tracking-widest text-white/60 mb-2">Básico</h3>
-                <div className="flex items-end gap-1">
-                  <span className="text-5xl font-black italic text-white">€49</span>
-                  <span className="text-xs text-white/40 uppercase font-bold pb-2">/mes</span>
-                </div>
+            <div className="glass p-8 rounded-[2rem] border-2 border-brand-orange bg-brand-orange/5 space-y-8 hover:border-brand-orange/30 transition-all duration-300 relative overflow-hidden flex flex-col justify-between h-full">
+              <div className="absolute top-0 right-0 px-3 py-1 text-[8px] font-black uppercase tracking-widest text-brand-orange bg-brand-orange/10 rounded-bl-xl">
+                Lanzamiento
               </div>
-              <ul className="space-y-4 text-sm font-medium text-white/70">
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-brand-orange" /> Hasta 100 atletas</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-brand-orange" /> Gestión de clases básica</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-brand-orange" /> Programación de 1 WOD diario</li>
-              </ul>
-              <Link href="/center-signup" className="block w-full py-4 text-xs font-black uppercase tracking-[0.2em] bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-center">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-widest text-brand-orange mb-2">2 Meses Gratis</h3>
+                  <div className="flex items-end gap-1">
+                    <span className="text-5xl font-black italic text-white">€0</span>
+                    <span className="text-xs text-white/40 uppercase font-bold pb-2">/60 días</span>
+                  </div>
+                </div>
+                <ul className="space-y-4 text-sm font-medium text-white/70">
+                  <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-brand-orange" /> Acceso completo 60 días</li>
+                  <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-brand-orange" /> Hasta 50 atletas</li>
+                  <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-brand-orange" /> Gestión de clases y reservas</li>
+                  <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-brand-orange" /> Sin tarjeta de crédito</li>
+                </ul>
+              </div>
+              <Link href="/center-signup?plan=free" className="block w-full py-4 mt-6 text-xs font-black uppercase tracking-[0.2em] bg-brand-orange text-white rounded-xl hover:bg-orange-500 transition-colors text-center font-bold">
+                Empezar Gratis
+              </Link>
+            </div>
+          </motion.div>
+
+          {/* Starter Plan */}
+          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}>
+            <div className="glass p-8 rounded-[2rem] border border-white/5 space-y-8 hover:border-white/15 transition-all duration-300 flex flex-col justify-between h-full">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-widest text-white/60 mb-2">Básico</h3>
+                  <div className="flex items-end gap-1">
+                    <span className="text-5xl font-black italic text-white">€49</span>
+                    <span className="text-xs text-white/40 uppercase font-bold pb-2">/mes</span>
+                  </div>
+                </div>
+                <ul className="space-y-4 text-sm font-medium text-white/70">
+                  <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-brand-orange" /> Hasta 100 atletas</li>
+                  <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-brand-orange" /> Gestión de clases básica</li>
+                  <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-brand-orange" /> Programación de 1 WOD diario</li>
+                </ul>
+              </div>
+              <Link href="/center-signup?plan=starter" className="block w-full py-4 mt-6 text-xs font-black uppercase tracking-[0.2em] bg-white/5 hover:bg-white/10 rounded-xl transition-colors text-center">
                 Empezar Básico
               </Link>
             </div>
           </motion.div>
 
           {/* Pro Plan */}
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }} className="relative z-10">
-            <div className="relative glass-dark p-8 rounded-[2.5rem] border-2 border-brand-orange space-y-8 bg-[#050505] overflow-hidden" style={{ boxShadow: '0 0 40px rgba(255,107,0,0.2), 0 0 80px rgba(255,107,0,0.08)' }}>
+          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }} className="relative z-10">
+            <div className="relative glass-dark p-8 rounded-[2.5rem] border-2 border-brand-orange space-y-8 bg-[#050505] overflow-hidden flex flex-col justify-between h-full" style={{ boxShadow: '0 0 40px rgba(255,107,0,0.2), 0 0 80px rgba(255,107,0,0.08)' }}>
               <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-brand-orange to-transparent" />
               <div className="absolute top-0 right-0 px-4 py-1.5 text-[9px] font-black uppercase tracking-widest text-brand-orange bg-brand-orange/10 rounded-bl-2xl rounded-tr-[2.5rem]">
                 Más Popular
               </div>
-              <div>
-                <h3 className="text-2xl font-black uppercase tracking-widest text-brand-orange mb-2">Pro</h3>
-                <div className="flex items-end gap-1">
-                  <span className="text-6xl font-black italic text-white">€99</span>
-                  <span className="text-xs text-white/40 uppercase font-bold pb-2">/mes</span>
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-2xl font-black uppercase tracking-widest text-brand-orange mb-2">Pro</h3>
+                  <div className="flex items-end gap-1">
+                    <span className="text-6xl font-black italic text-white">€99</span>
+                    <span className="text-xs text-white/40 uppercase font-bold pb-2">/mes</span>
+                  </div>
                 </div>
+                <ul className="space-y-4 text-sm font-medium text-white/90">
+                  <li className="flex items-center gap-3"><CheckCircle2 className="w-5 h-5 text-brand-orange" /> Atletas Ilimitados</li>
+                  <li className="flex items-center gap-3"><CheckCircle2 className="w-5 h-5 text-brand-orange" /> Leaderboards privados del Box</li>
+                  <li className="flex items-center gap-3"><CheckCircle2 className="w-5 h-5 text-brand-orange" /> Pagos y suscripciones Stripe</li>
+                  <li className="flex items-center gap-3"><CheckCircle2 className="w-5 h-5 text-brand-orange" /> Estadísticas y MRR en vivo</li>
+                </ul>
               </div>
-              <ul className="space-y-4 text-sm font-medium text-white/90">
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-5 h-5 text-brand-orange" /> Atletas Ilimitados</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-5 h-5 text-brand-orange" /> Leaderboards privados del Box</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-5 h-5 text-brand-orange" /> Pagos y suscripciones Stripe</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-5 h-5 text-brand-orange" /> Estadísticas y MRR en vivo</li>
-              </ul>
-              <Link href="/center-signup" className="block w-full py-4 text-xs font-black uppercase tracking-[0.2em] bg-brand-orange text-white rounded-xl hover:bg-orange-500 transition-colors text-center" style={{ boxShadow: '0 0 20px rgba(255,107,0,0.4)' }}>
+              <Link href="/center-signup?plan=pro" className="block w-full py-4 mt-6 text-xs font-black uppercase tracking-[0.2em] bg-brand-orange text-white rounded-xl hover:bg-orange-500 transition-colors text-center" style={{ boxShadow: '0 0 20px rgba(255,107,0,0.4)' }}>
                 Prueba Gratuita 14 Días
               </Link>
             </div>
           </motion.div>
 
           {/* Elite Plan */}
-          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }}>
-            <div className="glass p-8 rounded-[2rem] border border-white/5 space-y-8 hover:border-white/15 transition-all duration-300">
-              <div>
-                <h3 className="text-xl font-black uppercase tracking-widest text-white/60 mb-2">Élite</h3>
-                <div className="flex items-end gap-1">
-                  <span className="text-4xl font-black italic text-white leading-tight">A Medida</span>
+          <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.3 }}>
+            <div className="glass p-8 rounded-[2rem] border border-white/5 space-y-8 hover:border-white/15 transition-all duration-300 flex flex-col justify-between h-full">
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-xl font-black uppercase tracking-widest text-white/60 mb-2">Élite</h3>
+                  <div className="flex items-end gap-1">
+                    <span className="text-4xl font-black italic text-white leading-tight">A Medida</span>
+                  </div>
                 </div>
+                <ul className="space-y-4 text-sm font-medium text-white/70">
+                  <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-white/40" /> Migración de datos guiada</li>
+                  <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-white/40" /> Soporte prioritario 24/7</li>
+                  <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-white/40" /> App marca blanca (Próximamente)</li>
+                </ul>
               </div>
-              <ul className="space-y-4 text-sm font-medium text-white/70">
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-white/40" /> Migración de datos guiada</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-white/40" /> Soporte prioritario 24/7</li>
-                <li className="flex items-center gap-3"><CheckCircle2 className="w-4 h-4 text-white/40" /> App marca blanca (Próximamente)</li>
-              </ul>
-              <button className="w-full py-4 text-xs font-black uppercase tracking-[0.2em] bg-white/5 hover:bg-white/10 rounded-xl transition-colors">
+              <button className="w-full py-4 mt-6 text-xs font-black uppercase tracking-[0.2em] bg-white/5 hover:bg-white/10 rounded-xl transition-colors">
                 Contactar Ventas
               </button>
             </div>

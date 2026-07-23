@@ -827,7 +827,7 @@ export default function ProfilePage() {
             </div>
 
             {/* ── Profile Completion Indicator ── */}
-            {(() => {
+            {profile && !hasOrgs && (() => {
                 const fields = [
                     formData.full_name, formData.username, formData.bio,
                     formData.main_sport, formData.gym_home, formData.location,
@@ -888,13 +888,15 @@ export default function ProfilePage() {
             <div className="flex lg:hidden items-center justify-around border-b border-white/5 mb-6 bg-black/20 backdrop-blur-sm sticky top-[60px] z-30">
                 {([
                     { id: 'gallery', icon: <LayoutGrid className="w-5 h-5" />, label: 'Galería' },
-                    { id: 'stats', icon: <Trophy className="w-5 h-5" />, label: 'Stats' },
-                    { id: 'intel', icon: <Brain className="w-5 h-5" />, label: 'Intel' },
+                    ...(!hasOrgs ? [
+                        { id: 'stats', icon: <Trophy className="w-5 h-5" />, label: 'Stats' },
+                        { id: 'intel', icon: <Brain className="w-5 h-5" />, label: 'Intel' },
+                    ] : []),
                     { id: 'settings', icon: <Settings className="w-5 h-5" />, label: 'Ajustes' },
-                ] as const).map(tab => (
+                ]).map(tab => (
                     <button
                         key={tab.id}
-                        onClick={() => setMobileTab(tab.id)}
+                        onClick={() => setMobileTab(tab.id as any)}
                         className={clsx(
                             "flex-1 flex flex-col items-center gap-1 py-3 px-2 transition-all relative",
                             mobileTab === tab.id ? "text-brand-red" : "text-gray-600 hover:text-gray-400"
@@ -906,12 +908,12 @@ export default function ProfilePage() {
                     </button>
                 ))}
             </div>
-
+ 
             <div className="pt-2 lg:pt-8 flex flex-col lg:grid lg:grid-cols-12 gap-8">
                 {/* Left side: Stats & Info */}
                 <div className="lg:col-span-4 space-y-6">
                     {/* Athlete Card — only visible in stats tab on mobile */}
-                    {profile && (
+                    {profile && !hasOrgs && (
                     <div className={clsx(mobileTab !== 'stats' && "hidden lg:block")}>
                         <AthleteCard
                             profile={{
@@ -926,150 +928,154 @@ export default function ProfilePage() {
                                 endurance_stat: athleteStats?.endurance_stat ?? 0,
                                 agility_stat: athleteStats?.agility_stat ?? 0,
                                 consistency_stat: athleteStats?.consistency_stat ?? 0,
-                            }}
-                            stats={{
-                                totalWorkouts: athleteStats?.totalWorkouts ?? workouts.length,
-                                totalVolume: athleteStats?.totalVolume ?? 0,
-                                streak: athleteStats?.streak ?? 0,
-                                prCount: athleteStats?.prCount ?? 0,
-                                wins: combatStats.wins,
-                            }}
-                        />
-                    </div>
-                    )}
-                    <div className={clsx(mobileTab !== 'gallery' && "hidden lg:block")}>
-                        {profile?.id && <UserMediaGallery userId={profile.id} />}
-                    </div>
-
-                    <div className={clsx("space-y-6", mobileTab !== 'stats' && "hidden lg:block")}>
-                        {/* ── Personal Records — mobile stats tab ── */}
-                        {autoRecords.length > 0 && (
-                            <div className="bg-brand-gray/30 border border-brand-red/10 rounded-3xl p-5 backdrop-blur-xl lg:hidden">
-                                <div className="flex items-center justify-between mb-4">
-                                    <div className="flex items-center gap-2">
-                                        <Trophy className="w-4 h-4 text-brand-red" />
-                                        <h3 className="text-xs font-black uppercase tracking-[0.3em] text-foreground">Récords Personales</h3>
-                                    </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-brand-red bg-brand-red/10 px-2 py-1 rounded-full border border-brand-red/20">
-                                        {autoRecords.length}
-                                    </span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {autoRecords.slice(0, 6).map((rec, i) => (
-                                        <div key={i} className="flex items-center gap-2 bg-black/30 border border-white/5 rounded-xl p-2.5">
-                                            <div className="w-7 h-7 bg-brand-red/10 rounded-lg flex items-center justify-center shrink-0">
-                                                <Trophy className="w-3.5 h-3.5 text-brand-red" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-[10px] font-black text-foreground uppercase truncate">{rec.exercise}</p>
-                                                <p className="text-sm font-black text-brand-red italic">{rec.weight} kg</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
-                            <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Estado de Nivel</h3>
-                            <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5 mb-4">
-                                <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center text-brand-red">
-                                    <Trophy className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <p className="text-foreground dark:text-white font-bold">{profile?.level || 'Principiante'}</p>
-                                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Rango Actual</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
-                                <div className="w-12 h-12 bg-yellow-400/10 rounded-xl flex items-center justify-center text-yellow-500">
-                                    <TrendingUp className="w-6 h-6" />
-                                </div>
-                                <div>
-                                    <p className="text-foreground dark:text-white font-bold">{profile?.xp_points?.toLocaleString() || 0} XP</p>
-                                    <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Experiencia Total</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
-                            <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Registro de Combate</h3>
-                            <div className="grid grid-cols-3 gap-2 mb-4">
-                                <div className="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
-                                    <p className="text-white font-black italic">{combatStats.wins}</p>
-                                    <p className="text-[8px] text-green-500 font-black uppercase mt-1">Victorias</p>
-                                </div>
-                                <div className="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
-                                    <p className="text-white font-black italic">{combatStats.losses}</p>
-                                    <p className="text-[8px] text-brand-red font-black uppercase mt-1">Derrotas</p>
-                                </div>
-                                <div className="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
-                                    <p className="text-white font-black italic text-xs leading-none mt-1">{(combatStats.total > 0 ? (combatStats.wins / combatStats.total) * 100 : 0).toFixed(0)}%</p>
-                                    <p className="text-[8px] text-gray-500 font-black uppercase mt-1">Tasa</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
-                            <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Progreso de Trofeos</h3>
-                            <div className="flex flex-wrap gap-2">
-                                <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20" title="Iron Beast">
-                                    <Dumbbell className="w-5 h-5" />
-                                </div>
-                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${combatStats.wins > 0 ? 'bg-brand-red/10 text-brand-red border-brand-red/20' : 'bg-white/5 text-gray-700 border-white/5 opacity-50'}`} title="Arena Gladiator">
-                                    <Swords className="w-5 h-5" />
-                                </div>
-                                <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20" title="Hardened Veteran">
-                                    <Award className="w-5 h-5" />
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* ── Badges Section ── */}
-                        <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em]">Logros y Medallas</h3>
-                                <span className="text-[10px] font-black text-brand-red uppercase tracking-widest bg-brand-red/10 px-2 py-0.5 rounded-full border border-brand-red/20">
-                                    {userBadges.length} desbloqueados
-                                </span>
-                            </div>
-                            {userBadges.length > 0 ? (
-                                <div className="grid grid-cols-1 gap-2.5">
-                                    {userBadges.map((ub: any) => (
-                                        <div key={ub.id} className="flex items-center gap-3 bg-black/40 border border-white/5 rounded-2xl p-3 hover:border-brand-red/20 transition-all group">
-                                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-yellow-500/10 to-brand-red/10 border border-yellow-500/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                                                <Award className="w-4 h-4 text-yellow-500" />
-                                            </div>
-                                            <div className="min-w-0">
-                                                <p className="text-[11px] font-black text-white uppercase truncate">{ub.badge?.name}</p>
-                                                <p className="text-[8px] text-gray-500 font-bold uppercase tracking-wider line-clamp-1">{ub.badge?.description}</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-4 bg-black/20 rounded-2xl border border-dashed border-white/5">
-                                    <Award className="w-8 h-8 text-gray-600 mx-auto mb-2 opacity-50" />
-                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-wider">Sin medallas obtenidas aún</p>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
+                             }}
+                             stats={{
+                                 totalWorkouts: athleteStats?.totalWorkouts ?? workouts.length,
+                                 totalVolume: athleteStats?.totalVolume ?? 0,
+                                 streak: athleteStats?.streak ?? 0,
+                                 prCount: athleteStats?.prCount ?? 0,
+                                 wins: combatStats.wins,
+                             }}
+                         />
+                     </div>
+                     )}
+                     <div className={clsx(mobileTab !== 'gallery' && "hidden lg:block")}>
+                         {profile?.id && <UserMediaGallery userId={profile.id} />}
+                     </div>
+ 
+                     {!hasOrgs && (
+                         <div className={clsx("space-y-6", mobileTab !== 'stats' && "hidden lg:block")}>
+                             {/* ── Personal Records — mobile stats tab ── */}
+                             {autoRecords.length > 0 && (
+                                 <div className="bg-brand-gray/30 border border-brand-red/10 rounded-3xl p-5 backdrop-blur-xl lg:hidden">
+                                     <div className="flex items-center justify-between mb-4">
+                                         <div className="flex items-center gap-2">
+                                             <Trophy className="w-4 h-4 text-brand-red" />
+                                             <h3 className="text-xs font-black uppercase tracking-[0.3em] text-foreground">Récords Personales</h3>
+                                         </div>
+                                         <span className="text-[10px] font-black uppercase tracking-widest text-brand-red bg-brand-red/10 px-2 py-1 rounded-full border border-brand-red/20">
+                                             {autoRecords.length}
+                                         </span>
+                                     </div>
+                                     <div className="grid grid-cols-2 gap-2">
+                                         {autoRecords.slice(0, 6).map((rec, i) => (
+                                             <div key={i} className="flex items-center gap-2 bg-black/30 border border-white/5 rounded-xl p-2.5">
+                                                 <div className="w-7 h-7 bg-brand-red/10 rounded-lg flex items-center justify-center shrink-0">
+                                                     <Trophy className="w-3.5 h-3.5 text-brand-red" />
+                                                 </div>
+                                                 <div className="flex-1 min-w-0">
+                                                     <p className="text-[10px] font-black text-foreground uppercase truncate">{rec.exercise}</p>
+                                                     <p className="text-sm font-black text-brand-red italic">{rec.weight} kg</p>
+                                                 </div>
+                                             </div>
+                                         ))}
+                                     </div>
+                                 </div>
+                             )}
+ 
+                             <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
+                                 <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Estado de Nivel</h3>
+                                 <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5 mb-4">
+                                     <div className="w-12 h-12 bg-brand-red/10 rounded-xl flex items-center justify-center text-brand-red">
+                                         <Trophy className="w-6 h-6" />
+                                     </div>
+                                     <div>
+                                         <p className="text-foreground dark:text-white font-bold">{profile?.level || 'Principiante'}</p>
+                                         <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Rango Actual</p>
+                                     </div>
+                                 </div>
+                                 <div className="flex items-center gap-4 bg-black/40 p-4 rounded-2xl border border-white/5">
+                                     <div className="w-12 h-12 bg-yellow-400/10 rounded-xl flex items-center justify-center text-yellow-500">
+                                         <TrendingUp className="w-6 h-6" />
+                                     </div>
+                                     <div>
+                                         <p className="text-foreground dark:text-white font-bold">{profile?.xp_points?.toLocaleString() || 0} XP</p>
+                                         <p className="text-[10px] text-gray-500 uppercase font-bold tracking-wider">Experiencia Total</p>
+                                     </div>
+                                 </div>
+                             </div>
+ 
+                             <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
+                                 <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Registro de Combate</h3>
+                                 <div className="grid grid-cols-3 gap-2 mb-4">
+                                     <div className="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
+                                         <p className="text-white font-black italic">{combatStats.wins}</p>
+                                         <p className="text-[8px] text-green-500 font-black uppercase mt-1">Victorias</p>
+                                     </div>
+                                     <div className="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
+                                         <p className="text-white font-black italic">{combatStats.losses}</p>
+                                         <p className="text-[8px] text-brand-red font-black uppercase mt-1">Derrotas</p>
+                                     </div>
+                                     <div className="bg-black/40 p-3 rounded-2xl text-center border border-white/5">
+                                         <p className="text-white font-black italic text-xs leading-none mt-1">{(combatStats.total > 0 ? (combatStats.wins / combatStats.total) * 100 : 0).toFixed(0)}%</p>
+                                         <p className="text-[8px] text-gray-500 font-black uppercase mt-1">Tasa</p>
+                                     </div>
+                                 </div>
+                             </div>
+ 
+                             <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
+                                 <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] mb-4">Progreso de Trofeos</h3>
+                                 <div className="flex flex-wrap gap-2">
+                                     <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20" title="Iron Beast">
+                                         <Dumbbell className="w-5 h-5" />
+                                     </div>
+                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${combatStats.wins > 0 ? 'bg-brand-red/10 text-brand-red border-brand-red/20' : 'bg-white/5 text-gray-700 border-white/5 opacity-50'}`} title="Arena Gladiator">
+                                         <Swords className="w-5 h-5" />
+                                     </div>
+                                     <div className="w-10 h-10 rounded-xl bg-brand-red/10 flex items-center justify-center text-brand-red border border-brand-red/20" title="Hardened Veteran">
+                                         <Award className="w-5 h-5" />
+                                     </div>
+                                 </div>
+                             </div>
+ 
+                             {/* ── Badges Section ── */}
+                             <div className="bg-brand-gray/50 border border-white/5 rounded-3xl p-6 backdrop-blur-sm">
+                                 <div className="flex items-center justify-between mb-4">
+                                     <h3 className="text-xs font-black text-gray-500 uppercase tracking-[0.3em]">Logros y Medallas</h3>
+                                     <span className="text-[10px] font-black text-brand-red uppercase tracking-widest bg-brand-red/10 px-2 py-0.5 rounded-full border border-brand-red/20">
+                                         {userBadges.length} desbloqueados
+                                     </span>
+                                 </div>
+                                 {userBadges.length > 0 ? (
+                                     <div className="grid grid-cols-1 gap-2.5">
+                                         {userBadges.map((ub: any) => (
+                                             <div key={ub.id} className="flex items-center gap-3 bg-black/40 border border-white/5 rounded-2xl p-3 hover:border-brand-red/20 transition-all group">
+                                                 <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-yellow-500/10 to-brand-red/10 border border-yellow-500/20 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                                     <Award className="w-4 h-4 text-yellow-500" />
+                                                 </div>
+                                                 <div className="min-w-0">
+                                                     <p className="text-[11px] font-black text-white uppercase truncate">{ub.badge?.name}</p>
+                                                     <p className="text-[8px] text-gray-500 font-bold uppercase tracking-wider line-clamp-1">{ub.badge?.description}</p>
+                                                 </div>
+                                             </div>
+                                         ))}
+                                     </div>
+                                 ) : (
+                                     <div className="text-center py-4 bg-black/20 rounded-2xl border border-dashed border-white/5">
+                                         <Award className="w-8 h-8 text-gray-600 mx-auto mb-2 opacity-50" />
+                                         <p className="text-[10px] text-gray-500 font-black uppercase tracking-wider">Sin medallas obtenidas aún</p>
+                                     </div>
+                                 )}
+                             </div>
+                         </div>
+                     )}
+                 </div>
 
                 {/* Right side: Form, Workouts, Records */}
                 <div className={clsx("lg:col-span-8 space-y-8", mobileTab !== 'settings' && mobileTab !== 'intel' && "hidden lg:block")}>
 
                     {/* Intelligence Section */}
-                    <div className={clsx("space-y-6", mobileTab !== 'intel' && "hidden lg:block")}>
-                        <SkillTree stats={{
-                            power: profile?.power_stat || 0,
-                            endurance: profile?.endurance_stat || 0,
-                            agility: profile?.agility_stat || 0,
-                            consistency: profile?.consistency_stat || 0
-                        }} />
-                        <HealthHub />
-                    </div>
+                    {!hasOrgs && (
+                        <div className={clsx("space-y-6", mobileTab !== 'intel' && "hidden lg:block")}>
+                            <SkillTree stats={{
+                                power: profile?.power_stat || 0,
+                                endurance: profile?.endurance_stat || 0,
+                                agility: profile?.agility_stat || 0,
+                                consistency: profile?.consistency_stat || 0
+                            }} />
+                            <HealthHub />
+                        </div>
+                    )}
 
                     {/* Settings Form */}
                     <div className={clsx("bg-brand-gray/30 border border-white/5 rounded-3xl p-3 md:p-8 backdrop-blur-xl", mobileTab !== 'settings' && "hidden lg:block")}>

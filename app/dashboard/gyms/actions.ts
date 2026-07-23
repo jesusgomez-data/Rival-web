@@ -144,6 +144,14 @@ export async function createOrganization(formData: FormData) {
     }
 
     const isMultiCenter = formData.get('is_multi_center') === 'true';
+    const resolvedPlan = plan || 'free';
+
+    // El plan free es una prueba de 2 meses, no gratis indefinido — se
+    // registra la fecha de corte aqui mismo, en el momento de alta, para
+    // que nadie pueda quedarse "gratis para siempre" sin pagar.
+    const trialEndsAt = resolvedPlan === 'free'
+        ? new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString()
+        : null;
 
     const { data, error } = await supabase
         .from('organizations')
@@ -160,7 +168,8 @@ export async function createOrganization(formData: FormData) {
             center_type: type,
             owner_id: user.id,
             email: user.email,
-            plan: plan || 'free',
+            plan: resolvedPlan,
+            trial_ends_at: trialEndsAt,
             member_count: 1,
             logo_url: logoUrl,
             cover_photo_url: coverUrl,

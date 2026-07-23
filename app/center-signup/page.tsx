@@ -18,9 +18,9 @@ const centerTypes = [
 ]
 
 const plans = [
-  { id: 'free', name: 'FREE', price: '€0', description: 'Ideal para empezar' },
-  { id: 'starter', name: 'STARTER', price: '€49.99', description: 'Lanzamiento: Primeros 50 centros.' },
-  { id: 'pro', name: 'PRO', price: '€99.99', description: 'Lanzamiento: Primeros 50 centros.' },
+  { id: 'free', name: '2 MESES GRATIS', price: '€0', description: 'Sin tarjeta de crédito · Cancela cuando quieras', badge: '🎉 Oferta de Lanzamiento' },
+  { id: 'starter', name: 'STARTER', price: '€49.99', description: 'Primeros 50 centros — precio de lanzamiento', badge: null },
+  { id: 'pro', name: 'PRO', price: '€99.99', description: 'Primeros 50 centros — precio de lanzamiento', badge: null },
 ]
 
 export default function CenterSignup() {
@@ -39,7 +39,7 @@ export default function CenterSignup() {
     country: '',
     city: '',
     address: '',
-    plan: 'starter',
+    plan: 'free',
     logoUrl: '',
     coverUrl: '',
     latitude: '',
@@ -417,11 +417,96 @@ export default function CenterSignup() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">País</label>
-                  <select value={formData.country} onChange={(e) => setFormData({ ...formData, country: e.target.value })} className="w-full bg-brand-gray border border-white/10 rounded-xl py-4 px-4 text-white focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all">
+                  <select value={formData.country} onChange={(e) => setFormData({ ...formData, country: e.target.value })} className="w-full bg-brand-gray border border-white/10 rounded-xl py-4 px-4 text-white focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all max-h-60 overflow-y-auto">
                     <option value="">Selecciona</option>
-                    <option value="España">España</option>
+                    {/* América */}
+                    <option value="Antigua y Barbuda">Antigua y Barbuda</option>
                     <option value="Argentina">Argentina</option>
+                    <option value="Bahamas">Bahamas</option>
+                    <option value="Barbados">Barbados</option>
+                    <option value="Belice">Belice</option>
+                    <option value="Bolivia">Bolivia</option>
+                    <option value="Brasil">Brasil</option>
+                    <option value="Canadá">Canadá</option>
+                    <option value="Chile">Chile</option>
+                    <option value="Colombia">Colombia</option>
+                    <option value="Costa Rica">Costa Rica</option>
+                    <option value="Cuba">Cuba</option>
+                    <option value="Dominica">Dominica</option>
+                    <option value="Ecuador">Ecuador</option>
+                    <option value="El Salvador">El Salvador</option>
+                    <option value="Estados Unidos">Estados Unidos</option>
+                    <option value="Granada">Granada</option>
+                    <option value="Guatemala">Guatemala</option>
+                    <option value="Guyana">Guyana</option>
+                    <option value="Haití">Haití</option>
+                    <option value="Honduras">Honduras</option>
+                    <option value="Jamaica">Jamaica</option>
                     <option value="México">México</option>
+                    <option value="Nicaragua">Nicaragua</option>
+                    <option value="Panamá">Panamá</option>
+                    <option value="Paraguay">Paraguay</option>
+                    <option value="Perú">Perú</option>
+                    <option value="República Dominicana">República Dominicana</option>
+                    <option value="San Cristóbal y Nieves">San Cristóbal y Nieves</option>
+                    <option value="San Vicente y las Granadinas">San Vicente y las Granadinas</option>
+                    <option value="Santa Lucía">Santa Lucía</option>
+                    <option value="Surinam">Surinam</option>
+                    <option value="Trinidad y Tobago">Trinidad y Tobago</option>
+                    <option value="Uruguay">Uruguay</option>
+                    <option value="Venezuela">Venezuela</option>
+                    
+                    {/* Europa */}
+                    <option value="Albania">Albania</option>
+                    <option value="Alemania">Alemania</option>
+                    <option value="Andorra">Andorra</option>
+                    <option value="Armenia">Armenia</option>
+                    <option value="Austria">Austria</option>
+                    <option value="Azerbaiyán">Azerbaiyán</option>
+                    <option value="Bélgica">Bélgica</option>
+                    <option value="Bielorrusia">Bielorrusia</option>
+                    <option value="Bosnia y Herzegovina">Bosnia y Herzegovina</option>
+                    <option value="Bulgaria">Bulgaria</option>
+                    <option value="Chipre">Chipre</option>
+                    <option value="Ciudad del Vaticano">Ciudad del Vaticano</option>
+                    <option value="Croacia">Croacia</option>
+                    <option value="Dinamarca">Dinamarca</option>
+                    <option value="Eslovaquia">Eslovaquia</option>
+                    <option value="Eslovenia">Eslovenia</option>
+                    <option value="España">España</option>
+                    <option value="Estonia">Estonia</option>
+                    <option value="Finlandia">Finlandia</option>
+                    <option value="Francia">Francia</option>
+                    <option value="Georgia">Georgia</option>
+                    <option value="Grecia">Grecia</option>
+                    <option value="Hungría">Hungría</option>
+                    <option value="Irlanda">Irlanda</option>
+                    <option value="Islandia">Islandia</option>
+                    <option value="Italia">Italia</option>
+                    <option value="Kazajistán">Kazajistán</option>
+                    <option value="Letonia">Letonia</option>
+                    <option value="Liechtenstein">Liechtenstein</option>
+                    <option value="Lituania">Lituania</option>
+                    <option value="Luxemburgo">Luxemburgo</option>
+                    <option value="Macedonia del Norte">Macedonia del Norte</option>
+                    <option value="Malta">Malta</option>
+                    <option value="Moldavia">Moldavia</option>
+                    <option value="Mónaco">Mónaco</option>
+                    <option value="Montenegro">Montenegro</option>
+                    <option value="Noruega">Noruega</option>
+                    <option value="Países Bajos">Países Bajos</option>
+                    <option value="Polonia">Polonia</option>
+                    <option value="Portugal">Portugal</option>
+                    <option value="Reino Unido">Reino Unido</option>
+                    <option value="República Checa">República Checa</option>
+                    <option value="Rumania">Rumania</option>
+                    <option value="Rusia">Rusia</option>
+                    <option value="San Marino">San Marino</option>
+                    <option value="Serbia">Serbia</option>
+                    <option value="Suecia">Suecia</option>
+                    <option value="Suiza">Suiza</option>
+                    <option value="Turquía">Turquía</option>
+                    <option value="Ucrania">Ucrania</option>
                   </select>
                 </div>
                 <div>
@@ -567,46 +652,77 @@ export default function CenterSignup() {
           {/* STEP 5 — Plan */}
           {step === 5 && (
             <div className="space-y-6">
+              {/* Hero Free Trial Banner */}
+              <div className="bg-gradient-to-br from-brand-red/20 to-orange-500/10 border border-brand-red/40 rounded-2xl p-5 text-center">
+                <div className="text-3xl mb-1">🎉</div>
+                <h3 className="text-xl font-black text-white uppercase tracking-tight mb-1">2 Meses Completamente Gratis</h3>
+                <p className="text-gray-300 text-sm">Acceso completo · Sin tarjeta de crédito · Cancela cuando quieras</p>
+                <div className="mt-3 inline-flex items-center gap-1.5 bg-brand-red/20 border border-brand-red/30 rounded-full px-3 py-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand-red animate-pulse" />
+                  <span className="text-[10px] font-black text-brand-red uppercase tracking-widest">Oferta Exclusiva de Lanzamiento</span>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-1">Plan</label>
-                <p className="text-[10px] text-brand-red font-bold uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <span className="w-1 h-1 rounded-full bg-brand-red animate-pulse" />
-                  Los cobros se realizarán automáticamente los días 1 de cada mes
-                </p>
-                <p className="text-sm text-gray-400 mb-4">Todos incluyen 30 días gratis.</p>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Elige tu Plan</label>
                 <div className="space-y-3">
                   {plans.map((plan) => (
                     <button
                       key={plan.id}
                       onClick={() => setFormData({ ...formData, plan: plan.id })}
                       disabled={loading}
-                      className={`w-full p-4 rounded-xl border-2 transition-all text-left disabled:opacity-50 ${formData.plan === plan.id ? 'border-brand-red bg-brand-red/10' : 'border-white/10 hover:border-white/20'}`}
+                      className={`w-full p-4 rounded-xl border-2 transition-all text-left disabled:opacity-50 relative overflow-hidden ${
+                        plan.id === 'free'
+                          ? formData.plan === plan.id
+                            ? 'border-brand-red bg-brand-red/20 shadow-[0_0_20px_rgba(239,68,68,0.15)]'
+                            : 'border-brand-red/50 bg-brand-red/5 hover:bg-brand-red/10'
+                          : formData.plan === plan.id
+                            ? 'border-white/40 bg-white/10'
+                            : 'border-white/10 hover:border-white/20'
+                      }`}
                     >
+                      {plan.badge && (
+                        <div className="absolute top-0 right-0 bg-brand-red text-white text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-bl-lg">
+                          {plan.badge}
+                        </div>
+                      )}
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-3">
-                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${formData.plan === plan.id ? 'border-brand-red bg-brand-red' : 'border-white/30'}`}>
+                          <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all ${
+                            formData.plan === plan.id ? 'border-brand-red bg-brand-red' : 'border-white/30'
+                          }`}>
                             {formData.plan === plan.id && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                           </div>
                           <div>
-                            <div className="font-bold text-white">{plan.name}</div>
+                            <div className={`font-bold ${plan.id === 'free' ? 'text-brand-red' : 'text-white'}`}>{plan.name}</div>
                             <div className="text-xs text-gray-400">{plan.description}</div>
                           </div>
                         </div>
-                        <div className="text-2xl font-bold text-brand-red">{plan.price}</div>
+                        <div className={`text-2xl font-bold ${plan.id === 'free' ? 'text-brand-red' : 'text-gray-300'}`}>{plan.price}</div>
                       </div>
                     </button>
                   ))}
                 </div>
+                <p className="text-[10px] text-gray-600 mt-3 text-center">
+                  {formData.plan !== 'free' && 'Los cobros se realizarán automáticamente los días 1 de cada mes'}
+                  {formData.plan === 'free' && '✓ Gratis por 2 meses a partir de hoy. Sin renovación automática.'}
+                </p>
               </div>
 
               <button
                 onClick={() => handlePlanSelect(formData.plan)}
                 disabled={loading}
-                className="w-full bg-brand-red hover:bg-brand-accent text-white py-4 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-brand-red/20 flex items-center justify-center gap-2 group disabled:opacity-70"
+                className={`w-full py-4 rounded-xl font-bold text-lg transition-all shadow-lg flex items-center justify-center gap-2 group disabled:opacity-70 ${
+                  formData.plan === 'free'
+                    ? 'bg-brand-red hover:bg-brand-accent text-white hover:shadow-brand-red/20'
+                    : 'bg-white/10 hover:bg-white/20 text-white border border-white/20'
+                }`}
               >
                 {loading
                   ? <><Loader2 className="w-5 h-5 animate-spin" /> Creando centro...</>
-                  : <>Confirmar y Crear Centro <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>
+                  : formData.plan === 'free'
+                    ? <>Empezar 2 Meses Gratis <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>
+                    : <>Confirmar y Crear Centro <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" /></>
                 }
               </button>
 

@@ -53,43 +53,45 @@ const features = [
 
 const plans = [
   {
-    name: 'FREE',
+    name: '2 MESES GRATIS',
     price: '€0',
-    description: 'Prueba gratis',
+    description: 'Oferta de Lanzamiento',
     features: [
-      'Perfil público',
-      'Hasta 10 clases/semana',
-      'Check-in manual',
+      'Acceso completo a todas las funciones',
+      'Sin tarjeta de crédito requerida',
       'Hasta 50 miembros',
-      'Chat básico',
+      'Hasta 10 clases/semana',
+      'Check-in y chat básico',
     ],
-    cta: 'Empezar Gratis',
+    cta: 'Empezar Gratis Ahora',
     ctaLink: '/center-signup',
-    highlight: false,
+    highlight: true,
+    badge: '🎉 2 Meses Gratis',
   },
   {
     name: 'STARTER',
     price: '€49.99',
-    description: 'Oferta de Lanzamiento: Primeros 50 centros',
+    description: 'Precio de Lanzamiento — Primeros 50 centros',
     features: [
-      'Todo de Free',
+      'Todo lo del periodo gratuito',
       'Clases ilimitadas',
-      'Sistema de pruebas',
+      'Sistema de pruebas de miembros',
       'Tienda básica',
       'Google Calendar sync',
       'Notificaciones push',
     ],
-    cta: 'Prueba Gratis',
+    cta: 'Empezar con Starter',
     ctaLink: '/center-signup?plan=starter',
-    highlight: true,
+    highlight: false,
+    badge: null,
   },
   {
     name: 'PRO',
     price: '€99.99',
-    description: 'Oferta de Lanzamiento: Primeros 50 centros',
+    description: 'Precio de Lanzamiento — Primeros 50 centros',
     features: [
-      'Todo de Starter',
-      'WOD Generator',
+      'Todo lo de Starter',
+      'WOD Generator con IA',
       'Churn Prediction',
       'Benchmarking Competitivo',
       'Tienda avanzada',
@@ -98,13 +100,14 @@ const plans = [
     cta: 'Hablar con Ventas',
     ctaLink: 'mailto:sales@rival.app',
     highlight: false,
+    badge: null,
   },
   {
-    name: 'ESTHER / ENTERPRISE',
+    name: 'ENTERPRISE',
     price: 'Custom',
     description: 'Para cadenas y grandes redes de centros',
     features: [
-      'Todo de Pro',
+      'Todo lo de Pro',
       'API de integración propia',
       'Marca Blanca (app personalizada)',
       'Soporte Prioritario 24/7',
@@ -114,6 +117,7 @@ const plans = [
     cta: 'Contactar con Ventas',
     ctaLink: 'mailto:sales@rivalfit.app',
     highlight: false,
+    badge: null,
   },
 ];
 
@@ -291,10 +295,15 @@ export default function ForCenters() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-heading font-bold mb-6 text-foreground">Planes de <span className="text-brand-red">Crecimiento</span></h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto text-lg mb-2">Sin costes ocultos. Sin complicaciones. Cancela cuando quieras.</p>
-            <p className="text-[10px] text-brand-red font-black uppercase tracking-[0.2em]">
-              Facturación automática los días 1 de cada mes
-            </p>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg mb-4">Sin costes ocultos. Sin complicaciones. Cancela cuando quieras.</p>
+            {/* 2-month free trial banner */}
+            <div className="inline-flex items-center gap-3 bg-brand-red/10 border border-brand-red/30 rounded-2xl px-6 py-3">
+              <span className="text-2xl">🎉</span>
+              <div className="text-left">
+                <p className="text-brand-red font-black uppercase tracking-wider text-sm">2 Meses Completamente Gratis</p>
+                <p className="text-muted-foreground text-xs">Sin tarjeta de crédito · Oferta exclusiva de lanzamiento</p>
+              </div>
+            </div>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -309,16 +318,16 @@ export default function ForCenters() {
               >
                 {plan.highlight && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <span className="bg-brand-red text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Más Popular</span>
+                    <span className="bg-brand-red text-white px-4 py-1 rounded-full text-xs font-bold uppercase tracking-wider">{(plan as any).badge || 'Más Popular'}</span>
                   </div>
                 )}
 
                 <h3 className="text-2xl font-heading font-bold text-foreground mb-2">{plan.name}</h3>
-                <p className="text-muted-foreground text-sm mb-4">{plan.description === 'Prueba gratis' ? 'Ideal para empezar' : plan.description}</p>
+                <p className="text-muted-foreground text-sm mb-4">{plan.description}</p>
 
                 <div className="mb-6">
                   <span className="text-4xl font-heading font-bold text-foreground">{plan.price}</span>
-                  {plan.description !== 'Prueba gratis' && <span className="text-muted-foreground ml-2">/mes</span>}
+                  {plan.price !== '€0' && plan.price !== 'Custom' && <span className="text-muted-foreground ml-2">/mes</span>}
                 </div>
 
                 <ul className="space-y-3 mb-8 flex-grow">

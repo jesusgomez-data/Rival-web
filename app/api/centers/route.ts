@@ -59,6 +59,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 3. Create Organization
+    const trialEndsAt = new Date();
+    trialEndsAt.setMonth(trialEndsAt.getMonth() + 2);
+
     const { data: organization, error: orgError } = await supabase
       .from('organizations')
       .insert({
@@ -78,6 +81,8 @@ export async function POST(request: NextRequest) {
         phone: phone || null,
         website: website || null,
         bio: bio || null,
+        trial_ends_at: trialEndsAt.toISOString(),
+        subscription_status: 'trial',
       })
       .select()
       .single()

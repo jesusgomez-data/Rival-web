@@ -669,7 +669,7 @@ export default function UnifiedLanding() {
                                     <div className="flex items-center justify-center text-yellow-500 mb-1">
                                         <Trophy className="w-4 h-4" />
                                     </div>
-                                    <div className="text-[8px] font-black uppercase tracking-widest text-slate-600 dark:text-white/70 leading-tight">HYROX Race Center</div>
+                                    <div className="text-[8px] font-black uppercase tracking-widest text-slate-600 dark:text-white/70 leading-tight">Gestión de Atletas</div>
                                 </div>
                             </div>
 
