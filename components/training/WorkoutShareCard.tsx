@@ -455,6 +455,19 @@ export default function WorkoutShareCard({
         return duration > 0 ? duration : 0;
     })();
 
+    // fetch() on a data: URI is unreliable in some mobile WebViews (Capacitor/PWA
+    // wrappers in particular) — it can throw or hang on the large base64 strings
+    // toPng() produces. Decoding it directly with atob() avoids the network layer
+    // entirely and works everywhere.
+    const dataUrlToBlob = (dataUrl: string): Blob => {
+        const [header, base64] = dataUrl.split(',');
+        const mime = header.match(/data:(.*?);base64/)?.[1] || 'image/png';
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return new Blob([bytes], { type: mime });
+    };
+
     // Some browsers (notably iOS Safari) silently drop a download triggered by
     // an <a download> click when the element was never attached to the DOM —
     // appending it first (and removing it after) makes the download reliable
@@ -490,7 +503,7 @@ export default function WorkoutShareCard({
             const filename = `rival-workout-${Date.now()}.png`;
 
             if (navigator.share) {
-                const blob = await (await fetch(dataUrl)).blob();
+                const blob = dataUrlToBlob(dataUrl);
                 const file = new File([blob], filename, { type: 'image/png' });
                 if (navigator.canShare?.({ files: [file] })) {
                     try {
@@ -520,7 +533,7 @@ export default function WorkoutShareCard({
         setLoading(true);
         try {
             const dataUrl = await toPng(cardRef.current, { cacheBust: true, pixelRatio: 2 });
-            const blob = await (await fetch(dataUrl)).blob();
+            const blob = dataUrlToBlob(dataUrl);
             const file = new File([blob], 'rival-workout.png', { type: 'image/png' });
             if (navigator.share && navigator.canShare?.({ files: [file] })) {
                 await navigator.share({ files: [file], title: workoutTitle || 'Mi entrenamiento', text: '¡Mira mi entrenamiento en Rival Fit! 🔥' });

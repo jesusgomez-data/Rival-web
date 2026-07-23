@@ -1469,19 +1469,26 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                             <button onClick={handleEditClick} className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-brand-red flex items-center gap-3 border-b border-white/5">
                                 <Edit2 className="w-4 h-4" /> EDITAR
                             </button>
-                            <button
-                                onClick={handleDownloadMedia}
-                                disabled={isDownloadingVideo}
-                                className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-brand-red flex items-center justify-between gap-3 border-b border-white/5 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
-                            >
-                                <div className="flex items-center gap-3">
-                                    {isDownloadingVideo ? <Loader2 className="w-4 h-4 animate-spin text-brand-red" /> : <Download className="w-4 h-4" />}
-                                    {isDownloadingVideo ? 'DESCARGANDO...' : 'DESCARGAR'}
-                                </div>
-                                {isDownloadingVideo && downloadProgress > 0 && (
-                                    <span className="text-brand-red font-black text-[10px]">{downloadProgress}%</span>
-                                )}
-                            </button>
+                            {/* Solo tiene sentido "descargar" cuando el post tiene una foto/video
+                                real detras (photoUrl resuelto). Un post de WOD/PR/resultado de
+                                clase no tiene un archivo de medios que bajar — su "image" es el
+                                JSON del entrenamiento, y VideoProcessor fallaba siempre al
+                                intentar procesarlo como si fuera media real. */}
+                            {hasMedia && (
+                                <button
+                                    onClick={handleDownloadMedia}
+                                    disabled={isDownloadingVideo}
+                                    className="w-full px-5 py-4 text-left text-[11px] font-black text-white hover:bg-brand-red flex items-center justify-between gap-3 border-b border-white/5 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        {isDownloadingVideo ? <Loader2 className="w-4 h-4 animate-spin text-brand-red" /> : <Download className="w-4 h-4" />}
+                                        {isDownloadingVideo ? 'DESCARGANDO...' : 'DESCARGAR'}
+                                    </div>
+                                    {isDownloadingVideo && downloadProgress > 0 && (
+                                        <span className="text-brand-red font-black text-[10px]">{downloadProgress}%</span>
+                                    )}
+                                </button>
+                            )}
                             {(isOwner || isAdminUser) && (
                                 <button onClick={handleDelete} className="w-full px-5 py-4 text-left text-[11px] font-black text-red-500 hover:bg-red-600 hover:text-white flex items-center gap-3">
                                     <Trash2 className="w-4 h-4" /> ELIMINAR

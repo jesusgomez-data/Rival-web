@@ -300,9 +300,22 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
             } else if (type === 'image' && url) {
                 setIsUploading(true);
                 try {
-                    // Fetch the image to use as the main story file (full screen background)
-                    const response = await fetch(url);
-                    const blob = await response.blob();
+                    // fetch() on a data: URI (from html-to-image's toPng, e.g. the WOD
+                    // share card) is unreliable in some mobile WebViews and can throw
+                    // on the large base64 string — decode it directly instead.
+                    let blob: Blob;
+                    if (typeof url === 'string' && url.startsWith('data:')) {
+                        const [header, base64] = url.split(',');
+                        const mime = header.match(/data:(.*?);base64/)?.[1] || 'image/jpeg';
+                        const binary = atob(base64);
+                        const bytes = new Uint8Array(binary.length);
+                        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+                        blob = new Blob([bytes], { type: mime });
+                    } else {
+                        // Fetch the image to use as the main story file (full screen background)
+                        const response = await fetch(url);
+                        blob = await response.blob();
+                    }
                     const file = new File([blob], "shared_story_image.jpg", { type: blob.type });
 
                     setupPreview(file);
