@@ -416,7 +416,7 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
             <div className="w-full bg-[#0d0d0d] border border-white/8 rounded-3xl overflow-hidden shadow-2xl">
                 <div className="p-4 flex gap-4 items-stretch">
                     {/* Left: cover / avatar */}
-                    <div className="relative w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-brand-red/30 to-black border border-white/10">
+                    <div className="relative w-24 h-24 rounded-2xl overflow-hidden flex-shrink-0 bg-gradient-to-br from-brand-red/30 to-black border border-white/10 dark-section">
                         {data.media_url ? (
                             <img src={data.media_url} alt="WOD" className="w-full h-full object-cover" />
                         ) : authorAvatar ? (
@@ -547,7 +547,7 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
     return (
         <div className="w-full bg-[#111111] border border-white/5 rounded-[32px] overflow-hidden group hover:border-brand-red/30 transition-all shadow-2xl relative">
             {/* Header / Backdrop Image */}
-            <div className={cn("relative h-32 md:h-40 overflow-hidden bg-gradient-to-br", CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].gradient)}>
+            <div className={cn("relative h-32 md:h-40 overflow-hidden bg-gradient-to-br dark-section", CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].gradient)}>
                 {data.media_url ? (
                     <img src={data.media_url} alt="WOD" className="w-full h-full object-cover opacity-60 mix-blend-overlay" />
                 ) : (

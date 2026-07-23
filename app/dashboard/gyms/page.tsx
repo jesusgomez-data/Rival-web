@@ -695,7 +695,7 @@ function CenterListPageContent() {
                                                     <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-20 grayscale"></div>
                                                 )}
                                                 {isProfessional(org.center_type) && (
-                                                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-black text-white border border-white/10">
+                                                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-black text-white border border-white/10 keep-all">
                                                         {getTypeIcon(org.center_type)} {getTypeLabel(org.center_type)}
                                                     </div>
                                                 )}
@@ -857,7 +857,7 @@ function CenterListPageContent() {
                                             ) : (
                                                 <div className="absolute inset-0 bg-gradient-to-br from-brand-red/20 to-black opacity-60" />
                                             )}
-                                            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-black text-white border border-white/10">
+                                            <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[9px] font-black text-white border border-white/10 keep-all">
                                                 {getTypeIcon(org.center_type)} {getTypeLabel(org.center_type)}
                                             </div>
                                         </div>
