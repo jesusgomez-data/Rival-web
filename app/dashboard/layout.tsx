@@ -570,24 +570,29 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             { name: t.navDashboard.messages, href: "/dashboard/messages", icon: MessageSquarePlus },
         ];
 
+        // Un usuario normal que ademas creo/gestiona un centro sigue siendo
+        // un atleta — debe ver el menu completo de siempre, y ademas un
+        // acceso rapido al panel de su centro. Solo se reemplaza el menu
+        // completo por el reducido si el usuario es EXCLUSIVAMENTE de
+        // negocio (dado de alta directamente como centro).
+        items.push(
+            { name: t.navDashboard.onlineCoach, href: "/dashboard/coach", icon: MessageCircle },
+            { name: "Mis Marcas", href: "/dashboard/hyrox", icon: Dumbbell },
+            { name: "Nutrición", href: "/dashboard/nutrition", icon: Zap },
+            { name: "Body Stats", href: "/dashboard/body-stats", icon: Activity },
+            { name: t.navDashboard.affiliateGym, href: "/dashboard/gyms", icon: Building2 },
+            { name: "Profesionales", href: "/dashboard/gyms?type=personal_trainer", icon: User },
+            { name: "Mis Reservas", href: "/dashboard/my-bookings", icon: BookOpen },
+            { name: "Explorar", href: "/dashboard/explore", icon: Compass },
+            { name: "Competiciones", href: "/dashboard/competitions", icon: Flag },
+            { name: t.navDashboard.leaderboard, href: "/dashboard/leaderboard", icon: Trophy },
+            { name: t.navDashboard.analytics, href: "/dashboard/analytics", icon: BarChart2 },
+            { name: t.navDashboard.profile, href: "/dashboard/profile", icon: Settings }
+        );
+
         if (isBusinessUser) {
             const orgUrl = businessOrgId ? `/dashboard/gyms/${businessOrgId}` : "/dashboard/gyms";
-            items.push({ name: "Dashboard", href: orgUrl, icon: Building2 });
-        } else {
-            items.push(
-                { name: t.navDashboard.onlineCoach, href: "/dashboard/coach", icon: MessageCircle },
-                { name: "Mis Marcas", href: "/dashboard/hyrox", icon: Dumbbell },
-                { name: "Nutrición", href: "/dashboard/nutrition", icon: Zap },
-                { name: "Body Stats", href: "/dashboard/body-stats", icon: Activity },
-                { name: t.navDashboard.affiliateGym, href: "/dashboard/gyms", icon: Building2 },
-                { name: "Profesionales", href: "/dashboard/gyms?type=personal_trainer", icon: User },
-                { name: "Mis Reservas", href: "/dashboard/my-bookings", icon: BookOpen },
-                { name: "Explorar", href: "/dashboard/explore", icon: Compass },
-                { name: "Competiciones", href: "/dashboard/competitions", icon: Flag },
-                { name: t.navDashboard.leaderboard, href: "/dashboard/leaderboard", icon: Trophy },
-                { name: t.navDashboard.analytics, href: "/dashboard/analytics", icon: BarChart2 },
-                { name: t.navDashboard.profile, href: "/dashboard/profile", icon: Settings }
-            );
+            items.push({ name: "Dashboard del Centro", href: orgUrl, icon: Building2 });
         }
 
         if (isAdmin === true) {
