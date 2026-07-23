@@ -4,6 +4,8 @@ import { useEffect, useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/utils/supabase/client";
 import { Activity } from "lucide-react";
+import { useTheme } from "@/app/ThemeContext";
+import clsx from "clsx";
 
 interface ActivityEvent {
     id: string;
@@ -14,6 +16,7 @@ interface ActivityEvent {
 }
 
 export default function LiveActivityTicker() {
+    const { theme } = useTheme();
     const supabase = useMemo(() => createClient(), []);
     const [events, setEvents] = useState<ActivityEvent[]>([]);
     const [tickerIndex, setTickerIndex] = useState(0);
@@ -181,7 +184,10 @@ export default function LiveActivityTicker() {
     const currentEvent = events[tickerIndex];
 
     return (
-        <div className="w-full bg-[#080808]/75 backdrop-blur-md border border-white/[0.06] rounded-full py-2 px-4 flex items-center justify-between overflow-hidden shadow-2xl relative">
+        <div className={clsx(
+            "w-full backdrop-blur-md rounded-full py-2 px-4 flex items-center justify-between overflow-hidden shadow-2xl relative border",
+            theme === 'dark' ? "bg-[#080808]/75 border-white/[0.06]" : "bg-white/90 border-gray-200"
+        )}>
             {/* Left Section: Pulsing Live Indicator */}
             <div className="flex items-center gap-2 shrink-0 select-none">
                 <span className="relative flex h-2 w-2">
@@ -202,7 +208,10 @@ export default function LiveActivityTicker() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
                         transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="flex items-center gap-2 w-full justify-start text-[11px] sm:text-xs font-bold tracking-wide text-white/90 truncate"
+                        className={clsx(
+                            "flex items-center gap-2 w-full justify-start text-[11px] sm:text-xs font-bold tracking-wide truncate",
+                            theme === 'dark' ? "text-white/90" : "text-gray-800"
+                        )}
                     >
                         <span className="text-sm shrink-0 leading-none">{currentEvent?.emoji}</span>
                         <span className="truncate leading-none">{currentEvent?.text}</span>

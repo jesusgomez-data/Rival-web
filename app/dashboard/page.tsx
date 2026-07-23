@@ -1173,7 +1173,7 @@ export default function DashboardHome() {
                         </Link>
                     </div>
 
-                    <div className="bg-gradient-to-br from-brand-gray to-black border border-white/10 rounded-[32px] p-5 md:p-8 relative overflow-hidden group shadow-2xl">
+                    <div className="bg-[#111] border border-white/10 rounded-[32px] p-5 md:p-8 relative overflow-hidden group shadow-2xl">
                         <div className="relative z-10">
                             <h3 className="font-heading font-black text-foreground italic tracking-wider mb-5 uppercase text-lg">{t.dashboard.weeklyGoal}</h3>
                             <div className="space-y-6">

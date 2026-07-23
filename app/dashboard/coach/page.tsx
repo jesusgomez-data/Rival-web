@@ -210,7 +210,7 @@ export default function CoachPage() {
     return (
         <div className="h-[calc(100vh-140px)] flex flex-col bg-brand-gray border border-white/5 rounded-2xl overflow-hidden shadow-2xl">
             {/* Chat Header */}
-            <div className="p-4 border-b border-white/5 bg-black/40 backdrop-blur-md flex items-center justify-between">
+            <div className="p-4 border-b border-white/5 bg-gray-100 dark:bg-black/40 backdrop-blur-md flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-brand-red flex items-center justify-center shadow-[0_0_15px_rgba(220,38,38,0.5)]">
                         <Zap className="w-6 h-6 text-white fill-current" />
@@ -276,7 +276,7 @@ export default function CoachPage() {
                                         "p-4 rounded-2xl text-sm leading-relaxed shadow-md",
                                         msg.role === 'user'
                                             ? "bg-white text-black font-medium rounded-tr-none shadow-white/5"
-                                            : "bg-black/60 border border-white/10 text-gray-200 rounded-tl-none shadow-black/40"
+                                            : "bg-gray-100 dark:bg-black/60 border border-gray-200 dark:border-white/10 text-gray-800 dark:text-gray-200 rounded-tl-none shadow-black/40"
                                     )}>
                                         {msg.content}
                                     </div>
@@ -390,7 +390,7 @@ export default function CoachPage() {
                                 <div className="w-8 h-8 rounded-full bg-brand-red shadow-[0_0_12px_rgba(220,38,38,0.4)] flex items-center justify-center shrink-0 mt-1">
                                     <Bot className="w-4 h-4 text-white" />
                                 </div>
-                                <div className="bg-black/60 border border-white/10 rounded-2xl rounded-tl-none px-5 py-4 flex flex-col gap-1">
+                                <div className="bg-gray-100 dark:bg-black/60 border border-gray-200 dark:border-white/10 rounded-2xl rounded-tl-none px-5 py-4 flex flex-col gap-1">
                                     {/* 3 bouncing dots — WhatsApp/iMessage style */}
                                     <div className="flex items-center gap-1.5">
                                         <span className="w-2 h-2 rounded-full bg-brand-red animate-bounce [animation-delay:0ms]" />

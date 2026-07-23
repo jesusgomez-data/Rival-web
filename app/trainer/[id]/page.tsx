@@ -358,9 +358,9 @@ export default function TrainerPublicProfile() {
                 </div>
             )}
             
-            <div className="w-full max-w-4xl border-x border-white/5 bg-zinc-950/40 min-h-screen">
+            <div className="w-full max-w-4xl border-x border-white/5 bg-black/40 min-h-screen">
                 {/* Back */}
-                <div className="sticky top-0 z-30 bg-black/80 backdrop-blur border-b border-white/5 px-4 flex items-center gap-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))', paddingBottom: 12 }}>
+                <div className="sticky top-0 z-30 bg-white/80 dark:bg-black/80 backdrop-blur border-b border-gray-200 dark:border-white/5 px-4 flex items-center gap-3" style={{ paddingTop: 'max(12px, env(safe-area-inset-top))', paddingBottom: 12 }}>
                 <button
                     onClick={() => {
                         if (window.history.length > 1 && document.referrer && document.referrer.includes(window.location.hostname)) {

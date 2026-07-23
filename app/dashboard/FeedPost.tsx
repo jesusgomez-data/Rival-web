@@ -1752,7 +1752,12 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                     isTextOnly ? "pt-4" : ""
                 )}>
                     {isTextOnly ? (
-                        <div className="relative overflow-hidden bg-gradient-to-br from-brand-red/10 via-zinc-900/40 to-black/80 border border-white/5 rounded-2xl p-6 shadow-inner">
+                        <div className={clsx(
+                            "relative overflow-hidden border rounded-2xl p-6 shadow-inner",
+                            theme === 'dark'
+                                ? "bg-gradient-to-br from-brand-red/10 via-zinc-900/40 to-black/80 border-white/5"
+                                : "bg-gradient-to-br from-brand-red/5 via-gray-50 to-gray-100 border-gray-200"
+                        )}>
                             {/* Decorative sporty accent line */}
                             <div className="absolute top-0 left-0 w-1 h-full bg-brand-red shadow-[0_0_8px_rgba(220,38,38,0.5)]" />
                             {/* Decorative background glow */}
