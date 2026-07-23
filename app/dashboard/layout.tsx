@@ -187,6 +187,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     const [profile, setProfile] = useState<any>(null);
     const [userEmail, setUserEmail] = useState<string | null>(null);
     const [isBusinessUser, setIsBusinessUser] = useState(false);
+    const [isBusinessOnly, setIsBusinessOnly] = useState(false);
     const [businessOrgId, setBusinessOrgId] = useState<string | null>(null);
     const [showMobileSearch, setShowMobileSearch] = useState(false);
     const [unreadMessages, setUnreadMessages] = useState(0);
@@ -273,6 +274,10 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                     if (isMounted) {
                         setIsBusinessUser(!!orgId);
                         setBusinessOrgId(orgId);
+                        // Cuenta nativa de centro (creada via /center-signup) vs un
+                        // atleta normal que ademas gestiona un centro — solo la
+                        // primera pierde el menu de atleta.
+                        setIsBusinessOnly(profileData?.account_type === 'business');
                     }
                 }
 
@@ -570,29 +575,32 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             { name: t.navDashboard.messages, href: "/dashboard/messages", icon: MessageSquarePlus },
         ];
 
-        // Un usuario normal que ademas creo/gestiona un centro sigue siendo
-        // un atleta — debe ver el menu completo de siempre, y ademas un
-        // acceso rapido al panel de su centro. Solo se reemplaza el menu
-        // completo por el reducido si el usuario es EXCLUSIVAMENTE de
-        // negocio (dado de alta directamente como centro).
-        items.push(
-            { name: t.navDashboard.onlineCoach, href: "/dashboard/coach", icon: MessageCircle },
-            { name: "Mis Marcas", href: "/dashboard/hyrox", icon: Dumbbell },
-            { name: "Nutrición", href: "/dashboard/nutrition", icon: Zap },
-            { name: "Body Stats", href: "/dashboard/body-stats", icon: Activity },
-            { name: t.navDashboard.affiliateGym, href: "/dashboard/gyms", icon: Building2 },
-            { name: "Profesionales", href: "/dashboard/gyms?type=personal_trainer", icon: User },
-            { name: "Mis Reservas", href: "/dashboard/my-bookings", icon: BookOpen },
-            { name: "Explorar", href: "/dashboard/explore", icon: Compass },
-            { name: "Competiciones", href: "/dashboard/competitions", icon: Flag },
-            { name: t.navDashboard.leaderboard, href: "/dashboard/leaderboard", icon: Trophy },
-            { name: t.navDashboard.analytics, href: "/dashboard/analytics", icon: BarChart2 },
-            { name: t.navDashboard.profile, href: "/dashboard/profile", icon: Settings }
-        );
-
-        if (isBusinessUser) {
+        // Cuenta EXCLUSIVAMENTE de negocio (alta directa por /center-signup):
+        // menu reducido, solo su panel de centro. Un atleta normal que
+        // ademas creo/gestiona un centro sigue viendo el menu completo de
+        // siempre, mas un acceso rapido al panel de su centro.
+        if (isBusinessOnly) {
             const orgUrl = businessOrgId ? `/dashboard/gyms/${businessOrgId}` : "/dashboard/gyms";
             items.push({ name: "Dashboard del Centro", href: orgUrl, icon: Building2 });
+        } else {
+            items.push(
+                { name: t.navDashboard.onlineCoach, href: "/dashboard/coach", icon: MessageCircle },
+                { name: "Mis Marcas", href: "/dashboard/hyrox", icon: Dumbbell },
+                { name: "Nutrición", href: "/dashboard/nutrition", icon: Zap },
+                { name: "Body Stats", href: "/dashboard/body-stats", icon: Activity },
+                { name: t.navDashboard.affiliateGym, href: "/dashboard/gyms", icon: Building2 },
+                { name: "Profesionales", href: "/dashboard/gyms?type=personal_trainer", icon: User },
+                { name: "Mis Reservas", href: "/dashboard/my-bookings", icon: BookOpen },
+                { name: "Explorar", href: "/dashboard/explore", icon: Compass },
+                { name: "Competiciones", href: "/dashboard/competitions", icon: Flag },
+                { name: t.navDashboard.leaderboard, href: "/dashboard/leaderboard", icon: Trophy },
+                { name: t.navDashboard.analytics, href: "/dashboard/analytics", icon: BarChart2 },
+                { name: t.navDashboard.profile, href: "/dashboard/profile", icon: Settings }
+            );
+            if (isBusinessUser) {
+                const orgUrl = businessOrgId ? `/dashboard/gyms/${businessOrgId}` : "/dashboard/gyms";
+                items.push({ name: "Dashboard del Centro", href: orgUrl, icon: Building2 });
+            }
         }
 
         if (isAdmin === true) {
@@ -601,7 +609,7 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
 
         return items;
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isAdmin, t, isBusinessUser, businessOrgId]);
+    }, [isAdmin, t, isBusinessUser, isBusinessOnly, businessOrgId]);
 
     const isBusinessCenterRoute = pathname?.startsWith('/dashboard/gyms/') && pathname.split('/').length > 3;
     const hideSidebarDefault = pathname === '/dashboard/admin'; // Give admin its toggle, but not business centers

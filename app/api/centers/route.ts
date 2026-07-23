@@ -50,6 +50,10 @@ export async function POST(request: NextRequest) {
         id: userId,
         username: email.split('@')[0],
         full_name: fullName,
+        // Cuenta nativa de centro (alta directa por /center-signup), a
+        // diferencia de un atleta normal que luego crea un centro desde
+        // dentro de la app — solo esta primera debe ver el menu reducido.
+        account_type: 'business',
         updated_at: new Date().toISOString()
       }, { onConflict: 'id' })
 
