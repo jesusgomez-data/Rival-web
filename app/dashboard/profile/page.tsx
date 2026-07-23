@@ -152,6 +152,16 @@ export default function ProfilePage() {
             if (trial) setUpcomingTrial(trial);
 
             if (data) {
+                // Una cuenta de empresa (account_type = 'business') no tiene
+                // perfil personal de atleta que editar — su "perfil" es el
+                // perfil publico de su centro, que se gestiona desde el
+                // dashboard del centro.
+                if (data.account_type === 'business') {
+                    const orgs = await getUserOrganizations().catch(() => []);
+                    router.replace(orgs?.[0]?.id ? `/dashboard/gyms/${orgs[0].id}` : '/dashboard/gyms');
+                    return;
+                }
+
                 setProfile(data);
 
                 try {
