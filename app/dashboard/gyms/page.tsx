@@ -333,7 +333,7 @@ function CenterListPageContent() {
     // Theme Classes
     const bgMain = theme === 'dark' ? 'bg-black text-white' : 'bg-gray-50 text-gray-900';
     const bgCard = theme === 'dark' ? 'bg-brand-gray border-white/5' : 'bg-white border-gray-200 shadow-sm';
-    const textMuted = theme === 'dark' ? 'text-gray-400' : 'text-gray-500';
+    const textMuted = theme === 'dark' ? 'text-gray-400' : 'text-gray-600';
     const textHeading = theme === 'dark' ? 'text-white' : 'text-gray-900';
     const bgInput = theme === 'dark' ? 'bg-black/40 border-white/10 text-white' : 'bg-gray-50 border-gray-200 text-black';
 
