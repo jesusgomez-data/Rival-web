@@ -425,7 +425,7 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                             <div className="w-full h-full flex items-center justify-center text-3xl">{catCfg.icon}</div>
                         )}
                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                        <span className={cn("absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded text-white", catCfg.color)}>
+                        <span className={cn("absolute bottom-1.5 left-1/2 -translate-x-1/2 text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded", catCfg.color)} style={{ color: '#fff' }}>
                             {catCfg.icon}
                         </span>
                     </div>
@@ -560,14 +560,14 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                 <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
 
                 <div className="absolute top-4 left-6 right-6 flex items-center justify-between gap-2 z-10">
-                    <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-full px-3 py-1 flex items-center gap-2">
+                    <div className="backdrop-blur-md rounded-full px-3 py-1 flex items-center gap-2" style={{ backgroundColor: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)' }}>
                         <Activity className="w-3 h-3 text-brand-red" />
-                        <span className="text-[9px] font-black text-white uppercase tracking-widest">{completionsCount} ATLETAS</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: '#fff' }}>{completionsCount} ATLETAS</span>
                     </div>
                     {centerName && (
                         <div className="bg-brand-red/20 backdrop-blur-md border border-brand-red/30 rounded-full px-3 py-1 flex items-center gap-1.5 shrink-0">
                             <MapPin className="w-3 h-3 text-brand-red" />
-                            <span className="text-[9px] font-black text-white uppercase tracking-widest truncate max-w-[140px]">{centerName}</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest truncate max-w-[140px]" style={{ color: '#fff' }}>{centerName}</span>
                         </div>
                     )}
                 </div>
@@ -575,16 +575,16 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                 <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                            <span className={cn("text-white text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded", CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].color)}>
+                            <span className={cn("text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded", CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].color)} style={{ color: '#fff' }}>
                                 {CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].label}
                             </span>
-                            <span className="text-white/60 text-[8px] font-bold uppercase tracking-widest">{data.blocks.length} BLOQUES</span>
+                            <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.6)' }}>{data.blocks.length} BLOQUES</span>
                         </div>
-                        <h3 className="text-xl md:text-3xl font-heading font-black italic uppercase tracking-tighter text-white drop-shadow-lg leading-tight truncate">
+                        <h3 className="text-xl md:text-3xl font-heading font-black italic uppercase tracking-tighter drop-shadow-lg leading-tight truncate" style={{ color: '#fff' }}>
                             {data.title || 'WORKOUT OF THE DAY'}
                         </h3>
                         {publishDate && (
-                            <p className="text-[8px] md:text-[10px] text-white/40 font-bold uppercase tracking-[0.2em] mt-0.5">
+                            <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.2em] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
                                 {publishDate}
                             </p>
                         )}
@@ -592,7 +592,8 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
 
                     <button
                         onClick={() => setIsExpanded(!isExpanded)}
-                        className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-brand-red hover:border-brand-red transition-all shrink-0 ml-4"
+                        className="w-10 h-10 rounded-full backdrop-blur-md flex items-center justify-center hover:bg-brand-red hover:border-brand-red transition-all shrink-0 ml-4"
+                        style={{ backgroundColor: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', color: '#fff' }}
                     >
                         {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
                     </button>
