@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { getWorkoutHistory, deleteWorkout } from "../actions";
-import { ChevronLeft, Dumbbell, Calendar, Clock, Trash2, Edit2, Loader2, Trophy, X } from "lucide-react";
+import { ChevronLeft, Dumbbell, Calendar, Clock, Trash2, Loader2, Trophy, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
@@ -117,8 +117,8 @@ function WorkoutLogsContent() {
                     <p className="text-gray-500 text-sm mb-6">
                         {dateFilter ? `No se encontraron entrenamientos para el día ${dateFilter}.` : 'Todavía no has registrado ninguna sesión, soldado.'}
                     </p>
-                    <Link href="/dashboard/training/session" className="bg-white text-black px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all">
-                        Iniciar Primera Sesión
+                    <Link href="/dashboard" className="bg-white text-black px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest hover:bg-brand-red hover:text-white transition-all">
+                        Publicar un Entrenamiento
                     </Link>
                 </div>
             ) : (
@@ -211,13 +211,6 @@ function WorkoutLogsContent() {
                                         {/* Actions - Only if owner */}
                                         {(!targetUserId || targetUserId === currentUserId) && (
                                             <div className="flex items-center gap-2 pl-4 border-l border-white/5">
-                                                <Link
-                                                    href={`/dashboard/training/session?editId=${workout.id}`}
-                                                    className="p-3 text-gray-600 hover:text-white hover:bg-white/5 rounded-2xl transition-all"
-                                                    title="Editar entreno"
-                                                >
-                                                    <Edit2 className="w-5 h-5" />
-                                                </Link>
                                                 <button
                                                     onClick={() => handleDelete(workout.id)}
                                                     disabled={deletingId === workout.id}
