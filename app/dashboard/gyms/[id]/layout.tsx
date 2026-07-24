@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import { createClient } from "@/utils/supabase/server";
 import { notFound, redirect } from "next/navigation";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import GymLayoutClient from "./GymLayoutClient";
 
 
@@ -33,7 +35,14 @@ export default async function CenterLayout({
     // Básico/Pro elegidos ahí tampoco han pagado nada todavía.
     if (org.subscription_status !== 'active' && org.trial_ends_at && new Date(org.trial_ends_at) < new Date()) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-background p-6">
+            <div className="min-h-screen flex items-center justify-center bg-background p-6 relative">
+                <Link
+                    href="/dashboard"
+                    className="absolute top-6 left-6 w-11 h-11 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-foreground hover:bg-white/10 transition-all"
+                    style={{ top: 'max(24px, env(safe-area-inset-top))' }}
+                >
+                    <ArrowLeft className="w-5 h-5" />
+                </Link>
                 <div className="max-w-md w-full text-center space-y-6 bg-brand-gray border border-white/5 rounded-[32px] p-10 shadow-2xl">
                     <div className="w-16 h-16 rounded-full bg-brand-red/10 border border-brand-red/20 flex items-center justify-center mx-auto">
                         <span className="text-3xl">⏰</span>
