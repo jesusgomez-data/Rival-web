@@ -1294,8 +1294,22 @@ export async function getWorkoutHistory(limit = 10, userId?: string) {
         .order('date_performed', { ascending: false })
         .limit(limit)
 
+    // 3. Fetch WOD/PR posts (creados con "+" > WOD, incluye las carreras con GPS)
+    // — la unica via de alta desde que se retiro el tracker de sesion en vivo,
+    // asi que sin esto el historial aparecia vacio para todo lo publicado por
+    // esa via aunque el calendario de actividad SI lo contara (cuenta tambien
+    // estos posts, no solo la tabla workouts).
+    const { data: wodPosts, error: pError } = await supabase
+        .from('posts')
+        .select('id, wod_data, caption, created_at, media_type')
+        .eq('user_id', targetUserId)
+        .in('media_type', ['wod', 'pr'])
+        .order('created_at', { ascending: false })
+        .limit(limit)
+
     if (wError) console.error('Error fetching workouts:', wError)
     if (cError) console.error('Error fetching class results:', cError)
+    if (pError) console.error('Error fetching wod posts:', pError)
 
     // 3. Map and Unify structures
     const unifiedWorkouts = [
@@ -1331,6 +1345,24 @@ export async function getWorkoutHistory(limit = 10, userId?: string) {
                 effort_rpe: 8,
                 max_weight_kg: maxW,
                 is_pr: false // This could be calculated by comparing with previous records if needed
+            };
+        }),
+        ...(wodPosts || []).map(p => {
+            let wod: any = {};
+            try { wod = JSON.parse(p.wod_data || '{}'); } catch { }
+            const metrics = wod.metrics || null;
+            const isRunning = wod.category === 'RUNNING' || metrics?.type === 'running';
+            return {
+                id: p.id,
+                display_date: p.created_at,
+                created_at: p.created_at,
+                type: 'wod_post',
+                title: wod.title || (p.media_type === 'pr' ? 'Récord Personal' : 'WOD'),
+                sport_type: isRunning ? 'Running' : (wod.category || 'CrossFit'),
+                duration_seconds: metrics?.duration || 0,
+                effort_rpe: 7,
+                metrics,
+                workout_sets: [],
             };
         })
     ];
