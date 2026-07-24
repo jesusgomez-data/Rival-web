@@ -19,6 +19,7 @@ import { WodBlock, WodFormat, WodSummary, ExerciseEntry, WorkoutCategory } from 
 import { cn } from "@/lib/utils";
 import WODLeaderboardModal from "@/components/WODLeaderboardModal";
 import WODTrackerModal from "@/components/WODTrackerModal";
+import RouteMap from "@/components/training/RouteMap";
 
 interface WodData {
     title: string;
@@ -231,6 +232,28 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                     {/* EXPANDED CONTENT: Analysis, Splits, Charts */}
                     {isExpanded && (
                         <div className="animate-in fade-in slide-in-from-top-4 duration-500 space-y-10 pb-6">
+                            {/* Route map — el recorrido GPS real de la carrera, el elemento
+                                mas "Strava" que faltaba: el dato ya se guardaba en cada
+                                sesion pero nunca se pintaba en el feed. */}
+                            {(() => {
+                                const path = (data.metrics as any)?.path as { lat: number; lon: number }[] | undefined;
+                                if (!path || path.length < 2) return null;
+                                return (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <h4 className="text-[10px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-2">
+                                                <Target className="w-3.5 h-3.5 text-brand-red" />
+                                                RECORRIDO
+                                            </h4>
+                                            <span className="text-[8px] font-bold text-gray-500 uppercase">GPS REAL</span>
+                                        </div>
+                                        <div className="w-full aspect-square rounded-2xl border border-white/5 bg-white/[0.02] overflow-hidden relative">
+                                            <RouteMap path={path} color="#ef4444" strokeWidth={7} showGrid className="w-full h-full" />
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
                             {/* Splits per km chart - real GPS data */}
                             <div className="space-y-4">
                                 {(() => {

@@ -7,6 +7,7 @@ import { ChevronLeft, Dumbbell, Calendar, Clock, Trash2, Edit2, Loader2, Trophy,
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import RouteMap from "@/components/training/RouteMap";
 
 export default function WorkoutLogsPage() {
     return (
@@ -172,9 +173,15 @@ function WorkoutLogsContent() {
                                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
                                     <div className="space-y-4">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-14 h-14 bg-brand-red/10 rounded-2xl flex items-center justify-center text-brand-red border border-brand-red/20 shadow-[0_0_20px_rgba(220,38,38,0.1)]">
-                                                {isRunning ? <Clock className="w-6 h-6 transition-transform group-hover:rotate-12" /> : <Dumbbell className="w-6 h-6 transition-transform group-hover:rotate-12" />}
-                                            </div>
+                                            {isRunning && workout.metrics?.path?.length >= 2 ? (
+                                                <div className="w-14 h-14 rounded-2xl overflow-hidden border border-brand-red/20 bg-brand-red/10 shadow-[0_0_20px_rgba(220,38,38,0.1)] shrink-0">
+                                                    <RouteMap path={workout.metrics.path} color="#ef4444" strokeWidth={14} showStart={false} className="w-full h-full" />
+                                                </div>
+                                            ) : (
+                                                <div className="w-14 h-14 bg-brand-red/10 rounded-2xl flex items-center justify-center text-brand-red border border-brand-red/20 shadow-[0_0_20px_rgba(220,38,38,0.1)]">
+                                                    {isRunning ? <Clock className="w-6 h-6 transition-transform group-hover:rotate-12" /> : <Dumbbell className="w-6 h-6 transition-transform group-hover:rotate-12" />}
+                                                </div>
+                                            )}
                                             <div>
                                                 <h3 className="text-white font-heading font-black text-xl uppercase italic tracking-tight group-hover:text-brand-red transition-colors">{workout.title}</h3>
                                                 <div className="flex items-center gap-4 text-[11px] text-gray-500 font-black uppercase tracking-widest mt-1">
