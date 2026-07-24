@@ -37,7 +37,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
     );
     const [showEmojiPicker, setShowEmojiPicker] = useState(false);
     const [postType, setPostType] = useState<'standard' | 'pr' | 'wod'>(initialPostType || 'standard');
-    const [wodData, setWodData] = useState<{ title: string, blocks: WodBlock[], summary: WodSummary, category?: WorkoutCategory, originalWodPostId?: string, partner?: any } | null>(
+    const [wodData, setWodData] = useState<{ title: string, blocks: WodBlock[], summary: WodSummary, category?: WorkoutCategory, originalWodPostId?: string, partner?: any, metrics?: any } | null>(
         initialPostType === 'wod' && initialData ? initialData : null
     );
     const [originalWodPostId, setOriginalWodPostId] = useState<string | null>(
