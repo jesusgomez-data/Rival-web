@@ -1351,17 +1351,24 @@ export async function getWorkoutHistory(limit = 10, userId?: string) {
             let wod: any = {};
             try { wod = JSON.parse(p.wod_data || '{}'); } catch { }
             const metrics = wod.metrics || null;
+            const blocks = Array.isArray(wod.blocks) ? wod.blocks : [];
             const isRunning = wod.category === 'RUNNING' || metrics?.type === 'running';
+            const formats = Array.from(new Set(blocks.map((b: any) => b.format).filter(Boolean)));
+            const fallbackTitle = p.media_type === 'pr'
+                ? 'Récord Personal'
+                : (formats.length > 0 ? formats.join(' + ') : 'WOD');
             return {
                 id: p.id,
                 display_date: p.created_at,
                 created_at: p.created_at,
                 type: 'wod_post',
-                title: wod.title || (p.media_type === 'pr' ? 'Récord Personal' : 'WOD'),
+                title: wod.title || p.caption || fallbackTitle,
                 sport_type: isRunning ? 'Running' : (wod.category || 'CrossFit'),
                 duration_seconds: metrics?.duration || 0,
                 effort_rpe: 7,
                 metrics,
+                blocks,
+                summary: wod.summary || null,
                 workout_sets: [],
             };
         })

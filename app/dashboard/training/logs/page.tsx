@@ -135,6 +135,13 @@ function WorkoutLogsContent() {
                         let thirdStatLabel = 'Ejercicios';
                         let thirdStatValue = '0';
 
+                        const isWodPost = workout.type === 'wod_post';
+                        const wodExerciseNames: string[] = isWodPost
+                            ? Array.from(new Set(
+                                (workout.blocks || []).flatMap((b: any) => (b.exercises || []).map((ex: any) => ex.name).filter(Boolean))
+                            ))
+                            : [];
+
                         if (isRunning) {
                             mainStatLabel = 'Distancia';
                             // Try to get distance from metrics or calculate from somewhere if needed (usually in metrics)
@@ -151,6 +158,17 @@ function WorkoutLogsContent() {
                             const m = Math.floor(s / 60);
                             const sec = s % 60;
                             thirdStatValue = workout.metrics?.time || `${m}:${sec < 10 ? '0' + sec : sec}`;
+                        } else if (isWodPost) {
+                            // WOD publicado (bloques/formato/puntuación), no tiene workout_sets
+                            mainStatLabel = 'Puntuación';
+                            mainStatValue = workout.summary?.scoreLabel || '—';
+                            mainStatUnit = '';
+
+                            subStatLabel = 'Formato';
+                            const formats: string[] = Array.from(new Set((workout.blocks || []).map((b: any) => b.format).filter(Boolean))) as string[];
+                            subStatValue = formats[0] || '—';
+
+                            thirdStatValue = wodExerciseNames.length.toString();
                         } else {
                             // Strength Logic
                             const maxWeight = workout.workout_sets?.reduce((max: number, set: any) =>
@@ -162,7 +180,9 @@ function WorkoutLogsContent() {
 
                         // Determine pills
                         let pills: string[] = [];
-                        if (workout.workout_sets && workout.workout_sets.length > 0) {
+                        if (isWodPost && wodExerciseNames.length > 0) {
+                            pills = wodExerciseNames;
+                        } else if (workout.workout_sets && workout.workout_sets.length > 0) {
                             pills = Array.from(new Set(workout.workout_sets.map((s: any) => s.exercise_name)));
                         } else if (isRunning) {
                             pills = ['Carrera Libre', 'Running'];
