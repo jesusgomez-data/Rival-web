@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import GymLayoutClient from "./GymLayoutClient";
+import TrialEndedPlanPicker from "./TrialEndedPlanPicker";
 
 
 export default async function CenterLayout({
@@ -43,22 +44,19 @@ export default async function CenterLayout({
                 >
                     <ArrowLeft className="w-5 h-5" />
                 </Link>
-                <div className="max-w-md w-full text-center space-y-6 bg-brand-gray border border-white/5 rounded-[32px] p-10 shadow-2xl">
-                    <div className="w-16 h-16 rounded-full bg-brand-red/10 border border-brand-red/20 flex items-center justify-center mx-auto">
-                        <span className="text-3xl">⏰</span>
+                <div className="max-w-2xl w-full text-center space-y-8 bg-brand-gray border border-white/5 rounded-[32px] p-10 shadow-2xl">
+                    <div className="space-y-6">
+                        <div className="w-16 h-16 rounded-full bg-brand-red/10 border border-brand-red/20 flex items-center justify-center mx-auto">
+                            <span className="text-3xl">⏰</span>
+                        </div>
+                        <div>
+                            <h1 className="text-xl font-heading font-black italic uppercase text-foreground mb-2">Tu prueba gratuita terminó</h1>
+                            <p className="text-sm text-muted-foreground">
+                                Los 2 meses gratis de <strong>{org.name}</strong> han finalizado. Elige un plan para seguir gestionando clases, miembros y pagos.
+                            </p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="text-xl font-heading font-black italic uppercase text-foreground mb-2">Tu prueba gratuita terminó</h1>
-                        <p className="text-sm text-muted-foreground">
-                            Los 2 meses gratis de <strong>{org.name}</strong> han finalizado. Actualiza tu plan para seguir gestionando clases, miembros y pagos.
-                        </p>
-                    </div>
-                    <a
-                        href="mailto:sales@rivalfit.app"
-                        className="block w-full py-3.5 bg-brand-red text-white rounded-xl font-black text-xs uppercase tracking-[0.2em] hover:bg-red-600 transition-all"
-                    >
-                        Hablar con Ventas
-                    </a>
+                    <TrialEndedPlanPicker organizationId={id} centerType={org.center_type} />
                 </div>
             </div>
         );
