@@ -1294,16 +1294,18 @@ export async function getWorkoutHistory(limit = 10, userId?: string) {
         .order('date_performed', { ascending: false })
         .limit(limit)
 
-    // 3. Fetch WOD/PR posts (creados con "+" > WOD, incluye las carreras con GPS)
+    // 3. Fetch WOD posts (creados con "+" > WOD, incluye las carreras con GPS)
     // — la unica via de alta desde que se retiro el tracker de sesion en vivo,
     // asi que sin esto el historial aparecia vacio para todo lo publicado por
     // esa via aunque el calendario de actividad SI lo contara (cuenta tambien
-    // estos posts, no solo la tabla workouts).
+    // estos posts, no solo la tabla workouts). Los posts de PR quedan fuera:
+    // guardan sus datos en el campo "image" con una forma totalmente distinta
+    // (exerciseName/weight), no en wod_data/blocks.
     const { data: wodPosts, error: pError } = await supabase
         .from('posts')
         .select('id, wod_data, caption, created_at, media_type')
         .eq('user_id', targetUserId)
-        .in('media_type', ['wod', 'pr'])
+        .eq('media_type', 'wod')
         .order('created_at', { ascending: false })
         .limit(limit)
 
@@ -1364,6 +1366,8 @@ export async function getWorkoutHistory(limit = 10, userId?: string) {
                 type: 'wod_post',
                 title: wod.title || p.caption || fallbackTitle,
                 sport_type: isRunning ? 'Running' : (wod.category || 'CrossFit'),
+                category: wod.category || 'CROSS_TRAINING',
+                media_url: wod.media_url || null,
                 duration_seconds: metrics?.duration || 0,
                 effort_rpe: 7,
                 metrics,

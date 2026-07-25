@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import RouteMap from "@/components/training/RouteMap";
+import WodCard from "@/components/explore/WodCard";
 
 export default function WorkoutLogsPage() {
     return (
@@ -186,6 +187,40 @@ function WorkoutLogsContent() {
                             pills = Array.from(new Set(workout.workout_sets.map((s: any) => s.exercise_name)));
                         } else if (isRunning) {
                             pills = ['Carrera Libre', 'Running'];
+                        }
+
+                        // Un WOD publicado (con o sin GPS) se muestra igual que en el
+                        // feed — mismos bloques, ejercicios, notas, pesos, mapa de
+                        // recorrido si es running — en vez de un resumen generico que
+                        // nunca alcanzaba a mostrar lo que realmente se hizo ese día.
+                        if (isWodPost) {
+                            return (
+                                <div key={workout.id} className="relative">
+                                    {(!targetUserId || targetUserId === currentUserId) && (
+                                        <button
+                                            onClick={() => handleDelete(workout.id)}
+                                            disabled={deletingId === workout.id}
+                                            className="absolute top-4 right-4 z-20 w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/10 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-500/10 transition-all"
+                                            title="Borrar entreno"
+                                        >
+                                            {deletingId === workout.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                        </button>
+                                    )}
+                                    <WodCard
+                                        data={{
+                                            title: workout.title,
+                                            blocks: workout.blocks || [],
+                                            summary: workout.summary,
+                                            media_url: workout.media_url,
+                                            category: workout.category,
+                                            metrics: workout.metrics,
+                                        }}
+                                        userName=""
+                                        publishDate={new Date(workout.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                        postId={workout.id}
+                                    />
+                                </div>
+                            );
                         }
 
                         return (
