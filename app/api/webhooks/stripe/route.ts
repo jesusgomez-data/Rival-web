@@ -244,9 +244,13 @@ export async function POST(req: Request) {
                     if (priceId === STRIPE_PRICES.center.starter) planName = 'starter';
                     if (priceId === STRIPE_PRICES.center.pro) planName = 'pro';
 
+                    // subscription_status también debe pasar a 'active' aquí: el
+                    // gate de prueba vencida (gyms/[id]/layout.tsx) bloquea el panel
+                    // mientras subscription_status !== 'active', así que sin esto el
+                    // centro pagaría y seguiría bloqueado para siempre.
                     const { error } = await supabase
                         .from("organizations")
-                        .update({ plan: planName })
+                        .update({ plan: planName, subscription_status: 'active' })
                         .eq("id", organizationId);
 
                     if (error) console.error("Error updating organization plan:", error);
