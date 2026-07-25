@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import RouteMap from "@/components/training/RouteMap";
 import WodCard from "@/components/explore/WodCard";
+import RepostModalListener from "@/components/RepostModalListener";
 
 export default function WorkoutLogsPage() {
     return (
@@ -29,6 +30,7 @@ function WorkoutLogsContent() {
     const targetUserId = searchParams.get('userId');
     const dateFilter = searchParams.get('date');
     const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+    const [currentUser, setCurrentUser] = useState<any>(null);
     const [workouts, setWorkouts] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -37,7 +39,7 @@ function WorkoutLogsContent() {
         try {
             setIsLoading(true);
             const { data: { user } } = await createClient().auth.getUser();
-            if (user) setCurrentUserId(user.id);
+            if (user) { setCurrentUserId(user.id); setCurrentUser(user); }
 
             const data = await getWorkoutHistory(50, targetUserId || undefined);
             setWorkouts(data || []);
@@ -293,6 +295,8 @@ function WorkoutLogsContent() {
                     })}
                 </div>
             )}
+
+            <RepostModalListener currentUser={currentUser} onSuccess={fetchLogs} />
         </div>
     );
 }
