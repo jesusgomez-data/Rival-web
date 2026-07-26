@@ -290,7 +290,29 @@ function MessagesContent() {
     })
 
     if (isLoadingConversations) {
-        return <div className="h-screen flex items-center justify-center bg-background"><Loader2 className="animate-spin text-brand-red w-12 h-12" /></div>
+        // Skeleton en vez de pantalla en blanco con un spinner suelto — mismo
+        // criterio aplicado ya en Explorar/Dashboard: la sensación de "la app
+        // se queda en blanco" viene de gatear TODA la pantalla tras un solo
+        // loading flag sin ningún placeholder reconocible.
+        return (
+            <div className="h-screen bg-background flex flex-col animate-pulse">
+                <div className="flex-1 flex flex-col md:flex-row gap-4 p-4 max-w-6xl mx-auto w-full">
+                    <div className="w-full md:w-[360px] shrink-0 space-y-3">
+                        <div className="h-10 bg-white/5 rounded-2xl" />
+                        {[1, 2, 3, 4, 5].map(i => (
+                            <div key={i} className="flex items-center gap-3 p-3">
+                                <div className="w-12 h-12 rounded-full bg-white/10 shrink-0" />
+                                <div className="flex-1 space-y-2">
+                                    <div className="h-3 bg-white/10 rounded-full w-32" />
+                                    <div className="h-2 bg-white/5 rounded-full w-48" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="hidden md:block flex-1 bg-white/[0.02] rounded-3xl" />
+                </div>
+            </div>
+        );
     }
 
     const activeConv = conversations.find(c => c.id === activeConversationId)
