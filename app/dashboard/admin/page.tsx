@@ -161,6 +161,19 @@ export default function AdminDashboard() {
         loadData();
     }, []);
 
+    // El Terminal decía "● Live Feed" pero solo cargaba una vez al entrar —
+    // nada se actualizaba solo mientras la pestaña estaba abierta. Ahora sí
+    // refresca de verdad cada 12s, pero SOLO mientras esa pestaña concreta
+    // está visible (no tiene sentido gastar peticiones de fondo en las
+    // otras 6 pestañas del panel que el admin no está mirando).
+    useEffect(() => {
+        if (activeTab !== 'system' || systemSubTab !== 'terminal') return;
+        const interval = setInterval(() => {
+            getSystemActivity().then(setSystemActivity).catch(() => {});
+        }, 12_000);
+        return () => clearInterval(interval);
+    }, [activeTab, systemSubTab]);
+
     // Filter Logic
     const filteredCenters = centers.filter(center => {
         const matchesSearch = center.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
