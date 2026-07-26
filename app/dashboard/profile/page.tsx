@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { getUserProfile, deleteProfile } from "../training/actions";
+import { deleteProfile } from "../training/actions";
 import { getUpcomingTrial } from "../gyms/trial-booking-actions";
 
 import { createClient } from "@/utils/supabase/client";
@@ -144,90 +144,93 @@ export default function ProfilePage() {
 
     useEffect(() => {
         async function loadProfile() {
-            const [data, trial] = await Promise.all([
-                getUserProfile(),
-                getUpcomingTrial().catch(() => null)
+            // El perfil (lo único que hace falta para pintar la pantalla) se pide
+            // directo a Supabase en vez de vía Server Action: getUserProfile()
+            // hacía su propio auth.getUser() + query en un round-trip aparte al
+            // servidor de Next (con su coste de cold-start), sumado a los otros
+            // dos "pisos" secuenciales de abajo. Antes el spinner no se quitaba
+            // hasta que las TRES fases (perfil → badges/gear → stats/PRs/
+            // workouts/orgs) terminaban una detrás de otra — de ahí la lentitud
+            // y la pantalla en blanco al entrar. Ahora se pinta en cuanto
+            // llega el perfil, y el resto de datos rellena solo cuando llega
+            // (todos con valores por defecto ya sensatos: arrays vacíos, 0s).
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) { setLoading(false); return; }
+
+            const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+
+            if (!data) { setLoading(false); return; }
+
+            setProfile(data);
+            setFormData({
+                full_name: data.full_name || "",
+                username: data.username || "",
+                bio: data.bio || "",
+                main_sport: data.main_sport || "General",
+                gym_home: data.gym_home || "",
+                location: data.location || "",
+                website: data.website || "",
+                gender: data.gender || "",
+                birth_date: data.birth_date ? data.birth_date.split('T')[0] : "",
+                privacy_setting: data.privacy_setting || "public",
+                birth_date_public: data.birth_date_public !== false,
+            });
+            if (data.cover_position !== undefined) {
+                setCoverPosition(Number(data.cover_position) || 50);
+            }
+            if (data.featured_rms) {
+                setFeaturedRms(data.featured_rms);
+            }
+
+            // Libera la pantalla ya — lo de abajo llega en segundo plano.
+            setLoading(false);
+
+            getUpcomingTrial().then(setUpcomingTrial).catch(() => {});
+
+            checkAndAwardBadges(data.id).catch((e) => console.warn("Error awarding badges:", e));
+            seedDemoGear(data.id).catch((e) => console.warn("Error seeding gear:", e));
+
+            const [stats, prSetsRes, workoutsRes, orgs, badgesRes, gearRes] = await Promise.all([
+                getCombatStats(data.id),
+                supabase
+                    .from('workout_sets')
+                    .select('exercise_name, weight_kg, is_pr, workouts!inner(user_id, start_time)')
+                    .eq('workouts.user_id', data.id)
+                    .eq('is_pr', true)
+                    .order('weight_kg', { ascending: false })
+                    .limit(20),
+                supabase
+                    .from('workouts')
+                    .select('*, workout_sets(id, exercise_name, weight_kg, reps, set_order, is_pr)')
+                    .eq('user_id', data.id)
+                    .order('start_time', { ascending: false })
+                    .limit(30),
+                getUserOrganizations(),
+                getUserBadges(data.id),
+                getUserGear(data.id)
             ]);
 
-            if (trial) setUpcomingTrial(trial);
+            setCombatStats(stats);
+            setUserBadges(badgesRes);
+            setUserGear(gearRes);
 
-            if (data) {
-                setProfile(data);
-
-                try {
-                    await Promise.all([
-                        checkAndAwardBadges(data.id),
-                        seedDemoGear(data.id)
-                    ]);
-                } catch (e) {
-                    console.warn("Error seeding accomplishments:", e);
-                }
-
-                setFormData({
-                    full_name: data.full_name || "",
-                    username: data.username || "",
-                    bio: data.bio || "",
-                    main_sport: data.main_sport || "General",
-                    gym_home: data.gym_home || "",
-                    location: data.location || "",
-                    website: data.website || "",
-                    gender: data.gender || "",
-                    birth_date: data.birth_date ? data.birth_date.split('T')[0] : "",
-                    privacy_setting: data.privacy_setting || "public",
-                    birth_date_public: data.birth_date_public !== false,
+            const prSets = prSetsRes.data;
+            if (prSets && prSets.length > 0) {
+                const best: Record<string, { exercise: string; weight: number; date: string }> = {};
+                prSets.forEach((s: any) => {
+                    const name = s.exercise_name;
+                    const w = Array.isArray(s.workouts) ? s.workouts[0] : s.workouts;
+                    const date = w?.start_time || new Date().toISOString();
+                    if (!best[name] || s.weight_kg > best[name].weight) {
+                        best[name] = { exercise: name, weight: s.weight_kg, date };
+                    }
                 });
-
-                const [stats, prSetsRes, workoutsRes, orgs, badgesRes, gearRes] = await Promise.all([
-                    getCombatStats(data.id),
-                    supabase
-                        .from('workout_sets')
-                        .select('exercise_name, weight_kg, is_pr, workouts!inner(user_id, start_time)')
-                        .eq('workouts.user_id', data.id)
-                        .eq('is_pr', true)
-                        .order('weight_kg', { ascending: false })
-                        .limit(20),
-                    supabase
-                        .from('workouts')
-                        .select('*, workout_sets(id, exercise_name, weight_kg, reps, set_order, is_pr)')
-                        .eq('user_id', data.id)
-                        .order('start_time', { ascending: false })
-                        .limit(30),
-                    getUserOrganizations(),
-                    getUserBadges(data.id),
-                    getUserGear(data.id)
-                ]);
-
-                setCombatStats(stats);
-                setUserBadges(badgesRes);
-                setUserGear(gearRes);
-
-                const prSets = prSetsRes.data;
-                if (prSets && prSets.length > 0) {
-                    const best: Record<string, { exercise: string; weight: number; date: string }> = {};
-                    prSets.forEach((s: any) => {
-                        const name = s.exercise_name;
-                        const w = Array.isArray(s.workouts) ? s.workouts[0] : s.workouts;
-                        const date = w?.start_time || new Date().toISOString();
-                        if (!best[name] || s.weight_kg > best[name].weight) {
-                            best[name] = { exercise: name, weight: s.weight_kg, date };
-                        }
-                    });
-                    const sorted = Object.values(best).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                    setAutoRecords(sorted);
-                }
-
-                setWorkouts(workoutsRes.data || []);
-                setHasOrgs(orgs && orgs.length > 0);
-
-                if (data.cover_position !== undefined) {
-                    setCoverPosition(Number(data.cover_position) || 50);
-                }
-
-                if (data.featured_rms) {
-                    setFeaturedRms(data.featured_rms);
-                }
+                const sorted = Object.values(best).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                setAutoRecords(sorted);
             }
-            setLoading(false);
+
+            setWorkouts(workoutsRes.data || []);
+            setHasOrgs(orgs && orgs.length > 0);
         }
         getAthleteCardStats().then(setAthleteStats);
         loadProfile();
@@ -604,9 +607,25 @@ export default function ProfilePage() {
     };
 
     if (loading) {
+        // Skeleton con la misma silueta de la página real (portada + avatar +
+        // tabs) en vez de un spinner suelto sobre fondo vacío — mismo criterio
+        // ya aplicado en Explorar/Mensajes.
         return (
-            <div className="flex items-center justify-center min-h-[60vh]">
-                <Loader2 className="w-8 h-8 text-brand-red animate-spin" />
+            <div className="max-w-7xl mx-auto pb-20 px-0 md:px-8 space-y-8 animate-pulse">
+                <div className="h-48 md:h-64 bg-white/5 md:rounded-[2rem]" />
+                <div className="px-4 md:px-0 -mt-16 flex items-end gap-4">
+                    <div className="w-28 h-28 rounded-full bg-white/10 border-4 border-background shrink-0" />
+                    <div className="flex-1 space-y-2 pb-2">
+                        <div className="h-5 w-40 bg-white/10 rounded-full" />
+                        <div className="h-3 w-24 bg-white/5 rounded-full" />
+                    </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3 px-4 md:px-0">
+                    {[1, 2, 3].map(i => <div key={i} className="h-16 bg-white/5 rounded-2xl" />)}
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-4 md:px-0">
+                    {[1, 2, 3, 4].map(i => <div key={i} className="h-24 bg-white/5 rounded-2xl" />)}
+                </div>
             </div>
         );
     }
