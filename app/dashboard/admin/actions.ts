@@ -29,9 +29,15 @@ export async function getAdminStats() {
 
     const { data: orgs } = await supabaseAdmin
         .from('organizations')
-        .select('plan, monthly_revenue');
+        .select('plan, monthly_revenue, subscription_status');
 
+    // Un centro con plan='starter' pero subscription_status='trial' no ha
+    // pagado nada todavía (plan es solo lo que eligió al registrarse, no lo
+    // que factura Stripe) — contarlo como MRR real infla el número con
+    // ingresos que no existen. Solo cuenta lo que está subscription_status
+    // = 'active' (confirmado por el webhook de Stripe al completar el pago).
     const mrr = orgs?.reduce((acc: number, org: any) => {
+        if (org.subscription_status !== 'active') return acc;
         if (org.plan === 'starter') return acc + 49.99;
         if (org.plan === 'pro') return acc + 99.99;
         return acc + (Number(org.monthly_revenue) || 0);

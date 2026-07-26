@@ -89,10 +89,7 @@ export default function TerminalActivity({ activities }: { activities: any[] }) 
             {/* Terminal Footer */}
             <div className="p-3 bg-white/5 border-t border-white/10">
                 <div className="flex items-center justify-between text-[10px] text-gray-500 font-mono">
-                    <div className="flex items-center gap-4">
-                        <span>CPU: 12%</span>
-                        <span>MEM: 244MB</span>
-                    </div>
+                    <span>{activities.length} eventos cargados</span>
                     <div className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         {new Date().toLocaleDateString()}
