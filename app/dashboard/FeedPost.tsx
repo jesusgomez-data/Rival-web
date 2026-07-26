@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Activity, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink, ZapOff, Eye } from "lucide-react";
+import { MoreHorizontal, MessageCircle, Share2, Trophy, X, Send, Smile, Play, Pause, Trash2, Edit2, Save, Heart, Activity, Music, Plus, CheckCircle2, Instagram, Swords, Download, Loader2, Repeat, MessageSquare, Volume2, VolumeX, ChevronLeft, ChevronRight, ExternalLink, ZapOff, Eye, Quote } from "lucide-react";
 import LikeFist from "@/components/LikeFist";
 import { VideoProcessor } from "./stories/VideoProcessor";
 import LikeButton from "./explore/LikeButton";
@@ -1760,22 +1760,39 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
                 )}>
                     {isTextOnly ? (
                         <div className={clsx(
-                            "relative overflow-hidden border rounded-2xl p-6 shadow-inner",
+                            "relative overflow-hidden border rounded-[28px] p-8 md:p-10 shadow-2xl",
                             theme === 'dark'
-                                ? "bg-gradient-to-br from-brand-red/10 via-zinc-900/40 to-black/80 border-white/5"
-                                : "bg-gradient-to-br from-brand-red/5 via-gray-50 to-gray-100 border-gray-200"
+                                ? "bg-gradient-to-br from-zinc-900 via-zinc-950 to-black border-white/10"
+                                : "bg-gradient-to-br from-white via-gray-50 to-gray-100 border-gray-200"
                         )}>
-                            {/* Decorative sporty accent line */}
-                            <div className="absolute top-0 left-0 w-1 h-full bg-brand-red shadow-[0_0_8px_rgba(220,38,38,0.5)]" />
-                            {/* Decorative background glow */}
-                            <div className="absolute top-0 right-0 w-24 h-24 bg-brand-red/5 blur-2xl rounded-full pointer-events-none" />
-                            
+                            {/* Textura de puntos sutil — mismo lenguaje visual que las
+                                tarjetas de running (fondo "consola de datos"), a media
+                                opacidad para no competir con el texto */}
+                            <div
+                                className="absolute inset-0 opacity-[0.04] pointer-events-none"
+                                style={{ backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)', backgroundSize: '20px 20px' }}
+                            />
+                            {/* Resplandor ambiental */}
+                            <div className="absolute -top-12 -right-12 w-48 h-48 bg-brand-red/10 blur-[70px] rounded-full pointer-events-none" />
+                            <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-brand-red/5 blur-[70px] rounded-full pointer-events-none" />
+
+                            {/* Comilla decorativa de fondo */}
+                            <Quote
+                                className="absolute -top-3 -left-1 w-20 h-20 text-brand-red/[0.08] pointer-events-none"
+                                strokeWidth={0}
+                                fill="currentColor"
+                            />
+
                             <p className={clsx(
-                                "text-base md:text-lg font-bold leading-relaxed italic tracking-wide relative z-10 whitespace-pre-wrap",
+                                "relative z-10 text-lg md:text-xl font-bold leading-[1.65] tracking-tight whitespace-pre-wrap",
                                 theme === 'dark' ? "text-gray-100" : "text-zinc-800"
                             )}>
                                 <MentionText text={displayCaption} className="whitespace-pre-wrap" />
                             </p>
+
+                            {/* Firma inferior: acento degradado, sin texto fijo que no
+                                encaje con cualquier cuenta que publique */}
+                            <div className="relative z-10 mt-7 h-[2px] w-16 bg-gradient-to-r from-brand-red to-transparent rounded-full" />
                         </div>
                     ) : (
                         <div className="text-[13px] leading-relaxed whitespace-pre-wrap">
