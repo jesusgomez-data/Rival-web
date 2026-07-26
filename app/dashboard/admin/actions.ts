@@ -198,6 +198,24 @@ export async function updateOrganizationPlan(orgId: string, plan: string) {
     revalidatePath('/dashboard/admin');
 }
 
+// Activar/desactivar manualmente el acceso de un centro sin pasar por
+// Stripe — para tratos cerrados fuera de la plataforma, cortesías, o
+// desbloquear a alguien mientras se resuelve un problema de cobro.
+// subscription_status es la misma columna que usa el gate de prueba
+// vencida (gyms/[id]/layout.tsx) y el webhook de Stripe al confirmar pago,
+// así que esto tiene el mismo efecto real que un pago exitoso.
+export async function updateOrganizationSubscriptionStatus(orgId: string, status: 'trial' | 'active' | 'expired' | 'cancelled') {
+    if (!(await isUserAdmin())) throw new Error("Unauthorized");
+    const { error } = await supabaseAdmin
+        .from('organizations')
+        .update({ subscription_status: status })
+        .eq('id', orgId);
+
+    if (error) throw new Error(error.message);
+    await logAdminAction('update_org_subscription_status', 'organization', orgId, { new_status: status });
+    revalidatePath('/dashboard/admin');
+}
+
 export async function updateUserPlan(userId: string, tier: string) {
     if (!(await isUserAdmin())) throw new Error("Unauthorized");
 

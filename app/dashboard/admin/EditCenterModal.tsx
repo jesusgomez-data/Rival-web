@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { X, Save, Trash2, Edit } from 'lucide-react';
-import { updateOrganizationPlan, deleteOrganization } from './actions';
+import { updateOrganizationPlan, updateOrganizationSubscriptionStatus, deleteOrganization } from './actions';
+import { isProfessional } from '@/lib/professional-types';
 import Image from 'next/image';
 
 interface EditCenterModalProps {
@@ -17,13 +18,19 @@ export default function EditCenterModal({ open, onClose, center, onUpdate }: Edi
 
     if (!open || !center) return null;
 
+    const isPro = isProfessional(center.center_type);
+
     async function handleUpdate(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
         setLoading(true);
         const formData = new FormData(e.currentTarget);
         const plan = formData.get('plan') as string;
+        const status = formData.get('subscription_status') as string;
 
-        await updateOrganizationPlan(center.id, plan);
+        await Promise.all([
+            updateOrganizationPlan(center.id, plan),
+            updateOrganizationSubscriptionStatus(center.id, status as any)
+        ]);
 
         setLoading(false);
         onUpdate();
@@ -78,16 +85,42 @@ export default function EditCenterModal({ open, onClose, center, onUpdate }: Edi
                         <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Plan de Suscripción</label>
                         <select
                             name="plan"
-                            defaultValue={center.plan || 'free'}
+                            defaultValue={center.plan || (isPro ? 'pt_free' : 'free')}
                             className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-black dark:text-white focus:border-brand-red outline-none appearance-none transition-colors"
                         >
-                            <option className="bg-white dark:bg-[#0a0a0a]" value="free">Rival Free (0€)</option>
-                            <option className="bg-white dark:bg-[#0a0a0a]" value="starter">Rival Starter (49.99€)</option>
-                            <option className="bg-white dark:bg-[#0a0a0a]" value="pro">Rival Pro (99.99€)</option>
+                            {isPro ? (
+                                <>
+                                    <option className="bg-white dark:bg-[#0a0a0a]" value="pt_free">Profesional Basic (0€)</option>
+                                    <option className="bg-white dark:bg-[#0a0a0a]" value="pt_pro">Profesional Pro (29.99€)</option>
+                                    <option className="bg-white dark:bg-[#0a0a0a]" value="pt_elite">Profesional Elite (59.99€)</option>
+                                </>
+                            ) : (
+                                <>
+                                    <option className="bg-white dark:bg-[#0a0a0a]" value="free">Rival Free (0€)</option>
+                                    <option className="bg-white dark:bg-[#0a0a0a]" value="starter">Rival Starter (49.99€)</option>
+                                    <option className="bg-white dark:bg-[#0a0a0a]" value="pro">Rival Pro (99.99€)</option>
+                                </>
+                            )}
                         </select>
                     </div>
 
-                    {/* Future: Add Stripe Subscription Status / Cancel Link here */}
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-500">Estado de la Suscripción</label>
+                        <select
+                            name="subscription_status"
+                            defaultValue={center.subscription_status || 'trial'}
+                            className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-black dark:text-white focus:border-brand-red outline-none appearance-none transition-colors"
+                        >
+                            <option className="bg-white dark:bg-[#0a0a0a]" value="trial">En prueba (sin pagar)</option>
+                            <option className="bg-white dark:bg-[#0a0a0a]" value="active">Activo (acceso desbloqueado)</option>
+                            <option className="bg-white dark:bg-[#0a0a0a]" value="expired">Prueba vencida (bloqueado)</option>
+                            <option className="bg-white dark:bg-[#0a0a0a]" value="cancelled">Cancelado</option>
+                        </select>
+                        <p className="text-[10px] text-gray-500 leading-relaxed">
+                            Poner en <strong>Activo</strong> desbloquea el panel del centro al instante, sin pasar por
+                            Stripe — útil para tratos cerrados fuera de la plataforma o cortesías.
+                        </p>
+                    </div>
 
                     <div className="flex gap-3 pt-4">
                         <button
