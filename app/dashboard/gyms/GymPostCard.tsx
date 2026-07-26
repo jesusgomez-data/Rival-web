@@ -31,6 +31,7 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
 
     const [showWODTracker, setShowWODTracker] = useState(false);
     const [hasCompletedWod, setHasCompletedWod] = useState(false);
+    const [wodCompletionsCount, setWodCompletionsCount] = useState(0);
     const completionCheckedRef = useRef(false);
 
     // Consultar el estado de completado SOLO cuando la tarjeta entra en
@@ -41,6 +42,14 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
             completionCheckedRef.current = true;
             fetchWodCompletion(post.id)
                 .then(({ completion }) => { if (completion) setHasCompletedWod(true); })
+                .catch(() => {});
+            // El contador "X ATLETAS" de WodCard nunca se rellenaba en los WODs
+            // publicados por el centro — no se le pasaba completionsCount, así
+            // que se quedaba siempre en el valor por defecto (0), aunque hubiera
+            // atletas registrados en el ranking real.
+            fetch(`/api/wod/leaderboard?wodPostId=${post.id}`)
+                .then(r => r.json())
+                .then(data => { if (data.success && typeof data.total === 'number') setWodCompletionsCount(data.total); })
                 .catch(() => {});
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -251,6 +260,8 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
                                 data={wodData}
                                 userName={post.post_as_center && post.organization ? post.organization.name : (post.author?.full_name || "Coach")}
                                 postId={post.id}
+                                completionsCount={wodCompletionsCount}
+                                hasCompleted={hasCompletedWod}
                             />
                             <div className="pt-4">
                                 <button

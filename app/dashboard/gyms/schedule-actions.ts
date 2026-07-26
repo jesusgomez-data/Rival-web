@@ -416,13 +416,18 @@ export async function getClassAttendees(classId: string) {
 
     const userIds = attendees.filter((a: any) => a.user_id).map((a: any) => a.user_id);
     if (userIds.length > 0) {
-        const { data: profiles } = await supabase.from('profiles').select('id, username').in('id', userIds);
+        // members.avatar_url es un campo del registro de socio del centro
+        // (casi nunca se rellena) — la foto real del atleta vive en
+        // profiles.avatar_url. Antes solo se traía username de aquí, así que
+        // la foto real nunca llegaba y siempre se veía el fallback genérico.
+        const { data: profiles } = await supabase.from('profiles').select('id, username, avatar_url').in('id', userIds);
         if (profiles) {
             const profileMap = new Map(profiles.map(p => [p.id, p]));
             attendees.forEach((a: any) => {
                 const profile = profileMap.get(a.user_id);
                 if (a.user_id && profile) {
                     a.username = profile.username;
+                    a.avatar_url = profile.avatar_url || a.avatar_url;
                 }
             });
         }
