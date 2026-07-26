@@ -549,7 +549,7 @@ export default function AdminDashboard() {
                                                             </Link>
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            <PlanBadge plan={center.plan || 'free'} type="center" />
+                                                            <PlanBadge plan={center.plan || 'free'} type="center" subscriptionStatus={center.subscription_status} />
                                                         </td>
                                                         <td className="px-6 py-4 text-right">
                                                             <button
@@ -963,7 +963,7 @@ const KpiCard = ({ title, value, trend, icon: Icon, color, delay }: any) => {
     );
 }
 
-function PlanBadge({ plan, type }: { plan: string, type: 'center' | 'user' }) {
+function PlanBadge({ plan, type, subscriptionStatus }: { plan: string, type: 'center' | 'user', subscriptionStatus?: string }) {
     // Center Plans: free, starter, pro
     // User Plans: free, premium, elite
     const isPaid = plan !== 'free' && plan;
@@ -973,10 +973,30 @@ function PlanBadge({ plan, type }: { plan: string, type: 'center' | 'user' }) {
     if (plan === 'starter' || plan === 'premium') colorClass = "bg-brand-red/10 text-brand-red border-brand-red/20";
     if (plan === 'pro' || plan === 'elite') colorClass = "bg-purple-500/10 text-purple-500 border-purple-500/20";
 
+    // `plan` es solo lo que el centro ELIGIÓ al registrarse — no hay cobro
+    // real en el alta (center-signup), así que un centro puede llevar
+    // "STARTER" aquí sin haber pagado nunca. Sin esto, el admin ve
+    // "STARTER" y asume que está pagando, cuando en realidad puede seguir
+    // bloqueado por prueba vencida (confundió justo esto en Rival Madrid /
+    // Jesus Gomez). subscriptionStatus viene de Stripe vía webhook.
+    let statusLabel: string | null = null;
+    let statusColor = "text-gray-500";
+    if (isPaid && type === 'center') {
+        if (subscriptionStatus === 'active') { statusLabel = 'Pagando'; statusColor = 'text-green-500'; }
+        else if (subscriptionStatus === 'expired') { statusLabel = 'Prueba vencida'; statusColor = 'text-brand-red'; }
+        else if (subscriptionStatus === 'cancelled') { statusLabel = 'Cancelado'; statusColor = 'text-brand-red'; }
+        else { statusLabel = 'Sin pagar (prueba)'; statusColor = 'text-yellow-500'; }
+    }
+
     return (
-        <span className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-black tracking-wide border ${colorClass}`}>
-            {plan || 'Free'}
-        </span>
+        <div className="flex flex-col gap-0.5 items-start">
+            <span className={`px-2.5 py-1 rounded-md text-[10px] uppercase font-black tracking-wide border ${colorClass}`}>
+                {plan || 'Free'}
+            </span>
+            {statusLabel && (
+                <span className={`text-[9px] font-bold uppercase tracking-wider ${statusColor}`}>{statusLabel}</span>
+            )}
+        </div>
     );
 }
 

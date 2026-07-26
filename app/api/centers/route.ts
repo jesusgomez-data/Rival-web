@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { rateLimiters, getClientIdentifier, setRateLimitHeaders } from '@/lib/rate-limit'
+import { isProfessional } from '@/lib/professional-types'
 
 export async function POST(request: NextRequest) {
   try {
@@ -42,6 +43,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // `plan` llega del querystring de la página de precios (?plan=starter) sin
+    // validar contra el tipo de organización. Un profesional (fisio, entrenador
+    // personal, etc.) puede acabar con plan='starter' — un ID que ni siquiera
+    // existe para su tier (los suyos son pt_free/pt_pro/pt_elite) — lo que
+    // confunde en el panel de admin y en el checkout de upgrade. Se normaliza
+    // aquí según el tipo real de organización.
+    const validCenterPlans = ['free', 'starter', 'pro'];
+    const validProPlans = ['pt_free', 'pt_pro', 'pt_elite'];
+    const validPlans = isProfessional(centerType) ? validProPlans : validCenterPlans;
+    const resolvedPlan = validPlans.includes(plan) ? plan : (isProfessional(centerType) ? 'pt_free' : 'free');
+
     // 2. Ensure Profile Exists (Safe Upsert)
     // We do this to satisfy the Foreign Key constraint on 'organizations.owner_id'
     const { error: profileError } = await supabase
@@ -79,7 +91,7 @@ export async function POST(request: NextRequest) {
         cover_photo_url: coverUrl || null,
         latitude: latitude ? parseFloat(latitude) : null,
         longitude: longitude ? parseFloat(longitude) : null,
-        plan: plan || 'free',
+        plan: resolvedPlan,
         owner_id: userId,
         is_public: true,
         phone: phone || null,
@@ -109,7 +121,7 @@ export async function POST(request: NextRequest) {
         country: country,
         city: city,
         status: 'active',
-        plan: plan || 'free',
+        plan: resolvedPlan,
         email: email,
         phone: phone || null,
         website: website || null,
