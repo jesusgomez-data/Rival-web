@@ -362,8 +362,8 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                             <div className="border-t border-white/5 pt-8 mt-10 flex flex-col sm:flex-row gap-4">
                                 <button
                                     onClick={() => {
-                                        window.dispatchEvent(new CustomEvent('repost-wod', { 
-                                            detail: { ...data, postId: (data as any).original_wod_post_id || postId }
+                                        window.dispatchEvent(new CustomEvent('repost-wod', {
+                                            detail: { ...data, post_type: 'wod', postId: (data as any).original_wod_post_id || postId }
                                         }));
                                     }}
                                     className="flex-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl py-4 flex items-center justify-center gap-3 transition-all active:scale-95 group/rep"
@@ -791,11 +791,12 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                                                 if (postId) {
                                                     setShowWODTracker(true);
                                                 } else {
-                                                    window.dispatchEvent(new CustomEvent('repost-wod', { 
+                                                    window.dispatchEvent(new CustomEvent('repost-wod', {
                                                         detail: {
                                                             ...data,
+                                                            post_type: 'wod',
                                                             postId: postId
-                                                        } 
+                                                        }
                                                     }));
                                                 }
                                             }}
@@ -814,9 +815,10 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                                     {postId && (
                                         <button
                                             onClick={() => {
-                                                window.dispatchEvent(new CustomEvent('repost-wod', { 
+                                                window.dispatchEvent(new CustomEvent('repost-wod', {
                                                     detail: {
                                                         ...data,
+                                                        post_type: 'wod',
                                                         postId: (data as any).original_wod_post_id || postId
                                                     }
                                                 }));
