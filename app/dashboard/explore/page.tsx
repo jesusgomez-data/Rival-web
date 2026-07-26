@@ -165,14 +165,10 @@ export default function ExplorePage({
         } catch (e) { return "reciente"; }
     }
 
-    if (data.loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[50vh]">
-                <div className="w-8 h-8 border-4 border-brand-red border-t-transparent rounded-full animate-spin"></div>
-            </div>
-        );
-    }
-
+    // El header (título + buscador) ya no depende de datos — se pinta
+    // siempre al instante, en vez de dejar la pantalla entera en blanco con
+    // solo un spinner mientras se resuelven perfil/posts/duelos. Solo el
+    // contenido (feed) se sustituye por un skeleton mientras carga.
     return (
         <div className="max-w-full lg:max-w-7xl mx-auto space-y-8 pb-20 px-0 lg:px-8">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-4 lg:px-0">
@@ -191,6 +187,27 @@ export default function ExplorePage({
                 </div>
             </div>
 
+            {data.loading ? (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start animate-pulse">
+                    <div className="lg:col-span-8 space-y-6">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="bg-white/[0.03] border border-white/5 rounded-[28px] p-5 space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-white/10 shrink-0" />
+                                    <div className="space-y-2 flex-1">
+                                        <div className="h-3 bg-white/10 rounded-full w-32" />
+                                        <div className="h-2 bg-white/5 rounded-full w-20" />
+                                    </div>
+                                </div>
+                                <div className="h-40 bg-white/5 rounded-2xl" />
+                            </div>
+                        ))}
+                    </div>
+                    <div className="lg:col-span-4 space-y-4">
+                        <div className="h-48 bg-white/5 rounded-[1.5rem]" />
+                    </div>
+                </div>
+            ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 <div className="lg:col-span-8 space-y-8">
                     {/* Feed Content */}
@@ -333,6 +350,7 @@ export default function ExplorePage({
                     <SidebarAd tier={data.profile?.subscription_tier} />
                 </div>
             </div>
+            )}
         </div>
     );
 }
