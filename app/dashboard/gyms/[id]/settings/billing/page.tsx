@@ -341,19 +341,35 @@ function BillingContent({ organizationId }: { organizationId: string }) {
         load();
     }, [organizationId, status]);
 
+    // Solo Starter/Pro (centros) tienen un Price de Stripe real configurado
+    // hoy. Los tiers de Profesional (pt_pro/pt_elite) no tenían su propio
+    // priceId — el ternario de antes hacía que CUALQUIER plan que no fuera
+    // 'starter' cayera en el precio Pro de centros (€99.99), cobrando de más
+    // o de menos a un profesional según el plan que pulsara. Mejor bloquear
+    // el checkout con un aviso claro que cobrar mal.
+    const PRICE_IDS: Record<string, string> = {
+        starter: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 'price_1SxdaPCpwHwK9MuevBVancPf',
+        pro: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 'price_1SxdavCpwHwK9Mueeesvlq6T',
+    };
+
     const handleUpgrade = async (plan: any) => {
         if (plan.id === org?.plan) return;
+        if (plan.id === 'free' || plan.id === 'pt_free') {
+            alert("Para cancelar tu suscripción, contacta con soporte o usa el Portal de Facturación.");
+            return;
+        }
+        const priceId = PRICE_IDS[plan.id];
+        if (!priceId) {
+            alert('Este plan todavía no tiene pago automático configurado. Escríbenos a sales@rivalfit.app para activarlo.');
+            return;
+        }
         setUpdating(plan.id);
         try {
-            if (plan.id === 'free') {
-                alert("Para cancelar tu suscripción, contacta con soporte o usa el Portal de Facturación.");
-            } else {
-                const priceId = plan.id === 'starter'
-                    ? process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 'price_1SxdaPCpwHwK9MuevBVancPf'
-                    : process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 'price_1SxdavCpwHwK9Mueeesvlq6T';
-                await createOrganizationCheckoutSession(priceId, organizationId);
-            }
+            await createOrganizationCheckoutSession(priceId, organizationId);
         } catch (error: any) {
+            // createOrganizationCheckoutSession usa redirect() de Next, que
+            // lanza un error especial para navegar — no es un fallo real.
+            if (error?.digest?.startsWith('NEXT_REDIRECT')) throw error;
             alert("Error: " + error.message);
         } finally {
             setUpdating(null);

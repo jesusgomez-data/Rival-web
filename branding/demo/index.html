@@ -274,7 +274,7 @@ h1.hero-h .accent{color:var(--red)}
 
 /* ══ PRICING ══════════════════════════════════════════════════ */
 .pricing-section{background:var(--bg2);padding:5.5rem 2.5rem}
-.plans-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1.4rem;margin-top:3rem}
+.plans-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.4rem;margin-top:3rem}
 .plan{background:var(--card);border:1px solid var(--border);border-radius:1.5rem;padding:2rem;position:relative;transition:.3s}
 .plan:hover{transform:translateY(-4px)}
 .plan.hot{border-color:var(--red);background:linear-gradient(160deg,rgba(239,68,68,.07),var(--card))}
@@ -322,7 +322,7 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:3rem 2.5
 /* ══ REVEAL ══════════════════════════════════════════════════ */
 .rv{opacity:0;transform:translateY(28px);transition:opacity .6s ease,transform .6s ease}
 .rv.vis{opacity:1;transform:translateY(0)}
-.rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.2s}.rv.d3{transition-delay:.3s}
+.rv.d1{transition-delay:.1s}.rv.d2{transition-delay:.2s}.rv.d3{transition-delay:.3s}.rv.d4{transition-delay:.4s}
 
 /* ══ RESPONSIVE ══════════════════════════════════════════════ */
 @media(max-width:1100px){
@@ -769,23 +769,35 @@ footer{background:var(--bg2);border-top:1px solid var(--border);padding:3rem 2.5
         </ul>
         <a href="/center-signup?plan=free" class="pcta main" style="display:block;text-align:center;text-decoration:none;line-height:2.6rem;background:var(--red);color:#fff">Registrar Centro Gratis</a>
       </div>
-      <div class="plan hot rv d2">
-        <div class="plan-name">Pro</div>
-        <div class="plan-price">€99<sub>/mes</sub></div>
-        <div class="plan-per">Hasta 3 sedes · Atletas ilimitados</div>
+      <div class="plan rv d2">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">€49.99<sub>/mes</sub></div>
+        <div class="plan-per">Precio de lanzamiento · Primeros 50 centros</div>
         <ul class="pl">
           <li>Todo lo del plan gratuito</li>
-          <li>Coach IA para todos los atletas</li>
-          <li>Analíticas avanzadas y KPIs</li>
-          <li>Gestión de múltiples sedes</li>
-          <li>Cobros y membresías automáticas</li>
-          <li>Tienda y e-commerce</li>
+          <li>Clases ilimitadas</li>
+          <li>Sistema de pruebas de miembros</li>
+          <li>Tienda básica</li>
           <li>Integración Google Calendar</li>
-          <li>Soporte prioritario</li>
+          <li>Notificaciones push</li>
+        </ul>
+        <a href="/center-signup?plan=starter" class="pcta main" style="display:block;text-align:center;text-decoration:none;line-height:2.6rem">Empezar con Starter →</a>
+      </div>
+      <div class="plan hot rv d3">
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">€99.99<sub>/mes</sub></div>
+        <div class="plan-per">Precio de lanzamiento · Atletas ilimitados</div>
+        <ul class="pl">
+          <li>Todo lo de Starter</li>
+          <li>WOD Generator con IA</li>
+          <li>Churn Prediction</li>
+          <li>Benchmarking competitivo</li>
+          <li>Tienda avanzada / e-commerce</li>
+          <li>Reportes automáticos</li>
         </ul>
         <a href="/center-signup?plan=pro" class="pcta main" style="display:block;text-align:center;text-decoration:none;line-height:2.6rem">Empezar Pro Gratis →</a>
       </div>
-      <div class="plan rv d3">
+      <div class="plan rv d4">
         <div class="plan-name">Enterprise</div>
         <div class="plan-price" style="font-size:2.1rem;padding-top:.3rem">A medida</div>
         <div class="plan-per">Cadenas · Franquicias · Sin límites</div>

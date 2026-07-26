@@ -53,12 +53,24 @@ const PT_PLANS = [
 export default function TrialEndedPlanPicker({ organizationId, centerType }: { organizationId: string; centerType: string }) {
     const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
+    // Solo Starter/Pro (centros) tienen un Price de Stripe real configurado
+    // hoy. Los tiers de Profesional (pt_pro/pt_elite) no tienen su propio
+    // priceId — antes esto caía silenciosamente en el precio Pro de centros
+    // (€99.99) sin importar cuál se pulsara, cobrando de más o de menos según
+    // el caso. Mejor bloquear el checkout con un aviso claro que cobrar mal.
+    const PRICE_IDS: Record<string, string> = {
+        starter: process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 'price_1SxdaPCpwHwK9MuevBVancPf',
+        pro: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 'price_1SxdavCpwHwK9Mueeesvlq6T',
+    };
+
     const handleUpgrade = async (planId: string) => {
+        const priceId = PRICE_IDS[planId];
+        if (!priceId) {
+            alert('Este plan todavía no tiene pago automático configurado. Escríbenos a sales@rivalfit.app para activarlo.');
+            return;
+        }
         setLoadingPlan(planId);
         try {
-            const priceId = planId === 'starter'
-                ? (process.env.NEXT_PUBLIC_STRIPE_PRICE_STARTER || 'price_1SxdaPCpwHwK9MuevBVancPf')
-                : (process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || 'price_1SxdavCpwHwK9Mueeesvlq6T');
             await createOrganizationCheckoutSession(priceId, organizationId);
         } catch (error: any) {
             // createOrganizationCheckoutSession usa redirect() de Next, que
