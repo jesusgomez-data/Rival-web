@@ -1,18 +1,20 @@
 import { getRaceResults, getCompetitions } from "./actions";
+import { getMyLifts } from "../training/actions";
 import { isUserAdmin } from "@/utils/admin";
 import HyroxClient from "./HyroxClient";
 
 export const metadata = {
     title: "Mis Marcas | RivalFit",
-    description: "Registra tus marcas de HYROX, Deka y más competencias con splits por segmento."
+    description: "Tus PRs de levantamiento y tus marcas de HYROX, Deka y más competencias."
 };
 
 export default async function MisMarcasPage() {
-    const [results, competitions, isAdmin] = await Promise.all([
+    const [results, competitions, isAdmin, lifts] = await Promise.all([
         getRaceResults(),
         getCompetitions(),
-        isUserAdmin()
+        isUserAdmin(),
+        getMyLifts()
     ]);
 
-    return <HyroxClient initialResults={results} competitions={competitions} isAdmin={isAdmin} />;
+    return <HyroxClient initialResults={results} competitions={competitions} isAdmin={isAdmin} initialLifts={lifts} />;
 }

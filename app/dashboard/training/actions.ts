@@ -1404,6 +1404,58 @@ export async function getWorkoutDetails(workoutId: string) {
 
     return workout
 }
+// 15.5 Get all of the user's current lifting PRs (max weight ever logged per exercise)
+export interface MyLift {
+    exercise_name: string;
+    weight_kg: number;
+    reps: number;
+    achieved_at: string;
+}
+
+export async function getMyLifts(): Promise<MyLift[]> {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return []
+
+    const { data, error } = await supabase
+        .from('workout_sets')
+        .select(`
+            exercise_name,
+            weight_kg,
+            reps,
+            workouts!inner(user_id, created_at)
+        `)
+        .eq('workouts.user_id', user.id)
+        .gt('weight_kg', 0)
+        // Ejercicios de distancia (carrera, remo...) a veces guardan metros en
+        // esta misma columna al no tener un campo de distancia propio en ese
+        // flujo — un "PR" de 15000kg rompe la confianza en la lista al momento.
+        .lt('weight_kg', 500)
+
+    if (error || !data) return []
+
+    const best = new Map<string, MyLift>()
+    for (const row of data as any[]) {
+        // El nombre guardado incluye el formato del bloque donde se hizo
+        // ("Back Squat (EMOM)", "Back Squat (FORTIME)"...), lo que partía el
+        // mismo ejercicio en varias marcas distintas. Se agrupa por el
+        // nombre base para que el usuario vea un unico PR real por ejercicio.
+        const baseName = (row.exercise_name || '').replace(/\s*\([^)]*\)\s*$/, '').trim()
+        if (!baseName) continue
+        const existing = best.get(baseName)
+        if (!existing || row.weight_kg > existing.weight_kg) {
+            best.set(baseName, {
+                exercise_name: baseName,
+                weight_kg: row.weight_kg,
+                reps: row.reps,
+                achieved_at: row.workouts?.created_at || '',
+            })
+        }
+    }
+
+    return Array.from(best.values()).sort((a, b) => a.exercise_name.localeCompare(b.exercise_name))
+}
+
 // 16. Get Exercise Previous Record
 export async function getExercisePreviousRecord(exerciseName: string) {
     const supabase = await createClient()

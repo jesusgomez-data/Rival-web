@@ -2,10 +2,12 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Plus, X, Trash2, Trophy, Timer, Flag, ChevronDown, ChevronUp, Loader2, TrendingDown, ArrowLeft, Medal, Settings2 } from "lucide-react";
+import { Plus, X, Trash2, Trophy, Timer, Flag, ChevronDown, ChevronUp, Loader2, TrendingDown, ArrowLeft, Medal, Settings2, Dumbbell } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { HYROX_SEGMENTS, HYROX_CATEGORIES, secondsToClock, parseClock, formatDelta, type CompetitionTemplate, type HyroxSegment } from "@/lib/hyrox";
 import { saveRaceResult, deleteRaceResult, adminCreateCompetition } from "./actions";
+import type { MyLift } from "../training/actions";
+import LiftsPanel from "./LiftsPanel";
 
 interface RaceResult {
     id: string;
@@ -20,11 +22,13 @@ interface RaceResult {
     created_at: string;
 }
 
-export default function HyroxClient({ initialResults, competitions, isAdmin }: {
+export default function HyroxClient({ initialResults, competitions, isAdmin, initialLifts }: {
     initialResults: RaceResult[];
     competitions: CompetitionTemplate[];
     isAdmin: boolean;
+    initialLifts: MyLift[];
 }) {
+    const [activeTab, setActiveTab] = useState<'lifts' | 'races'>('lifts');
     const [results, setResults] = useState<RaceResult[]>(initialResults);
     const [activeSlug, setActiveSlug] = useState(competitions[0]?.slug || 'hyrox');
     const [showForm, setShowForm] = useState(false);
@@ -225,17 +229,41 @@ export default function HyroxClient({ initialResults, competitions, isAdmin }: {
                         MIS <span className="text-brand-red">MARCAS</span>
                     </h1>
                     <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mt-1">
-                        {activeComp?.description || 'Splits y PRs por segmento en cada competencia'}
+                        {activeTab === 'lifts'
+                            ? 'Tus PRs de levantamiento, siempre a mano'
+                            : (activeComp?.description || 'Splits y PRs por segmento en cada competencia')}
                     </p>
                 </div>
+                {activeTab === 'races' && (
+                    <button
+                        onClick={() => { setShowForm(!showForm); setErrorMsg(null); }}
+                        className={`${showForm ? 'bg-muted text-muted-foreground border border-border' : 'bg-brand-red text-white shadow-lg hover:bg-red-600'} py-3 px-6 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95`}
+                    >
+                        {showForm ? (<><X className="w-4 h-4" /> Cerrar</>) : (<><Plus className="w-4 h-4" /> Nueva Marca</>)}
+                    </button>
+                )}
+            </div>
+
+            {/* Pestañas: Levantamientos vs Carreras */}
+            <div className="flex gap-2 border-b border-border">
                 <button
-                    onClick={() => { setShowForm(!showForm); setErrorMsg(null); }}
-                    className={`${showForm ? 'bg-muted text-muted-foreground border border-border' : 'bg-brand-red text-white shadow-lg hover:bg-red-600'} py-3 px-6 rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all active:scale-95`}
+                    onClick={() => setActiveTab('lifts')}
+                    className={`flex items-center gap-2 px-4 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-colors ${activeTab === 'lifts' ? 'border-brand-red text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
                 >
-                    {showForm ? (<><X className="w-4 h-4" /> Cerrar</>) : (<><Plus className="w-4 h-4" /> Nueva Marca</>)}
+                    <Dumbbell className="w-4 h-4" /> Levantamientos
+                </button>
+                <button
+                    onClick={() => setActiveTab('races')}
+                    className={`flex items-center gap-2 px-4 py-3 text-xs font-black uppercase tracking-widest border-b-2 transition-colors ${activeTab === 'races' ? 'border-brand-red text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
+                >
+                    <Flag className="w-4 h-4" /> Carreras
                 </button>
             </div>
 
+            {activeTab === 'lifts' && <LiftsPanel lifts={initialLifts} />}
+
+            {activeTab === 'races' && (
+            <>
             {/* Selector de competencia */}
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                 {competitions.map(c => (
@@ -492,6 +520,8 @@ export default function HyroxClient({ initialResults, competitions, isAdmin }: {
                     })
                 )}
             </div>
+            </>
+            )}
 
             {/* Modal admin: crear competencia */}
             {showAdminModal && (
