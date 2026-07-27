@@ -1771,14 +1771,21 @@ export async function parseWodFromImage(base64Image: string) {
                 break;
             } catch (err: any) {
                 const errMsg = err.message || String(err);
-                const isQuotaError = errMsg.includes('429') || 
-                                     errMsg.toLowerCase().includes('quota') || 
-                                     errMsg.toLowerCase().includes('limit') || 
+                const isQuotaError = errMsg.includes('429') ||
+                                     errMsg.toLowerCase().includes('quota') ||
+                                     errMsg.toLowerCase().includes('limit') ||
                                      errMsg.toLowerCase().includes('exceeded') ||
                                      errMsg.toLowerCase().includes('requests');
+                const isOverloadError = errMsg.includes('503') ||
+                                     errMsg.toLowerCase().includes('service unavailable') ||
+                                     errMsg.toLowerCase().includes('high demand') ||
+                                     errMsg.toLowerCase().includes('overloaded');
 
-                if (isQuotaError && !usedFallback) {
-                    console.warn('[parseWodFromImage] Quota exceeded on gemini-2.0-flash. Falling back to gemini-2.5-flash...');
+                // Cuota agotada o modelo saturado: probar con otro modelo en vez
+                // de reintentar el mismo (que va a seguir saturado/limitado) y
+                // hacer esperar al usuario para nada.
+                if ((isQuotaError || isOverloadError) && !usedFallback) {
+                    console.warn(`[parseWodFromImage] ${isQuotaError ? 'Quota exceeded' : 'Overloaded'} on gemini-2.0-flash. Falling back to gemini-2.5-flash...`);
                     currentModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
                     usedFallback = true;
                     attempts = 0; // Reset attempts for the fallback model

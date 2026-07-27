@@ -152,6 +152,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
     const [partner, setPartner] = useState<TaggedProfile | null>(initialData?.partner || null);
     const [showCategoryPicker, setShowCategoryPicker] = useState(false);
     const [isScanning, setIsScanning] = useState(false);
+    const [scanError, setScanError] = useState<string | null>(null);
     const [metrics, setMetrics] = useState<any>(initialData?.metrics || null);
     const [showGpsTracker, setShowGpsTracker] = useState(false);
 
@@ -268,6 +269,7 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
         if (!file) return;
 
         setIsScanning(true);
+        setScanError(null);
         try {
             const base64 = await resizeImageForScan(file);
             const res = await parseWodFromImage(base64);
@@ -299,16 +301,17 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                     if (data.summary) setSummary(data.summary);
                     updateWod(newTitle, normalizedBlocks, newSummary, newDate, newCat);
                 } else {
-                    alert('La pizarra se analizó correctamente pero no se encontró un formato estructurado de bloques compatible.');
+                    setScanError('La pizarra se analizó correctamente pero no se encontró un formato estructurado de bloques compatible.');
                 }
             } else {
-                alert(res.error || 'No se pudo analizar la imagen. Intenta con una foto más clara.');
+                setScanError(res.error || 'No se pudo analizar la imagen. Intenta con una foto más clara.');
             }
         } catch (err: any) {
             console.error('Scan error:', err);
-            alert(`No se pudo escanear la pizarra: ${err?.message || 'error desconocido'}. Inténtalo de nuevo.`);
+            setScanError(`No se pudo escanear la pizarra: ${err?.message || 'error desconocido'}. Inténtalo de nuevo.`);
         } finally {
             setIsScanning(false);
+            if (scanInputRef.current) scanInputRef.current.value = "";
         }
     };
 
@@ -686,6 +689,28 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                             className="hidden"
                         />
                     </div>
+
+                    {scanError && (
+                        <div className="mt-2 flex items-start justify-between gap-3 bg-brand-red/10 border border-brand-red/20 rounded-xl px-4 py-3">
+                            <p className="text-xs text-red-300 leading-relaxed">{scanError}</p>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={() => { setScanError(null); scanInputRef.current?.click(); }}
+                                    className="text-[10px] font-black uppercase tracking-widest text-brand-red hover:underline whitespace-nowrap"
+                                >
+                                    Reintentar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setScanError(null)}
+                                    className="text-gray-500 hover:text-white transition-colors text-xs"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
                 <input
                     type="text"
