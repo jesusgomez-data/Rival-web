@@ -452,7 +452,7 @@ export async function saveWorkout(workoutData: any) {
                 type: 'pr_achievement',
                 title: `🏆 ¡Nuevo récord personal!`,
                 content: `${pr.name}: ${pr.newMax}kg${improvement}. ¡Sigue así!`,
-                link: '/dashboard/profile'
+                link: '/dashboard/hyrox'
             });
         }
         // Also award extra XP per PR

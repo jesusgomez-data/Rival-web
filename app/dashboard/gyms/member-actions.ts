@@ -711,12 +711,12 @@ export async function rejectBookingRequest(centerId: string, requestId: string, 
         type: 'trial_rejected',
         title: `Reserva rechazada: ${gymName}`,
         content: `Tu solicitud para la sesión "${className}"${classTime ? ` del ${classTime}` : ''} ha sido rechazada. Motivo: ${reason}`,
-        link: `/trainer/${centerId}`
+        link: `/gym/${centerId}`
     });
 
     revalidatePath(`/dashboard/gyms/${centerId}/members`);
     revalidatePath(`/dashboard/gyms/${centerId}/schedule`);
-    revalidatePath(`/trainer/${centerId}`);
+    revalidatePath(`/gym/${centerId}`);
     return { success: true };
 }
 

@@ -216,7 +216,7 @@ export async function createPRPost(formData: FormData) {
                 type: 'pr_achievement',
                 title: `🏆 ¡Nuevo récord personal!`,
                 content: `${exercise}: ${weight}kg${improvementText}`,
-                link: '/dashboard/profile'
+                link: '/dashboard/hyrox'
             });
         }
 
