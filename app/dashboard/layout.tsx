@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef, useMemo, Fragment, Suspense } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/utils/supabase/client";
 import { getUserProfile } from "./training/actions";
 import { getUnreadMessageCount } from "./messages/actions";
@@ -244,6 +245,9 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
                 if (user) {
                     cachedUserIdRef.current = user.id;
                     if (isMounted) setUserEmail(user.email?.toLowerCase() || null);
+                    // Para que Sentry pueda decir a cuantos usuarios reales afecta
+                    // cada error, no solo el numero de eventos.
+                    Sentry.setUser({ id: user.id, email: user.email || undefined });
                 }
 
                 // Fetch database profile and unread messages in parallel
@@ -548,7 +552,8 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
             removeAccount(profile.id);
         }
         await supabase.auth.signOut();
-        
+        Sentry.setUser(null);
+
         const remaining = getSavedAccounts();
         if (remaining.length > 0) {
             const success = await switchToAccount(remaining[0].userId);
