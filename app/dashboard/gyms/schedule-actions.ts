@@ -747,9 +747,12 @@ export async function getMyUpcomingClasses() {
     const memberIds = memberships.map(m => m.id);
 
     const nowIso = new Date().toISOString();
+    // class_enrollments no tiene columna created_at (usa enrollment_date) —
+    // este select se comparte con class_waitlist (que si tiene created_at),
+    // asi que se omite aqui para no romper la query de enrollments con un
+    // error de columna inexistente que dejaba "enrollments" siempre vacio.
     const classSelect = `
         id,
-        created_at,
         class:class_id (
             id,
             name,
@@ -761,10 +764,12 @@ export async function getMyUpcomingClasses() {
         )
     `;
 
-    const [{ data: enrollRows }, { data: waitlistRows }] = await Promise.all([
+    const [{ data: enrollRows, error: enrollErr }, { data: waitlistRows, error: waitlistErr }] = await Promise.all([
         supabase.from('class_enrollments').select(classSelect).in('member_id', memberIds),
         supabase.from('class_waitlist').select(classSelect).in('member_id', memberIds)
     ]);
+    if (enrollErr) console.error('[getMyUpcomingClasses] enrollments query failed:', enrollErr.message);
+    if (waitlistErr) console.error('[getMyUpcomingClasses] waitlist query failed:', waitlistErr.message);
 
     const normalize = (rows: any[] | null) =>
         (rows || [])
