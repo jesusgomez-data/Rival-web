@@ -14,6 +14,21 @@ Sentry.init({
         'AbortError',
         'NotAllowedError', // autoplay bloqueado: comportamiento normal del navegador
     ],
+    // "Load failed"/"Failed to fetch" es el mensaje generico que da el
+    // navegador (sobre todo Safari/iOS) cuando se corta la conexion a medio
+    // fetch — real y esperado en movil. Pero el mensaje es demasiado
+    // generico para ignorarlo en todo el sitio (podria ocultar un fallo de
+    // carga real en otro fetch), asi que solo se descarta cuando el propio
+    // stack confirma que viene del fetch interno de Server Actions de Next.
+    beforeSend(event, hint) {
+        const msg = String(hint?.originalException instanceof Error ? hint.originalException.message : event.message || '');
+        if (/^(Load failed|Failed to fetch)$/i.test(msg.trim())) {
+            const frames = event.exception?.values?.[0]?.stacktrace?.frames || [];
+            const fromServerActionFetch = frames.some(f => /server-action-reducer/i.test(f.filename || ''));
+            if (fromServerActionFetch) return null;
+        }
+        return event;
+    },
 });
 
 export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
