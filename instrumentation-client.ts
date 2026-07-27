@@ -24,7 +24,7 @@ export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
 // una sola vez (máx. 1 vez por minuto) para traer la versión nueva.
 if (typeof window !== 'undefined') {
     const isStaleChunkError = (msg: string) =>
-        /Loading chunk .* failed|ChunkLoadError|Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed/i.test(msg);
+        /Loading chunk .* failed|ChunkLoadError|Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed|Server Action .* was not found on the server|Failed to find Server Action/i.test(msg);
 
     const reloadOnce = () => {
         const key = 'rival-chunk-reload-ts';
