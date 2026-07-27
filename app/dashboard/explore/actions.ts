@@ -222,13 +222,16 @@ export async function createPRPost(formData: FormData) {
 
         revalidatePath('/dashboard/community')
         revalidatePath('/dashboard')
-        return { 
+        return {
             success: true,
             prDetails: {
                 name: exercise,
-                previousMax: currentMax,
+                // null (no 0) cuando es la primera vez que se registra este
+                // ejercicio: no hay "anterior" real que comparar, y mostrar
+                // "Anterior: 0kg" confundia (parecia que antes levantaba 0kg).
+                previousMax: currentMax > 0 ? currentMax : null,
                 newMax: weightNum,
-                improvement: isNewPR && currentMax > 0 ? parseFloat((weightNum - currentMax).toFixed(1)) : 0,
+                improvement: currentMax > 0 ? parseFloat((weightNum - currentMax).toFixed(1)) : null,
                 isNewPR: isNewPR,
                 userName: profile?.username || profile?.full_name || user.email?.split('@')[0] || "Atleta"
             }

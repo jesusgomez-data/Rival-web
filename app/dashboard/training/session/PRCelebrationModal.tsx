@@ -9,9 +9,9 @@ import Image from 'next/image';
 
 interface PRAchievement {
     name: string;
-    previousMax: number;
+    previousMax: number | null;
     newMax: number;
-    improvement: number;
+    improvement: number | null;
 }
 
 interface PRCelebrationModalProps {
@@ -109,10 +109,16 @@ export default function PRCelebrationModal({ achievements, onClose, userName }: 
                                     {pr.name}
                                 </h4>
                                 <div className="flex items-center gap-2 mt-2">
-                                    <span className="text-[10px] font-bold text-gray-500 uppercase">Anterior:</span>
-                                    <span className="text-[10px] font-black text-gray-400">{pr.previousMax}kg</span>
-                                    <div className="w-1 h-1 rounded-full bg-gray-700" />
-                                    <span className="text-[10px] font-bold text-green-500 uppercase">+{pr.improvement}kg</span>
+                                    {pr.previousMax != null ? (
+                                        <>
+                                            <span className="text-[10px] font-bold text-gray-500 uppercase">Anterior:</span>
+                                            <span className="text-[10px] font-black text-gray-400">{pr.previousMax}kg</span>
+                                            <div className="w-1 h-1 rounded-full bg-gray-700" />
+                                            <span className="text-[10px] font-bold text-green-500 uppercase">+{pr.improvement}kg</span>
+                                        </>
+                                    ) : (
+                                        <span className="text-[10px] font-bold text-green-500 uppercase">Primer récord registrado</span>
+                                    )}
                                 </div>
                             </div>
 
