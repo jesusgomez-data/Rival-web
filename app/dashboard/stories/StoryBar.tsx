@@ -288,7 +288,11 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                             scale: 1,
                             rotation: 0,
                             color: '#FFFFFF',
-                            link: `/dashboard`
+                            // Antes apuntaba siempre a /dashboard (el feed general) en vez
+                            // del post concreto que se estaba compartiendo — al pulsar el
+                            // sticker en la historia, simplemente se cerraba el visor sin
+                            // llevar a ningún sitio en particular.
+                            link: `/dashboard/post/${customEvent.detail.postId}`
                         };
                         setTimeout(() => setOverlays([linkOverlay]), 100);
                     }
@@ -331,7 +335,8 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                             scale: 1,
                             rotation: 0,
                             color: '#FFFFFF',
-                            link: `/dashboard`
+                            // Ídem: antes iba siempre a /dashboard en vez del post real.
+                            link: `/dashboard/post/${customEvent.detail.postId}`
                         };
                         // Use setTimeout to ensure state update happens after setupPreview's state clear
                         setTimeout(() => setOverlays([linkOverlay]), 100);
@@ -393,7 +398,8 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                         y: 55,
                         scale: 1,
                         rotation: 0,
-                        link: postId ? `/dashboard` : undefined
+                        // Ídem: antes iba siempre a /dashboard en vez del post real.
+                        link: postId ? `/dashboard/post/${postId}` : undefined
                     };
 
                     setTimeout(() => {
