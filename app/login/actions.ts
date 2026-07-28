@@ -3,13 +3,25 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { getClientIp, isRateLimited, recordAttempt } from '@/utils/rate-limit'
 
 export async function login(prevState: any, formData: FormData) {
-    const supabase = await createClient()
-
     const email = formData.get('email') as string
     const password = formData.get('password') as string
+    const ip = await getClientIp()
 
+    // Se limita por email Y por IP: por email evita fuerza bruta contra una
+    // cuenta concreta, por IP evita credential stuffing probando muchos
+    // emails distintos desde el mismo atacante.
+    const [emailLimit, ipLimit] = await Promise.all([
+        isRateLimited(email, 'login'),
+        isRateLimited(ip, 'login'),
+    ])
+    if (emailLimit.limited || ipLimit.limited) {
+        return { error: `Demasiados intentos. Espera ${emailLimit.retryAfterMinutes || ipLimit.retryAfterMinutes} minutos antes de volver a intentarlo.` }
+    }
+
+    const supabase = await createClient()
     const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -18,22 +30,41 @@ export async function login(prevState: any, formData: FormData) {
     // If error, return it to the state
     if (error) {
         console.error("Login Error:", error);
+        await Promise.all([recordAttempt(email, 'login', false), recordAttempt(ip, 'login', false)])
         return { error: error.message }
     }
+
+    await Promise.all([recordAttempt(email, 'login', true), recordAttempt(ip, 'login', true)])
 
     // If success, redirect (this throws an error in Next.js to handle redirect, so it must be outside try/catch or just straight up)
     redirect('/dashboard')
 }
 
 export async function signup(prevState: any, formData: FormData) {
-    const supabase = await createClient()
-
     const email = formData.get('email') as string
     const password = formData.get('password') as string
     const firstName = formData.get('firstName') as string
     const lastName = formData.get('lastName') as string
     const username = formData.get('username') as string
     const birthDate = formData.get('birthDate') as string
+
+    const ip = await getClientIp()
+    const ipLimit = await isRateLimited(ip, 'signup')
+    if (ipLimit.limited) {
+        return { error: `Demasiadas cuentas creadas desde aquí. Espera ${ipLimit.retryAfterMinutes} minutos e inténtalo de nuevo.` }
+    }
+
+    // Política de contraseña mínima: sin esto, la única barrera era el
+    // default de Supabase (6 caracteres, sin complejidad) — muy por debajo
+    // de lo que exige cualquier red social seria.
+    if (password.length < 8) {
+        return { error: 'La contraseña debe tener al menos 8 caracteres.' }
+    }
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+        return { error: 'La contraseña debe incluir mayúsculas, minúsculas y al menos un número.' }
+    }
+
+    const supabase = await createClient()
 
     // Validate username uniqueness BEFORE attempting signup
     const { data: existingUser, error: checkError } = await supabase
@@ -78,9 +109,12 @@ export async function signup(prevState: any, formData: FormData) {
             errorMessage = "Demasiados intentos. Por favor espera unos segundos antes de intentar de nuevo.";
         }
 
+        await recordAttempt(ip, 'signup', false)
         // Don't leak stack traces to user
         return { error: errorMessage }
     }
+
+    await recordAttempt(ip, 'signup', true)
 
     // Explicitly create profile to ensure it exists and prevent "ghost" profiles
     if (data.user) {

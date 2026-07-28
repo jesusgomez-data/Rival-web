@@ -191,10 +191,14 @@ export default function SignupPage() {
                                         name="password"
                                         type="password"
                                         required
+                                        minLength={8}
+                                        pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}"
+                                        title="Mínimo 8 caracteres, con mayúsculas, minúsculas y al menos un número."
                                         className="w-full border border-border rounded-xl py-4 pl-12 pr-4 focus:outline-none focus:border-brand-red/50 focus:ring-1 focus:ring-brand-red/50 transition-all bg-card text-foreground placeholder:text-muted-foreground"
                                         placeholder={t.signup.passwordHint}
                                     />
                                 </div>
+                                <p className="text-[11px] text-muted-foreground mt-1.5">Mínimo 8 caracteres, con mayúsculas, minúsculas y un número.</p>
                             </div>
 
                             <div className="pt-2">
