@@ -3,8 +3,36 @@
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
+import { createAdminClient } from '@/utils/supabase/admin'
 import { getClientIp, isRateLimited, recordAttempt } from '@/utils/rate-limit'
 import { verifyTurnstileToken } from '@/utils/turnstile'
+import { createNotification } from '@/app/dashboard/notifications-actions'
+
+// Avisa a la cuenta oficial "rivalfit" (con push si la tiene activada) cada
+// vez que alguien completa el registro. Se busca por username en vez de
+// guardar el UUID a fuego para no romperlo si esa cuenta cambia algun dia.
+// Nunca bloquea el registro si algo falla aqui.
+async function notifyOfficialAccountOfSignup(fullName: string, username: string) {
+    try {
+        const admin = createAdminClient()
+        const { data: official } = await admin
+            .from('profiles')
+            .select('id')
+            .eq('username', 'rivalfit')
+            .maybeSingle()
+        if (!official) return
+
+        await createNotification({
+            userId: official.id,
+            type: 'new_signup',
+            title: '🎉 Nuevo usuario registrado',
+            content: `${fullName} (@${username}) se acaba de unir a RIVAL FIT.`,
+            link: `/dashboard/profile/${username}`,
+        })
+    } catch (e) {
+        console.error('[notifyOfficialAccountOfSignup] error:', e)
+    }
+}
 
 export async function login(prevState: any, formData: FormData) {
     const email = formData.get('email') as string
@@ -151,9 +179,11 @@ export async function signup(prevState: any, formData: FormData) {
                 return { error: `El nombre de usuario "${username}" ya está en uso. Por favor elige otro.` }
             }
 
-            // Don't block flow for other errors, but log it. 
+            // Don't block flow for other errors, but log it.
             // If trigger worked, this might fail or be redundant, which is fine with upsert.
         }
+
+        await notifyOfficialAccountOfSignup(`${firstName} ${lastName}`, username)
     }
 
     if (data.session) {
