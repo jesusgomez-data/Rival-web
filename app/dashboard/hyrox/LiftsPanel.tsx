@@ -176,7 +176,7 @@ export default function LiftsPanel({ lifts: initialLifts }: { lifts: MyLift[] })
                                                     </button>
                                                 </div>
                                             </div>
-                                        ) : (
+                                        ) : lift.source === 'set' ? (
                                             <div className="flex items-center gap-2">
                                                 <button
                                                     onClick={() => startEdit(lift)}
@@ -192,6 +192,10 @@ export default function LiftsPanel({ lifts: initialLifts }: { lifts: MyLift[] })
                                                     {isBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />} Borrar
                                                 </button>
                                             </div>
+                                        ) : (
+                                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                                                Detectado en un WOD publicado — para cambiarlo, edita esa publicación.
+                                            </p>
                                         )}
 
                                         <div className="flex items-center gap-3 border-t border-border pt-4">

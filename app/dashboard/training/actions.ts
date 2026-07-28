@@ -1411,6 +1411,24 @@ export interface MyLift {
     weight_kg: number;
     reps: number;
     achieved_at: string;
+    // 'set' = viene de workout_sets (editable/borrable). 'wod_post' = detectado
+    // dentro de un WOD publicado normal — no hay una fila propia que editar/
+    // borrar ahi, solo se puede tocar editando el post original.
+    source: 'set' | 'wod_post';
+}
+
+// Bloques/filas que no son un ejercicio real con peso levantado — se cuelan
+// en el WOD como "Rest"/"Calentamiento" y a veces traen un numero suelto
+// (rondas, minutos...) que parece un peso pero no lo es.
+const NON_EXERCISE_NAMES = /^(rest|descanso|warm[\s-]?up|calentamiento|cooldown|enfriamiento|stretch|estiramiento)s?$/i
+
+function extractWeightKg(ex: any): number | null {
+    const raw = ex?.detail ?? ex?.value
+    const unit = String(ex?.unit ?? ex?.weightUnit ?? 'kg').toLowerCase()
+    if (unit !== 'kg') return null
+    const weight = parseFloat(String(raw).replace(',', '.'))
+    if (!Number.isFinite(weight) || weight <= 0 || weight >= 500) return null
+    return weight
 }
 
 export async function getMyLifts(): Promise<MyLift[]> {
@@ -1418,32 +1436,41 @@ export async function getMyLifts(): Promise<MyLift[]> {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return []
 
-    const { data, error } = await supabase
-        .from('workout_sets')
-        .select(`
-            id,
-            exercise_name,
-            weight_kg,
-            reps,
-            workouts!inner(user_id, created_at)
-        `)
-        .eq('workouts.user_id', user.id)
-        .gt('weight_kg', 0)
-        // Ejercicios de distancia (carrera, remo...) a veces guardan metros en
-        // esta misma columna al no tener un campo de distancia propio en ese
-        // flujo — un "PR" de 15000kg rompe la confianza en la lista al momento.
-        .lt('weight_kg', 500)
-
-    if (error || !data) return []
+    const [{ data: setsData }, { data: postsData }] = await Promise.all([
+        supabase
+            .from('workout_sets')
+            .select(`
+                id,
+                exercise_name,
+                weight_kg,
+                reps,
+                workouts!inner(user_id, created_at)
+            `)
+            .eq('workouts.user_id', user.id)
+            .gt('weight_kg', 0)
+            // Ejercicios de distancia (carrera, remo...) a veces guardan metros
+            // en esta misma columna al no tener un campo de distancia propio
+            // en ese flujo — un "PR" de 15000kg rompe la confianza al momento.
+            .lt('weight_kg', 500),
+        // Publicar un WOD normal (el flujo de uso diario) es la fuente MAS
+        // comun de PRs reales, y no escribe en workout_sets — sin esto, un
+        // Pull Up a 40kg publicado hoy nunca actualizaba el 20kg antiguo.
+        supabase
+            .from('posts')
+            .select('id, wod_data, created_at')
+            .eq('user_id', user.id)
+            .eq('media_type', 'wod'),
+    ])
 
     const best = new Map<string, MyLift>()
-    for (const row of data as any[]) {
+
+    for (const row of (setsData || []) as any[]) {
         // El nombre guardado incluye el formato del bloque donde se hizo
         // ("Back Squat (EMOM)", "Back Squat (FORTIME)"...), lo que partía el
         // mismo ejercicio en varias marcas distintas. Se agrupa por el
         // nombre base para que el usuario vea un unico PR real por ejercicio.
         const baseName = (row.exercise_name || '').replace(/\s*\([^)]*\)\s*$/, '').trim()
-        if (!baseName) continue
+        if (!baseName || NON_EXERCISE_NAMES.test(baseName)) continue
         const existing = best.get(baseName)
         if (!existing || row.weight_kg > existing.weight_kg) {
             best.set(baseName, {
@@ -1452,8 +1479,40 @@ export async function getMyLifts(): Promise<MyLift[]> {
                 weight_kg: row.weight_kg,
                 reps: row.reps,
                 achieved_at: row.workouts?.created_at || '',
+                source: 'set',
             })
         }
+    }
+
+    for (const post of (postsData || []) as any[]) {
+        let wodObj: any
+        try {
+            wodObj = typeof post.wod_data === 'object' ? post.wod_data : JSON.parse(post.wod_data)
+        } catch {
+            continue
+        }
+        const w = Array.isArray(wodObj) ? wodObj[0] : wodObj
+        const blocks = w?.blocks || []
+        blocks.forEach((block: any, blockIdx: number) => {
+            (block.exercises || []).forEach((ex: any, exIdx: number) => {
+                const baseName = (ex?.name || '').replace(/\s*\([^)]*\)\s*$/, '').trim()
+                if (!baseName || NON_EXERCISE_NAMES.test(baseName)) return
+                const weight = extractWeightKg(ex)
+                if (weight == null) return
+                const existing = best.get(baseName)
+                if (!existing || weight > existing.weight_kg) {
+                    const repsRaw = parseInt(ex?.reps, 10)
+                    best.set(baseName, {
+                        set_id: `wod:${post.id}:${blockIdx}:${exIdx}`,
+                        exercise_name: baseName,
+                        weight_kg: weight,
+                        reps: Number.isFinite(repsRaw) && repsRaw > 0 ? repsRaw : 1,
+                        achieved_at: post.created_at || '',
+                        source: 'wod_post',
+                    })
+                }
+            })
+        })
     }
 
     return Array.from(best.values()).sort((a, b) => a.exercise_name.localeCompare(b.exercise_name))
@@ -1463,6 +1522,8 @@ export async function getMyLifts(): Promise<MyLift[]> {
 // Ambas comprueban propiedad via el join a workouts.user_id antes de tocar
 // nada — nadie puede editar/borrar un set que no sea suyo.
 export async function updateLiftRecord(setId: string, weightKg: number, reps: number) {
+    if (setId.startsWith('wod:')) return { error: 'Esta marca viene de un WOD publicado — edítala desde esa publicación.' }
+
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'No autorizado' }
@@ -1485,6 +1546,8 @@ export async function updateLiftRecord(setId: string, weightKg: number, reps: nu
 }
 
 export async function deleteLiftRecord(setId: string) {
+    if (setId.startsWith('wod:')) return { error: 'Esta marca viene de un WOD publicado — bórrala desde esa publicación.' }
+
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'No autorizado' }
