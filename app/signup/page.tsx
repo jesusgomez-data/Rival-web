@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, User, Mail, Lock, ArrowRight } from "lucide-react";
 import { signup } from "@/app/login/actions";
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useLanguage } from "@/app/LanguageContext";
 import { createClient } from "@/utils/supabase/client";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -14,6 +14,7 @@ import TurnstileWidget from "@/components/TurnstileWidget";
 export default function SignupPage() {
     const { t } = useLanguage();
     const [state, formAction, isPending] = useActionState(signup, null);
+    const [turnstileStatus, setTurnstileStatus] = useState<'loading' | 'ready' | 'error'>('loading');
     const supabase = createClient();
 
     const handleOAuthLogin = async (provider: 'google' | 'apple') => {
@@ -202,14 +203,14 @@ export default function SignupPage() {
                                 <p className="text-[11px] text-muted-foreground mt-1.5">Mínimo 8 caracteres, con mayúsculas, minúsculas y un número.</p>
                             </div>
 
-                            <TurnstileWidget />
+                            <TurnstileWidget onStatusChange={setTurnstileStatus} />
 
                             <div className="pt-2">
                                 <button
-                                    disabled={isPending}
+                                    disabled={isPending || turnstileStatus === 'loading'}
                                     className="w-full py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed bg-foreground text-background hover:opacity-80"
                                 >
-                                    {isPending ? t.signup.submitting : t.signup.submit} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                    {isPending ? t.signup.submitting : (turnstileStatus === 'loading' ? 'Verificando seguridad...' : t.signup.submit)} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                 </button>
                                 <p className="text-xs text-muted-foreground mt-4 text-center">{t.signup.terms}</p>
                             </div>

@@ -10,13 +10,14 @@ import { createClient } from "@/utils/supabase/client";
 import { clearActiveSessionLocally } from "@/utils/supabase/multi-account";
 import ThemeToggle from "@/components/ThemeToggle";
 import TurnstileWidget from "@/components/TurnstileWidget";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 
 export default function LoginPage() {
     const { t } = useLanguage();
     const [state, formAction, isPending] = useActionState(login, null);
+    const [turnstileStatus, setTurnstileStatus] = useState<'loading' | 'ready' | 'error'>('loading');
     const supabase = createClient();
     const router = useRouter();
 
@@ -150,13 +151,13 @@ export default function LoginPage() {
                             </div>
                         </div>
 
-                        <TurnstileWidget />
+                        <TurnstileWidget onStatusChange={setTurnstileStatus} />
 
                         <button
-                            disabled={isPending}
+                            disabled={isPending || turnstileStatus === 'loading'}
                             className="w-full bg-brand-red hover:bg-brand-accent text-white py-4 rounded-xl font-bold text-lg transition-all shadow-lg hover:shadow-brand-red/20 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {isPending ? t.login.authenticating : t.login.submit} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                            {isPending ? t.login.authenticating : (turnstileStatus === 'loading' ? 'Verificando seguridad...' : t.login.submit)} <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                         </button>
                     </form>
 
