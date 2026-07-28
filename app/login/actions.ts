@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { getClientIp, isRateLimited, recordAttempt } from '@/utils/rate-limit'
+import { verifyTurnstileToken } from '@/utils/turnstile'
 
 export async function login(prevState: any, formData: FormData) {
     const email = formData.get('email') as string
@@ -19,6 +20,11 @@ export async function login(prevState: any, formData: FormData) {
     ])
     if (emailLimit.limited || ipLimit.limited) {
         return { error: `Demasiados intentos. Espera ${emailLimit.retryAfterMinutes || ipLimit.retryAfterMinutes} minutos antes de volver a intentarlo.` }
+    }
+
+    const captcha = await verifyTurnstileToken(formData.get('cf-turnstile-response') as string | null, ip)
+    if (!captcha.success) {
+        return { error: captcha.error }
     }
 
     const supabase = await createClient()
@@ -52,6 +58,11 @@ export async function signup(prevState: any, formData: FormData) {
     const ipLimit = await isRateLimited(ip, 'signup')
     if (ipLimit.limited) {
         return { error: `Demasiadas cuentas creadas desde aquí. Espera ${ipLimit.retryAfterMinutes} minutos e inténtalo de nuevo.` }
+    }
+
+    const captcha = await verifyTurnstileToken(formData.get('cf-turnstile-response') as string | null, ip)
+    if (!captcha.success) {
+        return { error: captcha.error }
     }
 
     // Política de contraseña mínima: sin esto, la única barrera era el

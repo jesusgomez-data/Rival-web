@@ -8,6 +8,7 @@ import { useActionState } from "react";
 import { useLanguage } from "@/app/LanguageContext";
 import { createClient } from "@/utils/supabase/client";
 import ThemeToggle from "@/components/ThemeToggle";
+import TurnstileWidget from "@/components/TurnstileWidget";
 
 
 export default function SignupPage() {
@@ -200,6 +201,8 @@ export default function SignupPage() {
                                 </div>
                                 <p className="text-[11px] text-muted-foreground mt-1.5">Mínimo 8 caracteres, con mayúsculas, minúsculas y un número.</p>
                             </div>
+
+                            <TurnstileWidget />
 
                             <div className="pt-2">
                                 <button

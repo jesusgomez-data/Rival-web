@@ -9,6 +9,7 @@ import { useLanguage } from "@/app/LanguageContext";
 import { createClient } from "@/utils/supabase/client";
 import { clearActiveSessionLocally } from "@/utils/supabase/multi-account";
 import ThemeToggle from "@/components/ThemeToggle";
+import TurnstileWidget from "@/components/TurnstileWidget";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
@@ -148,6 +149,8 @@ export default function LoginPage() {
                                 <Link href="/forgot-password" className="text-xs text-brand-red hover:underline transition-colors">{t.login.forgotPassword}</Link>
                             </div>
                         </div>
+
+                        <TurnstileWidget />
 
                         <button
                             disabled={isPending}
