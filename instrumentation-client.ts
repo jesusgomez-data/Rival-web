@@ -13,6 +13,7 @@ Sentry.init({
         'ResizeObserver loop',
         'AbortError',
         'NotAllowedError', // autoplay bloqueado: comportamiento normal del navegador
+        'window.webkit.messageHandlers', // navegador in-app de Instagram/TikTok/Facebook: su propio puente nativo falla, no es codigo nuestro
     ],
     // "Load failed"/"Failed to fetch" es el mensaje generico que da el
     // navegador (sobre todo Safari/iOS) cuando se corta la conexion a medio
