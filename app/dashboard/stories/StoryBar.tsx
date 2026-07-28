@@ -1780,28 +1780,56 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                 <span className="text-[8px] font-black text-white uppercase tracking-[0.15em]">Arrastra la foto para encuadrar • Scroll/Rueda para Zoom</span>
                             </div>
 
+                            {/* Fondo desenfocado: antes el editor forzaba object-cover
+                                (recorta lo que no encaje en 9:16) sin forma de ver la
+                                imagen completa — cualquier foto/gráfico con proporción
+                                distinta perdía contenido por los bordes sin remedio (el
+                                zoom solo permitía acercar, nunca alejar). Ahora se ve la
+                                imagen ENTERA (object-contain) sobre un fondo desenfocado
+                                de sí misma, igual que Instagram — sin recortar nada por
+                                defecto, y el usuario puede seguir haciendo zoom si quiere
+                                recortar a propósito. */}
                             {previewFile?.type.startsWith('video/') ? (
-                                <video
-                                    src={previewUrl}
-                                    autoPlay
-                                    loop
-                                    playsInline
-                                    className="w-full h-full object-cover pointer-events-none"
-                                    style={{
-                                        transform: `scale(${imageZoom}) translate(${(50 - imagePositionX) / imageZoom}%, ${(50 - imagePositionY) / imageZoom}%)`,
-                                        transformOrigin: 'center center'
-                                    }}
-                                />
+                                <>
+                                    <video
+                                        src={previewUrl}
+                                        autoPlay
+                                        loop
+                                        muted
+                                        playsInline
+                                        aria-hidden="true"
+                                        className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-60 pointer-events-none"
+                                    />
+                                    <video
+                                        src={previewUrl}
+                                        autoPlay
+                                        loop
+                                        playsInline
+                                        className="relative w-full h-full object-contain pointer-events-none"
+                                        style={{
+                                            transform: `scale(${imageZoom}) translate(${(50 - imagePositionX) / imageZoom}%, ${(50 - imagePositionY) / imageZoom}%)`,
+                                            transformOrigin: 'center center'
+                                        }}
+                                    />
+                                </>
                             ) : (
-                                <img
-                                    src={previewUrl}
-                                    alt="Preview"
-                                    className="w-full h-full object-cover pointer-events-none"
-                                    style={{
-                                        transform: `scale(${imageZoom}) translate(${(50 - imagePositionX) / imageZoom}%, ${(50 - imagePositionY) / imageZoom}%)`,
-                                        transformOrigin: 'center center'
-                                    }}
-                                />
+                                <>
+                                    <img
+                                        src={previewUrl}
+                                        alt=""
+                                        aria-hidden="true"
+                                        className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-60 pointer-events-none"
+                                    />
+                                    <img
+                                        src={previewUrl}
+                                        alt="Preview"
+                                        className="relative w-full h-full object-contain pointer-events-none"
+                                        style={{
+                                            transform: `scale(${imageZoom}) translate(${(50 - imagePositionX) / imageZoom}%, ${(50 - imagePositionY) / imageZoom}%)`,
+                                            transformOrigin: 'center center'
+                                        }}
+                                    />
+                                </>
                             )}
 
                             {/* Overlays Rendering */}
@@ -2201,40 +2229,59 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                     }
                                 })()
                             ) : currentStory.media_type === 'video' ? (
-                                <video
-                                    ref={storyVideoRef}
-                                    src={currentStory.media_url}
-                                    autoPlay
-                                    playsInline
-                                    muted={isMuted}
-                                    className="w-full h-full object-cover pointer-events-none animate-in fade-in duration-300"
-                                    style={{
-                                        transform: `scale(${storyZoom}) translate(${(50 - storyPosX) / storyZoom}%, ${(50 - storyPosY) / storyZoom}%)`,
-                                        transformOrigin: 'center center'
-                                    }}
-                                    onTimeUpdate={(e) => {
-                                        const video = e.currentTarget;
-                                        if (video.duration && !isPaused) {
-                                            setProgress((video.currentTime / video.duration) * 100);
-                                        }
-                                    }}
-                                    onEnded={() => {
-                                        nextStory();
-                                    }}
-                                    onPlay={(e) => {
-                                        if (isPaused) e.currentTarget.pause();
-                                    }}
-                                />
+                                <>
+                                    <video
+                                        src={currentStory.media_url}
+                                        autoPlay
+                                        loop
+                                        muted
+                                        playsInline
+                                        aria-hidden="true"
+                                        className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-60 pointer-events-none"
+                                    />
+                                    <video
+                                        ref={storyVideoRef}
+                                        src={currentStory.media_url}
+                                        autoPlay
+                                        playsInline
+                                        muted={isMuted}
+                                        className="relative w-full h-full object-contain pointer-events-none animate-in fade-in duration-300"
+                                        style={{
+                                            transform: `scale(${storyZoom}) translate(${(50 - storyPosX) / storyZoom}%, ${(50 - storyPosY) / storyZoom}%)`,
+                                            transformOrigin: 'center center'
+                                        }}
+                                        onTimeUpdate={(e) => {
+                                            const video = e.currentTarget;
+                                            if (video.duration && !isPaused) {
+                                                setProgress((video.currentTime / video.duration) * 100);
+                                            }
+                                        }}
+                                        onEnded={() => {
+                                            nextStory();
+                                        }}
+                                        onPlay={(e) => {
+                                            if (isPaused) e.currentTarget.pause();
+                                        }}
+                                    />
+                                </>
                             ) : (
-                                <img
-                                    src={currentStory.media_url}
-                                    alt="Story content"
-                                    className="w-full h-full object-cover pointer-events-none animate-in fade-in duration-300"
-                                    style={{
-                                        transform: `scale(${storyZoom}) translate(${(50 - storyPosX) / storyZoom}%, ${(50 - storyPosY) / storyZoom}%)`,
-                                        transformOrigin: 'center center'
-                                    }}
-                                />
+                                <>
+                                    <img
+                                        src={currentStory.media_url}
+                                        alt=""
+                                        aria-hidden="true"
+                                        className="absolute inset-0 w-full h-full object-cover scale-125 blur-2xl opacity-60 pointer-events-none"
+                                    />
+                                    <img
+                                        src={currentStory.media_url}
+                                        alt="Story content"
+                                        className="relative w-full h-full object-contain pointer-events-none animate-in fade-in duration-300"
+                                        style={{
+                                            transform: `scale(${storyZoom}) translate(${(50 - storyPosX) / storyZoom}%, ${(50 - storyPosY) / storyZoom}%)`,
+                                            transformOrigin: 'center center'
+                                        }}
+                                    />
+                                </>
                             )}
 
                             {/* Workout Summary Overlay */}
