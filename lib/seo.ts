@@ -11,7 +11,7 @@ import { Metadata } from 'next';
 
 export const SEO_CONFIG = {
   siteName: 'RivalFit',
-  siteUrl: process.env.NEXT_PUBLIC_APP_URL || 'https://rival.app',
+  siteUrl: (process.env.NEXT_PUBLIC_APP_URL || 'https://rivalfit.app').replace(/\/$/, ''),
   twitterHandle: '@rivalfitapp',
   defaultLocale: 'es',
 };
@@ -150,9 +150,12 @@ export function generateOrganizationSchema() {
       'https://www.instagram.com/rivalfitapp',
       'https://www.linkedin.com/company/rivalfit',
     ],
+    // Sin telefono de soporte real todavia — un numero inventado en datos
+    // estructurados es peor que no tener contactPoint (usuarios reales lo
+    // marcarian, y Google penaliza datos estructurados falsos).
     contactPoint: {
       '@type': 'ContactPoint',
-      telephone: '+34-900-000-000',
+      email: 'sales@rivalfit.app',
       contactType: 'Customer Service',
       availableLanguage: ['es', 'en', 'pt'],
     },
@@ -176,13 +179,9 @@ export function generateSoftwareApplicationSchema() {
         name: 'RivalFit',
       },
     },
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: '4.8',
-      ratingCount: '127',
-      bestRating: '5',
-      worstRating: '1',
-    },
+    // Sin aggregateRating: Google prohibe explicitamente valoraciones
+    // inventadas en datos estructurados (es motivo de accion manual/penalizacion).
+    // Cuando haya reseñas reales de centros, se añade con datos verdaderos.
     description: 'Software de gestión integral para centros deportivos: reservas, pagos, comunidad y analytics.',
   };
 }

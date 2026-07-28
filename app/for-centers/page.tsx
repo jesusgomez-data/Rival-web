@@ -98,7 +98,7 @@ const plans = [
       'Reportes automáticos',
     ],
     cta: 'Hablar con Ventas',
-    ctaLink: 'mailto:sales@rival.app',
+    ctaLink: 'mailto:sales@rivalfit.app',
     highlight: false,
     badge: null,
   },

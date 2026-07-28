@@ -24,7 +24,7 @@ export const metadata: Metadata = generatePageMetadata({
     'plataforma yoga studio',
   ],
   image: '/og-for-centers.jpg',
-  canonical: 'https://rival.app/for-centers',
+  canonical: 'https://rivalfit.app/for-centers',
 });
 
 // ============================================
