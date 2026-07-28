@@ -1406,6 +1406,7 @@ export async function getWorkoutDetails(workoutId: string) {
 }
 // 15.5 Get all of the user's current lifting PRs (max weight ever logged per exercise)
 export interface MyLift {
+    set_id: string;
     exercise_name: string;
     weight_kg: number;
     reps: number;
@@ -1420,6 +1421,7 @@ export async function getMyLifts(): Promise<MyLift[]> {
     const { data, error } = await supabase
         .from('workout_sets')
         .select(`
+            id,
             exercise_name,
             weight_kg,
             reps,
@@ -1445,6 +1447,7 @@ export async function getMyLifts(): Promise<MyLift[]> {
         const existing = best.get(baseName)
         if (!existing || row.weight_kg > existing.weight_kg) {
             best.set(baseName, {
+                set_id: row.id,
                 exercise_name: baseName,
                 weight_kg: row.weight_kg,
                 reps: row.reps,
@@ -1454,6 +1457,52 @@ export async function getMyLifts(): Promise<MyLift[]> {
     }
 
     return Array.from(best.values()).sort((a, b) => a.exercise_name.localeCompare(b.exercise_name))
+}
+
+// Edita o borra el set concreto que sostiene el PR mostrado en "Mis Marcas".
+// Ambas comprueban propiedad via el join a workouts.user_id antes de tocar
+// nada — nadie puede editar/borrar un set que no sea suyo.
+export async function updateLiftRecord(setId: string, weightKg: number, reps: number) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'No autorizado' }
+    if (!(weightKg > 0) || !(reps > 0)) return { error: 'Peso y repeticiones deben ser mayores que 0.' }
+
+    const { data: set } = await supabase
+        .from('workout_sets')
+        .select('id, workouts!inner(user_id)')
+        .eq('id', setId)
+        .single()
+    if (!set || (set as any).workouts?.user_id !== user.id) return { error: 'No autorizado' }
+
+    const { error } = await supabase
+        .from('workout_sets')
+        .update({ weight_kg: weightKg, reps })
+        .eq('id', setId)
+
+    if (error) return { error: 'No se pudo actualizar la marca.' }
+    return { success: true }
+}
+
+export async function deleteLiftRecord(setId: string) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return { error: 'No autorizado' }
+
+    const { data: set } = await supabase
+        .from('workout_sets')
+        .select('id, workouts!inner(user_id)')
+        .eq('id', setId)
+        .single()
+    if (!set || (set as any).workouts?.user_id !== user.id) return { error: 'No autorizado' }
+
+    const { error } = await supabase
+        .from('workout_sets')
+        .delete()
+        .eq('id', setId)
+
+    if (error) return { error: 'No se pudo borrar la marca.' }
+    return { success: true }
 }
 
 // 16. Get Exercise Previous Record
