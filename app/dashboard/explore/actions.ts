@@ -4,7 +4,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
-import { updateMissionProgress } from '../training/actions'
+import { updateMissionProgress, extractWeightKg, NON_EXERCISE_NAMES } from '../training/actions'
 import { syncFeaturedRm } from '@/lib/pr-sync'
 import { createNotification } from '../notifications-actions'
 
@@ -381,6 +381,29 @@ export async function createWodPost(formData: FormData) {
         // --- Sync WOD completion record for leaderboard ---
         if (newPost) {
             await syncWodCompletion(supabase, user, newPost.id, wodDataJson);
+        }
+
+        // Publicar un WOD normal es la fuente MÁS común de PRs reales (más que
+        // el tipo de post "PR" dedicado), pero nunca actualizaba "Mis Marcas
+        // destacadas" del perfil — solo createPRPost y el guardado de sesión
+        // estructurada llamaban a syncFeaturedRm. Resultado: levantar más
+        // peso en un WOD normal nunca se reflejaba en el récord destacado del
+        // perfil aunque sí apareciera en Mis Marcas (Levantamientos).
+        try {
+            const wodObj = JSON.parse(wodDataJson);
+            const w = Array.isArray(wodObj) ? wodObj[0] : wodObj;
+            const blocks = w?.blocks || [];
+            for (const block of blocks) {
+                for (const ex of (block.exercises || [])) {
+                    const baseName = (ex?.name || '').replace(/\s*\([^)]*\)\s*$/, '').trim();
+                    if (!baseName || NON_EXERCISE_NAMES.test(baseName)) continue;
+                    const weight = extractWeightKg(ex);
+                    if (weight == null) continue;
+                    await syncFeaturedRm(user.id, baseName, weight);
+                }
+            }
+        } catch (e) {
+            console.error("Error syncing featured RMs from WOD post:", e);
         }
 
         revalidatePath('/dashboard/community')
