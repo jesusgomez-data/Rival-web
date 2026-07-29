@@ -25,6 +25,7 @@ import MentionText from "@/components/MentionText";
 import MentionInput from "@/components/MentionInput";
 import { useVideo } from "./VideoContext";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { fetchWodCompletion } from "@/lib/wod-completion-cache";
 import dynamic from 'next/dynamic';
 
 // ── Dynamic imports: loaded on-demand, NOT in the initial bundle ──────────────
@@ -1117,20 +1118,26 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
 
     const checkUserCompletion = async (targetWodId: string, signal?: AbortSignal) => {
         try {
-            const res = await fetch(`/api/wod/my-completion?wodPostId=${targetWodId}`, { signal });
-            const data = await res.json();
-            if (data.success && data.completion) {
+            // Antes esto hacía su propio fetch directo a /api/wod/my-completion,
+            // en paralelo (y por fuera) del mismo endpoint que ya usa WodCard vía
+            // fetchWodCompletion() — cada WOD del feed disparaba su llamada
+            // aparte, sin deduplicar ni agrupar nada. Sentry lo marcó como N+1:
+            // 7 WODs distintos en /dashboard = 7 requests de 1.5-3s cada uno.
+            // Usando la misma caché compartida (que ahora además agrupa en un
+            // solo request batch las peticiones que llegan juntas), esta
+            // llamada se resuelve dentro de esa misma ráfaga en vez de sumar
+            // una más.
+            const { completion } = await fetchWodCompletion(targetWodId);
+            if (signal?.aborted) return;
+            if (completion) {
                 setHasCompletedWod(true);
                 // If we found a completion, and it has an original_wod_post_id, use it for everything!
-                if (data.completion.original_wod_post_id && data.completion.original_wod_post_id !== targetWodId) {
-                    setManualOriginalId(data.completion.original_wod_post_id);
+                if (completion.original_wod_post_id && completion.original_wod_post_id !== targetWodId) {
+                    setManualOriginalId(completion.original_wod_post_id);
                 }
             }
         } catch (e) {
-            // Cancelacion por navegacion (abort o "Failed to fetch"): no critico, ignorar
-            const msg = (e as Error)?.message || '';
-            if ((e as Error)?.name === 'AbortError' || msg.includes('Failed to fetch')) return;
-            console.warn("Estado de completado no disponible:", msg);
+            console.warn("Estado de completado no disponible:", (e as Error)?.message);
         }
     };
 
