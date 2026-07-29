@@ -14,9 +14,13 @@ export async function toggleFollow(followingId: string) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return { error: 'Unauthorized' }
 
-    // Official account cannot follow others
+    // Official account cannot follow others — antes esto devolvía
+    // { success: true } sin campo `following`, así que el botón no tenía
+    // forma de saber que la acción se había bloqueado: ni revertía el
+    // estado optimista ni avisaba, se quedaba "colgado" sin explicación
+    // (justo lo reportado: "le doy seguir y no funciona").
     const { data: currentProfile } = await adminSupabase.from('profiles').select('is_official').eq('id', user.id).single()
-    if (currentProfile?.is_official) return { success: true }
+    if (currentProfile?.is_official) return { error: 'Las cuentas oficiales no pueden seguir a otros atletas.' }
     if (followingId === user.id) return { error: 'No puedes seguirte a ti mismo' }
 
     // Check if relationship exists using ADMIN client
