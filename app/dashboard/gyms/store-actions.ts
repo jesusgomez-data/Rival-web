@@ -8,8 +8,11 @@ import { createNotification } from "../notifications-actions";
 export async function getCenterProducts(id: string, isCenterId: boolean = false) {
     const supabase = await createClient();
 
+    // "cost" (coste de compra) no se usa en ningun sitio de la UI — se lee
+    // siempre de la vista publica sin esa columna, tanto para la tienda
+    // publica del centro como para el panel del dueño.
     let query = supabase
-        .from('center_products')
+        .from('center_products_public')
         .select('*');
 
     if (isCenterId) {
