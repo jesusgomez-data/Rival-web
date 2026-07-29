@@ -128,6 +128,10 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
     const [progress, setProgress] = useState(0)
     const [isPaused, setIsPaused] = useState(false)
     const [isPressed, setIsPressed] = useState(false)
+    // Sin esto no había ningún indicador de carga en el visor de historias:
+    // con red lenta se veía un frame congelado/negro sin ninguna señal de
+    // que algo estaba pasando, dando la sensación de que "no carga rápido".
+    const [isStoryMediaLoading, setIsStoryMediaLoading] = useState(false)
     
     // Story DM Reply and Quick Reactions State
     const [replyText, setReplyText] = useState("")
@@ -1120,17 +1124,30 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
         }
     }, [isMuted, selectedUserIndex, currentStory?.music_url, showViewers, previewUrl, isPaused])
 
+    // Al cambiar de historia, se asume "cargando" hasta que el video/imagen
+    // confirme que ya tiene algo pintado (onPlaying / onLoad más abajo).
+    useEffect(() => {
+        if (selectedUserIndex !== null && currentStory && currentStory.media_type !== 'pr') {
+            setIsStoryMediaLoading(true);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedUserIndex, activeStoryIndex]);
+
     // Story Progression Logic (driven by dynamic timer for images/PRs, or video element for videos)
     useEffect(() => {
         let interval: any;
-        if (selectedUserIndex !== null && !showViewers && !isPaused && !previewUrl && currentStory) {
+        if (selectedUserIndex !== null && !showViewers && !isPaused && !previewUrl && !isStoryMediaLoading && currentStory) {
             if (currentStory.media_type === 'video') {
                 // Video progression is handled by the video element's event handlers
                 return;
             }
             
-            // Standard image / PR card duration (5 seconds)
-            const storyDuration = 5000;
+            // Duración real de la historia: ya se guarda duration_seconds=30
+            // en la base de datos al crearla, pero este temporizador lo
+            // ignoraba por completo y usaba 5 segundos fijos — de ahí que
+            // las historias de imagen/PR se cerraran mucho antes de los 30s
+            // esperados.
+            const storyDuration = (currentStory.duration_seconds || 5) * 1000;
             const step = 50;
 
             interval = setInterval(() => {
@@ -1144,7 +1161,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
             }, step);
         }
         return () => clearInterval(interval);
-    }, [selectedUserIndex, activeStoryIndex, isPaused, showViewers, previewUrl, currentStory?.media_type]);
+    }, [selectedUserIndex, activeStoryIndex, isPaused, showViewers, previewUrl, currentStory?.media_type, isStoryMediaLoading]);
 
     const pressTimerRef = useRef<NodeJS.Timeout | null>(null);
     const pressStartTimeRef = useRef<number>(0);
@@ -2250,6 +2267,7 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                         src={currentStory.media_url}
                                         autoPlay
                                         playsInline
+                                        preload="auto"
                                         muted={isMuted}
                                         className="relative w-full h-full object-contain pointer-events-none animate-in fade-in duration-300"
                                         style={{
@@ -2268,6 +2286,9 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                         onPlay={(e) => {
                                             if (isPaused) e.currentTarget.pause();
                                         }}
+                                        onPlaying={() => setIsStoryMediaLoading(false)}
+                                        onWaiting={() => setIsStoryMediaLoading(true)}
+                                        onError={() => setIsStoryMediaLoading(false)}
                                     />
                                 </>
                             ) : (
@@ -2286,8 +2307,16 @@ export default function StoryBar({ currentUser, hideBar = false }: { currentUser
                                             transform: `scale(${storyZoom}) translate(${(50 - storyPosX) / storyZoom}%, ${(50 - storyPosY) / storyZoom}%)`,
                                             transformOrigin: 'center center'
                                         }}
+                                        onLoad={() => setIsStoryMediaLoading(false)}
+                                        onError={() => setIsStoryMediaLoading(false)}
                                     />
                                 </>
+                            )}
+
+                            {isStoryMediaLoading && (
+                                <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/30 pointer-events-none">
+                                    <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin" />
+                                </div>
                             )}
 
                             {/* Workout Summary Overlay */}

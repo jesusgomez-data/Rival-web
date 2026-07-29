@@ -20,6 +20,7 @@ interface Story {
     media_url: string
     media_type: string
     created_at: string
+    duration_seconds?: number
     has_seen?: boolean
     music_url?: string | null
     music_title?: string | null

@@ -320,7 +320,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
             const newPreviews = files.map(file => URL.createObjectURL(file));
             setPreviews(newPreviews);
             setPendingFiles(files);
-            
+
             // For video duration (only check first if multiple, or iterate)
             const firstVideo = files.find(f => f.type.startsWith('video/'));
             if (firstVideo) {
@@ -330,6 +330,16 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                     setVideoDuration(docVideo.duration);
                     setDuration(docVideo.duration);
                     URL.revokeObjectURL(docVideo.src);
+                    // Antes esto no validaba nada: si el usuario no pulsaba
+                    // "Editar Video" a propósito, un vídeo de cualquier
+                    // duración (5, 10 minutos...) se publicaba tal cual, sin
+                    // límite real. Los posts duran máximo 1 minuto — si se
+                    // pasa, se abre el editor forzando a recortarlo antes de
+                    // poder publicar.
+                    if (docVideo.duration > 60) {
+                        setEditorVideoFile(firstVideo);
+                        setIsVideoEditing(true);
+                    }
                 };
                 docVideo.src = URL.createObjectURL(firstVideo);
             }
@@ -922,6 +932,7 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
             {isVideoEditing && editorVideoFile && (
                 <VideoEditor
                     videoFile={editorVideoFile}
+                    maxDurationSeconds={60}
                     onSave={(editedFile, dur, coverBlob) => {
                         const url = URL.createObjectURL(editedFile);
                         setPreviews([url]);
@@ -937,6 +948,15 @@ export default function CreatePost({ currentUser, onSuccess, initialPostType, in
                         setEditorVideoFile(null);
                     }}
                     onCancel={() => {
+                        // Si el editor se abrió a la fuerza porque el vídeo
+                        // superaba 1 minuto, cancelar no debe dejar ese vídeo
+                        // sin recortar listo para publicarse — se quita del
+                        // todo, para que el usuario elija otro o lo recorte.
+                        if (videoDuration > 60) {
+                            setPreviews([]);
+                            setPendingFiles([]);
+                            setDuration(null);
+                        }
                         setIsVideoEditing(false);
                         setEditorVideoFile(null);
                     }}

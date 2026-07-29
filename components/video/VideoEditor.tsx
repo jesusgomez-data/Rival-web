@@ -150,9 +150,14 @@ interface VideoEditorProps {
     videoFile: File
     onSave: (editedFile: File, duration: number, coverBlob?: Blob | null) => void
     onCancel: () => void
+    // Antes el recorte máximo (30s) estaba fijo en el código sin importar
+    // si el editor se abría para una historia o para un post — así que un
+    // post nunca podía durar más de 30s aunque el límite real debiera ser
+    // 1 minuto. Historias siguen usando 30s (el valor por defecto).
+    maxDurationSeconds?: number
 }
 
-export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditorProps) {
+export default function VideoEditor({ videoFile, onSave, onCancel, maxDurationSeconds = 30 }: VideoEditorProps) {
     const [videoUrl, setVideoUrl]           = useState<string | null>(null)
     const [currentFilter, setCurrentFilter] = useState(FILTERS[0])
     const [currentFX, setCurrentFX]         = useState(SPECIAL_FX[0])
@@ -312,7 +317,7 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
 
     useEffect(() => {
         if (videoDuration > 0 && trimRange.end === 0) {
-            setTrimRange({ start: 0, end: Math.min(videoDuration, 30) })
+            setTrimRange({ start: 0, end: Math.min(videoDuration, maxDurationSeconds) })
             generateThumbnails(videoDuration)
         }
     }, [videoDuration])
@@ -381,9 +386,9 @@ export default function VideoEditor({ videoFile, onSave, onCancel }: VideoEditor
             const ratio = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width))
             const t = ratio * videoDuration
             if (activeHandle === 'start') {
-                setTrimRange(p => ({ ...p, start: Math.max(0, p.end - 30, Math.min(t, p.end - 0.5)) }))
+                setTrimRange(p => ({ ...p, start: Math.max(0, p.end - maxDurationSeconds, Math.min(t, p.end - 0.5)) }))
             } else {
-                setTrimRange(p => ({ ...p, end: Math.min(videoDuration, p.start + 30, Math.max(t, p.start + 0.5)) }))
+                setTrimRange(p => ({ ...p, end: Math.min(videoDuration, p.start + maxDurationSeconds, Math.max(t, p.start + 0.5)) }))
             }
             if (videoRef.current) videoRef.current.currentTime = t
         }
