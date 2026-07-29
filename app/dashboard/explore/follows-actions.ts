@@ -52,24 +52,42 @@ export async function toggleFollow(followingId: string) {
 
         if (error) return { error: error.message }
 
-        // Update mission progress (assuming this action handles its own perms or is safe)
-        await updateMissionProgress(user.id, 'social_interactions', 1)
+        // El follow en sí ya se guardó arriba — si cualquiera de estos dos
+        // efectos secundarios (misión, notificación) lanzaba una excepción
+        // sin capturar, esa excepción se propagaba fuera de toggleFollow()
+        // ANTES de llegar al `return` de éxito. El cliente (FollowButton)
+        // no envuelve su `await toggleFollow(...)` en try/catch, así que
+        // eso se convertía en un rechazo de promesa sin manejar: el follow
+        // quedaba guardado en la BD pero el usuario nunca veía confirmación
+        // — parecía que "no había funcionado" aunque sí funcionó a medias.
+        try {
+            await updateMissionProgress(user.id, 'social_interactions', 1)
+        } catch (e) {
+            console.error('[toggleFollow] updateMissionProgress failed:', e)
+        }
 
-        // Trigger Notification
-        const { data: profile } = await supabase.from('profiles').select('full_name, username').eq('id', user.id).single();
-        await createNotification({
-            userId: followingId,
-            type: 'follow',
-            title: '¡Nuevo Rival!',
-            content: `${profile?.full_name || 'Alguien'} ha comenzado a seguirte.`,
-            link: profile?.username ? `/dashboard/profile/${profile.username}` : '/dashboard/community'
-        });
+        try {
+            const { data: profile } = await supabase.from('profiles').select('full_name, username').eq('id', user.id).single();
+            await createNotification({
+                userId: followingId,
+                type: 'follow',
+                title: '¡Nuevo Rival!',
+                content: `${profile?.full_name || 'Alguien'} ha comenzado a seguirte.`,
+                link: profile?.username ? `/dashboard/profile/${profile.username}` : '/dashboard/community'
+            });
+        } catch (e) {
+            console.error('[toggleFollow] createNotification failed:', e)
+        }
     }
 
-    revalidatePath('/dashboard/community')
-    revalidatePath('/dashboard')
-    revalidatePath('/dashboard/explore')
-    revalidatePath('/dashboard/profile/[username]', 'page')
+    try {
+        revalidatePath('/dashboard/community')
+        revalidatePath('/dashboard')
+        revalidatePath('/dashboard/explore')
+        revalidatePath('/dashboard/profile/[username]', 'page')
+    } catch (e) {
+        console.error('[toggleFollow] revalidatePath failed:', e)
+    }
     return { success: true, following: !existingFollow }
 }
 

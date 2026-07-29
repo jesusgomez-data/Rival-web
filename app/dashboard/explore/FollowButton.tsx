@@ -25,15 +25,26 @@ export default function FollowButton({ targetId, isFollowingInitial, variant = '
         setIsFollowing(nextState);
         onToggle?.(nextState);
 
-        const result = await toggleFollow(targetId);
+        try {
+            const result = await toggleFollow(targetId);
 
-        if (result.error) {
+            if (result.error) {
+                setIsFollowing(previousState);
+                onToggle?.(previousState);
+                alert("Error: " + result.error);
+            } else if (typeof result.following === 'boolean') {
+                setIsFollowing(result.following);
+                onToggle?.(result.following);
+            }
+        } catch (e) {
+            // Si el server action lanzaba una excepción sin capturar (en vez
+            // de devolver { error }), esto se quedaba como una promesa
+            // rechazada sin manejar: el estado optimista nunca se revertía
+            // ni se avisaba de nada — el botón parecía funcionar pero no.
+            console.error('[FollowButton] toggleFollow threw:', e);
             setIsFollowing(previousState);
             onToggle?.(previousState);
-            alert("Error: " + result.error);
-        } else if (typeof result.following === 'boolean') {
-            setIsFollowing(result.following);
-            onToggle?.(result.following);
+            alert('No se pudo actualizar el follow. Inténtalo de nuevo.');
         }
 
         setIsPending(false);
