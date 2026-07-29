@@ -263,6 +263,29 @@ function SessionContent() {
                 return;
             }
 
+            // MediaRecorder solo puede grabar en el formato que el propio
+            // navegador soporte al vuelo — y salvo Safari, ningún navegador
+            // (Chrome/Android incluido) sabe producir MP4 real, así que este
+            // bucle siempre termina eligiendo WebM en Chrome. WebM no es
+            // reproducible en Safari/iOS bajo NINGUNA circunstancia (no es un
+            // bug de reproducción, es una limitación real de esa plataforma) —
+            // eso es justo lo que hacía que un vídeo grabado/recortado en
+            // Android se viera "VIDEO_NO_DISPONIBLE" para cualquier amigo en
+            // iPhone. Como no hay recodificación en servidor, la única forma
+            // segura de no publicar algo irreproducible es NO recortar en ese
+            // caso y subir el archivo original tal cual (que normalmente sí es
+            // MP4/H.264 compatible con todo, al venir directo de la cámara).
+            if (!mimeType.includes('mp4')) {
+                alert("Tu navegador no puede recortar vídeo en un formato compatible con todos los dispositivos (como iPhone). Se subirá el vídeo completo sin recortar para evitar que no se pueda reproducir.");
+                if (pendingFile) startUpload(pendingFile);
+                setIsVideoTrimming(false);
+                setTrimmerVideoUrl(null);
+                setIsTrimmingLoading(false);
+                setTrimProgress(0);
+                if (fileInputRef.current) fileInputRef.current.value = "";
+                return;
+            }
+
             const recorder = new MediaRecorder(stream, { mimeType });
             const chunks: Blob[] = [];
             recorder.ondataavailable = (e) => {

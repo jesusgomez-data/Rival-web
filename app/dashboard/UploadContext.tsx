@@ -448,6 +448,26 @@ export function UploadProvider({ children }: { children: React.ReactNode }) {
 
                 if (!mimeType) throw new Error("No se encontró un formato de video soportado para grabar.");
 
+                // MediaRecorder solo puede grabar en el formato que el propio
+                // navegador sepa producir — y salvo Safari, ningún navegador
+                // (Chrome/Android incluido) sabe grabar MP4 real, así que este
+                // bucle acaba eligiendo WebM en la inmensa mayoría de
+                // dispositivos. WebM no se reproduce en Safari/iOS bajo NINGUNA
+                // circunstancia (no es un bug de reproducción, es una
+                // limitación real de esa plataforma) — esto es lo que hacía que
+                // un vídeo recortado/re-codificado en Android quedase
+                // "VIDEO_NO_DISPONIBLE" para cualquier amigo en iPhone. Como no
+                // hay recodificación en servidor, la única forma segura de no
+                // publicar algo irreproducible es devolver el archivo original
+                // sin tocar en ese caso (normalmente ya es MP4/H.264, compatible
+                // con todo, al venir directo de la cámara del móvil).
+                if (!mimeType.includes('mp4')) {
+                    URL.revokeObjectURL(video.src);
+                    onProgress(100);
+                    resolve(file);
+                    return;
+                }
+
                 // Bitrate proporcional a la resolución final (antes era fijo en 2.5 Mbps
                 // incluso para 1080p+, de ahí la baja calidad reportada).
                 const pixelCount = outW * outH;
