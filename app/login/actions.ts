@@ -12,7 +12,7 @@ import { createNotification } from '@/app/dashboard/notifications-actions'
 // vez que alguien completa el registro. Se busca por username en vez de
 // guardar el UUID a fuego para no romperlo si esa cuenta cambia algun dia.
 // Nunca bloquea el registro si algo falla aqui.
-async function notifyOfficialAccountOfSignup(fullName: string, username: string) {
+export async function notifyOfficialAccountOfSignup(fullName: string, username: string) {
     try {
         const admin = createAdminClient()
         const { data: official } = await admin

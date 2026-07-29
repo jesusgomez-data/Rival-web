@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { notifyOfficialAccountOfSignup } from '@/app/login/actions'
 
 export async function GET(request: Request) {
     const { searchParams, origin } = new URL(request.url)
@@ -35,6 +36,13 @@ export async function GET(request: Request) {
                         username,
                         xp_points: 0,
                     })
+
+                    // Este es el alta real de un usuario nuevo vía Google —
+                    // el aviso a la cuenta oficial solo estaba conectado al
+                    // signup por email/contraseña (login/actions.ts), nunca
+                    // a este flujo OAuth, así que cualquiera que se
+                    // registrara con Google nunca generaba la notificación.
+                    notifyOfficialAccountOfSignup(fullName, username).catch(() => {})
 
                     redirectPath = '/onboarding'
                 }
