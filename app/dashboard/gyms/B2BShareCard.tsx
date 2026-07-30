@@ -4,7 +4,8 @@ import React, { useRef, useState } from 'react';
 import { toPng } from 'html-to-image';
 import {
     X, Download, Building2, Calendar, CreditCard, ShoppingBag,
-    ArrowUpRight, Users, Activity, TrendingUp, DollarSign
+    ArrowUpRight, Users, Activity, TrendingUp, DollarSign, RefreshCw,
+    Brain, MessageCircle, Trophy, Dumbbell, Zap, Bot
 } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid } from 'recharts';
 
@@ -13,9 +14,109 @@ interface B2BShareCardProps {
     isAdmin: boolean;
 }
 
+// Antes solo existía UNA composición fija (siempre el mismo titular, los
+// mismos callouts, los mismos datos) — cada descarga era literalmente la
+// misma imagen. El botón "Actualizar" recorre estas variantes: mismo
+// template premium, pero un ángulo de venta distinto de la plataforma
+// cada vez, para poder publicar contenido fresco sin repetir siempre lo
+// mismo.
+const VARIANTS = [
+    {
+        brand: 'MANAGEMENT',
+        headline: <>Control total <br /><span className="text-brand-red">de tu centro deportivo</span></>,
+        tagline: 'Gestión • Reservas • Pagos • Tienda',
+        callout1: { icon: Building2, title: 'Gestión Centros', sub: 'Control administrativo integral' },
+        callout2: { icon: CreditCard, title: 'Pagos y Tienda', sub: 'Automatización de suscripciones' },
+        stats: [
+            { label: 'Ingresos (Mes)', val: '€12,840', icon: DollarSign },
+            { label: 'Miembros', val: '248', icon: Users },
+            { label: 'Asistencia', val: '86%', icon: Activity },
+            { label: 'Crecimiento', val: '+14%', icon: TrendingUp },
+        ],
+        panelIcon: ShoppingBag,
+        panelLabel: 'Punto de Venta Activo',
+        panelValue: 'Tienda Online',
+        panel2Icon: Calendar,
+        panel2Label: 'Próximas Clases',
+        panel2Value: '12 Reservas',
+        cta: 'EMPIEZA TU LEGADO',
+    },
+    {
+        brand: 'AI COACH',
+        headline: <>Un coach de IA <br /><span className="text-brand-red">para cada atleta</span></>,
+        tagline: 'WODs • Programación • Feedback 24/7',
+        callout1: { icon: Brain, title: 'WOD Generator IA', sub: 'Entrenos a medida en segundos' },
+        callout2: { icon: MessageCircle, title: 'Chat Con Tu Coach', sub: 'Dudas resueltas al instante' },
+        stats: [
+            { label: 'WODs Generados', val: '1,240', icon: Dumbbell },
+            { label: 'Atletas Activos', val: '248', icon: Users },
+            { label: 'Satisfacción', val: '97%', icon: Activity },
+            { label: 'Retención', val: '+22%', icon: TrendingUp },
+        ],
+        panelIcon: Bot,
+        panelLabel: 'Asistente Activo',
+        panelValue: 'IA 24/7',
+        panel2Icon: Trophy,
+        panel2Label: 'Récords Este Mes',
+        panel2Value: '38 PRs',
+        cta: 'PRUÉBALO GRATIS',
+    },
+    {
+        brand: 'COMUNIDAD',
+        headline: <>Tu comunidad <br /><span className="text-brand-red">entrenando junta</span></>,
+        tagline: 'Rankings • Retos • Duelos • Social',
+        callout1: { icon: Trophy, title: 'Ranking Comunitario', sub: 'Compite con todo tu centro' },
+        callout2: { icon: Zap, title: 'Retos Semanales', sub: 'Motivación que no se apaga' },
+        stats: [
+            { label: 'Atletas Activos', val: '248', icon: Users },
+            { label: 'Retos Activos', val: '12', icon: Zap },
+            { label: 'Asistencia', val: '86%', icon: Activity },
+            { label: 'Crecimiento', val: '+14%', icon: TrendingUp },
+        ],
+        panelIcon: Users,
+        panelLabel: 'Comunidad Activa',
+        panelValue: '248 Atletas',
+        panel2Icon: Trophy,
+        panel2Label: 'Retos Completados',
+        panel2Value: '94 Este Mes',
+        cta: 'ÚNETE A LA ARENA',
+    },
+    {
+        brand: 'BUSINESS',
+        headline: <>Haz crecer <br /><span className="text-brand-red">tu negocio fitness</span></>,
+        tagline: 'Cobros • Analíticas • Automatización',
+        callout1: { icon: DollarSign, title: 'Cobros Automáticos', sub: 'Suscripciones sin fricción' },
+        callout2: { icon: TrendingUp, title: 'Analíticas En Vivo', sub: 'Decisiones basadas en datos' },
+        stats: [
+            { label: 'Ingresos (Mes)', val: '€12,840', icon: DollarSign },
+            { label: 'Miembros', val: '248', icon: Users },
+            { label: 'Renovación', val: '91%', icon: Activity },
+            { label: 'Crecimiento', val: '+14%', icon: TrendingUp },
+        ],
+        panelIcon: ShoppingBag,
+        panelLabel: 'Punto de Venta Activo',
+        panelValue: 'Tienda Online',
+        panel2Icon: CreditCard,
+        panel2Label: 'Pagos Procesados',
+        panel2Value: '€8,120',
+        cta: 'EMPIEZA TU LEGADO',
+    },
+];
+
 export default function B2BShareCard({ onClose, isAdmin }: B2BShareCardProps) {
     const cardRef = useRef<HTMLDivElement>(null);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [variantIdx, setVariantIdx] = useState(0);
+    const variant = VARIANTS[variantIdx];
+
+    const handleRegenerate = () => {
+        setVariantIdx(prev => {
+            if (VARIANTS.length <= 1) return prev;
+            let next = Math.floor(Math.random() * VARIANTS.length);
+            if (next === prev) next = (next + 1) % VARIANTS.length;
+            return next;
+        });
+    };
 
     // Realistic-looking data
     const chartData = [
@@ -54,11 +155,19 @@ export default function B2BShareCard({ onClose, isAdmin }: B2BShareCardProps) {
     return (
         <div className="fixed inset-0 z-[1000] bg-black/95 flex flex-col items-center justify-start overflow-y-auto p-4 md:p-8 backdrop-blur-2xl animate-in fade-in duration-300">
             {/* Mobile Fixed Download Button */}
-            <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[1010] w-[calc(100%-3rem)]">
+            <div className="md:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[1010] w-[calc(100%-3rem)] flex gap-3">
+                <button
+                    onClick={handleRegenerate}
+                    disabled={isGenerating || !isAdmin}
+                    title="Generar otra imagen"
+                    className="shrink-0 bg-white/10 border border-white/20 text-white p-4 rounded-2xl flex items-center justify-center active:scale-95 disabled:opacity-50 transition-all"
+                >
+                    <RefreshCw className="w-5 h-5" />
+                </button>
                 <button
                     onClick={handleDownload}
                     disabled={isGenerating || !isAdmin}
-                    className="w-full bg-white text-black py-4 rounded-2xl font-black italic uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(255,255,255,0.1)] flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 transition-all border border-black/10"
+                    className="flex-1 bg-white text-black py-4 rounded-2xl font-black italic uppercase tracking-[0.2em] shadow-[0_20px_40px_rgba(255,255,255,0.1)] flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50 transition-all border border-black/10"
                 >
                     <Download className="w-5 h-5" />
                     {!isAdmin ? "Acceso Restringido" : (isGenerating ? "Generando..." : "Descargar")}
@@ -94,29 +203,28 @@ export default function B2BShareCard({ onClose, isAdmin }: B2BShareCardProps) {
                         <div className="relative z-10 w-full text-center mb-16 space-y-4">
                             <div className="flex items-center justify-center gap-3 mb-4">
                                 <span className="text-white font-black text-6xl tracking-tighter italic">RIVAL</span>
-                                <span className="bg-brand-red text-white text-xl font-black px-6 py-2 rounded-xl tracking-widest uppercase shadow-2xl shadow-brand-red/20">MANAGEMENT</span>
+                                <span className="bg-brand-red text-white text-xl font-black px-6 py-2 rounded-xl tracking-widest uppercase shadow-2xl shadow-brand-red/20">{variant.brand}</span>
                             </div>
 
                             <h1 className="text-white font-black text-[84px] leading-[1] tracking-tight max-w-5xl mx-auto uppercase italic">
-                                Control total <br />
-                                <span className="text-brand-red">de tu centro deportivo</span>
+                                {variant.headline}
                             </h1>
-                            <p className="text-gray-500 text-3xl font-black uppercase tracking-[0.4em]">Gestión • Reservas • Pagos • Tienda</p>
+                            <p className="text-gray-500 text-3xl font-black uppercase tracking-[0.4em]">{variant.tagline}</p>
                         </div>
 
                         {/* THE REAL DASHBOARD COMPOSITION */}
                         <div className="relative w-full flex-1 flex flex-col items-center justify-start mt-4">
 
-                            {/* Callout 1: Gestión */}
+                            {/* Callout 1 */}
                             <div className="absolute -top-10 left-4 z-20 animate-in slide-in-from-left duration-700">
                                 <div className="bg-[#1A1A1A] border border-white/10 p-7 rounded-[28px] shadow-2xl flex flex-col gap-1 min-w-[300px]">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 bg-brand-red/20 rounded-xl flex items-center justify-center text-brand-red">
-                                            <Building2 className="w-6 h-6" />
+                                            <variant.callout1.icon className="w-6 h-6" />
                                         </div>
-                                        <h4 className="text-white font-black text-2xl uppercase italic leading-none">Gestión Centros</h4>
+                                        <h4 className="text-white font-black text-2xl uppercase italic leading-none">{variant.callout1.title}</h4>
                                     </div>
-                                    <p className="text-gray-500 font-bold uppercase tracking-widest text-[11px]">Control administrativo integral</p>
+                                    <p className="text-gray-500 font-bold uppercase tracking-widest text-[11px]">{variant.callout1.sub}</p>
                                 </div>
                                 <div className="text-brand-red mt-4 ml-24">
                                     <svg width="100" height="60" viewBox="0 0 100 60" fill="none" className="rotate-[12deg]">
@@ -125,16 +233,16 @@ export default function B2BShareCard({ onClose, isAdmin }: B2BShareCardProps) {
                                 </div>
                             </div>
 
-                            {/* Callout 2: Pagos */}
+                            {/* Callout 2 */}
                             <div className="absolute top-10 right-4 z-20 text-right animate-in slide-in-from-right duration-700 delay-300">
                                 <div className="bg-[#1A1A1A] border border-white/10 p-7 rounded-[28px] shadow-2xl flex flex-col gap-1 min-w-[300px]">
                                     <div className="flex items-center gap-3 justify-end">
-                                        <h4 className="text-white font-black text-2xl uppercase italic leading-none">Pagos y Tienda</h4>
+                                        <h4 className="text-white font-black text-2xl uppercase italic leading-none">{variant.callout2.title}</h4>
                                         <div className="w-10 h-10 bg-brand-red/20 rounded-xl flex items-center justify-center text-brand-red">
-                                            <CreditCard className="w-6 h-6" />
+                                            <variant.callout2.icon className="w-6 h-6" />
                                         </div>
                                     </div>
-                                    <p className="text-gray-500 font-bold uppercase tracking-widest text-[11px]">Automatización de suscripciones</p>
+                                    <p className="text-gray-500 font-bold uppercase tracking-widest text-[11px]">{variant.callout2.sub}</p>
                                 </div>
                                 <div className="text-brand-red mt-4 mr-24 scale-x-[-1]">
                                     <svg width="100" height="60" viewBox="0 0 100 60" fill="none" className="rotate-[12deg]">
@@ -160,12 +268,7 @@ export default function B2BShareCard({ onClose, isAdmin }: B2BShareCardProps) {
                                 <div className="flex-1 p-10 flex flex-col gap-8">
                                     {/* Stat Cards Row */}
                                     <div className="grid grid-cols-4 gap-6">
-                                        {[
-                                            { label: 'Ingresos (Mes)', val: '€12,840', icon: DollarSign },
-                                            { label: 'Miembros', val: '248', icon: Users },
-                                            { label: 'Asistencia', val: '86%', icon: Activity },
-                                            { label: 'Crecimiento', val: '+14%', icon: TrendingUp }
-                                        ].map((stat, idx) => (
+                                        {variant.stats.map((stat, idx) => (
                                             <div key={idx} className="bg-[#111111] border border-white/5 rounded-[24px] p-6 flex flex-col gap-2">
                                                 <div className="flex justify-between items-center mb-1">
                                                     <stat.icon className="w-5 h-5 text-brand-red opacity-50" />
@@ -205,17 +308,17 @@ export default function B2BShareCard({ onClose, isAdmin }: B2BShareCardProps) {
 
                                         <div className="col-span-2 flex flex-col gap-6">
                                             <div className="flex-1 bg-brand-red rounded-[32px] p-8 flex flex-col justify-between text-white shadow-[0_20px_40px_rgba(227,30,36,0.3)]">
-                                                <ShoppingBag className="w-10 h-10" />
+                                                <variant.panelIcon className="w-10 h-10" />
                                                 <div>
-                                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">Punto de Venta Activo</p>
-                                                    <h4 className="text-4xl font-black italic leading-none italic uppercase">Tienda Online</h4>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-80 mb-2">{variant.panelLabel}</p>
+                                                    <h4 className="text-4xl font-black italic leading-none italic uppercase">{variant.panelValue}</h4>
                                                 </div>
                                             </div>
                                             <div className="flex-1 bg-[#111111] border border-white/10 rounded-[32px] p-8 flex flex-col justify-between">
-                                                <Calendar className="w-10 h-10 text-brand-red" />
+                                                <variant.panel2Icon className="w-10 h-10 text-brand-red" />
                                                 <div>
-                                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2">Próximas Clases</p>
-                                                    <h4 className="text-white text-3xl font-black italic">12 Reservas</h4>
+                                                    <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-2">{variant.panel2Label}</p>
+                                                    <h4 className="text-white text-3xl font-black italic">{variant.panel2Value}</h4>
                                                 </div>
                                             </div>
                                         </div>
@@ -232,7 +335,7 @@ export default function B2BShareCard({ onClose, isAdmin }: B2BShareCardProps) {
                             </div>
 
                             <div className="bg-white text-black px-24 py-10 rounded-full text-5xl font-black italic uppercase tracking-[0.2em] shadow-2xl transition-transform hover:scale-105">
-                                EMPIEZA TU LEGADO
+                                {variant.cta}
                             </div>
                         </div>
                     </div>
@@ -245,18 +348,28 @@ export default function B2BShareCard({ onClose, isAdmin }: B2BShareCardProps) {
                             <Activity className="w-8 h-8" />
                         </div>
                         <div className="space-y-1">
-                            <p className="text-white font-black text-2xl italic uppercase tracking-tight leading-none">Rival Fit Dark Mode v4</p>
-                            <p className="text-white/40 font-bold uppercase tracking-[0.2em] text-[10px]">1080x1080 PNG • Composición HQ</p>
+                            <p className="text-white font-black text-2xl italic uppercase tracking-tight leading-none">Rival Fit Dark Mode v4 — {variant.brand}</p>
+                            <p className="text-white/40 font-bold uppercase tracking-[0.2em] text-[10px]">1080x1080 PNG • Composición HQ • Variante {variantIdx + 1}/{VARIANTS.length}</p>
                         </div>
                     </div>
 
-                    <button
-                        onClick={handleDownload}
-                        disabled={isGenerating || !isAdmin}
-                        className="bg-white text-black px-12 py-5 rounded-2xl font-black italic uppercase tracking-[0.2em] shadow-2xl flex items-center gap-3 hover:bg-brand-red hover:text-white transition-all active:scale-95 disabled:opacity-50"
-                    >
-                        {!isAdmin ? "Acceso Restringido" : (isGenerating ? "Generando..." : "Descargar Imagen")}
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleRegenerate}
+                            disabled={isGenerating || !isAdmin}
+                            title="Generar otra imagen (otro ángulo de la plataforma)"
+                            className="bg-white/5 border border-white/10 text-white px-6 py-5 rounded-2xl font-black italic uppercase tracking-[0.2em] flex items-center gap-3 hover:bg-white/10 transition-all active:scale-95 disabled:opacity-50"
+                        >
+                            <RefreshCw className="w-5 h-5" /> Actualizar
+                        </button>
+                        <button
+                            onClick={handleDownload}
+                            disabled={isGenerating || !isAdmin}
+                            className="bg-white text-black px-12 py-5 rounded-2xl font-black italic uppercase tracking-[0.2em] shadow-2xl flex items-center gap-3 hover:bg-brand-red hover:text-white transition-all active:scale-95 disabled:opacity-50"
+                        >
+                            {!isAdmin ? "Acceso Restringido" : (isGenerating ? "Generando..." : "Descargar Imagen")}
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
