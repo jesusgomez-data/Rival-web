@@ -4,7 +4,8 @@ import { createClient } from '@/utils/supabase/server'
 import { createAdminClient } from '@/utils/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
-import { updateMissionProgress, extractWeightKg, NON_EXERCISE_NAMES } from '../training/actions'
+import { updateMissionProgress } from '../training/actions'
+import { extractWeightKg, NON_EXERCISE_NAMES } from '@/lib/wod-exercise-utils'
 import { syncFeaturedRm } from '@/lib/pr-sync'
 import { createNotification } from '../notifications-actions'
 

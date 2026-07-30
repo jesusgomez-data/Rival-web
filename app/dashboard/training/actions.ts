@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { createNotification } from '../notifications-actions';
 import { syncFeaturedRm } from '@/lib/pr-sync';
+import { NON_EXERCISE_NAMES, extractWeightKg } from '@/lib/wod-exercise-utils';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 const aiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
@@ -1451,19 +1452,9 @@ export interface MyLift {
     source: 'set' | 'wod_post';
 }
 
-// Bloques/filas que no son un ejercicio real con peso levantado — se cuelan
-// en el WOD como "Rest"/"Calentamiento" y a veces traen un numero suelto
-// (rondas, minutos...) que parece un peso pero no lo es.
-export const NON_EXERCISE_NAMES = /^(rest|descanso|warm[\s-]?up|calentamiento|cooldown|enfriamiento|stretch|estiramiento)s?$/i
-
-export function extractWeightKg(ex: any): number | null {
-    const raw = ex?.detail ?? ex?.value
-    const unit = String(ex?.unit ?? ex?.weightUnit ?? 'kg').toLowerCase()
-    if (unit !== 'kg') return null
-    const weight = parseFloat(String(raw).replace(',', '.'))
-    if (!Number.isFinite(weight) || weight <= 0 || weight >= 500) return null
-    return weight
-}
+// Movidos a lib/wod-exercise-utils.ts: un archivo 'use server' solo puede
+// exportar funciones async, así que esta regex/función síncrona no podían
+// vivir aquí como export directo (rompía el build).
 
 export async function getMyLifts(): Promise<MyLift[]> {
     const supabase = await createClient()
