@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Award, Loader2, CheckCircle2, Clock, Edit2, Share2, Users, X, UserCircle } from "lucide-react";
-import { joinChallenge, getChallengeParticipants } from "./ranking-actions";
+import { joinChallenge, getChallengeParticipants, syncMyChallengeProgress } from "./ranking-actions";
+import { isAutoTrackableChallenge } from "@/lib/challenge-types";
 import { clsx } from "clsx";
 import Link from "next/link";
 import Image from "next/image";
@@ -30,6 +31,12 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
     useEffect(() => {
         let mounted = true;
         const fetchLiveStatus = async () => {
+            // Retos tipo "entrena X días" se recalculan solos contra la
+            // actividad real cada vez que se ve la tarjeta — antes esto
+            // dependía de que el usuario escribiera su propio número a mano.
+            if (isAutoTrackableChallenge(challenge.goal_type)) {
+                await syncMyChallengeProgress(challenge.id).catch(() => {});
+            }
             const res = await getChallengeParticipants(challenge.id);
             if (res.success && res.participants && mounted) {
                 setLiveCount(res.participants.length);
@@ -45,7 +52,7 @@ export default function ChallengeCard({ challenge, userId, isParticipatingInitia
         };
         fetchLiveStatus();
         return () => { mounted = false; };
-    }, [challenge.id, userId]);
+    }, [challenge.id, challenge.goal_type, userId]);
 
     const openParticipantsModal = async () => {
         setShowParticipants(true);

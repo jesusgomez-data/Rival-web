@@ -7,6 +7,8 @@ import { clsx } from "clsx";
 import ChallengeJoinButton from "../../ChallengeJoinButton";
 import ChallengeCompletionCard from "../../ChallengeCompletionCard";
 import ChallengeProgressUpdate from "../../ChallengeProgressUpdate";
+import { syncMyChallengeProgress } from "../../ranking-actions";
+import { isAutoTrackableChallenge } from "@/lib/challenge-types";
 
 const formatDate = (d: string | null) => {
     if (!d) return 'Sin fecha límite';
@@ -82,6 +84,21 @@ export default async function ChallengeDetailPage({ params }: { params: Promise<
             profiles: profilesMap[p.user_id] || { username: 'Unknown', full_name: 'Unknown User' }
         }))
     };
+
+    // Retos tipo "entrena X días" (goal_type auto-trackeable) se recalculan
+    // contra la actividad real cada vez que se abre la página — antes el
+    // número dependía de que el propio usuario lo escribiera a mano
+    // (ChallengeProgressUpdate), lo cual no tenía sentido.
+    if (user && isAutoTrackableChallenge(challenge.goal_type)) {
+        const myPart = challenge.participants?.find((p: any) => p.user_id === user.id);
+        if (myPart) {
+            const syncResult = await syncMyChallengeProgress(id).catch(() => null);
+            if (syncResult && 'success' in syncResult && syncResult.success) {
+                myPart.current_progress = syncResult.progress;
+                myPart.is_completed = syncResult.completed;
+            }
+        }
+    }
 
     // Sort participants by progress (descending)
     // First those completed, then by progress amount
@@ -178,12 +195,17 @@ export default async function ChallengeDetailPage({ params }: { params: Promise<
                                         />
                                     )}
 
-                                    {/* Manual Update Component */}
-                                    <ChallengeProgressUpdate
-                                        challengeId={id}
-                                        currentProgress={myParticipation.current_progress}
-                                        targetValue={challenge.goal_value}
-                                    />
+                                    {isAutoTrackableChallenge(challenge.goal_type) ? (
+                                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest text-center leading-relaxed">
+                                            Tu progreso se actualiza solo con tu actividad — no hace falta que lo escribas.
+                                        </p>
+                                    ) : (
+                                        <ChallengeProgressUpdate
+                                            challengeId={id}
+                                            currentProgress={myParticipation.current_progress}
+                                            targetValue={challenge.goal_value}
+                                        />
+                                    )}
                                 </div>
                             ) : (
                                 <div className="space-y-4 text-center">

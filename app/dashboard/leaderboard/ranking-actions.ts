@@ -1,6 +1,8 @@
 "use server";
 
 import { createClient } from "@/utils/supabase/server";
+import { countTrainingDaysInRange } from "../training/actions";
+import { AUTO_TRACKABLE_GOAL_TYPES } from "@/lib/challenge-types";
 
 export async function getRankings(category: 'xp' | 'combat' | 'social') {
     const supabase = await createClient();
@@ -155,6 +157,12 @@ export async function joinChallenge(challengeId: string) {
         }
         return { error: error.message };
     }
+
+    // Si el reto se puede calcular solo (p.ej. "entrena 20 días"), se
+    // sincroniza ya mismo al unirse — por si el usuario ya entrenó algún
+    // día del rango antes de apuntarse, no debería arrancar en 0 de forma
+    // injusta.
+    await syncMyChallengeProgress(challengeId).catch(() => {});
     return { success: true };
 }
 
@@ -231,6 +239,45 @@ export async function updateChallengeProgress(challengeId: string, progress: num
 
     if (error) return { error: error.message };
     return { success: true, completed: isCompleted };
+}
+
+// Recalcula el progreso REAL del usuario en un reto auto-trackeable
+// (goal_type en AUTO_TRACKABLE_GOAL_TYPES) a partir de su actividad de
+// entrenamiento real — sin pedirle que escriba nada. Se llama al unirse y
+// cada vez que se abre la tarjeta/detalle del reto, así el número siempre
+// refleja la realidad en vez de quedarse con lo último que alguien tecleó.
+export async function syncMyChallengeProgress(challengeId: string) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { error: "No auth" };
+
+    const { data: challenge } = await supabase
+        .from('community_challenges')
+        .select('goal_type, goal_value, start_date, end_date')
+        .eq('id', challengeId)
+        .single();
+
+    if (!challenge || !AUTO_TRACKABLE_GOAL_TYPES.includes(challenge.goal_type)) {
+        return { skipped: true };
+    }
+
+    const startDate = challenge.start_date || new Date(0).toISOString();
+    const endDate = challenge.end_date || new Date().toISOString();
+    const progress = await countTrainingDaysInRange(user.id, startDate, endDate);
+    const isCompleted = progress >= (challenge.goal_value || 999999);
+
+    const { error } = await supabase
+        .from('challenge_participants')
+        .update({
+            current_progress: progress,
+            is_completed: isCompleted,
+            completed_at: isCompleted ? new Date().toISOString() : null
+        })
+        .eq('challenge_id', challengeId)
+        .eq('user_id', user.id);
+
+    if (error) return { error: error.message };
+    return { success: true, progress, completed: isCompleted };
 }
 
 export async function createChallenge(data: any) {

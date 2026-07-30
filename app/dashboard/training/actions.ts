@@ -83,6 +83,40 @@ export async function getWorkoutStreak() {
     return calculateWorkoutStreak(supabase, user.id)
 }
 
+// Cuenta días distintos con actividad real en un rango — misma fuente
+// unificada que la racha (workouts, class_results, checkins, posts de
+// wod/pr/class_result y wod_completions). Se usa para que retos tipo
+// "Entrena 20 días este mes" (goal_type='streak'/'workouts') se calculen
+// solos a partir de tu actividad real, en vez de que tengas que escribir
+// tú mismo cuántos días llevas — no tendría sentido que fuera manual.
+export async function countTrainingDaysInRange(userId: string, startDate: string, endDate: string): Promise<number> {
+    const supabase = await createClient()
+
+    const [
+        { data: workouts },
+        { data: classResults },
+        { data: checkins },
+        { data: wodPosts },
+        { data: wodCompletions }
+    ] = await Promise.all([
+        supabase.from('workouts').select('created_at').eq('user_id', userId).gte('created_at', startDate).lte('created_at', endDate),
+        supabase.from('class_results').select('date_performed').eq('user_id', userId).gte('date_performed', startDate).lte('date_performed', endDate),
+        supabase.from('daily_checkins').select('checkin_date').eq('user_id', userId).gte('checkin_date', startDate).lte('checkin_date', endDate),
+        supabase.from('posts').select('created_at').eq('user_id', userId).in('media_type', ['wod', 'pr', 'class_result']).gte('created_at', startDate).lte('created_at', endDate),
+        supabase.from('wod_completions').select('completed_at').eq('user_id', userId).gte('completed_at', startDate).lte('completed_at', endDate)
+    ])
+
+    const allDates = [
+        ...(workouts || []).map((w: any) => new Date(w.created_at).toISOString().split('T')[0]),
+        ...(classResults || []).map((c: any) => new Date(c.date_performed).toISOString().split('T')[0]),
+        ...(checkins || []).map((ch: any) => ch.checkin_date),
+        ...(wodPosts || []).map((p: any) => new Date(p.created_at).toISOString().split('T')[0]),
+        ...(wodCompletions || []).map((c: any) => new Date(c.completed_at).toISOString().split('T')[0])
+    ];
+
+    return new Set(allDates).size
+}
+
 export async function getMissions() {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
