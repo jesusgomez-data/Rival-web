@@ -259,7 +259,7 @@ export default function EditCenter({ params }: { params: Promise<{ id: string }>
     if (loading) return <div className="flex items-center justify-center min-h-screen bg-black"><Loader2 className="w-8 h-8 text-brand-red animate-spin" /></div>
 
     return (
-        <div className="min-h-screen bg-[#0a0a0a] text-white pb-20 font-sans">
+        <div className="min-h-screen bg-[#0a0a0a] text-white pb-20 font-sans overflow-x-hidden">
 
             {/* Toast */}
             {toast && (
@@ -341,7 +341,7 @@ export default function EditCenter({ params }: { params: Promise<{ id: string }>
                             </div>
 
                             {/* Name & location */}
-                            <div className="flex-1 flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-1">
+                            <div className="w-full flex-1 min-w-0 flex flex-col sm:flex-row sm:items-end justify-between gap-4 pb-1">
                                 <div>
                                     <h1 className="text-3xl sm:text-5xl font-black italic uppercase text-white tracking-tighter leading-none drop-shadow-2xl">
                                         {formData.name || 'Nombre del Centro'}
@@ -677,7 +677,7 @@ function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: strin
                 {icon}
                 <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
             </div>
-            <span className="text-xs font-bold text-white/60 truncate ml-3 max-w-[60%] text-right">{value}</span>
+            <span className="text-xs font-bold text-white/60 truncate min-w-0 ml-3 max-w-[60%] text-right">{value}</span>
         </div>
     )
 }
