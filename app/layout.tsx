@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "./ThemeContext";
 import { LanguageProvider } from "./LanguageContext";
 import InstallAppPrompt from "@/components/pwa/InstallAppPrompt";
+import VersionChecker from "@/components/VersionChecker";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -131,6 +132,7 @@ export default function RootLayout({
           <ThemeProvider>
             {children}
             <InstallAppPrompt />
+            <VersionChecker />
           </ThemeProvider>
         </LanguageProvider>
       </body>
