@@ -4,11 +4,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { Flame, Building2, X, ArrowRight, Activity, Trophy, LogIn } from "lucide-react";
+import { Flame, Building2, X, ArrowRight, Activity, Trophy, LogIn, User, Loader2 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { useTheme } from "./ThemeContext";
 import ThemeToggle from "@/components/ThemeToggle";
+import { getSavedAccounts, switchToAccount, type SavedAccount } from "@/utils/supabase/multi-account";
 
 
 
@@ -302,6 +303,52 @@ export default function UnifiedLanding() {
     const [showSplash, setShowSplash] = useState(true);
     const supabase = createClient();
     const router = useRouter();
+
+    // "Continuar como..." — solo para quien YA tiene sesión guardada en este
+    // navegador (multi-cuenta: login/page.tsx guarda cada sesión en
+    // localStorage al iniciar sesión). Quien no tiene cuenta ve la landing
+    // exactamente igual que antes; esto no reemplaza nada para ellos.
+    const [savedAccounts, setSavedAccounts] = useState<SavedAccount[]>([]);
+    const [accountCenters, setAccountCenters] = useState<Record<string, { id: string; name: string }>>({});
+    const [switchingAccountId, setSwitchingAccountId] = useState<string | null>(null);
+
+    useEffect(() => {
+        const accounts = getSavedAccounts();
+        if (accounts.length === 0) return;
+        setSavedAccounts(accounts);
+
+        // Por cada cuenta guardada, ver si esa persona es dueña de algún
+        // centro/box — para poder ofrecer "Entrar a {Nombre del Centro}"
+        // además de "Entrar como @usuario".
+        (async () => {
+            const { data: orgs } = await supabase
+                .from('organizations')
+                .select('id, name, owner_id')
+                .in('owner_id', accounts.map(a => a.userId));
+            if (!orgs) return;
+            const map: Record<string, { id: string; name: string }> = {};
+            for (const org of orgs) {
+                map[org.owner_id] = { id: org.id, name: org.name };
+            }
+            setAccountCenters(map);
+        })();
+    }, []);
+
+    const handleContinueAs = async (userId: string, destination: 'dashboard' | string) => {
+        setSwitchingAccountId(userId);
+        try {
+            const ok = await switchToAccount(userId);
+            if (ok) {
+                router.push(destination === 'dashboard' ? '/dashboard' : `/dashboard/gyms/${destination}`);
+            } else {
+                setSwitchingAccountId(null);
+                router.push('/login');
+            }
+        } catch {
+            setSwitchingAccountId(null);
+            router.push('/login');
+        }
+    };
 
     // Splash solo la primera vez por sesión (volver a la landing = entrada directa)
     useEffect(() => {
@@ -673,31 +720,94 @@ export default function UnifiedLanding() {
                                 </div>
                             </div>
 
-                            {/* Primary CTAs — Empezar Gratis & Demo */}
-                            <div className="flex gap-3">
-                                <Link
-                                    href="/signup"
-                                    className="flex-1 bg-gradient-to-r from-brand-red to-red-600 hover:from-brand-accent hover:to-red-500 text-white py-3.5 sm:py-4 rounded-xl font-black uppercase tracking-[0.2em] text-xs xs:text-sm sm:text-xs btn-sport-tech transition-all shadow-[0_4px_20px_rgba(239,68,68,0.25)] hover:shadow-[0_4px_30px_rgba(239,68,68,0.5)] flex items-center justify-center gap-2 group cursor-pointer hover:scale-[1.02] active:scale-95 duration-300"
-                                >
-                                    <span className="skew-x-[10deg] block flex items-center gap-1.5">
-                                        Empezar Gratis <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                                    </span>
-                                </Link>
-                                <a
-                                    href="/demo.html"
-                                    className="flex-1 bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 hover:border-brand-red/40 hover:bg-brand-red/5 text-slate-800 dark:text-white py-3.5 sm:py-4 rounded-xl font-black uppercase tracking-[0.2em] text-xs xs:text-sm sm:text-xs transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-95 duration-300"
-                                >
-                                    <span className="skew-x-[10deg] block">
-                                        Demo ⚡
-                                    </span>
-                                </a>
-                            </div>
+                            {savedAccounts.length > 0 ? (
+                                /* Continuar como... — solo para quien ya tiene sesión guardada
+                                   en este navegador (multi-cuenta). Sustituye a los CTAs
+                                   genéricos de Empezar Gratis/Demo para esta persona. */
+                                <div className="space-y-3">
+                                    <p className="text-center text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 dark:text-white/40">
+                                        Bienvenido de nuevo
+                                    </p>
+                                    {savedAccounts.map((account) => {
+                                        const center = accountCenters[account.userId];
+                                        const isSwitching = switchingAccountId === account.userId;
+                                        return (
+                                            <div
+                                                key={account.userId}
+                                                className="bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 rounded-2xl p-4 space-y-3"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-200 dark:bg-white/10 border border-slate-300 dark:border-white/10 shrink-0 relative flex items-center justify-center">
+                                                        {account.avatarUrl ? (
+                                                            <img src={account.avatarUrl} alt={account.username} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            <User className="w-5 h-5 text-slate-500 dark:text-white/40" />
+                                                        )}
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-black text-slate-900 dark:text-white truncate">{account.fullName || account.username}</p>
+                                                        <p className="text-[11px] text-slate-500 dark:text-white/40 truncate">@{account.username}</p>
+                                                    </div>
+                                                </div>
 
-                            <div className="text-center">
-                                <span className="text-[11px] xs:text-[12px] sm:text-xs font-bold text-slate-500 dark:text-white/40">
-                                    ¿Ya tienes cuenta? <Link href="/login" className="text-slate-900 dark:text-white hover:text-brand-red font-black uppercase tracking-widest ml-1 transition-colors">Inicia sesión</Link>
-                                </span>
-                            </div>
+                                                <div className="flex flex-col gap-2">
+                                                    <button
+                                                        onClick={() => handleContinueAs(account.userId, 'dashboard')}
+                                                        disabled={isSwitching}
+                                                        className="w-full bg-gradient-to-r from-brand-red to-red-600 hover:from-brand-accent hover:to-red-500 text-white py-3 rounded-xl font-black uppercase tracking-[0.15em] text-[11px] xs:text-xs transition-all shadow-[0_4px_20px_rgba(239,68,68,0.25)] flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-95 duration-300 disabled:opacity-60"
+                                                    >
+                                                        {isSwitching ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" />}
+                                                        Entrar a tu cuenta ({account.username})
+                                                    </button>
+                                                    {center && (
+                                                        <button
+                                                            onClick={() => handleContinueAs(account.userId, center.id)}
+                                                            disabled={isSwitching}
+                                                            className="w-full bg-slate-100 dark:bg-white/[0.04] border border-slate-200 dark:border-white/10 hover:border-brand-orange/40 hover:bg-brand-orange/5 text-slate-800 dark:text-white py-3 rounded-xl font-black uppercase tracking-[0.15em] text-[11px] xs:text-xs transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-95 duration-300 disabled:opacity-60"
+                                                        >
+                                                            <Building2 className="w-4 h-4 text-brand-orange" />
+                                                            Entrar a tu cuenta ({center.name})
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                    <div className="text-center pt-1">
+                                        <span className="text-[11px] xs:text-[12px] sm:text-xs font-bold text-slate-500 dark:text-white/40">
+                                            ¿No eres tú? <Link href="/login?add_account=true" className="text-slate-900 dark:text-white hover:text-brand-red font-black uppercase tracking-widest ml-1 transition-colors">Usar otra cuenta</Link>
+                                        </span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Primary CTAs — Empezar Gratis & Demo */}
+                                    <div className="flex gap-3">
+                                        <Link
+                                            href="/signup"
+                                            className="flex-1 bg-gradient-to-r from-brand-red to-red-600 hover:from-brand-accent hover:to-red-500 text-white py-3.5 sm:py-4 rounded-xl font-black uppercase tracking-[0.2em] text-xs xs:text-sm sm:text-xs btn-sport-tech transition-all shadow-[0_4px_20px_rgba(239,68,68,0.25)] hover:shadow-[0_4px_30px_rgba(239,68,68,0.5)] flex items-center justify-center gap-2 group cursor-pointer hover:scale-[1.02] active:scale-95 duration-300"
+                                        >
+                                            <span className="skew-x-[10deg] block flex items-center gap-1.5">
+                                                Empezar Gratis <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                            </span>
+                                        </Link>
+                                        <a
+                                            href="/demo.html"
+                                            className="flex-1 bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 hover:border-brand-red/40 hover:bg-brand-red/5 text-slate-800 dark:text-white py-3.5 sm:py-4 rounded-xl font-black uppercase tracking-[0.2em] text-xs xs:text-sm sm:text-xs transition-all flex items-center justify-center gap-2 cursor-pointer hover:scale-[1.02] active:scale-95 duration-300"
+                                        >
+                                            <span className="skew-x-[10deg] block">
+                                                Demo ⚡
+                                            </span>
+                                        </a>
+                                    </div>
+
+                                    <div className="text-center">
+                                        <span className="text-[11px] xs:text-[12px] sm:text-xs font-bold text-slate-500 dark:text-white/40">
+                                            ¿Ya tienes cuenta? <Link href="/login" className="text-slate-900 dark:text-white hover:text-brand-red font-black uppercase tracking-widest ml-1 transition-colors">Inicia sesión</Link>
+                                        </span>
+                                    </div>
+                                </>
+                            )}
 
                             {/* Bottom Links & Explores */}
                             <div className="space-y-4 pt-1">
