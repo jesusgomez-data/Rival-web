@@ -11,6 +11,7 @@ import MentionInput from "@/components/MentionInput";
 import WodCard from "@/components/explore/WodCard";
 import WODTrackerModal from "@/components/WODTrackerModal";
 import { fetchWodCompletion } from "@/lib/wod-completion-cache";
+import { fetchWodCompletionsCount } from "@/lib/wod-leaderboard-count-cache";
 
 export default function GymPostCard({ post, centerId, isAdmin = false, currentUserId, isMember = false }: any) {
     const [likes, setLikes] = useState(post.likes_count || 0);
@@ -47,9 +48,8 @@ export default function GymPostCard({ post, centerId, isAdmin = false, currentUs
             // publicados por el centro — no se le pasaba completionsCount, así
             // que se quedaba siempre en el valor por defecto (0), aunque hubiera
             // atletas registrados en el ranking real.
-            fetch(`/api/wod/leaderboard?wodPostId=${post.id}`)
-                .then(r => r.json())
-                .then(data => { if (data.success && typeof data.total === 'number') setWodCompletionsCount(data.total); })
+            fetchWodCompletionsCount(post.id)
+                .then(count => setWodCompletionsCount(count))
                 .catch(() => {});
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps

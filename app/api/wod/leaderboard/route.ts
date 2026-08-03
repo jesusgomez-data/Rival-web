@@ -22,8 +22,50 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const wodPostId = searchParams.get("wodPostId");
+    const wodPostIdsParam = searchParams.get("wodPostIds");
     const limit = parseInt(searchParams.get("limit") || "50");
     const rxOnly = searchParams.get("rxOnly") === "true";
+
+    // Modo batch: solo cuenta de completados por post, sin perfiles/stats/
+    // creador (lo que WodCard necesita para el chip "X ATLETAS" del feed).
+    // Evita el N+1 de disparar una llamada completa de leaderboard por cada
+    // tarjeta de WOD visible a la vez.
+    if (wodPostIdsParam) {
+      const ids = [...new Set(wodPostIdsParam.split(",").map((id) => id.trim()).filter(Boolean))];
+      if (ids.length === 0) {
+        return NextResponse.json({ success: true, counts: {} });
+      }
+
+      const { data: originalPosts } = await supabaseAdmin
+        .from("posts")
+        .select("id, original_wod_post_id")
+        .in("id", ids);
+
+      const targetIdMap = new Map(ids.map((id) => {
+        const post = originalPosts?.find((p) => p.id === id);
+        return [id, post?.original_wod_post_id || id];
+      }));
+      const targetIds = [...new Set(targetIdMap.values())];
+
+      const { data: batchCompletions } = await supabaseAdmin
+        .from("wod_completions")
+        .select("original_wod_post_id, original_center_post_id, completion_post_id")
+        .or(targetIds.map((tid) => `original_wod_post_id.eq.${tid},original_center_post_id.eq.${tid},completion_post_id.eq.${tid}`).join(","));
+
+      const countByTargetId = new Map<string, number>();
+      for (const c of batchCompletions || []) {
+        const matched = targetIds.find((tid) => tid === c.original_wod_post_id || tid === c.original_center_post_id || tid === c.completion_post_id);
+        if (matched) countByTargetId.set(matched, (countByTargetId.get(matched) || 0) + 1);
+      }
+
+      const counts: Record<string, number> = {};
+      for (const id of ids) {
+        const targetId = targetIdMap.get(id)!;
+        counts[id] = countByTargetId.get(targetId) || 0;
+      }
+
+      return NextResponse.json({ success: true, counts });
+    }
 
     if (!wodPostId) {
       return NextResponse.json({ error: "wodPostId es requerido" }, { status: 400 });

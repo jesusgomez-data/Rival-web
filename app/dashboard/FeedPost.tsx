@@ -26,6 +26,7 @@ import MentionInput from "@/components/MentionInput";
 import { useVideo } from "./VideoContext";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { fetchWodCompletion } from "@/lib/wod-completion-cache";
+import { fetchWodCompletionsCount } from "@/lib/wod-leaderboard-count-cache";
 import dynamic from 'next/dynamic';
 
 // ── Dynamic imports: loaded on-demand, NOT in the initial bundle ──────────────
@@ -1103,15 +1104,11 @@ const FeedPost = memo(function FeedPost({ postId, username, user, action, time, 
 
     const fetchCompletionsCount = async (targetWodId: string, signal?: AbortSignal) => {
         try {
-            const res = await fetch(`/api/wod/leaderboard?wodPostId=${targetWodId}`, { signal });
-            const data = await res.json();
-            if (data.success && typeof data.total === 'number') {
-                setCompletionsCountWod(data.total);
-            }
+            const count = await fetchWodCompletionsCount(targetWodId);
+            if (signal?.aborted) return;
+            setCompletionsCountWod(count);
         } catch (e) {
-            // Cancelacion por navegacion (abort o "Failed to fetch"): contador no critico, ignorar
             const msg = (e as Error)?.message || '';
-            if ((e as Error)?.name === 'AbortError' || msg.includes('Failed to fetch')) return;
             console.warn("Completions count no disponible:", msg);
         }
     };
