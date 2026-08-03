@@ -547,22 +547,14 @@ function DashboardContent({ children }: { children: React.ReactNode }) {
     };
 
     const handleLogout = async () => {
-        if (profile?.id) {
-            const { removeAccount } = await import('@/utils/supabase/multi-account');
-            removeAccount(profile.id);
-        }
-        await supabase.auth.signOut();
+        // Cerrar sesión NO debe olvidar la cuenta guardada — solo cierra la
+        // sesión activa en este dispositivo, dejando el refresh token en
+        // localStorage para que el landing pueda ofrecer "Bienvenido de
+        // nuevo" al volver. Solo se borra explícitamente vía
+        // handleLogoutAccount (el selector de cuentas), que es la acción de
+        // "olvidar esta cuenta".
+        await clearActiveSessionLocally();
         Sentry.setUser(null);
-
-        const remaining = getSavedAccounts();
-        if (remaining.length > 0) {
-            const success = await switchToAccount(remaining[0].userId);
-            if (success) {
-                window.location.reload();
-                return;
-            }
-        }
-        
         router.push("/");
     };
 
