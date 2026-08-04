@@ -20,13 +20,15 @@ Sentry.init({
     // fetch — real y esperado en movil. Pero el mensaje es demasiado
     // generico para ignorarlo en todo el sitio (podria ocultar un fallo de
     // carga real en otro fetch), asi que solo se descarta cuando el propio
-    // stack confirma que viene del fetch interno de Server Actions de Next.
+    // stack confirma que viene del fetch interno de Next: Server Actions o
+    // navegacion RSC (fetch-server-response), que es el mismo patron de
+    // deploy-en-curso / pestaña con bundle viejo.
     beforeSend(event, hint) {
         const msg = String(hint?.originalException instanceof Error ? hint.originalException.message : event.message || '');
         if (/^(Load failed|Failed to fetch)$/i.test(msg.trim())) {
             const frames = event.exception?.values?.[0]?.stacktrace?.frames || [];
-            const fromServerActionFetch = frames.some(f => /server-action-reducer/i.test(f.filename || ''));
-            if (fromServerActionFetch) return null;
+            const fromNextInternalFetch = frames.some(f => /server-action-reducer|fetch-server-response/i.test(f.filename || ''));
+            if (fromNextInternalFetch) return null;
         }
         return event;
     },
