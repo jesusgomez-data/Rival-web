@@ -19,8 +19,15 @@ export default function VersionChecker() {
 
     useEffect(() => {
         let cancelled = false;
+        let inFlight = false;
 
         const checkVersion = async () => {
+            // visibilitychange puede dispararse varias veces seguidas (cambiar
+            // de app rápido en móvil) — sin esta guardia, cada disparo lanzaba
+            // su propio fetch en paralelo (visto en Sentry: 16+ llamadas a
+            // /api/version fallando juntas durante un corte de red real).
+            if (inFlight) return;
+            inFlight = true;
             try {
                 const res = await fetch('/api/version', { cache: 'no-store' });
                 const data = await res.json();
@@ -33,6 +40,8 @@ export default function VersionChecker() {
                 }
             } catch {
                 // Sin conexión momentánea: no es una versión nueva, ignorar.
+            } finally {
+                inFlight = false;
             }
         };
 
