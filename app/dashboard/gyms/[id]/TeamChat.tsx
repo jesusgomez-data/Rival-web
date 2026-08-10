@@ -172,23 +172,24 @@ export default function TeamChat({ centerId, className, standalone = false }: { 
     if (isStaff === null) return null; // Or a skeleton
 
     return (
-        <div 
+        <div
             className={clsx(
                 "bg-card border border-border flex flex-col overflow-hidden shadow-xl transition-all duration-300",
                 isFullScreen
-                    ? "fixed inset-0 z-[9999] h-screen h-[100dvh] w-screen rounded-none border-none bg-background"
+                    ? "fixed inset-0 z-[9999] h-screen h-[100dvh] w-screen rounded-none border-none bg-background md:items-center"
                     : clsx("rounded-2xl", className || "h-[700px]")
             )}
             style={isFullScreen ? { paddingTop: 'max(12px, env(safe-area-inset-top))' } : undefined}
         >
+          <div className={clsx("flex flex-col min-h-0 w-full", isFullScreen && "h-full md:max-w-4xl md:mx-auto md:border-x md:border-border/60")}>
             {/* Header */}
-            <div className="p-4 border-b border-border bg-muted/30 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <div className="p-2 bg-brand-red/10 rounded-lg">
-                        <MessageSquare className="w-5 h-5 text-brand-red" />
+            <div className={clsx("border-b border-border bg-muted/30 flex items-center justify-between", isFullScreen ? "p-4 md:px-6 md:py-5" : "p-4")}>
+                <div className="flex items-center gap-2 md:gap-3">
+                    <div className={clsx("bg-brand-red/10 rounded-lg", isFullScreen ? "p-2 md:p-2.5" : "p-2")}>
+                        <MessageSquare className={clsx("text-brand-red", isFullScreen ? "w-5 h-5 md:w-6 md:h-6" : "w-5 h-5")} />
                     </div>
                     <div>
-                        <h3 className="font-bold text-foreground">{standalone ? 'Chat de Empresa' : 'Notas del Equipo'}</h3>
+                        <h3 className={clsx("font-bold text-foreground", isFullScreen && "md:text-lg")}>{standalone ? 'Chat de Empresa' : 'Notas del Equipo'}</h3>
                         <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">{standalone ? 'Canal operativo del centro' : 'Solo Personal Autorizado'}</p>
                     </div>
                 </div>
@@ -209,7 +210,7 @@ export default function TeamChat({ centerId, className, standalone = false }: { 
                             <span className="text-[10px] font-bold text-gray-500 uppercase">Offline</span>
                         </div>
                     )}
-                    
+
                     {/* Full Screen Toggle Button */}
                     <button
                         type="button"
@@ -227,7 +228,7 @@ export default function TeamChat({ centerId, className, standalone = false }: { 
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-card/50">
+            <div className={clsx("flex-1 overflow-y-auto space-y-4 custom-scrollbar bg-card/50", isFullScreen ? "p-4 md:px-6 md:py-6 md:space-y-5" : "p-4")}>
                 {loading && messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center gap-3 text-muted-foreground">
                         <Loader2 className="w-8 h-8 animate-spin text-brand-red" />
@@ -265,16 +266,16 @@ export default function TeamChat({ centerId, className, standalone = false }: { 
                                         <div className="shrink-0">
                                             {msg.as_org ? (
                                                 msg.organization?.logo_url ? (
-                                                    <img src={msg.organization.logo_url} alt="" className="w-8 h-8 rounded-full border-2 border-brand-red mt-1 p-0.5" />
+                                                    <img src={msg.organization.logo_url} alt="" className={clsx("rounded-full border-2 border-brand-red mt-1 p-0.5", isFullScreen ? "w-8 h-8 md:w-10 md:h-10" : "w-8 h-8")} />
                                                 ) : (
-                                                    <div className="w-8 h-8 rounded-full bg-brand-red flex items-center justify-center mt-1">
+                                                    <div className={clsx("rounded-full bg-brand-red flex items-center justify-center mt-1", isFullScreen ? "w-8 h-8 md:w-10 md:h-10" : "w-8 h-8")}>
                                                         <Building2 className="w-4 h-4 text-white" />
                                                     </div>
                                                 )
                                             ) : msg.user?.avatar_url ? (
-                                                <img src={msg.user.avatar_url} alt="" className="w-8 h-8 rounded-full border border-border mt-1" />
+                                                <img src={msg.user.avatar_url} alt="" className={clsx("rounded-full border border-border mt-1", isFullScreen ? "w-8 h-8 md:w-10 md:h-10" : "w-8 h-8")} />
                                             ) : (
-                                                <div className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center mt-1">
+                                                <div className={clsx("rounded-full bg-muted border border-border flex items-center justify-center mt-1", isFullScreen ? "w-8 h-8 md:w-10 md:h-10" : "w-8 h-8")}>
                                                     <UserIcon className="w-4 h-4 text-muted-foreground" />
                                                 </div>
                                             )}
@@ -291,6 +292,7 @@ export default function TeamChat({ centerId, className, standalone = false }: { 
                                             </div>
                                             <div className={clsx(
                                                 "p-3 rounded-2xl rounded-tl-none text-sm leading-relaxed shadow-sm border",
+                                                isFullScreen && "md:max-w-2xl md:p-4",
                                                 msg.as_org
                                                     ? "bg-brand-red/5 border-brand-red/30 text-white font-medium"
                                                     : "bg-muted/40 border-border/50 text-foreground/90"
@@ -308,7 +310,7 @@ export default function TeamChat({ centerId, className, standalone = false }: { 
             </div>
 
             {/* Input Area */}
-            <div className="p-4 border-t border-border bg-muted/20 space-y-3">
+            <div className={clsx("border-t border-border bg-muted/20 space-y-3", isFullScreen ? "p-4 md:px-6 md:py-5" : "p-4")}>
                 {isOwner && (
                     <div className="flex items-center gap-4">
                         <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Publicar como:</span>
@@ -345,7 +347,10 @@ export default function TeamChat({ centerId, className, standalone = false }: { 
                             }
                         }}
                         placeholder="Escribe una nota para el equipo..."
-                        className="w-full bg-card border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-red/20 focus:border-brand-red/50 transition-all pr-12 placeholder:italic"
+                        className={clsx(
+                            "w-full bg-card border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-red/20 focus:border-brand-red/50 transition-all pr-12 placeholder:italic",
+                            isFullScreen ? "px-4 py-3 md:px-5 md:py-3.5 md:text-base" : "px-4 py-3"
+                        )}
                     />
                     <button
                         type="submit"
@@ -363,6 +368,7 @@ export default function TeamChat({ centerId, className, standalone = false }: { 
                     Protocolo de Comunicación Interna v1.0
                 </div>
             </div>
+          </div>
         </div>
     );
 }
