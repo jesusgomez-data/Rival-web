@@ -30,6 +30,7 @@ export type WodFormat = 'AMRAP' | 'FOR TIME' | 'EMOM' | 'TABATA' | 'INTERVALS' |
     // Endurance formats
     | 'CARRERA LIBRE' | 'INTERVALOS' | 'FARTLEK' | 'TEMPO' | 'SERIES' | 'TRAIL';
 export type WorkoutCategory = 'CROSS_TRAINING' | 'RUNNING' | 'GYM' | 'OCR' | 'HYROX' | 'CYCLING' | 'SWIMMING' | 'YOGA' | 'BOXING';
+const VALID_WORKOUT_CATEGORIES: WorkoutCategory[] = ['CROSS_TRAINING', 'RUNNING', 'GYM', 'OCR', 'HYROX', 'CYCLING', 'SWIMMING', 'YOGA', 'BOXING'];
 
 import { BENCHMARKS } from "./benchmarks";
 
@@ -281,7 +282,11 @@ export default function WodCreator({ onUpdate, initialData }: WodCreatorProps) {
                 const newSummary = data.summary || summary;
 
                 if (data.title) setTitle(data.title.toUpperCase());
-                if (data.category) setCategory(data.category);
+                // data.category viene de la IA y no siempre cae en una de las
+                // 9 categorías válidas (escaneo impreciso) — guardar un valor
+                // fuera de ese enum rompía el render de WodCard en cualquier
+                // feed donde apareciera ese WOD despues.
+                if (data.category && VALID_WORKOUT_CATEGORIES.includes(data.category)) setCategory(data.category);
 
                 if (data.blocks && Array.isArray(data.blocks)) {
                     const normalizedBlocks = data.blocks.map((b: any) => ({

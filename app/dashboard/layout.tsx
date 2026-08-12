@@ -32,7 +32,8 @@ import {
     Activity,
     Instagram,
     BookOpen,
-    Compass
+    Compass,
+    Loader2
 } from "lucide-react";
 import clsx from "clsx";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -1134,13 +1135,27 @@ import { UploadProvider } from "./UploadContext";
 import { PresenceProvider } from "./PresenceContext";
 import PushNotificationManager from "@/components/pwa/PushNotificationManager";
 
+// fallback={null} dejaba la pantalla en blanco sin ningun aviso cada vez
+// que algo dentro suspendia (carga lenta, import dinamico atascado,
+// streaming de un Server Component pesado) — reportado por usuarios como
+// "la app se queda en blanco". Un fallback visible convierte ese blanco
+// silencioso en un loader, y si la suspension se prolonga demasiado, en
+// algo que se puede reportar en vez de simplemente no aparecer.
+function DashboardSuspenseFallback() {
+    return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-brand-red animate-spin" />
+        </div>
+    );
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     return (
         <UploadProvider>
             <VideoProvider>
                 <StoryProvider>
                     <PresenceProvider>
-                        <Suspense fallback={null}>
+                        <Suspense fallback={<DashboardSuspenseFallback />}>
                             <DashboardContent>
                                 {children}
                             </DashboardContent>

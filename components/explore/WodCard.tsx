@@ -69,6 +69,16 @@ const ENDURANCE_CATEGORIES: WorkoutCategory[] = ['RUNNING', 'CYCLING', 'SWIMMING
 
 const DEFAULT_CONFIG = { label: 'WOD', color: 'text-green-500', icon: Target };
 
+// data.category viene de un escaneo/creación de WOD por IA, que a veces
+// produce un valor fuera del enum fijo de CATEGORY_CONFIG (ej. un escaneo
+// imperfecto). CATEGORY_CONFIG[valorInesperado] da undefined, y acceder a
+// .color/.icon/.gradient sobre undefined tiraba toda la tarjeta — y con
+// ella, la página entera al no haber Error Boundary. Fallback siempre a
+// CROSS_TRAINING si la categoría no es una clave reconocida.
+function getCategoryConfig(category?: WorkoutCategory | string | null) {
+    return CATEGORY_CONFIG[category as WorkoutCategory] || CATEGORY_CONFIG['CROSS_TRAINING'];
+}
+
 const CATEGORY_CONFIG: Record<WorkoutCategory, { label: string, color: string, icon: string, gradient: string }> = {
     'CROSS_TRAINING': { label: 'CROSS TRAINING', color: 'bg-brand-red', icon: '🏋️', gradient: 'from-brand-red to-brand-orange' },
     'RUNNING': { label: 'RUNNING', color: 'bg-blue-600', icon: '🏃', gradient: 'from-blue-600 to-cyan-500' },
@@ -172,8 +182,8 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                 <div className="relative p-6 z-10">
                     <div className="flex items-center justify-between mb-6">
                         <div className="flex items-center gap-2">
-                            <span className={cn("text-white text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded shadow-glow-sm", CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].color)}>
-                                {CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].label}
+                            <span className={cn("text-white text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded shadow-glow-sm", getCategoryConfig(data.category).color)}>
+                                {getCategoryConfig(data.category).label}
                             </span>
                             <div className="w-1 h-1 rounded-full bg-brand-red animate-pulse" />
                             <span className="text-[9px] font-black text-white/40 uppercase tracking-widest italic">{userName} SESSION</span>
@@ -429,7 +439,7 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
 
     // ── Official "WOD del día" premium card ──────────────────────────────────
     if (isOfficial) {
-        const catCfg = CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'];
+        const catCfg = getCategoryConfig(data.category);
         const firstBlock = data.blocks?.[0];
         const formatLabel = firstBlock ? (FORMAT_CONFIG[firstBlock.format]?.label || firstBlock.format) : 'WOD';
         const formatColor = firstBlock ? (FORMAT_CONFIG[firstBlock.format]?.color || 'text-brand-red') : 'text-brand-red';
@@ -570,13 +580,13 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
     return (
         <div className="w-full bg-[#111111] border border-white/5 rounded-[32px] overflow-hidden group hover:border-brand-red/30 transition-all shadow-2xl relative">
             {/* Header / Backdrop Image */}
-            <div className={cn("relative h-32 md:h-40 overflow-hidden bg-gradient-to-br dark-section", CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].gradient)}>
+            <div className={cn("relative h-32 md:h-40 overflow-hidden bg-gradient-to-br dark-section", getCategoryConfig(data.category).gradient)}>
                 {data.media_url ? (
                     <img src={data.media_url} alt="WOD" className="w-full h-full object-cover opacity-60 mix-blend-overlay" />
                 ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
                         <div className="text-8xl transform -rotate-12 opacity-30 select-none">
-                            {CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].icon}
+                            {getCategoryConfig(data.category).icon}
                         </div>
                     </div>
                 )}
@@ -598,8 +608,8 @@ function WodCard({ data, userName, publishDate, postId, completionsCount = 0, ha
                 <div className="absolute bottom-4 left-6 right-6 flex items-end justify-between">
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                            <span className={cn("text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded", CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].color)} style={{ color: '#fff' }}>
-                                {CATEGORY_CONFIG[data.category || 'CROSS_TRAINING'].label}
+                            <span className={cn("text-[8px] font-black uppercase tracking-[0.2em] px-2 py-0.5 rounded", getCategoryConfig(data.category).color)} style={{ color: '#fff' }}>
+                                {getCategoryConfig(data.category).label}
                             </span>
                             <span className="text-[8px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.6)' }}>{data.blocks.length} BLOQUES</span>
                         </div>
