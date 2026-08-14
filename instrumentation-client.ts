@@ -18,18 +18,36 @@ Sentry.init({
     ],
     // "Load failed"/"Failed to fetch" es el mensaje generico que da el
     // navegador (sobre todo Safari/iOS) cuando se corta la conexion a medio
-    // fetch — real y esperado en movil. Pero el mensaje es demasiado
-    // generico para ignorarlo en todo el sitio (podria ocultar un fallo de
-    // carga real en otro fetch), asi que solo se descarta cuando el propio
-    // stack confirma que viene del fetch interno de Next: Server Actions o
-    // navegacion RSC (fetch-server-response), que es el mismo patron de
-    // deploy-en-curso / pestaña con bundle viejo.
+    // fetch — real y esperado en movil, y tambien el sintoma de un Server
+    // Action fallando por version skew (deploy nuevo mientras el usuario
+    // sigue con el bundle viejo). Es demasiado generico para ignorarlo en
+    // todo el sitio, asi que solo se descarta cuando ademas hay evidencia de
+    // que vino de esa llamada interna de Next.
+    //
+    // OJO: NO se puede confiar en el nombre de archivo del stack trace aqui.
+    // beforeSend corre en el navegador ANTES de que Sentry resuelva
+    // sourcemaps (eso pasa despues, en el servidor de Sentry, solo para la
+    // vista del dashboard) — en produccion el bundle esta minificado, asi
+    // que f.filename nunca contiene "server-action-reducer" de verdad. La
+    // señal fiable que si esta disponible en este momento es el propio
+    // breadcrumb del fetch: los Server Actions siempre hacen POST a la URL
+    // actual de la pagina, y ese breadcrumb queda marcado como error si el
+    // fetch fallo.
     beforeSend(event, hint) {
         const msg = String(hint?.originalException instanceof Error ? hint.originalException.message : event.message || '');
         if (/^(Load failed|Failed to fetch)$/i.test(msg.trim())) {
-            const frames = event.exception?.values?.[0]?.stacktrace?.frames || [];
-            const fromNextInternalFetch = frames.some(f => /server-action-reducer|fetch-server-response/i.test(f.filename || ''));
-            if (fromNextInternalFetch) return null;
+            // Server Actions siempre hacen POST a la URL de la propia
+            // pagina (no a /api/*, que es donde vive nuestro codigo de
+            // servidor) — asi se evita silenciar un POST nuestro que falle
+            // por un bug real en /api/*.
+            const breadcrumbs = event.breadcrumbs || [];
+            const fromFailedServerActionFetch = breadcrumbs.some(b =>
+                b.category === 'fetch' &&
+                (b.data as any)?.method === 'POST' &&
+                !String((b.data as any)?.url || '').includes('/api/') &&
+                (b.level === 'error' || !(b.data as any)?.status_code)
+            );
+            if (fromFailedServerActionFetch) return null;
         }
         return event;
     },

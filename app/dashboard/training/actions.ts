@@ -8,7 +8,10 @@ import { syncFeaturedRm } from '@/lib/pr-sync';
 import { NON_EXERCISE_NAMES, extractWeightKg } from '@/lib/wod-exercise-utils';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-const aiModel = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+// gemini-2.0-flash fue retirado por Google (404 "no longer available") —
+// cada escaneo de WOD fallaba de inmediato porque ese error no cuenta como
+// cuota-agotada/saturado, asi que el fallback de mas abajo nunca se activaba.
+const aiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 
 async function calculateWorkoutStreak(supabase: any, userId: string) {
@@ -1891,8 +1894,7 @@ export async function parseWodFromImage(base64Image: string) {
         let attempts = 0;
         const maxAttempts = 3;
         let delay = 1000;
-        let currentModel = aiModel;
-        let usedFallback = false;
+        const currentModel = aiModel;
 
         while (attempts < maxAttempts) {
             try {
@@ -1918,20 +1920,8 @@ export async function parseWodFromImage(base64Image: string) {
                                      errMsg.toLowerCase().includes('high demand') ||
                                      errMsg.toLowerCase().includes('overloaded');
 
-                // Cuota agotada o modelo saturado: probar con otro modelo en vez
-                // de reintentar el mismo (que va a seguir saturado/limitado) y
-                // hacer esperar al usuario para nada.
-                if ((isQuotaError || isOverloadError) && !usedFallback) {
-                    console.warn(`[parseWodFromImage] ${isQuotaError ? 'Quota exceeded' : 'Overloaded'} on gemini-2.0-flash. Falling back to gemini-2.5-flash...`);
-                    currentModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-                    usedFallback = true;
-                    attempts = 0; // Reset attempts for the fallback model
-                    delay = 1000;
-                    continue;
-                }
-
                 attempts++;
-                console.warn(`[parseWodFromImage] Attempt ${attempts} failed:`, errMsg);
+                console.warn(`[parseWodFromImage] Attempt ${attempts} failed${isQuotaError ? ' (quota)' : isOverloadError ? ' (overload)' : ''}:`, errMsg);
                 if (attempts >= maxAttempts) {
                     throw err;
                 }
